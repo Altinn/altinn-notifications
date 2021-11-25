@@ -23,5 +23,5 @@ jobs:
       working-directory: src/Altinn.Notifications
       run: dotnet build --no-restore
     - name: Test
-      working-directory: test
+      working-directory: test/Altinn.Notifications.Tests
       run: dotnet test --no-build --verbosity normal
