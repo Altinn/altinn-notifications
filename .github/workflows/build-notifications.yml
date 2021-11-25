@@ -26,7 +26,7 @@ jobs:
       working-directory: test/Altinn.Notifications.Tests
       run: dotnet test
   build-image:
-      uses: ./.github/reusables/build-image.yaml@main
+      uses: ./.github/workflows/reusables/build-image.yaml@main
       if: github.ref == 'refs/heads/main'
       needs: build
       with:
