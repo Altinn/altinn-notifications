@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Altinn.Notifications.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("notifications/api/v1/[controller]")]
     [ApiController]
     public class NotificationsController : ControllerBase
     {

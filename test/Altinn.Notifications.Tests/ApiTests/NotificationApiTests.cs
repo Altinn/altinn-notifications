@@ -36,7 +36,7 @@ namespace Altinn.Notifications.Tests
         {
             NotificationExt notificationeExt = new NotificationExt();
 
-            HttpRequestMessage reqst = new HttpRequestMessage(HttpMethod.Post, "api/notifications/")
+            HttpRequestMessage reqst = new HttpRequestMessage(HttpMethod.Post, "notifications/api/v1/notifications/")
             {
                 Content = new StringContent(System.Text.Json.JsonSerializer.Serialize(notificationeExt), Encoding.UTF8, "application/json")
             };
