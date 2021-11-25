@@ -9,14 +9,12 @@ namespace Altinn.Notifications.Controllers
     [ApiController]
     public class NotificationsController : ControllerBase
     {
-        // GET: api/<ValuesController>
-        [HttpGet]
-        public IEnumerable<string> Get()
-        {
-            return new string[] { "value1", "value2" };
-        }
 
-        // GET api/<ValuesController>/5
+        /// <summary>
+        /// Operation to 
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
         [HttpGet("{id}")]
         public string Get(int id)
         {
@@ -28,18 +26,6 @@ namespace Altinn.Notifications.Controllers
         public ObjectResult Post([FromBody] NotificationExt notification)
         {
             return Ok("Hurra");
-        }
-
-        // PUT api/<ValuesController>/5
-        [HttpPut("{id}")]
-        public void Put(int id, [FromBody] string value)
-        {
-        }
-
-        // DELETE api/<ValuesController>/5
-        [HttpDelete("{id}")]
-        public void Delete(int id)
-        {
         }
     }
 }
