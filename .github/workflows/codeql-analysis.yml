@@ -41,7 +41,7 @@ jobs:
         # queries: ./path/to/local/query, your-org/your-repo/queries@main
     
     - name: Build notifications core
-      run: 'dotnet build src/Altinn.Notifications.Core
+      run: 'dotnet build src/Altinn.Notifications.Core'
     - name: Build notifications functions
       run: 'dotnet build src/Altinn.Notifications.Functions'
     - name: Build notifications integrations  
