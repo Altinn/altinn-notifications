@@ -1,0 +1,36 @@
+name: Release app image
+
+on:
+  push:
+    tags:
+      - '*.*.*'
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 6.0.x
+    - name: Restore dependencies
+      run: dotnet restore
+    - name: Build
+      working-directory: src/Altinn.Notifications
+      run: dotnet build --no-restore
+    - name: Test
+      working-directory: test/Altinn.Notifications.Tests
+      run: dotnet test
+    - name: Get version from tags
+      id: version
+      run: echo ::set-output name=tag::${GITHUB_REF/refs\/tags\//}
+  build-image:
+      uses: altinn/altinn-notifications/.github/workflows/build-image.yaml@main
+      needs: build
+      with:
+        tag: ${{ needs.build.outputs.tag }}
+        push: true
