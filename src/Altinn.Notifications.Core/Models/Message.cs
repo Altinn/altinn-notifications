@@ -2,6 +2,10 @@
 {
     public class Message
     {
+        public int Id { get; set; }
+
+        public int NotificationId { get; set; }
+
         public string? EmailSubject { get; set; }
 
         public string? EmailBody { get; set; }

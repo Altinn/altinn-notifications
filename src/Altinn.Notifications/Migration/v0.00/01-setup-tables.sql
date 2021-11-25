@@ -39,8 +39,8 @@ CREATE TABLE IF NOT EXISTS notifications.targets
     id BIGSERIAL,
     notificationid bigint NOT NULL,
     channeltype character varying COLLATE pg_catalog."default" NOT NULL,
-    "address" character varying COLLATE pg_catalog."default" NOT NULL,
-    "sent" timestamptz  NOT NULL,
+    "address" character varying COLLATE pg_catalog."default",
+    "sent" timestamptz,
     CONSTRAINT targets_pkey PRIMARY KEY (id)
 )
 TABLESPACE pg_default;

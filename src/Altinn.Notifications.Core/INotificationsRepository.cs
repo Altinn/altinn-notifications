@@ -4,6 +4,10 @@ namespace Altinn.Notifications.Core
 {
     public interface INotificationsRepository
     {
-        Task<Notification> SaveNotification(Notification notification);
+        Task<Notification> AddNotification(Notification notification);
+
+        Task<Target> AddTarget(Target target);
+
+        Task<Message> AddMessage(Message message);
     }
 }

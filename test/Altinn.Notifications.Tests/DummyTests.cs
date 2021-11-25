@@ -29,7 +29,7 @@ namespace Altinn.Notifications.Tests
         /// This test depends on a running database server.
         /// </summary>
         ///[Fact]
-        public async Task ForceNotificationInsert()
+        public async Task AddNotification_ActualServer()
         {
             const string connectionString = "Host=localhost;Port=5432;Username=platform_notifications;Password=Password;Database=notificationsdb";
 
@@ -39,13 +39,74 @@ namespace Altinn.Notifications.Tests
             Notification notification = new()
             {
                 SendTime = DateTime.UtcNow,
-                InstanceId = "notreallyaninstanceid",
+                InstanceId = "averyvierdinstanceid",
                 Sender = "sender"
             };
 
-            Notification actual = await target.SaveNotification(notification);
+            Notification actual = await target.AddNotification(notification);
 
             Assert.NotNull(actual);
+        }
+
+        /// <summary>
+        /// This test depends on a running database server.
+        /// </summary>
+        ///[Fact]
+        public async Task AddTarget_ActualServer()
+        {
+            const string connectionString = "Host=localhost;Port=5432;Username=platform_notifications;Password=Password;Database=notificationsdb";
+
+            Mock<ILogger<NotificationRepository>> logger = new Mock<ILogger<NotificationRepository>>();
+            NotificationRepository targeted = new NotificationRepository(connectionString, logger.Object);
+
+            Target target = new Target();
+            target.NotificationId = 234;
+            target.ChannelType = "SMS";
+            target.Address = "terje er kul";
+
+            Target actual = await targeted.AddTarget(target);
+
+            Assert.NotNull(actual);
+        }
+
+        /// <summary>
+        /// This test depends on a running database server.
+        /// </summary>
+        ///[Fact]
+        public async Task AddMessage_ActualServer()
+        {
+            const string connectionString = "Host=localhost;Port=5432;Username=platform_notifications;Password=Password;Database=notificationsdb";
+
+            Mock<ILogger<NotificationRepository>> logger = new Mock<ILogger<NotificationRepository>>();
+            NotificationRepository targeted = new NotificationRepository(connectionString, logger.Object);
+
+            Message message = new Message();
+            message.NotificationId = 234;
+            message.EmailSubject = "The coolest";
+            message.EmailBody = "terje er kul";
+            message.Language = "nb";
+
+            Message actual = await targeted.AddMessage(message);
+
+            Assert.NotNull(actual);
+        }
+
+        /// <summary>
+        /// This test depends on a running database server.
+        /// </summary>
+        ///[Fact]
+        public async Task GetNotification_ActualServer()
+        {
+            const string connectionString = "Host=localhost;Port=5432;Username=platform_notifications;Password=Password;Database=notificationsdb";
+
+            Mock<ILogger<NotificationRepository>> logger = new Mock<ILogger<NotificationRepository>>();
+            NotificationRepository target = new NotificationRepository(connectionString, logger.Object);
+
+            Notification actual = await target.GetNotification(2);
+
+            Assert.NotNull(actual);
+
+            Assert.Equal("averyvierdinstanceid", actual.InstanceId);
         }
     }
 }
