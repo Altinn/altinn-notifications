@@ -25,9 +25,10 @@ jobs:
     - name: Test
       working-directory: test/Altinn.Notifications.Tests
       run: dotnet test
-    - uses: ./.github/reusables/build-image.yaml@main
-      name: build and push image
+  build-image:
+      uses: ./.github/reusables/build-image.yaml@main
       if: github.ref == 'refs/heads/main'
+      needs: build
       with:
         tag: latest
         push: true
