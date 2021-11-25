@@ -24,4 +24,11 @@ jobs:
       run: dotnet build --no-restore
     - name: Test
       working-directory: test/Altinn.Notifications.Tests
-      run: dotnet test --no-build --verbosity normal
+      run: dotnet test
+  build-image:
+      uses: altinn/altinn-notifications/.github/workflows/build-image.yaml@main
+      if: github.ref == 'refs/heads/main'
+      needs: build
+      with:
+        tag: latest
+        push: true
