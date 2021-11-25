@@ -30,7 +30,6 @@ jobs:
       run: echo ::set-output name=tag::${GITHUB_REF/refs\/tags\//}
   build-image:
       uses: altinn/altinn-notifications/.github/workflows/build-image.yaml@main
-      if: github.ref == 'refs/heads/main'
       needs: build
       with:
         tag: ${{ needs.build.outputs.tag }}
