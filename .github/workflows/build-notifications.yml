@@ -27,7 +27,7 @@ jobs:
       run: dotnet test
     - uses: ./.github/reusables/build-image@main
       name: build and push image
-      if: github.ref == 'refs/heads/master'
+      if: github.ref == 'refs/heads/main'
       with:
         tag: latest
         push: true
