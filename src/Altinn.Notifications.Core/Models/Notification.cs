@@ -13,5 +13,7 @@
         public string? InstanceId { get; set; }
 
         public string? PartyReference { get; set; }
+
+        public string? Sender { get; set; }
     }
 }

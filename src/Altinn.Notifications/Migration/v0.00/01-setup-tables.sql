@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS notifications.notifications
     sendtime timestamptz NOT NULL,
     instanceid character varying COLLATE pg_catalog."default",
     partyreference character varying COLLATE pg_catalog."default",
+    sender character varying COLLATE pg_catalog."default" NOT NULL,
     CONSTRAINT notifications_pkey PRIMARY KEY (id)
 )
 TABLESPACE pg_default;

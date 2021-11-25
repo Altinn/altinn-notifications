@@ -1,13 +1,22 @@
+using System.Text.Json.Serialization;
+
 using Altinn.Notifications.Configuration;
+using Altinn.Notifications.Persistence;
 
 using Npgsql.Logging;
 
 using Yuniql.AspNetCore;
 using Yuniql.PostgreSql;
 
+ILogger logger;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+
+ConfigureSetupLogging();
+ConfigureLogging(builder.Logging);
+ConfigureServices(builder.Services, builder.Configuration);
 
 builder.Services.AddControllers();
 
@@ -48,3 +57,46 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+
+void ConfigureSetupLogging()
+{
+    var logFactory = LoggerFactory.Create(builder =>
+    {
+        builder
+            .AddFilter("Altinn.Platform.Register.Program", LogLevel.Debug)
+            .AddConsole();
+    });
+
+    logger = logFactory.CreateLogger<Program>();
+}
+
+void ConfigureLogging(ILoggingBuilder logging)
+{
+    // The default ASP.NET Core project templates call CreateDefaultBuilder, which adds the following logging providers:
+    // Console, Debug, EventSource
+    // https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-3.1
+
+    // Clear log providers
+    logging.ClearProviders();
+
+    // If not application insight is available log to console
+    logging.AddFilter("Microsoft", LogLevel.Warning);
+    logging.AddFilter("System", LogLevel.Warning);
+    logging.AddConsole();
+}
+
+void ConfigureServices(IServiceCollection services, IConfiguration config)
+{
+    logger.LogInformation("Program // ConfigureServices");
+
+    services.AddControllers().AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.WriteIndented = true;
+        options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+    });
+
+    services.AddSingleton(config);
+
+    services.Configure<PostgreSQLSettings>(config.GetSection("PostgreSQLSettings"));
+}
