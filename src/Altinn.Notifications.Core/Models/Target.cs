@@ -19,7 +19,7 @@ namespace Altinn.Notifications.Core.Models
         /// PreferredSMS - out of scope
         /// PreferredEmail - out of scope
         /// </summary>
-        public string Type { get; set; }
+        public string? ChannelType { get; set; }
 
         /// <summary>
         /// Possible values:
