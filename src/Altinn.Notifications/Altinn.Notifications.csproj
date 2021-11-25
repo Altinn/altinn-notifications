@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Altinn.Notifications.Core\Altinn.Notifications.Core.csproj" />
+    <ProjectReference Include="..\Altinn.Notifications.Integrations\Altinn.Notifications.Integrations.csproj" />
+    <ProjectReference Include="..\Altinn.Notifications.Interfaces\Altinn.Notifications.Interfaces.csproj" />
+    <ProjectReference Include="..\Altinn.Notifications.Persistence\Altinn.Notifications.Persistence.csproj" />
+  </ItemGroup>
+
+</Project>
