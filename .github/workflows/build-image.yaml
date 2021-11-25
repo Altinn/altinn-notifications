@@ -28,10 +28,9 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Get repository as lowercase
         id: lowercase
-        run: |
-          echo ::set-output name=reponame::${GITHUB_REPOSITORY,,}
+        run: echo ::set-env name=IMAGE_REPOSITORY::$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')
       - name: Build image
         uses: docker/build-push-action@v2
         with:
           push: ${{ inputs.push }}
-          tags: ghcr.io/${{ steps.lowercase.reponame }}:${{ inputs.tag }}
+          tags: ghcr.io/${{ env.IMAGE_REPOSITORY }}:${{ inputs.tag }}
