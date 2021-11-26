@@ -3,9 +3,11 @@ using Altinn.Notifications.Interfaces.Models;
 using Altinn.Notifications.Tests.Mocks;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -20,15 +22,14 @@ namespace Altinn.Notifications.Tests
     {
         private readonly CustomWebApplicationFactory<Altinn.Notifications.Controllers.NotificationsController> _factory;
 
-        private readonly HttpClient _client;
-
+ 
         public NotificationApiTests(CustomWebApplicationFactory<Altinn.Notifications.Controllers.NotificationsController> factory)
         {
            
             _factory = factory;
-            _client = factory.CreateClient();
         }
 
+        [Fact]
         public async Task Notification_Post_Ok()
         {
             NotificationExt notificationeExt = new NotificationExt();
@@ -49,7 +50,13 @@ namespace Altinn.Notifications.Tests
         {
             WebApplicationFactory<Altinn.Notifications.Controllers.NotificationsController> factory = customFactory.WithWebHostBuilder(builder =>
             {
-              
+                string unitTestFolder =Path.GetDirectoryName(new Uri(typeof(EmailServiceMock).Assembly.Location).LocalPath);
+
+                builder.ConfigureAppConfiguration((context, conf) =>
+                {
+                    conf.AddJsonFile(unitTestFolder + "/appsettings.json", false);
+                });
+
                 builder.ConfigureTestServices(services =>
                 {
                     services.AddSingleton<IEmail, EmailServiceMock>();
