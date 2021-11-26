@@ -16,6 +16,7 @@ namespace Altinn.Notifications.Persistence
         private readonly string insertMessageSql = "select * from notifications.insert_message(@notificationid, @emailsubject, @emailbody, @smstext, @language)";
 
         private readonly string getNotificationSql = "select * from notifications.get_notification(@_id)";
+        private readonly string getUnsentTargetsSql = "select * from notifications.get_unsenttargets()";
 
         private readonly string _connectionString;
         
@@ -202,6 +203,26 @@ namespace Altinn.Notifications.Persistence
                 reader.Read();
                 return ReadMessage(reader);
             }
+        }
+
+        public async Task<List<Target>> GetUnsentTargets()
+        {
+            List<Target> unsentTargets = new List<Target>();
+
+            using NpgsqlConnection conn = new NpgsqlConnection(_connectionString);
+            await conn.OpenAsync();
+
+            NpgsqlCommand pgcom = new NpgsqlCommand(getUnsentTargetsSql, conn);
+
+            using (NpgsqlDataReader reader = pgcom.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    unsentTargets.Add(ReadTarget(reader));
+                }
+            }
+
+            return unsentTargets;
         }
 
         private static Notification ReadNotification(NpgsqlDataReader reader)
