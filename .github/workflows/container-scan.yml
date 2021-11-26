@@ -1,4 +1,4 @@
-name: AppTemplate Scan
+name: Notifications scan
 
 on:
   push:
