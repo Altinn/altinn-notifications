@@ -8,10 +8,10 @@ AUTHORIZATION platform_notifications_admin;
 CREATE TABLE IF NOT EXISTS notifications.notifications
 (
     id BIGSERIAL,
-    sendtime timestamptz NOT NULL,
+    sendtime timestamptz,
     instanceid character varying COLLATE pg_catalog."default",
     partyreference character varying COLLATE pg_catalog."default",
-    sender character varying COLLATE pg_catalog."default" NOT NULL,
+    sender character varying COLLATE pg_catalog."default",
     CONSTRAINT notifications_pkey PRIMARY KEY (id)
 )
 TABLESPACE pg_default;

@@ -73,7 +73,7 @@ namespace Altinn.Notifications.Functions.Integrations
         public async Task TriggerSendTarget(string targetId)
         {
             _logger.LogInformation($"// NotificationsClient // Posting new targetId");
-            string path = "notifications/send";
+            string path = "/send";
             string token = string.Empty; // await _token.GeneratePlatformToken();
             HttpResponseMessage res = await _client.PostAsync(path, JsonContent.Create(targetId), token);
 

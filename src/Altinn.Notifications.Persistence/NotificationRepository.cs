@@ -50,7 +50,14 @@ namespace Altinn.Notifications.Persistence
                 pgcom.Parameters.AddWithValue("partyreference", DBNull.Value);
             }
 
-            pgcom.Parameters.AddWithValue("sender", notification.Sender);
+            if (notification.Sender != null)
+            {
+                pgcom.Parameters.AddWithValue("sender", notification.Sender);
+            }
+            else
+            {
+                pgcom.Parameters.AddWithValue("sender", DBNull.Value);
+            }
 
             using (NpgsqlDataReader reader = pgcom.ExecuteReader())
             {
