@@ -1,5 +1,4 @@
-﻿using Altinn.Common.AccessTokenClient.Services;
-using Altinn.Notifications.Functions.Configurations;
+﻿using Altinn.Notifications.Functions.Configurations;
 using Altinn.Notifications.Functions.Extensions;
 
 using Microsoft.Extensions.Logging;
@@ -7,11 +6,9 @@ using Microsoft.Extensions.Options;
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -45,7 +42,7 @@ namespace Altinn.Notifications.Functions.Integrations
 
             if (!res.IsSuccessStatusCode)
             {
-                _logger.LogError("Something went terribly wrong!");
+                _logger.LogError($" // NotificationsClient // GetOutboundEmails // {res.StatusCode} - {await res.Content.ReadAsStringAsync()}");
                 return outboundEmails;
             }
 

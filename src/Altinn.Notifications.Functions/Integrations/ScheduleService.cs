@@ -25,10 +25,7 @@ namespace Altinn.Notifications.Functions.Integrations
             List<int> outboundEmails = await _outbound.GetOutboundEmails();
             if (outboundEmails.Count == 0)
             {
-                _logger.LogInformation("// Schedule // No elements return. Pushing mock data");
-                Random rnd = new Random();
-                await _queue.Push(rnd.Next().ToString());
-
+                _logger.LogInformation("// Schedule // No elements returned. ");
                 return;
             }
 
