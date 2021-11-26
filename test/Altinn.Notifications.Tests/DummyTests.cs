@@ -113,6 +113,22 @@ namespace Altinn.Notifications.Tests
         /// This test depends on a running database server. It was used to test the data access code and database entities.
         /// </summary>
         ///[Fact]
+        public async Task GetTarget_ActualServer()
+        {
+            const string connectionString = "Host=localhost;Port=5432;Username=platform_notifications;Password=Password;Database=notificationsdb";
+
+            Mock<ILogger<NotificationRepository>> logger = new Mock<ILogger<NotificationRepository>>();
+            NotificationRepository target = new NotificationRepository(connectionString, logger.Object);
+
+            Target actual = await target.GetTarget(2);
+
+            Assert.NotNull(actual);
+        }
+
+        /// <summary>
+        /// This test depends on a running database server. It was used to test the data access code and database entities.
+        /// </summary>
+        ///[Fact]
         public async Task GetUnsentTargets_ActualServer()
         {
             const string connectionString = "Host=localhost;Port=5432;Username=platform_notifications;Password=Password;Database=notificationsdb";
