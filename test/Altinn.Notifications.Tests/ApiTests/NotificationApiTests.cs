@@ -1,6 +1,7 @@
 ﻿using Altinn.Notifications.Core;
 using Altinn.Notifications.Interfaces.Models;
 using Altinn.Notifications.Tests.Mocks;
+using Altinn.Notifications.Tests.Utils;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
@@ -12,6 +13,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 using Xunit;
@@ -25,7 +27,6 @@ namespace Altinn.Notifications.Tests
  
         public NotificationApiTests(CustomWebApplicationFactory<Altinn.Notifications.Controllers.NotificationsController> factory)
         {
-           
             _factory = factory;
         }
 
@@ -33,8 +34,13 @@ namespace Altinn.Notifications.Tests
         public async Task Notification_Post_Ok()
         {
             NotificationExt notificationeExt = new NotificationExt();
+            notificationeExt.InstanceId = "2934823947/234234324";
+            notificationeExt.Messages = new List<MessageExt>();
+            notificationeExt.Messages.Add(new MessageExt() { EmailBody = "Email body", EmailSubject = "Email Subject", Langauge = "en", SmsText = "SMS body" });
+            notificationeExt.Targets = new List<TargetExt>();
+            notificationeExt.Targets.Add(new TargetExt() { ChannelType = "Email", Address = "test@altinnunittest.no" });
 
-            HttpClient client = GetTestClient(_factory);
+            HttpClient client = SetupUtil.GetTestClient(_factory);
 
             HttpRequestMessage reqst = new HttpRequestMessage(HttpMethod.Post, "notifications/api/v1/notifications/")
             {
@@ -43,28 +49,13 @@ namespace Altinn.Notifications.Tests
 
             HttpResponseMessage response = await client.SendAsync(reqst);
             Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        }
-
-        public static HttpClient GetTestClient(
-            CustomWebApplicationFactory<Altinn.Notifications.Controllers.NotificationsController> customFactory)
-        {
-            WebApplicationFactory<Altinn.Notifications.Controllers.NotificationsController> factory = customFactory.WithWebHostBuilder(builder =>
+            string content = await response.Content.ReadAsStringAsync();
+            var options = new JsonSerializerOptions
             {
-                string unitTestFolder =Path.GetDirectoryName(new Uri(typeof(EmailServiceMock).Assembly.Location).LocalPath);
-
-                builder.ConfigureAppConfiguration((context, conf) =>
-                {
-                    conf.AddJsonFile(unitTestFolder + "/appsettings.json", false);
-                });
-
-                builder.ConfigureTestServices(services =>
-                {
-                    services.AddSingleton<IEmail, EmailServiceMock>();
-                    services.AddSingleton<INotificationsRepository, NotificationRepositoryMock>();
-                });
-            });
-            factory.Server.AllowSynchronousIO = true;
-            return factory.CreateClient();
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            };
+            NotificationExt? notificationExtResponse = System.Text.Json.JsonSerializer.Deserialize<NotificationExt>(content, options);
+            Assert.Equal(notificationeExt.InstanceId, notificationExtResponse.InstanceId);
         }
     }
 }
