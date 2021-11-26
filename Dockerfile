@@ -17,6 +17,7 @@ RUN dotnet publish -c Release -o out ./src/Altinn.Notifications/Altinn.Notificat
 FROM mcr.microsoft.com/dotnet/aspnet:6.0.0-alpine3.14 AS final
 WORKDIR /app
 COPY --from=build-env /app/out .
+COPY src/Altinn.Notifications/Migration ./Migration
 RUN addgroup -g 3000 dotnet && adduser -u 1000 -G dotnet -D -s /bin/false dotnet
 USER dotnet
 ENTRYPOINT [ "dotnet", "Altinn.Notifications.dll" ]

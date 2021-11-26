@@ -11,13 +11,6 @@ namespace Altinn.Notifications.Persistence
 {
     public class NotificationRepository : INotificationsRepository
     {
-        private readonly string insertNotificationSql = "select * from notifications.insert_notification(@sendtime, @instanceid, @partyreference, @sender)";
-        private readonly string insertTargetSql = "select * from notifications.insert_target(@notificationid, @channeltype, @address, @sent)";
-        private readonly string insertMessageSql = "select * from notifications.insert_message(@notificationid, @emailsubject, @emailbody, @smstext, @language)";
-
-        private readonly string getNotificationSql = "select * from notifications.get_notification(@_id)";
-        private readonly string getUnsentTargetsSql = "select * from notifications.get_unsenttargets()";
-
         private readonly string _connectionString;
         
         private readonly ILogger _logger;
@@ -46,7 +39,8 @@ namespace Altinn.Notifications.Persistence
             using NpgsqlConnection conn = new NpgsqlConnection(_connectionString);
             
             await conn.OpenAsync();
-
+            
+            string insertNotificationSql = "select * from notifications.insert_notification(@sendtime, @instanceid, @partyreference, @sender)";
             NpgsqlCommand pgcom = new NpgsqlCommand(insertNotificationSql, conn);
             pgcom.Parameters.AddWithValue("sendtime", notification.SendTime);
 
@@ -85,7 +79,7 @@ namespace Altinn.Notifications.Persistence
             using NpgsqlConnection conn = new NpgsqlConnection(_connectionString);
             await conn.OpenAsync();
 
-            NpgsqlCommand pgcom = new NpgsqlCommand(getNotificationSql, conn);
+            NpgsqlCommand pgcom = new NpgsqlCommand("select * from notifications.get_notification(@_id)", conn);
             pgcom.Parameters.AddWithValue("_id", NpgsqlDbType.Integer, id);
 
             using (NpgsqlDataReader reader = pgcom.ExecuteReader())
@@ -130,7 +124,8 @@ namespace Altinn.Notifications.Persistence
             using NpgsqlConnection conn = new NpgsqlConnection(_connectionString);
 
             await conn.OpenAsync();
-
+            
+            string insertTargetSql = "select * from notifications.insert_target(@notificationid, @channeltype, @address, @sent)";
             NpgsqlCommand pgcom = new NpgsqlCommand(insertTargetSql, conn);
             pgcom.Parameters.AddWithValue("notificationid", target.NotificationId);
             pgcom.Parameters.AddWithValue("channeltype", target.ChannelType);
@@ -165,7 +160,8 @@ namespace Altinn.Notifications.Persistence
             using NpgsqlConnection conn = new NpgsqlConnection(_connectionString);
 
             await conn.OpenAsync();
-
+            
+            string insertMessageSql = "select * from notifications.insert_message(@notificationid, @emailsubject, @emailbody, @smstext, @language)";
             NpgsqlCommand pgcom = new NpgsqlCommand(insertMessageSql, conn);
             pgcom.Parameters.AddWithValue("notificationid", message.NotificationId);
 
@@ -212,7 +208,7 @@ namespace Altinn.Notifications.Persistence
             using NpgsqlConnection conn = new NpgsqlConnection(_connectionString);
             await conn.OpenAsync();
 
-            NpgsqlCommand pgcom = new NpgsqlCommand(getUnsentTargetsSql, conn);
+            NpgsqlCommand pgcom = new NpgsqlCommand("select * from notifications.get_unsenttargets()", conn);
 
             using (NpgsqlDataReader reader = pgcom.ExecuteReader())
             {
@@ -223,6 +219,27 @@ namespace Altinn.Notifications.Persistence
             }
 
             return unsentTargets;
+        }
+        
+        public async Task<Target> GetTarget(int targetId)
+        {
+            Target target = null;
+
+            using NpgsqlConnection conn = new NpgsqlConnection(_connectionString);
+            await conn.OpenAsync();
+
+            NpgsqlCommand pgcom = new NpgsqlCommand("select * from notifications.get_target(@_id)", conn);
+            pgcom.Parameters.AddWithValue("_id", NpgsqlDbType.Integer, targetId);
+
+            using (NpgsqlDataReader reader = pgcom.ExecuteReader())
+            {
+                if (reader.Read())
+                {
+                    target = ReadTarget(reader);
+                }
+            }
+
+            return target;
         }
 
         private static Notification ReadNotification(NpgsqlDataReader reader)
