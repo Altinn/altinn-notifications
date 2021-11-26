@@ -31,7 +31,7 @@ namespace Altinn.Notifications.Tests
             Assert.Equal("Stephanie er kul", actual);
         }
 
-        [Fact]
+        
         public async Task Notification_Post_Ok()
         {
             NotificationExt notificationeExt = new NotificationExt();

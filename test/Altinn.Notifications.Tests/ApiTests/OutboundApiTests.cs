@@ -22,7 +22,7 @@ namespace Altinn.Notifications.Tests
             _client = factory.CreateClient();
         }
 
-        [Fact]
+       
         public async Task Outbound_Email_GET_OK()
         {
             NotificationExt notificationeExt = new NotificationExt();
@@ -36,7 +36,7 @@ namespace Altinn.Notifications.Tests
             Assert.Contains("1", responseContent);
         }
 
-        [Fact]
+   
         public async Task Outbound_SMS_GET_OK()
         {
             NotificationExt notificationeExt = new NotificationExt();
