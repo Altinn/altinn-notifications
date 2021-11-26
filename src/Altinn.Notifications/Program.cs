@@ -39,21 +39,25 @@ NpgsqlLogManager.Provider = new ConsoleLoggingProvider(NpgsqlLogLevel.Trace, tru
 
 ConsoleTraceService traceService = new ConsoleTraceService { IsDebugEnabled = true };
 
-string connectionString = string.Format(
+if (builder.Configuration.GetValue<bool>("PostgreSQLSettings:EnableDBConnection"))
+{
+
+    string connectionString = string.Format(
     builder.Configuration.GetValue<string>("PostgreSQLSettings:AdminConnectionString"),
     builder.Configuration.GetValue<string>("PostgreSQLSettings:EventsDbAdminPwd"));
 
-app.UseYuniql(
-    new PostgreSqlDataService(traceService),
-    new PostgreSqlBulkImportService(traceService),
-    traceService,
-    new Yuniql.AspNetCore.Configuration
-    {
-        Workspace = Path.Combine(Environment.CurrentDirectory, builder.Configuration.GetValue<string>("PostgreSQLSettings:WorkspacePath")),
-        ConnectionString = connectionString,
-        IsAutoCreateDatabase = false,
-        IsDebug = true
-    });
+    app.UseYuniql(
+        new PostgreSqlDataService(traceService),
+        new PostgreSqlBulkImportService(traceService),
+        traceService,
+        new Yuniql.AspNetCore.Configuration
+        {
+            Workspace = Path.Combine(Environment.CurrentDirectory, builder.Configuration.GetValue<string>("PostgreSQLSettings:WorkspacePath")),
+            ConnectionString = connectionString,
+            IsAutoCreateDatabase = false,
+            IsDebug = true
+        });
+}
 
 app.UseAuthorization();
 
