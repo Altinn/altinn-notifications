@@ -10,6 +10,6 @@
         /// <summary>
         /// Password for app user for the postgres db
         /// </summary>
-        public string EventsDbPwd { get; set; }
+        public string NotificationsDbPwd { get; set; }
     }
 }
