@@ -11,10 +11,12 @@ namespace Altinn.Notifications.Core
 
     {
         private readonly INotificationsRepository _notificationsRepository;
+        private readonly IEmail _emailservice;
 
-        public NotificationsService(INotificationsRepository notificationsRepository)
+        public NotificationsService(INotificationsRepository notificationsRepository, IEmail emailservice)
         {
             _notificationsRepository = notificationsRepository;
+            _emailservice = emailservice;
         }
 
         public async Task<Notification> CreateNotification(Notification notification)
@@ -37,9 +39,15 @@ namespace Altinn.Notifications.Core
             return await _notificationsRepository.GetUnsentTargets();
         }
 
-        public Task Send(string targetId)
+        public async Task Send(string targetId)
         {
-            throw new NotImplementedException();
+            Target target = new Target();
+
+            Notification notication = await _notificationsRepository.GetNotification(target.NotificationId);
+
+            Message message = notication.Messages.FirstOrDefault(r => !string.IsNullOrEmpty(r.EmailSubject));
+
+            await _emailservice.SendEmailAsync(target.Address, message.EmailSubject, message.EmailBody);
         }
     }
 }
