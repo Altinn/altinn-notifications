@@ -10,7 +10,7 @@ namespace Altinn.Notifications.Core
     public  interface INotifications
     {
 
-        public void CreateNotification(Notification notification);
+        public Notification CreateNotification(Notification notification);
 
         public List<string> GetSmsTarget();
 
