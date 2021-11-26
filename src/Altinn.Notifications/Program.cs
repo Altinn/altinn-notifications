@@ -1,10 +1,17 @@
 using System.Text.Json.Serialization;
 
+using Altinn.Common.AccessToken.Configuration;
+
 using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core;
 using Altinn.Notifications.Integrations;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Persistence;
+
+using Microsoft.Azure.KeyVault;
+using Microsoft.Azure.KeyVault.Models;
+using Microsoft.Azure.Services.AppAuthentication;
+using Microsoft.Extensions.Configuration.AzureKeyVault;
 
 using Npgsql.Logging;
 
@@ -13,14 +20,16 @@ using Yuniql.PostgreSql;
 
 ILogger logger;
 
-var builder = WebApplication.CreateBuilder(args);
+string vaultApplicationInsightsKey = "ApplicationInsights--InstrumentationKey";
 
-// Add services to the container.
+string applicationInsightsKey = string.Empty;
+
+var builder = WebApplication.CreateBuilder(args);
 
 ConfigureSetupLogging();
 ConfigureLogging(builder.Logging);
 ConfigureServices(builder.Services, builder.Configuration);
-
+SetConfigurationProviders(builder.Configuration);
 builder.Services.AddControllers();
 
 builder.Services.AddEndpointsApiExplorer();
@@ -44,7 +53,7 @@ if (builder.Configuration.GetValue<bool>("PostgreSQLSettings:EnableDBConnection"
 
     string connectionString = string.Format(
     builder.Configuration.GetValue<string>("PostgreSQLSettings:AdminConnectionString"),
-    builder.Configuration.GetValue<string>("PostgreSQLSettings:EventsDbAdminPwd"));
+    builder.Configuration.GetValue<string>("PostgreSQLSettings:NotificationsDbAdminPwd"));
 
     app.UseYuniql(
         new PostgreSqlDataService(traceService),
@@ -111,4 +120,61 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     services.AddSingleton<IEmail, EmailSmtp>();
     services.AddSingleton<INotifications, NotificationsService>();
     services.AddSingleton<INotificationsRepository, NotificationRepository>();
+}
+
+void SetConfigurationProviders(ConfigurationManager config)
+{
+    string basePath = Directory.GetParent(Directory.GetCurrentDirectory()).FullName;
+    config.SetBasePath(basePath);
+    config.AddJsonFile(basePath + "altinn-appsettings/altinn-dbsettings-secret.json", optional: true, reloadOnChange: true);
+    if (basePath == "/")
+    {
+        config.AddJsonFile(basePath + "app/appsettings.json", optional: false, reloadOnChange: true);
+    }
+    else
+    {
+        config.AddJsonFile(Directory.GetCurrentDirectory() + "/appsettings.json", optional: false, reloadOnChange: true);
+    }
+
+    config.AddEnvironmentVariables();
+
+    ConnectToKeyVaultAndSetApplicationInsights(config);
+
+    config.AddCommandLine(args);
+}
+
+
+
+void ConnectToKeyVaultAndSetApplicationInsights(ConfigurationManager config)
+{
+   KeyVaultSettings keyVaultSettings = new KeyVaultSettings();
+    config.GetSection("kvSetting").Bind(keyVaultSettings);
+    if (!string.IsNullOrEmpty(keyVaultSettings.ClientId) &&
+        !string.IsNullOrEmpty(keyVaultSettings.TenantId) &&
+        !string.IsNullOrEmpty(keyVaultSettings.ClientSecret) &&
+        !string.IsNullOrEmpty(keyVaultSettings.SecretUri))
+    {
+        logger.LogInformation("Program // Configure key vault client // App");
+
+        string connectionString = $"RunAs=App;AppId={keyVaultSettings.ClientId};" +
+                                  $"TenantId={keyVaultSettings.TenantId};" +
+                                  $"AppKey={keyVaultSettings.ClientSecret}";
+        AzureServiceTokenProvider azureServiceTokenProvider = new AzureServiceTokenProvider(connectionString);
+        KeyVaultClient keyVaultClient = new KeyVaultClient(
+            new KeyVaultClient.AuthenticationCallback(
+                azureServiceTokenProvider.KeyVaultTokenCallback));
+        config.AddAzureKeyVault(
+            keyVaultSettings.SecretUri, keyVaultClient, new DefaultKeyVaultSecretManager());
+        try
+        {
+            SecretBundle secretBundle = keyVaultClient
+                .GetSecretAsync(keyVaultSettings.SecretUri, vaultApplicationInsightsKey).Result;
+
+            applicationInsightsKey = secretBundle.Value;
+        }
+        catch (Exception vaultException)
+        {
+            logger.LogError($"Unable to read application insights key {vaultException}");
+        }
+    }
 }
