@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Altinn.Notifications.Core;
+using Microsoft.AspNetCore.Mvc;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -8,10 +9,18 @@ namespace Altinn.Notifications.Controllers
     [ApiController]
     public class SendController : ControllerBase
     {
+        private readonly INotifications _notificationsService;
+
+        public SendController(INotifications notificationService)
+        {
+            _notificationsService = notificationService;
+        }
+
         // POST api/<SendController>
         [HttpPost]
-        public ObjectResult Post([FromBody] string value)
+        public async Task<ObjectResult> Post([FromBody] string value)
         {
+            await _notificationsService.Send(value);
             return Ok("sendt");
         }
     }
