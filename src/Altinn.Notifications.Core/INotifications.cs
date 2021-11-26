@@ -12,9 +12,9 @@ namespace Altinn.Notifications.Core
 
         public Task<Notification> CreateNotification(Notification notification);
 
-        public Task<List<string>> GetSmsTarget();
+        public Task<List<Target>> GetUnsentSmsTargets();
 
-        public Task<List<string>> GetEmailTarget();
+        public Task<List<Target>> GetUnsentEmailTargets();
 
         public Task Send(string targetId);
 

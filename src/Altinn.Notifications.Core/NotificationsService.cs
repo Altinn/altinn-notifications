@@ -8,25 +8,33 @@ using System.Threading.Tasks;
 namespace Altinn.Notifications.Core
 {
     internal class NotificationsService : INotifications
+
     {
-        public Task<Notification> CreateNotification(Notification notification)
+        private readonly INotificationsRepository _notificationsRepository;
+
+        public NotificationsService(INotificationsRepository notificationsRepository)
         {
-            throw new NotImplementedException();
+            _notificationsRepository = notificationsRepository;
         }
 
-        public Task<List<string>> GetEmailTarget()
+        public async Task<Notification> CreateNotification(Notification notification)
         {
-            throw new NotImplementedException();
+           return await _notificationsRepository.AddNotification(notification);
         }
 
-        public Task<Notification> GetNotification(int notificationId)
+        public async Task<List<Target>> GetUnsentEmailTargets()
         {
-            throw new NotImplementedException();
+           return await _notificationsRepository.GetUnsentTargets();
         }
 
-        public Task<List<string>> GetSmsTarget()
+        public async Task<Notification> GetNotification(int notificationId)
         {
-            throw new NotImplementedException();
+            return await _notificationsRepository.GetNotification(notificationId);
+        }
+
+        public async Task<List<Target>> GetUnsentSmsTargets()
+        {
+            return await _notificationsRepository.GetUnsentTargets();
         }
 
         public Task Send(string targetId)
