@@ -17,7 +17,7 @@ namespace Altinn.Notifications.Persistence
 
         public NotificationRepository(IOptions<PostgreSQLSettings> postgresSettings, ILogger<NotificationRepository> logger)
         {
-            _connectionString = string.Format(postgresSettings.Value.ConnectionString, postgresSettings.Value.EventsDbPwd);
+            _connectionString = string.Format(postgresSettings.Value.ConnectionString, postgresSettings.Value.NotificationsDbPwd);
 
             _logger = logger;
         }
