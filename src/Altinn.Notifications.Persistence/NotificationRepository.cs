@@ -89,9 +89,35 @@ namespace Altinn.Notifications.Persistence
 
             using (NpgsqlDataReader reader = pgcom.ExecuteReader())
             {
-                while (reader.Read())
+                if (reader.Read())
                 {
                     notification = ReadNotification(reader);
+
+                    do
+                    {
+                        int targetId = reader.GetValue<int>("targetid");
+                        if (notification.Targets.All(t => t.Id != targetId))
+                        {
+                            Target target = new Target();
+                            target.Id = targetId;
+                            target.ChannelType = reader.GetValue<string>("channeltype");
+                            target.Address = reader.GetValue<string>("address");
+                            target.Sent = reader.GetValue<DateTime>("sent").ToUniversalTime();
+                            notification.Targets.Add(target);
+                        }
+
+                        int messageId = reader.GetValue<int>("messageid");
+                        if (notification.Messages.All(m => m.Id != messageId))
+                        {
+                            Message message = new Message();
+                            message.Id = messageId;
+                            message.EmailSubject = reader.GetValue<string>("emailsubject");
+                            message.EmailBody = reader.GetValue<string>("emailbody");
+                            message.SmsText = reader.GetValue<string>("smstext");
+                            message.Language = reader.GetValue<string>("language");
+                            notification.Messages.Add(message);
+                        }
+                    } while (reader.Read());
                 }
             }
 

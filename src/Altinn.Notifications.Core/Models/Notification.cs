@@ -6,7 +6,7 @@
 
         public DateTime SendTime { get; set; }
 
-        public List<Message> Texts { get; set; } = new List<Message>();
+        public List<Message> Messages { get; set; } = new List<Message>();
 
         public List<Target> Targets { get; set; } = new List<Target>();
 

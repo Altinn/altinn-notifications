@@ -6,5 +6,5 @@ if [ ! "$(docker ps -q -f name=notificationsdb)" ]; then
     sleep 5
 fi
 
-
-psql "host=localhost port=5432 dbname=postgres user=postgres password=testpassword" -f init.sql
+SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+psql "host=localhost port=5432 dbname=postgres user=postgres password=testpassword" -f ${SCRIPT_DIR}/init.sql

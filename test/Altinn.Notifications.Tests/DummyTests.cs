@@ -26,7 +26,7 @@ namespace Altinn.Notifications.Tests
         }
 
         /// <summary>
-        /// This test depends on a running database server.
+        /// This test depends on a running database server. It was used to test the data access code and database entities.
         /// </summary>
         ///[Fact]
         public async Task AddNotification_ActualServer()
@@ -49,7 +49,7 @@ namespace Altinn.Notifications.Tests
         }
 
         /// <summary>
-        /// This test depends on a running database server.
+        /// This test depends on a running database server. It was used to test the data access code and database entities.
         /// </summary>
         ///[Fact]
         public async Task AddTarget_ActualServer()
@@ -70,7 +70,7 @@ namespace Altinn.Notifications.Tests
         }
 
         /// <summary>
-        /// This test depends on a running database server.
+        /// This test depends on a running database server. It was used to test the data access code and database entities.
         /// </summary>
         ///[Fact]
         public async Task AddMessage_ActualServer()
@@ -92,7 +92,7 @@ namespace Altinn.Notifications.Tests
         }
 
         /// <summary>
-        /// This test depends on a running database server.
+        /// This test depends on a running database server. It was used to test the data access code and database entities.
         /// </summary>
         ///[Fact]
         public async Task GetNotification_ActualServer()
@@ -102,7 +102,7 @@ namespace Altinn.Notifications.Tests
             Mock<ILogger<NotificationRepository>> logger = new Mock<ILogger<NotificationRepository>>();
             NotificationRepository target = new NotificationRepository(connectionString, logger.Object);
 
-            Notification actual = await target.GetNotification(2);
+            Notification actual = await target.GetNotification(1);
 
             Assert.NotNull(actual);
 
