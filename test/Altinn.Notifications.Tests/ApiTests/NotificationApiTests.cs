@@ -1,7 +1,13 @@
-﻿using Altinn.Notifications.Interfaces.Models;
+﻿using Altinn.Notifications.Core;
+using Altinn.Notifications.Interfaces.Models;
+using Altinn.Notifications.Tests.Mocks;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -23,27 +29,35 @@ namespace Altinn.Notifications.Tests
             _client = factory.CreateClient();
         }
 
-        [Fact]
-        public void InitialTest()
-        {
-            string actual = "Stephanie er kul";
-
-            Assert.Equal("Stephanie er kul", actual);
-        }
-
-        
         public async Task Notification_Post_Ok()
         {
             NotificationExt notificationeExt = new NotificationExt();
+
+            HttpClient client = GetTestClient(_factory);
 
             HttpRequestMessage reqst = new HttpRequestMessage(HttpMethod.Post, "notifications/api/v1/notifications/")
             {
                 Content = new StringContent(System.Text.Json.JsonSerializer.Serialize(notificationeExt), Encoding.UTF8, "application/json")
             };
 
-            HttpResponseMessage response = await _client.SendAsync(reqst);
-            string responseContent = await response.Content.ReadAsStringAsync();
-            Assert.Contains("Hurra", responseContent);
+            HttpResponseMessage response = await client.SendAsync(reqst);
+            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        }
+
+        public static HttpClient GetTestClient(
+            CustomWebApplicationFactory<Altinn.Notifications.Controllers.NotificationsController> customFactory)
+        {
+            WebApplicationFactory<Altinn.Notifications.Controllers.NotificationsController> factory = customFactory.WithWebHostBuilder(builder =>
+            {
+              
+                builder.ConfigureTestServices(services =>
+                {
+                    services.AddSingleton<IEmail, EmailServiceMock>();
+                    services.AddSingleton<INotificationsRepository, NotificationRepositoryMock>();
+                });
+            });
+            factory.Server.AllowSynchronousIO = true;
+            return factory.CreateClient();
         }
     }
 }

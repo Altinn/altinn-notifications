@@ -5,7 +5,7 @@ namespace Altinn.Notifications.Integrations.Configuration
     /// <summary>
     /// Configuration for the SMTP client
     /// </summary>
-    public class SmtpConfiguration
+    public class SmtpSettings
     {
         /// <summary>
         /// Gets or sets the SMTP host

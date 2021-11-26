@@ -5,6 +5,7 @@ using Altinn.Common.AccessToken.Configuration;
 using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core;
 using Altinn.Notifications.Integrations;
+using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Persistence;
 
 using Microsoft.Azure.KeyVault;
@@ -47,21 +48,25 @@ NpgsqlLogManager.Provider = new ConsoleLoggingProvider(NpgsqlLogLevel.Trace, tru
 
 ConsoleTraceService traceService = new ConsoleTraceService { IsDebugEnabled = true };
 
-string connectionString = string.Format(
+if (builder.Configuration.GetValue<bool>("PostgreSQLSettings:EnableDBConnection"))
+{
+
+    string connectionString = string.Format(
     builder.Configuration.GetValue<string>("PostgreSQLSettings:AdminConnectionString"),
     builder.Configuration.GetValue<string>("PostgreSQLSettings:EventsDbAdminPwd"));
 
-app.UseYuniql(
-    new PostgreSqlDataService(traceService),
-    new PostgreSqlBulkImportService(traceService),
-    traceService,
-    new Yuniql.AspNetCore.Configuration
-    {
-        Workspace = Path.Combine(Environment.CurrentDirectory, builder.Configuration.GetValue<string>("PostgreSQLSettings:WorkspacePath")),
-        ConnectionString = connectionString,
-        IsAutoCreateDatabase = false,
-        IsDebug = true
-    });
+    app.UseYuniql(
+        new PostgreSqlDataService(traceService),
+        new PostgreSqlBulkImportService(traceService),
+        traceService,
+        new Yuniql.AspNetCore.Configuration
+        {
+            Workspace = Path.Combine(Environment.CurrentDirectory, builder.Configuration.GetValue<string>("PostgreSQLSettings:WorkspacePath")),
+            ConnectionString = connectionString,
+            IsAutoCreateDatabase = false,
+            IsDebug = true
+        });
+}
 
 app.UseAuthorization();
 
@@ -110,6 +115,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     services.AddSingleton(config);
 
     services.Configure<PostgreSQLSettings>(config.GetSection("PostgreSQLSettings"));
+    services.Configure<SmtpSettings>(config.GetSection("SmtpSettings"));
 
     services.AddSingleton<IEmail, EmailSmtp>();
     services.AddSingleton<INotifications, NotificationsService>();
