@@ -31,21 +31,21 @@ namespace Altinn.Notifications.Tests
         ///[Fact]
         public async Task AddNotification_ActualServer()
         {
-            const string connectionString = "Host=localhost;Port=5432;Username=platform_notifications;Password=Password;Database=notificationsdb";
+            ////const string connectionString = "Host=localhost;Port=5432;Username=platform_notifications;Password=Password;Database=notificationsdb";
 
-            Mock<ILogger<NotificationRepository>> logger = new Mock<ILogger<NotificationRepository>>();
-            NotificationRepository target = new NotificationRepository(connectionString, logger.Object);
+            ////Mock<ILogger<NotificationRepository>> logger = new Mock<ILogger<NotificationRepository>>();
+            ////NotificationRepository target = new NotificationRepository(connectionString, logger.Object);
 
-            Notification notification = new()
-            {
-                SendTime = DateTime.UtcNow,
-                InstanceId = "averyvierdinstanceid",
-                Sender = "sender"
-            };
+            ////Notification notification = new()
+            ////{
+            ////    SendTime = DateTime.UtcNow,
+            ////    InstanceId = "averyvierdinstanceid",
+            ////    Sender = "sender"
+            ////};
 
-            Notification actual = await target.AddNotification(notification);
+            ////Notification actual = await target.AddNotification(notification);
 
-            Assert.NotNull(actual);
+            ////Assert.NotNull(actual);
         }
 
         /// <summary>
@@ -54,19 +54,19 @@ namespace Altinn.Notifications.Tests
         ///[Fact]
         public async Task AddTarget_ActualServer()
         {
-            const string connectionString = "Host=localhost;Port=5432;Username=platform_notifications;Password=Password;Database=notificationsdb";
+            ////const string connectionString = "Host=localhost;Port=5432;Username=platform_notifications;Password=Password;Database=notificationsdb";
 
-            Mock<ILogger<NotificationRepository>> logger = new Mock<ILogger<NotificationRepository>>();
-            NotificationRepository targeted = new NotificationRepository(connectionString, logger.Object);
+            ////Mock<ILogger<NotificationRepository>> logger = new Mock<ILogger<NotificationRepository>>();
+            ////NotificationRepository targeted = new NotificationRepository(connectionString, logger.Object);
 
-            Target target = new Target();
-            target.NotificationId = 234;
-            target.ChannelType = "SMS";
-            target.Address = "terje er kul";
+            ////Target target = new Target();
+            ////target.NotificationId = 234;
+            ////target.ChannelType = "SMS";
+            ////target.Address = "terje er kul";
 
-            Target actual = await targeted.AddTarget(target);
+            ////Target actual = await targeted.AddTarget(target);
 
-            Assert.NotNull(actual);
+            ////Assert.NotNull(actual);
         }
 
         /// <summary>
@@ -75,20 +75,20 @@ namespace Altinn.Notifications.Tests
         ///[Fact]
         public async Task AddMessage_ActualServer()
         {
-            const string connectionString = "Host=localhost;Port=5432;Username=platform_notifications;Password=Password;Database=notificationsdb";
+            ////const string connectionString = "Host=localhost;Port=5432;Username=platform_notifications;Password=Password;Database=notificationsdb";
 
-            Mock<ILogger<NotificationRepository>> logger = new Mock<ILogger<NotificationRepository>>();
-            NotificationRepository targeted = new NotificationRepository(connectionString, logger.Object);
+            ////Mock<ILogger<NotificationRepository>> logger = new Mock<ILogger<NotificationRepository>>();
+            ////NotificationRepository targeted = new NotificationRepository(connectionString, logger.Object);
 
-            Message message = new Message();
-            message.NotificationId = 234;
-            message.EmailSubject = "The coolest";
-            message.EmailBody = "terje er kul";
-            message.Language = "nb";
+            ////Message message = new Message();
+            ////message.NotificationId = 234;
+            ////message.EmailSubject = "The coolest";
+            ////message.EmailBody = "terje er kul";
+            ////message.Language = "nb";
 
-            Message actual = await targeted.AddMessage(message);
+            ////Message actual = await targeted.AddMessage(message);
 
-            Assert.NotNull(actual);
+            ////Assert.NotNull(actual);
         }
 
         /// <summary>
@@ -97,16 +97,16 @@ namespace Altinn.Notifications.Tests
         ///[Fact]
         public async Task GetNotification_ActualServer()
         {
-            const string connectionString = "Host=localhost;Port=5432;Username=platform_notifications;Password=Password;Database=notificationsdb";
+            ////const string connectionString = "Host=localhost;Port=5432;Username=platform_notifications;Password=Password;Database=notificationsdb";
 
-            Mock<ILogger<NotificationRepository>> logger = new Mock<ILogger<NotificationRepository>>();
-            NotificationRepository target = new NotificationRepository(connectionString, logger.Object);
+            ////Mock<ILogger<NotificationRepository>> logger = new Mock<ILogger<NotificationRepository>>();
+            ////NotificationRepository target = new NotificationRepository(connectionString, logger.Object);
 
-            Notification actual = await target.GetNotification(1);
+            ////Notification actual = await target.GetNotification(1);
 
-            Assert.NotNull(actual);
+            ////Assert.NotNull(actual);
 
-            Assert.Equal("averyvierdinstanceid", actual.InstanceId);
+            ////Assert.Equal("averyvierdinstanceid", actual.InstanceId);
         }
 
         /// <summary>
@@ -115,14 +115,14 @@ namespace Altinn.Notifications.Tests
         ///[Fact]
         public async Task GetTarget_ActualServer()
         {
-            const string connectionString = "Host=localhost;Port=5432;Username=platform_notifications;Password=Password;Database=notificationsdb";
+            ////const string connectionString = "Host=localhost;Port=5432;Username=platform_notifications;Password=Password;Database=notificationsdb";
 
-            Mock<ILogger<NotificationRepository>> logger = new Mock<ILogger<NotificationRepository>>();
-            NotificationRepository target = new NotificationRepository(connectionString, logger.Object);
+            ////Mock<ILogger<NotificationRepository>> logger = new Mock<ILogger<NotificationRepository>>();
+            ////NotificationRepository target = new NotificationRepository(connectionString, logger.Object);
 
-            Target actual = await target.GetTarget(2);
+            ////Target actual = await target.GetTarget(2);
 
-            Assert.NotNull(actual);
+            ////Assert.NotNull(actual);
         }
 
         /// <summary>
@@ -131,14 +131,14 @@ namespace Altinn.Notifications.Tests
         ///[Fact]
         public async Task GetUnsentTargets_ActualServer()
         {
-            const string connectionString = "Host=localhost;Port=5432;Username=platform_notifications;Password=Password;Database=notificationsdb";
+            ////const string connectionString = "Host=localhost;Port=5432;Username=platform_notifications;Password=Password;Database=notificationsdb";
 
-            Mock<ILogger<NotificationRepository>> logger = new Mock<ILogger<NotificationRepository>>();
-            NotificationRepository target = new NotificationRepository(connectionString, logger.Object);
+            ////Mock<ILogger<NotificationRepository>> logger = new Mock<ILogger<NotificationRepository>>();
+            ////NotificationRepository target = new NotificationRepository(connectionString, logger.Object);
 
-            List<Target> actual = await target.GetUnsentTargets();
+            ////List<Target> actual = await target.GetUnsentTargets();
 
-            Assert.NotNull(actual);
+            ////Assert.NotNull(actual);
         }
     }
 }
