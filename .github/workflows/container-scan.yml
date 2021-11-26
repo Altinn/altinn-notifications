@@ -1,0 +1,27 @@
+name: Notifications scan
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/**'
+      - 'Dockerfile'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'src/**'
+      - 'Dockerfile'
+  schedule:
+    - cron: '0 8 * * 1,4'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build the Docker image
+      run: docker build --tag altinn-notifications:${{github.sha}}
+
+    - uses: Azure/container-scan@v0
+      with:
+        image-name: altinn-notifications:${{ github.sha }}
