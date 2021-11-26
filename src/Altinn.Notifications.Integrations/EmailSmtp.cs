@@ -13,22 +13,22 @@ namespace Altinn.Notifications.Integrations
     /// </summary>≈
     public class EmailSmtp : IEmail
     {
-        private readonly SmtpConfiguration _smtpConfiguration;
+        private readonly SmtpSettings _smtpSettings;
 
-        public EmailSmtp(IOptions<SmtpConfiguration> smtpConfiguration)
+        public EmailSmtp(IOptions<SmtpSettings> smtpSettings)
         {
-            _smtpConfiguration = smtpConfiguration.Value;
+            _smtpSettings = smtpSettings.Value;
         }
 
         /// <inheritdoc/>
         public async Task<bool> SendEmailAsync(string address, string subject, string body, CancellationToken cancellationToken)
         {
             MailMessage msg = new MailMessage();
-            msg.From = new MailAddress(_smtpConfiguration.Sender);
+            msg.From = new MailAddress(_smtpSettings.Sender);
             msg.To.Add(new MailAddress(address));
             msg.Subject = subject;
             msg.Body = body;
-            SmtpClient client = new SmtpClient(_smtpConfiguration.Host, _smtpConfiguration.Port);
+            SmtpClient client = new SmtpClient(_smtpSettings.Host, _smtpSettings.Port);
             client.UseDefaultCredentials = true;
             await client.SendMailAsync(msg, cancellationToken);
             return true;
