@@ -20,7 +20,7 @@ namespace Altinn.Notifications.Controllers
         [HttpPost]
         public async Task<ObjectResult> Post([FromBody] string value)
         {
-            await _notificationsService.Send(value);
+            await _notificationsService.Send(Convert.ToInt32(value));
             return Ok("sendt");
         }
     }

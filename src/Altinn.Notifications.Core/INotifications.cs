@@ -16,7 +16,7 @@ namespace Altinn.Notifications.Core
 
         public Task<List<Target>> GetUnsentEmailTargets();
 
-        public Task Send(string targetId);
+        public Task Send(int targetId);
 
         public Task<Notification> GetNotification(int notificationId);
     }

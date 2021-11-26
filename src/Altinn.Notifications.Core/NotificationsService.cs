@@ -39,9 +39,9 @@ namespace Altinn.Notifications.Core
             return await _notificationsRepository.GetUnsentTargets();
         }
 
-        public async Task Send(string targetId)
+        public async Task Send(int targetId)
         {
-            Target target = new Target();
+            Target target = await _notificationsRepository.GetTarget(targetId);
 
             Notification notication = await _notificationsRepository.GetNotification(target.NotificationId);
 
