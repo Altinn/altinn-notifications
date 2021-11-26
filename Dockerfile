@@ -12,7 +12,7 @@ RUN dotnet restore ./src/Altinn.Notifications/Altinn.Notifications.csproj
 # Copy everything else and build
 COPY src ./src
 RUN dotnet publish -c Release -o out ./src/Altinn.Notifications/Altinn.Notifications.csproj
-
+# check scan
 # Build runtime image
 FROM mcr.microsoft.com/dotnet/aspnet:6.0.0-alpine3.14 AS final
 WORKDIR /app
