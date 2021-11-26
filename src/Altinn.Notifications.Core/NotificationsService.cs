@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Altinn.Notifications.Core
 {
-    internal class NotificationsService : INotifications
+    public class NotificationsService : INotifications
 
     {
         private readonly INotificationsRepository _notificationsRepository;
