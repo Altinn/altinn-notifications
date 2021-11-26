@@ -162,7 +162,6 @@ namespace Altinn.Notifications.Controllers
                 {
                     messagesExt.Add(GetMessage(message));
                 }
-
             }
 
             return messagesExt;
