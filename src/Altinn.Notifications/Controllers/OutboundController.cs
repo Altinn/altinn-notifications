@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Altinn.Notifications.Core;
+using Altinn.Notifications.Core.Models;
+using Microsoft.AspNetCore.Mvc;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -8,6 +10,12 @@ namespace Altinn.Notifications.Controllers
     [ApiController]
     public class OutboundController : ControllerBase
     {
+        private readonly INotifications _notificationsService;
+
+        public OutboundController(INotifications notificationService)
+        {
+            _notificationsService = notificationService;
+        }
 
         [HttpGet("sms")]
         public IEnumerable<string> GetOutboundSms()
@@ -20,13 +28,19 @@ namespace Altinn.Notifications.Controllers
         }
 
         [HttpGet("email")]
-        public IEnumerable<string> GetOutboundEmail()
+        public async Task<IEnumerable<string>> GetOutboundEmail()
         {
-            List<string> result = new List<string>();
-            result.Add("1");
-            result.Add("2");
-            result.Add("3");
-            return result;
+
+           List<Target> targets = await  _notificationsService.GetUnsentEmailTargets();
+
+            List<string> unsentTargets = new List<string>();
+
+            foreach(Target target in targets)
+            {
+                unsentTargets.Add(target.Id.ToString());
+            }
+
+            return unsentTargets;
         }
     }
 }

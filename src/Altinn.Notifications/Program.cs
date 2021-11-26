@@ -1,6 +1,8 @@
 using System.Text.Json.Serialization;
 
 using Altinn.Notifications.Configuration;
+using Altinn.Notifications.Core;
+using Altinn.Notifications.Integrations;
 using Altinn.Notifications.Persistence;
 
 using Npgsql.Logging;
@@ -99,4 +101,8 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     services.AddSingleton(config);
 
     services.Configure<PostgreSQLSettings>(config.GetSection("PostgreSQLSettings"));
+
+    services.AddSingleton<IEmail, EmailSmtp>();
+    services.AddSingleton<INotifications, NotificationsService>();
+    services.AddSingleton<INotificationsRepository, NotificationRepository>();
 }
