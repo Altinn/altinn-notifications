@@ -48,6 +48,7 @@ namespace Altinn.Notifications.Controllers
         {
             Notification notification = new Notification()
             {
+                InstanceId = notificationExt.InstanceId,
                 Messages = GetMessages(notificationExt.Messages),
                 Targets = GetTargets(notificationExt.Targets)
             };
