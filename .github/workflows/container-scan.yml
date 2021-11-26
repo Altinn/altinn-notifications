@@ -5,10 +5,12 @@ on:
     branches: [ main ]
     paths:
       - 'src/**'
+      - 'Dockerfile'
   pull_request:
     branches: [ main ]
     paths:
       - 'src/**'
+      - 'Dockerfile'
   schedule:
     - cron: '0 8 * * 1,4'
 
