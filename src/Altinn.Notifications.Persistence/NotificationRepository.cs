@@ -22,18 +22,6 @@ namespace Altinn.Notifications.Persistence
             _logger = logger;
         }
 
-        /// <summary>
-        /// Remporarily created constructor to simplyfy testing.
-        /// </summary>
-        /// <param name="connectionString">Connection string</param>
-        /// <param name="logger">Logger</param>
-        public NotificationRepository(string connectionString, ILogger<NotificationRepository> logger)
-        {
-            _connectionString = connectionString;
-
-            _logger = logger;
-        }
-
         public async Task<Notification> AddNotification(Notification notification)
         {
             using NpgsqlConnection conn = new NpgsqlConnection(_connectionString);
