@@ -9,27 +9,27 @@ namespace Altinn.Notifications.Core
 {
     internal class NotificationsService : INotifications
     {
-        public Notification CreateNotification(Notification notification)
+        public Task<Notification> CreateNotification(Notification notification)
         {
             throw new NotImplementedException();
         }
 
-        public List<string> GetEmailTarget()
+        public Task<List<string>> GetEmailTarget()
         {
             throw new NotImplementedException();
         }
 
-        public Notification GetNotification(int notificationId)
+        public Task<Notification> GetNotification(int notificationId)
         {
             throw new NotImplementedException();
         }
 
-        public List<string> GetSmsTarget()
+        public Task<List<string>> GetSmsTarget()
         {
             throw new NotImplementedException();
         }
 
-        public void Send(string targetId)
+        public Task Send(string targetId)
         {
             throw new NotImplementedException();
         }

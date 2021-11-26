@@ -10,14 +10,14 @@ namespace Altinn.Notifications.Core
     public  interface INotifications
     {
 
-        public Notification CreateNotification(Notification notification);
+        public Task<Notification> CreateNotification(Notification notification);
 
-        public List<string> GetSmsTarget();
+        public Task<List<string>> GetSmsTarget();
 
-        public List<string> GetEmailTarget();
+        public Task<List<string>> GetEmailTarget();
 
-        public void Send(string targetId);
+        public Task Send(string targetId);
 
-        public Notification GetNotification(int notificationId);
+        public Task<Notification> GetNotification(int notificationId);
     }
 }
