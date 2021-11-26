@@ -8,30 +8,46 @@ using System.Threading.Tasks;
 namespace Altinn.Notifications.Core
 {
     internal class NotificationsService : INotifications
+
     {
-        public Task<Notification> CreateNotification(Notification notification)
+        private readonly INotificationsRepository _notificationsRepository;
+        private readonly IEmail _emailservice;
+
+        public NotificationsService(INotificationsRepository notificationsRepository, IEmail emailservice)
         {
-            throw new NotImplementedException();
+            _notificationsRepository = notificationsRepository;
+            _emailservice = emailservice;
         }
 
-        public Task<List<string>> GetEmailTarget()
+        public async Task<Notification> CreateNotification(Notification notification)
         {
-            throw new NotImplementedException();
+           return await _notificationsRepository.AddNotification(notification);
         }
 
-        public Task<Notification> GetNotification(int notificationId)
+        public async Task<List<Target>> GetUnsentEmailTargets()
         {
-            throw new NotImplementedException();
+           return await _notificationsRepository.GetUnsentTargets();
         }
 
-        public Task<List<string>> GetSmsTarget()
+        public async Task<Notification> GetNotification(int notificationId)
         {
-            throw new NotImplementedException();
+            return await _notificationsRepository.GetNotification(notificationId);
         }
 
-        public Task Send(string targetId)
+        public async Task<List<Target>> GetUnsentSmsTargets()
         {
-            throw new NotImplementedException();
+            return await _notificationsRepository.GetUnsentTargets();
+        }
+
+        public async Task Send(string targetId)
+        {
+            Target target = new Target();
+
+            Notification notication = await _notificationsRepository.GetNotification(target.NotificationId);
+
+            Message message = notication.Messages.FirstOrDefault(r => !string.IsNullOrEmpty(r.EmailSubject));
+
+            await _emailservice.SendEmailAsync(target.Address, message.EmailSubject, message.EmailBody);
         }
     }
 }

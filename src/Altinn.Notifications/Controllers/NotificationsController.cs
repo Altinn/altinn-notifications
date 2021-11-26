@@ -48,7 +48,7 @@ namespace Altinn.Notifications.Controllers
         {
             Notification notification = new Notification()
             {
-                Texts = GetMessages(notificationExt.Messages),
+                Messages = GetMessages(notificationExt.Messages),
                 Targets = GetTargets(notificationExt.Targets)
             };
 
@@ -114,7 +114,7 @@ namespace Altinn.Notifications.Controllers
             NotificationExt notificationExt = new NotificationExt()
             {
                 InstanceId = notification.InstanceId,
-                Messages = GetMessages(notification.Texts),
+                Messages = GetMessages(notification.Messages),
                 Targets = GetTargets(notification.Targets)
             };
 
@@ -162,7 +162,6 @@ namespace Altinn.Notifications.Controllers
                 {
                     messagesExt.Add(GetMessage(message));
                 }
-
             }
 
             return messagesExt;
