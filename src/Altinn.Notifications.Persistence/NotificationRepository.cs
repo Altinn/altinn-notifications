@@ -94,10 +94,10 @@ namespace Altinn.Notifications.Persistence
                         if (notification.Targets.All(t => t.Id != targetId))
                         {
                             Target target = new Target();
+                            // Setting id values separately because the column names are different
                             target.Id = targetId;
-                            target.ChannelType = reader.GetValue<string>("channeltype");
-                            target.Address = reader.GetValue<string>("address");
-                            target.Sent = reader.GetValue<DateTime>("sent").ToUniversalTime();
+                            target.NotificationId = notification.Id;
+                            ReadTargetValues(target, reader);
                             notification.Targets.Add(target);
                         }
 
@@ -105,11 +105,10 @@ namespace Altinn.Notifications.Persistence
                         if (notification.Messages.All(m => m.Id != messageId))
                         {
                             Message message = new Message();
+                            // Setting id values separately because the column names are different
                             message.Id = messageId;
-                            message.EmailSubject = reader.GetValue<string>("emailsubject");
-                            message.EmailBody = reader.GetValue<string>("emailbody");
-                            message.SmsText = reader.GetValue<string>("smstext");
-                            message.Language = reader.GetValue<string>("language");
+                            message.NotificationId = notification.Id;
+                            ReadMessageValues(message, reader);
                             notification.Messages.Add(message);
                         }
                     } while (reader.Read());
@@ -258,10 +257,15 @@ namespace Altinn.Notifications.Persistence
             Target target = new Target();
             target.Id = reader.GetValue<int>("id");
             target.NotificationId = reader.GetValue<int>("notificationid");
+            ReadTargetValues(target, reader);
+            return target;
+        }
+
+        private static void ReadTargetValues(Target target, NpgsqlDataReader reader)
+        {
             target.ChannelType = reader.GetValue<string>("channeltype");
             target.Address = reader.GetValue<string>("address");
             target.Sent = reader.GetValue<DateTime>("sent").ToUniversalTime();
-            return target;
         }
 
         private static Message ReadMessage(NpgsqlDataReader reader)
@@ -269,11 +273,16 @@ namespace Altinn.Notifications.Persistence
             Message message = new Message();
             message.Id = reader.GetValue<int>("id");
             message.NotificationId = reader.GetValue<int>("notificationid");
+            ReadMessageValues(message, reader);
+            return message;
+        }
+
+        private static void ReadMessageValues(Message message, NpgsqlDataReader reader)
+        {
             message.EmailSubject = reader.GetValue<string>("emailsubject");
             message.EmailBody = reader.GetValue<string>("emailbody");
             message.SmsText = reader.GetValue<string>("smstext");
             message.Language = reader.GetValue<string>("language");
-            return message;
         }
     }
 }
