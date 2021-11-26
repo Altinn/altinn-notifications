@@ -53,7 +53,7 @@ if (builder.Configuration.GetValue<bool>("PostgreSQLSettings:EnableDBConnection"
 
     string connectionString = string.Format(
     builder.Configuration.GetValue<string>("PostgreSQLSettings:AdminConnectionString"),
-    builder.Configuration.GetValue<string>("PostgreSQLSettings:EventsDbAdminPwd"));
+    builder.Configuration.GetValue<string>("PostgreSQLSettings:NotificationsDbAdminPwd"));
 
     app.UseYuniql(
         new PostgreSqlDataService(traceService),
