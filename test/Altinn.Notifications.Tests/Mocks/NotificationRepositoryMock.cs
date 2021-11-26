@@ -40,7 +40,11 @@ namespace Altinn.Notifications.Tests.Mocks
 
         public Task<List<Target>> GetUnsentTargets()
         {
-            throw new NotImplementedException();
+            List<Target> targets = new List<Target>();
+            targets.Add(new Target() { ChannelType = "Email", Address = "demo@demo.no", Id = 1337 });
+            targets.Add(new Target() { ChannelType = "Email", Address = "demo2@demo.no", Id = 1338 });
+            targets.Add(new Target() { ChannelType = "Email", Address = "demo3@demo.no", Id = 1339 });
+            return Task.FromResult(targets);
         }
     }
 }
