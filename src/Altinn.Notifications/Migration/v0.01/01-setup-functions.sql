@@ -27,15 +27,25 @@ CREATE OR REPLACE FUNCTION notifications.get_notification(_id bigint)
         sendtime timestamptz, 
         instanceid character varying, 
         partyreference character varying, 
-        sender character varying)
+        sender character varying,
+        targetid bigint,
+        channeltype character varying,
+        "address" character varying,
+        "sent" timestamptz,
+        messageid bigint,
+        emailsubject character varying,
+        emailbody character varying,
+        smstext character varying,
+        "language" character varying)
     LANGUAGE 'plpgsql'
     
 AS $BODY$
 BEGIN
 return query 
-	SELECT n.id, n.sendtime, n.instanceid, n.partyreference, n.sender
+	SELECT n.id, n.sendtime, n.instanceid, n.partyreference, n.sender, t.id, t.channeltype, t."address", t."sent", m.id, m.emailsubject, m.emailbody, m.smstext, m."language"
 	FROM notifications.notifications n
     LEFT JOIN notifications.targets t ON n.id = t.notificationid
+    LEFT JOIN notifications.messages m ON n.id = m.notificationid
     WHERE n.id = _id;
 
 END;
