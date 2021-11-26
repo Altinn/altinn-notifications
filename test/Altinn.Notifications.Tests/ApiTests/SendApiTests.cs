@@ -23,7 +23,6 @@ namespace Altinn.Notifications.Tests
             _client = factory.CreateClient();
         }
 
-        [Fact]
         public async Task Send_Post_Ok()
         {
             NotificationExt notificationeExt = new NotificationExt();

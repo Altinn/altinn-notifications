@@ -8,22 +8,22 @@
         /// <summary>
         /// The email title for email notifications
         /// </summary>
-        public string EmailTitle    { get; set; }
+        public string? EmailSubject    { get; set; }
 
         /// <summary>
         /// The email body for email notofications. HTML
         /// </summary>
-        public string EmailBody { get; set; }
+        public string? EmailBody { get; set; }
 
         /// <summary>
         /// SMS Text message
         /// </summary>
-        public string SmsText { get; set; }
+        public string? SmsText { get; set; }
 
         /// <summary>
         /// Language 
         /// </summary>
-        public string Langauge { get; set; }
+        public string Langauge { get; set; } = "nb";
 
     }
 }
