@@ -84,20 +84,28 @@ namespace Altinn.Notifications.Tests
         ///[Fact]
         public async Task AddMessage_ActualServer()
         {
-            ////const string connectionString = "Host=localhost;Port=5432;Username=platform_notifications;Password=Password;Database=notificationsdb";
+            Mock<ILogger<NotificationRepository>> logger = new Mock<ILogger<NotificationRepository>>();
 
-            ////Mock<ILogger<NotificationRepository>> logger = new Mock<ILogger<NotificationRepository>>();
-            ////NotificationRepository targeted = new NotificationRepository(connectionString, logger.Object);
+            PostgreSQLSettings postgreSQLSettings = new()
+            {
+                ConnectionString = "Host=localhost;Port=5432;Username=platform_notifications;Password={0};Database=notificationsdb",
+                NotificationsDbPwd = "Password"
+            };
 
-            ////Message message = new Message();
-            ////message.NotificationId = 234;
-            ////message.EmailSubject = "The coolest";
-            ////message.EmailBody = "terje er kul";
-            ////message.Language = "nb";
+            Mock<IOptions<PostgreSQLSettings>> options = new();
+            options.Setup(s => s.Value).Returns(postgreSQLSettings);
 
-            ////Message actual = await targeted.AddMessage(message);
+            NotificationRepository targeted = new NotificationRepository(options.Object, logger.Object);
 
-            ////Assert.NotNull(actual);
+            Message message = new Message();
+            message.NotificationId = 234;
+            message.EmailSubject = "The coolest";
+            message.EmailBody = "terje er kul";
+            message.Language = "nb";
+
+            Message actual = await targeted.AddMessage(message);
+
+            Assert.NotNull(actual);
         }
 
         /// <summary>
@@ -106,16 +114,24 @@ namespace Altinn.Notifications.Tests
         ///[Fact]
         public async Task GetNotification_ActualServer()
         {
-            ////const string connectionString = "Host=localhost;Port=5432;Username=platform_notifications;Password=Password;Database=notificationsdb";
+            Mock<ILogger<NotificationRepository>> logger = new Mock<ILogger<NotificationRepository>>();
 
-            ////Mock<ILogger<NotificationRepository>> logger = new Mock<ILogger<NotificationRepository>>();
-            ////NotificationRepository target = new NotificationRepository(connectionString, logger.Object);
+            PostgreSQLSettings postgreSQLSettings = new()
+            {
+                ConnectionString = "Host=localhost;Port=5432;Username=platform_notifications;Password={0};Database=notificationsdb",
+                NotificationsDbPwd = "Password"
+            };
 
-            ////Notification actual = await target.GetNotification(1);
+            Mock<IOptions<PostgreSQLSettings>> options = new();
+            options.Setup(s => s.Value).Returns(postgreSQLSettings);
 
-            ////Assert.NotNull(actual);
+            NotificationRepository target = new NotificationRepository(options.Object, logger.Object);
 
-            ////Assert.Equal("averyvierdinstanceid", actual.InstanceId);
+            Notification actual = await target.GetNotification(1);
+
+            Assert.NotNull(actual);
+
+            Assert.Equal("averyvierdinstanceid", actual.InstanceId);
         }
 
         /// <summary>
@@ -124,14 +140,22 @@ namespace Altinn.Notifications.Tests
         ///[Fact]
         public async Task GetTarget_ActualServer()
         {
-            ////const string connectionString = "Host=localhost;Port=5432;Username=platform_notifications;Password=Password;Database=notificationsdb";
+            Mock<ILogger<NotificationRepository>> logger = new Mock<ILogger<NotificationRepository>>();
 
-            ////Mock<ILogger<NotificationRepository>> logger = new Mock<ILogger<NotificationRepository>>();
-            ////NotificationRepository target = new NotificationRepository(connectionString, logger.Object);
+            PostgreSQLSettings postgreSQLSettings = new()
+            {
+                ConnectionString = "Host=localhost;Port=5432;Username=platform_notifications;Password={0};Database=notificationsdb",
+                NotificationsDbPwd = "Password"
+            };
 
-            ////Target actual = await target.GetTarget(2);
+            Mock<IOptions<PostgreSQLSettings>> options = new();
+            options.Setup(s => s.Value).Returns(postgreSQLSettings);
 
-            ////Assert.NotNull(actual);
+            NotificationRepository target = new NotificationRepository(options.Object, logger.Object);
+
+            Target actual = await target.GetTarget(2);
+
+            Assert.NotNull(actual);
         }
 
         /// <summary>
@@ -140,14 +164,22 @@ namespace Altinn.Notifications.Tests
         ///[Fact]
         public async Task GetUnsentTargets_ActualServer()
         {
-            ////const string connectionString = "Host=localhost;Port=5432;Username=platform_notifications;Password=Password;Database=notificationsdb";
+            Mock<ILogger<NotificationRepository>> logger = new Mock<ILogger<NotificationRepository>>();
 
-            ////Mock<ILogger<NotificationRepository>> logger = new Mock<ILogger<NotificationRepository>>();
-            ////NotificationRepository target = new NotificationRepository(connectionString, logger.Object);
+            PostgreSQLSettings postgreSQLSettings = new()
+            {
+                ConnectionString = "Host=localhost;Port=5432;Username=platform_notifications;Password={0};Database=notificationsdb",
+                NotificationsDbPwd = "Password"
+            };
 
-            ////List<Target> actual = await target.GetUnsentTargets();
+            Mock<IOptions<PostgreSQLSettings>> options = new();
+            options.Setup(s => s.Value).Returns(postgreSQLSettings);
 
-            ////Assert.NotNull(actual);
+            NotificationRepository target = new NotificationRepository(options.Object, logger.Object);
+
+            List<Target> actual = await target.GetUnsentTargets();
+
+            Assert.NotNull(actual);
         }
     }
 }
