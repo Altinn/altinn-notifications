@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "altinn-notifications.fullname" . }}
+  labels:
+    {{- include "altinn-notifications.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "altinn-notifications.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "altinn-notifications.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "altinn-notifications.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: {{ .Values.generalSettings.aspnetEnvironment | quote }}
+            - name: ASPNETCORE_URLS
+              value: {{ .Values.generalSettings.aspnetUrls | quote }}
+            - name: PostgreSQLSettings__AdminConnectionString
+              value: {{ .Values.postgreSQLSettings.adminConnectionString | quote }}
+            - name: PostgreSQLSettings__ConnectionString
+              value: {{ .Values.postgreSQLSettings.userConnectionString | quote }}
+            - name: SmtpSettings__Host
+              value: {{ .Values.smtpSettings.host | quote }}
+            - name: SmtpSettings__Port
+              value: {{ .Values.smtpSettings.port | quote }}
+            - name: SmtpSettings__Sender
+              value: {{ .Values.smtpSettings.sender | quote }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.deployment.containerPort }}
+              protocol: TCP
+          
+          # livenessProbe:
+          #   httpGet:
+          #     path: /
+          #     port: http
+          # readinessProbe:
+          #   httpGet:
+          #     path: /
+          #     port: http
+          {{- if .Values.appsettings.mount }}
+          volumeMounts:
+            - name: altinn-appsettings
+              mountPath: {{ .Values.appsettings.mountPath }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.appsettings.mount }}
+      volumes:
+        - name: altinn-appsettings
+          secret:
+            secretName: {{ .Values.appsettings.secretName }}
+      {{- end }}

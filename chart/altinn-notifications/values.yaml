@@ -1,0 +1,83 @@
+# Default values for altinn-notifications.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/altinn/altinn-notifications
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+fullnameOverride: "altinn-notifications"
+
+serviceAccount:
+  create: true
+
+podAnnotations:
+  config.linkerd.io/proxy-cpu-request: 100m
+  config.linkerd.io/proxy-memory-limit: 250Mi
+  config.linkerd.io/proxy-memory-request: 20Mi
+  linkerd.io/inject: enabled
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext:
+  # capabilities:
+  #   drop:
+  #   - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1000
+
+deployment:
+  containerPort: 5090
+
+service:
+  type: ClusterIP
+  port: 80
+
+linkerd:
+  enabled: true
+
+ingress:
+  enabled: true
+  entryPoints:
+    - http
+    - https
+  match:
+    host: "localhost:8080"
+    path: "/notifications"
+  tls:
+    secretName: ""
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+appsettings:
+  mount: false
+  secretName: ""
+  mountPath: ""
+
+generalSettings:
+  aspnetEnvironment: Staging
+  aspnetUrls: "http://+:5090"
+
+postgreSQLSettings:
+  adminConnectionString: ""
+  userConnectionString: ""
+
+smtpSettings:
+  host: "localhost"
+  port: 465
+  sender: ""
