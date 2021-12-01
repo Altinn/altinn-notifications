@@ -30,7 +30,12 @@ ConfigureSetupLogging();
 ConfigureLogging(builder.Logging);
 ConfigureServices(builder.Services, builder.Configuration);
 SetConfigurationProviders(builder.Configuration);
-builder.Services.AddControllers();
+builder.Services.AddControllers().AddJsonOptions(options =>
+		{
+			options.JsonSerializerOptions.AllowTrailingCommas = true;
+            options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+		});
+
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

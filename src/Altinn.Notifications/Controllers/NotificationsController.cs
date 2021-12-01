@@ -3,6 +3,8 @@ using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Interfaces.Models;
 using Microsoft.AspNetCore.Mvc;
 
+using System.Text.Json;
+
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
 namespace Altinn.Notifications.Controllers
@@ -13,14 +15,16 @@ namespace Altinn.Notifications.Controllers
     {
 
         private readonly INotifications _notificationsService;
+        private readonly ILogger<NotificationsController> _logger;
 
         /// <summary>
         /// Default constructor
         /// </summary>
         /// <param name="notificationService">The Notification core service</param>
-        public NotificationsController(INotifications notificationService)
+        public NotificationsController(INotifications notificationService, ILogger<NotificationsController> logger)
         {
             _notificationsService = notificationService;
+            _logger = logger;
         }
 
         /// <summary>
@@ -52,6 +56,8 @@ namespace Altinn.Notifications.Controllers
                 Messages = GetMessages(notificationExt.Messages),
                 Targets = GetTargets(notificationExt.Targets)
             };
+
+            _logger.LogError($"// NotificaitonsController // Received Notifications // {JsonSerializer.Serialize(notification)}");
 
             return notification;
         }
