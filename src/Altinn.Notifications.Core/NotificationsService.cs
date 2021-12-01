@@ -38,6 +38,15 @@ namespace Altinn.Notifications.Core
                 }
             }
 
+            if(notification.Messages.Count > 0)
+            {
+                foreach (Message message in notification.Messages)
+                {
+                    message.NotificationId = notification.Id;
+                    await _notificationsRepository.AddMessage(message);
+                }
+            }
+
            return createdNotification;
         }
 
