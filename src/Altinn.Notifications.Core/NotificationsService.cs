@@ -1,4 +1,7 @@
 ﻿using Altinn.Notifications.Core.Models;
+
+using Microsoft.Extensions.Logging;
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,15 +16,29 @@ namespace Altinn.Notifications.Core
         private readonly INotificationsRepository _notificationsRepository;
         private readonly IEmail _emailservice;
 
-        public NotificationsService(INotificationsRepository notificationsRepository, IEmail emailservice)
+        private readonly ILogger<INotifications> _logger;
+
+        public NotificationsService(INotificationsRepository notificationsRepository, IEmail emailservice, ILogger<INotifications> logger)
         {
             _notificationsRepository = notificationsRepository;
             _emailservice = emailservice;
+            _logger = logger;
         }
 
         public async Task<Notification> CreateNotification(Notification notification)
         {
-           return await _notificationsRepository.AddNotification(notification);
+           Notification createdNotification = await _notificationsRepository.AddNotification(notification);
+
+            if (notification.Targets.Count > 0)
+            {
+                foreach (Target target in notification.Targets)
+                {
+                    target.NotificationId = notification.Id;
+                    await _notificationsRepository.AddTarget(target);
+                }
+            }
+
+           return createdNotification;
         }
 
         public async Task<List<Target>> GetUnsentEmailTargets()
