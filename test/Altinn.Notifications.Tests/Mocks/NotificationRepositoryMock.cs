@@ -12,7 +12,7 @@ namespace Altinn.Notifications.Tests.Mocks
     {
         public Task<Message> AddMessage(Message message)
         {
-            throw new NotImplementedException();
+            return Task.FromResult(message);
         }
 
         public Task<Notification> AddNotification(Notification notification)
