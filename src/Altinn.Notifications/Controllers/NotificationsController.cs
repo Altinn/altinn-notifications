@@ -60,8 +60,6 @@ namespace Altinn.Notifications.Controllers
                 SendTime = defaultSendTime
             };
 
-            _logger.LogError($"// NotificaitonsController // Received Notifications // {JsonSerializer.Serialize(notification)}");
-
             return notification;
         }
 

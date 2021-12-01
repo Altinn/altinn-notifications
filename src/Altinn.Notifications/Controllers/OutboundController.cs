@@ -32,8 +32,6 @@ namespace Altinn.Notifications.Controllers
         [HttpGet("email")]
         public async Task<IEnumerable<string>> GetOutboundEmail()
         {
-
-            _logger.LogInformation($"// Outbound controller // GetOutboundEmail // Received a request");
            List<Target> targets = await  _notificationsService.GetUnsentEmailTargets();
 
             List<string> unsentTargets = new List<string>();

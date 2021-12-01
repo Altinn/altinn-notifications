@@ -67,11 +67,12 @@ namespace Altinn.Notifications.Core
 
         public async Task Send(int targetId)
         {
+            _logger.LogError($" // NotificationsService // Send // Senging targetId {targetId}");
             Target target = await _notificationsRepository.GetTarget(targetId);
 
-            Notification notication = await _notificationsRepository.GetNotification(target.NotificationId);
+            Notification notification = await _notificationsRepository.GetNotification(target.NotificationId);
 
-            Message message = notication.Messages.FirstOrDefault(r => !string.IsNullOrEmpty(r.EmailSubject));
+            Message message = notification.Messages.First(r => !string.IsNullOrEmpty(r.EmailSubject));
 
             await _emailservice.SendEmailAsync(target.Address, message.EmailSubject, message.EmailBody);
         }
