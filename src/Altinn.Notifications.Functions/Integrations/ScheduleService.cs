@@ -21,7 +21,7 @@ namespace Altinn.Notifications.Functions.Integrations
 
         public async Task QueueOutboundEMail()
         {
-            List<int> outboundEmails = await _outbound.GetOutboundEmails();
+            List<string> outboundEmails = await _outbound.GetOutboundEmails();
             if (outboundEmails.Count == 0)
             {
                 return;
@@ -29,15 +29,15 @@ namespace Altinn.Notifications.Functions.Integrations
 
             _logger.LogInformation($" // ScheduleService // QueueOutboundEMail // Attempting to queue outbound emails");
 
-            foreach (int outboundElement in outboundEmails)
+            foreach (string outboundElement in outboundEmails)
             {
-                await _queue.Push(outboundElement.ToString());
+                await _queue.Push(outboundElement);
             }
         }
 
         public async Task QueueOutboundSMS()
         {
-            List<int> outboundSMS = await _outbound.GetOutboundSMS();
+            List<string> outboundSMS = await _outbound.GetOutboundSMS();
             if (outboundSMS.Count == 0)
             {
                 return;
@@ -45,9 +45,9 @@ namespace Altinn.Notifications.Functions.Integrations
 
             _logger.LogInformation($" // ScheduleService // QueueOutboundSMS // Attempting to queue outbound sms");
 
-            foreach (int outboundElement in outboundSMS)
+            foreach (string outboundElement in outboundSMS)
             {
-                await _queue.Push(outboundElement.ToString());
+                await _queue.Push(outboundElement);
             }
         }
     }

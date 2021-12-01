@@ -10,6 +10,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace Altinn.Notifications.Functions.Integrations
@@ -32,38 +33,34 @@ namespace Altinn.Notifications.Functions.Integrations
             _client = client;
         }
 
-        public async Task<List<int>> GetOutboundEmails()
+        public async Task<List<string>> GetOutboundEmails()
         {
-            _logger.LogInformation($" // NotificationsClient // GetOutboundEmails // Sending request");
 
             string path = "outbound/email";
             string token = string.Empty; // await _token.GeneratePlatformToken();
             HttpResponseMessage res = await _client.GetAsync(path, token);
 
-            List<int> outboundEmails = new();
+            List<string> outboundEmails = new();
 
             if (!res.IsSuccessStatusCode)
             {
-                _logger.LogError($" // NotificationsClient // GetOutboundEmails // Failed with status code: {res.StatusCode} - {await res.Content.ReadAsStringAsync()}");
                 return outboundEmails;
             }
 
-
-
             var responseString = await res.Content.ReadAsStringAsync();
-            outboundEmails.AddRange(JsonSerializer.Deserialize<List<int>>(responseString));
+            outboundEmails.AddRange(JsonSerializer.Deserialize<List<string>>(responseString));
 
             _logger.LogInformation($" // NotificationsClient // GetOutboundEmails // {outboundEmails.Count} emails pending");
 
             return outboundEmails;
         }
 
-        public async Task<List<int>> GetOutboundSMS()
+        public async Task<List<string>> GetOutboundSMS()
         {
             string path = "outbound/sms";
             string token = string.Empty; // await _token.GeneratePlatformToken();
             HttpResponseMessage res = await _client.GetAsync(path, token);
-            List<int> outboundSMS = new();
+            List<string> outboundSMS = new();
 
             if (!res.IsSuccessStatusCode)
             {
@@ -72,7 +69,7 @@ namespace Altinn.Notifications.Functions.Integrations
             }
 
             var responseString = await res.Content.ReadAsStringAsync();
-            outboundSMS.AddRange(JsonSerializer.Deserialize<List<int>>(responseString));
+            outboundSMS.AddRange(JsonSerializer.Deserialize<List<string>>(responseString));
             return outboundSMS;
         }
 
@@ -80,9 +77,10 @@ namespace Altinn.Notifications.Functions.Integrations
         public async Task TriggerSendTarget(string targetId)
         {
             _logger.LogInformation($" // NotificationsClient // TriggerSendTarget // Posting target id {targetId}");
-            string path = "/send";
+            string path = "send/";
             string token = string.Empty; // await _token.GeneratePlatformToken();
             HttpResponseMessage res = await _client.PostAsync(path, JsonContent.Create(targetId), token);
+            _logger.LogInformation($" // NotificationsClient // TriggerSendTarget //  status code: {res.StatusCode} - {await res.Content.ReadAsStringAsync()}");
 
             if (!res.IsSuccessStatusCode)
             {
