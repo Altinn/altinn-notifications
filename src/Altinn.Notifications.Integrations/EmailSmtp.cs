@@ -15,12 +15,10 @@ namespace Altinn.Notifications.Integrations
     public class EmailSmtp : IEmail
     {
         private readonly SmtpSettings _smtpSettings;
-        private readonly ILogger<IEmail> _logger;
 
-        public EmailSmtp(IOptions<SmtpSettings> smtpSettings, Logger<IEmail> logger)
+        public EmailSmtp(IOptions<SmtpSettings> smtpSettings)
         {
             _smtpSettings = smtpSettings.Value;
-            _logger = logger;
         }
 
         /// <inheritdoc/>
@@ -34,9 +32,9 @@ namespace Altinn.Notifications.Integrations
             SmtpClient client = new SmtpClient(_smtpSettings.Host, _smtpSettings.Port);
             client.UseDefaultCredentials = true;
 
-            _logger.LogError($"// EmailSmtp // SendEmailAsync // Attempting to send email");
+            Console.WriteLine($"// EmailSmtp // SendEmailAsync // Attempting to send email");
             await client.SendMailAsync(msg, cancellationToken);
-            _logger.LogError($"// EmailSmtp // SendEmailAsync // Attempting to email sent");
+            Console.WriteLine($"// EmailSmtp // SendEmailAsync // Attempting to email sent");
 
             return true;
         }
