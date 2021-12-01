@@ -4,6 +4,7 @@ using System.Net.Mail;
 using Altinn.Notifications.Core;
 using Altinn.Notifications.Integrations.Configuration;
 
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Integrations
@@ -14,10 +15,12 @@ namespace Altinn.Notifications.Integrations
     public class EmailSmtp : IEmail
     {
         private readonly SmtpSettings _smtpSettings;
+        private readonly ILogger<IEmail> _logger;
 
-        public EmailSmtp(IOptions<SmtpSettings> smtpSettings)
+        public EmailSmtp(IOptions<SmtpSettings> smtpSettings, Logger<IEmail> logger)
         {
             _smtpSettings = smtpSettings.Value;
+            _logger = logger;
         }
 
         /// <inheritdoc/>
@@ -30,7 +33,11 @@ namespace Altinn.Notifications.Integrations
             msg.Body = body;
             SmtpClient client = new SmtpClient(_smtpSettings.Host, _smtpSettings.Port);
             client.UseDefaultCredentials = true;
+
+            _logger.LogError($"// EmailSmtp // SendEmailAsync // Attempting to send email");
             await client.SendMailAsync(msg, cancellationToken);
+            _logger.LogError($"// EmailSmtp // SendEmailAsync // Attempting to email sent");
+
             return true;
         }
 

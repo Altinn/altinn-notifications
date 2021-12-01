@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace Altinn.Notifications.Core
@@ -67,12 +68,12 @@ namespace Altinn.Notifications.Core
 
         public async Task Send(int targetId)
         {
-            _logger.LogError($" // NotificationsService // Send // Senging targetId {targetId}");
             Target target = await _notificationsRepository.GetTarget(targetId);
 
             Notification notification = await _notificationsRepository.GetNotification(target.NotificationId);
 
             Message message = notification.Messages.First(r => !string.IsNullOrEmpty(r.EmailSubject));
+            _logger.LogError($" // NotificationsService // Send // Sending message {JsonSerializer.Serialize(message)}");
 
             await _emailservice.SendEmailAsync(target.Address, message.EmailSubject, message.EmailBody);
         }
