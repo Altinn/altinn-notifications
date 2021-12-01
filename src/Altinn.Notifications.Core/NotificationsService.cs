@@ -73,9 +73,7 @@ namespace Altinn.Notifications.Core
             Notification notification = await _notificationsRepository.GetNotification(target.NotificationId);
 
             Message message = notification.Messages.First(r => !string.IsNullOrEmpty(r.EmailSubject));
-            _logger.LogError($" // NotificationsService // Send // Sending message: {JsonSerializer.Serialize(message)}");
 
-            _logger.LogError($" // NotificationsService // Send // To target: {JsonSerializer.Serialize(target)}");
             await _emailservice.SendEmailAsync(target.Address, message.EmailSubject, message.EmailBody);
         }
     }
