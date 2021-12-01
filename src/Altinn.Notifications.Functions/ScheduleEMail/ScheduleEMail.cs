@@ -18,13 +18,9 @@ namespace Altinn.Notifications.Functions
         }
 
         [FunctionName("ScheduleEMail")]
-        public async Task Run([TimerTrigger("0 */1 * * * *")] TimerInfo myTimer, ILogger log)
+        public async Task Run([TimerTrigger("0 */2 * * * *")] TimerInfo myTimer, ILogger log)
         {
-            log.LogInformation($" // Shedule emil // Trigger for sending emails executed at: {DateTime.Now}");
-
             await _schedule.QueueOutboundEMail();
-            log.LogInformation($" // Shedule emil // Completed");
-
         }
     }
 }

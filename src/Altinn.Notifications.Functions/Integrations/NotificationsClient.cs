@@ -18,7 +18,7 @@ namespace Altinn.Notifications.Functions.Integrations
     {
         private readonly HttpClient _client;
         private readonly IToken _token;
-        private readonly ILogger _logger;
+        private readonly ILogger<INotifications> _logger;
 
         public NotificationsClient(
             HttpClient client,
@@ -34,7 +34,9 @@ namespace Altinn.Notifications.Functions.Integrations
 
         public async Task<List<int>> GetOutboundEmails()
         {
-            string path = "outbound/emails";
+            _logger.LogInformation($" // NotificationsClient // GetOutboundEmails // Sending request");
+
+            string path = "outbound/email";
             string token = string.Empty; // await _token.GeneratePlatformToken();
             HttpResponseMessage res = await _client.GetAsync(path, token);
 
@@ -42,12 +44,17 @@ namespace Altinn.Notifications.Functions.Integrations
 
             if (!res.IsSuccessStatusCode)
             {
-                _logger.LogError($" // NotificationsClient // GetOutboundEmails // {res.StatusCode} - {await res.Content.ReadAsStringAsync()}");
+                _logger.LogError($" // NotificationsClient // GetOutboundEmails // Failed with status code: {res.StatusCode} - {await res.Content.ReadAsStringAsync()}");
                 return outboundEmails;
             }
 
+
+
             var responseString = await res.Content.ReadAsStringAsync();
             outboundEmails.AddRange(JsonSerializer.Deserialize<List<int>>(responseString));
+
+            _logger.LogInformation($" // NotificationsClient // GetOutboundEmails // {outboundEmails.Count} emails pending");
+
             return outboundEmails;
         }
 
@@ -72,14 +79,14 @@ namespace Altinn.Notifications.Functions.Integrations
 
         public async Task TriggerSendTarget(string targetId)
         {
-            _logger.LogInformation($"// NotificationsClient // Posting new targetId");
+            _logger.LogInformation($" // NotificationsClient // TriggerSendTarget // Posting target id {targetId}");
             string path = "/send";
             string token = string.Empty; // await _token.GeneratePlatformToken();
             HttpResponseMessage res = await _client.PostAsync(path, JsonContent.Create(targetId), token);
 
             if (!res.IsSuccessStatusCode)
             {
-                _logger.LogError("// NotificationsClient // Could not post target for sending!");
+                _logger.LogError($" // NotificationsClient // TriggerSendTarget // Failed with status code: {res.StatusCode} - {await res.Content.ReadAsStringAsync()}");
             }
         }
     }

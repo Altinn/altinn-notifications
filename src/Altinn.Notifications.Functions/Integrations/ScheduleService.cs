@@ -19,17 +19,15 @@ namespace Altinn.Notifications.Functions.Integrations
             _logger = logger;
         }
 
-        async Task ISchedule.QueueOutboundEMail()
+        async Task QueueOutboundEMail()
         {
-            _logger.LogInformation("// Schedule // Retreive outbound emails");
             List<int> outboundEmails = await _outbound.GetOutboundEmails();
             if (outboundEmails.Count == 0)
             {
-                _logger.LogInformation("// Schedule // No elements returned. ");
                 return;
             }
 
-            _logger.LogInformation($"// Schedule // Retrieved {outboundEmails.Count} pending emails.");
+            _logger.LogInformation($" // ScheduleService // QueueOutboundEMail // Attempting to queue outbound emails");
 
             foreach (int outboundElement in outboundEmails)
             {
@@ -37,17 +35,15 @@ namespace Altinn.Notifications.Functions.Integrations
             }
         }
 
-        async Task ISchedule.QueueOutboundSMS()
+        async Task QueueOutboundSMS()
         {
-            _logger.LogInformation("Trying to retreive outbound sms");
-
             List<int> outboundSMS = await _outbound.GetOutboundSMS();
             if (outboundSMS.Count == 0)
             {
                 return;
             }
 
-            _logger.LogInformation("Pushing outbound sms to queue.");
+            _logger.LogInformation($" // ScheduleService // QueueOutboundSMS // Attempting to queue outbound sms");
 
             foreach (int outboundElement in outboundSMS)
             {

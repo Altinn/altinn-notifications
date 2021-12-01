@@ -20,7 +20,7 @@ namespace Altinn.Notifications.Functions
         }
 
         [FunctionName("ScheduleSMS")]
-        public async Task Run([TimerTrigger("* * */1 * * *")]TimerInfo myTimer, ILogger log)
+        public async Task Run([TimerTrigger("* * */22 * * 1")]TimerInfo myTimer, ILogger log)
         {
             log.LogInformation($"Trigger for sending SMS executed at: {DateTime.Now}");
 
