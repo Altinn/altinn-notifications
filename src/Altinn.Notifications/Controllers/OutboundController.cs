@@ -11,10 +11,12 @@ namespace Altinn.Notifications.Controllers
     public class OutboundController : ControllerBase
     {
         private readonly INotifications _notificationsService;
+        private readonly ILogger<OutboundController> _logger;
 
-        public OutboundController(INotifications notificationService)
+        public OutboundController(INotifications notificationService, ILogger<OutboundController> logger)
         {
             _notificationsService = notificationService;
+            _logger = logger;
         }
 
         [HttpGet("sms")]
@@ -23,7 +25,7 @@ namespace Altinn.Notifications.Controllers
             List<string> result = new List<string>();
             result.Add("1");
             result.Add("2");
-            result.Add("3");    
+            result.Add("3");
             return result;
         }
 
@@ -31,6 +33,7 @@ namespace Altinn.Notifications.Controllers
         public async Task<IEnumerable<string>> GetOutboundEmail()
         {
 
+            _logger.LogInformation($"// Outbound controller // GetOutboundEmail // Received a request");
            List<Target> targets = await  _notificationsService.GetUnsentEmailTargets();
 
             List<string> unsentTargets = new List<string>();
