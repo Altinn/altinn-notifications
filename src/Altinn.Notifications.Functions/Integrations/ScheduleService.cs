@@ -19,7 +19,7 @@ namespace Altinn.Notifications.Functions.Integrations
             _logger = logger;
         }
 
-        async Task QueueOutboundEMail()
+        public async Task QueueOutboundEMail()
         {
             List<int> outboundEmails = await _outbound.GetOutboundEmails();
             if (outboundEmails.Count == 0)
@@ -35,7 +35,7 @@ namespace Altinn.Notifications.Functions.Integrations
             }
         }
 
-        async Task QueueOutboundSMS()
+        public async Task QueueOutboundSMS()
         {
             List<int> outboundSMS = await _outbound.GetOutboundSMS();
             if (outboundSMS.Count == 0)
