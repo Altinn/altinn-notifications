@@ -17,6 +17,8 @@ namespace Altinn.Notifications.Controllers
         private readonly INotifications _notificationsService;
         private readonly ILogger<NotificationsController> _logger;
 
+        private readonly DateTime defaultSendTime = new DateTime(2000, 1, 1);
+
         /// <summary>
         /// Default constructor
         /// </summary>
@@ -54,7 +56,8 @@ namespace Altinn.Notifications.Controllers
             {
                 InstanceId = notificationExt.InstanceId,
                 Messages = GetMessages(notificationExt.Messages),
-                Targets = GetTargets(notificationExt.Targets)
+                Targets = GetTargets(notificationExt.Targets),
+                SendTime = defaultSendTime
             };
 
             _logger.LogError($"// NotificaitonsController // Received Notifications // {JsonSerializer.Serialize(notification)}");

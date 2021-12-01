@@ -33,7 +33,7 @@ namespace Altinn.Notifications.Core
             {
                 foreach (Target target in notification.Targets)
                 {
-                    target.NotificationId = notification.Id;
+                    target.NotificationId = createdNotification.Id;
                     await _notificationsRepository.AddTarget(target);
                 }
             }
@@ -42,7 +42,7 @@ namespace Altinn.Notifications.Core
             {
                 foreach (Message message in notification.Messages)
                 {
-                    message.NotificationId = notification.Id;
+                    message.NotificationId = createdNotification.Id;
                     await _notificationsRepository.AddMessage(message);
                 }
             }
