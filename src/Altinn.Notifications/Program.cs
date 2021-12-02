@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using Altinn.Common.AccessToken.Configuration;
@@ -30,12 +31,6 @@ ConfigureSetupLogging();
 ConfigureLogging(builder.Logging);
 ConfigureServices(builder.Services, builder.Configuration);
 SetConfigurationProviders(builder.Configuration);
-builder.Services.AddControllers().AddJsonOptions(options =>
-		{
-			options.JsonSerializerOptions.AllowTrailingCommas = true;
-            options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
-		});
-
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -55,7 +50,6 @@ ConsoleTraceService traceService = new ConsoleTraceService { IsDebugEnabled = tr
 
 if (builder.Configuration.GetValue<bool>("PostgreSQLSettings:EnableDBConnection"))
 {
-
     string connectionString = string.Format(
     builder.Configuration.GetValue<string>("PostgreSQLSettings:AdminConnectionString"),
     builder.Configuration.GetValue<string>("PostgreSQLSettings:NotificationsDbAdminPwd"));
@@ -78,7 +72,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
-
 
 void ConfigureSetupLogging()
 {
@@ -114,6 +107,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     services.AddControllers().AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.WriteIndented = true;
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
         options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
     });
 
@@ -147,8 +141,6 @@ void SetConfigurationProviders(ConfigurationManager config)
 
     config.AddCommandLine(args);
 }
-
-
 
 void ConnectToKeyVaultAndSetApplicationInsights(ConfigurationManager config)
 {
