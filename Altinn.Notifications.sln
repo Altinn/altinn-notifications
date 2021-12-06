@@ -5,17 +5,22 @@ VisualStudioVersion = 17.0.31912.275
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Altinn.Notifications", "src\Altinn.Notifications\Altinn.Notifications.csproj", "{72667D0C-7803-47B2-B62E-F5C55C0851B2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Core", "src\Altinn.Notifications.Core\Altinn.Notifications.Core.csproj", "{5BB339F2-25A5-4156-AFF0-68D359292CD8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Altinn.Notifications.Core", "src\Altinn.Notifications.Core\Altinn.Notifications.Core.csproj", "{5BB339F2-25A5-4156-AFF0-68D359292CD8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Integrations", "src\Altinn.Notifications.Integrations\Altinn.Notifications.Integrations.csproj", "{14F6AAD8-2883-43AD-A0CA-271CC48051C9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Altinn.Notifications.Integrations", "src\Altinn.Notifications.Integrations\Altinn.Notifications.Integrations.csproj", "{14F6AAD8-2883-43AD-A0CA-271CC48051C9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Persistence", "src\Altinn.Notifications.Persistence\Altinn.Notifications.Persistence.csproj", "{8CE45C6F-0755-41FE-BCE9-84ABDC6A272D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Altinn.Notifications.Persistence", "src\Altinn.Notifications.Persistence\Altinn.Notifications.Persistence.csproj", "{8CE45C6F-0755-41FE-BCE9-84ABDC6A272D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Tests", "test\Altinn.Notifications.Tests\Altinn.Notifications.Tests.csproj", "{0098D647-A30E-44E1-8E0E-DFD08738B9A7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Altinn.Notifications.Tests", "test\Altinn.Notifications.Tests\Altinn.Notifications.Tests.csproj", "{0098D647-A30E-44E1-8E0E-DFD08738B9A7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Functions", "src\Altinn.Notifications.Functions\Altinn.Notifications.Functions.csproj", "{0F1B396E-981E-480F-93C5-B2C9E2D94378}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Altinn.Notifications.Functions", "src\Altinn.Notifications.Functions\Altinn.Notifications.Functions.csproj", "{0F1B396E-981E-480F-93C5-B2C9E2D94378}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Altinn.Notifications.Interfaces", "src\Altinn.Notifications.Interfaces\Altinn.Notifications.Interfaces.csproj", "{F1E15A73-0596-4142-9608-CD33D5E657B7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Altinn.Notifications.Interfaces", "src\Altinn.Notifications.Interfaces\Altinn.Notifications.Interfaces.csproj", "{F1E15A73-0596-4142-9608-CD33D5E657B7}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{AE428FE3-8E5E-4998-ADFF-0CB8B629A17A}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
