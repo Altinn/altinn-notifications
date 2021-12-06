@@ -19,7 +19,7 @@ podAnnotations:
   config.linkerd.io/proxy-memory-limit: 250Mi
   config.linkerd.io/proxy-memory-request: 20Mi
   linkerd.io/inject: enabled
-
+  config.linkerd.io/skip-outbound-ports: "465"
 podSecurityContext: {}
   # fsGroup: 2000
 

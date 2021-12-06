@@ -41,7 +41,7 @@ namespace Altinn.Notifications.Integrations
             SmtpClient client = new SmtpClient(_smtpSettings.Host, _smtpSettings.Port);
             client.UseDefaultCredentials = true;
 
-            await client.SendMailAsync(msg, cancellationToken);
+            client.Send(msg);
 
             return true;
         }
