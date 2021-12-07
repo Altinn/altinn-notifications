@@ -88,6 +88,7 @@ namespace Altinn.Notifications.Tests.UnitTests.Integrations
             Assert.Equal("accesstoken", sblRequest!.Headers.GetValues("PlatformAccessToken").First());
             Assert.StartsWith("http://real.domain.com", sblRequest!.RequestUri!.ToString());
             Assert.EndsWith("users/23", sblRequest!.RequestUri!.ToString());
+            Assert.Equal("notarealkey", sblRequest!.Headers.GetValues("arealheadername").First());
 
             Assert.Equal(UserId, actual!.UserId);
         }
