@@ -1,5 +1,6 @@
 ﻿using Altinn.Notifications.Core;
 using Altinn.Notifications.Core.Models;
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,7 +24,7 @@ namespace Altinn.Notifications.Tests.Mocks
 
         public Task<Target> AddTarget(Target target)
         {
-            return  Task.FromResult(target);
+            return Task.FromResult(target);
         }
 
         public Task<Notification> GetNotification(int id)
@@ -45,6 +46,21 @@ namespace Altinn.Notifications.Tests.Mocks
             targets.Add(new Target() { ChannelType = "Email", Address = "demo2@demo.no", Id = 1338 });
             targets.Add(new Target() { ChannelType = "Email", Address = "demo3@demo.no", Id = 1339 });
             return Task.FromResult(targets);
+        }
+
+        public Task<Target> UpdateSentTarget(int id)
+        {
+            switch (id)
+            {
+                case 1337:
+                    return Task.FromResult(new Target() { ChannelType = "Email", Address = "demo@demo.no", Id = 1337, Sent = DateTime.UtcNow });
+                case 1338:
+                    return Task.FromResult(new Target() { ChannelType = "Email", Address = "demo@demo.no", Id = 1338, Sent = DateTime.UtcNow });
+                case 1339:
+                    return Task.FromResult(new Target() { ChannelType = "Email", Address = "demo@demo.no", Id = 1339, Sent = DateTime.UtcNow });
+            }
+
+            throw new NotImplementedException();
         }
     }
 }
