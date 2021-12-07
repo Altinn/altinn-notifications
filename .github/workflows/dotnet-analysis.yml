@@ -51,8 +51,6 @@ jobs:
         run: |
           .\.sonar\scanner\dotnet-sonarscanner begin /k:"Altinn_altinn-notifications" /o:"altinn" /d:sonar.login="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io"
 
-          dotnet build src/Altinn.Notifications/
-
           dotnet test test/Altinn.Notifications.Tests `
           --collect:"XPlat Code Coverage" `
           --results-directory TestResults/ `
