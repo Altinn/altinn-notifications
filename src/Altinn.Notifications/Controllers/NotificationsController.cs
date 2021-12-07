@@ -1,11 +1,10 @@
 ﻿using Altinn.Notifications.Core;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Interfaces.Models;
+
 using Microsoft.AspNetCore.Mvc;
 
 using System.Text.Json;
-
-// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
 namespace Altinn.Notifications.Controllers
 {
@@ -30,10 +29,10 @@ namespace Altinn.Notifications.Controllers
         }
 
         /// <summary>
-        /// Operation to 
+        /// Operation for retrieving a notification
         /// </summary>
-        /// <param name="id"></param>
-        /// <returns></returns>
+        /// <param name="id">The notification id</param>
+        /// <returns>The notification</returns>
         [HttpGet("{id}")]
         public async Task<NotificationExt> Get(int id)
         {
@@ -41,7 +40,11 @@ namespace Altinn.Notifications.Controllers
             return GetNotification(notification);
         }
 
-        // POST api/<ValuesController>
+        /// <summary>
+        /// Operation for creating a notification
+        /// </summary>
+        /// <param name="notificationExt">The notification template</param>
+        /// <returns>The created notification</returns>
         [HttpPost]
         public async Task<ObjectResult> Post([FromBody] NotificationExt notificationExt)
         {
