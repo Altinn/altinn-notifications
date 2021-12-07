@@ -4,6 +4,7 @@
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <ProjectGuid>{DC8CDE0B-67F9-496D-8B01-CE2257950D05}</ProjectGuid>
   </PropertyGroup>
 
   <ItemGroup>
