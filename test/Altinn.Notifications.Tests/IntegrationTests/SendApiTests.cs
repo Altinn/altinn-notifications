@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Threading.Tasks;
 
 using Altinn.Notifications.Controllers;
+using Altinn.Notifications.Tests.IntegrationTests.Utils;
 
 using Xunit;
 
