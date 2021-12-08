@@ -50,15 +50,51 @@ namespace Altinn.Notifications.Integrations
         /// <param name="ct">The cancellation token to cancel operation.</param>
         /// <returns>The user profile if it exists.</returns>
         public async Task<UserProfile?> GetUserProfile(int userId, CancellationToken ct)
-        {           
+        {
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, $"users/{userId}");
+
+            AddAuthHeaders(request);
+            
+            HttpResponseMessage response = await SendRequest(request, ct);
+
+            return await ReadResponse(response, ct);
+        }
+
+        /// <summary>
+        /// Retrieves the user profile for a specified person using a national identity number.
+        /// </summary>
+        /// <param name="nationalIdentityNumber">The national identity number of a person.</param>
+        /// <param name="ct">The cancellation token to cancel operation.</param>
+        /// <returns>The identified user profile if found.</returns>
+        public async Task<UserProfile?> GetUserProfile(string nationalIdentityNumber, CancellationToken ct)
+        {
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, $"users")
+            {
+                Content = JsonContent.Create(nationalIdentityNumber)
+            };
+            
+            AddAuthHeaders(request);
+
+            var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseContentRead, ct);
+
+            return await ReadResponse(response, ct);
+        }
+
+        private void AddAuthHeaders(HttpRequestMessage request)
+        {
             request.Headers.Add(
                 "PlatformAccessToken", _accessTokenGenerator.GenerateAccessToken("platform", "notification"));
             request.Headers.Add(
                 "Authorization", "Bearer " + _userTokenProvider.GetUserToken());
+        }
 
-            var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseContentRead, ct);
+        private async Task<HttpResponseMessage> SendRequest(HttpRequestMessage request, CancellationToken ct)
+        {
+            return await _httpClient.SendAsync(request, HttpCompletionOption.ResponseContentRead, ct);
+        }
 
+        private async Task<UserProfile?> ReadResponse(HttpResponseMessage response, CancellationToken ct)
+        {
             if (response.StatusCode == HttpStatusCode.OK)
             {
                 return await response.Content.ReadFromJsonAsync<UserProfile>(jsonSerializerOptions, ct);
@@ -70,17 +106,6 @@ namespace Altinn.Notifications.Integrations
             }
 
             throw await UnhandledHttpResponseException.CreateAsync(response);
-        }
-
-        /// <summary>
-        /// Retrieves the user profile for a specified person using a national identity number.
-        /// </summary>
-        /// <param name="nationalIdentityNumber">The national identity number of a person.</param>
-        /// <param name="ct">The cancellation token to cancel operation.</param>
-        /// <returns>The identified user profile if found.</returns>
-        public Task<UserProfile?> GetUserProfile(string nationalIdentityNumber, CancellationToken ct)
-        {
-            throw new NotImplementedException();
         }
     }
 }

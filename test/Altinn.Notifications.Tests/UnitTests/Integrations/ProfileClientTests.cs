@@ -49,7 +49,7 @@ namespace Altinn.Notifications.Tests.UnitTests.Integrations
         }
 
         [Fact]
-        public async Task GetUserProfile_InputValidUserId_ProfileReturnsOk_ReturnsCorrectProfile()
+        public async Task GetUserProfile_ById_ProfileRespondsOk_ReturnsCorrectProfile()
         {
             // Arrange
             const int UserId = 23;
@@ -58,7 +58,6 @@ namespace Altinn.Notifications.Tests.UnitTests.Integrations
             DelegatingHandlerStub messageHandler = new(async (HttpRequestMessage request, CancellationToken token) =>
             {
                 sblRequest = request;
-
                 return await Task.FromResult(new HttpResponseMessage
                 {
                     Content = JsonContent.Create(
@@ -94,13 +93,13 @@ namespace Altinn.Notifications.Tests.UnitTests.Integrations
         }
 
         [Fact]
-        public async Task GetUserProfile_InputInvalidUserId_ProfileReturnsNotFound_ReturnsNull()
+        public async Task GetUserProfile_ById_ProfileRespondsNotFound_ReturnsNull()
         {
+            // Arrange
             HttpRequestMessage? sblRequest = null;
             DelegatingHandlerStub messageHandler = new(async (HttpRequestMessage request, CancellationToken token) =>
             {
                 sblRequest = request;
-
                 return await Task.FromResult(new HttpResponseMessage() { StatusCode = HttpStatusCode.NotFound });
             });
 
@@ -118,13 +117,13 @@ namespace Altinn.Notifications.Tests.UnitTests.Integrations
         }
 
         [Fact]
-        public async Task GetUserProfile_InputValidUserId_ProfileReturnsUnhandledStatusCode_ThrowsException()
+        public async Task GetUserProfile_ById_ProfileRespondsServiceUnavailable_ThrowsUnhandledHttpResponseException()
         {
+            // Arrange
             HttpRequestMessage? sblRequest = null;
             DelegatingHandlerStub messageHandler = new(async (HttpRequestMessage request, CancellationToken token) =>
             {
                 sblRequest = request;
-
                 return await Task.FromResult(new HttpResponseMessage() 
                     { 
                         StatusCode = HttpStatusCode.ServiceUnavailable, 
@@ -143,6 +142,113 @@ namespace Altinn.Notifications.Tests.UnitTests.Integrations
             try
             {
                 _ = await target.GetUserProfile(23, CancellationToken.None);
+            }
+            catch (UnhandledHttpResponseException ex)
+            {
+                actual = ex;
+            }
+
+            // Assert
+            Assert.NotNull(actual);
+            Assert.Equal((int)HttpStatusCode.ServiceUnavailable, actual!.StatusCode);
+            Assert.Equal("Service Unavailable", actual!.ReasonPhrase);
+            Assert.Equal("Error message.", actual!.Content);
+        }
+
+        [Fact]
+        public async Task GetUserProfile_BySsn_ProfileRespondsOk_ReturnsCorrectProfile()
+        {
+            /// Arrange
+            const int UserId = 23;
+
+            HttpRequestMessage? sblRequest = null;
+            DelegatingHandlerStub messageHandler = new(async (HttpRequestMessage request, CancellationToken token) =>
+            {
+                sblRequest = request;
+                return await Task.FromResult(new HttpResponseMessage
+                {
+                    Content = JsonContent.Create(
+                        new UserProfile
+                        {
+                            UserId = UserId
+                        },
+                        options: _jsonSerializerOptions)
+                });
+            });
+
+            var target = new ProfileClient(
+                new HttpClient(messageHandler),
+                _platformSettings.Object,
+                _accessTokenGenerator.Object,
+                _userTokenProvider.Object);
+
+            // Act
+            var actual = await target.GetUserProfile("17044451050", CancellationToken.None);
+
+            // Assert
+            _accessTokenGenerator.VerifyAll();
+            _userTokenProvider.VerifyAll();
+
+            Assert.Equal(HttpMethod.Post, sblRequest!.Method);
+            Assert.Equal("Bearer usertoken", sblRequest!.Headers.Authorization!.ToString());
+            Assert.Equal("accesstoken", sblRequest!.Headers.GetValues("PlatformAccessToken").First());
+            Assert.StartsWith("http://real.domain.com", sblRequest!.RequestUri!.ToString());
+            Assert.EndsWith("users", sblRequest!.RequestUri!.ToString());
+            Assert.Equal("notarealkey", sblRequest!.Headers.GetValues("arealheadername").First());
+
+            Assert.Equal(UserId, actual!.UserId);
+        }
+
+        [Fact]
+        public async Task GetUserProfile_BySsn_ProfileRespondsNotFound_ReturnsNull()
+        {
+            /// Arrange
+            HttpRequestMessage? sblRequest = null;
+            DelegatingHandlerStub messageHandler = new(async (HttpRequestMessage request, CancellationToken token) =>
+            {
+                sblRequest = request;
+                return await Task.FromResult(new HttpResponseMessage() { StatusCode = HttpStatusCode.NotFound });
+            });
+
+            var target = new ProfileClient(
+                new HttpClient(messageHandler),
+                _platformSettings.Object,
+                _accessTokenGenerator.Object,
+                _userTokenProvider.Object);
+
+            // Act
+            var actual = await target.GetUserProfile("17044451050", CancellationToken.None);
+
+            // Assert
+            Assert.Null(actual);
+        }
+
+        [Fact]
+        public async Task GetUserProfile_BySsn_ProfileRespondsServiceUnavailable_ThrowsUnhandledHttpResponseException()
+        {
+            // Arrange
+            HttpRequestMessage? sblRequest = null;
+            DelegatingHandlerStub messageHandler = new(async (HttpRequestMessage request, CancellationToken token) =>
+            {
+                sblRequest = request;
+                return await Task.FromResult(new HttpResponseMessage()
+                {
+                    StatusCode = HttpStatusCode.ServiceUnavailable,
+                    Content = new StringContent("Error message.")
+                });
+            });
+
+            var target = new ProfileClient(
+                new HttpClient(messageHandler),
+                _platformSettings.Object,
+                _accessTokenGenerator.Object,
+                _userTokenProvider.Object);
+
+            // Act
+            UnhandledHttpResponseException? actual = null;
+            try
+            {
+                _ = await target.GetUserProfile("17044451050", CancellationToken.None);
             }
             catch (UnhandledHttpResponseException ex)
             {
