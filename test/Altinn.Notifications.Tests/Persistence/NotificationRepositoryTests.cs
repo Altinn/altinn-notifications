@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 using Altinn.Notifications.Core.Models;
@@ -14,7 +12,7 @@ using Moq;
 
 using Xunit;
 
-namespace Altinn.Notifications.Tests
+namespace Altinn.Notifications.Tests.Persistence
 {
     public  class NotificationRepositoryTests
     {

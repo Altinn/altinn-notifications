@@ -1,31 +1,23 @@
-﻿using Altinn.Notifications.Core;
-using Altinn.Notifications.Interfaces.Models;
-using Altinn.Notifications.Tests.Mocks;
-using Altinn.Notifications.Tests.Utils;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+﻿using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
+using Altinn.Notifications.Controllers;
+using Altinn.Notifications.Interfaces.Models;
+using Altinn.Notifications.Tests.Utils;
+
 using Xunit;
 
-namespace Altinn.Notifications.Tests
+namespace Altinn.Notifications.Tests.IntegrationTests
 {
-    public  class NotificationApiTests : IClassFixture<CustomWebApplicationFactory<Altinn.Notifications.Controllers.NotificationsController>>
+    public  class NotificationApiTests : IClassFixture<CustomWebApplicationFactory<NotificationsController>>
     {
-        private readonly CustomWebApplicationFactory<Altinn.Notifications.Controllers.NotificationsController> _factory;
-
+        private readonly CustomWebApplicationFactory<NotificationsController> _factory;
  
-        public NotificationApiTests(CustomWebApplicationFactory<Altinn.Notifications.Controllers.NotificationsController> factory)
+        public NotificationApiTests(CustomWebApplicationFactory<NotificationsController> factory)
         {
             _factory = factory;
         }
@@ -44,7 +36,7 @@ namespace Altinn.Notifications.Tests
 
             HttpRequestMessage reqst = new HttpRequestMessage(HttpMethod.Post, "notifications/api/v1/notifications/")
             {
-                Content = new StringContent(System.Text.Json.JsonSerializer.Serialize(notificationeExt), Encoding.UTF8, "application/json")
+                Content = new StringContent(JsonSerializer.Serialize(notificationeExt), Encoding.UTF8, "application/json")
             };
 
             HttpResponseMessage response = await client.SendAsync(reqst);
@@ -54,7 +46,7 @@ namespace Altinn.Notifications.Tests
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             };
-            NotificationExt? notificationExtResponse = System.Text.Json.JsonSerializer.Deserialize<NotificationExt>(content, options);
+            NotificationExt? notificationExtResponse = JsonSerializer.Deserialize<NotificationExt>(content, options);
             Assert.Equal(notificationeExt.InstanceId, notificationExtResponse.InstanceId);
         }
     }
