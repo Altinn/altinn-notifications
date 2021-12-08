@@ -21,7 +21,7 @@ namespace Altinn.Notifications.Services
     public class UserTokenProvider : IUserTokenProvider
     {
         private readonly IHttpContextAccessor _httpContextAccessor;
-        private readonly string _jwtCookieName = string.Empty;
+        private readonly string _jwtCookieName;
 
         public UserTokenProvider(IHttpContextAccessor httpContextAccessor, IOptions<GeneralSettings> generalSettings)
         {
