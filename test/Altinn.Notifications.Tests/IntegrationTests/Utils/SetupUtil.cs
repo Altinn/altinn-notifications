@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Altinn.Notifications.Tests.Utils
+namespace Altinn.Notifications.Tests.IntegrationTests.Utils
 {
     public static class SetupUtil
     {

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 using Altinn.Notifications.Controllers;
 using Altinn.Notifications.Interfaces.Models;
-using Altinn.Notifications.Tests.Utils;
+using Altinn.Notifications.Tests.IntegrationTests.Utils;
 
 using Xunit;
 
