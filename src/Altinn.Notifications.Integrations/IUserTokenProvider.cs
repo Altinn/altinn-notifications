@@ -1,7 +1,7 @@
 ﻿namespace Altinn.Notifications.Integrations
 {
     /// <summary>
-    /// Defines the methods required for an implementation of a user JSN Web Ttoken provider.
+    /// Defines the methods required for an implementation of a user JSON Web Token provider.
     /// The provider is used by client implementations that needs the user token in requests 
     /// against other systems.
     /// </summary>
