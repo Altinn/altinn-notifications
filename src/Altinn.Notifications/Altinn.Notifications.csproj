@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="Altinn.Common.AccessToken" Version="0.5.10" />
+    <PackageReference Include="JWTCookieAuthentication" Version="2.4.2" />
     <PackageReference Include="Microsoft.Azure.Services.AppAuthentication" Version="1.6.2" />
     <PackageReference Include="Microsoft.Extensions.Configuration.AzureKeyVault" Version="3.1.21" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="6.0.0" />

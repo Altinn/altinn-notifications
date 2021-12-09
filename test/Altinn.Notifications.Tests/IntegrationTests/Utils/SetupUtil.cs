@@ -1,23 +1,20 @@
-﻿using Altinn.Notifications.Core;
+﻿using System.Net.Http;
+
+using Altinn.Notifications.Controllers;
+using Altinn.Notifications.Core;
 using Altinn.Notifications.Tests.Mocks;
+
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace Altinn.Notifications.Tests.Utils
+namespace Altinn.Notifications.Tests.IntegrationTests.Utils
 {
     public static class SetupUtil
     {
-        public static HttpClient GetTestClient(
-        CustomWebApplicationFactory<Altinn.Notifications.Controllers.NotificationsController> customFactory)
+        public static HttpClient GetTestClient(CustomWebApplicationFactory<NotificationsController> customFactory)
         {
-            WebApplicationFactory<Altinn.Notifications.Controllers.NotificationsController> factory = customFactory.WithWebHostBuilder(builder =>
+            WebApplicationFactory<NotificationsController> factory = customFactory.WithWebHostBuilder(builder =>
             {
                 builder.ConfigureTestServices(services =>
                 {
