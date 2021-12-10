@@ -33,6 +33,7 @@ namespace Altinn.Notifications.Core
             if (notification.Targets.Count > 0)
             {
                 createdNotification.Targets = new List<Target>();
+                
                 foreach (Target target in notification.Targets)
                 {
                     target.NotificationId = createdNotification.Id;
