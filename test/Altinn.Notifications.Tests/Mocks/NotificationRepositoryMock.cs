@@ -16,6 +16,8 @@ namespace Altinn.Notifications.Tests.Mocks
         public Task<Notification> AddNotification(Notification notification)
         {
             notification.Id = 1337;
+            notification.Targets = null;
+            notification.Messages = null;
             return Task.FromResult(notification);
         }
 
