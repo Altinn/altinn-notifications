@@ -13,10 +13,10 @@ using Xunit;
 
 namespace Altinn.Notifications.Tests.IntegrationTests
 {
-    public  class NotificationApiTests : IClassFixture<CustomWebApplicationFactory<NotificationsController>>
+    public class NotificationApiTests : IClassFixture<CustomWebApplicationFactory<NotificationsController>>
     {
         private readonly CustomWebApplicationFactory<NotificationsController> _factory;
- 
+
         public NotificationApiTests(CustomWebApplicationFactory<NotificationsController> factory)
         {
             _factory = factory;
@@ -46,8 +46,11 @@ namespace Altinn.Notifications.Tests.IntegrationTests
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             };
+
             NotificationExt? notificationExtResponse = JsonSerializer.Deserialize<NotificationExt>(content, options);
             Assert.Equal(notificationeExt.InstanceId, notificationExtResponse.InstanceId);
+            Assert.Single(notificationExtResponse.Targets);
+            Assert.Single(notificationExtResponse.Messages);
         }
     }
 }

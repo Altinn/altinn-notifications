@@ -15,13 +15,19 @@ namespace Altinn.Notifications.Tests.Mocks
 
         public Task<Notification> AddNotification(Notification notification)
         {
-            notification.Id = 1337;
-            return Task.FromResult(notification);
+            return Task.FromResult(new Notification
+            {
+                Id = 1337,
+                Sender = notification.Sender,
+                SendTime = notification.SendTime,
+                InstanceId = notification.InstanceId,
+                PartyReference = notification.PartyReference
+            });
         }
 
         public Task<Target> AddTarget(Target target)
         {
-            return  Task.FromResult(target);
+            return Task.FromResult(target);
         }
 
         public Task<Notification> GetNotification(int id)
