@@ -1,23 +1,21 @@
-﻿using Altinn.Notifications.Interfaces.Models;
-using Altinn.Notifications.Tests.Utils;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
 using System.Net.Http;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
+using Altinn.Notifications.Controllers;
+using Altinn.Notifications.Interfaces.Models;
+using Altinn.Notifications.Tests.IntegrationTests.Utils;
+
 using Xunit;
 
-namespace Altinn.Notifications.Tests
+namespace Altinn.Notifications.Tests.IntegrationTests
 {
-    public  class OutboundApiTests : IClassFixture<CustomWebApplicationFactory<Altinn.Notifications.Controllers.NotificationsController>>
+    public  class OutboundApiTests : IClassFixture<CustomWebApplicationFactory<NotificationsController>>
     {
-        private readonly CustomWebApplicationFactory<Altinn.Notifications.Controllers.NotificationsController> _factory;
+        private readonly CustomWebApplicationFactory<NotificationsController> _factory;
 
-
-        public OutboundApiTests(CustomWebApplicationFactory<Altinn.Notifications.Controllers.NotificationsController> factory)
+        public OutboundApiTests(CustomWebApplicationFactory<NotificationsController> factory)
         {
              _factory = factory;
         }
@@ -40,10 +38,9 @@ namespace Altinn.Notifications.Tests
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             };
 
-            List<string> targets = System.Text.Json.JsonSerializer.Deserialize<List<string>>(responseContent, options);
+            List<string> targets = JsonSerializer.Deserialize<List<string>>(responseContent, options);
 
             Assert.Equal(3, targets.Count);
-        }
-   
+        }   
     }
 }

@@ -32,19 +32,25 @@ namespace Altinn.Notifications.Core
 
             if (notification.Targets.Count > 0)
             {
+                createdNotification.Targets = new List<Target>();
+                
                 foreach (Target target in notification.Targets)
                 {
                     target.NotificationId = createdNotification.Id;
-                    await _notificationsRepository.AddTarget(target);
+                    Target createdTarget = await _notificationsRepository.AddTarget(target);
+                    createdNotification.Targets.Add(createdTarget);
                 }
             }
 
             if(notification.Messages.Count > 0)
             {
+                createdNotification.Messages = new List<Message>();
+
                 foreach (Message message in notification.Messages)
                 {
                     message.NotificationId = createdNotification.Id;
-                    await _notificationsRepository.AddMessage(message);
+                    Message createdMessage = await _notificationsRepository.AddMessage(message);
+                    createdNotification.Messages.Add(createdMessage);
                 }
             }
 

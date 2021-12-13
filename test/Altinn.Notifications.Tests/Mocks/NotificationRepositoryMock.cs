@@ -1,11 +1,11 @@
-﻿using Altinn.Notifications.Core;
-using Altinn.Notifications.Core.Models;
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+
+using Altinn.Notifications.Core;
+using Altinn.Notifications.Core.Models;
 
 namespace Altinn.Notifications.Tests.Mocks
 {
@@ -18,8 +18,14 @@ namespace Altinn.Notifications.Tests.Mocks
 
         public Task<Notification> AddNotification(Notification notification)
         {
-            notification.Id = 1337;
-            return Task.FromResult(notification);
+            return Task.FromResult(new Notification
+            {
+                Id = 1337,
+                Sender = notification.Sender,
+                SendTime = notification.SendTime,
+                InstanceId = notification.InstanceId,
+                PartyReference = notification.PartyReference
+            });
         }
 
         public Task<Target> AddTarget(Target target)
