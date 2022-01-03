@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Persistence;
 
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using Moq;
@@ -22,8 +21,6 @@ namespace Altinn.Notifications.Tests.Persistence
         ///[Fact]
         public async Task AddNotification_ActualServer()
         {
-            Mock<ILogger<NotificationRepository>> logger = new Mock<ILogger<NotificationRepository>>();
-
             PostgreSQLSettings postgreSQLSettings = new() 
             { 
                 ConnectionString = "Host=localhost;Port=5432;Username=platform_notifications;Password={0};Database=notificationsdb",
@@ -33,7 +30,7 @@ namespace Altinn.Notifications.Tests.Persistence
             Mock<IOptions<PostgreSQLSettings>> options = new();
             options.Setup(s => s.Value).Returns(postgreSQLSettings);
 
-            NotificationRepository target = new NotificationRepository(options.Object, logger.Object);
+            NotificationRepository target = new NotificationRepository(options.Object);
 
             Notification notification = new()
             {
@@ -53,8 +50,6 @@ namespace Altinn.Notifications.Tests.Persistence
         ///[Fact]
         public async Task AddTarget_ActualServer()
         {
-            Mock<ILogger<NotificationRepository>> logger = new Mock<ILogger<NotificationRepository>>();
-
             PostgreSQLSettings postgreSQLSettings = new()
             {
                 ConnectionString = "Host=localhost;Port=5432;Username=platform_notifications;Password={0};Database=notificationsdb",
@@ -64,7 +59,7 @@ namespace Altinn.Notifications.Tests.Persistence
             Mock<IOptions<PostgreSQLSettings>> options = new();
             options.Setup(s => s.Value).Returns(postgreSQLSettings);
 
-            NotificationRepository targeted = new NotificationRepository(options.Object, logger.Object);
+            NotificationRepository targeted = new NotificationRepository(options.Object);
 
             Target target = new Target();
             target.NotificationId = 234;
@@ -82,8 +77,6 @@ namespace Altinn.Notifications.Tests.Persistence
         ///[Fact]
         public async Task AddMessage_ActualServer()
         {
-            Mock<ILogger<NotificationRepository>> logger = new Mock<ILogger<NotificationRepository>>();
-
             PostgreSQLSettings postgreSQLSettings = new()
             {
                 ConnectionString = "Host=localhost;Port=5432;Username=platform_notifications;Password={0};Database=notificationsdb",
@@ -93,7 +86,7 @@ namespace Altinn.Notifications.Tests.Persistence
             Mock<IOptions<PostgreSQLSettings>> options = new();
             options.Setup(s => s.Value).Returns(postgreSQLSettings);
 
-            NotificationRepository targeted = new NotificationRepository(options.Object, logger.Object);
+            NotificationRepository targeted = new NotificationRepository(options.Object);
 
             Message message = new Message();
             message.NotificationId = 234;
@@ -112,8 +105,6 @@ namespace Altinn.Notifications.Tests.Persistence
         ///[Fact]
         public async Task GetNotification_ActualServer()
         {
-            Mock<ILogger<NotificationRepository>> logger = new Mock<ILogger<NotificationRepository>>();
-
             PostgreSQLSettings postgreSQLSettings = new()
             {
                 ConnectionString = "Host=localhost;Port=5432;Username=platform_notifications;Password={0};Database=notificationsdb",
@@ -123,7 +114,7 @@ namespace Altinn.Notifications.Tests.Persistence
             Mock<IOptions<PostgreSQLSettings>> options = new();
             options.Setup(s => s.Value).Returns(postgreSQLSettings);
 
-            NotificationRepository target = new NotificationRepository(options.Object, logger.Object);
+            NotificationRepository target = new NotificationRepository(options.Object);
 
             Notification actual = await target.GetNotification(1);
 
@@ -138,8 +129,6 @@ namespace Altinn.Notifications.Tests.Persistence
         ///[Fact]
         public async Task GetTarget_ActualServer()
         {
-            Mock<ILogger<NotificationRepository>> logger = new Mock<ILogger<NotificationRepository>>();
-
             PostgreSQLSettings postgreSQLSettings = new()
             {
                 ConnectionString = "Host=localhost;Port=5432;Username=platform_notifications;Password={0};Database=notificationsdb",
@@ -149,7 +138,7 @@ namespace Altinn.Notifications.Tests.Persistence
             Mock<IOptions<PostgreSQLSettings>> options = new();
             options.Setup(s => s.Value).Returns(postgreSQLSettings);
 
-            NotificationRepository target = new NotificationRepository(options.Object, logger.Object);
+            NotificationRepository target = new NotificationRepository(options.Object);
 
             Target actual = await target.GetTarget(2);
 
@@ -162,8 +151,6 @@ namespace Altinn.Notifications.Tests.Persistence
         ///[Fact]
         public async Task GetUnsentTargets_ActualServer()
         {
-            Mock<ILogger<NotificationRepository>> logger = new Mock<ILogger<NotificationRepository>>();
-
             PostgreSQLSettings postgreSQLSettings = new()
             {
                 ConnectionString = "Host=localhost;Port=5432;Username=platform_notifications;Password={0};Database=notificationsdb",
@@ -173,7 +160,7 @@ namespace Altinn.Notifications.Tests.Persistence
             Mock<IOptions<PostgreSQLSettings>> options = new();
             options.Setup(s => s.Value).Returns(postgreSQLSettings);
 
-            NotificationRepository target = new NotificationRepository(options.Object, logger.Object);
+            NotificationRepository target = new NotificationRepository(options.Object);
 
             List<Target> actual = await target.GetUnsentTargets();
 

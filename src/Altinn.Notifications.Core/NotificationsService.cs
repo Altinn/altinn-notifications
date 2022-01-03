@@ -2,13 +2,6 @@
 
 using Microsoft.Extensions.Logging;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
-
 namespace Altinn.Notifications.Core
 {
     public class NotificationsService : INotifications
@@ -62,7 +55,7 @@ namespace Altinn.Notifications.Core
            return await _notificationsRepository.GetUnsentTargets();
         }
 
-        public async Task<Notification> GetNotification(int notificationId)
+        public async Task<Notification?> GetNotification(int notificationId)
         {
             return await _notificationsRepository.GetNotification(notificationId);
         }

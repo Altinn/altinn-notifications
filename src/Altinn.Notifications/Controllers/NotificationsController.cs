@@ -1,39 +1,36 @@
 ﻿using Altinn.Notifications.Core;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Interfaces.Models;
+
 using Microsoft.AspNetCore.Mvc;
-
-using System.Text.Json;
-
-// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
 namespace Altinn.Notifications.Controllers
 {
-    [Route("notifications/api/v1/[controller]")]
+    /// <summary>
+    /// Provides endpoints for handling notifications.
+    /// </summary>
     [ApiController]
+    [Route("notifications/api/v1/notifications")]
     public class NotificationsController : ControllerBase
     {
-
         private readonly INotifications _notificationsService;
-        private readonly ILogger<NotificationsController> _logger;
 
         private readonly DateTime defaultSendTime = new DateTime(2000, 1, 1);
 
         /// <summary>
-        /// Default constructor
+        /// Initializing a new instance of the <see cref="NotificationsController"/> class.
         /// </summary>
-        /// <param name="notificationService">The Notification core service</param>
-        public NotificationsController(INotifications notificationService, ILogger<NotificationsController> logger)
+        /// <param name="notificationService">The notification core service.</param>
+        public NotificationsController(INotifications notificationService)
         {
             _notificationsService = notificationService;
-            _logger = logger;
         }
 
         /// <summary>
-        /// Operation to 
+        /// Retrieve a specific notification.
         /// </summary>
-        /// <param name="id"></param>
-        /// <returns></returns>
+        /// <param name="id">The unique id of the notification to retrieve.</param>
+        /// <returns>The identified notification.</returns>
         [HttpGet("{id}")]
         public async Task<NotificationExt> Get(int id)
         {
@@ -41,14 +38,17 @@ namespace Altinn.Notifications.Controllers
             return GetNotification(notification);
         }
 
-        // POST api/<ValuesController>
+        /// <summary>
+        /// Create a new notification.
+        /// </summary>
+        /// <param name="notificationExt">The notification details to be saved in the new notification.</param>
+        /// <returns>The created notification.</returns>
         [HttpPost]
         public async Task<ObjectResult> Post([FromBody] NotificationExt notificationExt)
         {
             Notification notification = await _notificationsService.CreateNotification(GetNotification(notificationExt));
             return Created($"/notifications/api/v1/notifcations/{notification.Id}", notification);
         }
-
 
         private Notification GetNotification(NotificationExt notificationExt)
         {
@@ -116,7 +116,6 @@ namespace Altinn.Notifications.Controllers
             return target;
         }
 
-
         private NotificationExt GetNotification(Notification notification)
         {
             NotificationExt notificationExt = new NotificationExt()
@@ -128,7 +127,6 @@ namespace Altinn.Notifications.Controllers
 
             return notificationExt;
         }
-
 
         private List<TargetExt> GetTargets(List<Target> targets)
         {
@@ -187,6 +185,5 @@ namespace Altinn.Notifications.Controllers
 
             return messageExt;
         }
-
     }
 }

@@ -2,24 +2,34 @@
 
 using Microsoft.AspNetCore.Mvc;
 
-// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-
 namespace Altinn.Notifications.Controllers
 {
-    [Route("notifications/api/v1/[controller]")]
+    /// <summary>
+    /// Provides endpoints for performing the actual sending of notifications.
+    /// </summary>
     [ApiController]
+    [Route("notifications/api/v1/send")]
     public class SendController : ControllerBase
     {
         private readonly INotifications _notificationsService;
         private readonly ILogger<SendController> _logger;
 
+        /// <summary>
+        /// Initializing a new instance of the <see cref="SendController"/> class.
+        /// </summary>
+        /// <param name="notificationService">The notification core service.</param>
+        /// <param name="logger">A logger the controller can use to register log entries.</param>
         public SendController(INotifications notificationService, ILogger<SendController> logger)
         {
             _notificationsService = notificationService;
             _logger = logger;
         }
 
-        // POST api/<SendController>
+        /// <summary>
+        /// Trigger the sending of a specific notification target.
+        /// </summary>
+        /// <param name="value">The unique id of the target to send.</param>
+        /// <returns>The result of the operation.</returns>
         [HttpPost]
         public async Task<ObjectResult> Post([FromBody] string value)
         {
