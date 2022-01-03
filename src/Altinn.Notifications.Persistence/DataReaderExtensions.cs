@@ -1,5 +1,4 @@
-﻿using System;
-using System.Data;
+﻿using System.Data;
 
 namespace Altinn.Notifications.Persistence
 {
@@ -53,7 +52,7 @@ namespace Altinn.Notifications.Persistence
                     }
                     else
                     {
-                        return (T)Enum.Parse(typeof(T), dbValue.ToString());
+                        return (T)Enum.Parse(typeof(T), dbValue.ToString()!);
                     }
                 }
 
@@ -70,7 +69,7 @@ namespace Altinn.Notifications.Persistence
                     = "Error trying to interpret data in column '{0}'. The reader value is '{1}', of type '{2}'. "
                     + "Attempt to interpret the value as type '{3}' failed.";
 
-                string strVal = dbValue.ToString();
+                string strVal = dbValue.ToString() ?? "dbValue.ToString() returns null.";
                 if (strVal.Length > 100)
                 {
                     strVal = string.Format($"{strVal.Substring(0, 100)} (truncated; length={strVal.Length}).");

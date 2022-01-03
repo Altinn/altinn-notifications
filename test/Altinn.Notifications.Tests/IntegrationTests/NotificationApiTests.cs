@@ -47,7 +47,7 @@ namespace Altinn.Notifications.Tests.IntegrationTests
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             };
 
-            NotificationExt? notificationExtResponse = JsonSerializer.Deserialize<NotificationExt>(content, options);
+            NotificationExt notificationExtResponse = JsonSerializer.Deserialize<NotificationExt>(content, options)!;
             Assert.Equal(notificationeExt.InstanceId, notificationExtResponse.InstanceId);
             Assert.Single(notificationExtResponse.Targets);
             Assert.Single(notificationExtResponse.Messages);

@@ -14,7 +14,7 @@ namespace Altinn.Notifications.Services
     /// the JSON Web Token needed for the application to make calls to other services.
     /// </summary>
     /// <remarks>
-    /// This class is excluded from code doverage because we have no good way of mocking the HttpContext. 
+    /// This class is excluded from code doverage because we have no good way of mocking the HttpContext.
     /// There are also very little code to test as most of the logic are in an imported package.
     /// </remarks>
     [ExcludeFromCodeCoverage]
@@ -23,11 +23,15 @@ namespace Altinn.Notifications.Services
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly string _jwtCookieName;
 
+        /// <summary>
+        /// Initialize a new instance of the <see cref="UserTokenProvider"/> class.
+        /// </summary>
+        /// <param name="httpContextAccessor">A service providing access to the http context.</param>
+        /// <param name="generalSettings">The application general settings.</param>
         public UserTokenProvider(IHttpContextAccessor httpContextAccessor, IOptions<GeneralSettings> generalSettings)
         {
             _httpContextAccessor = httpContextAccessor;
             _jwtCookieName = generalSettings.Value.JwtCookieName;
-
         }
 
         /// <summary>

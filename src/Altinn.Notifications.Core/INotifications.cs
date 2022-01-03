@@ -1,9 +1,4 @@
 ﻿using Altinn.Notifications.Core.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Altinn.Notifications.Core
 {
@@ -18,6 +13,6 @@ namespace Altinn.Notifications.Core
 
         public Task Send(int targetId);
 
-        public Task<Notification> GetNotification(int notificationId);
+        public Task<Notification?> GetNotification(int notificationId);
     }
 }

@@ -1,5 +1,3 @@
-
-
 namespace Altinn.Notifications.Integrations.Configuration
 {
     /// <summary>

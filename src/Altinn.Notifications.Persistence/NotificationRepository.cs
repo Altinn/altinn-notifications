@@ -1,7 +1,6 @@
 ﻿using Altinn.Notifications.Core;
 using Altinn.Notifications.Core.Models;
 
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using Npgsql;
@@ -12,14 +11,12 @@ namespace Altinn.Notifications.Persistence
     public class NotificationRepository : INotificationsRepository
     {
         private readonly string _connectionString;
-        
-        private readonly ILogger _logger;
 
-        public NotificationRepository(IOptions<PostgreSQLSettings> postgresSettings, ILogger<NotificationRepository> logger)
+        public NotificationRepository(IOptions<PostgreSQLSettings> postgresSettings)
         {
-            _connectionString = string.Format(postgresSettings.Value.ConnectionString, postgresSettings.Value.NotificationsDbPwd);
-
-            _logger = logger;
+            _connectionString = string.Format(
+                postgresSettings.Value.ConnectionString, 
+                postgresSettings.Value.NotificationsDbPwd);
         }
 
         public async Task<Notification> AddNotification(Notification notification)
@@ -67,9 +64,9 @@ namespace Altinn.Notifications.Persistence
         }
 
         /// <inheritdoc/>
-        public async Task<Notification> GetNotification(int id)
+        public async Task<Notification?> GetNotification(int id)
         {
-            Notification notification = null;
+            Notification? notification = null;
 
             using NpgsqlConnection conn = new NpgsqlConnection(_connectionString);
             await conn.OpenAsync();
@@ -215,9 +212,9 @@ namespace Altinn.Notifications.Persistence
             return unsentTargets;
         }
         
-        public async Task<Target> GetTarget(int targetId)
+        public async Task<Target?> GetTarget(int targetId)
         {
-            Target target = null;
+            Target? target = null;
 
             using NpgsqlConnection conn = new NpgsqlConnection(_connectionString);
             await conn.OpenAsync();
