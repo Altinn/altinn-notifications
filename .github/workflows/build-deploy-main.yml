@@ -1,0 +1,61 @@
+name: Build and deploy latest
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 6.0.x
+      - name: Restore dependencies
+        run: dotnet restore
+      - name: Build
+        working-directory: src/Altinn.Notifications
+        run: dotnet build --no-restore
+      - name: Test
+        working-directory: test/Altinn.Notifications.Tests
+        run: dotnet test
+  build-image:
+    uses: altinn/altinn-notifications/.github/workflows/build-image.yaml@main
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    with:
+      tag: latest
+      push: true
+  deploy-at21:
+    uses: altinn/altinn-notifications/.github/workflows/deploy-image.yaml@main
+    if: github.ref == 'refs/heads/main'
+    needs: build-image
+    with:
+      env: at21
+      tag: ${{ needs.build-image.outputs.digest }}
+  deploy-at22:
+    uses: altinn/altinn-notifications/.github/workflows/deploy-image.yaml@main
+    if: github.ref == 'refs/heads/main'
+    needs: [build-image, deploy-at21]
+    with:
+      env: at22
+      tag: ${{ needs.build-image.outputs.digest }}
+  deploy-at23:
+    uses: altinn/altinn-notifications/.github/workflows/deploy-image.yaml@main
+    if: github.ref == 'refs/heads/main'
+    needs: [build-image, deploy-at21]
+    with:
+      env: at23
+      tag: ${{ needs.build-image.outputs.digest }}
+  deploy-at24:
+    uses: altinn/altinn-notifications/.github/workflows/deploy-image.yaml@main
+    if: github.ref == 'refs/heads/main'
+    needs: [build-image, deploy-at21]
+    with:
+      env: at24
+      tag: ${{ needs.build-image.outputs.digest }}

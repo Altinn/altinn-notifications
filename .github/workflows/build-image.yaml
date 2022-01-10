@@ -10,11 +10,17 @@ on:
         required: true
         type: boolean
         default: true
+    outputs:
+      digest:
+        description: "The docker image digest"
+        value: ${{ jobs.docker-build.outputs.digest }}
 
 jobs:
   docker-build:
     name: "build docker image"
     runs-on: ubuntu-latest
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
     steps:
       - name: Setup QEMU
         uses: docker/setup-qemu-action@v1
@@ -30,6 +36,7 @@ jobs:
         id: lowercase
         run: echo ::set-output name=image-repository::$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')
       - name: Build image
+        id: build
         uses: docker/build-push-action@v2
         with:
           push: ${{ inputs.push }}

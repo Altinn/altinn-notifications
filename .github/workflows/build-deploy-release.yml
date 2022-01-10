@@ -1,0 +1,59 @@
+name: Build and deploy release
+
+on:
+  push:
+    tags:
+      - "*.*.*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 6.0.x
+      - name: Restore dependencies
+        run: dotnet restore
+      - name: Build
+        working-directory: src/Altinn.Notifications
+        run: dotnet build --no-restore
+      - name: Test
+        working-directory: test/Altinn.Notifications.Tests
+        run: dotnet test
+      - name: Get version from tags
+        id: version
+        run: echo ::set-output name=tag::${GITHUB_REF/refs\/tags\//}
+  build-image:
+    uses: altinn/altinn-notifications/.github/workflows/build-image.yaml@main
+    needs: build
+    with:
+      tag: ${{ needs.build.outputs.tag }}
+      push: true
+  deploy-at21:
+    uses: altinn/altinn-notifications/.github/workflows/deploy-image.yaml@main
+    needs: [build, build-image]
+    with:
+      env: at21
+      tag: ${{ needs.build.outputs.tag }}
+  deploy-at22:
+    uses: altinn/altinn-notifications/.github/workflows/deploy-image.yaml@main
+    needs: [build, build-image, deploy-at21]
+    with:
+      env: at22
+      tag: ${{ needs.build.outputs.tag }}
+  deploy-at23:
+    uses: altinn/altinn-notifications/.github/workflows/deploy-image.yaml@main
+    needs: [build, build-image, deploy-at21]
+    with:
+      env: at23
+      tag: ${{ needs.build.outputs.tag }}
+  deploy-at24:
+    uses: altinn/altinn-notifications/.github/workflows/deploy-image.yaml@main
+    needs: [build, build-image, deploy-at21]
+    with:
+      env: at24
+      tag: ${{ needs.build.outputs.tag }}
