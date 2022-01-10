@@ -6,14 +6,14 @@ namespace Altinn.Notifications.Core
     {
         Task<Notification> AddNotification(Notification notification);
         
-        Task<Notification> GetNotification(int id);
+        Task<Notification?> GetNotification(int id);
 
         Task<Target> AddTarget(Target target);
 
-        Task<Target> GetTarget(int id);
-
         Task<Target> UpdateSentTarget(int id);
 
+        Task<Target?> GetTarget(int id);
+      
         Task<Message> AddMessage(Message message);
 
         Task<List<Target>> GetUnsentTargets();

@@ -4,7 +4,6 @@ using System.Text.Json;
 using System.Threading.Tasks;
 
 using Altinn.Notifications.Controllers;
-using Altinn.Notifications.Interfaces.Models;
 using Altinn.Notifications.Tests.IntegrationTests.Utils;
 
 using Xunit;
@@ -23,12 +22,9 @@ namespace Altinn.Notifications.Tests.IntegrationTests
         [Fact]
         public async Task Outbound_Email_GET_OK()
         {
-            NotificationExt notificationeExt = new NotificationExt();
             HttpClient client = SetupUtil.GetTestClient(_factory);
 
-            HttpRequestMessage reqst = new HttpRequestMessage(HttpMethod.Get, "notifications/api/v1/outbound/email")
-            {
-            };
+            HttpRequestMessage reqst = new HttpRequestMessage(HttpMethod.Get, "notifications/api/v1/outbound/email");
 
             HttpResponseMessage response = await client.SendAsync(reqst);
             string responseContent = await response.Content.ReadAsStringAsync();
@@ -38,7 +34,7 @@ namespace Altinn.Notifications.Tests.IntegrationTests
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             };
 
-            List<string> targets = JsonSerializer.Deserialize<List<string>>(responseContent, options);
+            List<string> targets = JsonSerializer.Deserialize<List<string>>(responseContent, options)!;
 
             Assert.Equal(3, targets.Count);
         }   

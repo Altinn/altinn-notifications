@@ -33,16 +33,16 @@ namespace Altinn.Notifications.Tests.Mocks
             return Task.FromResult(target);
         }
 
-        public Task<Notification> GetNotification(int id)
+        public Task<Notification?> GetNotification(int id)
         {
             Notification notification = new Notification();
-            return Task.FromResult(notification);
+            return Task.FromResult<Notification?>(notification);
         }
 
-        public Task<Target> GetTarget(int id)
+        public Task<Target?> GetTarget(int id)
         {
             Target target = new Target();
-            return Task.FromResult(target);
+            return Task.FromResult<Target?>(target);
         }
 
         public Task<List<Target>> GetUnsentTargets()
