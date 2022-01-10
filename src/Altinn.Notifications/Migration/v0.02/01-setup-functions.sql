@@ -12,8 +12,9 @@ AS $BODY$
 BEGIN
 return query
 	SELECT t.id, t.notificationid, t.channeltype, t."address", t."sent"
-    WHERE t."sent" IS NULL
-	FROM notifications.targets t;
+    	FROM notifications.targets t
+	WHERE t."sent" IS NULL;
+	
 
 END;
 $BODY$;
