@@ -51,16 +51,12 @@ jobs:
         run: |
           .\.sonar\scanner\dotnet-sonarscanner begin /k:"Altinn_altinn-notifications" /o:"altinn" /d:sonar.login="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io"
 
-          echo building project
           dotnet build src/Altinn.Notifications/
 
-          echo trying to run tests
           dotnet test test/Altinn.Notifications.Tests/Altinn.Notifications.Tests.csproj `
           --collect:"XPlat Code Coverage" `
           --results-directory TestResults/ `
           --logger "trx;LogFileName=unittests.trx" `
-          --no-build `
-          --no-restore `
           --configuration release `
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
 
