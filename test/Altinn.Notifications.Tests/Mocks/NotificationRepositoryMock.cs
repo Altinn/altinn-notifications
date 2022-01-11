@@ -1,4 +1,7 @@
-﻿using System.Collections.Generic;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 
 using Altinn.Notifications.Core;
@@ -49,6 +52,21 @@ namespace Altinn.Notifications.Tests.Mocks
             targets.Add(new Target() { ChannelType = "Email", Address = "demo2@demo.no", Id = 1338 });
             targets.Add(new Target() { ChannelType = "Email", Address = "demo3@demo.no", Id = 1339 });
             return Task.FromResult(targets);
+        }
+
+        public Task<Target> UpdateSentTarget(int id)
+        {
+            switch (id)
+            {
+                case 1337:
+                    return Task.FromResult(new Target() { ChannelType = "Email", Address = "demo@demo.no", Id = 1337, Sent = DateTime.UtcNow });
+                case 1338:
+                    return Task.FromResult(new Target() { ChannelType = "Email", Address = "demo@demo.no", Id = 1338, Sent = DateTime.UtcNow });
+                case 1339:
+                    return Task.FromResult(new Target() { ChannelType = "Email", Address = "demo@demo.no", Id = 1339, Sent = DateTime.UtcNow });
+            }
+
+            throw new NotImplementedException();
         }
     }
 }

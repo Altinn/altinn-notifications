@@ -10,8 +10,10 @@ namespace Altinn.Notifications.Core
 
         Task<Target> AddTarget(Target target);
 
+        Task<Target> UpdateSentTarget(int id);
+
         Task<Target?> GetTarget(int id);
-        
+      
         Task<Message> AddMessage(Message message);
 
         Task<List<Target>> GetUnsentTargets();

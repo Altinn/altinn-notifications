@@ -1,4 +1,6 @@
-﻿using Altinn.Notifications.Core;
+using System.Text.Json;
+
+using Altinn.Notifications.Core;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Interfaces.Models;
 

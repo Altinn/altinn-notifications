@@ -74,6 +74,8 @@ namespace Altinn.Notifications.Core
             Message message = notification.Messages.First(r => !string.IsNullOrEmpty(r.EmailSubject));
 
             await _emailservice.SendEmailAsync(target.Address, message.EmailSubject, message.EmailBody);
+
+            await _notificationsRepository.UpdateSentTarget(target.Id);
         }
     }
 }
