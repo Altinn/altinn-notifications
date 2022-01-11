@@ -36,5 +36,5 @@ jobs:
     if: github.ref == 'refs/heads/main'
     needs: build-image
     with:
-      env: at22
+      environment: at22
       tag: ${{ needs.build-image.outputs.digest }}
