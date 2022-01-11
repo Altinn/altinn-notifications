@@ -37,5 +37,5 @@ jobs:
     uses: altinn/altinn-notifications/.github/workflows/deploy-image.yaml@main
     needs: [build, build-image]
     with:
-      env: at22
+      environment: at22
       tag: ${{ needs.build.outputs.tag }}
