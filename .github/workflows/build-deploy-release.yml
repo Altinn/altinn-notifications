@@ -33,27 +33,9 @@ jobs:
     with:
       tag: ${{ needs.build.outputs.tag }}
       push: true
-  deploy-at21:
+  deploy-at22:
     uses: altinn/altinn-notifications/.github/workflows/deploy-image.yaml@main
     needs: [build, build-image]
     with:
-      env: at21
-      tag: ${{ needs.build.outputs.tag }}
-  deploy-at22:
-    uses: altinn/altinn-notifications/.github/workflows/deploy-image.yaml@main
-    needs: [build, build-image, deploy-at21]
-    with:
       env: at22
-      tag: ${{ needs.build.outputs.tag }}
-  deploy-at23:
-    uses: altinn/altinn-notifications/.github/workflows/deploy-image.yaml@main
-    needs: [build, build-image, deploy-at21]
-    with:
-      env: at23
-      tag: ${{ needs.build.outputs.tag }}
-  deploy-at24:
-    uses: altinn/altinn-notifications/.github/workflows/deploy-image.yaml@main
-    needs: [build, build-image, deploy-at21]
-    with:
-      env: at24
       tag: ${{ needs.build.outputs.tag }}
