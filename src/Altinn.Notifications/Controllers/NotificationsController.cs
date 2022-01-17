@@ -34,9 +34,15 @@ namespace Altinn.Notifications.Controllers
         /// <param name="id">The unique id of the notification to retrieve.</param>
         /// <returns>The identified notification.</returns>
         [HttpGet("{id}")]
-        public async Task<NotificationExt> Get(int id)
+        public async Task<ActionResult<NotificationExt>> Get(int id)
         {
-            Notification notification = await _notificationsService.GetNotification(id);
+            Notification? notification = await _notificationsService.GetNotification(id);
+
+            if (notification is null)
+            {
+                return NotFound();
+            }
+
             return GetNotification(notification);
         }
 
