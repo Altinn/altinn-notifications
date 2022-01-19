@@ -13,6 +13,33 @@ on:
         required: false
         default: "IfNotPresent"
         type: string
+    secrets:
+      AZURE_CLIENT_ID:
+        required: true
+      AZURE_TENANT_ID:
+        required: true
+      AZURE_SUBSCRIPTION_ID:
+        required: true
+      AKS_RESOURCEGROUP_NAME:
+        required: true
+      AKS_CLUSTER_NAME:
+        required: true
+      TLS_SECRET_NAME:
+        required: true
+      INGRESS_HOST:
+        required: true
+      APPSETTINS_SECRET_NAME:
+        required: true
+      APPSETTINGS_PATH:
+        required: true
+      DB_ADMIN_CONNECTION_STRING:
+        required: true
+      DB_USER_CONNECTION_STRING:
+        required: true
+      SMTP_HOST:
+        required: true
+      SMTP_SENDER:
+        required: true
 
 jobs:
   docker-build:
