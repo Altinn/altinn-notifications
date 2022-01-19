@@ -10,7 +10,7 @@ on:
         required: true
         type: string
       pullPolicy:
-        required: true
+        required: false
         default: "IfNotPresent"
         type: string
 
