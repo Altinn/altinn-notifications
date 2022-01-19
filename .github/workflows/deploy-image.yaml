@@ -59,7 +59,11 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       - name: Deploy to ${{inputs.environment}}
         run: |
+          curl -LO "https://github.com/Azure/kubelogin/releases/download/v0.0.10/kubelogin-linux-amd64.zip"
+          unzip -j "kubelogin-linux-amd64.zip" -d ./
+          rm -rf "kubelogin-linux-amd64.zip"
           az aks get-credentials -g ${{ secrets.AKS_RESOURCEGROUP_NAME }} -n ${{ secrets.AKS_CLUSTER_NAME }}
+          ./kubelogin convert-kubeconfig -l azurecli
           helm upgrade --install altinn-notifications ./chart/altinn-notifications \
             --set image.tag=${{inputs.tag}} \
             --set ingress.tls.secretName=${{secrets.TLS_SECRET_NAME}} \
