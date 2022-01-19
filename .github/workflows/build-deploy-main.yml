@@ -2,7 +2,7 @@ name: Build and deploy latest
 
 on:
   push:
-    branches: [main]
+    branches: [actions-federated-id]
   pull_request:
     branches: [main]
 
@@ -26,14 +26,14 @@ jobs:
         run: dotnet test
   build-image:
     uses: altinn/altinn-notifications/.github/workflows/build-image.yaml@main
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/actions-federated-id'
     needs: build
     with:
       tag: latest
       push: true
   deploy-at22:
-    uses: altinn/altinn-notifications/.github/workflows/deploy-image.yaml@main
-    if: github.ref == 'refs/heads/main'
+    uses: altinn/altinn-notifications/.github/workflows/deploy-image.yaml@actions-federated-id
+    if: github.ref == 'refs/heads/actions-federated-id'
     needs: build-image
     with:
       environment: at22
