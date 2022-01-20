@@ -28,7 +28,7 @@ on:
         required: true
       INGRESS_HOST:
         required: true
-      APPSETTINS_SECRET_NAME:
+      APPSETTINGS_SECRET_NAME:
         required: true
       APPSETTINGS_PATH:
         required: true
@@ -69,7 +69,7 @@ jobs:
             --set ingress.tls.secretName=${{secrets.TLS_SECRET_NAME}} \
             --set ingress.match.host=${{secrets.INGRESS_HOST}} \
             --set appsettings.mount=true \
-            --set appsettings.secretName=${{secrets.APPSETTINS_SECRET_NAME}} \
+            --set appsettings.secretName=${{secrets.APPSETTINGS_SECRET_NAME}} \
             --set appsettings.mountPath=${{secrets.APPSETTINGS_PATH}} \
             --set postgreSQLSettings.adminConnectionString=${{secrets.DB_ADMIN_CONNECTION_STRING}} \
             --set postgreSQLSettings.userConnectionString=${{secrets.DB_USER_CONNECTION_STRING}} \
