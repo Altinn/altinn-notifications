@@ -82,7 +82,6 @@ jobs:
             --set smtpSettings.host=${{secrets.SMTP_HOST}} \
             --set smtpSettings.sender=${{secrets.SMTP_SENDER}}
           kubectl wait --for=condition=available --timeout=600s deployment/altinn-notifications
-          helm test altinn-notifications
       - name: Post Deploy
         if: always()
         run: |
