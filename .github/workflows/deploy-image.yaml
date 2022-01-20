@@ -78,3 +78,9 @@ jobs:
             --set smtpSettings.sender=${{secrets.SMTP_SENDER}}
           kubectl wait --for=condition=available --timeout=600s deployment/altinn-notifications
           helm test altinn-notifications
+      - name: Post Deploy
+        if: always()
+        run: |
+          rm -rf /home/runner/.kube/config
+          az logout
+          az account clear
