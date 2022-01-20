@@ -40,7 +40,8 @@ jobs:
     needs: build-image
     with:
       environment: at22
-      tag: ${{ needs.build-image.outputs.digest }}
+      tag: latest
+      digest: ${{ needs.build-image.outputs.digest }}
     secrets:
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}

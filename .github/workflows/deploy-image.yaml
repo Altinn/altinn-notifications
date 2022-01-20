@@ -9,6 +9,10 @@ on:
       tag:
         required: true
         type: string
+      digest:
+        required: false
+        type: string
+        default: ""
       pullPolicy:
         required: false
         default: "IfNotPresent"
@@ -66,6 +70,7 @@ jobs:
           kubelogin convert-kubeconfig -l azurecli
           helm upgrade --install altinn-notifications ./chart/altinn-notifications \
             --set image.tag=${{inputs.tag}} \
+            --set image.digest=${{inputs.digest}} \
             --set ingress.tls.secretName=${{secrets.TLS_SECRET_NAME}} \
             --set ingress.match.host=${{secrets.INGRESS_HOST}} \
             --set appsettings.mount=true \
