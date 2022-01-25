@@ -233,9 +233,9 @@ namespace Altinn.Notifications.Persistence
             return target;
         }
 
-        public async Task<Target> UpdateSentTarget(int id)
+        public async Task<Target?> UpdateSentTarget(int id)
         {
-            Target target = null;
+            Target? target = null;
 
             using NpgsqlConnection conn = new NpgsqlConnection(_connectionString);
             await conn.OpenAsync();

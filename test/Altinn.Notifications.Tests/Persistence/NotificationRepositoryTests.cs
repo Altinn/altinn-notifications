@@ -116,11 +116,11 @@ namespace Altinn.Notifications.Tests.Persistence
 
             NotificationRepository target = new NotificationRepository(options.Object);
 
-            Notification actual = await target.GetNotification(1);
+            Notification? actual = await target.GetNotification(1);
 
             Assert.NotNull(actual);
 
-            Assert.Equal("averyvierdinstanceid", actual.InstanceId);
+            Assert.Equal("averyvierdinstanceid", actual!.InstanceId);
         }
 
         /// <summary>
@@ -140,7 +140,7 @@ namespace Altinn.Notifications.Tests.Persistence
 
             NotificationRepository target = new NotificationRepository(options.Object);
 
-            Target actual = await target.GetTarget(2);
+            Target? actual = await target.GetTarget(2);
 
             Assert.NotNull(actual);
         }

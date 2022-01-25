@@ -1,24 +1,22 @@
-﻿using Altinn.Notifications.Functions.Configurations;
-using Altinn.Notifications.Functions.Extensions;
-
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+
+using Altinn.Notifications.Functions.Configurations;
+using Altinn.Notifications.Functions.Extensions;
+
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Functions.Integrations
 {
     public class NotificationsClient : INotifications
     {
         private readonly HttpClient _client;
-        private readonly IToken _token;
         private readonly ILogger<INotifications> _logger;
 
         public NotificationsClient(
