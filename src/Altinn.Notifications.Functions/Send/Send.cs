@@ -1,10 +1,8 @@
-using System;
 using System.Threading.Tasks;
 
 using Altinn.Notifications.Functions.Integrations;
 
 using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Extensions.Logging;
 
 namespace Altinn.Notifications.Functions.Send
