@@ -1,14 +1,11 @@
 ﻿using Altinn.Notifications.Functions.Configurations;
 
 using Azure.Storage.Queues;
-using Azure.Storage.Queues.Models;
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 

@@ -1,4 +1,3 @@
-using System.Text.Json;
 
 using Altinn.Notifications.Core;
 using Altinn.Notifications.Core.Models;

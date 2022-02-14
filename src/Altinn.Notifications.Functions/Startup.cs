@@ -1,5 +1,4 @@
-﻿using Altinn.Common.AccessTokenClient.Services;
-using Altinn.Notifications.Functions;
+﻿using Altinn.Notifications.Functions;
 using Altinn.Notifications.Functions.Configurations;
 using Altinn.Notifications.Functions.Integrations;
 
