@@ -33,11 +33,15 @@ jobs:
       push: true
   deploy-at22:
     uses: altinn/altinn-notifications/.github/workflows/deploy-image.yaml@main
+    permissions:
+      id-token: write
+      contents: read
     if: github.ref == 'refs/heads/main'
     needs: build-image
     with:
       environment: at22
-      tag: ${{ needs.build-image.outputs.digest }}
+      tag: latest
+      digest: ${{ needs.build-image.outputs.digest }}
     secrets:
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
@@ -46,7 +50,7 @@ jobs:
       AKS_CLUSTER_NAME: ${{ secrets.AKS_CLUSTER_NAME }}
       TLS_SECRET_NAME: ${{ secrets.TLS_SECRET_NAME }}
       INGRESS_HOST: ${{ secrets.INGRESS_HOST }}
-      APPSETTINS_SECRET_NAME: ${{ secrets.APPSETTINS_SECRET_NAME }}
+      APPSETTINGS_SECRET_NAME: ${{ secrets.APPSETTINGS_SECRET_NAME }}
       APPSETTINGS_PATH: ${{ secrets.APPSETTINGS_PATH }}
       DB_ADMIN_CONNECTION_STRING: ${{ secrets.DB_ADMIN_CONNECTION_STRING }}
       DB_USER_CONNECTION_STRING: ${{ secrets.DB_USER_CONNECTION_STRING }}
