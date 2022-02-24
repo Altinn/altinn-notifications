@@ -11,7 +11,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="6.0.0" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="6.0.0" />
     <PackageReference Include="Yuniql.AspNetCore" Version="1.1.55" />
-    <PackageReference Include="Yuniql.PostgreSql" Version="1.1.55" />
+    <PackageReference Include="Yuniql.PostgreSql" Version="1.2.25" />
   </ItemGroup>
 
   <ItemGroup>
