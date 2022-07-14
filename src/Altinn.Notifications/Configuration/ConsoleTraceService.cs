@@ -12,9 +12,21 @@ namespace Altinn.Notifications.Configuration
         /// </summary>
         public bool IsDebugEnabled { get; set; } = false;
 
+        /// <inheritdoc/>>
+        public bool IsTraceSensitiveData { get; set; } = false;
+
+        /// <inheritdoc/>>
+        public bool IsTraceToFile { get; set; } = false;
+
+        /// <inheritdoc/>>
+        public bool IsTraceToDirectory { get; set; } = false;
+
+        /// <inheritdoc/>>
+        public string TraceDirectory { get; set; }
+
         /// <summary>
         /// Info
-        /// </summary>      
+        /// </summary>
         public void Info(string message, object? payload = null)
         {
             var traceMessage = $"INF   {DateTime.UtcNow.ToString("o")}   {message}{Environment.NewLine}";
