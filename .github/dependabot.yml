@@ -20,7 +20,6 @@ updates:
       day: "thursday"
       time: "07:00"
       timezone: "Europe/Oslo"
-  ## Authorization
   - directory: "src/Altinn.Notifications.Integrations"
     package-ecosystem: "nuget"
     ignore:
@@ -46,6 +45,15 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
+    schedule:
+      interval: "weekly"
+      day: "thursday"
+      time: "07:00"
+      timezone: "Europe/Oslo"
+      
+ ## Dockerfile
+  - directory: "/"
+    package-ecosystem: "docker"
     schedule:
       interval: "weekly"
       day: "thursday"
