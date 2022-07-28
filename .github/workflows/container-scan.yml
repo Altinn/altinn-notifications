@@ -22,6 +22,8 @@ jobs:
     - name: Build the Docker image
       run: docker build . --tag altinn-notifications:${{github.sha}}
 
-    - uses: Azure/container-scan@v0
+    - uses: Azure/container-scan@v0.1
       with:
         image-name: altinn-notifications:${{ github.sha }}
+      env:
+        DOCKLE_HOST: "unix:///var/run/docker.sock"
