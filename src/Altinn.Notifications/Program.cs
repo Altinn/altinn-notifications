@@ -23,7 +23,7 @@ ILogger logger;
 
 string vaultApplicationInsightsKey = "ApplicationInsights--InstrumentationKey";
 
-string applicationInsightsKey = string.Empty;
+string applicationInsightsConnectionString = string.Empty;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -144,7 +144,7 @@ void SetConfigurationProviders(ConfigurationManager config)
 
 void ConnectToKeyVaultAndSetApplicationInsights(ConfigurationManager config)
 {
-   KeyVaultSettings keyVaultSettings = new KeyVaultSettings();
+    KeyVaultSettings keyVaultSettings = new KeyVaultSettings();
     config.GetSection("kvSetting").Bind(keyVaultSettings);
     if (!string.IsNullOrEmpty(keyVaultSettings.ClientId) &&
         !string.IsNullOrEmpty(keyVaultSettings.TenantId) &&
@@ -167,7 +167,7 @@ void ConnectToKeyVaultAndSetApplicationInsights(ConfigurationManager config)
             SecretBundle secretBundle = keyVaultClient
                 .GetSecretAsync(keyVaultSettings.SecretUri, vaultApplicationInsightsKey).Result;
 
-            applicationInsightsKey = secretBundle.Value;
+            applicationInsightsConnectionString = string.Format("InstrumentationKey={0}", secretBundle.Value);
         }
         catch (Exception vaultException)
         {
