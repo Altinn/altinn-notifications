@@ -23,7 +23,7 @@ jobs:
       digest: ${{ steps.build.outputs.digest }}
     steps:
       - name: Setup QEMU
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v2
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v1
       - name: Login docker
