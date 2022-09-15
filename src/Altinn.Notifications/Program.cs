@@ -72,6 +72,11 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+app.UseEndpoints(endpoints =>
+{
+    endpoints.MapHealthChecks("/health");
+});
+
 app.Run();
 
 void ConfigureSetupLogging()
