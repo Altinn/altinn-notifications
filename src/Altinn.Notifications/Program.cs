@@ -72,10 +72,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-app.UseEndpoints(endpoints =>
-{
-    endpoints.MapHealthChecks("/health");
-});
+app.MapHealthChecks("/health");
 
 app.Run();
 
