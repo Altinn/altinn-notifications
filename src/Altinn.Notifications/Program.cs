@@ -5,6 +5,7 @@ using Altinn.Common.AccessToken.Configuration;
 
 using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core;
+using Altinn.Notifications.Health;
 using Altinn.Notifications.Integrations;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Persistence;
@@ -111,6 +112,8 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
         options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
     });
 
+    services.AddHealthChecks().AddCheck<HealthCheck>("notifications_health_check");
+
     services.AddSingleton(config);
 
     services.Configure<PostgreSQLSettings>(config.GetSection("PostgreSQLSettings"));
@@ -119,6 +122,9 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     services.AddSingleton<IEmail, EmailSmtp>();
     services.AddSingleton<INotifications, NotificationsService>();
     services.AddSingleton<INotificationsRepository, NotificationRepository>();
+
+    services.AddApplicationInsightsTelemetryProcessor<HealthTelemetryFilter>();
+
 }
 
 void SetConfigurationProviders(ConfigurationManager config)
