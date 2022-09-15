@@ -10,6 +10,10 @@ using Altinn.Notifications.Integrations;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Persistence;
 
+using Microsoft.ApplicationInsights.AspNetCore.Extensions;
+using Microsoft.ApplicationInsights.Channel;
+using Microsoft.ApplicationInsights.Extensibility;
+using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel;
 using Microsoft.Azure.KeyVault;
 using Microsoft.Azure.KeyVault.Models;
 using Microsoft.Azure.Services.AppAuthentication;
@@ -151,8 +155,18 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     services.AddSingleton<INotifications, NotificationsService>();
     services.AddSingleton<INotificationsRepository, NotificationRepository>();
 
-    services.AddApplicationInsightsTelemetryProcessor<HealthTelemetryFilter>();
+    if (!string.IsNullOrEmpty(applicationInsightsConnectionString))
+    {
+        services.AddSingleton(typeof(ITelemetryChannel), new ServerTelemetryChannel() { StorageFolder = "/tmp/logtelemetry" });
 
+        services.AddApplicationInsightsTelemetry(new ApplicationInsightsServiceOptions
+        {
+            ConnectionString = applicationInsightsConnectionString
+        });
+
+        services.AddApplicationInsightsTelemetryProcessor<HealthTelemetryFilter>();
+        services.AddSingleton<ITelemetryInitializer, CustomTelemetryInitializer>();
+    }
 }
 
 void SetConfigurationProviders(ConfigurationManager config)

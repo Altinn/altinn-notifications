@@ -27,7 +27,7 @@ namespace Altinn.Notifications.Functions.Integrations
         {
             await GetQueueClient();
             await _queueClient.SendMessageAsync(Convert.ToBase64String(Encoding.UTF8.GetBytes(message)));
-            _logger.LogInformation(" // Quueu client // Successfully psuhed to queue.");
+            _logger.LogInformation(" // Quueu client // Successfully pushed to queue.");
 
         }
 
