@@ -19,25 +19,19 @@ return query
 END;
 $BODY$;
 
--- Function: notifications.set_sent_target
-CREATE OR REPLACE FUNCTION notifications.update_senttarget(_id bigint)
-     RETURNS TABLE (
-        id bigint,
-        notificationid bigint,
-        channeltype character varying,
-        "address" character varying,
-        "sent" timestamptz)
+-- Function: notifications.update_senttarget
+CREATE OR REPLACE PROCEDURE notifications.update_senttarget(
+	_id bigint)
     LANGUAGE 'plpgsql'
+  
 
 AS $BODY$
 DECLARE currentTime timestamptz;
 BEGIN
  SET TIME ZONE UTC;
   currentTime := NOW();
-
-RETURN QUERY
-    UPDATE notifications.targets
+ 
+    UPDATE notifications.targets as t
 	SET "sent" = currentTime
-    WHERE id = _id;
-END;
+    WHERE t.id = _id;
 $BODY$;

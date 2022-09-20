@@ -4,6 +4,7 @@ using Altinn.Notifications.Core.Models;
 using Microsoft.Extensions.Options;
 
 using Npgsql;
+
 using NpgsqlTypes;
 
 namespace Altinn.Notifications.Persistence
@@ -15,7 +16,7 @@ namespace Altinn.Notifications.Persistence
         public NotificationRepository(IOptions<PostgreSQLSettings> postgresSettings)
         {
             _connectionString = string.Format(
-                postgresSettings.Value.ConnectionString, 
+                postgresSettings.Value.ConnectionString,
                 postgresSettings.Value.NotificationsDbPwd);
         }
 
@@ -211,7 +212,7 @@ namespace Altinn.Notifications.Persistence
 
             return unsentTargets;
         }
-        
+
         public async Task<Target?> GetTarget(int targetId)
         {
             Target? target = null;
@@ -233,25 +234,15 @@ namespace Altinn.Notifications.Persistence
             return target;
         }
 
-        public async Task<Target?> UpdateSentTarget(int id)
+        public async Task UpdateSentTarget(int id)
         {
-            Target? target = null;
-
-            using NpgsqlConnection conn = new NpgsqlConnection(_connectionString);
+            await using NpgsqlConnection conn = new NpgsqlConnection(_connectionString);
             await conn.OpenAsync();
 
-            NpgsqlCommand pgcom = new NpgsqlCommand("select * from notifications.update_senttarget(@_id)", conn);
-            pgcom.Parameters.AddWithValue("_id", NpgsqlDbType.Integer, id);
+            await using NpgsqlCommand pgcom = new NpgsqlCommand("call notifications.update_senttarget(@_id)", conn);
+            pgcom.Parameters.AddWithValue("_id", id);
 
-            using (NpgsqlDataReader reader = pgcom.ExecuteReader())
-            {
-                if (reader.Read())
-                {
-                    target = ReadTarget(reader);
-                }
-            }
-
-            return target;
+            await pgcom.ExecuteNonQueryAsync();
         }
 
         private static Notification ReadNotification(NpgsqlDataReader reader)

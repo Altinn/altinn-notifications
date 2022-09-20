@@ -52,19 +52,9 @@ namespace Altinn.Notifications.Tests.Mocks
             return Task.FromResult(targets);
         }
 
-        public Task<Target?> UpdateSentTarget(int id)
+        public async Task UpdateSentTarget(int id)
         {
-            switch (id)
-            {
-                case 1337:
-                    return Task.FromResult<Target?>(new Target() { ChannelType = "Email", Address = "demo@demo.no", Id = 1337, Sent = DateTime.UtcNow });
-                case 1338:
-                    return Task.FromResult<Target?>(new Target() { ChannelType = "Email", Address = "demo@demo.no", Id = 1338, Sent = DateTime.UtcNow });
-                case 1339:
-                    return Task.FromResult<Target?>(new Target() { ChannelType = "Email", Address = "demo@demo.no", Id = 1339, Sent = DateTime.UtcNow });
-            }
-
-            throw new NotImplementedException();
+            await Task.CompletedTask;
         }
     }
 }
