@@ -1,7 +1,7 @@
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.Extensibility;
 
-namespace Altinn.Notifications.COnfiguration
+namespace Altinn.Notifications.Configuration
 {
     /// <summary>
     /// Set up custom telemetry for Application Insights
