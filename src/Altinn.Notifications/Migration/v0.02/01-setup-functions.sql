@@ -1,4 +1,5 @@
 -- Function: notifications.get_unsenttargets
+
 CREATE OR REPLACE FUNCTION notifications.get_unsenttargets()
     RETURNS TABLE (
         id bigint,
