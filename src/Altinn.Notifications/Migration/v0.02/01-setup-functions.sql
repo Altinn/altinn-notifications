@@ -23,9 +23,7 @@ $BODY$;
 -- Function: notifications.update_senttarget
 CREATE OR REPLACE PROCEDURE notifications.update_senttarget(
 	_id bigint)
-    LANGUAGE 'plpgsql'
-  
-
+LANGUAGE 'plpgsql' 
 AS $BODY$
 DECLARE currentTime timestamptz;
 BEGIN
@@ -35,4 +33,5 @@ BEGIN
     UPDATE notifications.targets as t
 	SET "sent" = currentTime
     WHERE t.id = _id;
+END;
 $BODY$;
