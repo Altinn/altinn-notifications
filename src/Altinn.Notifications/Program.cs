@@ -10,14 +10,13 @@ using Altinn.Notifications.Integrations;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Persistence;
 
+using Azure.Identity;
+using Azure.Security.KeyVault.Secrets;
+
 using Microsoft.ApplicationInsights.AspNetCore.Extensions;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel;
-using Microsoft.Azure.KeyVault;
-using Microsoft.Azure.KeyVault.Models;
-using Microsoft.Azure.Services.AppAuthentication;
-using Microsoft.Extensions.Configuration.AzureKeyVault;
 
 using Npgsql.Logging;
 
@@ -35,7 +34,7 @@ var builder = WebApplication.CreateBuilder(args);
 ConfigureSetupLogging();
 ConfigureLogging(builder.Logging);
 ConfigureServices(builder.Services, builder.Configuration);
-SetConfigurationProviders(builder.Configuration);
+await SetConfigurationProviders(builder.Configuration);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -92,45 +91,40 @@ void ConfigureSetupLogging()
     logger = logFactory.CreateLogger<Program>();
 }
 
+
 void ConfigureLogging(ILoggingBuilder logging)
 {
+    // The default ASP.NET Core project templates call CreateDefaultBuilder, which adds the following logging providers:
+    // Console, Debug, EventSource
+    // https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-3.1
 
+    // Clear log providers
+    logging.ClearProviders();
 
-    void ConfigureLogging(ILoggingBuilder logging)
+    // Setup up application insight if applicationInsightsKey   is available
+    if (!string.IsNullOrEmpty(applicationInsightsConnectionString))
     {
-        // The default ASP.NET Core project templates call CreateDefaultBuilder, which adds the following logging providers:
-        // Console, Debug, EventSource
-        // https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-3.1
+        // Add application insights https://docs.microsoft.com/en-us/azure/azure-monitor/app/ilogger
+        logging.AddApplicationInsights(
+            configureTelemetryConfiguration: (config) => config.ConnectionString = applicationInsightsConnectionString,
+            configureApplicationInsightsLoggerOptions: (options) => { });
 
-        // Clear log providers
-        logging.ClearProviders();
+        // Optional: Apply filters to control what logs are sent to Application Insights.
+        // The following configures LogLevel Information or above to be sent to
+        // Application Insights for all categories.
+        logging.AddFilter<Microsoft.Extensions.Logging.ApplicationInsights.ApplicationInsightsLoggerProvider>(string.Empty, LogLevel.Warning);
 
-        // Setup up application insight if applicationInsightsKey   is available
-        if (!string.IsNullOrEmpty(applicationInsightsConnectionString))
-        {
-            // Add application insights https://docs.microsoft.com/en-us/azure/azure-monitor/app/ilogger
-            logging.AddApplicationInsights(
-                configureTelemetryConfiguration: (config) => config.ConnectionString = applicationInsightsConnectionString,
-                configureApplicationInsightsLoggerOptions: (options) => { });
-
-            // Optional: Apply filters to control what logs are sent to Application Insights.
-            // The following configures LogLevel Information or above to be sent to
-            // Application Insights for all categories.
-            logging.AddFilter<Microsoft.Extensions.Logging.ApplicationInsights.ApplicationInsightsLoggerProvider>(string.Empty, LogLevel.Warning);
-
-            // Adding the filter below to ensure logs of all severity from Program.cs
-            // is sent to ApplicationInsights.
-            logging.AddFilter<Microsoft.Extensions.Logging.ApplicationInsights.ApplicationInsightsLoggerProvider>(typeof(Program).FullName, LogLevel.Trace);
-        }
-        else
-        {
-            // If not application insight is available log to console
-            logging.AddFilter("Microsoft", LogLevel.Warning);
-            logging.AddFilter("System", LogLevel.Warning);
-            logging.AddConsole();
-        }
+        // Adding the filter below to ensure logs of all severity from Program.cs
+        // is sent to ApplicationInsights.
+        logging.AddFilter<Microsoft.Extensions.Logging.ApplicationInsights.ApplicationInsightsLoggerProvider>(typeof(Program).FullName, LogLevel.Trace);
     }
-
+    else
+    {
+        // If not application insight is available log to console
+        logging.AddFilter("Microsoft", LogLevel.Warning);
+        logging.AddFilter("System", LogLevel.Warning);
+        logging.AddConsole();
+    }
 }
 
 void ConfigureServices(IServiceCollection services, IConfiguration config)
@@ -169,7 +163,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     }
 }
 
-void SetConfigurationProviders(ConfigurationManager config)
+async Task SetConfigurationProviders(ConfigurationManager config)
 {
     string basePath = Directory.GetParent(Directory.GetCurrentDirectory()).FullName;
     config.SetBasePath(basePath);
@@ -185,14 +179,14 @@ void SetConfigurationProviders(ConfigurationManager config)
 
     config.AddEnvironmentVariables();
 
-    ConnectToKeyVaultAndSetApplicationInsights(config);
+    await ConnectToKeyVaultAndSetApplicationInsights(config);
 
     config.AddCommandLine(args);
 }
 
-void ConnectToKeyVaultAndSetApplicationInsights(ConfigurationManager config)
+async Task ConnectToKeyVaultAndSetApplicationInsights(ConfigurationManager config)
 {
-    KeyVaultSettings keyVaultSettings = new KeyVaultSettings();
+    KeyVaultSettings keyVaultSettings = new();
     config.GetSection("kvSetting").Bind(keyVaultSettings);
     if (!string.IsNullOrEmpty(keyVaultSettings.ClientId) &&
         !string.IsNullOrEmpty(keyVaultSettings.TenantId) &&
@@ -200,26 +194,23 @@ void ConnectToKeyVaultAndSetApplicationInsights(ConfigurationManager config)
         !string.IsNullOrEmpty(keyVaultSettings.SecretUri))
     {
         logger.LogInformation("Program // Configure key vault client // App");
+        Environment.SetEnvironmentVariable("AZURE_CLIENT_ID", keyVaultSettings.ClientId);
+        Environment.SetEnvironmentVariable("AZURE_CLIENT_SECRET", keyVaultSettings.ClientSecret);
+        Environment.SetEnvironmentVariable("AZURE_TENANT_ID", keyVaultSettings.TenantId);
+        var azureCredentials = new DefaultAzureCredential();
 
-        string connectionString = $"RunAs=App;AppId={keyVaultSettings.ClientId};" +
-                                  $"TenantId={keyVaultSettings.TenantId};" +
-                                  $"AppKey={keyVaultSettings.ClientSecret}";
-        AzureServiceTokenProvider azureServiceTokenProvider = new AzureServiceTokenProvider(connectionString);
-        KeyVaultClient keyVaultClient = new KeyVaultClient(
-            new KeyVaultClient.AuthenticationCallback(
-                azureServiceTokenProvider.KeyVaultTokenCallback));
-        config.AddAzureKeyVault(
-            keyVaultSettings.SecretUri, keyVaultClient, new DefaultKeyVaultSecretManager());
+        config.AddAzureKeyVault(new Uri(keyVaultSettings.SecretUri), azureCredentials);
+
+        SecretClient client = new SecretClient(new Uri(keyVaultSettings.SecretUri), azureCredentials);
+
         try
         {
-            SecretBundle secretBundle = keyVaultClient
-                .GetSecretAsync(keyVaultSettings.SecretUri, vaultApplicationInsightsKey).Result;
-
-            applicationInsightsConnectionString = string.Format("InstrumentationKey={0}", secretBundle.Value);
+            KeyVaultSecret keyVaultSecret = await client.GetSecretAsync(vaultApplicationInsightsKey);
+            applicationInsightsConnectionString = string.Format("InstrumentationKey={0}", keyVaultSecret.Value);
         }
         catch (Exception vaultException)
         {
-            logger.LogError($"Unable to read application insights key {vaultException}");
+            logger.LogError(vaultException, $"Unable to read application insights key.");
         }
     }
 }
