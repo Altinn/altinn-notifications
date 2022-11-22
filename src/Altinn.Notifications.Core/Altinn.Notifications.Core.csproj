@@ -9,7 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="Altinn.Platform.Models" Version="1.1.1" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.0" />
   </ItemGroup>
 
 </Project>
