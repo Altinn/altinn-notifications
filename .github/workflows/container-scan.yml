@@ -6,15 +6,11 @@ on:
     paths:
       - 'src/**'
       - 'Dockerfile'
-    paths-ignore:
-      - 'src/Altinn.Notifications.Functions/**'
   pull_request:
     branches: [ main ]
     paths:
       - 'src/**'
-      - 'Dockerfile'
-    paths-ignore:
-      - 'src/Altinn.Notifications.Functions/**'      
+      - 'Dockerfile'   
   schedule:
     - cron: '0 8 * * 1,4'
 
