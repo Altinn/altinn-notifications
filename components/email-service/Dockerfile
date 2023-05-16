@@ -18,11 +18,8 @@ RUN dotnet publish -c Release -o out ./src/Altinn.Notifications.Email/Altinn.Not
 
 # Use the official .NET runtime image with Alpine Linux as a base image
 FROM mcr.microsoft.com/dotnet/aspnet:7.0.5-alpine3.17 AS final
-
-# Set the working directory in the container
+EXPOSE 5091
 WORKDIR /app
-
-# Copy the built application from the build environment
 COPY --from=build /app/out ./
 
 # setup the user and group
