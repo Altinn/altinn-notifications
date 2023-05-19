@@ -4,11 +4,7 @@ using System.Text.Json.Serialization;
 using Altinn.Common.AccessToken.Configuration;
 
 using Altinn.Notifications.Configuration;
-using Altinn.Notifications.Core;
 using Altinn.Notifications.Health;
-using Altinn.Notifications.Integrations;
-using Altinn.Notifications.Integrations.Configuration;
-using Altinn.Notifications.Persistence;
 
 using Azure.Identity;
 using Azure.Security.KeyVault.Secrets;
@@ -17,11 +13,6 @@ using Microsoft.ApplicationInsights.AspNetCore.Extensions;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel;
-
-using Npgsql.Logging;
-
-using Yuniql.AspNetCore;
-using Yuniql.PostgreSql;
 
 ILogger logger;
 
@@ -48,28 +39,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-NpgsqlLogManager.Provider = new ConsoleLoggingProvider(NpgsqlLogLevel.Trace, true, true);
-
-ConsoleTraceService traceService = new ConsoleTraceService { IsDebugEnabled = true };
-
-if (builder.Configuration.GetValue<bool>("PostgreSQLSettings:EnableDBConnection"))
-{
-    string connectionString = string.Format(
-    builder.Configuration.GetValue<string>("PostgreSQLSettings:AdminConnectionString"),
-    builder.Configuration.GetValue<string>("PostgreSQLSettings:NotificationsDbAdminPwd"));
-
-    app.UseYuniql(
-        new PostgreSqlDataService(traceService),
-        new PostgreSqlBulkImportService(traceService),
-        traceService,
-        new Yuniql.AspNetCore.Configuration
-        {
-            Workspace = Path.Combine(Environment.CurrentDirectory, builder.Configuration.GetValue<string>("PostgreSQLSettings:WorkspacePath")),
-            ConnectionString = connectionString,
-            IsAutoCreateDatabase = false,
-            IsDebug = true
-        });
-}
+//ConsoleTraceService traceService = new ConsoleTraceService { IsDebugEnabled = true };
 
 app.UseAuthorization();
 
@@ -84,7 +54,7 @@ void ConfigureSetupLogging()
     var logFactory = LoggerFactory.Create(builder =>
     {
         builder
-            .AddFilter("Altinn.Platform.Register.Program", LogLevel.Debug)
+            .AddFilter("Altinn.Platform.Notifications.Program", LogLevel.Debug)
             .AddConsole();
     });
 
@@ -141,13 +111,6 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     services.AddHealthChecks().AddCheck<HealthCheck>("notifications_health_check");
 
     services.AddSingleton(config);
-
-    services.Configure<PostgreSQLSettings>(config.GetSection("PostgreSQLSettings"));
-    services.Configure<SmtpSettings>(config.GetSection("SmtpSettings"));
-
-    services.AddSingleton<IEmail, EmailSmtp>();
-    services.AddSingleton<INotifications, NotificationsService>();
-    services.AddSingleton<INotificationsRepository, NotificationRepository>();
 
     if (!string.IsNullOrEmpty(applicationInsightsConnectionString))
     {

@@ -5,7 +5,6 @@ WORKDIR /app
 COPY src/Altinn.Notifications/*.csproj ./src/Altinn.Notifications/
 COPY src/Altinn.Notifications.Core/*.csproj ./src/Altinn.Notifications.Core/
 COPY src/Altinn.Notifications.Integrations/*.csproj ./src/Altinn.Notifications.Integrations/
-COPY src/Altinn.Notifications.Interfaces/*.csproj ./src/Altinn.Notifications.Interfaces/
 COPY src/Altinn.Notifications.Persistence/*.csproj ./src/Altinn.Notifications.Persistence/
 RUN dotnet restore ./src/Altinn.Notifications/Altinn.Notifications.csproj
 

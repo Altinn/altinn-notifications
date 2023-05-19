@@ -1,14 +1,12 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 
-using Yuniql.Extensibility;
-
 namespace Altinn.Notifications.Configuration
 {
     /// <summary>
     /// Copied from sample project.
     /// </summary>
     [ExcludeFromCodeCoverage]
-    public class ConsoleTraceService : ITraceService
+    public class ConsoleTraceService
     {
         /// <summary>
         /// Debug enabled 
