@@ -15,8 +15,11 @@ RUN dotnet publish -c Release -o out ./src/Altinn.Notifications/Altinn.Notificat
 # Build runtime image
 FROM mcr.microsoft.com/dotnet/aspnet:7.0.5-alpine3.17 AS final
 WORKDIR /app
+EXPOSE 5090
+
 COPY --from=build /app/out .
 COPY src/Altinn.Notifications.Persistence/Migration ./Migration
+
 RUN addgroup -g 3000 dotnet && adduser -u 1000 -G dotnet -D -s /bin/false dotnet
 USER dotnet
 ENTRYPOINT [ "dotnet", "Altinn.Notifications.dll" ]
