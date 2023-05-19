@@ -1,8 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-using Altinn.Common.AccessToken.Configuration;
-
 using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Health;
 
