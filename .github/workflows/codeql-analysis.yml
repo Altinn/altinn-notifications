@@ -3,7 +3,7 @@ name: "CodeQL"
 on:
   push:
     branches: [ main ]
-    paths: 
+    paths:
     - 'src/**'
   pull_request:
     # The branches below must be a subset of the branches above
@@ -26,10 +26,6 @@ jobs:
       fail-fast: false
       matrix:
         language: [ 'csharp' ]
-        # CodeQL supports [ 'cpp', 'csharp', 'go', 'java', 'javascript', 'python' ]
-        # Learn more:
-        # https://docs.github.com/en/free-pro-team@latest/github/finding-security-vulnerabilities-and-errors-in-your-code/configuring-code-scanning#changing-the-languages-that-are-analyzed
-
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
@@ -51,12 +47,12 @@ jobs:
     #   run: 'dotnet build src/Altinn.Notifications.Core'
     # - name: Build notifications functions
     #   run: 'dotnet build src/Altinn.Notifications.Functions'
-    # - name: Build notifications integrations  
+    # - name: Build notifications integrations
     #   run: 'dotnet build src/Altinn.Notifications.Integrations'
     # - name: Build notifications interfaces
     #   run: 'dotnet build src/Altinn.Notifications.Interfaces'
     # - name: Build notifications persistence
-    #   run: 'dotnet build src/Altinn.Notifications.Persistence'                
-    
+    #   run: 'dotnet build src/Altinn.Notifications.Persistence'
+
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2
