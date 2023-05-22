@@ -1,3 +1,5 @@
+#nullable disable
+
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -189,9 +191,11 @@ void ConfigurePostgreSql()
         builder.Configuration.GetValue<string>("PostgreSQLSettings:AdminConnectionString"),
         builder.Configuration.GetValue<string>("PostgreSQLSettings:notificationsDbAdminPwd"));
 
-    string workspacePath = builder.Environment.IsDevelopment() ?
-        workspacePath = Path.Combine(Directory.GetParent(Environment.CurrentDirectory).FullName, builder.Configuration.GetValue<string>("PostgreSQLSettings:WorkspacePath")) :
-        Path.Combine(Environment.CurrentDirectory, builder.Configuration.GetValue<string>("PostgreSQLSettings:WorkspacePath"));
+    string workspacePath = builder.Configuration.GetValue<string>("PostgreSQLSettings:WorkspacePath");
+
+    string fullWorkspacePath = builder.Environment.IsDevelopment() ?
+        workspacePath = Path.Combine(Directory.GetParent(Environment.CurrentDirectory).FullName, workspacePath) :
+        Path.Combine(Environment.CurrentDirectory, workspacePath);
 
     app.UseYuniql(
         new PostgreSqlDataService(traceService),
@@ -199,7 +203,7 @@ void ConfigurePostgreSql()
         traceService,
         new Configuration
         {
-            Workspace = workspacePath,
+            Workspace = fullWorkspacePath,
             ConnectionString = connectionString,
             IsAutoCreateDatabase = false,
             IsDebug = true,
