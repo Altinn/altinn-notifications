@@ -194,7 +194,7 @@ void ConfigurePostgreSql()
     string workspacePath = builder.Configuration.GetValue<string>("PostgreSQLSettings:WorkspacePath");
 
     string fullWorkspacePath = builder.Environment.IsDevelopment() ?
-        workspacePath = Path.Combine(Directory.GetParent(Environment.CurrentDirectory).FullName, workspacePath) :
+        Path.Combine(Directory.GetParent(Environment.CurrentDirectory).FullName, workspacePath) :
         Path.Combine(Environment.CurrentDirectory, workspacePath);
 
     app.UseYuniql(
