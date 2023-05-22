@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 
 using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Health;
+using Altinn.Notifications.Persistence.Configuration;
 
 using Azure.Identity;
 using Azure.Security.KeyVault.Secrets;
@@ -11,6 +12,9 @@ using Microsoft.ApplicationInsights.AspNetCore.Extensions;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel;
+
+using Yuniql.AspNetCore;
+using Yuniql.PostgreSql;
 
 ILogger logger;
 
@@ -29,6 +33,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+ConfigurePostgreSql();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -36,8 +41,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
-//ConsoleTraceService traceService = new ConsoleTraceService { IsDebugEnabled = true };
 
 app.UseAuthorization();
 
@@ -109,6 +112,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     services.AddHealthChecks().AddCheck<HealthCheck>("notifications_health_check");
 
     services.AddSingleton(config);
+    services.Configure<PostgreSqlSettings>(config.GetSection("PostgreSQLSettings"));
 
     if (!string.IsNullOrEmpty(applicationInsightsConnectionString))
     {
@@ -174,4 +178,30 @@ async Task ConnectToKeyVaultAndSetApplicationInsights(ConfigurationManager confi
             logger.LogError(vaultException, $"Unable to read application insights key.");
         }
     }
+}
+
+
+void ConfigurePostgreSql()
+{
+    ConsoleTraceService traceService = new ConsoleTraceService { IsDebugEnabled = true };
+
+    string connectionString = string.Format(
+        builder.Configuration.GetValue<string>("PostgreSQLSettings:AdminConnectionString"),
+        builder.Configuration.GetValue<string>("PostgreSQLSettings:notificationsDbAdminPwd"));
+
+    string workspacePath = builder.Environment.IsDevelopment() ?
+        workspacePath = Path.Combine(Directory.GetParent(Environment.CurrentDirectory).FullName, builder.Configuration.GetValue<string>("PostgreSQLSettings:WorkspacePath")) :
+        Path.Combine(Environment.CurrentDirectory, builder.Configuration.GetValue<string>("PostgreSQLSettings:WorkspacePath"));
+
+    app.UseYuniql(
+        new PostgreSqlDataService(traceService),
+        new PostgreSqlBulkImportService(traceService),
+        traceService,
+        new Configuration
+        {
+            Workspace = workspacePath,
+            ConnectionString = connectionString,
+            IsAutoCreateDatabase = false,
+            IsDebug = true,
+        });
 }

@@ -3,7 +3,6 @@
   <PropertyGroup>
     <TargetFramework>net7.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
     <ProjectGuid>{DB57DAD7-753D-4595-81AD-9CB43B7A697A}</ProjectGuid>
   </PropertyGroup>
 
