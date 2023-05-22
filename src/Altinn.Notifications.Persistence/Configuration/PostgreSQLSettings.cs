@@ -1,4 +1,5 @@
-﻿namespace Altinn.Notifications.Persistence.Configuration
+﻿#nullable disable
+namespace Altinn.Notifications.Persistence.Configuration
 {
     /// <summary>
     /// Settings for Postgre database

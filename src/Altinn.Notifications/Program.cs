@@ -168,7 +168,7 @@ async Task ConnectToKeyVaultAndSetApplicationInsights(ConfigurationManager confi
 
         config.AddAzureKeyVault(new Uri(keyVaultSettings.SecretUri), azureCredentials);
 
-        SecretClient client = new SecretClient(new Uri(keyVaultSettings.SecretUri), azureCredentials);
+        SecretClient client = new(new Uri(keyVaultSettings.SecretUri), azureCredentials);
 
         try
         {
@@ -185,7 +185,7 @@ async Task ConnectToKeyVaultAndSetApplicationInsights(ConfigurationManager confi
 
 void ConfigurePostgreSql()
 {
-    ConsoleTraceService traceService = new ConsoleTraceService { IsDebugEnabled = true };
+    ConsoleTraceService traceService = new() { IsDebugEnabled = true };
 
     string connectionString = string.Format(
         builder.Configuration.GetValue<string>("PostgreSQLSettings:AdminConnectionString"),

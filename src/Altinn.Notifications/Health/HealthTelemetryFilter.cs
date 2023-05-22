@@ -3,6 +3,8 @@ using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
 
+#nullable disable
+
 namespace Altinn.Notifications.Health
 {
     /// <summary>
@@ -34,9 +36,7 @@ namespace Altinn.Notifications.Health
 
         private static bool ExcludeItemTelemetry(ITelemetry item)
         {
-            RequestTelemetry request = item as RequestTelemetry;
-
-            if (request != null && request.Url.ToString().EndsWith("/health/"))
+            if (item is RequestTelemetry request && request.Url.ToString().EndsWith("/health/"))
             {
                 return true;
             }

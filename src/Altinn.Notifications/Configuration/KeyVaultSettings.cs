@@ -1,4 +1,5 @@
-﻿namespace Altinn.Notifications.Configuration;
+﻿#nullable disable
+namespace Altinn.Notifications.Configuration;
 
 /// <summary>
 /// The key vault settings used to fetch certificate information from key vault
