@@ -1,12 +1,14 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 
+using Yuniql.Extensibility;
+
 namespace Altinn.Notifications.Configuration
 {
     /// <summary>
     /// Copied from sample project.
     /// </summary>
     [ExcludeFromCodeCoverage]
-    public class ConsoleTraceService
+    public class ConsoleTraceService : ITraceService
     {
         /// <summary>
         /// Debug enabled 
@@ -28,29 +30,29 @@ namespace Altinn.Notifications.Configuration
         /// <summary>
         /// Info
         /// </summary>      
-        public void Info(string message, object payload = null)
+        public void Info(string message, object? payload = null)
         {
-            var traceMessage = $"INF   {DateTime.UtcNow.ToString("o")}   {message}{Environment.NewLine}";
+            var traceMessage = $"INF   {DateTime.UtcNow:o}   {message}{Environment.NewLine}";
             Console.Write(traceMessage);
         }
 
         /// <summary>
         /// Error
         /// </summary>
-        public void Error(string message, object payload = null)
+        public void Error(string message, object? payload = null)
         {
-            var traceMessage = $"ERR   {DateTime.UtcNow.ToString("o")}   {message}{Environment.NewLine}";
+            var traceMessage = $"ERR   {DateTime.UtcNow:o}   {message}{Environment.NewLine}";
             Console.Write(traceMessage);
         }
 
         /// <summary>
         /// Debug
         /// </summary>
-        public void Debug(string message, object payload = null)
+        public void Debug(string message, object? payload = null)
         {
             if (IsDebugEnabled)
             {
-                var traceMessage = $"DBG   {DateTime.UtcNow.ToString("o")}   {message}{Environment.NewLine}";
+                var traceMessage = $"DBG   {DateTime.UtcNow:o}   {message}{Environment.NewLine}";
                 Console.Write(traceMessage);
             }
         }
@@ -58,18 +60,18 @@ namespace Altinn.Notifications.Configuration
         /// <summary>
         /// Success
         /// </summary>
-        public void Success(string message, object payload = null)
+        public void Success(string message, object? payload = null)
         {
-            var traceMessage = $"INF   {DateTime.UtcNow.ToString("u")}   {message}{Environment.NewLine}";
+            var traceMessage = $"INF   {DateTime.UtcNow:u}   {message}{Environment.NewLine}";
             Console.Write(traceMessage);
         }
 
         /// <summary>
         /// Warn
         /// </summary>
-        public void Warn(string message, object payload = null)
+        public void Warn(string message, object? payload = null)
         {
-            var traceMessage = $"WRN   {DateTime.UtcNow.ToString("o")}   {message}{Environment.NewLine}";
+            var traceMessage = $"WRN   {DateTime.UtcNow:o}   {message}{Environment.NewLine}";
             Console.Write(traceMessage);
         }
     }

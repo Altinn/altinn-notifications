@@ -1,8 +1,11 @@
+#nullable disable
+
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Health;
+using Altinn.Notifications.Persistence.Configuration;
 
 using Azure.Identity;
 using Azure.Security.KeyVault.Secrets;
@@ -11,6 +14,9 @@ using Microsoft.ApplicationInsights.AspNetCore.Extensions;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel;
+
+using Yuniql.AspNetCore;
+using Yuniql.PostgreSql;
 
 ILogger logger;
 
@@ -29,6 +35,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+ConfigurePostgreSql();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -36,8 +43,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
-//ConsoleTraceService traceService = new ConsoleTraceService { IsDebugEnabled = true };
 
 app.UseAuthorization();
 
@@ -109,6 +114,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     services.AddHealthChecks().AddCheck<HealthCheck>("notifications_health_check");
 
     services.AddSingleton(config);
+    services.Configure<PostgreSqlSettings>(config.GetSection("PostgreSQLSettings"));
 
     if (!string.IsNullOrEmpty(applicationInsightsConnectionString))
     {
@@ -162,7 +168,7 @@ async Task ConnectToKeyVaultAndSetApplicationInsights(ConfigurationManager confi
 
         config.AddAzureKeyVault(new Uri(keyVaultSettings.SecretUri), azureCredentials);
 
-        SecretClient client = new SecretClient(new Uri(keyVaultSettings.SecretUri), azureCredentials);
+        SecretClient client = new(new Uri(keyVaultSettings.SecretUri), azureCredentials);
 
         try
         {
@@ -174,4 +180,32 @@ async Task ConnectToKeyVaultAndSetApplicationInsights(ConfigurationManager confi
             logger.LogError(vaultException, $"Unable to read application insights key.");
         }
     }
+}
+
+
+void ConfigurePostgreSql()
+{
+    ConsoleTraceService traceService = new() { IsDebugEnabled = true };
+
+    string connectionString = string.Format(
+        builder.Configuration.GetValue<string>("PostgreSQLSettings:AdminConnectionString"),
+        builder.Configuration.GetValue<string>("PostgreSQLSettings:notificationsDbAdminPwd"));
+
+    string workspacePath = builder.Configuration.GetValue<string>("PostgreSQLSettings:WorkspacePath");
+
+    string fullWorkspacePath = builder.Environment.IsDevelopment() ?
+        Path.Combine(Directory.GetParent(Environment.CurrentDirectory).FullName, workspacePath) :
+        Path.Combine(Environment.CurrentDirectory, workspacePath);
+
+    app.UseYuniql(
+        new PostgreSqlDataService(traceService),
+        new PostgreSqlBulkImportService(traceService),
+        traceService,
+        new Configuration
+        {
+            Workspace = fullWorkspacePath,
+            ConnectionString = connectionString,
+            IsAutoCreateDatabase = false,
+            IsDebug = true,
+        });
 }
