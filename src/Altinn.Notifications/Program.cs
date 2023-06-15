@@ -64,7 +64,6 @@ void ConfigureSetupLogging()
     logger = logFactory.CreateLogger<Program>();
 }
 
-
 void ConfigureLogging(ILoggingBuilder logging)
 {
     // The default ASP.NET Core project templates call CreateDefaultBuilder, which adds the following logging providers:
@@ -181,7 +180,6 @@ async Task ConnectToKeyVaultAndSetApplicationInsights(ConfigurationManager confi
         }
     }
 }
-
 
 void ConfigurePostgreSql()
 {
