@@ -3,7 +3,7 @@
 namespace Altinn.Notifications.Core.Models.Notification;
 
 /// <summary>
-/// Class describing an email notification and extends the <see cref="INotification">
+/// Class describing an email notification and extends the <see cref="INotification"/>
 /// </summary>
 public class EmailNotification : INotification
 {
