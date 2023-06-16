@@ -10,21 +10,21 @@ namespace Altinn.Notifications.Core.Models.Notification
         /// <summary>
         /// Gets the id of the notification.
         /// </summary>
-        public string? Id { get; set; }
+        public string? Id { get; }
 
         /// <summary>
         /// Gets the order id of the notification.
         /// </summary>
-        public string OrderId { get; set; }
+        public string OrderId { get; }
 
         /// <summary>
         /// Gets the send time of the notification.
         /// </summary>
-        public DateTime SendTime { get; set; }
+        public DateTime SendTime { get; }
 
         /// <summary>
         /// Gets the notifiction channel for the notification.
         /// </summary>
-        public NotificationChannel NotificationChannel { get; set; }
+        public NotificationChannel NotificationChannel { get; }
     }
 }

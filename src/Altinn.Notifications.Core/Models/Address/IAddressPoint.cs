@@ -10,5 +10,5 @@ internal interface IAddressPoint
     /// <summary>
     /// Gets or sets the address type for the address point
     /// </summary>
-    public AddressType AddressType { get; set; }
+    public AddressType AddressType { get; }
 }

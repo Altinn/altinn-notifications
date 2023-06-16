@@ -5,7 +5,7 @@ namespace Altinn.Notifications.Core.Models.NotificationTemplate;
 /// <summary>
 /// Template for an email notification
 /// </summary>
-public class EMailTemplate
+public class EMailTemplate : INotificationTemplate
 {
     /// <summary>
     /// Gets the from adress of emails created by the template    
@@ -27,6 +27,9 @@ public class EMailTemplate
     /// </summary>
     public EMailContentType ContentType { get; private set; }
 
+    /// <inheritdoc/>
+    public NotificationTemplateType Type { get; private set; }
+
     /// <summary>
     /// Initializes a new instance of the <see cref="EMailTemplate"/> class.
     /// </summary>
@@ -36,5 +39,6 @@ public class EMailTemplate
         Subject = subject;
         Body = body;
         ContentType = contentType;
+        Type = NotificationTemplateType.Email;
     }
 }

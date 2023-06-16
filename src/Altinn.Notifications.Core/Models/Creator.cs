@@ -1,6 +1,4 @@
-﻿using System.Drawing;
-
-namespace Altinn.Notifications.Core.Models;
+﻿namespace Altinn.Notifications.Core.Models;
 
 /// <summary>
 /// A class representing a notification creator 
@@ -10,10 +8,13 @@ public class Creator
     /// <summary>
     /// Gets the short name of the creator
     /// </summary>
-    public string ShortName { get; set; }
+    public string ShortName { get; private set; }
 
-    public Creator()
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Creator"/> class.
+    /// </summary>
+    public Creator(string shortName)
     {
-
+        ShortName = shortName;
     }
 }

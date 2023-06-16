@@ -10,6 +10,6 @@ namespace Altinn.Notifications.Core.Models.NotificationTemplate
         /// <summary>
         /// Gets or sets the type for the template
         /// </summary>
-        public NotificationTemplateType Type { get; set; }
+        public NotificationTemplateType Type { get; }
     }
 }

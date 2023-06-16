@@ -9,32 +9,51 @@ namespace Altinn.Notifications.Core.Models;
 public class NotificationOrder
 {
     /// <summary>
-    /// Gets or sets the senders reference of a notification
+    /// Gets the id of the notification order
     /// </summary>
-    public string? SendersReference { get; set; } // internal set? is it possible to set /modify this after creation?
+    public string Id { get; private set;  }
 
     /// <summary>
-    /// Gets or sets the templates to create notifications based of
+    /// Gets the senders reference of a notification
     /// </summary>
-    public List<INotificationTemplate> Templates { get; set; }
+    public string? SendersReference { get; private set; } 
 
     /// <summary>
-    /// Gets or sets the send time for the notification(s)
+    /// Gets the templates to create notifications based of
+    /// </summary>
+    public List<INotificationTemplate> Templates { get; private set; }
+
+    /// <summary>
+    /// Gets the send time for the notification(s)
     /// </summary>
     public DateTime SendTime { get; set; }
 
     /// <summary>
-    /// Gets or sets the preferred notification channel
+    /// Gets the preferred notification channel
     /// </summary>
-    public NotificationChannelPreferred PreferredNotificationChannel { get; set; }
+    public NotificationChannelPreferred PreferredNotificationChannel { get; private set; }
 
     /// <summary>
-    /// Gets or sets the creator of the notification
+    /// Gets the creator of the notification
     /// </summary>
-    public Creator Creator { get; set; }
+    public Creator Creator { get; private set; }
 
     /// <summary>
-    /// Gets or sets a list of recipients
+    /// Gets a list of recipients
     /// </summary>
-    public List<Recipient>? Recipients { get; set; }
+    public List<Recipient> Recipients { get; private set; }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="NotificationOrder"/> class.
+    /// </summary>
+    public NotificationOrder(string? sendersReference, List<INotificationTemplate> templates, DateTime sendTime, NotificationChannelPreferred preferredNotificationChannel, Creator creator, List<Recipient> recipients)
+    {
+        Id = Guid.NewGuid().ToString();
+        SendersReference = sendersReference;
+        Templates = templates;
+        SendTime = sendTime;
+        PreferredNotificationChannel = preferredNotificationChannel;
+        Creator = creator;
+        Recipients = recipients;
+    }
 }
