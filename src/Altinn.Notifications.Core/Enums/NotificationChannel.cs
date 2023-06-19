@@ -5,6 +5,6 @@
     /// </summary>
     public enum NotificationChannel
     {
-        EMail = 0
+        EMail
     }
 }
