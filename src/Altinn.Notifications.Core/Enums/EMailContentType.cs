@@ -5,6 +5,7 @@
     /// </summary>
     public enum EMailContentType
     {
-        PlainText
+        PlainText,
+        Html
     }
 }
