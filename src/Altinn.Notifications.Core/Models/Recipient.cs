@@ -15,12 +15,12 @@ namespace Altinn.Notifications.Core.Models
         /// <summary>
         /// Gets or sets a list of address points for the recipient
         /// </summary>
-        public List<EmailAddressPoint> AddressInfo { get; set; } = new List<EmailAddressPoint>();
+        public List<IAddressPoint> AddressInfo { get; set; } = new List<IAddressPoint>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Recipient"/> class.
         /// </summary>
-        public Recipient(string recipientId, List<EmailAddressPoint> addressInfo)
+        public Recipient(string recipientId, List<IAddressPoint> addressInfo)
         {
             RecipientId = recipientId;
             AddressInfo = addressInfo;

@@ -5,7 +5,7 @@ namespace Altinn.Notifications.Core.Models.Address;
 /// <summary>
 /// Interface describing an address point
 /// </summary>
-internal interface IAddressPoint
+public interface IAddressPoint
 {
     /// <summary>
     /// Gets or sets the address type for the address point
