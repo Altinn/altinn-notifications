@@ -5,5 +5,5 @@
 /// </summary>
 public enum NotificationChannelPreferred
 {
-    EmailOnly // should we add all other enumprops now, or leave just the one we support now? 
+    EmailOnly 
 }
