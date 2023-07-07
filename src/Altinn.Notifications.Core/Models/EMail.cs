@@ -45,7 +45,7 @@ public class Email
         Id = id;
         Subject = subject;
         Body = body;
-        FromAddress= fromAddress;
+        FromAddress = fromAddress;
         ToAddress = toAddress;
         ContentType = contentType;
     }
