@@ -22,7 +22,7 @@ public class EmailNotification : INotification
     /// <summary>
     /// Get or sets the content type of the email notification
     /// </summary>
-    public EMailContentType ContentType { get; private set; }
+    public EmailContentType ContentType { get; private set; }
 
     /// <summary>
     /// Get or sets the subject of the email notification
@@ -42,7 +42,7 @@ public class EmailNotification : INotification
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotification"/> class.
     /// </summary>
-    public EmailNotification(string orderId, DateTime sendTime, NotificationChannel notificationChannel, EMailContentType contentType, string subject, string body, string fromAdress)
+    public EmailNotification(string orderId, DateTime sendTime, NotificationChannel notificationChannel, EmailContentType contentType, string subject, string body, string fromAdress)
     {
         Id = Guid.NewGuid().ToString();
         OrderId = orderId;

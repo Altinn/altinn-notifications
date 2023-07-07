@@ -1,11 +1,10 @@
-﻿namespace Altinn.Notifications.Core.Enums
+﻿namespace Altinn.Notifications.Core.Enums;
+
+/// <summary>
+/// Enum  describing available email content types
+/// </summary>
+public enum EmailContentType
 {
-    /// <summary>
-    /// Enum  describing available email content types
-    /// </summary>
-    public enum EMailContentType
-    {
-        Plain,
-        Html
-    }
+    Plain,
+    Html
 }

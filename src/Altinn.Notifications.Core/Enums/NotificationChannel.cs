@@ -1,10 +1,9 @@
-﻿namespace Altinn.Notifications.Core.Enums
+﻿namespace Altinn.Notifications.Core.Enums;
+
+/// <summary>
+/// Enum  describing available notification channels
+/// </summary>
+public enum NotificationChannel
 {
-    /// <summary>
-    /// Enum  describing available notification channels
-    /// </summary>
-    public enum NotificationChannel
-    {
-        EMail
-    }
+    Email
 }

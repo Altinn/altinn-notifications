@@ -1,10 +1,9 @@
-﻿namespace Altinn.Notifications.Core.Enums
+﻿namespace Altinn.Notifications.Core.Enums;
+
+/// <summary>
+/// Enum  describing available notification template types
+/// </summary>
+public enum NotificationTemplateType
 {
-    /// <summary>
-    /// Enum  describing available notification template types
-    /// </summary>
-    public enum NotificationTemplateType
-    {
-        Email
-    }
+    Email
 }
