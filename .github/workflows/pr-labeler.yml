@@ -1,0 +1,19 @@
+name: Label critical PR
+on:
+  pull_request_target:
+    branches:
+      -  main
+    types:
+      - opened
+    paths:
+      - '**/Altinn.Notifications.Core/**'
+
+jobs:
+  add_labels:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/labeler@v4
+      with:
+        repo-token: "${{ secrets.GITHUB_TOKEN }}"

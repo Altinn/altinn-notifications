@@ -5,43 +5,42 @@ using Microsoft.ApplicationInsights.Extensibility;
 
 #nullable disable
 
-namespace Altinn.Notifications.Health
+namespace Altinn.Notifications.Health;
+
+/// <summary>
+/// Filter to exclude health check request from Application Insights
+/// </summary>
+[ExcludeFromCodeCoverage]
+public class HealthTelemetryFilter : ITelemetryProcessor
 {
+    private ITelemetryProcessor Next { get; set; }
+
     /// <summary>
-    /// Filter to exclude health check request from Application Insights
+    /// Initializes a new instance of the <see cref="HealthTelemetryFilter"/> class.
     /// </summary>
-    [ExcludeFromCodeCoverage]
-    public class HealthTelemetryFilter : ITelemetryProcessor
+    public HealthTelemetryFilter(ITelemetryProcessor next)
     {
-        private ITelemetryProcessor Next { get; set; }
+        Next = next;
+    }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="HealthTelemetryFilter"/> class.
-        /// </summary>
-        public HealthTelemetryFilter(ITelemetryProcessor next)
+    /// <inheritdoc/>
+    public void Process(ITelemetry item)
+    {
+        if (ExcludeItemTelemetry(item))
         {
-            Next = next;
+            return;
         }
 
-        /// <inheritdoc/>
-        public void Process(ITelemetry item)
-        {
-            if (ExcludeItemTelemetry(item))
-            {
-                return;
-            }
+        Next.Process(item);
+    }
 
-            Next.Process(item);
+    private static bool ExcludeItemTelemetry(ITelemetry item)
+    {
+        if (item is RequestTelemetry request && request.Url.ToString().EndsWith("/health/"))
+        {
+            return true;
         }
 
-        private static bool ExcludeItemTelemetry(ITelemetry item)
-        {
-            if (item is RequestTelemetry request && request.Url.ToString().EndsWith("/health/"))
-            {
-                return true;
-            }
-
-            return false;
-        }
+        return false;
     }
 }

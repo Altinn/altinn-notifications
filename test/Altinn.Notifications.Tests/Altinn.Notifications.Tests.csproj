@@ -45,4 +45,8 @@
     <Folder Include="UnitTests\" />
   </ItemGroup>
 
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'">
+    <CodeAnalysisRuleSet>..\..\Altinn3.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+
 </Project>
