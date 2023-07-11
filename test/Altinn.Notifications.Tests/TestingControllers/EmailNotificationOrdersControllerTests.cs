@@ -29,132 +29,131 @@ using Xunit;
 
 using ValidationResult = FluentValidation.Results.ValidationResult;
 
-namespace Altinn.Notifications.Tests.TestingControllers
+namespace Altinn.Notifications.Tests.TestingControllers;
+
+public class EmailNotificationOrdersControllerTests : IClassFixture<WebApplicationFactory<EmailNotificationOrdersController>>
 {
-    public class EmailNotificationOrdersControllerTests : IClassFixture<WebApplicationFactory<EmailNotificationOrdersController>>
+    private const string _basePath = "/notifications/api/v1/orders/email";
+
+    private readonly WebApplicationFactory<EmailNotificationOrdersController> _factory;
+
+    private readonly JsonSerializerOptions _options;
+    public EmailNotificationOrdersControllerTests(WebApplicationFactory<EmailNotificationOrdersController> factory)
     {
-        private const string _basePath = "/notifications/api/v1/orders/email";
-
-        private readonly WebApplicationFactory<EmailNotificationOrdersController> _factory;
-
-        private readonly JsonSerializerOptions _options;
-        public EmailNotificationOrdersControllerTests(WebApplicationFactory<EmailNotificationOrdersController> factory)
+        _factory = factory;
+        _options = new JsonSerializerOptions
         {
-            _factory = factory;
-            _options = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            };
-        }
+            PropertyNameCaseInsensitive = true
+        };
+    }
 
-        [Fact]
-        public async Task Post_MissingBearerToken_Unauthorized()
+    [Fact]
+    public async Task Post_MissingBearerToken_Unauthorized()
+    {
+        //Arrange
+        HttpClient client = GetTestClient();
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath);
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Post_EmptyBody_BadRequest()
+    {
+        HttpClient client = GetTestClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
+
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
         {
-            //Arrange
-            HttpClient client = GetTestClient();
-            HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath);
+            Content = new StringContent(string.Empty, Encoding.UTF8, "application/json")
+        };
 
-            // Act
-            HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
 
-            // Assert
-            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-        }
+        string content = await response.Content.ReadAsStringAsync();
+        ProblemDetails? actual = JsonSerializer.Deserialize<ProblemDetails>(content, _options);
 
-        [Fact]
-        public async Task Post_EmptyBody_BadRequest()
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("One or more validation errors occurred.", actual?.Title);
+    }
+
+    [Fact]
+    public async Task Post_ValidationReturnsError_BadRequest()
+    {
+        var _validator = new Mock<IValidator<EmailNotificationOrderRequest>>();
+        _validator.Setup(v => v.Validate(It.IsAny<EmailNotificationOrderRequest>()))
+            .Returns(new ValidationResult(new List<ValidationFailure> { new ValidationFailure("SomeProperty", "SomeError") }));
+
+
+        HttpClient client = GetTestClient(_validator.Object);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
+
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
         {
-            HttpClient client = GetTestClient();
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
+            Content = new StringContent("{}", Encoding.UTF8, "application/json")
+        };
 
-            HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
-            {
-                Content = new StringContent(string.Empty, Encoding.UTF8, "application/json")
-            };
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        string content = await response.Content.ReadAsStringAsync();
+        ProblemDetails? actual = JsonSerializer.Deserialize<ProblemDetails>(content, _options);
 
-            // Act
-            HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
 
-            string content = await response.Content.ReadAsStringAsync();
-            ProblemDetails? actual = JsonSerializer.Deserialize<ProblemDetails>(content, _options);
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("One or more validation errors occurred.", actual?.Title);
+    }
 
-            // Assert
-            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-            Assert.Equal("One or more validation errors occurred.", actual?.Title);
-        }
+    [Fact]
+    public async Task Post_ValidationSuccessful_Successful()
+    {
+        HttpClient client = GetTestClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
 
-        [Fact]
-        public async Task Post_ValidationReturnsError_BadRequest()
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
+        {
+            Content = new StringContent("{}", Encoding.UTF8, "application/json")
+        };
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+    }
+
+
+    private HttpClient GetTestClient(IValidator<EmailNotificationOrderRequest>? validator = null)
+    {
+        if (validator == null)
         {
             var _validator = new Mock<IValidator<EmailNotificationOrderRequest>>();
             _validator.Setup(v => v.Validate(It.IsAny<EmailNotificationOrderRequest>()))
-                .Returns(new ValidationResult(new List<ValidationFailure> { new ValidationFailure("SomeProperty", "SomeError") }));
-
-
-            HttpClient client = GetTestClient(_validator.Object);
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
-
-            HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
-            {
-                Content = new StringContent("{}", Encoding.UTF8, "application/json")
-            };
-
-            // Act
-            HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
-            string content = await response.Content.ReadAsStringAsync();
-            ProblemDetails? actual = JsonSerializer.Deserialize<ProblemDetails>(content, _options);
-
-
-            // Assert
-            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-            Assert.Equal("One or more validation errors occurred.", actual?.Title);
+                .Returns(new ValidationResult());
+            validator = _validator.Object;
         }
 
-        [Fact]
-        public async Task Post_ValidationSuccessful_Successful()
+
+        HttpClient client = _factory.WithWebHostBuilder(builder =>
         {
-            HttpClient client = GetTestClient();
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
+            IdentityModelEventSource.ShowPII = true;
 
-            HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
+            builder.ConfigureTestServices(services =>
             {
-                Content = new StringContent("{}", Encoding.UTF8, "application/json")
-            };
+                services.AddSingleton(validator);
 
-            // Act
-            HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+                // Set up mock authentication so that not well known endpoint is used
+                services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
+            });
+        }).CreateClient();
 
-
-            // Assert
-            Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-        }
-
-
-        private HttpClient GetTestClient(IValidator<EmailNotificationOrderRequest>? validator = null)
-        {
-            if (validator == null)
-            {
-                var _validator = new Mock<IValidator<EmailNotificationOrderRequest>>();
-                _validator.Setup(v => v.Validate(It.IsAny<EmailNotificationOrderRequest>()))
-                    .Returns(new ValidationResult());
-                validator = _validator.Object;
-            }
-
-
-            HttpClient client = _factory.WithWebHostBuilder(builder =>
-            {
-                IdentityModelEventSource.ShowPII = true;
-
-                builder.ConfigureTestServices(services =>
-                {
-                    services.AddSingleton(validator);
-
-                    // Set up mock authentication so that not well known endpoint is used
-                    services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
-                });
-            }).CreateClient();
-
-            return client;
-        }
+        return client;
     }
 }

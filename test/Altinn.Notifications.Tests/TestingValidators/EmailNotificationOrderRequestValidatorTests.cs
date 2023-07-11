@@ -5,89 +5,88 @@ using Altinn.Notifications.Validators;
 
 using Xunit;
 
-namespace Altinn.Notifications.Tests.TestingValidators
+namespace Altinn.Notifications.Tests.TestingValidators;
+
+public class EmailNotificationOrderRequestValidatorTests
 {
-    public class EmailNotificationOrderRequestValidatorTests
+    private readonly EmailNotificationOrderRequestValidator _validator;
+
+    public EmailNotificationOrderRequestValidatorTests()
     {
-        private readonly EmailNotificationOrderRequestValidator _validator;
+        _validator = new EmailNotificationOrderRequestValidator();
+    }
 
-        public EmailNotificationOrderRequestValidatorTests()
+    [Fact]
+    public void Validate_AllRequiredPropsOresent_ReturnsTrue()
+    {
+        var order = new EmailNotificationOrderRequest()
         {
-            _validator = new EmailNotificationOrderRequestValidator();
-        }
+            Subject = "This is an email subject",
+            FromAddress = "sender@domain.com",
+            Recipients = new List<RecipientExt>() { new RecipientExt() { Id = "16069412345" } },
+            Body = "This is an email body"
+        };
 
-        [Fact]
-        public void Validate_AllRequiredPropsOresent_ReturnsTrue()
+        var actual = _validator.Validate(order);
+        Assert.True(actual.IsValid);
+    }
+
+    [Fact]
+    public void Validate_BothRecipientsAndToAddressPopulated_ReturnsFalse()
+    {
+        var order = new EmailNotificationOrderRequest()
         {
-            var order = new EmailNotificationOrderRequest()
-            {
-                Subject = "This is an email subject",
-                FromAddress = "sender@domain.com",
-                Recipients = new List<RecipientExt>() { new RecipientExt() { Id = "16069412345" } },
-                Body = "This is an email body"
-            };
+            FromAddress = "sender@domain.com",
+            ToAddresses = new List<string>() { "recipient1@domain.com", "recipient2@domain.com" },
+            Recipients = new List<RecipientExt>() { new RecipientExt() { Id = "16069412345" } },
+            Body = "This is an email body"
 
-            var actual = _validator.Validate(order);
-            Assert.True(actual.IsValid);
-        }
+        };
 
-        [Fact]
-        public void Validate_BothRecipientsAndToAddressPopulated_ReturnsFalse()
+        var actual = _validator.Validate(order);
+        Assert.False(actual.IsValid);
+    }
+
+    [Fact]
+    public void Validate_FromAddressMissing_ReturnsFalse()
+    {
+        var order = new EmailNotificationOrderRequest()
         {
-            var order = new EmailNotificationOrderRequest()
-            {
-                FromAddress = "sender@domain.com",
-                ToAddresses = new List<string>() { "recipient1@domain.com", "recipient2@domain.com" },
-                Recipients = new List<RecipientExt>() { new RecipientExt() { Id = "16069412345" } },
-                Body = "This is an email body"
+            Subject = "This is an email subject",
+            Recipients = new List<RecipientExt>() { new RecipientExt() { Id = "16069412345" } },
+            Body = "This is an email body"
 
-            };
+        };
 
-            var actual = _validator.Validate(order);
-            Assert.False(actual.IsValid);
-        }
+        var actual = _validator.Validate(order);
+        Assert.False(actual.IsValid);
+    }
 
-        [Fact]
-        public void Validate_FromAddressMissing_ReturnsFalse()
+    [Fact]
+    public void Validate_SubjectMissing_ReturnsFalse()
+    {
+        var order = new EmailNotificationOrderRequest()
         {
-            var order = new EmailNotificationOrderRequest()
-            {
-                Subject = "This is an email subject",
-                Recipients = new List<RecipientExt>() { new RecipientExt() { Id = "16069412345" } },
-                Body = "This is an email body"
+            FromAddress = "sender@domain.com",
+            Recipients = new List<RecipientExt>() { new RecipientExt() { Id = "16069412345" } },
+            Body = "This is an email body"
+        };
 
-            };
+        var actual = _validator.Validate(order);
+        Assert.False(actual.IsValid);
+    }
 
-            var actual = _validator.Validate(order);
-            Assert.False(actual.IsValid);
-        }
-
-        [Fact]
-        public void Validate_SubjectMissing_ReturnsFalse()
+    [Fact]
+    public void Validate_BodyMissing_ReturnsFalse()
+    {
+        var order = new EmailNotificationOrderRequest()
         {
-            var order = new EmailNotificationOrderRequest()
-            {
-                FromAddress = "sender@domain.com",
-                Recipients = new List<RecipientExt>() { new RecipientExt() { Id = "16069412345" } },
-                Body = "This is an email body"
-            };
+            Subject = "This is an email subject",
+            FromAddress = "sender@domain.com",
+            Recipients = new List<RecipientExt>() { new RecipientExt() { Id = "16069412345" } },
+        };
 
-            var actual = _validator.Validate(order);
-            Assert.False(actual.IsValid);
-        }
-
-        [Fact]
-        public void Validate_BodyMissing_ReturnsFalse()
-        {
-            var order = new EmailNotificationOrderRequest()
-            {
-                Subject = "This is an email subject",
-                FromAddress = "sender@domain.com",
-                Recipients = new List<RecipientExt>() { new RecipientExt() { Id = "16069412345" } },
-            };
-
-            var actual = _validator.Validate(order);
-            Assert.False(actual.IsValid);
-        }
+        var actual = _validator.Validate(order);
+        Assert.False(actual.IsValid);
     }
 }
