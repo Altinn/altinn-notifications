@@ -22,7 +22,9 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Logging;
+
 using Moq;
+
 using Xunit;
 
 using ValidationResult = FluentValidation.Results.ValidationResult;
@@ -74,7 +76,7 @@ namespace Altinn.Notifications.Tests.TestingControllers
             HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
 
             string content = await response.Content.ReadAsStringAsync();
-            ProblemDetails actual = JsonSerializer.Deserialize<ProblemDetails>(content, _options);
+            ProblemDetails? actual = JsonSerializer.Deserialize<ProblemDetails>(content, _options);
 
             // Assert
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -99,8 +101,8 @@ namespace Altinn.Notifications.Tests.TestingControllers
 
             // Act
             HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
-            string content = await response.Content.ReadAsStringAsync(); 
-            ProblemDetails actual = JsonSerializer.Deserialize<ProblemDetails>(content, _options);
+            string content = await response.Content.ReadAsStringAsync();
+            ProblemDetails? actual = JsonSerializer.Deserialize<ProblemDetails>(content, _options);
 
 
             // Assert

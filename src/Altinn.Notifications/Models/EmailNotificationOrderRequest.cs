@@ -35,7 +35,7 @@ namespace Altinn.Notifications.Models
         /// Gets or sets the content type of the email
         /// </summary>
         [JsonPropertyName("content-type")]
-        public EmailContentType ContentType { get; set; } = EmailContentType.PlainText;
+        public EmailContentType ContentType { get; set; } = EmailContentType.Plain;
 
         /// <summary>
         /// Gets or sets the send time of the email. Defaults to UtcNow.        
