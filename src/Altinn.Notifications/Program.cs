@@ -1,19 +1,27 @@
 #nullable disable
 
+using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Health;
+using Altinn.Notifications.Models;
 using Altinn.Notifications.Persistence.Configuration;
+using Altinn.Notifications.Validators;
+
+using AltinnCore.Authentication.JwtCookie;
 
 using Azure.Identity;
 using Azure.Security.KeyVault.Secrets;
+
+using FluentValidation;
 
 using Microsoft.ApplicationInsights.AspNetCore.Extensions;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel;
+using Microsoft.IdentityModel.Tokens;
 
 using Yuniql.AspNetCore;
 using Yuniql.PostgreSql;
@@ -35,7 +43,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
-ConfigurePostgreSql();
+ConfigurePostgreSql(builder.Configuration);
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -128,6 +136,30 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
         services.AddApplicationInsightsTelemetryProcessor<HealthTelemetryFilter>();
         services.AddSingleton<ITelemetryInitializer, CustomTelemetryInitializer>();
     }
+
+    services.AddAuthentication(JwtCookieDefaults.AuthenticationScheme)
+          .AddJwtCookie(JwtCookieDefaults.AuthenticationScheme, options =>
+          {
+              GeneralSettings generalSettings = config.GetSection("GeneralSettings").Get<GeneralSettings>();
+              options.JwtCookieName = generalSettings.JwtCookieName;
+              options.MetadataAddress = generalSettings.OpenIdWellKnownEndpoint;
+              options.TokenValidationParameters = new TokenValidationParameters
+              {
+                  ValidateIssuerSigningKey = true,
+                  ValidateIssuer = false,
+                  ValidateAudience = false,
+                  RequireExpirationTime = true,
+                  ValidateLifetime = true,
+                  ClockSkew = TimeSpan.Zero
+              };
+
+              if (builder.Environment.IsDevelopment())
+              {
+                  options.RequireHttpsMetadata = false;
+              }
+          });
+
+    AddInputModelValidators(services);
 }
 
 async Task SetConfigurationProviders(ConfigurationManager config)
@@ -182,30 +214,37 @@ async Task ConnectToKeyVaultAndSetApplicationInsights(ConfigurationManager confi
     }
 }
 
-
-void ConfigurePostgreSql()
+void AddInputModelValidators(IServiceCollection services)
 {
-    ConsoleTraceService traceService = new() { IsDebugEnabled = true };
+    services.AddSingleton<IValidator<EmailNotificationOrderRequest>, EmailNotificationOrderRequestValidator>();
+}
 
-    string connectionString = string.Format(
-        builder.Configuration.GetValue<string>("PostgreSQLSettings:AdminConnectionString"),
-        builder.Configuration.GetValue<string>("PostgreSQLSettings:notificationsDbAdminPwd"));
+void ConfigurePostgreSql(ConfigurationManager config)
+{
+    if (config.GetValue<bool>("PostgreSQLSettings:EnableDBConnection"))
+    {
+        ConsoleTraceService traceService = new() { IsDebugEnabled = true };
 
-    string workspacePath = builder.Configuration.GetValue<string>("PostgreSQLSettings:WorkspacePath");
+        string connectionString = string.Format(
+            builder.Configuration.GetValue<string>("PostgreSQLSettings:AdminConnectionString"),
+            builder.Configuration.GetValue<string>("PostgreSQLSettings:notificationsDbAdminPwd"));
 
-    string fullWorkspacePath = builder.Environment.IsDevelopment() ?
-        Path.Combine(Directory.GetParent(Environment.CurrentDirectory).FullName, workspacePath) :
-        Path.Combine(Environment.CurrentDirectory, workspacePath);
+        string workspacePath = builder.Configuration.GetValue<string>("PostgreSQLSettings:WorkspacePath");
 
-    app.UseYuniql(
-        new PostgreSqlDataService(traceService),
-        new PostgreSqlBulkImportService(traceService),
-        traceService,
-        new Configuration
-        {
-            Workspace = fullWorkspacePath,
-            ConnectionString = connectionString,
-            IsAutoCreateDatabase = false,
-            IsDebug = true,
-        });
+        string fullWorkspacePath = builder.Environment.IsDevelopment() ?
+            Path.Combine(Directory.GetParent(Environment.CurrentDirectory).FullName, workspacePath) :
+            Path.Combine(Environment.CurrentDirectory, workspacePath);
+
+        app.UseYuniql(
+            new PostgreSqlDataService(traceService),
+            new PostgreSqlBulkImportService(traceService),
+            traceService,
+            new Configuration
+            {
+                Workspace = fullWorkspacePath,
+                ConnectionString = connectionString,
+                IsAutoCreateDatabase = false,
+                IsDebug = true,
+            });
+    }
 }
