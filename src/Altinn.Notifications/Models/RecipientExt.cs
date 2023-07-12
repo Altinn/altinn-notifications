@@ -19,8 +19,8 @@ public class RecipientExt
     public string? Id { get; set; }
 
     /// <summary>
-    /// Gets or sets a list of address points for the recipient
+    /// Gets or sets the email address of the recipient
     /// </summary>
-    [JsonPropertyName("addressList")]
-    public List<IAddressPoint> AddressList { get; set; } = new List<IAddressPoint>();
+    [JsonPropertyName("emailAddress")]
+    public string? EmailAddress { get; set; }
 }

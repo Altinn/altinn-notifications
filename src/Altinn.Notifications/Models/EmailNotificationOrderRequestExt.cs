@@ -1,6 +1,10 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Runtime.CompilerServices;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 using Altinn.Notifications.Core.Enums;
+
+using Microsoft.AspNetCore.Server.IIS.Core;
 
 namespace Altinn.Notifications.Models;
 
@@ -10,7 +14,7 @@ namespace Altinn.Notifications.Models;
 /// <remarks>
 /// External representaion to be used in the API.
 /// </remarks>
-public class EmailNotificationOrderRequest
+public class EmailNotificationOrderRequestExt
 {
     /// <summary>
     /// Gets or sets the from address to use as sender of the email
@@ -59,4 +63,12 @@ public class EmailNotificationOrderRequest
     /// </summary>
     [JsonPropertyName("recipients")]
     public List<RecipientExt>? Recipients { get; set; }
+
+    /// <summary>
+    /// Json serialized the <see cref="EmailNotificationOrderRequestExt"/>
+    /// </summary>
+    public string Serialize()
+    {
+        return JsonSerializer.Serialize(this);
+    }
 }

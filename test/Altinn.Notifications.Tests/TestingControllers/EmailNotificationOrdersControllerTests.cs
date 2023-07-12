@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -7,6 +8,11 @@ using System.Text.Json;
 using System.Threading.Tasks;
 
 using Altinn.Notifications.Controllers;
+using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Core.Models.NotificationTemplate;
+using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Tests.Mocks.Authentication;
 using Altinn.Notifications.Tests.Utils;
@@ -38,6 +44,10 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<WebApplicati
     private readonly WebApplicationFactory<EmailNotificationOrdersController> _factory;
 
     private readonly JsonSerializerOptions _options;
+
+    private readonly EmailNotificationOrderRequestExt _orderRequestExt;
+    private readonly NotificationOrder _order;
+
     public EmailNotificationOrdersControllerTests(WebApplicationFactory<EmailNotificationOrdersController> factory)
     {
         _factory = factory;
@@ -45,6 +55,27 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<WebApplicati
         {
             PropertyNameCaseInsensitive = true
         };
+
+        _orderRequestExt = new()
+        {
+            Body = "email-body",
+            ContentType = EmailContentType.Html,
+            FromAddress = "sender@domain.com",
+            Recipients = null,
+            SendersReference = "senders-reference",
+            SendTime = DateTime.UtcNow,
+            Subject = "email-subject",
+            ToAddresses = new List<string>() { "recipient1@domain.com", "recipient2@domain.com" }
+        };
+
+        _order = new(
+            "senders-reference", 
+            new List<INotificationTemplate>(),
+            DateTime.UtcNow, 
+            NotificationChannel.Email,
+            new Creator("ttd"), 
+            new List<Recipient>());
+
     }
 
     [Fact]
@@ -86,8 +117,8 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<WebApplicati
     [Fact]
     public async Task Post_ValidationReturnsError_BadRequest()
     {
-        var _validator = new Mock<IValidator<EmailNotificationOrderRequest>>();
-        _validator.Setup(v => v.Validate(It.IsAny<EmailNotificationOrderRequest>()))
+        var _validator = new Mock<IValidator<EmailNotificationOrderRequestExt>>();
+        _validator.Setup(v => v.Validate(It.IsAny<EmailNotificationOrderRequestExt>()))
             .Returns(new ValidationResult(new List<ValidationFailure> { new ValidationFailure("SomeProperty", "SomeError") }));
 
 
@@ -111,14 +142,46 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<WebApplicati
     }
 
     [Fact]
-    public async Task Post_ValidationSuccessful_Successful()
+    public async Task Post_ServiceReturnsError_ServerError()
     {
-        HttpClient client = GetTestClient();
+        // Arrange
+        Mock<IEmailNotificationOrderService> serviceMock = new();
+        serviceMock.Setup(s => s.RegisterEmailNotificationOrder(It.IsAny<NotificationOrderRequest>()))
+            .ReturnsAsync((null, new ServiceError(500)));
+
+
+
+        HttpClient client = GetTestClient(orderService: serviceMock.Object);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
 
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
         {
-            Content = new StringContent("{}", Encoding.UTF8, "application/json")
+            Content = new StringContent(_orderRequestExt.Serialize(), Encoding.UTF8, "application/json")
+        };
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+
+        // Assert
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        serviceMock.VerifyAll();
+    }
+
+    [Fact]
+    public async Task Post_ServiceReturnsOrder_Accepted()
+    {
+        // Arrange
+        Mock<IEmailNotificationOrderService> serviceMock = new();
+        serviceMock.Setup(s => s.RegisterEmailNotificationOrder(It.IsAny<NotificationOrderRequest>()))
+            .ReturnsAsync((_order, null));
+
+        HttpClient client = GetTestClient(orderService: serviceMock.Object);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
+
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
+        {
+            Content = new StringContent(_orderRequestExt.Serialize(), Encoding.UTF8, "application/json")
         };
 
         // Act
@@ -127,17 +190,24 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<WebApplicati
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        serviceMock.VerifyAll();
     }
 
 
-    private HttpClient GetTestClient(IValidator<EmailNotificationOrderRequest>? validator = null)
+    private HttpClient GetTestClient(IValidator<EmailNotificationOrderRequestExt>? validator = null, IEmailNotificationOrderService? orderService = null)
     {
         if (validator == null)
         {
-            var _validator = new Mock<IValidator<EmailNotificationOrderRequest>>();
-            _validator.Setup(v => v.Validate(It.IsAny<EmailNotificationOrderRequest>()))
+            var _validator = new Mock<IValidator<EmailNotificationOrderRequestExt>>();
+            _validator.Setup(v => v.Validate(It.IsAny<EmailNotificationOrderRequestExt>()))
                 .Returns(new ValidationResult());
             validator = _validator.Object;
+        }
+
+        if (orderService == null)
+        {
+            var _orderService = new Mock<IEmailNotificationOrderService>();
+            orderService = _orderService.Object;
         }
 
 
@@ -148,6 +218,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<WebApplicati
             builder.ConfigureTestServices(services =>
             {
                 services.AddSingleton(validator);
+                services.AddSingleton(orderService);
 
                 // Set up mock authentication so that not well known endpoint is used
                 services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();

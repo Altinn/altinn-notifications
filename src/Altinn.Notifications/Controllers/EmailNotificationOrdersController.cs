@@ -1,4 +1,8 @@
-﻿using Altinn.Notifications.Models;
+﻿using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Mappers;
+using Altinn.Notifications.Models;
 using Altinn.Notifications.Validators;
 
 using FluentValidation;
@@ -16,14 +20,16 @@ namespace Altinn.Notifications.Controllers;
 [Authorize]
 public class EmailNotificationOrdersController : ControllerBase
 {
-    private readonly IValidator<EmailNotificationOrderRequest> _validator;
+    private readonly IValidator<EmailNotificationOrderRequestExt> _validator;
+    private readonly IEmailNotificationOrderService _orderService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotificationOrdersController"/> class.
     /// </summary>
-    public EmailNotificationOrdersController(IValidator<EmailNotificationOrderRequest> validator)
+    public EmailNotificationOrdersController(IValidator<EmailNotificationOrderRequestExt> validator, IEmailNotificationOrderService orderService)
     {
         _validator = validator;
+        _orderService = orderService;
     }
 
     /// <summary>
@@ -34,7 +40,7 @@ public class EmailNotificationOrdersController : ControllerBase
     /// <returns>The registered notification order</returns>
     [HttpPost]
     [Consumes("application/json")]
-    public async Task<ActionResult<NotificationOrderExt>> Post([FromBody] EmailNotificationOrderRequest emailNotificationOrderRequest)
+    public async Task<ActionResult<NotificationOrderExt>> Post([FromBody] EmailNotificationOrderRequestExt emailNotificationOrderRequest)
     {
         var validationResult = _validator.Validate(emailNotificationOrderRequest);
         if (!validationResult.IsValid)
@@ -43,8 +49,16 @@ public class EmailNotificationOrdersController : ControllerBase
             return ValidationProblem(ModelState);
         }
 
-        await Task.CompletedTask;
+        var orderRequest = emailNotificationOrderRequest.MapToOrderRequest();
+        (NotificationOrder? registeredOrder, ServiceError? error) = await _orderService.RegisterEmailNotificationOrder(orderRequest);
 
-        return Accepted();
+        if (error != null)
+        {
+            return StatusCode(error.ErrorCode, error.ErrorMessage);
+        }
+
+        NotificationOrderExt registeredOrderExt = registeredOrder!.MapToNotificationOrderExt();
+
+        return Accepted(registeredOrderExt);
     }
 }

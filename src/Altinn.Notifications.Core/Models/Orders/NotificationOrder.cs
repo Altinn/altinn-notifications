@@ -1,7 +1,7 @@
 ﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 
-namespace Altinn.Notifications.Core.Models;
+namespace Altinn.Notifications.Core.Models.Orders;
 
 /// <summary>
 /// Class representing a notification order
@@ -11,12 +11,12 @@ public class NotificationOrder
     /// <summary>
     /// Gets the id of the notification order
     /// </summary>
-    public string Id { get; private set;  }
+    public string Id { get; private set; }
 
     /// <summary>
     /// Gets the senders reference of a notification
     /// </summary>
-    public string? SendersReference { get; private set; } 
+    public string? SendersReference { get; private set; }
 
     /// <summary>
     /// Gets the templates to create notifications based of
@@ -31,12 +31,17 @@ public class NotificationOrder
     /// <summary>
     /// Gets the preferred notification channel
     /// </summary>
-    public NotificationChannelPreferred PreferredNotificationChannel { get; private set; }
+    public NotificationChannel NotificationChannel { get; private set; }
 
     /// <summary>
     /// Gets the creator of the notification
     /// </summary>
     public Creator Creator { get; private set; }
+
+    /// <summary>
+    /// Gets the date and time for when the notification order was created
+    /// </summary>
+    public DateTime Created { get; private set; }
 
     /// <summary>
     /// Gets a list of recipients
@@ -46,13 +51,13 @@ public class NotificationOrder
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationOrder"/> class.
     /// </summary>
-    public NotificationOrder(string? sendersReference, List<INotificationTemplate> templates, DateTime sendTime, NotificationChannelPreferred preferredNotificationChannel, Creator creator, List<Recipient> recipients)
+    public NotificationOrder(string? sendersReference, List<INotificationTemplate> templates, DateTime sendTime, NotificationChannel notificationChannel, Creator creator, List<Recipient> recipients)
     {
         Id = Guid.NewGuid().ToString();
         SendersReference = sendersReference;
         Templates = templates;
         SendTime = sendTime;
-        PreferredNotificationChannel = preferredNotificationChannel;
+        NotificationChannel = notificationChannel;
         Creator = creator;
         Recipients = recipients;
     }

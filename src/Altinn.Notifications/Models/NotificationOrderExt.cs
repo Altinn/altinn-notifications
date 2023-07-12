@@ -1,4 +1,7 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
+
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 
 namespace Altinn.Notifications.Models;
@@ -14,40 +17,87 @@ public class NotificationOrderExt
     /// <summary>
     /// Gets or sets the id of the notification order
     /// </summary>
+    [JsonPropertyName("id")]
     public string Id { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the list of recipients
+    /// Gets or sets the short name of the creator of the notification order
     /// </summary>
-    public List<RecipientExt> Recipients { get; set; } = new List<RecipientExt>();
-
-    /// <summary>
-    /// Gets or sets the templates to use as the base the notification
-    /// </summary>
-    public List<INotificationTemplate> Templates { get; set; } = new List<INotificationTemplate>();
+    [JsonPropertyName("creator")]
+    public string Creator { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the senders reference of the notification
     /// </summary>
+    [JsonPropertyName("sendersReference")]
     public string? SendersReference { get; set; }
 
     /// <summary>
     /// Gets or sets the requested send time of the notification
     /// </summary>
+    [JsonPropertyName("sendTime")]
     public DateTime SendTime { get; set; }
 
     /// <summary>
     /// Gets or sets the date and time of when the notification order was created
     /// </summary>
+    [JsonPropertyName("created")]
     public DateTime Created { get; set; }
 
     /// <summary>
     /// Gets or sets the preferred notification channel of the notification order
     /// </summary>
-    public NotificationChannelPreferred NotificationChannelPreferred { get; set; }
+    [JsonPropertyName("notificationChannel")]
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public NotificationChannel NotificationChannel { get; set; }
 
     /// <summary>
-    /// Gets or sets the creator of the notification order
+    /// Gets or sets the list of recipients
     /// </summary>
-    public CreatorExt Creator { get; set; } = new CreatorExt();
+    [JsonPropertyName("recipients")]
+    public List<RecipientExt> Recipients { get; set; } = new List<RecipientExt>();
+
+    /// <summary>
+    /// Gets or sets the emailTemplate
+    /// </summary>
+    [JsonPropertyName("emailTemplate")]
+    public EmailTemplateExt? EmailTemplate { get; set; }
+
+    /// <summary>
+    /// Json serialized the <see cref="NotificationOrderExt"/>
+    /// </summary>
+    public string Serialize()
+    {
+        return JsonSerializer.Serialize(this, new JsonSerializerOptions
+        {
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+
+            Converters = { new JsonStringEnumConverter(), new TemplateListConverter() },
+        });
+    }
+
+    /// <summary>
+    /// Converter class for list 
+    /// </summary>
+    public class TemplateListConverter : JsonConverter<List<INotificationTemplate>>
+    {
+        /// <inheritdoc/>
+        public override List<INotificationTemplate>? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <inheritdoc/>
+        public override void Write(Utf8JsonWriter writer, List<INotificationTemplate> value, JsonSerializerOptions options)
+        {
+            writer.WriteStartArray();
+
+            foreach (var template in value)
+            {
+                JsonSerializer.Serialize(writer, template, template.GetType(), options);
+            }
+
+            writer.WriteEndArray();
+        }
+    }
 }

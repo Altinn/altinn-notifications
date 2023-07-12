@@ -2,14 +2,12 @@
 
 using FluentValidation;
 
-using Microsoft.AspNetCore.Mvc.ModelBinding;
-
 namespace Altinn.Notifications.Validators;
 
 /// <summary>
-/// Claass contining validation logic for the <see cref="EmailNotificationOrderRequest"/> model
+/// Claass contining validation logic for the <see cref="EmailNotificationOrderRequestExt"/> model
 /// </summary>
-public class EmailNotificationOrderRequestValidator : AbstractValidator<EmailNotificationOrderRequest>
+public class EmailNotificationOrderRequestValidator : AbstractValidator<EmailNotificationOrderRequestExt>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotificationOrderRequestValidator"/> class.
@@ -20,6 +18,11 @@ public class EmailNotificationOrderRequestValidator : AbstractValidator<EmailNot
             .Empty()
             .When(order => order.ToAddresses != null && order.ToAddresses.Any())
             .WithMessage("Provide either recipients or to addresses, not both.");
+
+        RuleFor(order => order.Recipients)
+            .Must(recipients => recipients?.Any(a => string.IsNullOrEmpty(a.EmailAddress)) == false)
+            .When(o => o.Recipients != null)
+            .WithMessage("Email address must be provided for all recipients");
 
         RuleFor(order => order.Body).NotEmpty();
         RuleFor(order => order.Subject).NotEmpty();

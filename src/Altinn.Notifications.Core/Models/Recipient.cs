@@ -10,7 +10,7 @@ public class Recipient
     /// <summary>
     /// Gets or sets the recipient id
     /// </summary>
-    public string RecipientId { get; set; }
+    public string RecipientId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets a list of address points for the recipient
@@ -20,9 +20,17 @@ public class Recipient
     /// <summary>
     /// Initializes a new instance of the <see cref="Recipient"/> class.
     /// </summary>
-    public Recipient(string recipientId, List<IAddressPoint> addressInfo)
+    public Recipient(string? recipientId, List<IAddressPoint> addressInfo)
     {
-        RecipientId = recipientId;
+        RecipientId = recipientId ?? string.Empty;
+        AddressInfo = addressInfo;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Recipient"/> class.
+    /// </summary>
+    public Recipient(List<IAddressPoint> addressInfo)
+    {
         AddressInfo = addressInfo;
     }
 
@@ -32,5 +40,12 @@ public class Recipient
     public Recipient(string recipientId)
     {
         RecipientId = recipientId;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Recipient"/> class.
+    /// </summary>
+    public Recipient()
+    {
     }
 }

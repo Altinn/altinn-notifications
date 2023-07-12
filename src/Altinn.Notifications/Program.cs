@@ -215,7 +215,7 @@ async Task ConnectToKeyVaultAndSetApplicationInsights(ConfigurationManager confi
 
 void AddInputModelValidators(IServiceCollection services)
 {
-    services.AddSingleton<IValidator<EmailNotificationOrderRequest>, EmailNotificationOrderRequestValidator>();
+    services.AddSingleton<IValidator<EmailNotificationOrderRequestExt>, EmailNotificationOrderRequestValidator>();
 }
 
 void ConfigurePostgreSql(ConfigurationManager config)
