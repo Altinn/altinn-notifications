@@ -40,7 +40,7 @@ public class EmailNotificationOrdersController : ControllerBase
     /// <returns>The registered notification order</returns>
     [HttpPost]
     [Consumes("application/json")]
-    public async Task<ActionResult<NotificationOrderExt>> Post([FromBody] EmailNotificationOrderRequestExt emailNotificationOrderRequest)
+    public async Task<ActionResult<NotificationOrderExt>> Post(EmailNotificationOrderRequestExt emailNotificationOrderRequest)
     {
         var validationResult = _validator.Validate(emailNotificationOrderRequest);
         if (!validationResult.IsValid)
