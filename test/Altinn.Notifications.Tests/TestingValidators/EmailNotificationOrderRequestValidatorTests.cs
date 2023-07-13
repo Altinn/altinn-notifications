@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 
 using Altinn.Notifications.Models;
@@ -79,7 +80,25 @@ public class EmailNotificationOrderRequestValidatorTests
         var actual = _validator.Validate(order);
 
         Assert.False(actual.IsValid);
-        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("Email address must be provided for all recipients"));
+        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("Email address must be provided for all recipients."));
+    }
+
+    [Fact]
+    public void Validate_SendTimePassed_ReturnsFalse()
+    {
+        var order = new EmailNotificationOrderRequestExt()
+        {
+            Subject = "This is an email subject",
+            FromAddress = "sender@domain.com",
+            Recipients = new List<RecipientExt>() { new RecipientExt() { Id = "16069412345", EmailAddress = "recipient2@domain.com" } },
+            Body = "This is an email body",
+            SendTime = DateTime.UtcNow.AddDays(-1)
+        };
+
+        var actual = _validator.Validate(order);
+
+        Assert.False(actual.IsValid);
+        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("Send time must be in the future. Leave blank to send immediatly."));
     }
 
     [Fact]
@@ -96,7 +115,6 @@ public class EmailNotificationOrderRequestValidatorTests
         var actual = _validator.Validate(order);
         Assert.False(actual.IsValid);
         Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("'From Address' must not be empty."));
-
     }
 
     [Fact]
@@ -112,7 +130,6 @@ public class EmailNotificationOrderRequestValidatorTests
         var actual = _validator.Validate(order);
         Assert.False(actual.IsValid);
         Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("'Subject' must not be empty."));
-
     }
 
     [Fact]
@@ -128,6 +145,5 @@ public class EmailNotificationOrderRequestValidatorTests
         var actual = _validator.Validate(order);
         Assert.False(actual.IsValid);
         Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("'Body' must not be empty."));
-
     }
 }

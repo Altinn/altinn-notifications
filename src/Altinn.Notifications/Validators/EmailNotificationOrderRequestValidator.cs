@@ -22,7 +22,11 @@ public class EmailNotificationOrderRequestValidator : AbstractValidator<EmailNot
         RuleFor(order => order.Recipients)
             .Must(recipients => recipients?.Exists(a => string.IsNullOrEmpty(a.EmailAddress)) == false)
             .When(o => o.Recipients != null)
-            .WithMessage("Email address must be provided for all recipients");
+            .WithMessage("Email address must be provided for all recipients.");
+
+        RuleFor(order => order.SendTime)
+          .Must(sendTime => sendTime >= DateTime.UtcNow.AddMinutes(-5))
+          .WithMessage("Send time must be in the future. Leave blank to send immediatly.");
 
         RuleFor(order => order.Body).NotEmpty();
         RuleFor(order => order.Subject).NotEmpty();
