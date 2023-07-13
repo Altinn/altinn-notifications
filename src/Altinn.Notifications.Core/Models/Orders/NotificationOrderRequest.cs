@@ -16,7 +16,7 @@ public class NotificationOrderRequest
     /// <summary>
     /// Gets the templates to create notifications based of
     /// </summary>
-    public List<INotificationTemplate> Templates { get; set; } = new List<INotificationTemplate>();
+    public List<INotificationTemplate> Templates { get; set; }
 
     /// <summary>
     /// Gets the send time for the notification(s)
@@ -31,7 +31,7 @@ public class NotificationOrderRequest
     /// <summary>
     /// Gets a list of recipients
     /// </summary>
-    public List<Recipient> Recipients { get; set; } = new List<Recipient>();
+    public List<Recipient> Recipients { get; set; }
 
     /// <summary>
     /// Constructor

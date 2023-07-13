@@ -68,8 +68,7 @@ public static class OrderMapper
     private static string? GetEmailFromAddressList(List<IAddressPoint> addressPoints)
     {
         var emailAddressPoint = addressPoints
-            .Where(a => a.AddressType.Equals(AddressType.Email))
-            .FirstOrDefault()
+            .FirstOrDefault(a => a.AddressType.Equals(AddressType.Email))
             as EmailAddressPoint;
 
         return emailAddressPoint?.EmailAddress;
