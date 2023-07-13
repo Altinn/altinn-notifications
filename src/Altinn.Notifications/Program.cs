@@ -5,9 +5,13 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using Altinn.Notifications.Configuration;
+using Altinn.Notifications.Core.Repository.Interfaces;
+using Altinn.Notifications.Core.Services;
+using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Health;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Persistence.Configuration;
+using Altinn.Notifications.Persistence.Repository;
 using Altinn.Notifications.Validators;
 
 using AltinnCore.Authentication.JwtCookie;
@@ -121,7 +125,6 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     services.AddHealthChecks().AddCheck<HealthCheck>("notifications_health_check");
 
     services.AddSingleton(config);
-    services.Configure<PostgreSqlSettings>(config.GetSection("PostgreSQLSettings"));
 
     if (!string.IsNullOrEmpty(applicationInsightsConnectionString))
     {
@@ -159,6 +162,8 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
           });
 
     AddInputModelValidators(services);
+    ConfigureCoreServices(services);
+    ConfigurePersistenceServices(services, config);
 }
 
 async Task SetConfigurationProviders(ConfigurationManager config)
@@ -246,4 +251,18 @@ void ConfigurePostgreSql(ConfigurationManager config)
                 IsDebug = true,
             });
     }
+}
+
+void ConfigureCoreServices(IServiceCollection services)
+{
+    services.AddSingleton<IGuidService, GuidService>();
+    services.AddSingleton<IDateTimeService, DateTimeService>();
+
+    services.AddSingleton<IEmailNotificationOrderService, EmailNotificationOrderService>();
+}
+
+void ConfigurePersistenceServices(IServiceCollection services, IConfiguration config)
+{
+    services.Configure<PostgreSqlSettings>(config.GetSection("PostgreSQLSettings"));
+    services.AddSingleton<IOrderRepository, OrderRepository>();
 }

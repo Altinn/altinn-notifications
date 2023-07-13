@@ -25,4 +25,9 @@
     <CodeAnalysisRuleSet>..\..\Altinn3.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
 
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>Altinn.Notifications.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
 </Project>

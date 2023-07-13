@@ -13,12 +13,12 @@ public interface IOrderRepository
     /// </summary>
     /// <param name="id">The id of the notification order to retrieve</param>
     /// <returns>A notification order</returns>
-    public NotificationOrder GetById(string id);
+    public Task<NotificationOrder> GetById(string id);
 
     /// <summary>
     /// Creates a new notification order in the database
     /// </summary>
     /// <param name="order">The order to save</param>
     /// <returns>The saved notification order</returns>
-    public NotificationOrder Create(NotificationOrder order);
+    public Task<NotificationOrder> Create(NotificationOrder order);
 }

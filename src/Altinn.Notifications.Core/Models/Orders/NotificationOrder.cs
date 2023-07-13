@@ -11,54 +11,63 @@ public class NotificationOrder
     /// <summary>
     /// Gets the id of the notification order
     /// </summary>
-    public string Id { get; private set; }
+    public string Id { get; internal set; } = string.Empty;
 
     /// <summary>
     /// Gets the senders reference of a notification
     /// </summary>
-    public string? SendersReference { get; private set; }
+    public string? SendersReference { get; internal set; }
 
     /// <summary>
     /// Gets the templates to create notifications based of
     /// </summary>
-    public List<INotificationTemplate> Templates { get; private set; }
+    public List<INotificationTemplate> Templates { get; internal set; } = new List<INotificationTemplate>();
 
     /// <summary>
     /// Gets the send time for the notification(s)
     /// </summary>
-    public DateTime SendTime { get; set; }
+    public DateTime SendTime { get; internal set; }
 
     /// <summary>
     /// Gets the preferred notification channel
     /// </summary>
-    public NotificationChannel NotificationChannel { get; private set; }
+    public NotificationChannel NotificationChannel { get; internal set; }
 
     /// <summary>
     /// Gets the creator of the notification
     /// </summary>
-    public Creator Creator { get; private set; }
+    public Creator Creator { get; internal set; }
 
     /// <summary>
     /// Gets the date and time for when the notification order was created
     /// </summary>
-    public DateTime Created { get; private set; }
+    public DateTime Created { get; internal set; }
 
     /// <summary>
     /// Gets a list of recipients
     /// </summary>
-    public List<Recipient> Recipients { get; private set; }
+    public List<Recipient> Recipients { get; internal set; } = new List<Recipient>();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationOrder"/> class.
     /// </summary>
-    public NotificationOrder(string? sendersReference, List<INotificationTemplate> templates, DateTime sendTime, NotificationChannel notificationChannel, Creator creator, List<Recipient> recipients)
+    public NotificationOrder(string id, string? sendersReference, List<INotificationTemplate> templates, DateTime sendTime, NotificationChannel notificationChannel, Creator creator, DateTime created, List<Recipient> recipients)
     {
-        Id = Guid.NewGuid().ToString();
+        Id = id;
         SendersReference = sendersReference;
         Templates = templates;
         SendTime = sendTime;
         NotificationChannel = notificationChannel;
         Creator = creator;
+        Created = created;
         Recipients = recipients;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="NotificationOrder"/> class.
+    /// </summary>
+    internal NotificationOrder()
+    {
+        Creator = new Creator(string.Empty);
     }
 }

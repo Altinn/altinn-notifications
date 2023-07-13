@@ -1,6 +1,7 @@
 ﻿using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Validators;
@@ -49,7 +50,14 @@ public class EmailNotificationOrdersController : ControllerBase
             return ValidationProblem(ModelState);
         }
 
-        var orderRequest = emailNotificationOrderRequest.MapToOrderRequest();
+        string? creator = User.GetOrg();
+
+        if (creator == null)
+        {
+            return BadRequest("No org present in user token.");
+        }
+
+        var orderRequest = emailNotificationOrderRequest.MapToOrderRequest(creator);
         (NotificationOrder? registeredOrder, ServiceError? error) = await _orderService.RegisterEmailNotificationOrder(orderRequest);
 
         if (error != null)

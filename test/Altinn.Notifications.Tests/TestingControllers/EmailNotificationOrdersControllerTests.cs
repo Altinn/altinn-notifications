@@ -64,16 +64,18 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<WebApplicati
             Recipients = null,
             SendersReference = "senders-reference",
             SendTime = DateTime.UtcNow,
-            Subject = "email-subject",
+            Subject = "email-subject",            
             ToAddresses = new List<string>() { "recipient1@domain.com", "recipient2@domain.com" }
         };
 
         _order = new(
+            Guid.NewGuid().ToString(),
             "senders-reference", 
             new List<INotificationTemplate>(),
             DateTime.UtcNow, 
             NotificationChannel.Email,
-            new Creator("ttd"), 
+            new Creator("ttd"),
+             DateTime.UtcNow,
             new List<Recipient>());
 
     }

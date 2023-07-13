@@ -19,18 +19,25 @@ public class OrderMapperTests
     {
         // Arrange 
         DateTime sendTime = DateTime.UtcNow;
-        NotificationOrder order = new(
-            "ref1337",
-            new List<INotificationTemplate>() { new EmailTemplate("from@domain.com", "email-subject", "email-body", EmailContentType.Plain) },
-            sendTime,
-            NotificationChannel.Email,
-            new Creator("ttd"),
-            new List<Recipient>());
+        DateTime created = DateTime.UtcNow;
+
+        NotificationOrder order = new()
+        {
+            Id = Guid.NewGuid().ToString(),
+            SendersReference = "ref1337",
+            Templates = new List<INotificationTemplate>() { new EmailTemplate("from@domain.com", "email-subject", "email-body", EmailContentType.Plain) },
+            SendTime = sendTime,
+            NotificationChannel = NotificationChannel.Email,
+            Creator = new Creator("ttd"),
+            Created = created,
+            Recipients = new List<Recipient>()
+        };
 
         NotificationOrderExt expected = new()
         {
             Id = order.Id,
             Creator = "ttd",
+            Created = created,
             NotificationChannel = NotificationChannel.Email,
             SendersReference = "ref1337",
             SendTime = sendTime,
@@ -118,22 +125,26 @@ public class OrderMapperTests
             ToAddresses = new List<string>() { "recipient1@domain.com", "recipient2@domain.com" }
         };
 
-        NotificationOrderRequest expected = new(
-            "senders-reference",
-            new List<INotificationTemplate>() {
+        NotificationOrderRequest expected = new()
+        {
+            SendersReference = "senders-reference",
+            Creator = new Creator("ttd"),
+            Templates = new List<INotificationTemplate>() {
                 new EmailTemplate(
                     "sender@domain.com",
                     "email-subject",
                     "email-body",
                     EmailContentType.Html)},
-            sendTime,
-            NotificationChannel.Email,
-                new List<Recipient>() {
+            SendTime = sendTime,
+            NotificationChannel = NotificationChannel.Email,
+            Recipients = new List<Recipient>() {
                         new Recipient(){ AddressInfo =new List<IAddressPoint>(){new EmailAddressPoint("recipient1@domain.com")}},
                         new Recipient(){ AddressInfo =new List<IAddressPoint>(){new EmailAddressPoint("recipient2@domain.com")}}
-                    });
+            }
+        };
+
         // Act
-        var actual = OrderMapper.MapToOrderRequest(orderRequestExt);
+        var actual = OrderMapper.MapToOrderRequest(orderRequestExt, "ttd");
 
         // Assert
         Assert.Equivalent(expected, actual, true);
@@ -157,23 +168,26 @@ public class OrderMapperTests
             ToAddresses = null
         };
 
-        NotificationOrderRequest expected = new(
-            "senders-reference",
-            new List<INotificationTemplate>() {
+        NotificationOrderRequest expected = new()
+        {
+            SendersReference = "senders-reference",
+            Creator = new Creator("ttd"),
+            Templates = new List<INotificationTemplate>() {
                 new EmailTemplate(
                     "sender@domain.com",
                     "email-subject",
                     "email-body",
                     EmailContentType.Html)},
-            sendTime,
-            NotificationChannel.Email,
-            new List<Recipient>() {
-                new Recipient(){ AddressInfo =new List<IAddressPoint>(){new EmailAddressPoint("recipient1@domain.com")} },
-                new Recipient(){ AddressInfo =new List<IAddressPoint>(){new EmailAddressPoint("recipient2@domain.com")} }
-            });
+            SendTime = sendTime,
+            NotificationChannel = NotificationChannel.Email,
+            Recipients = new List<Recipient>() {
+                        new Recipient(){ AddressInfo =new List<IAddressPoint>(){new EmailAddressPoint("recipient1@domain.com")}},
+                        new Recipient(){ AddressInfo =new List<IAddressPoint>(){new EmailAddressPoint("recipient2@domain.com")}}
+            }
+        };
 
         // Act
-        var actual = OrderMapper.MapToOrderRequest(orderRequestExt);
+        var actual = OrderMapper.MapToOrderRequest(orderRequestExt, "ttd");
 
         // Assert
         Assert.Equivalent(expected, actual, true);

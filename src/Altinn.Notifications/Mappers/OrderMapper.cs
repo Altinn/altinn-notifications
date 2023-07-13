@@ -15,7 +15,7 @@ public static class OrderMapper
     /// <summary>
     /// Maps a <see cref="EmailNotificationOrderRequestExt"/> to a <see cref="NotificationOrderRequest"/>
     /// </summary>
-    public static NotificationOrderRequest MapToOrderRequest(this EmailNotificationOrderRequestExt extRequest)
+    public static NotificationOrderRequest MapToOrderRequest(this EmailNotificationOrderRequestExt extRequest, string creator)
     {
         var emailTemplate = new EmailTemplate(extRequest.FromAddress, extRequest.Subject, extRequest.Body, extRequest.ContentType);
 
@@ -42,6 +42,7 @@ public static class OrderMapper
 
         return new NotificationOrderRequest(
             extRequest.SendersReference,
+            creator,
             new List<INotificationTemplate>() { emailTemplate },
             extRequest.SendTime,
             NotificationChannel.Email,
@@ -68,7 +69,7 @@ public static class OrderMapper
     private static string? GetEmailFromAddressList(List<IAddressPoint> addressPoints)
     {
         var emailAddressPoint = addressPoints
-            .FirstOrDefault(a => a.AddressType.Equals(AddressType.Email))
+            .Find(a => a.AddressType.Equals(AddressType.Email))
             as EmailAddressPoint;
 
         return emailAddressPoint?.EmailAddress;

@@ -11,37 +11,53 @@ public class NotificationOrderRequest
     /// <summary>
     /// Gets the senders reference of a notification
     /// </summary>
-    public string? SendersReference { get; set; }
+    public string? SendersReference { get; internal set; }
 
     /// <summary>
     /// Gets the templates to create notifications based of
     /// </summary>
-    public List<INotificationTemplate> Templates { get; set; }
+    public List<INotificationTemplate> Templates { get; internal set; }
 
     /// <summary>
     /// Gets the send time for the notification(s)
     /// </summary>
-    public DateTime SendTime { get; set; }
+    public DateTime SendTime { get; internal set; }
 
     /// <summary>
     /// Gets the preferred notification channel
     /// </summary>
-    public NotificationChannel NotificationChannel { get; set; }
+    public NotificationChannel NotificationChannel { get; internal set; }
 
     /// <summary>
     /// Gets a list of recipients
     /// </summary>
-    public List<Recipient> Recipients { get; set; }
+    public List<Recipient> Recipients { get; internal set; }
 
     /// <summary>
-    /// Constructor
+    /// Gets the creator of the notification request
     /// </summary>
-    public NotificationOrderRequest(string? sendersReference, List<INotificationTemplate> templates, DateTime sendTime, NotificationChannel notificationChannel, List<Recipient> recipients)
+    public Creator Creator { get; internal set; }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="NotificationOrderRequest"/> class.
+    /// </summary>
+    public NotificationOrderRequest(string? sendersReference, string creatorShortName, List<INotificationTemplate> templates, DateTime sendTime, NotificationChannel notificationChannel, List<Recipient> recipients)
     {
         SendersReference = sendersReference;
+        Creator = new(creatorShortName);
         Templates = templates;
         SendTime = sendTime;
         NotificationChannel = notificationChannel;
         Recipients = recipients;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="NotificationOrderRequest"/> class.
+    /// </summary>
+    internal NotificationOrderRequest()
+    {
+        Creator = new Creator(string.Empty);
+        Templates = new List<INotificationTemplate>();
+        Recipients = new List<Recipient>();
     }
 }
