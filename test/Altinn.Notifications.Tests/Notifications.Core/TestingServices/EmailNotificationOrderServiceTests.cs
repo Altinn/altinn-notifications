@@ -12,7 +12,7 @@ using Moq;
 
 using Xunit;
 
-namespace Altinn.Notifications.Tests.TestingServices;
+namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 public class EmailNotificationOrderServiceTests
 {
 

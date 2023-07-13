@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using System.Security.Claims;
 
-using Altinn.Notifications.Tests.Mocks.Authentication;
+using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 
 using AltinnCore.Authentication.Constants;
 
-namespace Altinn.Notifications.Tests.Utils;
+namespace Altinn.Notifications.Tests.Notifications.Utils;
 
 public static class PrincipalUtil
 {
@@ -68,7 +68,7 @@ public static class PrincipalUtil
 
         return token;
     }
-        public static string GetUserToken(int userId, int authenticationLevel = 2, string? scope = null)
+    public static string GetUserToken(int userId, int authenticationLevel = 2, string? scope = null)
     {
         ClaimsPrincipal principal = GetClaimsPrincipal(userId, authenticationLevel, scope);
 

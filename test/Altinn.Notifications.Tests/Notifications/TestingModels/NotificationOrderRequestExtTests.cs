@@ -8,7 +8,7 @@ using Altinn.Notifications.Models;
 
 using Xunit;
 
-namespace Altinn.Notifications.Tests.TestingModels;
+namespace Altinn.Notifications.Tests.Notifications.TestingModels;
 public class NotificationOrderRequestExtTests
 {
     [Fact]

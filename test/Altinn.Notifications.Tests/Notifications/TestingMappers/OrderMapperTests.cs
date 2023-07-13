@@ -11,7 +11,7 @@ using Altinn.Notifications.Models;
 
 using Xunit;
 
-namespace Altinn.Notifications.Tests.TestingMappers;
+namespace Altinn.Notifications.Tests.Notifications.TestingMappers;
 public class OrderMapperTests
 {
     [Fact]
@@ -52,7 +52,7 @@ public class OrderMapperTests
         };
 
         // Act
-        var actual = OrderMapper.MapToNotificationOrderExt(order);
+        var actual = order.MapToNotificationOrderExt();
 
         // Assert
         Assert.Equivalent(expected, actual, true);
@@ -79,7 +79,7 @@ public class OrderMapperTests
         };
 
         // Act
-        var actual = OrderMapper.MapToRecipientExt(new List<Recipient>() { input });
+        var actual = new List<Recipient>() { input }.MapToRecipientExt();
 
         // Assert
         Assert.Equivalent(new List<RecipientExt>() { expected }, actual, true);
@@ -101,7 +101,7 @@ public class OrderMapperTests
         };
 
         // Act
-        var actual = OrderMapper.MapToRecipientExt(new List<Recipient>() { input });
+        var actual = new List<Recipient>() { input }.MapToRecipientExt();
 
         // Assert
         Assert.Equivalent(new List<RecipientExt>() { expected }, actual, true);
@@ -144,7 +144,7 @@ public class OrderMapperTests
         };
 
         // Act
-        var actual = OrderMapper.MapToOrderRequest(orderRequestExt, "ttd");
+        var actual = orderRequestExt.MapToOrderRequest("ttd");
 
         // Assert
         Assert.Equivalent(expected, actual, true);
@@ -187,7 +187,7 @@ public class OrderMapperTests
         };
 
         // Act
-        var actual = OrderMapper.MapToOrderRequest(orderRequestExt, "ttd");
+        var actual = orderRequestExt.MapToOrderRequest("ttd");
 
         // Assert
         Assert.Equivalent(expected, actual, true);

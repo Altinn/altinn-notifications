@@ -7,7 +7,7 @@ using Altinn.Notifications.Validators;
 
 using Xunit;
 
-namespace Altinn.Notifications.Tests.TestingValidators;
+namespace Altinn.Notifications.Tests.Notifications.TestingValidators;
 
 public class EmailNotificationOrderRequestValidatorTests
 {

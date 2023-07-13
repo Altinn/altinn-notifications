@@ -14,8 +14,8 @@ using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Models;
-using Altinn.Notifications.Tests.Mocks.Authentication;
-using Altinn.Notifications.Tests.Utils;
+using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
+using Altinn.Notifications.Tests.Notifications.Utils;
 
 using AltinnCore.Authentication.JwtCookie;
 
@@ -35,7 +35,7 @@ using Xunit;
 
 using ValidationResult = FluentValidation.Results.ValidationResult;
 
-namespace Altinn.Notifications.Tests.TestingControllers;
+namespace Altinn.Notifications.Tests.Notifications.TestingControllers;
 
 public class EmailNotificationOrdersControllerTests : IClassFixture<WebApplicationFactory<EmailNotificationOrdersController>>
 {
