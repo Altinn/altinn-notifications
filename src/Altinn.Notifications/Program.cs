@@ -1,17 +1,14 @@
 #nullable disable
 
-using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using Altinn.Notifications.Configuration;
-using Altinn.Notifications.Core.Repository.Interfaces;
-using Altinn.Notifications.Core.Services;
-using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Extensions;
 using Altinn.Notifications.Health;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Persistence.Configuration;
-using Altinn.Notifications.Persistence.Repository;
+using Altinn.Notifications.Persistence.Extensions;
 using Altinn.Notifications.Validators;
 
 using AltinnCore.Authentication.JwtCookie;
@@ -120,6 +117,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
         options.JsonSerializerOptions.WriteIndented = true;
         options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
         options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+        options.JsonSerializerOptions.Converters.Insert(0, new JsonStringEnumConverter());
     });
 
     services.AddHealthChecks().AddCheck<HealthCheck>("notifications_health_check");
@@ -162,8 +160,9 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
           });
 
     AddInputModelValidators(services);
-    ConfigureCoreServices(services);
-    ConfigurePersistenceServices(services, config);
+    services.AddCoreServices();
+    PostgreSqlSettings postgresSettings = config.GetSection("PostgreSqlSettings").Get<PostgreSqlSettings>();
+    services.AddPostgresRepositories(postgresSettings);
 }
 
 async Task SetConfigurationProviders(ConfigurationManager config)
@@ -171,14 +170,16 @@ async Task SetConfigurationProviders(ConfigurationManager config)
     string basePath = Directory.GetParent(Directory.GetCurrentDirectory()).FullName;
     config.SetBasePath(basePath);
     config.AddJsonFile(basePath + "altinn-appsettings/altinn-dbsettings-secret.json", optional: true, reloadOnChange: true);
-    if (basePath == "/")
-    {
-        config.AddJsonFile(basePath + "app/appsettings.json", optional: false, reloadOnChange: true);
-    }
-    else
-    {
-        config.AddJsonFile(Directory.GetCurrentDirectory() + "/appsettings.json", optional: false, reloadOnChange: true);
-    }
+    
+    // couldn't load appsettings.development with the code below active. 
+    /* if (basePath == "/")
+     {
+         config.AddJsonFile(basePath + "app/appsettings.json", optional: false, reloadOnChange: true);
+     }
+     else
+     {
+         config.AddJsonFile(Directory.GetCurrentDirectory() + "/appsettings.json", optional: false, reloadOnChange: true);
+     }*/
 
     config.AddEnvironmentVariables();
 
@@ -251,18 +252,4 @@ void ConfigurePostgreSql(ConfigurationManager config)
                 IsDebug = true,
             });
     }
-}
-
-void ConfigureCoreServices(IServiceCollection services)
-{
-    services.AddSingleton<IGuidService, GuidService>();
-    services.AddSingleton<IDateTimeService, DateTimeService>();
-
-    services.AddSingleton<IEmailNotificationOrderService, EmailNotificationOrderService>();
-}
-
-void ConfigurePersistenceServices(IServiceCollection services, IConfiguration config)
-{
-    services.Configure<PostgreSqlSettings>(config.GetSection("PostgreSQLSettings"));
-    services.AddSingleton<IOrderRepository, OrderRepository>();
 }

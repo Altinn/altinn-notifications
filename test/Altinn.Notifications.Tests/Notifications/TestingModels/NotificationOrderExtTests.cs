@@ -9,7 +9,7 @@ using Altinn.Notifications.Models;
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.TestingModels;
-public class NotificationOrderRequestExtTests
+public class NotificationOrderExtTests
 {
     [Fact]
     public void SerializeToJson()
@@ -70,7 +70,5 @@ public class NotificationOrderRequestExtTests
 
         // Assert
         Assert.Equal(expected, actual);
-
-
     }
 }

@@ -1,4 +1,5 @@
 ﻿using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Repository.Interfaces;
 using Altinn.Notifications.Core.Services.Interfaces;

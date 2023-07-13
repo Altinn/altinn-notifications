@@ -13,5 +13,10 @@ public class PostgreSqlSettings
     /// <summary>
     /// Password for app user for the postgre db
     /// </summary>
-    public string NotificationssDbPwd { get; set; } = string.Empty;
+    public string NotificationsDbPwd { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to include parameter values in logging/tracing.
+    /// </summary>
+    public bool LogParameters { get; set; } = false;
 }

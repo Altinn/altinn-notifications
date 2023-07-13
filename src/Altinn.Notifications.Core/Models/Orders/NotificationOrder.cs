@@ -1,4 +1,7 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
+
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 
 namespace Altinn.Notifications.Core.Models.Orders;
@@ -69,5 +72,36 @@ public class NotificationOrder
     internal NotificationOrder()
     {
         Creator = new Creator(string.Empty);
+    }
+
+    /// <summary>
+    /// Json serializes the <see cref="NotificationOrder"/>
+    /// </summary>
+    public string Serialize()
+    {
+        // figure out how to serialize all templates to the right type
+        return JsonSerializer.Serialize(
+            this,
+            new JsonSerializerOptions
+            {
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                Converters = { new JsonStringEnumConverter() }
+            });
+    }
+
+    /// <summary>
+    /// Deserialize a json string into the <see cref="NotificationOrder"/>
+    /// </summary>
+    public static NotificationOrder? Deserialize(string serializedString)
+    {
+        // figure out how to deserialize all templates to the right type
+        return JsonSerializer.Deserialize<NotificationOrder>(
+            serializedString,
+            new JsonSerializerOptions()
+            {
+                PropertyNameCaseInsensitive = true,
+                Converters = { new JsonStringEnumConverter() }
+            });
     }
 }

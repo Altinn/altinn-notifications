@@ -1,11 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Data;
 
+using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Repository.Interfaces;
+
+using Npgsql;
+
+using NpgsqlTypes;
 
 namespace Altinn.Notifications.Persistence.Repository;
 
@@ -14,15 +15,85 @@ namespace Altinn.Notifications.Persistence.Repository;
 /// </summary>
 public class OrderRepository : IOrderRepository
 {
-    /// <inheritdoc/>
-    public Task<NotificationOrder> Create(NotificationOrder order)
+    private readonly NpgsqlDataSource _dataSource;
+    private const string _insertOrderSql = "select notifications.insertorder($1, $2, $3, $4, $5, $6)"; // (_alternateid, _creatorname, _sendersreference, _created, _sendtime, _notificationorder)
+    private const string _insertEmailTextSql = "call notifications.insertemailtext($1, $2, $3, $4, $5)"; // (__orderid, _fromaddress, _subject, _body, _contenttype)
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OrderRepository"/> class.
+    /// </summary>
+    /// <param name="dataSource">The npgsql data source.</param>
+    public OrderRepository(NpgsqlDataSource dataSource)
     {
-        throw new NotImplementedException();
+        _dataSource = dataSource;
+    }
+
+    /// <inheritdoc/>
+    public async Task<NotificationOrder> Create(NotificationOrder order)
+    {
+        long dbOrderId = await InsertOrder(order);
+
+        EmailTemplate? emailTempate = ExtractTemplates(order);
+        if (emailTempate != null)
+        {
+            await InsertEmailText(dbOrderId, emailTempate.FromAddress, emailTempate.Subject, emailTempate.Body, emailTempate.ContentType.ToString());
+        }
+
+        return order;
     }
 
     /// <inheritdoc/>
     public Task<NotificationOrder> GetById(string id)
     {
         throw new NotImplementedException();
+    }
+
+    /// <summary>
+    /// Extracts relevant templates from a notification order
+    /// </summary>
+    internal static EmailTemplate? ExtractTemplates(NotificationOrder order)
+    {
+        EmailTemplate? emailTemplate = null;
+
+        foreach (INotificationTemplate template in order.Templates)
+        {
+            switch (template.Type)
+            {
+                case Core.Enums.NotificationTemplateType.Email:
+                    emailTemplate = template as EmailTemplate;
+                    break;
+            }
+        }
+
+        return emailTemplate;
+    }
+
+    private async Task<long> InsertOrder(NotificationOrder order)
+    {
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_insertOrderSql);
+
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, new Guid(order.Id));
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, order.Creator.ShortName);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, order.SendersReference ?? (object)DBNull.Value);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, order.Created);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, order.SendTime);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Jsonb, order.Serialize());
+
+        await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync();
+        await reader.ReadAsync();
+        return (long)reader.GetValue(0);
+    }
+
+    private async Task InsertEmailText(long dbOrderId, string fromAddress, string subject, string body, string contentType)
+    {
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_insertEmailTextSql);
+
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Bigint, dbOrderId);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, fromAddress);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, subject);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, body);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, contentType);
+
+        await pgcom.ExecuteNonQueryAsync();
     }
 }

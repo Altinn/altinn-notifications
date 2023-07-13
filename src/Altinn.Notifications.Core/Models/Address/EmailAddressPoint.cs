@@ -8,19 +8,27 @@ namespace Altinn.Notifications.Core.Models.Address;
 public class EmailAddressPoint : IAddressPoint
 {
     /// <inheritdoc/>
-    public AddressType AddressType { get; private set; }
+    public AddressType AddressType { get; internal set; }
 
     /// <summary>
     /// Gets the email address
     /// </summary>
-    public string EmailAddress { get; private set; }
+    public string EmailAddress { get; internal set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailAddressPoint"/> class.
     /// </summary>
     public EmailAddressPoint(string emailAddress)
     {
-        AddressType = AddressType.Email; 
+        AddressType = AddressType.Email;
         EmailAddress = emailAddress;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EmailAddressPoint"/> class.
+    /// </summary>
+    internal EmailAddressPoint()
+    {
+        EmailAddress = string.Empty;
     }
 }
