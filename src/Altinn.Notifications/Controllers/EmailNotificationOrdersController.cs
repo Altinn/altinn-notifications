@@ -54,7 +54,7 @@ public class EmailNotificationOrdersController : ControllerBase
 
         if (creator == null)
         {
-            return BadRequest("No org present in user token.");
+            return Forbid();
         }
 
         var orderRequest = emailNotificationOrderRequest.MapToOrderRequest(creator);

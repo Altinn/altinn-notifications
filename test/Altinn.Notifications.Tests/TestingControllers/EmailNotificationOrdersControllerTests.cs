@@ -64,15 +64,15 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<WebApplicati
             Recipients = null,
             SendersReference = "senders-reference",
             SendTime = DateTime.UtcNow,
-            Subject = "email-subject",            
+            Subject = "email-subject",
             ToAddresses = new List<string>() { "recipient1@domain.com", "recipient2@domain.com" }
         };
 
         _order = new(
             Guid.NewGuid().ToString(),
-            "senders-reference", 
+            "senders-reference",
             new List<INotificationTemplate>(),
-            DateTime.UtcNow, 
+            DateTime.UtcNow,
             NotificationChannel.Email,
             new Creator("ttd"),
              DateTime.UtcNow,
@@ -141,6 +141,25 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<WebApplicati
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal("One or more validation errors occurred.", actual?.Title);
+    }
+
+    [Fact]
+    public async Task Post_UserClaimsPrincipal_Forbidden()
+    {
+        // Arrange
+        HttpClient client = GetTestClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetUserToken(1337));
+
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
+        {
+            Content = new StringContent(_orderRequestExt.Serialize(), Encoding.UTF8, "application/json")
+        };
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Fact]
