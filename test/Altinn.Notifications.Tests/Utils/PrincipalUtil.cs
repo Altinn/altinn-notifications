@@ -36,12 +36,12 @@ public static class PrincipalUtil
         return new ClaimsPrincipal(identity);
     }
 
-    public static ClaimsPrincipal GetClaimsPrincipal(int userId, int authenticationLevel, string scope = null)
+    public static ClaimsPrincipal GetClaimsPrincipal(int userId, int authenticationLevel, string? scope = null)
     {
         string issuer = "www.altinn.no";
 
-        List<Claim> claims = new List<Claim>
-            {
+        List<Claim> claims = new()
+        {
                 new Claim(AltinnCoreClaimTypes.UserId, userId.ToString(), ClaimValueTypes.String, issuer),
                 new Claim(AltinnCoreClaimTypes.UserName, "UserOne", ClaimValueTypes.String, issuer),
                 new Claim(AltinnCoreClaimTypes.PartyID, userId.ToString(), ClaimValueTypes.Integer32, issuer),
@@ -54,7 +54,7 @@ public static class PrincipalUtil
             claims.Add(new Claim("urn:altinn:scope", scope, ClaimValueTypes.String, "maskinporten"));
         }
 
-        ClaimsIdentity identity = new ClaimsIdentity("mock");
+        ClaimsIdentity identity = new("mock");
         identity.AddClaims(claims);
 
         return new ClaimsPrincipal(identity);
@@ -68,7 +68,7 @@ public static class PrincipalUtil
 
         return token;
     }
-        public static string GetUserToken(int userId, int authenticationLevel = 2, string scope = null)
+        public static string GetUserToken(int userId, int authenticationLevel = 2, string? scope = null)
     {
         ClaimsPrincipal principal = GetClaimsPrincipal(userId, authenticationLevel, scope);
 

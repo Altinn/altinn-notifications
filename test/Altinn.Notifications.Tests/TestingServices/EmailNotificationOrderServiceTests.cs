@@ -62,7 +62,7 @@ public class EmailNotificationOrderServiceTests
         repoMock.VerifyAll();
     }
 
-    public EmailNotificationOrderService GetTestService(IOrderRepository? repository = null, string? guid = null, DateTime? dateTime = null)
+    public static EmailNotificationOrderService GetTestService(IOrderRepository? repository = null, string? guid = null, DateTime? dateTime = null)
     {
         if (repository == null)
         {
