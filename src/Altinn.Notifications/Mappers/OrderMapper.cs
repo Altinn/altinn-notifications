@@ -24,7 +24,11 @@ public static class OrderMapper
         if (extRequest.Recipients?.Any() == true)
         {
             recipients.AddRange(
-                extRequest.Recipients.Select(r => new Recipient(r.Id, new List<IAddressPoint>() { new EmailAddressPoint(r.EmailAddress!) })));
+                extRequest.Recipients.Select(r => new Recipient()
+                {
+                    RecipientId = r.Id ?? string.Empty,
+                    AddressInfo = new List<IAddressPoint>() { new EmailAddressPoint(r.EmailAddress!) }
+                }));
         }
         else
         {
@@ -33,7 +37,7 @@ public static class OrderMapper
             addresses.AddRange(
                 extRequest.ToAddresses!.Select(a => new EmailAddressPoint(a)));
             recipients.AddRange(
-                addresses.Select(a => new Recipient(new List<IAddressPoint>() { a })));
+                addresses.Select(a => new Recipient() { AddressInfo = new List<IAddressPoint>() { a } }));
         }
 
         return new NotificationOrderRequest(
@@ -92,7 +96,8 @@ public static class OrderMapper
             switch (template.Type)
             {
                 case NotificationTemplateType.Email:
-                    var emailTemplate = template! as EmailTemplateExt;
+                    var emailTemplate = template! as EmailTemplate;
+
                     orderExt.EmailTemplate = new()
                     {
                         Body = emailTemplate!.Body,

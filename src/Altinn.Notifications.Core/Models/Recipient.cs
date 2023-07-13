@@ -16,36 +16,4 @@ public class Recipient
     /// Gets or sets a list of address points for the recipient
     /// </summary>
     public List<IAddressPoint> AddressInfo { get; set; } = new List<IAddressPoint>();
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Recipient"/> class.
-    /// </summary>
-    public Recipient(string? recipientId, List<IAddressPoint> addressInfo)
-    {
-        RecipientId = recipientId ?? string.Empty;
-        AddressInfo = addressInfo;
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Recipient"/> class.
-    /// </summary>
-    public Recipient(List<IAddressPoint> addressInfo)
-    {
-        AddressInfo = addressInfo;
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Recipient"/> class.
-    /// </summary>
-    public Recipient(string recipientId)
-    {
-        RecipientId = recipientId;
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Recipient"/> class.
-    /// </summary>
-    public Recipient()
-    {
-    }
 }

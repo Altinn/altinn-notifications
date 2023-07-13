@@ -18,13 +18,28 @@ public class EmailNotificationOrderRequestValidatorTests
     }
 
     [Fact]
-    public void Validate_AllRequiredPropsOresent_ReturnsTrue()
+    public void Validate_RecipientProvided_ReturnsTrue()
     {
         var order = new EmailNotificationOrderRequestExt()
         {
             Subject = "This is an email subject",
             FromAddress = "sender@domain.com",
             Recipients = new List<RecipientExt>() { new RecipientExt() { Id = "16069412345", EmailAddress = "recipient2@domain.com" } },
+            Body = "This is an email body"
+        };
+
+        var actual = _validator.Validate(order);
+        Assert.True(actual.IsValid);
+    }
+
+    [Fact]
+    public void Validate_ToAddressProvided_ReturnsTrue()
+    {
+        var order = new EmailNotificationOrderRequestExt()
+        {
+            Subject = "This is an email subject",
+            FromAddress = "sender@domain.com",
+            ToAddresses = new List<string>() { "recipient1@domain.com", "recipient2@domain.com" },
             Body = "This is an email body"
         };
 

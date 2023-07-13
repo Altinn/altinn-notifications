@@ -72,32 +72,7 @@ public class NotificationOrderExt
         {
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
 
-            Converters = { new JsonStringEnumConverter(), new TemplateListConverter() },
+            Converters = { new JsonStringEnumConverter() },
         });
-    }
-
-    /// <summary>
-    /// Converter class for list 
-    /// </summary>
-    public class TemplateListConverter : JsonConverter<List<INotificationTemplate>>
-    {
-        /// <inheritdoc/>
-        public override List<INotificationTemplate>? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <inheritdoc/>
-        public override void Write(Utf8JsonWriter writer, List<INotificationTemplate> value, JsonSerializerOptions options)
-        {
-            writer.WriteStartArray();
-
-            foreach (var template in value)
-            {
-                JsonSerializer.Serialize(writer, template, template.GetType(), options);
-            }
-
-            writer.WriteEndArray();
-        }
     }
 }
