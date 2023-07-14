@@ -1,6 +1,4 @@
-﻿using System.Data;
-
-using Altinn.Notifications.Core.Models.NotificationTemplate;
+﻿using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Repository.Interfaces;
 
@@ -18,6 +16,7 @@ public class OrderRepository : IOrderRepository
     private readonly NpgsqlDataSource _dataSource;
     private const string _insertOrderSql = "select notifications.insertorder($1, $2, $3, $4, $5, $6)"; // (_alternateid, _creatorname, _sendersreference, _created, _sendtime, _notificationorder)
     private const string _insertEmailTextSql = "call notifications.insertemailtext($1, $2, $3, $4, $5)"; // (__orderid, _fromaddress, _subject, _body, _contenttype)
+    private const string _getOrderById = "select notificationorder from notifications.orders where alternateid = $1";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderRepository"/> class.
@@ -43,9 +42,17 @@ public class OrderRepository : IOrderRepository
     }
 
     /// <inheritdoc/>
-    public Task<NotificationOrder> GetById(string id)
+    public async Task<NotificationOrder?> GetById(string id)
     {
-        throw new NotImplementedException();
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getOrderById);
+
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, new Guid(id));
+
+        await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync();
+        await reader.ReadAsync();
+        var serialized = reader.GetString(0);
+        
+        return NotificationOrder.Deserialize(serialized);
     }
 
     /// <summary>

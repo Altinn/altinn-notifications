@@ -37,18 +37,18 @@ using ValidationResult = FluentValidation.Results.ValidationResult;
 
 namespace Altinn.Notifications.Tests.Notifications.TestingControllers;
 
-public class EmailNotificationOrdersControllerTests : IClassFixture<WebApplicationFactory<EmailNotificationOrdersController>>
+public class EmailNotificationOrdersControllerTests : IClassFixture<CustomWebApplicationFactory<EmailNotificationOrdersController>>
 {
     private const string _basePath = "/notifications/api/v1/orders/email";
 
-    private readonly WebApplicationFactory<EmailNotificationOrdersController> _factory;
+    private readonly CustomWebApplicationFactory<EmailNotificationOrdersController> _factory;
 
     private readonly JsonSerializerOptions _options;
 
     private readonly EmailNotificationOrderRequestExt _orderRequestExt;
     private readonly NotificationOrder _order;
 
-    public EmailNotificationOrdersControllerTests(WebApplicationFactory<EmailNotificationOrdersController> factory)
+    public EmailNotificationOrdersControllerTests(CustomWebApplicationFactory<EmailNotificationOrdersController> factory)
     {
         _factory = factory;
         _options = new JsonSerializerOptions

@@ -12,7 +12,7 @@ public class OrderRepositoryTests
     public void ExtractTemplates_EmailTemplate()
     {
         // Arrange
-        EmailTemplate expected = new EmailTemplate()
+        EmailTemplate expected = new()
         {
             Body = "body",
             ContentType = EmailContentType.Plain,

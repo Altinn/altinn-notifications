@@ -1,7 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
 using Altinn.Notifications.Core.Enums;
-using Altinn.Notifications.Core.Models.NotificationTemplate;
 
 namespace Altinn.Notifications.Core.Models.Address;
 
@@ -9,7 +8,7 @@ namespace Altinn.Notifications.Core.Models.Address;
 /// Interface describing an address point
 /// </summary>
 [JsonDerivedType(typeof(EmailAddressPoint), "email")]
-[JsonPolymorphic(TypeDiscriminatorPropertyName = "$descriminator")]
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "$")]
 public interface IAddressPoint
 {
     /// <summary>

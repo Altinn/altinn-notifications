@@ -1,5 +1,4 @@
-﻿using System;
-using Altinn.Notifications.Core.Models.Orders;
+﻿using Altinn.Notifications.Core.Models.Orders;
 
 namespace Altinn.Notifications.Core.Repository.Interfaces;
 
@@ -13,7 +12,7 @@ public interface IOrderRepository
     /// </summary>
     /// <param name="id">The id of the notification order to retrieve</param>
     /// <returns>A notification order</returns>
-    public Task<NotificationOrder> GetById(string id);
+    public Task<NotificationOrder?> GetById(string id);
 
     /// <summary>
     /// Creates a new notification order in the database

@@ -66,8 +66,8 @@ public class NotificationOrderTests
                 "templates",  new JsonArray()
                 {
                     new JsonObject() {
-                        {"$descriminator", "email" },
-                        { "type","Email" },
+                        {"$", "email" },
+                        {"type","Email" },
                         {"fromAddress","sender@domain.com" },
                         {"subject", "email-subject" },
                         {"body","email-body" },
@@ -89,7 +89,7 @@ public class NotificationOrderTests
                             {
                              new JsonObject()
                              {
-                                 {"$descriminator", "email" },
+                                 {"$", "email" },
                                  {"addressType", "Email" },
                                  { "emailAddress", "recipient1@domain.com" }
                              }
@@ -102,7 +102,7 @@ public class NotificationOrderTests
     }
 
     [Fact]
-    public void Deserialize()
+    public void Deserialize_Static()
     {
         // Arrange
         NotificationOrder expected = _order;
@@ -126,4 +126,14 @@ public class NotificationOrderTests
         // Assert
         Assert.Equal(expected, actual);
     }
+
+    [Theory]
+    [InlineData(1, "{ \"id\": \"4fec2be9-7f52-4d32-9554-467908c3c629\", \"created\": \"2023-07-14T07:39:19.088978Z\", \"creator\": { \"shortName\": \"ttd\" }, \"sendTime\": \"2023-08-14T08:15:00Z\", \"templates\": [ { \"$\": \"email\", \"body\": \"email-body\", \"type\": \"Email\", \"subject\": \"email-subject\", \"contentType\": \"Html\", \"fromAddress\": \"sender@domain.com\" } ], \"recipients\": [ { \"addressInfo\": [ { \"$\": \"email\", \"addressType\": \"Email\", \"emailAddress\": \"recipient1@domain.com\" } ], \"recipientId\": \"\" }, { \"addressInfo\": [ { \"$\": \"email\", \"addressType\": \"Email\", \"emailAddress\": \"recipient2@domain.com\" } ], \"recipientId\": \"\" } ], \"sendersReference\": \"senders-reference\", \"notificationChannel\": \"Email\" }")]
+    public void Deserialize(int exampleNo, string serializedOrder)
+    {
+        NotificationOrder.Deserialize(serializedOrder);
+    }
+
+    // naturlig ende til ende: lagre ned, lese ut og deserialisere ok. 
 }
+
