@@ -2,6 +2,7 @@
 using System.Text.Json.Serialization;
 
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models.NotificationTemplate;
 
 namespace Altinn.Notifications.Core.Models.Orders;
 
@@ -53,7 +54,7 @@ public class NotificationOrder
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationOrder"/> class.
     /// </summary>
-    public NotificationOrder(string id, string? sendersReference, List<NotificationTemplate.INotificationTemplate> templates, DateTime sendTime, NotificationChannel notificationChannel, Creator creator, DateTime created, List<Recipient> recipients)
+    public NotificationOrder(string id, string? sendersReference, List<INotificationTemplate> templates, DateTime sendTime, NotificationChannel notificationChannel, Creator creator, DateTime created, List<Recipient> recipients)
     {
         Id = id;
         SendersReference = sendersReference;
