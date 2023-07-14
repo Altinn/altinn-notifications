@@ -1,0 +1,22 @@
+{
+  "name": "pg",
+  "version": "1.0.0",
+  "description": "Altinn platform microservice for handling notifications (mail, sms, etc)\r This component handles the functionality related to registering and sending notifications.",
+  "main": "client.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Altinn/altinn-notifications.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Altinn/altinn-notifications/issues"
+  },
+  "homepage": "https://github.com/Altinn/altinn-notifications#readme"
+}
