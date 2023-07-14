@@ -1,6 +1,8 @@
 ﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 using Altinn.Notifications.Controllers;
 using Altinn.Notifications.Core.Enums;
@@ -58,6 +60,11 @@ public class EmailOrderTests : IClassFixture<IntegrationTestWebApplicationFactor
 
         // Act
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        string json = await response.Content.ReadAsStringAsync();
+        JsonSerializer.Deserialize<NotificationOrderExt>(json, new JsonSerializerOptions
+        {
+            Converters = { new JsonStringEnumConverter() }
+        });
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);

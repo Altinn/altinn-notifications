@@ -10,12 +10,12 @@ public class Recipient
     /// <summary>
     /// Gets the recipient id
     /// </summary>
-    public string RecipientId { get; internal set; } = string.Empty;
+    public string RecipientId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets a list of address points for the recipient
     /// </summary>
-    public List<IAddressPoint> AddressInfo { get; internal set; } = new List<IAddressPoint>();
+    public List<IAddressPoint> AddressInfo { get; set; } = new List<IAddressPoint>();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Recipient"/> class.

@@ -8,34 +8,34 @@ namespace Altinn.Notifications.Core.Models;
 public class Email
 {
     /// <summary>
-    /// Gets the id of the email.
+    /// Gets or sets the id of the email.
     /// </summary>
-    public string Id { get; internal set; }
+    public string Id { get; set; }
 
     /// <summary>
-    /// Gets the subject of the email.
+    /// Gets or sets the subject of the email.
     /// </summary>
-    public string Subject { get; internal set; }
+    public string Subject { get; set; }
 
     /// <summary>
-    /// Gets the body of the email.
+    /// Gets or sets the body of the email.
     /// </summary>
-    public string Body { get; internal set; }
+    public string Body { get; set; }
 
     /// <summary>
-    /// Gets the to fromAdress of the email.
+    /// Gets or sets the to fromAdress of the email.
     /// </summary>
-    public string FromAddress { get; internal set; }
+    public string FromAddress { get; set; }
 
     /// <summary>
-    /// Gets the to adress of the email.
+    /// Gets or sets the to adress of the email.
     /// </summary>
-    public string ToAddress { get; internal set; }
+    public string ToAddress { get; set; }
 
     /// <summary>
-    /// Gets the content type of the email.
+    /// Gets or sets the content type of the email.
     /// </summary>
-    public EmailContentType ContentType { get; internal set; }
+    public EmailContentType ContentType { get; set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Email"/> class.
