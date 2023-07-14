@@ -11,6 +11,7 @@ jobs:
     name: Build and Test
     if: ((github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false) || github.event_name == 'push') && github.repository_owner == 'Altinn'
     runs-on: ubuntu-latest
+    container: node:10.18-jessie
     services:
       postgres:
         image: postgres:15
@@ -36,7 +37,7 @@ jobs:
         run: echo fs.inotify.max_user_instances=8192 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
       - name: Prepare db
         run: node client.js
         env:
