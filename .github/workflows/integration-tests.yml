@@ -17,7 +17,7 @@ jobs:
         env:
           POSTGRES_USER: platform_notifications_admin
           POSTGRES_PASSWORD: Password
-          POSTGRES_DB: notifications
+          POSTGRES_DB: notificationsdb
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
