@@ -169,16 +169,6 @@ async Task SetConfigurationProviders(ConfigurationManager config)
     string basePath = Directory.GetParent(Directory.GetCurrentDirectory()).FullName;
     config.SetBasePath(basePath);
     config.AddJsonFile(basePath + "altinn-appsettings/altinn-dbsettings-secret.json", optional: true, reloadOnChange: true);
-
-    if (basePath == "/")
-    {
-        config.AddJsonFile(basePath + "app/appsettings.json", optional: false, reloadOnChange: true);
-    }
-    else
-    {
-        config.AddJsonFile(Directory.GetCurrentDirectory() + $"/appsettings.json", optional: false, reloadOnChange: true);
-    }
-
     config.AddEnvironmentVariables();
 
     await ConnectToKeyVaultAndSetApplicationInsights(config);
