@@ -36,6 +36,7 @@ jobs:
       - name: Run PostgreSQL query
         run: |
                #!/bin/bash
-               psql -h localhost -p 5432 -U platform_notifications_admin -W Password -d notificationsdb -c "SELECT * FROM notifications.orders;"
+               export PGPASSWORD=Password
+               psql -h localhost -p 5432 -U platform_notifications_admin -d notificationsdb -c "SELECT * FROM notifications.orders;"
       - name: Test
         run: dotnet test test/Altinn.Notifications.IntegrationTests/Altinn.Notifications.IntegrationTests.csproj -v m
