@@ -34,6 +34,8 @@ jobs:
           dotnet-version: |
             7.0.x
       - name: Run PostgreSQL query
-        run: ./dbsetup.sh
+        run: |
+            chmod +x dbsetup.sh
+            ./dbsetup.sh
       - name: Test
         run: dotnet test test/Altinn.Notifications.IntegrationTests/Altinn.Notifications.IntegrationTests.csproj -v m

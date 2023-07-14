@@ -11,6 +11,20 @@ jobs:
     name: Build and Test
     if: ((github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false) || github.event_name == 'push') && github.repository_owner == 'Altinn'
     runs-on: ubuntu-latest
+    services:
+          postgres:
+            image: postgres:14
+            env:
+              POSTGRES_USER: platform_notifications_admin
+              POSTGRES_PASSWORD: Password
+              POSTGRES_DB: notificationsdb
+            options: >-
+              --health-cmd pg_isready
+              --health-interval 10s
+              --health-timeout 5s
+              --health-retries 5
+            ports:
+              - 5432:5432
     steps:
       - uses: actions/checkout@v3
       - name: Setup .NET
@@ -20,13 +34,31 @@ jobs:
             7.0.x
       - name: Set inotify instances
         run: echo fs.inotify.max_user_instances=8192 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
+      - name: Run PostgreSQL query
+        run: |
+            chmod +x dbsetup.sh
+            ./dbsetup.sh
       - name: Build
         run: dotnet build Altinn.Notifications.sln -v m
       - name: Test
-        run: dotnet test test/Altinn.Notifications.Tests/Altinn.Notifications.Tests.csproj  -v m
+        run: dotnet test Altinn.Notifications.sln -v m
   analyze:
     name: Static code analysis
     runs-on: windows-latest
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: platform_notifications_admin
+          POSTGRES_PASSWORD: Password
+          POSTGRES_DB: notificationsdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
     steps:
       - name: Setup .NET
         uses: actions/setup-dotnet@v3
