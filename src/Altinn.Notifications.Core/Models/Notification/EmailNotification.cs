@@ -8,36 +8,36 @@ namespace Altinn.Notifications.Core.Models.Notification;
 public class EmailNotification : INotification
 {
     /// <inheritdoc/>
-    public string Id { get; private set; }
+    public string Id { get; internal set; }
 
     /// <inheritdoc/>
-    public string OrderId { get; private set; }
+    public string OrderId { get; internal set; }
 
     /// <inheritdoc/>
-    public DateTime SendTime { get; private set; }
+    public DateTime SendTime { get; internal set; }
 
     /// <inheritdoc/>
-    public NotificationChannel NotificationChannel { get; private set; }
+    public NotificationChannel NotificationChannel { get; internal set; }
 
     /// <summary>
     /// Get or sets the content type of the email notification
     /// </summary>
-    public EmailContentType ContentType { get; private set; }
+    public EmailContentType ContentType { get; internal set; }
 
     /// <summary>
     /// Get or sets the subject of the email notification
     /// </summary>
-    public string Subject { get; private set; }
+    public string Subject { get; internal set; }
 
     /// <summary>
     /// Get or sets the body of the email notification
     /// </summary>
-    public string Body { get; private set; }
+    public string Body { get; internal set; }
 
     /// <summary>
     /// Get or sets the from adress of the email notification
     /// </summary>
-    public string FromAdress { get; private set; }
+    public string FromAdress { get; internal set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotification"/> class.

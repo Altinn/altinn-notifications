@@ -8,7 +8,7 @@ public class Creator
     /// <summary>
     /// Gets the short name of the creator
     /// </summary>
-    public string ShortName { get; private set; }
+    public string ShortName { get; internal set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Creator"/> class.
