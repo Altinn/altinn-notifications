@@ -12,19 +12,19 @@ jobs:
     if: ((github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false) || github.event_name == 'push') && github.repository_owner == 'Altinn'
     runs-on: ubuntu-latest
     services:
-          postgres:
-            image: postgres:14
-            env:
-              POSTGRES_USER: platform_notifications_admin
-              POSTGRES_PASSWORD: Password
-              POSTGRES_DB: notificationsdb
-            options: >-
-              --health-cmd pg_isready
-              --health-interval 10s
-              --health-timeout 5s
-              --health-retries 5
-            ports:
-              - 5432:5432
+     postgres:
+       image: postgres:14
+       env:
+         POSTGRES_USER: platform_notifications_admin
+         POSTGRES_PASSWORD: Password
+         POSTGRES_DB: notificationsdb
+       options: >-
+         --health-cmd pg_isready
+         --health-interval 10s
+         --health-timeout 5s
+         --health-retries 5
+       ports:
+         - 5432:5432
     steps:
       - uses: actions/checkout@v3
       - name: Setup .NET
