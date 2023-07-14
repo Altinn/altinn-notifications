@@ -23,7 +23,7 @@ jobs:
       - name: Build
         run: dotnet build Altinn.Notifications.sln -v m
       - name: Test
-        run: dotnet test Altinn.Notifications.sln -v m
+        run: dotnet test test/Altinn.Notifications.Tests/Altinn.Notifications.Tests.csproj  -v m
   analyze:
     name: Static code analysis
     runs-on: windows-latest
@@ -70,7 +70,7 @@ jobs:
 
           dotnet build Altinn.Notifications.sln
 
-          dotnet test Altinn.Notifications.sln `
+          dotnet test test/Altinn.Notifications.Tests/Altinn.Notifications.Tests.csproj `
           --collect:"XPlat Code Coverage" `
           --results-directory TestResults/ `
           --logger "trx;LogFileName=unittests.trx" `

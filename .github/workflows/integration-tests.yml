@@ -35,4 +35,4 @@ jobs:
       - name: Set inotify instances
         run: echo fs.inotify.max_user_instances=8192 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
       - name: Test
-        run: dotnet test .\test\Altinn.Notifications.IntegrationTests\ -v m
+        run: dotnet test test/Altinn.Notifications.IntegrationTests/Altinn.Notifications.IntegrationTests.csproj -v m
