@@ -79,7 +79,6 @@ public class NotificationOrder
     /// </summary>
     public string Serialize()
     {
-        // figure out how to serialize all templates to the right type
         return JsonSerializer.Serialize(
             this,
             new JsonSerializerOptions
@@ -95,7 +94,6 @@ public class NotificationOrder
     /// </summary>
     public static NotificationOrder? Deserialize(string serializedString)
     {
-        // figure out how to deserialize all templates to the right type
         return JsonSerializer.Deserialize<NotificationOrder>(
             serializedString,
             new JsonSerializerOptions()

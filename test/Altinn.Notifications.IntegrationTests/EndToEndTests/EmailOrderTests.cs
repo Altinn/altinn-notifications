@@ -69,14 +69,12 @@ public class EmailOrderTests : IClassFixture<IntegrationTestWebApplicationFactor
 
         // Act
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
-        string json = await response.Content.ReadAsStringAsync();
-        JsonSerializer.Deserialize<NotificationOrderExt>(json, new JsonSerializerOptions
-        {
-            Converters = { new JsonStringEnumConverter() }
-        });
+        string orderId = await response.Content.ReadAsStringAsync();
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        Assert.Equal("https://platform.at22.altinn.cloud/notifications/api/v1/orders/" + orderId, response.Headers?.Location?.ToString());
+        Guid.Parse(orderId);
     }
 
     private HttpClient GetTestClient()

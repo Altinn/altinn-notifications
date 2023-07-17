@@ -136,6 +136,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
         services.AddSingleton<ITelemetryInitializer, CustomTelemetryInitializer>();
     }
 
+    services.Configure<GeneralSettings>(config.GetSection("GeneralSettings"));
     services.AddAuthentication(JwtCookieDefaults.AuthenticationScheme)
           .AddJwtCookie(JwtCookieDefaults.AuthenticationScheme, options =>
           {

@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Models;
+﻿using Altinn.Notifications.Configuration;
+using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
@@ -10,6 +11,7 @@ using FluentValidation;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Controllers;
 
@@ -23,14 +25,16 @@ public class EmailNotificationOrdersController : ControllerBase
 {
     private readonly IValidator<EmailNotificationOrderRequestExt> _validator;
     private readonly IEmailNotificationOrderService _orderService;
+    private readonly GeneralSettings _settings;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotificationOrdersController"/> class.
     /// </summary>
-    public EmailNotificationOrdersController(IValidator<EmailNotificationOrderRequestExt> validator, IEmailNotificationOrderService orderService)
+    public EmailNotificationOrdersController(IValidator<EmailNotificationOrderRequestExt> validator, IEmailNotificationOrderService orderService, IOptions<GeneralSettings> settings)
     {
         _validator = validator;
         _orderService = orderService;
+        _settings = settings.Value;
     }
 
     /// <summary>
@@ -67,6 +71,7 @@ public class EmailNotificationOrdersController : ControllerBase
 
         NotificationOrderExt registeredOrderExt = registeredOrder!.MapToNotificationOrderExt();
 
-        return Accepted(registeredOrderExt);
+        string selfLink = _settings.BaseUri + "/notifications/api/v1/orders/" + registeredOrderExt.Id;
+        return Accepted(selfLink, registeredOrderExt.Id);
     }
 }
