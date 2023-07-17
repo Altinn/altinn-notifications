@@ -32,10 +32,10 @@ public class OrderRepository : IOrderRepository
     {
         long dbOrderId = await InsertOrder(order);
 
-        EmailTemplate? emailTempate = ExtractTemplates(order);
-        if (emailTempate != null)
+        EmailTemplate? emailTemplate = ExtractTemplates(order);
+        if (emailTemplate != null)
         {
-            await InsertEmailText(dbOrderId, emailTempate.FromAddress, emailTempate.Subject, emailTempate.Body, emailTempate.ContentType.ToString());
+            await InsertEmailText(dbOrderId, emailTemplate.FromAddress, emailTemplate.Subject, emailTemplate.Body, emailTemplate.ContentType.ToString());
         }
 
         return order;
