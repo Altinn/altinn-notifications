@@ -21,20 +21,8 @@ public static class OrderMapper
 
         var recipients = new List<Recipient>();
 
-        if (extRequest.Recipients?.Any() == true)
-        {
-            recipients.AddRange(
-                extRequest.Recipients.Select(r => new Recipient(r.Id ?? string.Empty, new List<IAddressPoint>() { new EmailAddressPoint(r.EmailAddress!) })));
-        }
-        else
-        {
-            var addresses = new List<IAddressPoint>();
-
-            addresses.AddRange(
-                extRequest.ToAddresses!.Select(a => new EmailAddressPoint(a)));
-            recipients.AddRange(
-                addresses.Select(a => new Recipient(new List<IAddressPoint>() { a })));
-        }
+        recipients.AddRange(
+            extRequest.Recipients.Select(r => new Recipient(r.Id ?? string.Empty, new List<IAddressPoint>() { new EmailAddressPoint(r.EmailAddress!) })));
 
         return new NotificationOrderRequest(
             extRequest.SendersReference,

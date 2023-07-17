@@ -108,49 +108,6 @@ public class OrderMapperTests
     }
 
     [Fact]
-    public void MapToOrderRequest_ToAddressesProvided_AreEquivalent()
-    {
-        DateTime sendTime = DateTime.UtcNow;
-
-        // Arrange 
-        EmailNotificationOrderRequestExt orderRequestExt = new()
-        {
-            Body = "email-body",
-            ContentType = EmailContentType.Html,
-            FromAddress = "sender@domain.com",
-            Recipients = null,
-            SendersReference = "senders-reference",
-            SendTime = sendTime,
-            Subject = "email-subject",
-            ToAddresses = new List<string>() { "recipient1@domain.com", "recipient2@domain.com" }
-        };
-
-        NotificationOrderRequest expected = new()
-        {
-            SendersReference = "senders-reference",
-            Creator = new Creator("ttd"),
-            Templates = new List<INotificationTemplate>() {
-                new EmailTemplate(
-                    "sender@domain.com",
-                    "email-subject",
-                    "email-body",
-                    EmailContentType.Html)},
-            SendTime = sendTime,
-            NotificationChannel = NotificationChannel.Email,
-            Recipients = new List<Recipient>() {
-                        new Recipient(){ AddressInfo =new List<IAddressPoint>(){new EmailAddressPoint("recipient1@domain.com")}},
-                        new Recipient(){ AddressInfo =new List<IAddressPoint>(){new EmailAddressPoint("recipient2@domain.com")}}
-            }
-        };
-
-        // Act
-        var actual = orderRequestExt.MapToOrderRequest("ttd");
-
-        // Assert
-        Assert.Equivalent(expected, actual, true);
-    }
-
-    [Fact]
     public void MapToOrderRequest_RecipientsProvided_AreEquivalent()
     {
         DateTime sendTime = DateTime.UtcNow;
@@ -165,7 +122,6 @@ public class OrderMapperTests
             SendersReference = "senders-reference",
             SendTime = sendTime,
             Subject = "email-subject",
-            ToAddresses = null
         };
 
         NotificationOrderRequest expected = new()

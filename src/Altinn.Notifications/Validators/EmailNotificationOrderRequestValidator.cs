@@ -15,13 +15,9 @@ public class EmailNotificationOrderRequestValidator : AbstractValidator<EmailNot
     public EmailNotificationOrderRequestValidator()
     {
         RuleFor(order => order.Recipients)
-            .Empty()
-            .When(order => order.ToAddresses != null && order.ToAddresses.Any())
-            .WithMessage("Provide either recipients or to addresses, not both.");
-
-        RuleFor(order => order.Recipients)
+            .NotEmpty()
+            .WithMessage("One or moe recipient is required.")
             .Must(recipients => recipients?.Exists(a => string.IsNullOrEmpty(a.EmailAddress)) == false)
-            .When(o => o.Recipients != null)
             .WithMessage("Email address must be provided for all recipients.");
 
         RuleFor(order => order.SendTime)

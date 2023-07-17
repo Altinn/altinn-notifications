@@ -60,11 +60,10 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<CustomWebApp
             Body = "email-body",
             ContentType = EmailContentType.Html,
             FromAddress = "sender@domain.com",
-            Recipients = null,
+            Recipients = new List<RecipientExt>() { new RecipientExt() { EmailAddress = "recipient1@domain.com" }, new RecipientExt() { EmailAddress = "recipient2@domain.com" } },
             SendersReference = "senders-reference",
             SendTime = DateTime.UtcNow,
             Subject = "email-subject",
-            ToAddresses = new List<string>() { "recipient1@domain.com", "recipient2@domain.com" }
         };
 
         _order = new(

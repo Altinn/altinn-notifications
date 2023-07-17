@@ -34,39 +34,6 @@ public class EmailNotificationOrderRequestValidatorTests
     }
 
     [Fact]
-    public void Validate_ToAddressProvided_ReturnsTrue()
-    {
-        var order = new EmailNotificationOrderRequestExt()
-        {
-            Subject = "This is an email subject",
-            FromAddress = "sender@domain.com",
-            ToAddresses = new List<string>() { "recipient1@domain.com", "recipient2@domain.com" },
-            Body = "This is an email body"
-        };
-
-        var actual = _validator.Validate(order);
-        Assert.True(actual.IsValid);
-    }
-
-    [Fact]
-    public void Validate_BothRecipientsAndToAddressPopulated_ReturnsFalse()
-    {
-        var order = new EmailNotificationOrderRequestExt()
-        {
-            Subject = "This is an email subject",
-            FromAddress = "sender@domain.com",
-            ToAddresses = new List<string>() { "recipient1@domain.com", "recipient2@domain.com" },
-            Recipients = new List<RecipientExt>() { new RecipientExt() { Id = "16069412345", EmailAddress = "person@domain.com" } },
-            Body = "This is an email body"
-
-        };
-
-        var actual = _validator.Validate(order);
-        Assert.False(actual.IsValid);
-        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("Provide either recipients or to addresses, not both."));
-    }
-
-    [Fact]
     public void Validate_EmailNotDefinedForRecipient_ReturnFalse()
     {
         var order = new EmailNotificationOrderRequestExt()
