@@ -50,7 +50,7 @@ public class EmailOrderTests : IClassFixture<IntegrationTestWebApplicationFactor
                 }
             },
             SendersReference = "senders-reference",
-            SendTime = DateTime.UtcNow,
+            RequestedSendTime = DateTime.UtcNow,
             Subject = "email-subject"
         };
     }

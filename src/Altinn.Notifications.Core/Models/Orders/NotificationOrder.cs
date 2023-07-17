@@ -24,12 +24,12 @@ public class NotificationOrder
     /// <summary>
     /// Gets the templates to create notifications based of
     /// </summary>
-    public List<NotificationTemplate.INotificationTemplate> Templates { get; internal set; } = new List<NotificationTemplate.INotificationTemplate>();
+    public List<INotificationTemplate> Templates { get; internal set; } = new List<INotificationTemplate>();
 
     /// <summary>
-    /// Gets the send time for the notification(s)
+    /// Gets the requested send time for the notification(s)
     /// </summary>
-    public DateTime SendTime { get; internal set; }
+    public DateTime RequestedSendTime { get; internal set; }
 
     /// <summary>
     /// Gets the preferred notification channel
@@ -54,12 +54,12 @@ public class NotificationOrder
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationOrder"/> class.
     /// </summary>
-    public NotificationOrder(string id, string? sendersReference, List<INotificationTemplate> templates, DateTime sendTime, NotificationChannel notificationChannel, Creator creator, DateTime created, List<Recipient> recipients)
+    public NotificationOrder(string id, string? sendersReference, List<INotificationTemplate> templates, DateTime requestedSendTime, NotificationChannel notificationChannel, Creator creator, DateTime created, List<Recipient> recipients)
     {
         Id = id;
         SendersReference = sendersReference;
         Templates = templates;
-        SendTime = sendTime;
+        RequestedSendTime = requestedSendTime;
         NotificationChannel = notificationChannel;
         Creator = creator;
         Created = created;

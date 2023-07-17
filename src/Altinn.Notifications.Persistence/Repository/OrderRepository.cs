@@ -14,7 +14,7 @@ namespace Altinn.Notifications.Persistence.Repository;
 public class OrderRepository : IOrderRepository
 {
     private readonly NpgsqlDataSource _dataSource;
-    private const string _insertOrderSql = "select notifications.insertorder($1, $2, $3, $4, $5, $6)"; // (_alternateid, _creatorname, _sendersreference, _created, _sendtime, _notificationorder)
+    private const string _insertOrderSql = "select notifications.insertorder($1, $2, $3, $4, $5, $6)"; // (_alternateid, _creatorname, _sendersreference, _created, _requestedsendtime, _notificationorder)
     private const string _insertEmailTextSql = "call notifications.insertemailtext($1, $2, $3, $4, $5)"; // (__orderid, _fromaddress, _subject, _body, _contenttype)
     private const string _getOrderById = "select notificationorder from notifications.orders where alternateid = $1";
 
@@ -83,7 +83,7 @@ public class OrderRepository : IOrderRepository
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, order.Creator.ShortName);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, order.SendersReference ?? (object)DBNull.Value);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, order.Created);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, order.SendTime);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, order.RequestedSendTime);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Jsonb, order.Serialize());
 
         await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync();

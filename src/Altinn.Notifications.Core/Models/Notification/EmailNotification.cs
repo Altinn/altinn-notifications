@@ -14,43 +14,38 @@ public class EmailNotification : INotification
     public string OrderId { get; internal set; }
 
     /// <inheritdoc/>
-    public DateTime SendTime { get; internal set; }
+    public DateTime RequestedSendTime { get; internal set; }
 
     /// <inheritdoc/>
-    public NotificationChannel NotificationChannel { get; internal set; }
+    public NotificationChannel NotificationChannel { get; } = NotificationChannel.Email;
 
     /// <summary>
-    /// Get or sets the content type of the email notification
+    /// Get the id of the recipient of the email notification
     /// </summary>
-    public EmailContentType ContentType { get; internal set; }
+    public string? RecipientId { get; internal set; }
 
     /// <summary>
-    /// Get or sets the subject of the email notification
+    /// Get or sets the to address of the email notification
     /// </summary>
-    public string Subject { get; internal set; }
-
-    /// <summary>
-    /// Get or sets the body of the email notification
-    /// </summary>
-    public string Body { get; internal set; }
-
-    /// <summary>
-    /// Get or sets the from adress of the email notification
-    /// </summary>
-    public string FromAdress { get; internal set; }
+    public string ToAddress { get; internal set; } = string.Empty;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotification"/> class.
     /// </summary>
-    public EmailNotification(string orderId, DateTime sendTime, NotificationChannel notificationChannel, EmailContentType contentType, string subject, string body, string fromAdress)
+    public EmailNotification(string orderId, DateTime sendTime)
     {
         Id = Guid.NewGuid().ToString();
         OrderId = orderId;
-        SendTime = sendTime;
-        NotificationChannel = notificationChannel;
-        ContentType = contentType;
-        Subject = subject;
-        Body = body;
-        FromAdress = fromAdress;
+        RequestedSendTime = sendTime;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EmailNotification"/> class.
+    /// </summary>
+    internal EmailNotification()
+    {
+        Id = string.Empty;
+        OrderId = string.Empty;
+        RequestedSendTime = DateTime.MinValue;
     }
 }

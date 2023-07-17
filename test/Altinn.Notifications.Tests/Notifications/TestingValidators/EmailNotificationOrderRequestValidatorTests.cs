@@ -59,7 +59,7 @@ public class EmailNotificationOrderRequestValidatorTests
             FromAddress = "sender@domain.com",
             Recipients = new List<RecipientExt>() { new RecipientExt() { Id = "16069412345", EmailAddress = "recipient2@domain.com" } },
             Body = "This is an email body",
-            SendTime = DateTime.UtcNow.AddDays(-1)
+            RequestedSendTime = DateTime.UtcNow.AddDays(-1)
         };
 
         var actual = _validator.Validate(order);

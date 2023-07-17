@@ -31,11 +31,13 @@ public class EmailNotificationOrderService : IEmailNotificationOrderService
         string orderId = _guid.NewGuidAsString();
         DateTime created = _dateTime.UtcNow();
 
+        SetFromAddressIfNotDefined(null);
+
         var order = new NotificationOrder(
             orderId,
             orderRequest.SendersReference,
             orderRequest.Templates,
-            orderRequest.SendTime,
+            orderRequest.RequestedSendTime,
             orderRequest.NotificationChannel,
             orderRequest.Creator,
             created,
@@ -45,5 +47,10 @@ public class EmailNotificationOrderService : IEmailNotificationOrderService
 
         // push to kafka 
         return (savedOrder, null);
+    }
+
+    private void SetFromAddressIfNotDefined(EmailTemplate template)
+    {
+        // get from settings
     }
 }

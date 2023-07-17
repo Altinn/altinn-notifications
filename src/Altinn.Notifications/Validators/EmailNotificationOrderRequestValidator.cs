@@ -20,7 +20,7 @@ public class EmailNotificationOrderRequestValidator : AbstractValidator<EmailNot
             .Must(recipients => recipients?.Exists(a => string.IsNullOrEmpty(a.EmailAddress)) == false)
             .WithMessage("Email address must be provided for all recipients.");
 
-        RuleFor(order => order.SendTime)
+        RuleFor(order => order.RequestedSendTime)
           .Must(sendTime => sendTime >= DateTime.UtcNow.AddMinutes(-5))
           .WithMessage("Send time must be in the future. Leave blank to send immediatly.");
 

@@ -30,7 +30,7 @@ public class EmailNotificationOrderServiceTests
             Created = createdTime,
             Creator = new("ttd"),
             NotificationChannel = NotificationChannel.Email,
-            SendTime = sendTime,
+            RequestedSendTime = sendTime,
             Recipients = { },
             SendersReference = "senders-reference",
             Templates = { }
@@ -43,7 +43,7 @@ public class EmailNotificationOrderServiceTests
             NotificationChannel = NotificationChannel.Email,
             Recipients = { },
             SendersReference = "senders-reference",
-            SendTime = sendTime,
+            RequestedSendTime = sendTime,
             Templates = { }
         };
 

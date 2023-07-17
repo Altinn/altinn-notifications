@@ -19,4 +19,9 @@ public class GeneralSettings
     /// Name of the cookie for where JWT is stored
     /// </summary>
     public string JwtCookieName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Default sender of email notifications
+    /// </summary>
+    public string DefaultEmailFromAddress { get; set; } = "dontreply@altinn.no";
 }

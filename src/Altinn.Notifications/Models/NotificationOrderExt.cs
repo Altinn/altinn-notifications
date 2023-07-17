@@ -35,8 +35,8 @@ public class NotificationOrderExt
     /// <summary>
     /// Gets or sets the requested send time of the notification
     /// </summary>
-    [JsonPropertyName("sendTime")]
-    public DateTime SendTime { get; set; }
+    [JsonPropertyName("requestedSendTime")]
+    public DateTime RequestedSendTime { get; set; }
 
     /// <summary>
     /// Gets or sets the date and time of when the notification order was created

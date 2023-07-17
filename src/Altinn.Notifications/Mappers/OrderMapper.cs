@@ -28,7 +28,7 @@ public static class OrderMapper
             extRequest.SendersReference,
             creator,
             new List<INotificationTemplate>() { emailTemplate },
-            extRequest.SendTime,
+            extRequest.RequestedSendTime,
             NotificationChannel.Email,
             recipients);
     }
@@ -72,7 +72,7 @@ public static class OrderMapper
             Creator = order.Creator.ShortName,
             NotificationChannel = order.NotificationChannel,
             Recipients = order.Recipients.MapToRecipientExt(),
-            SendTime = order.SendTime
+            RequestedSendTime = order.RequestedSendTime
         };
 
         foreach (var template in order.Templates)

@@ -18,9 +18,9 @@ public interface INotification
     public string OrderId { get; }
 
     /// <summary>
-    /// Gets the send time of the notification.
+    /// Gets the requested send time of the notification.
     /// </summary>
-    public DateTime SendTime { get; }
+    public DateTime RequestedSendTime { get; }
 
     /// <summary>
     /// Gets the notifiction channel for the notification.

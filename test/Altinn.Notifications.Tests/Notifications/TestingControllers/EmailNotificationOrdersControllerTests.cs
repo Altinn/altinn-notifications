@@ -62,7 +62,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<CustomWebApp
             FromAddress = "sender@domain.com",
             Recipients = new List<RecipientExt>() { new RecipientExt() { EmailAddress = "recipient1@domain.com" }, new RecipientExt() { EmailAddress = "recipient2@domain.com" } },
             SendersReference = "senders-reference",
-            SendTime = DateTime.UtcNow,
+            RequestedSendTime = DateTime.UtcNow,
             Subject = "email-subject",
         };
 

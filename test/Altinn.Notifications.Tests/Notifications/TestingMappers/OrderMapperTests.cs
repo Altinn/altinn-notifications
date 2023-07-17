@@ -26,7 +26,7 @@ public class OrderMapperTests
             Id = Guid.NewGuid().ToString(),
             SendersReference = "ref1337",
             Templates = new List<INotificationTemplate>() { new EmailTemplate("from@domain.com", "email-subject", "email-body", EmailContentType.Plain) },
-            SendTime = sendTime,
+            RequestedSendTime = sendTime,
             NotificationChannel = NotificationChannel.Email,
             Creator = new Creator("ttd"),
             Created = created,
@@ -40,7 +40,7 @@ public class OrderMapperTests
             Created = created,
             NotificationChannel = NotificationChannel.Email,
             SendersReference = "ref1337",
-            SendTime = sendTime,
+            RequestedSendTime = sendTime,
             Recipients = new List<RecipientExt>(),
             EmailTemplate = new EmailTemplateExt
             {
@@ -120,7 +120,7 @@ public class OrderMapperTests
             FromAddress = "sender@domain.com",
             Recipients = new List<RecipientExt>() { new RecipientExt() { EmailAddress = "recipient1@domain.com" }, new RecipientExt() { EmailAddress = "recipient2@domain.com" } },
             SendersReference = "senders-reference",
-            SendTime = sendTime,
+            RequestedSendTime = sendTime,
             Subject = "email-subject",
         };
 
@@ -134,7 +134,7 @@ public class OrderMapperTests
                     "email-subject",
                     "email-body",
                     EmailContentType.Html)},
-            SendTime = sendTime,
+            RequestedSendTime = sendTime,
             NotificationChannel = NotificationChannel.Email,
             Recipients = new List<Recipient>() {
                         new Recipient(){ AddressInfo =new List<IAddressPoint>(){new EmailAddressPoint("recipient1@domain.com")}},

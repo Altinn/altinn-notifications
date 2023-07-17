@@ -34,7 +34,7 @@ jobs:
             7.0.x
       - name: Set inotify instances
         run: echo fs.inotify.max_user_instances=8192 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
-      - name: Run PostgreSQL query
+      - name: Setup PostgreSQL for test
         run: |
             chmod +x dbsetup.sh
             ./dbsetup.sh

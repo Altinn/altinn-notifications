@@ -19,9 +19,9 @@ public class NotificationOrderRequest
     public List<INotificationTemplate> Templates { get; internal set; }
 
     /// <summary>
-    /// Gets the send time for the notification(s)
+    /// Gets the requested send time for the notification(s)
     /// </summary>
-    public DateTime SendTime { get; internal set; }
+    public DateTime RequestedSendTime { get; internal set; }
 
     /// <summary>
     /// Gets the preferred notification channel
@@ -41,12 +41,12 @@ public class NotificationOrderRequest
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationOrderRequest"/> class.
     /// </summary>
-    public NotificationOrderRequest(string? sendersReference, string creatorShortName, List<INotificationTemplate> templates, DateTime sendTime, NotificationChannel notificationChannel, List<Recipient> recipients)
+    public NotificationOrderRequest(string? sendersReference, string creatorShortName, List<INotificationTemplate> templates, DateTime requestedSendTime, NotificationChannel notificationChannel, List<Recipient> recipients)
     {
         SendersReference = sendersReference;
         Creator = new(creatorShortName);
         Templates = templates;
-        SendTime = sendTime;
+        RequestedSendTime = requestedSendTime;
         NotificationChannel = notificationChannel;
         Recipients = recipients;
     }

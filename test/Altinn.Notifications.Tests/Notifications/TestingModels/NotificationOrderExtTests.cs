@@ -23,7 +23,7 @@ public class NotificationOrderExtTests
             { "id", id },
             { "creator", "ttd" },
             { "sendersReference", "senders-reference" },
-            { "sendTime", "2023-02-14T08:15:00Z"},
+            { "requestedSendTime", "2023-02-14T08:15:00Z"},
             { "created", "2022-02-14T08:15:00Z"},
             { "notificationChannel", "Email" },
             { "recipients", new JsonArray()
@@ -50,7 +50,7 @@ public class NotificationOrderExtTests
             Creator = "ttd",
             Created = createdTime,
             SendersReference = "senders-reference",
-            SendTime = sendTime,
+            RequestedSendTime = sendTime,
             NotificationChannel = NotificationChannel.Email,
             Recipients = new List<RecipientExt>() {
                   new RecipientExt{ EmailAddress="recipient1@domain.com" },

@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Net.Mail;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using Altinn.Notifications.Core.Enums;
@@ -40,8 +41,8 @@ public class EmailNotificationOrderRequestExt
     /// <summary>
     /// Gets or sets the send time of the email. Defaults to UtcNow.        
     /// </summary>
-    [JsonPropertyName("sendTime")]
-    public DateTime SendTime { get; set; } = DateTime.UtcNow;
+    [JsonPropertyName("requestedSendTime")]
+    public DateTime RequestedSendTime { get; set; } = DateTime.UtcNow;
 
     /// <summary>
     /// Gets or sets the senders reference on the notification
@@ -53,7 +54,7 @@ public class EmailNotificationOrderRequestExt
     /// Gets or sets the list of recipients
     /// </summary>
     [JsonPropertyName("recipients")]
-    public List<RecipientExt> Recipients { get; set; }
+    public List<RecipientExt> Recipients { get; set; } = new List<RecipientExt>();
 
     /// <summary>
     /// Json serialized the <see cref="EmailNotificationOrderRequestExt"/>
