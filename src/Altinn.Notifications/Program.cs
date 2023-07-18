@@ -1,19 +1,27 @@
 #nullable disable
-
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using Altinn.Notifications.Configuration;
+using Altinn.Notifications.Core.Extensions;
 using Altinn.Notifications.Health;
+using Altinn.Notifications.Models;
 using Altinn.Notifications.Persistence.Configuration;
+using Altinn.Notifications.Persistence.Extensions;
+using Altinn.Notifications.Validators;
+
+using AltinnCore.Authentication.JwtCookie;
 
 using Azure.Identity;
 using Azure.Security.KeyVault.Secrets;
+
+using FluentValidation;
 
 using Microsoft.ApplicationInsights.AspNetCore.Extensions;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel;
+using Microsoft.IdentityModel.Tokens;
 
 using Yuniql.AspNetCore;
 using Yuniql.PostgreSql;
@@ -35,7 +43,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
-ConfigurePostgreSql();
+ConfigurePostgreSql(builder.Configuration);
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -108,12 +116,12 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
         options.JsonSerializerOptions.WriteIndented = true;
         options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
         options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+        options.JsonSerializerOptions.Converters.Insert(0, new JsonStringEnumConverter());
     });
 
     services.AddHealthChecks().AddCheck<HealthCheck>("notifications_health_check");
 
     services.AddSingleton(config);
-    services.Configure<PostgreSqlSettings>(config.GetSection("PostgreSQLSettings"));
 
     if (!string.IsNullOrEmpty(applicationInsightsConnectionString))
     {
@@ -127,6 +135,34 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
         services.AddApplicationInsightsTelemetryProcessor<HealthTelemetryFilter>();
         services.AddSingleton<ITelemetryInitializer, CustomTelemetryInitializer>();
     }
+
+    services.Configure<GeneralSettings>(config.GetSection("GeneralSettings"));
+    services.AddAuthentication(JwtCookieDefaults.AuthenticationScheme)
+          .AddJwtCookie(JwtCookieDefaults.AuthenticationScheme, options =>
+          {
+              GeneralSettings generalSettings = config.GetSection("GeneralSettings").Get<GeneralSettings>();
+              options.JwtCookieName = generalSettings.JwtCookieName;
+              options.MetadataAddress = generalSettings.OpenIdWellKnownEndpoint;
+              options.TokenValidationParameters = new TokenValidationParameters
+              {
+                  ValidateIssuerSigningKey = true,
+                  ValidateIssuer = false,
+                  ValidateAudience = false,
+                  RequireExpirationTime = true,
+                  ValidateLifetime = true,
+                  ClockSkew = TimeSpan.Zero
+              };
+
+              if (builder.Environment.IsDevelopment())
+              {
+                  options.RequireHttpsMetadata = false;
+              }
+          });
+
+    AddInputModelValidators(services);
+    services.AddCoreServices(config);
+    PostgreSqlSettings postgresSettings = config.GetSection("PostgreSqlSettings").Get<PostgreSqlSettings>();
+    services.AddPostgresRepositories(postgresSettings);
 }
 
 async Task SetConfigurationProviders(ConfigurationManager config)
@@ -134,15 +170,6 @@ async Task SetConfigurationProviders(ConfigurationManager config)
     string basePath = Directory.GetParent(Directory.GetCurrentDirectory()).FullName;
     config.SetBasePath(basePath);
     config.AddJsonFile(basePath + "altinn-appsettings/altinn-dbsettings-secret.json", optional: true, reloadOnChange: true);
-    if (basePath == "/")
-    {
-        config.AddJsonFile(basePath + "app/appsettings.json", optional: false, reloadOnChange: true);
-    }
-    else
-    {
-        config.AddJsonFile(Directory.GetCurrentDirectory() + "/appsettings.json", optional: false, reloadOnChange: true);
-    }
-
     config.AddEnvironmentVariables();
 
     await ConnectToKeyVaultAndSetApplicationInsights(config);
@@ -181,29 +208,35 @@ async Task ConnectToKeyVaultAndSetApplicationInsights(ConfigurationManager confi
     }
 }
 
-void ConfigurePostgreSql()
+void AddInputModelValidators(IServiceCollection services)
 {
-    ConsoleTraceService traceService = new() { IsDebugEnabled = true };
+    services.AddSingleton<IValidator<EmailNotificationOrderRequestExt>, EmailNotificationOrderRequestValidator>();
+}
 
-    string connectionString = string.Format(
-        builder.Configuration.GetValue<string>("PostgreSQLSettings:AdminConnectionString"),
-        builder.Configuration.GetValue<string>("PostgreSQLSettings:notificationsDbAdminPwd"));
+void ConfigurePostgreSql(ConfigurationManager config)
+{
+    PostgreSqlSettings postgreSettings = new();
+    config.GetSection("PostgreSQLSettings").Bind(postgreSettings);
+    if (postgreSettings.EnableDBConnection)
+    {
+        ConsoleTraceService traceService = new() { IsDebugEnabled = true };
 
-    string workspacePath = builder.Configuration.GetValue<string>("PostgreSQLSettings:WorkspacePath");
+        string connectionString = string.Format(postgreSettings.AdminConnectionString, postgreSettings.NotificationsDbAdminPwd);
 
-    string fullWorkspacePath = builder.Environment.IsDevelopment() ?
-        Path.Combine(Directory.GetParent(Environment.CurrentDirectory).FullName, workspacePath) :
-        Path.Combine(Environment.CurrentDirectory, workspacePath);
+        string fullWorkspacePath = builder.Environment.IsDevelopment() ?
+            Path.Combine(Directory.GetParent(Environment.CurrentDirectory).FullName, postgreSettings.MigrationScriptPath) :
+            Path.Combine(Environment.CurrentDirectory, postgreSettings.MigrationScriptPath);
 
-    app.UseYuniql(
-        new PostgreSqlDataService(traceService),
-        new PostgreSqlBulkImportService(traceService),
-        traceService,
-        new Configuration
-        {
-            Workspace = fullWorkspacePath,
-            ConnectionString = connectionString,
-            IsAutoCreateDatabase = false,
-            IsDebug = true,
-        });
+        app.UseYuniql(
+            new PostgreSqlDataService(traceService),
+            new PostgreSqlBulkImportService(traceService),
+            traceService,
+            new Configuration
+            {
+                Workspace = fullWorkspacePath,
+                ConnectionString = connectionString,
+                IsAutoCreateDatabase = false,
+                IsDebug = postgreSettings.EnableDebug
+            });
+    }
 }
