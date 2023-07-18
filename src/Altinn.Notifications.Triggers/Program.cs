@@ -8,7 +8,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 ConfigureSetupLogging();
 ConfigureServices(builder.Services, builder.Configuration);
-await SetConfigurationProviders(builder.Configuration);
+SetConfigurationProviders(builder.Configuration);
 
 var app = builder.Build();
 
@@ -48,7 +48,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     builder.Services.AddHostedService<TriggerTimer>();
 }
 
-async Task SetConfigurationProviders(ConfigurationManager config)
+void SetConfigurationProviders(ConfigurationManager config)
 {
     string basePath = Directory.GetParent(Directory.GetCurrentDirectory()).FullName;
     config.SetBasePath(basePath);
