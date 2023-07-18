@@ -4,6 +4,9 @@ using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Triggers.BackgroundServices
 {
+    /// <summary>
+    /// Test class for a timer triggered background service
+    /// </summary>
     public class TriggerTimer : IHostedService, IDisposable
     {
         private int executionCount = 0;
@@ -11,18 +14,21 @@ namespace Altinn.Notifications.Triggers.BackgroundServices
         private Timer? _timer = null;
         private readonly string _baseUrl;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="TriggerTimer"/> class.
+        /// </summary>
         public TriggerTimer(ILogger<TriggerTimer> logger, IOptions<PlatformSettings> settings)
         {
             _logger = logger;
             _baseUrl = settings.Value.ApiNotificationsEndpoint;
         }
 
-        public Task StartAsync(CancellationToken stoppingToken)
+        /// <inheritdoc/>
+        public Task StartAsync(CancellationToken cancellationToken)
         {
             _logger.LogInformation($"Trigger Timer Hosted Service running.");
 
-            _timer = new Timer(DoWork, null, TimeSpan.Zero,
-                TimeSpan.FromSeconds(30));
+            _timer = new Timer(DoWork, null, TimeSpan.Zero, TimeSpan.FromSeconds(30));
 
             return Task.CompletedTask;
         }
@@ -35,7 +41,8 @@ namespace Altinn.Notifications.Triggers.BackgroundServices
                 "Trigger Timer Service is working. Count: {Count}.  With value {_baseUrl}", count, _baseUrl);
         }
 
-        public Task StopAsync(CancellationToken stoppingToken)
+        /// <inheritdoc/>
+        public Task StopAsync(CancellationToken cancellationToken)
         {
             _logger.LogInformation("Timed Hosted Service is stopping.");
 
@@ -44,9 +51,10 @@ namespace Altinn.Notifications.Triggers.BackgroundServices
             return Task.CompletedTask;
         }
 
+        /// <inheritdoc/>
         public void Dispose()
         {
-            _timer?.Dispose();
+            throw new NotImplementedException();
         }
     }
 }

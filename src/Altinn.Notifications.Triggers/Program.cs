@@ -21,8 +21,6 @@ app.MapControllers();
 app.MapHealthChecks("/health");
 
 app.Run();
-
-
 void ConfigureSetupLogging()
 {
     var logFactory = LoggerFactory.Create(builder =>
@@ -34,7 +32,6 @@ void ConfigureSetupLogging()
 
     logger = logFactory.CreateLogger<Program>();
 }
-
 
 void ConfigureServices(IServiceCollection services, IConfiguration config)
 {
