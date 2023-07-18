@@ -160,7 +160,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
           });
 
     AddInputModelValidators(services);
-    services.AddCoreServices();
+    services.AddCoreServices(config);
     PostgreSqlSettings postgresSettings = config.GetSection("PostgreSqlSettings").Get<PostgreSqlSettings>();
     services.AddPostgresRepositories(postgresSettings);
 }
