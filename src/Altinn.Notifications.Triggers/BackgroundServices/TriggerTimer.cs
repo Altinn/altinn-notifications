@@ -19,7 +19,7 @@ namespace Altinn.Notifications.Triggers.BackgroundServices
 
         public Task StartAsync(CancellationToken stoppingToken)
         {
-            _logger.LogInformation($"Trigger Timer Hosted Service running. With value {_baseUrl}");
+            _logger.LogInformation($"Trigger Timer Hosted Service running.");
 
             _timer = new Timer(DoWork, null, TimeSpan.Zero,
                 TimeSpan.FromSeconds(30));
@@ -32,7 +32,7 @@ namespace Altinn.Notifications.Triggers.BackgroundServices
             var count = Interlocked.Increment(ref executionCount);
 
             _logger.LogInformation(
-                "Trigger Timer Service is working. Count: {Count}", count);
+                "Trigger Timer Service is working. Count: {Count}.  With value {_baseUrl}", count, _baseUrl);
         }
 
         public Task StopAsync(CancellationToken stoppingToken)
