@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS notifications.orders
 	processedstatus orderprocessingstate DEFAULT 'registered',
 	notificationorder JSONB NOT NULL
 );
+GRANT SELECT,INSERT,UPDATE,DELETE ON TABLE notifications.orders IN SCHEMA notifications TO platform_notifications;
+
 
 CREATE TABLE IF NOT EXISTS notifications.emailtexts
 (
@@ -20,3 +22,4 @@ CREATE TABLE IF NOT EXISTS notifications.emailtexts
 	body TEXT NOT NULL,
 	contenttype TEXT NOT NULL
 );
+GRANT SELECT,INSERT,UPDATE,DELETE ON TABLE notifications.emailtexts IN SCHEMA notifications TO platform_notifications;
