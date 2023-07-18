@@ -7,6 +7,7 @@ on:
       - opened
     paths:
       - '**/Altinn.Notifications.Core/**'
+      - '**/Altinn.Notifications.Triggers/**'
 
 jobs:
   add_labels:

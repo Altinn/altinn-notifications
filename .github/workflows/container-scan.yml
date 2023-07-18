@@ -10,7 +10,7 @@ on:
     branches: [ main ]
     paths:
       - 'src/**'
-      - 'Dockerfile'   
+      - 'Dockerfile'
   schedule:
     - cron: '0 8 * * 1,4'
 
@@ -19,11 +19,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - name: Build the Docker image
+    - name: Build the Notifications Docker image
       run: docker build . --tag altinn-notifications:${{github.sha}}
 
     - uses: Azure/container-scan@v0.1
       with:
         image-name: altinn-notifications:${{ github.sha }}
+      env:
+        DOCKLE_HOST: "unix:///var/run/docker.sock"
+    - name: Build the Notifications Triggers Docker image
+      run: docker build . --tag altinn-notifications-triggers:${{github.sha}}
+
+    - uses: Azure/container-scan@v0.1
+      with:
+        image-name: altinn-notifications-triggers:${{ github.sha }}
       env:
         DOCKLE_HOST: "unix:///var/run/docker.sock"
