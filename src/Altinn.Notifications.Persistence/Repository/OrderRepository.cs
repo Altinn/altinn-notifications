@@ -1,4 +1,6 @@
-﻿using Altinn.Notifications.Core.Models.NotificationTemplate;
+﻿using System.Net.Mime;
+
+using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Repository.Interfaces;
 
@@ -17,6 +19,7 @@ public class OrderRepository : IOrderRepository
     private const string _insertOrderSql = "select notifications.insertorder($1, $2, $3, $4, $5, $6)"; // (_alternateid, _creatorname, _sendersreference, _created, _requestedsendtime, _notificationorder)
     private const string _insertEmailTextSql = "call notifications.insertemailtext($1, $2, $3, $4, $5)"; // (__orderid, _fromaddress, _subject, _body, _contenttype)
     private const string _getOrderById = "select notificationorder from notifications.orders where alternateid = $1";
+    private const string _setProcessCompleted = "update notifications.orders set processedstatus = 'completed' where alternateid = $1";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderRepository"/> class.
@@ -53,6 +56,28 @@ public class OrderRepository : IOrderRepository
         var serialized = reader.GetString(0);
         
         return NotificationOrder.Deserialize(serialized);
+    }
+
+    /// <inheritdoc/>
+    public async Task SetProcessingCompleted(string orderId)
+    {
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_setProcessCompleted);
+
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, orderId);
+
+        await pgcom.ExecuteNonQueryAsync();
+    }
+
+    /// <inheritdoc/>
+    public Task<List<NotificationOrder>> GetPastDueOrdersAndSetProcessingState()
+    {
+        throw new NotImplementedException();
+    }
+
+    /// <inheritdoc/>
+    public Task<List<NotificationOrder>> GetPendingOrdersAndSetProcessingState()
+    {
+        throw new NotImplementedException();
     }
 
     /// <summary>
@@ -103,4 +128,5 @@ public class OrderRepository : IOrderRepository
 
         await pgcom.ExecuteNonQueryAsync();
     }
+
 }
