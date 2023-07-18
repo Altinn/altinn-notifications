@@ -3,7 +3,7 @@ WORKDIR /app
 
 # Copy csproj and restore as distinct layers
 COPY src/Altinn.Notifications.Triggers/*.csproj .src/Altinn.Notifications.Triggers/
-RUN dotnet restore src/Altinn.Notifications.Triggers/
+RUN dotnet restore src/Altinn.Notifications.Triggers/Altinn.Notifications.Triggers.csproj
 
 # Copy everything else and build
 COPY src/Altinn.Notifications.Triggers/ ./src/Altinn.Notifications.Triggers/
