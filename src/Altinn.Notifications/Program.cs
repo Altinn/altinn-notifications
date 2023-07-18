@@ -215,19 +215,17 @@ void AddInputModelValidators(IServiceCollection services)
 
 void ConfigurePostgreSql(ConfigurationManager config)
 {
-    if (config.GetValue<bool>("PostgreSQLSettings:EnableDBConnection"))
+    PostgreSqlSettings postgreSettings = new();
+    config.GetSection("PostgreSQLSettings").Bind(postgreSettings);
+    if (postgreSettings.EnableDBConnection)
     {
         ConsoleTraceService traceService = new() { IsDebugEnabled = true };
 
-        string connectionString = string.Format(
-            builder.Configuration.GetValue<string>("PostgreSQLSettings:AdminConnectionString"),
-            builder.Configuration.GetValue<string>("PostgreSQLSettings:notificationsDbAdminPwd"));
-
-        string workspacePath = builder.Configuration.GetValue<string>("PostgreSQLSettings:WorkspacePath");
+        string connectionString = string.Format(postgreSettings.AdminConnectionString, postgreSettings.NotificationsDbAdminPwd);
 
         string fullWorkspacePath = builder.Environment.IsDevelopment() ?
-            Path.Combine(Directory.GetParent(Environment.CurrentDirectory).FullName, workspacePath) :
-            Path.Combine(Environment.CurrentDirectory, workspacePath);
+            Path.Combine(Directory.GetParent(Environment.CurrentDirectory).FullName, postgreSettings.MigrationScriptPath) :
+            Path.Combine(Environment.CurrentDirectory, postgreSettings.MigrationScriptPath);
 
         app.UseYuniql(
             new PostgreSqlDataService(traceService),
@@ -238,7 +236,7 @@ void ConfigurePostgreSql(ConfigurationManager config)
                 Workspace = fullWorkspacePath,
                 ConnectionString = connectionString,
                 IsAutoCreateDatabase = false,
-                IsDebug = true,
+                IsDebug = postgreSettings.EnableDebug
             });
     }
 }
