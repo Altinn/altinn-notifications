@@ -1,6 +1,8 @@
-﻿using Altinn.Notifications.Core.Services;
+﻿using Altinn.Notifications.Core.Configuration;
+using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Altinn.Notifications.Core.Extensions;
@@ -14,9 +16,13 @@ public static class ServiceCollectionExtensions
     /// Adds core services and configurations to DI container.
     /// </summary>
     /// <param name="services">service collection.</param>
-    public static IServiceCollection AddCoreServices(this IServiceCollection services)
+    /// <param name="config">the configuration collection</param>
+    public static IServiceCollection AddCoreServices(this IServiceCollection services, IConfiguration config)
     {
         return services
-            .AddSingleton<IGuidService, GuidService>();
+              .AddSingleton<IGuidService, GuidService>()
+              .AddSingleton<IDateTimeService, DateTimeService>()
+              .AddSingleton<IEmailNotificationOrderService, EmailNotificationOrderService>()
+              .Configure<NotificationOrderConfig>(config.GetSection("NotificationOrderConfig"));
     }
 }

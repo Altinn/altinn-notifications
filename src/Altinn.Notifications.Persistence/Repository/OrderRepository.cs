@@ -1,6 +1,4 @@
-﻿using System.Net.Mime;
-
-using Altinn.Notifications.Core.Models.NotificationTemplate;
+﻿using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Repository.Interfaces;
 

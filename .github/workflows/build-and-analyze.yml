@@ -11,6 +11,20 @@ jobs:
     name: Build and Test
     if: ((github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false) || github.event_name == 'push') && github.repository_owner == 'Altinn'
     runs-on: ubuntu-latest
+    services:
+     postgres:
+       image: postgres:14
+       env:
+         POSTGRES_USER: platform_notifications_admin
+         POSTGRES_PASSWORD: Password
+         POSTGRES_DB: notificationsdb
+       options: >-
+         --health-cmd pg_isready
+         --health-interval 10s
+         --health-timeout 5s
+         --health-retries 5
+       ports:
+         - 5432:5432
     steps:
       - uses: actions/checkout@v3
       - name: Setup .NET
@@ -20,6 +34,10 @@ jobs:
             7.0.x
       - name: Set inotify instances
         run: echo fs.inotify.max_user_instances=8192 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
+      - name: Setup PostgreSQL for test
+        run: |
+            chmod +x dbsetup.sh
+            ./dbsetup.sh
       - name: Build
         run: dotnet build Altinn.Notifications.sln -v m
       - name: Test
@@ -66,11 +84,11 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         shell: powershell
         run: |
-          .\.sonar\scanner\dotnet-sonarscanner begin /k:"Altinn_altinn-notifications" /o:"altinn" /d:sonar.login="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml"
+          .\.sonar\scanner\dotnet-sonarscanner begin /k:"Altinn_altinn-notifications" /o:"altinn" /d:sonar.login="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" /d:sonar.cpd.exclusions="src/Altinn.Notifications.Persistence/Migration/**/*.sql" /d:sonar.coverage.exclusions="src/Altinn.Notifications.Persistence/Migration/**/*.sql"
 
           dotnet build Altinn.Notifications.sln
 
-          dotnet test Altinn.Notifications.sln `
+          dotnet test test/Altinn.Notifications.Tests/Altinn.Notifications.Tests.csproj `
           --collect:"XPlat Code Coverage" `
           --results-directory TestResults/ `
           --logger "trx;LogFileName=unittests.trx" `
