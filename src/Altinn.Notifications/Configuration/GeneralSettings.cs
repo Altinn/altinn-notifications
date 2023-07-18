@@ -23,5 +23,5 @@ public class GeneralSettings
     /// <summary>
     /// Default sender of email notifications
     /// </summary>
-    public string DefaultEmailFromAddress { get; set; } = "dontreply@altinn.no";
+    public string DefaultEmailFromAddress { get; set; } = "noreply@altinn.no";
 }

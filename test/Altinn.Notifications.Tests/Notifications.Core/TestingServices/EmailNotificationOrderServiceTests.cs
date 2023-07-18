@@ -83,7 +83,7 @@ public class EmailNotificationOrderServiceTests
             RequestedSendTime = sendTime,
             Recipients = { },
             SendersReference = "senders-reference",
-            Templates = { new EmailTemplate { Body = "email-body", FromAddress = "dontreply@altinn.no" } }
+            Templates = { new EmailTemplate { Body = "email-body", FromAddress = "noreply@altinn.no" } }
         };
 
         NotificationOrderRequest input = new()
@@ -131,7 +131,7 @@ public class EmailNotificationOrderServiceTests
 
         var config = Options.Create<NotificationOrderConfig>(new()
         {
-            DefaultEmailFromAddress = "dontreply@altinn.no"
+            DefaultEmailFromAddress = "noreply@altinn.no"
         });
         return new EmailNotificationOrderService(repository, guidMock.Object, dateTimeMock.Object, config);
     }
