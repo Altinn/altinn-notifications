@@ -8,6 +8,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 ConfigureSetupLogging();
 ConfigureServices(builder.Services, builder.Configuration);
+await SetConfigurationProviders(builder.Configuration);
 
 var app = builder.Build();
 
@@ -37,8 +38,6 @@ void ConfigureSetupLogging()
 
 void ConfigureServices(IServiceCollection services, IConfiguration config)
 {
-    // Add services to the container.
-
     services.AddControllers();
     services.AddHealthChecks().AddCheck<HealthCheck>("notifications_triggers_health_check");
 
@@ -47,6 +46,13 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     services.Configure<PlatformSettings>(config.GetSection("PlatformSettings"));
 
     builder.Services.AddHostedService<TriggerTimer>();
+}
 
+async Task SetConfigurationProviders(ConfigurationManager config)
+{
+    string basePath = Directory.GetParent(Directory.GetCurrentDirectory()).FullName;
+    config.SetBasePath(basePath);
+    config.AddEnvironmentVariables();
 
+    config.AddCommandLine(args);
 }
