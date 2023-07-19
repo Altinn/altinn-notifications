@@ -88,12 +88,6 @@ public class OrderRepository : IOrderRepository
         return searchResult;
     }
 
-    /// <inheritdoc/>
-    public Task<List<NotificationOrder>> GetPendingOrdersAndSetProcessingState()
-    {
-        throw new NotImplementedException();
-    }
-
     /// <summary>
     /// Extracts relevant templates from a notification order
     /// </summary>

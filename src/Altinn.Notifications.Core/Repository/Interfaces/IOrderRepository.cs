@@ -28,12 +28,6 @@ public interface IOrderRepository
     public Task<List<NotificationOrder>> GetPastDueOrdersAndSetProcessingState();
 
     /// <summary>
-    /// Gets a list of notification orders where processing start time has elapsed with a reasonable amount of time
-    /// </summary>
-    /// <returns>A list of notification orders</returns>
-    public Task<List<NotificationOrder>> GetPendingOrdersAndSetProcessingState();
-
-    /// <summary>
     /// Sets processing complete status on an order
     /// </summary>
     public Task SetProcessingCompleted(string orderId);
