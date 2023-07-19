@@ -36,15 +36,12 @@ public class OrderProcessingService : IOrderProcessingService
     /// <inheritdoc/>
     public async Task StartProcessingPastDueOrders()
     {
-        await _producer.ProduceAsync(_kafkaSettings.PastDueOrdersTopicName,"teest");
-
-        /*
         List<NotificationOrder> pastDueOrders = await _orderRepository.GetPastDueOrdersAndSetProcessingState();
 
         foreach (NotificationOrder order in pastDueOrders)
         {
             await _producer.ProduceAsync(_kafkaSettings.PastDueOrdersTopicName, order.Serialize());
-        }*/
+        }
     }
 
     /// <inheritdoc/>
