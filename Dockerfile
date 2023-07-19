@@ -1,7 +1,6 @@
 FROM mcr.microsoft.com/dotnet/sdk:7.0.306-alpine3.18 AS build
 WORKDIR /app
 
-
 # Copy csproj and restore as distinct layers
 COPY src/Altinn.Notifications/*.csproj ./src/Altinn.Notifications/
 COPY src/Altinn.Notifications.Core/*.csproj ./src/Altinn.Notifications.Core/
