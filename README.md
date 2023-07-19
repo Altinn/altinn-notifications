@@ -59,3 +59,9 @@ In pgAdmin
   - platform_notifications (canlogin)
 - Create schema _notifications_ in notificationsdb with owner _platform_notifications_admin_
 
+## Setting up Kafka
+
+To run a kafka broker locally you need to have Docker installed on your machine.
+
+In a terminal navigate to the root of this repository
+and run command `docker-compose -f setup-kafka.yaml up -d`
