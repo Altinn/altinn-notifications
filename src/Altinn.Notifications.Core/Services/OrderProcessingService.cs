@@ -1,6 +1,4 @@
-﻿using System.Reflection.Metadata.Ecma335;
-
-using Altinn.Notifications.Core.Configuration;
+﻿using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations.Interfaces;
 using Altinn.Notifications.Core.Models;
@@ -27,11 +25,10 @@ public class OrderProcessingService : IOrderProcessingService
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderProcessingService"/> class.
     /// </summary>
-    public OrderProcessingService(IOrderRepository orderRepository, IKafkaProducer producer, IOptions<KafkaTopicSettings> kafkaSettings)
+    public OrderProcessingService(IOrderRepository orderRepository, IEmailNotificationService emailService, IKafkaProducer producer, IOptions<KafkaTopicSettings> kafkaSettings)
     {
         _orderRepository = orderRepository;
-
-        // _emailService = emailService;
+        _emailService = emailService;
         _producer = producer;
         _kafkaSettings = kafkaSettings.Value;
     }

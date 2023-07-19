@@ -19,11 +19,12 @@ public static class ServiceCollectionExtensions
     /// <param name="config">the configuration collection</param>
     public static IServiceCollection AddCoreServices(this IServiceCollection services, IConfiguration config)
     {
-        // .AddSingleton<IEmailNotificationOrderService, EmailNotificationOrderService>()
         return services
               .AddSingleton<IGuidService, GuidService>()
               .AddSingleton<IDateTimeService, DateTimeService>()
               .AddSingleton<IOrderProcessingService, OrderProcessingService>()
+              .AddSingleton<IEmailNotificationOrderService, EmailNotificationOrderService>()
+              .AddSingleton<IEmailNotificationService, EmailNotificationService>()
               .Configure<KafkaTopicSettings>(config.GetSection("KafkaSettings:Topics"))
               .Configure<NotificationOrderConfig>(config.GetSection("NotificationOrderConfig"));
     }
