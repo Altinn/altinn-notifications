@@ -74,7 +74,7 @@ public class OrderRepository : IOrderRepository
     {
         List<NotificationOrder> searchResult = new();
 
-        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_setProcessCompleted);
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getOrdersPastSendTimeUpdateStatus);
 
         await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync())
         {
