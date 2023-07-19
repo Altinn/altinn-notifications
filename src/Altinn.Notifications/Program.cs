@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core.Extensions;
 using Altinn.Notifications.Health;
+using Altinn.Notifications.Integrations.Extensions;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Persistence.Configuration;
 using Altinn.Notifications.Persistence.Extensions;
@@ -161,6 +162,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
 
     AddInputModelValidators(services);
     services.AddCoreServices(config);
+    services.AddKafkaServices(config);
     PostgreSqlSettings postgresSettings = config.GetSection("PostgreSqlSettings").Get<PostgreSqlSettings>();
     services.AddPostgresRepositories(postgresSettings);
 }

@@ -30,7 +30,7 @@ public class TriggerController : ControllerBase
     [Route("pastdueorders")]    
     public async Task<ActionResult> Trigger_PastDueOrders()
     {
-        await _orderProcessingService.ProcessPastDueOrders();
+        await _orderProcessingService.StartProcessingPastDueOrders();
         return Ok();
     }
 
@@ -42,7 +42,7 @@ public class TriggerController : ControllerBase
     [Route("pendingorders")]
     public async Task<ActionResult> Trigger_PendingOrders()
     {
-        await _orderProcessingService.ProcessPendingOrders();
+        await _orderProcessingService.StartProcessPendingOrders();
         return Ok();
     }
 }

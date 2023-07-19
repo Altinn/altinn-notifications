@@ -8,10 +8,10 @@ public interface IOrderProcessingService
     /// <summary>
     /// Processes a batch of past due orders
     /// </summary>
-    public Task ProcessPastDueOrders();
+    public Task StartProcessingPastDueOrders();
 
     /// <summary>
     /// Processes a batch of pending orders
     /// </summary>
-    public Task ProcessPendingOrders();
+    public Task StartProcessPendingOrders();
 }

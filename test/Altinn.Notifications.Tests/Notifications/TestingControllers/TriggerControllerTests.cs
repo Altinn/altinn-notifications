@@ -33,7 +33,7 @@ public class TriggerControllerTests : IClassFixture<CustomWebApplicationFactory<
     {
         Mock<IOrderProcessingService> serviceMock = new();
         serviceMock
-            .Setup(s => s.ProcessPastDueOrders());
+            .Setup(s => s.StartProcessingPastDueOrders());
 
         var client = GetTestClient(serviceMock.Object);
     
@@ -53,7 +53,7 @@ public class TriggerControllerTests : IClassFixture<CustomWebApplicationFactory<
     {
         Mock<IOrderProcessingService> serviceMock = new();
         serviceMock
-            .Setup(s => s.ProcessPendingOrders());
+            .Setup(s => s.StartProcessPendingOrders());
 
         var client = GetTestClient(serviceMock.Object);
 
