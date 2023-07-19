@@ -12,12 +12,12 @@ namespace Altinn.Notifications.Core.Services;
 /// </summary>
 public class EmailNotificationService : IEmailNotificationService
 {
-    private readonly GuidService _guid;
+    private readonly IGuidService _guid;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotificationService"/> class.
     /// </summary>
-    public EmailNotificationService(GuidService guid)
+    public EmailNotificationService(IGuidService guid)
     {
         _guid = guid;
     }
