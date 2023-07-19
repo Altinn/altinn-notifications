@@ -102,4 +102,26 @@ public class NotificationOrder
                 Converters = { new JsonStringEnumConverter() }
             });
     }
+
+    /// <summary>
+    /// Try to parse a json string into the <see cref="NotificationOrder"/>
+    /// </summary>
+    public static bool TryParse(string input, out NotificationOrder value)
+    {
+        NotificationOrder parsedOutput;
+        value = new NotificationOrder();
+        try
+        {
+            parsedOutput = Deserialize(input);
+
+            value = parsedOutput;
+            return true;
+        }
+        catch
+        { 
+            // try parse, we simply return false if fails
+        }
+
+        return false;
+    }
 }

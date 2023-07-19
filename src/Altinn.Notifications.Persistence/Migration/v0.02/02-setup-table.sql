@@ -5,7 +5,7 @@
 	_orderid BIGINT REFERENCES notifications.orders(_id) ON DELETE CASCADE,
 	recipientid TEXT,
 	toaddress TEXT NOT NULL,
-	result TEXT NOT NULL,
+	result emailnotificationresulttype NOT NULL,
 	resulttime TIMESTAMPTZ NOT NULL,
 	expirytime TIMESTAMPTZ NOT NULL
 );

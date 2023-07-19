@@ -3,9 +3,9 @@
 namespace Altinn.Notifications.Core.Models.Notification;
 
 /// <summary>
-/// Class describing an email notification and extends the <see cref="INotification"/>
+/// Class describing an email notification and extends the <see cref="INotification{EmailNotificationResultType}"/>
 /// </summary>
-public class EmailNotification : INotification
+public class EmailNotification : INotification<EmailNotificationResultType>
 {
     /// <inheritdoc/>
     public string Id { get; internal set; }
@@ -28,6 +28,11 @@ public class EmailNotification : INotification
     /// Get or sets the to address of the email notification
     /// </summary>
     public string ToAddress { get; internal set; } = string.Empty;
+
+    /// <summary>
+    /// Get or sets the send result of
+    /// </summary>
+    public NotificationResult<EmailNotificationResultType> SendResult { get; internal set; } = new(EmailNotificationResultType.New);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotification"/> class.

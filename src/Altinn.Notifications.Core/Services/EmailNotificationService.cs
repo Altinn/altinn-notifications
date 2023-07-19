@@ -36,14 +36,11 @@ public class EmailNotificationService : IEmailNotificationService
         }
         else
         {
-            /*
-             * generate emailNotification with a failure result as we don't have recipient contact info. 
-             *  GenerateFailedEmailNotificationForRecipient(order, recipientId, "No email address identified for recipient");
-            */
+            await GenerateEmailNotificationForRecipient(orderId, requestedSendTime, recipient.RecipientId, string.Empty, EmailNotificationResultType.Failed_RecipientNotIdentified);
         }
     }
 
-    private async Task GenerateEmailNotificationForRecipient(string orderId, DateTime requestedSendTime, string recipientId, string toAddress)
+    private async Task GenerateEmailNotificationForRecipient(string orderId, DateTime requestedSendTime, string recipientId, string toAddress, EmailNotificationResultType result = EmailNotificationResultType.New)
     {
         var emailNotification = new EmailNotification()
         {
@@ -51,9 +48,27 @@ public class EmailNotificationService : IEmailNotificationService
             OrderId = orderId,
             RequestedSendTime = requestedSendTime,
             ToAddress = toAddress,
-            RecipientId = string.IsNullOrEmpty(recipientId) ? null : recipientId
+            RecipientId = string.IsNullOrEmpty(recipientId) ? null : recipientId,
+            SendResult = new(result)
         };
 
-        await _repository.AddEmailNotification(emailNotification);
+        DateTime expiry;
+
+        switch (result)
+        {
+            case EmailNotificationResultType.New:
+            case EmailNotificationResultType.Sending:
+                expiry = requestedSendTime.AddHours(1); // lets see how much time it takes to get a status for communication services
+                break;
+            case EmailNotificationResultType.Failed_RecipientNotIdentified:
+                // no need to attempt sending at a later time
+                expiry = DateTime.UtcNow;
+                break;
+            default:
+                expiry = requestedSendTime.AddDays(1);
+                break;
+        }
+
+        await _repository.AddEmailNotification(emailNotification, expiry);
     }
 }
