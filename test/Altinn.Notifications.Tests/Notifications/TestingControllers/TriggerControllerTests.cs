@@ -47,27 +47,6 @@ public class TriggerControllerTests : IClassFixture<CustomWebApplicationFactory<
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         serviceMock.VerifyAll();
     }
-
-    [Fact]
-    public async Task Trigger_PendingOrders_RightServiceTriggered()
-    {
-        Mock<IOrderProcessingService> serviceMock = new();
-        serviceMock
-            .Setup(s => s.StartProcessPendingOrders());
-
-        var client = GetTestClient(serviceMock.Object);
-
-        string url = _basePath + "/pendingorders";
-        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
-
-        // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        serviceMock.VerifyAll();
-    }
-
     private HttpClient GetTestClient(IOrderProcessingService? orderProcessingService = null)
     {
         if (orderProcessingService == null)

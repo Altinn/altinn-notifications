@@ -14,5 +14,5 @@ public interface IEmailNotificationService
     /// If e-mail address is not provided, generate email with failed status for now. 
     /// Future implementation: Missing e-mail =>  Send to kafka queue to complete population of recipient.
     /// </summary>
-    public void ProcessEmailNotification(string orderId, EmailTemplate emailTemplate, Recipient recipient);
+    public Task CreateEmailNotification(string orderId, DateTime requestedSendTime, EmailTemplate emailTemplate, Recipient recipient);
 }

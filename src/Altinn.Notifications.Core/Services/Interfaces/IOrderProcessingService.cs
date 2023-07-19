@@ -1,4 +1,6 @@
-﻿namespace Altinn.Notifications.Core.Services.Interfaces;
+﻿using Altinn.Notifications.Core.Models.Orders;
+
+namespace Altinn.Notifications.Core.Services.Interfaces;
 
 /// <summary>
 /// Interface for the order processing service
@@ -11,7 +13,7 @@ public interface IOrderProcessingService
     public Task StartProcessingPastDueOrders();
 
     /// <summary>
-    /// Processes a batch of pending orders
+    /// Processes a notification order
     /// </summary>
-    public Task StartProcessPendingOrders();
+    public Task ProcessOrder(NotificationOrder order);
 }

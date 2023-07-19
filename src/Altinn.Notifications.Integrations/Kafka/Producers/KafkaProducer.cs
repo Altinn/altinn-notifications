@@ -40,41 +40,39 @@ public class KafkaProducer : IKafkaProducer
             Value = message
         });
 
-        Console.WriteLine($"Message sent (key: {result.Key}, value: {result.Value})");
+        // todo: look into result types and add error handling
     }
 
     private void EnsureTopicsExist()
     {
-        using (var adminClient = new AdminClientBuilder(new Dictionary<string, string>() { { "bootstrap.servers", _settings.BrokerAddress } }).Build())
-        {
-            var existingTopics = adminClient.GetMetadata(TimeSpan.FromSeconds(10)).Topics;
+        using var adminClient = new AdminClientBuilder(new Dictionary<string, string>() { { "bootstrap.servers", _settings.BrokerAddress } }).Build();
+        var existingTopics = adminClient.GetMetadata(TimeSpan.FromSeconds(10)).Topics;
 
-            foreach (var topic in _settings.TopicList)
+        foreach (var topic in _settings.TopicList)
+        {
+            if (!existingTopics.Exists(t => t.Topic.Equals(topic, StringComparison.OrdinalIgnoreCase)))
             {
-                if (!existingTopics.Any(t => t.Topic.Equals(topic, StringComparison.OrdinalIgnoreCase)))
+                try
                 {
-                    try
+                    adminClient.CreateTopicsAsync(new TopicSpecification[]
                     {
-                        adminClient.CreateTopicsAsync(new TopicSpecification[]
-                        {
                         new TopicSpecification
                         {
                             Name = topic,
                             NumPartitions = 1, // Set the desired number of partitions
                             ReplicationFactor = 1 // Set the desired replication factor
                         }
-                        }).Wait();
-                        Console.WriteLine($"Topic '{topic}' created successfully.");
-                    }
-                    catch (CreateTopicsException ex)
-                    {
-                        Console.WriteLine($"Failed to create topic '{topic}': {ex.Results[0].Error.Reason}");
-                    }
+                    }).Wait();
+                    Console.WriteLine($"Topic '{topic}' created successfully.");
                 }
-                else
+                catch (CreateTopicsException ex)
                 {
-                    Console.WriteLine($"Topic '{topic}' already exists.");
+                    Console.WriteLine($"Failed to create topic '{topic}': {ex.Results[0].Error.Reason}");
                 }
+            }
+            else
+            {
+                Console.WriteLine($"Topic '{topic}' already exists.");
             }
         }
     }

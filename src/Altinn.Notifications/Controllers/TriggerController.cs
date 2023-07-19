@@ -33,16 +33,4 @@ public class TriggerController : ControllerBase
         await _orderProcessingService.StartProcessingPastDueOrders();
         return Ok();
     }
-
-    /// <summary>
-    /// Endpoint for triggering the processing of peding orders
-    /// </summary>
-    [HttpPost]
-    [Consumes("application/json")]
-    [Route("pendingorders")]
-    public async Task<ActionResult> Trigger_PendingOrders()
-    {
-        await _orderProcessingService.StartProcessPendingOrders();
-        return Ok();
-    }
 }

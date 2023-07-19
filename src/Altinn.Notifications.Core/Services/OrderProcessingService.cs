@@ -20,17 +20,17 @@ public class OrderProcessingService : IOrderProcessingService
     private readonly IOrderRepository _orderRepository;
     private readonly IEmailNotificationService _emailService;
     private readonly IKafkaProducer _producer;
-    private readonly KafkaTopicSettings _kafkaSettings;
+    private readonly string _pastDueOrdersTopic;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderProcessingService"/> class.
     /// </summary>
-    public OrderProcessingService(IOrderRepository orderRepository, IEmailNotificationService emailService, IKafkaProducer producer, IOptions<KafkaTopicSettings> kafkaSettings)
+    public OrderProcessingService(IOrderRepository orderRepository, IEmailNotificationService emailService, IKafkaProducer producer, IOptions<KafkaSettings> kafkaSettings)
     {
         _orderRepository = orderRepository;
         _emailService = emailService;
         _producer = producer;
-        _kafkaSettings = kafkaSettings.Value;
+        _pastDueOrdersTopic = kafkaSettings.Value.PastDueOrdersTopicName;
     }
 
     /// <inheritdoc/>
@@ -40,35 +40,13 @@ public class OrderProcessingService : IOrderProcessingService
 
         foreach (NotificationOrder order in pastDueOrders)
         {
-            await _producer.ProduceAsync(_kafkaSettings.PastDueOrdersTopicName, order.Serialize());
+            await _producer.ProduceAsync(_pastDueOrdersTopic, order.Serialize());
         }
     }
 
     /// <inheritdoc/>
-    public async Task StartProcessPendingOrders()
+    public async Task ProcessOrder(NotificationOrder order)
     {
-        /*List<NotificationOrder> pastDueOrders = await _orderRepository.GetPendingOrdersAndSetProcessingState();
-
-        foreach (NotificationOrder order in pastDueOrders)
-        {
-            NotificationChannel ch = order.NotificationChannel;
-
-            switch (ch)
-            {
-                case NotificationChannel.Email:
-                    List<EmailNotification> generatedEmailNotifiations = null; // Repository.GetAllEmailNotificationsForOrder();
-
-                    // hvis det er en recipient det ikke er generert notificaion for, opprett notification og følg vanlig flyt
-                    break;
-            }
-
-            await _orderRepository.SetProcessingCompleted(order.Id);
-        }*/
-    }
-
-    private async Task ProcessOrder(NotificationOrder order)
-    {
-        /*
         NotificationChannel ch = order.NotificationChannel;
         EmailTemplate? emailTemplate = order.Templates.Find(t => t.Type == NotificationTemplateType.Email) as EmailTemplate;
 
@@ -79,7 +57,7 @@ public class OrderProcessingService : IOrderProcessingService
                 case NotificationChannel.Email:
                     if (emailTemplate != null)
                     {
-                        _emailService.ProcessEmailNotification(order.Id, emailTemplate, recipient);
+                        await _emailService.CreateEmailNotification(order.Id, order.RequestedSendTime, emailTemplate, recipient);
                     }
 
                     break;
@@ -87,6 +65,5 @@ public class OrderProcessingService : IOrderProcessingService
         }
 
         await _orderRepository.SetProcessingCompleted(order.Id);
-        */
     }
 }

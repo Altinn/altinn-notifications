@@ -9,3 +9,5 @@
 	resulttime TIMESTAMPTZ NOT NULL,
 	expirytime TIMESTAMPTZ NOT NULL
 );
+
+GRANT SELECT,INSERT,UPDATE,DELETE ON TABLE notifications.emailnotifications TO platform_notifications;
