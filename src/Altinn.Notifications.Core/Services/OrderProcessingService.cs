@@ -36,18 +36,21 @@ public class OrderProcessingService : IOrderProcessingService
     /// <inheritdoc/>
     public async Task StartProcessingPastDueOrders()
     {
+        await _producer.ProduceAsync(_kafkaSettings.PastDueOrdersTopicName,"teest");
+
+        /*
         List<NotificationOrder> pastDueOrders = await _orderRepository.GetPastDueOrdersAndSetProcessingState();
 
         foreach (NotificationOrder order in pastDueOrders)
         {
             await _producer.ProduceAsync(_kafkaSettings.PastDueOrdersTopicName, order.Serialize());
-        }
+        }*/
     }
 
     /// <inheritdoc/>
     public async Task StartProcessPendingOrders()
     {
-        List<NotificationOrder> pastDueOrders = await _orderRepository.GetPendingOrdersAndSetProcessingState();
+        /*List<NotificationOrder> pastDueOrders = await _orderRepository.GetPendingOrdersAndSetProcessingState();
 
         foreach (NotificationOrder order in pastDueOrders)
         {
@@ -63,11 +66,12 @@ public class OrderProcessingService : IOrderProcessingService
             }
 
             await _orderRepository.SetProcessingCompleted(order.Id);
-        }
+        }*/
     }
 
     private async Task ProcessOrder(NotificationOrder order)
     {
+        /*
         NotificationChannel ch = order.NotificationChannel;
         EmailTemplate? emailTemplate = order.Templates.Find(t => t.Type == NotificationTemplateType.Email) as EmailTemplate;
 
@@ -86,5 +90,6 @@ public class OrderProcessingService : IOrderProcessingService
         }
 
         await _orderRepository.SetProcessingCompleted(order.Id);
+        */
     }
 }
