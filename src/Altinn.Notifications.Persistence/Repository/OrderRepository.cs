@@ -1,4 +1,6 @@
-﻿using Altinn.Notifications.Core.Models.NotificationTemplate;
+﻿using System.Text.Json;
+
+using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Repository.Interfaces;
 
@@ -18,6 +20,7 @@ public class OrderRepository : IOrderRepository
     private const string _insertEmailTextSql = "call notifications.insertemailtext($1, $2, $3, $4, $5)"; // (__orderid, _fromaddress, _subject, _body, _contenttype)
     private const string _getOrderById = "select notificationorder from notifications.orders where alternateid = $1";
     private const string _setProcessCompleted = "update notifications.orders set processedstatus = 'completed' where alternateid = $1";
+    private const string _getOrdersPastSendTimeUpdateStatus = "select notifications.getorders_pastsendtime_updatestatus()";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderRepository"/> class.
@@ -67,9 +70,22 @@ public class OrderRepository : IOrderRepository
     }
 
     /// <inheritdoc/>
-    public Task<List<NotificationOrder>> GetPastDueOrdersAndSetProcessingState()
+    public async Task<List<NotificationOrder>> GetPastDueOrdersAndSetProcessingState()
     {
-        throw new NotImplementedException();
+        List<NotificationOrder> searchResult = new();
+
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getOrdersPastSendTimeUpdateStatus);
+
+        await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync())
+        {
+            while (await reader.ReadAsync())
+            {
+                NotificationOrder notificationOrder = NotificationOrder.Deserialize(reader[0]?.ToString()!)!;
+                searchResult.Add(notificationOrder);
+            }
+        }
+
+        return searchResult;
     }
 
     /// <inheritdoc/>
