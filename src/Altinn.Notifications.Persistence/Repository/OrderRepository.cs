@@ -55,7 +55,7 @@ public class OrderRepository : IOrderRepository
         await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync();
         await reader.ReadAsync();
         var serialized = reader.GetString(0);
-        
+
         return NotificationOrder.Deserialize(serialized);
     }
 
@@ -142,5 +142,4 @@ public class OrderRepository : IOrderRepository
 
         await pgcom.ExecuteNonQueryAsync();
     }
-
 }
