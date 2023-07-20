@@ -121,7 +121,7 @@ public class NotificationOrder
             parsedOutput = Deserialize(input!);
 
             value = parsedOutput!;
-            return true;
+            return value.Id != null;
         }
         catch
         {

@@ -136,5 +136,25 @@ public class NotificationOrderTests
         var actual = NotificationOrder.Deserialize(serializedOrder);
         Assert.NotNull(actual);
     }
+
+    [Fact]
+    public void TryParse_EmptyString_False()
+    {
+        NotificationOrder? actualParsedOrder;
+
+        bool actualResult = NotificationOrder.TryParse(string.Empty, out actualParsedOrder);
+
+        Assert.False(actualResult);
+    }
+
+    [Fact]
+    public void TryParse_InvalidString_False()
+    {
+        NotificationOrder? actualParsedOrder;
+
+        bool actualResult = NotificationOrder.TryParse("{\"ticket\":\"noTicket\"}", out actualParsedOrder);
+
+        Assert.False(actualResult);
+    }
 }
 
