@@ -4,7 +4,6 @@ using System.Text;
 
 using Altinn.Notifications.Controllers;
 using Altinn.Notifications.Core.Enums;
-using Altinn.Notifications.Core.Integrations.Consumers;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Tests.EndToEndTests;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
@@ -86,9 +85,6 @@ public class EmailOrderTests : IClassFixture<IntegrationTestWebApplicationFactor
             {
                 // Set up mock authentication so that not well known endpoint is used
                 services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
-
-                var descriptor = services.Single(s => s.ImplementationType == typeof(PastDueOrdersConsumer));
-                services.Remove(descriptor);
             });
         }).CreateClient();
 

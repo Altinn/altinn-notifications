@@ -1,14 +1,8 @@
 ﻿using System.Net;
-using System.Net.Http.Headers;
-using System.Text;
 
 using Altinn.Notifications.Controllers;
-using Altinn.Notifications.Core.Enums;
-using Altinn.Notifications.Core.Integrations.Consumers;
-using Altinn.Notifications.Models;
 using Altinn.Notifications.Tests.EndToEndTests;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
-using Altinn.Notifications.Tests.Notifications.Utils;
 
 using AltinnCore.Authentication.JwtCookie;
 
@@ -57,8 +51,6 @@ public class PastDueOrderProcessingTest : IClassFixture<IntegrationTestWebApplic
             {
                 // Set up mock authentication so that not well known endpoint is used
                 services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
-                var descriptor = services.Single(s => s.ImplementationType == typeof(PastDueOrdersConsumer));
-                services.Remove(descriptor);
             });
         }).CreateClient();
 
