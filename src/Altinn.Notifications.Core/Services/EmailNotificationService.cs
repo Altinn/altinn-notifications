@@ -58,7 +58,8 @@ public class EmailNotificationService : IEmailNotificationService
         {
             expiry = DateTime.UtcNow;
         }
-        else {
+        else 
+        {
             // lets see how much time it takes to get a status for communication services
             expiry = requestedSendTime.AddHours(1);
         }
