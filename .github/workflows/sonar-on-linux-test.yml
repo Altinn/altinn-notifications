@@ -31,8 +31,6 @@ jobs:
       - name: Install SonarCloud scanners
         run: |
           dotnet tool install --global dotnet-sonarscanner
-          New-Item -Path .\.sonar\scanner -ItemType Directory
-          dotnet tool update dotnet-sonarscanner --tool-path .\.sonar\scanner
       #- name: Cache SonarCloud scanner
       #  id: cache-sonar-scanner
       #  uses: actions/cache@v3
