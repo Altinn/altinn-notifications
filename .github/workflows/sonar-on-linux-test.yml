@@ -8,6 +8,20 @@ jobs:
   analyze:
     name: Static code analysis
     runs-on: ubuntu-latest
+    services:
+     postgres:
+       image: postgres:14
+       env:
+         POSTGRES_USER: platform_notifications_admin
+         POSTGRES_PASSWORD: Password
+         POSTGRES_DB: notificationsdb
+       options: >-
+         --health-cmd pg_isready
+         --health-interval 10s
+         --health-timeout 5s
+         --health-retries 5
+       ports:
+         - 5432:5432
     steps:
       - name: Setup .NET
         uses: actions/setup-dotnet@v3
@@ -31,13 +45,14 @@ jobs:
       - name: Install SonarCloud scanners
         run: |
           dotnet tool install --global dotnet-sonarscanner
-      #- name: Cache SonarCloud scanner
-      #  id: cache-sonar-scanner
-      #  uses: actions/cache@v3
-      #  with:
-      #    path: .\.sonar\scanner
-      #    key: ${{ runner.os }}-sonar-scanner
-      #    restore-keys: ${{ runner.os }}-sonar-scanner
+      - name: Setup PostgreSQL for test
+        run: |
+            chmod +x dbsetup.sh
+            ./dbsetup.sh
+      - name: Set up kafka
+        uses: ybyzek/cp-all-in-one-action@v0.2.1
+        with:
+          service: broker
       - name: Build and analyze
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
@@ -47,7 +62,7 @@ jobs:
 
           dotnet build Altinn.Notifications.sln
 
-          dotnet test test/Altinn.Notifications.Tests/Altinn.Notifications.Tests.csproj \
+          dotnet build Altinn.Notifications.sln \
           --collect:"XPlat Code Coverage" \
           --results-directory TestResults/ \
           --logger "trx;LogFileName=unittests.trx" \
