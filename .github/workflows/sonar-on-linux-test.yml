@@ -28,6 +28,9 @@ jobs:
           path: ~\sonar\cache
           key: ${{ runner.os }}-sonar
           restore-keys: ${{ runner.os }}-sonar
+      - name: Install SonarCloud scanners
+        run: |
+          dotnet tool install --global dotnet-sonarscanner
       #- name: Cache SonarCloud scanner
       #  id: cache-sonar-scanner
       #  uses: actions/cache@v3
@@ -40,8 +43,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          dotnet tool install --global dotnet-sonarscanner
-
           dotnet-sonarscanner begin /k:"Altinn_altinn-notifications" /o:"altinn" /d:sonar.login="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" /d:sonar.cpd.exclusions="src/Altinn.Notifications.Persistence/Migration/**/*.sql" /d:sonar.coverage.exclusions="src/Altinn.Notifications.Persistence/Migration/**/*.sql"
 
           dotnet build Altinn.Notifications.sln
