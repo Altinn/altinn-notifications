@@ -14,7 +14,7 @@ namespace Altinn.Notifications.Core.Repository.Interfaces;
 public interface IEmailNotificationsRepository
 {
     /// <summary>
-    /// Adds a new email notification to the data base
+    /// Adds a new email notification to the database
     /// </summary>
     public Task AddEmailNotification(EmailNotification notification, DateTime expiry);
 }

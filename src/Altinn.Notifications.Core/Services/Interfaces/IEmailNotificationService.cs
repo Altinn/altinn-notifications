@@ -9,10 +9,14 @@ namespace Altinn.Notifications.Core.Services.Interfaces;
 public interface IEmailNotificationService
 {
     /// <summary>
-    /// Process all email notifications. 
-    /// If e-mail address is provided, genrate email notification. 
-    /// If e-mail address is not provided, generate email with failed status for now. 
-    /// Future implementation: Missing e-mail =>  Send to kafka queue to complete population of recipient.
+    /// Process all email notifications.
     /// </summary>
     public Task CreateEmailNotification(string orderId, DateTime requestedSendTime, EmailTemplate emailTemplate, Recipient recipient);
+
+    /// <summary>
+    /// Stats the process of sending all ready email notifications
+    /// </summary>
+    /// <returns></returns>
+    public Task SendNotifications();
+
 }

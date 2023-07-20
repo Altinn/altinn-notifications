@@ -1,4 +1,5 @@
 ﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Integrations.Interfaces;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Notification;
@@ -15,14 +16,16 @@ public class EmailNotificationService : IEmailNotificationService
 {
     private readonly IEmailNotificationsRepository _repository;
     private readonly IGuidService _guid;
+    private readonly IKafkaProducer _producer;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotificationService"/> class.
     /// </summary>
-    public EmailNotificationService(IEmailNotificationsRepository repository, IGuidService guid)
+    public EmailNotificationService(IEmailNotificationsRepository repository, IGuidService guid, IKafkaProducer producer)
     {
         _repository = repository;
         _guid = guid;
+        _producer = producer;
     }
 
     /// <inheritdoc/>
@@ -38,6 +41,13 @@ public class EmailNotificationService : IEmailNotificationService
         {
             await GenerateEmailNotificationForRecipient(orderId, requestedSendTime, recipient.RecipientId, string.Empty, EmailNotificationResultType.Failed_RecipientNotIdentified);
         }
+    }
+
+    /// <inheritdoc/>
+    public async Task SendNotifications()
+    {
+        // retrieve notificaiton and texts from db 
+        // push to kafka
     }
 
     private async Task GenerateEmailNotificationForRecipient(string orderId, DateTime requestedSendTime, string recipientId, string toAddress, EmailNotificationResultType result = EmailNotificationResultType.New)
