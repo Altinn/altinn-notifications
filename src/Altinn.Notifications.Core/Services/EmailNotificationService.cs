@@ -54,19 +54,13 @@ public class EmailNotificationService : IEmailNotificationService
 
         DateTime expiry;
 
-        switch (result)
+        if ( result == EmailNotificationResultType.Failed_RecipientNotIdentified )
         {
-            case EmailNotificationResultType.New:
-            case EmailNotificationResultType.Sending:
-                expiry = requestedSendTime.AddHours(1); // lets see how much time it takes to get a status for communication services
-                break;
-            case EmailNotificationResultType.Failed_RecipientNotIdentified:
-                // no need to attempt sending at a later time
-                expiry = DateTime.UtcNow;
-                break;
-            default:
-                expiry = requestedSendTime.AddDays(1);
-                break;
+            expiry = DateTime.UtcNow;
+        }
+        else {
+            // lets see how much time it takes to get a status for communication services
+            expiry = requestedSendTime.AddHours(1);
         }
 
         await _repository.AddEmailNotification(emailNotification, expiry);
