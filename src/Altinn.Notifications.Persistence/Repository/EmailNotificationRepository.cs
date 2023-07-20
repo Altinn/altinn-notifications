@@ -31,6 +31,7 @@ public class EmailNotificationRepository : IEmailNotificationsRepository
         await pgcom.ExecuteNonQueryAsync();
     }
 
+    /// <inheritdoc/>
     public Task<List<Email>> GetNewNotifications()
     {
         throw new NotImplementedException();
