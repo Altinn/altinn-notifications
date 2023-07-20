@@ -40,10 +40,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="UnitTests\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <None Update="jwtselfsignedcert.pfx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

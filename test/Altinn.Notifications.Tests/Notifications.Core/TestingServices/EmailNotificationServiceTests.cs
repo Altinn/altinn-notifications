@@ -54,6 +54,7 @@ public class EmailNotificationServiceTests
         string id = Guid.NewGuid().ToString();
         DateTime requestedSendTime = DateTime.UtcNow;
         DateTime dateTimeOutput = DateTime.UtcNow;
+        DateTime expectedExpiry = requestedSendTime.AddHours(1);
 
         EmailNotification expected = new()
         {
@@ -66,7 +67,7 @@ public class EmailNotificationServiceTests
         };
 
         var repoMock = new Mock<IEmailNotificationsRepository>();
-        repoMock.Setup(r => r.AddEmailNotification(It.Is<EmailNotification>(e => AreEqual(expected, e)), It.Is<DateTime>(d => d == dateTimeOutput)));
+        repoMock.Setup(r => r.AddEmailNotification(It.Is<EmailNotification>(e => AssertUtils.AreEquivalent(expected, e)), It.Is<DateTime>(d => d == expectedExpiry)));
 
         var service = GetTestService(repo: repoMock.Object, guidOutput: id, dateTimeOutput: dateTimeOutput);
 
@@ -84,6 +85,7 @@ public class EmailNotificationServiceTests
         string id = Guid.NewGuid().ToString();
         DateTime requestedSendTime = DateTime.UtcNow;
         DateTime dateTimeOutput = DateTime.UtcNow;
+        DateTime expectedExpiry = dateTimeOutput;
 
         EmailNotification expected = new()
         {
@@ -95,7 +97,7 @@ public class EmailNotificationServiceTests
         };
 
         var repoMock = new Mock<IEmailNotificationsRepository>();
-        repoMock.Setup(r => r.AddEmailNotification(It.Is<EmailNotification>(e => AreEqual(expected, e)), It.Is<DateTime>(d => d == dateTimeOutput)));
+        repoMock.Setup(r => r.AddEmailNotification(It.Is<EmailNotification>(e => AssertUtils.AreEquivalent(expected, e)), It.Is<DateTime>(d => d == expectedExpiry)));
 
         var service = GetTestService(repo: repoMock.Object, guidOutput: id, dateTimeOutput: dateTimeOutput);
 
@@ -104,12 +106,6 @@ public class EmailNotificationServiceTests
 
         // Assert
         repoMock.Verify();
-    }
-
-    private bool AreEqual<T>(T expected, T actual)
-    {
-        Assert.Equivalent(expected, actual);
-        return true;
     }
 
     private static EmailNotificationService GetTestService(IEmailNotificationsRepository? repo = null, IKafkaProducer? producer = null, string? guidOutput = null, DateTime? dateTimeOutput = null)

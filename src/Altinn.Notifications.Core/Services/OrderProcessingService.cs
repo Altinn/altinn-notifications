@@ -2,8 +2,6 @@
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations.Interfaces;
 using Altinn.Notifications.Core.Models;
-using Altinn.Notifications.Core.Models.Notification;
-using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Repository.Interfaces;
 using Altinn.Notifications.Core.Services.Interfaces;
@@ -48,14 +46,12 @@ public class OrderProcessingService : IOrderProcessingService
     public async Task ProcessOrder(NotificationOrder order)
     {
         NotificationChannel ch = order.NotificationChannel;
-        EmailTemplate? emailTemplate = order.Templates.Find(t => t.Type == NotificationTemplateType.Email) as EmailTemplate;
 
         foreach (Recipient recipient in order.Recipients)
         {
             switch (ch)
             {
                 case NotificationChannel.Email:
-
                     await _emailService.CreateEmailNotification(order.Id, order.RequestedSendTime, recipient);
                     break;
             }
