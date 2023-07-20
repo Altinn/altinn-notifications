@@ -86,9 +86,7 @@ public class PastDueOrdersConsumer : IHostedService
                 var consumeResult = _consumer.Consume(cancellationToken);
                 if (consumeResult != null)
                 {
-                    NotificationOrder? order;
-
-                    bool succeeded = NotificationOrder.TryParse(consumeResult.Message.Value, out order);
+                    bool succeeded = NotificationOrder.TryParse(consumeResult.Message.Value, out NotificationOrder? order);
 
                     if (succeeded)
                     {

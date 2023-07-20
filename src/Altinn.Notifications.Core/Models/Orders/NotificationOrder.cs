@@ -108,17 +108,23 @@ public class NotificationOrder
     /// </summary>
     public static bool TryParse(string input, out NotificationOrder value)
     {
-        NotificationOrder parsedOutput;
+        NotificationOrder? parsedOutput;
         value = new NotificationOrder();
+
+        if (string.IsNullOrEmpty(input))
+        {
+            return false;
+        }
+
         try
         {
-            parsedOutput = Deserialize(input);
+            parsedOutput = Deserialize(input!);
 
-            value = parsedOutput;
+            value = parsedOutput!;
             return true;
         }
         catch
-        { 
+        {
             // try parse, we simply return false if fails
         }
 

@@ -1,4 +1,6 @@
-﻿namespace Altinn.Notifications.Core.Models.Notification;
+﻿using Altinn.Notifications.Core.Services.Interfaces;
+
+namespace Altinn.Notifications.Core.Models.Notification;
 
 /// <summary>
 /// Notification result class
@@ -9,9 +11,9 @@ public class NotificationResult<TEnum>
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationResult{TEnum}"/> class.
     /// </summary>
-    public NotificationResult(TEnum result)
+    public NotificationResult(TEnum result, DateTime resultTime)
     {
-        ResultTime = DateTime.UtcNow;
+        ResultTime = resultTime;
         Result = result;
     }
 

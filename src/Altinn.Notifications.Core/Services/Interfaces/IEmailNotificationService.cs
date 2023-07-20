@@ -11,12 +11,11 @@ public interface IEmailNotificationService
     /// <summary>
     /// Process all email notifications.
     /// </summary>
-    public Task CreateEmailNotification(string orderId, DateTime requestedSendTime, EmailTemplate emailTemplate, Recipient recipient);
+    public Task CreateEmailNotification(string orderId, DateTime requestedSendTime, Recipient recipient);
 
     /// <summary>
     /// Stats the process of sending all ready email notifications
     /// </summary>
     /// <returns></returns>
     public Task SendNotifications();
-
 }

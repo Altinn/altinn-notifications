@@ -30,9 +30,9 @@ public class EmailNotification : INotification<EmailNotificationResultType>
     public string ToAddress { get; internal set; } = string.Empty;
 
     /// <summary>
-    /// Get or sets the send result of
+    /// Get or sets the send result of the notification
     /// </summary>
-    public NotificationResult<EmailNotificationResultType> SendResult { get; internal set; } = new(EmailNotificationResultType.New);
+    public NotificationResult<EmailNotificationResultType> SendResult { get; internal set; } = new(EmailNotificationResultType.New, DateTime.UtcNow);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotification"/> class.

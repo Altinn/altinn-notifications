@@ -55,11 +55,8 @@ public class OrderProcessingService : IOrderProcessingService
             switch (ch)
             {
                 case NotificationChannel.Email:
-                    if (emailTemplate != null)
-                    {
-                        await _emailService.CreateEmailNotification(order.Id, order.RequestedSendTime, emailTemplate, recipient);
-                    }
 
+                    await _emailService.CreateEmailNotification(order.Id, order.RequestedSendTime, recipient);
                     break;
             }
         }

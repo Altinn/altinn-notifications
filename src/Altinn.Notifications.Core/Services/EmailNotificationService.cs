@@ -6,7 +6,6 @@ using Altinn.Notifications.Core.Integrations.Interfaces;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Notification;
-using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Repository.Interfaces;
 using Altinn.Notifications.Core.Services.Interfaces;
 
@@ -20,6 +19,7 @@ namespace Altinn.Notifications.Core.Services;
 public class EmailNotificationService : IEmailNotificationService
 {
     private readonly IGuidService _guid;
+    private readonly IDateTimeService _dateTime;
     private readonly IEmailNotificationsRepository _repository;
     private readonly IKafkaProducer _producer;
     private readonly string _emailQueueTopicName;
@@ -29,28 +29,30 @@ public class EmailNotificationService : IEmailNotificationService
     /// </summary>
     public EmailNotificationService(
         IGuidService guid,
+        IDateTimeService dateTime,
         IEmailNotificationsRepository repository,
         IKafkaProducer producer,
         IOptions<KafkaSettings> kafkaSettings)
     {
         _guid = guid;
+        _dateTime = dateTime;
         _repository = repository;
         _producer = producer;
         _emailQueueTopicName = kafkaSettings.Value.EmailQueueTopicName;
     }
 
     /// <inheritdoc/>
-    public async Task CreateEmailNotification(string orderId, DateTime requestedSendTime, EmailTemplate emailTemplate, Recipient recipient)
+    public async Task CreateEmailNotification(string orderId, DateTime requestedSendTime, Recipient recipient)
     {
         EmailAddressPoint? addressPoint = recipient.AddressInfo.Find(a => a.AddressType == AddressType.Email) as EmailAddressPoint;
 
         if (!string.IsNullOrEmpty(addressPoint?.EmailAddress))
         {
-            await GenerateEmailNotificationForRecipient(orderId, requestedSendTime, recipient.RecipientId, addressPoint.EmailAddress);
+            await CreateEmailNotificationForRecipient(orderId, requestedSendTime, recipient.RecipientId, addressPoint.EmailAddress);
         }
         else
         {
-            await GenerateEmailNotificationForRecipient(orderId, requestedSendTime, recipient.RecipientId, string.Empty, EmailNotificationResultType.Failed_RecipientNotIdentified);
+            await CreateEmailNotificationForRecipient(orderId, requestedSendTime, recipient.RecipientId, string.Empty, EmailNotificationResultType.Failed_RecipientNotIdentified);
         }
     }
 
@@ -65,7 +67,7 @@ public class EmailNotificationService : IEmailNotificationService
         }
     }
 
-    private async Task GenerateEmailNotificationForRecipient(string orderId, DateTime requestedSendTime, string recipientId, string toAddress, EmailNotificationResultType result = EmailNotificationResultType.New)
+    private async Task CreateEmailNotificationForRecipient(string orderId, DateTime requestedSendTime, string recipientId, string toAddress, EmailNotificationResultType result = EmailNotificationResultType.New)
     {
         var emailNotification = new EmailNotification()
         {
@@ -74,14 +76,14 @@ public class EmailNotificationService : IEmailNotificationService
             RequestedSendTime = requestedSendTime,
             ToAddress = toAddress,
             RecipientId = string.IsNullOrEmpty(recipientId) ? null : recipientId,
-            SendResult = new(result)
+            SendResult = new(result, _dateTime.UtcNow())
         };
 
         DateTime expiry;
 
         if (result == EmailNotificationResultType.Failed_RecipientNotIdentified)
         {
-            expiry = DateTime.UtcNow;
+            expiry = _dateTime.UtcNow();
         }
         else
         {

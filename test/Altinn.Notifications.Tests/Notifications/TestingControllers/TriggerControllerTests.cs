@@ -68,7 +68,7 @@ public class TriggerControllerTests : IClassFixture<CustomWebApplicationFactory<
         serviceMock.VerifyAll();
     }
 
-    private HttpClient GetTestClient(IOrderProcessingService? orderProcessingService = null, IEmailNotificationService emailNotificationService = null)
+    private HttpClient GetTestClient(IOrderProcessingService? orderProcessingService = null, IEmailNotificationService? emailNotificationService = null)
     {
         if (orderProcessingService == null)
         {
