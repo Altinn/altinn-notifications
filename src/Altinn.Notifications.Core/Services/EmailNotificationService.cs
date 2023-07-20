@@ -14,17 +14,17 @@ namespace Altinn.Notifications.Core.Services;
 /// </summary>
 public class EmailNotificationService : IEmailNotificationService
 {
-    private readonly IEmailNotificationsRepository _repository;
     private readonly IGuidService _guid;
+    private readonly IEmailNotificationsRepository _repository;
     private readonly IKafkaProducer _producer;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotificationService"/> class.
     /// </summary>
-    public EmailNotificationService(IEmailNotificationsRepository repository, IGuidService guid, IKafkaProducer producer)
+    public EmailNotificationService(IGuidService guid, IEmailNotificationsRepository repository, IKafkaProducer producer)
     {
-        _repository = repository;
         _guid = guid;
+        _repository = repository;
         _producer = producer;
     }
 
@@ -47,6 +47,8 @@ public class EmailNotificationService : IEmailNotificationService
     public async Task SendNotifications()
     {
         // retrieve notificaiton and texts from db 
+        EmailNotification notification = new();
+
         // push to kafka
     }
 
@@ -64,11 +66,11 @@ public class EmailNotificationService : IEmailNotificationService
 
         DateTime expiry;
 
-        if ( result == EmailNotificationResultType.Failed_RecipientNotIdentified )
+        if (result == EmailNotificationResultType.Failed_RecipientNotIdentified)
         {
             expiry = DateTime.UtcNow;
         }
-        else 
+        else
         {
             // lets see how much time it takes to get a status for communication services
             expiry = requestedSendTime.AddHours(1);

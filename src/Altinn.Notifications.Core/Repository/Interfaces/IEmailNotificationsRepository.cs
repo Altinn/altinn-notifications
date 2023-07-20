@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 
 namespace Altinn.Notifications.Core.Repository.Interfaces;
@@ -17,4 +18,10 @@ public interface IEmailNotificationsRepository
     /// Adds a new email notification to the database
     /// </summary>
     public Task AddEmailNotification(EmailNotification notification, DateTime expiry);
+
+    /// <summary>
+    /// Retrieves all email notifications with status 'new'
+    /// </summary>
+    /// <returns></returns>
+    public Task<List<EmailEnvelope>> GetNewNotifications();
 }
