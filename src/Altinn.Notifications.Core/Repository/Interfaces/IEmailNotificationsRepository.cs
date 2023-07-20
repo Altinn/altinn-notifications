@@ -23,5 +23,5 @@ public interface IEmailNotificationsRepository
     /// Retrieves all email notifications with status 'new'
     /// </summary>
     /// <returns></returns>
-    public Task<List<EmailEnvelope>> GetNewNotifications();
+    public Task<List<Email>> GetNewNotifications();
 }
