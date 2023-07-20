@@ -47,11 +47,11 @@ jobs:
 
           dotnet build Altinn.Notifications.sln
 
-          dotnet test test/Altinn.Notifications.Tests/Altinn.Notifications.Tests.csproj `
-          --collect:"XPlat Code Coverage" `
-          --results-directory TestResults/ `
-          --logger "trx;LogFileName=unittests.trx" `
-          --configuration release `
+          dotnet test test/Altinn.Notifications.Tests/Altinn.Notifications.Tests.csproj \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults/ \
+          --logger "trx;LogFileName=unittests.trx" \
+          --configuration release \
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
 
           dotnet-sonarscanner end /d:sonar.login="${{ secrets.SONAR_TOKEN }}"
