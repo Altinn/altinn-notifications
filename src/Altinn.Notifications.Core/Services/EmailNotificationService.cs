@@ -1,4 +1,7 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using System.Text.Json;
+
+using Altinn.Notifications.Core.Configuration;
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations.Interfaces;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
@@ -6,6 +9,8 @@ using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Repository.Interfaces;
 using Altinn.Notifications.Core.Services.Interfaces;
+
+using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Core.Services;
 
@@ -17,15 +22,21 @@ public class EmailNotificationService : IEmailNotificationService
     private readonly IGuidService _guid;
     private readonly IEmailNotificationsRepository _repository;
     private readonly IKafkaProducer _producer;
+    private readonly string _emailQueueTopicName;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotificationService"/> class.
     /// </summary>
-    public EmailNotificationService(IGuidService guid, IEmailNotificationsRepository repository, IKafkaProducer producer)
+    public EmailNotificationService(
+        IGuidService guid,
+        IEmailNotificationsRepository repository,
+        IKafkaProducer producer,
+        IOptions<KafkaSettings> kafkaSettings)
     {
         _guid = guid;
         _repository = repository;
         _producer = producer;
+        _emailQueueTopicName = kafkaSettings.Value.EmailQueueTopicName;
     }
 
     /// <inheritdoc/>
@@ -46,10 +57,12 @@ public class EmailNotificationService : IEmailNotificationService
     /// <inheritdoc/>
     public async Task SendNotifications()
     {
-        // retrieve notificaiton and texts from db 
-        EmailNotification notification = new();
+        List<Email> emails = await _repository.GetNewNotifications();
 
-        // push to kafka
+        foreach (Email email in emails)
+        {
+            await _producer.ProduceAsync(_emailQueueTopicName, JsonSerializer.Serialize(email));
+        }
     }
 
     private async Task GenerateEmailNotificationForRecipient(string orderId, DateTime requestedSendTime, string recipientId, string toAddress, EmailNotificationResultType result = EmailNotificationResultType.New)

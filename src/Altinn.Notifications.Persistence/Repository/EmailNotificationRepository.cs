@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Models.Notification;
+﻿using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Repository.Interfaces;
 
 using Npgsql;
@@ -28,5 +29,10 @@ public class EmailNotificationRepository : IEmailNotificationsRepository
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_insertEmailNotificationSql);
 
         await pgcom.ExecuteNonQueryAsync();
+    }
+
+    public Task<List<Email>> GetNewNotifications()
+    {
+        throw new NotImplementedException();
     }
 }
