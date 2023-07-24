@@ -1,6 +1,5 @@
 ﻿using System.Net;
 
-using Altinn.Notifications.Controllers;
 using Altinn.Notifications.Tests.EndToEndTests;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 
@@ -13,15 +12,15 @@ using Microsoft.IdentityModel.Logging;
 
 using Xunit;
 
-namespace Altinn.Notifications.IntegrationTests.RepositoryTests;
+namespace Altinn.Notifications.IntegrationTests.Notifications.TriggerController;
 
-public class PastDueOrderProcessingTest : IClassFixture<IntegrationTestWebApplicationFactory<TriggerController>>
+public class Trigger_PastDueOrdersTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.TriggerController>>
 {
     private const string _basePath = "/notifications/api/v1/trigger/pastdueorders";
 
-    private readonly IntegrationTestWebApplicationFactory<TriggerController> _factory;
+    private readonly IntegrationTestWebApplicationFactory<Controllers.TriggerController> _factory;
 
-    public PastDueOrderProcessingTest(IntegrationTestWebApplicationFactory<TriggerController> factory)
+    public Trigger_PastDueOrdersTests(IntegrationTestWebApplicationFactory<Controllers.TriggerController> factory)
     {
         _factory = factory;
     }

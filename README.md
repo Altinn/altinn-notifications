@@ -64,4 +64,4 @@ In pgAdmin
 To run a kafka broker locally you need to have Docker installed on your machine.
 
 In a terminal navigate to the root of this repository
-and run command `docker-compose -f setup-kafka.yaml up -d`
+and run command `docker-compose -f setup-kafka.yml up -d`
