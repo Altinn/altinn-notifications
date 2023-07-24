@@ -16,7 +16,10 @@ public class PastDueOrdersConsumerTests
     [Fact]
     public async Task RunTask_10seconds()
     {
-        var builder = new ConfigurationBuilder().AddJsonFile($"appsettings.json", optional: false);
+        var builder = new ConfigurationBuilder()
+            .AddJsonFile($"appsettings.json", optional: false)
+            .AddJsonFile("appsettings.IntegrationTest.json");
+
         var config = builder.Build();
 
         Persistence.Configuration.PostgreSqlSettings postgresSettings = config.GetSection("PostgreSqlSettings").Get<Persistence.Configuration.PostgreSqlSettings>();
@@ -35,8 +38,10 @@ public class PastDueOrdersConsumerTests
 
         await service.StartAsync(CancellationToken.None);
 
-        await Task.Delay(10000);
+        await Task.Delay(20000);
 
         await service.StopAsync(CancellationToken.None);
+
+        // To do: check for updated statuses for order and email notification in db
     }
 }
