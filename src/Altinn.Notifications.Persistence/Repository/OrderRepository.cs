@@ -16,7 +16,7 @@ public class OrderRepository : IOrderRepository
     private readonly NpgsqlDataSource _dataSource;
     private const string _insertOrderSql = "select notifications.insertorder($1, $2, $3, $4, $5, $6)"; // (_alternateid, _creatorname, _sendersreference, _created, _requestedsendtime, _notificationorder)
     private const string _insertEmailTextSql = "call notifications.insertemailtext($1, $2, $3, $4, $5)"; // (__orderid, _fromaddress, _subject, _body, _contenttype)
-    private const string _setProcessCompleted = "update notifications.orders set processedstatus = 'completed' where alternateid = $1";
+    private const string _setProcessCompleted = "update notifications.orders set processedstatus = 'completed' where alternateid=$1";
     private const string _getOrdersPastSendTimeUpdateStatus = "select notifications.getorders_pastsendtime_updatestatus()";
 
     /// <summary>
@@ -47,7 +47,7 @@ public class OrderRepository : IOrderRepository
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_setProcessCompleted);
 
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, orderId);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, Guid.Parse(orderId));
 
         await pgcom.ExecuteNonQueryAsync();
     }
