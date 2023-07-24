@@ -60,7 +60,7 @@ public class NotificationOrderExtTests
             {
                 FromAddress = "sender@domain.com",
                 Subject = "email-subject",
-                Body = "email-body",
+                Body = "email-boy",
                 ContentType = EmailContentType.Html,
             }
         };
