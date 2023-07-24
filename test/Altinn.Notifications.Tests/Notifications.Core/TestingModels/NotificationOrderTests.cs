@@ -156,5 +156,16 @@ public class NotificationOrderTests
 
         Assert.False(actualResult);
     }
+
+
+    [Fact]
+    public void TryParse_InvalidJsonExceptionThrown_False()
+    {
+        NotificationOrder? actualParsedOrder;
+
+        bool actualResult = NotificationOrder.TryParse("{\"ticket:\"noTicket\"}", out actualParsedOrder);
+
+        Assert.False(actualResult);
+    }
 }
 
