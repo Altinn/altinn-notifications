@@ -61,7 +61,7 @@ In pgAdmin
 
 ## Setting up Kafka
 
-To run a kafka broker  and Kafdrop (visualization and administration tool) locally you need to have Docker installed on your machine.
+To run a kafka broker and Kafdrop (visualization and administration tool) locally you need to have Docker installed on your machine.
 
 In a terminal navigate to the root of this repository
 and run command `docker-compose -f setup-kafka.yml up -d`

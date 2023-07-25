@@ -24,7 +24,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Core.Consumers;
 
 public class PastDueOrdersConsumerTests
 {
-    private readonly NotificationOrder order = new()
+    private readonly NotificationOrder _order = new()
     {
         Id = Guid.NewGuid().ToString(),
         SendersReference = "senders-reference",
@@ -87,13 +87,13 @@ public class PastDueOrdersConsumerTests
         Assert.Equal(1, emailNotificationCount);
     }
 
-    private IServiceProvider SetUpServices(string topicName)
+    private static IServiceProvider SetUpServices(string topicName)
     {
         var builder = new ConfigurationBuilder()
             .AddJsonFile($"appsettings.json", optional: false)
             .AddJsonFile("appsettings.IntegrationTest.json");
 
-        builder.AddInMemoryCollection(new List<KeyValuePair<string, string>>()
+        builder.AddInMemoryCollection(new List<KeyValuePair<string, string?>>()
         {
             new( "KafkaSettings:PastDueOrdersTopicName", topicName ),
             new( "KafkaSettings:TopicList", $"[{topicName}]" )
@@ -113,13 +113,13 @@ public class PastDueOrdersConsumerTests
         return services.BuildServiceProvider();
     }
 
-    private async Task<long> SelectCompletedOrderCount(NpgsqlDataSource dataSource, string orderId)
+    private static async Task<long> SelectCompletedOrderCount(NpgsqlDataSource dataSource, string orderId)
     {
         string sql = $"select count(1) from notifications.orders where processedstatus = 'completed' and alternateid='{orderId}'";
         return await RunSqlReturnCount(dataSource, sql);
     }
 
-    private async Task<long> SelectEmailNotificationCount(NpgsqlDataSource dataSource, string orderId)
+    private static async Task<long> SelectEmailNotificationCount(NpgsqlDataSource dataSource, string orderId)
     {
         string sql = $"select count(1) " +
                    "from notifications.emailnotifications e " +
@@ -128,7 +128,7 @@ public class PastDueOrdersConsumerTests
         return await RunSqlReturnCount(dataSource, sql);
     }
 
-    private async Task<int> RunSqlReturnCount(NpgsqlDataSource dataSource, string sql)
+    private static async Task<int> RunSqlReturnCount(NpgsqlDataSource dataSource, string sql)
     {
         await using NpgsqlCommand pgcom = dataSource.CreateCommand(sql);
 
@@ -140,7 +140,7 @@ public class PastDueOrdersConsumerTests
     private async Task<string> PopulateDbAndTopic(IServiceProvider serviceProvider, string topicName)
     {
         var repository = (OrderRepository)serviceProvider.GetServices(typeof(IOrderRepository)).First()!;
-        var persistedOrder = await repository.Create(order);
+        var persistedOrder = await repository.Create(_order);
 
         var producer = (KafkaProducer)serviceProvider.GetServices(typeof(IKafkaProducer)).First()!;
         await producer.ProduceAsync(topicName, persistedOrder.Serialize());

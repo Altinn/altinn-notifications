@@ -10,5 +10,5 @@ public interface IKafkaProducer
     /// </summary>
     /// <param name="topic">The topic to post a message to</param>
     /// <param name="message">The message to post</param>
-    public Task ProduceAsync(string topic, string message);
+    public Task<bool> ProduceAsync(string topic, string message);
 }

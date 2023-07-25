@@ -140,19 +140,14 @@ public class NotificationOrderTests
     [Fact]
     public void TryParse_EmptyString_False()
     {
-        NotificationOrder? actualParsedOrder;
-
-        bool actualResult = NotificationOrder.TryParse(string.Empty, out actualParsedOrder);
-
+        bool actualResult = NotificationOrder.TryParse(string.Empty, out _);
         Assert.False(actualResult);
     }
 
     [Fact]
     public void TryParse_InvalidString_False()
     {
-        NotificationOrder? actualParsedOrder;
-
-        bool actualResult = NotificationOrder.TryParse("{\"ticket\":\"noTicket\"}", out actualParsedOrder);
+        bool actualResult = NotificationOrder.TryParse("{\"ticket\":\"noTicket\"}", out _);
 
         Assert.False(actualResult);
     }
@@ -161,9 +156,7 @@ public class NotificationOrderTests
     [Fact]
     public void TryParse_InvalidJsonExceptionThrown_False()
     {
-        NotificationOrder? actualParsedOrder;
-
-        bool actualResult = NotificationOrder.TryParse("{\"ticket:\"noTicket\"}", out actualParsedOrder);
+        bool actualResult = NotificationOrder.TryParse("{\"ticket:\"noTicket\"}", out _);
 
         Assert.False(actualResult);
     }
