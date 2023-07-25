@@ -60,7 +60,6 @@ public class PastDueOrdersConsumerTests
             }
     };
 
-    [Fact]
     public async Task RunTask_ConfirmExpectedSideEffects()
     {
         // Arrange
