@@ -52,7 +52,7 @@ public class OrderProcessingService : IOrderProcessingService
             switch (ch)
             {
                 case NotificationChannel.Email:
-                    await _emailService.CreateEmailNotification(order.Id, order.RequestedSendTime, recipient);
+                    await _emailService.CreateNotification(order.Id, order.RequestedSendTime, recipient);
                     break;
             }
         }

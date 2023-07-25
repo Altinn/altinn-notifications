@@ -69,7 +69,7 @@ public class EmailNotificationServiceTests
         var service = GetTestService(repo: repoMock.Object, guidOutput: id, dateTimeOutput: dateTimeOutput);
 
         // Act
-        await service.CreateEmailNotification("orderid", requestedSendTime, new Recipient("skd", new List<IAddressPoint>() { new EmailAddressPoint("skd@norge.no") }));
+        await service.CreateNotification("orderid", requestedSendTime, new Recipient("skd", new List<IAddressPoint>() { new EmailAddressPoint("skd@norge.no") }));
 
         // Assert
         repoMock.Verify();
@@ -99,7 +99,7 @@ public class EmailNotificationServiceTests
         var service = GetTestService(repo: repoMock.Object, guidOutput: id, dateTimeOutput: dateTimeOutput);
 
         // Act
-        await service.CreateEmailNotification("orderid", requestedSendTime, new Recipient("skd", new List<IAddressPoint>()));
+        await service.CreateNotification("orderid", requestedSendTime, new Recipient("skd", new List<IAddressPoint>()));
 
         // Assert
         repoMock.Verify();

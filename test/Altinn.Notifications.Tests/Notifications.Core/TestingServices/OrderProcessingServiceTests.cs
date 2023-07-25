@@ -62,7 +62,7 @@ public class OrderProcessingServiceTests
         };
 
         var serviceMock = new Mock<IEmailNotificationService>();
-        serviceMock.Setup(s => s.CreateEmailNotification(It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<Recipient>()));
+        serviceMock.Setup(s => s.CreateNotification(It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<Recipient>()));
 
         var service = GetTestService(emailService: serviceMock.Object);
 
@@ -70,7 +70,7 @@ public class OrderProcessingServiceTests
         await service.ProcessOrder(order);
 
         // Assert
-        serviceMock.Verify(s => s.CreateEmailNotification(It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<Recipient>()), Times.Exactly(2));
+        serviceMock.Verify(s => s.CreateNotification(It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<Recipient>()), Times.Exactly(2));
     }
 
     [Fact]
@@ -93,7 +93,7 @@ public class OrderProcessingServiceTests
         Recipient expectedRecipient = new("skd", new List<IAddressPoint>() { new EmailAddressPoint("test@test.com") });
 
         var serviceMock = new Mock<IEmailNotificationService>();
-        serviceMock.Setup(s => s.CreateEmailNotification(It.IsAny<string>(), It.Is<DateTime>(d => d.Equals(requested)), It.Is<Recipient>(r => AssertUtils.AreEquivalent(expectedRecipient, r))));
+        serviceMock.Setup(s => s.CreateNotification(It.IsAny<string>(), It.Is<DateTime>(d => d.Equals(requested)), It.Is<Recipient>(r => AssertUtils.AreEquivalent(expectedRecipient, r))));
 
         var repoMock = new Mock<IOrderRepository>();
         repoMock.Setup(r => r.SetProcessingCompleted(It.Is<string>(s => s.Equals("orderid"))));
@@ -123,7 +123,7 @@ public class OrderProcessingServiceTests
 
 
         var serviceMock = new Mock<IEmailNotificationService>();
-        serviceMock.Setup(s => s.CreateEmailNotification(It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<Recipient>()))
+        serviceMock.Setup(s => s.CreateNotification(It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<Recipient>()))
             .ThrowsAsync(new Exception());
 
         var repoMock = new Mock<IOrderRepository>();
@@ -135,7 +135,7 @@ public class OrderProcessingServiceTests
         await Assert.ThrowsAsync<Exception>(async () => await service.ProcessOrder(order));
 
         // Assert
-        serviceMock.Verify(s => s.CreateEmailNotification(It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<Recipient>()), Times.Once);
+        serviceMock.Verify(s => s.CreateNotification(It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<Recipient>()), Times.Once);
         repoMock.Verify(r => r.SetProcessingCompleted(It.IsAny<string>()), Times.Never);
     }
 
