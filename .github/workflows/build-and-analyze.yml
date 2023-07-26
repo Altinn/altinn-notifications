@@ -68,7 +68,7 @@ jobs:
           -v q \
           --collect:"XPlat Code Coverage" \
           --results-directory TestResults/ \
-          --logger "trx;LogFileName=unittests.trx" \
+          --logger "trx;" \
           --configuration release \
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
 
