@@ -74,7 +74,7 @@ jobs:
 
           dotnet-sonarscanner end /d:sonar.login="${{ secrets.SONAR_TOKEN }}"
       - name: Annotate Test Failures
-        if: ${{ job.status == 'failure' }}
+        if: ${{ failure() }}
         run: |
           # Install XMLStarlet for parsing XML files
           sudo apt-get update -y
