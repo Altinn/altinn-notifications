@@ -15,3 +15,27 @@ RETURN QUERY
 	RETURNING cast(notificationorder as text) AS notificationorders;
 END;
 $BODY$;
+
+CREATE OR REPLACE FUNCTION notifications.getemails_statusnew_updatestatus()
+RETURNS TABLE(
+    id bigint, 
+    subject text,
+	body text,
+	fromaddress text,
+	toaddress text,
+	contenttype text
+) 
+LANGUAGE 'plpgsql'
+AS $BODY$
+BEGIN
+RETURN query 
+	WITH updated AS (
+		UPDATE notifications.emailnotifications
+			SET result = 'sending'
+			WHERE result = 'new' 
+			RETURNING _id, _orderid, notifications.emailnotifications.toaddress)
+	SELECT u._id, et.subject, et.body, et.fromaddress, u.toaddress, et.contenttype 
+	FROM updated u, notifications.emailtexts et
+	WHERE u._orderid = et._orderid;	
+END;
+$BODY$;
