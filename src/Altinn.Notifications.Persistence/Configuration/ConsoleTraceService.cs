@@ -2,7 +2,7 @@
 
 using Yuniql.Extensibility;
 
-namespace Altinn.Notifications.Configuration;
+namespace Altinn.Notifications.Persistence.Configuration;
 
 /// <summary>
 /// Copied from sample project.

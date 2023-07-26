@@ -7,7 +7,6 @@ using Altinn.Notifications.Core.Extensions;
 using Altinn.Notifications.Health;
 using Altinn.Notifications.Integrations.Extensions;
 using Altinn.Notifications.Models;
-using Altinn.Notifications.Persistence.Configuration;
 using Altinn.Notifications.Persistence.Extensions;
 using Altinn.Notifications.Validators;
 
@@ -23,9 +22,6 @@ using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel;
 using Microsoft.IdentityModel.Tokens;
-
-using Yuniql.AspNetCore;
-using Yuniql.PostgreSql;
 
 ILogger logger;
 
@@ -44,7 +40,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
-ConfigurePostgreSql(builder.Configuration);
+app.SetUpPostgreSql(builder.Environment.IsDevelopment(), builder.Configuration);
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -163,8 +159,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     AddInputModelValidators(services);
     services.AddCoreServices(config);
     services.AddKafkaServices(config);
-    PostgreSqlSettings postgresSettings = config.GetSection("PostgreSqlSettings").Get<PostgreSqlSettings>();
-    services.AddPostgresRepositories(postgresSettings);
+    services.AddPostgresRepositories(config);
 }
 
 async Task SetConfigurationProviders(ConfigurationManager config)
@@ -213,32 +208,4 @@ async Task ConnectToKeyVaultAndSetApplicationInsights(ConfigurationManager confi
 void AddInputModelValidators(IServiceCollection services)
 {
     services.AddSingleton<IValidator<EmailNotificationOrderRequestExt>, EmailNotificationOrderRequestValidator>();
-}
-
-void ConfigurePostgreSql(ConfigurationManager config)
-{
-    PostgreSqlSettings postgreSettings = new();
-    config.GetSection("PostgreSQLSettings").Bind(postgreSettings);
-    if (postgreSettings.EnableDBConnection)
-    {
-        ConsoleTraceService traceService = new() { IsDebugEnabled = true };
-
-        string connectionString = string.Format(postgreSettings.AdminConnectionString, postgreSettings.NotificationsDbAdminPwd);
-
-        string fullWorkspacePath = builder.Environment.IsDevelopment() ?
-            Path.Combine(Directory.GetParent(Environment.CurrentDirectory).FullName, postgreSettings.MigrationScriptPath) :
-            Path.Combine(Environment.CurrentDirectory, postgreSettings.MigrationScriptPath);
-
-        app.UseYuniql(
-            new PostgreSqlDataService(traceService),
-            new PostgreSqlBulkImportService(traceService),
-            traceService,
-            new Configuration
-            {
-                Workspace = fullWorkspacePath,
-                ConnectionString = connectionString,
-                IsAutoCreateDatabase = false,
-                IsDebug = postgreSettings.EnableDebug
-            });
-    }
 }

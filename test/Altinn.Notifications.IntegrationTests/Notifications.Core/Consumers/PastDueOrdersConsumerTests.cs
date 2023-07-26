@@ -13,6 +13,7 @@ using Altinn.Notifications.Integrations.Kafka.Producers;
 using Altinn.Notifications.Persistence.Extensions;
 using Altinn.Notifications.Persistence.Repository;
 
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -91,6 +92,7 @@ public class PastDueOrdersConsumerTests
         Assert.Equal(1, emailNotificationCount);
     }
 
+
     private static IServiceProvider SetUpServices(string topicName)
     {
         Environment.SetEnvironmentVariable("KafkaSettings__PastDueOrdersTopicName", topicName);
@@ -99,16 +101,18 @@ public class PastDueOrdersConsumerTests
         var builder = new ConfigurationBuilder()
             .AddJsonFile($"appsettings.json")
             .AddJsonFile("appsettings.IntegrationTest.json")
-            .AddEnvironmentVariables();     
+            .AddEnvironmentVariables();
 
         var config = builder.Build();
 
-        Persistence.Configuration.PostgreSqlSettings postgresSettings = config.GetSection("PostgreSqlSettings").Get<Persistence.Configuration.PostgreSqlSettings>()!;
+        WebApplication.CreateBuilder()
+                       .Build()
+                       .SetUpPostgreSql(true, config);
 
         IServiceCollection services = new ServiceCollection()
             .AddLogging()
             .AddCoreServices(config)
-            .AddPostgresRepositories(postgresSettings)
+            .AddPostgresRepositories(config)
             .AddKafkaServices(config);
 
         return services.BuildServiceProvider();
