@@ -17,7 +17,7 @@ public interface IEmailNotificationsRepository
     /// <summary>
     /// Adds a new email notification to the database
     /// </summary>
-    public Task AddEmailNotification(EmailNotification notification, DateTime expiry);
+    public Task AddNotification(EmailNotification notification, DateTime expiry);
 
     /// <summary>
     /// Retrieves all email notifications with status 'new'

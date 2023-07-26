@@ -59,8 +59,11 @@ public class PastDueOrdersConsumerTests : IAsyncDisposable
     }
 
     public async ValueTask DisposeAsync()
-    {
-        await DeleteTopic(_serviceProvider, _pastDueOrdersTopicName);
+    { 
+        // Delete topic
+        var producer = (KafkaProducer)_serviceProvider.GetServices(typeof(IKafkaProducer)).First()!;
+        await producer.DeleteTopicAsync(_pastDueOrdersTopicName);
+        GC.SuppressFinalize(this);
     }
 
     private static IServiceProvider SetUpServices(string topicName)
@@ -112,7 +115,7 @@ public class PastDueOrdersConsumerTests : IAsyncDisposable
         return (int)reader.GetInt64(0);
     }
 
-    private async Task<string> PopulateDbAndTopic(IServiceProvider serviceProvider, string topicName)
+    private static async Task<string> PopulateDbAndTopic(IServiceProvider serviceProvider, string topicName)
     {
         var repository = (OrderRepository)serviceProvider.GetServices(typeof(IOrderRepository)).First()!;
         var persistedOrder = await repository.Create(GetOrder());
@@ -123,12 +126,7 @@ public class PastDueOrdersConsumerTests : IAsyncDisposable
         return persistedOrder.Id;
     }
 
-    private async Task DeleteTopic(IServiceProvider serviceProvider, string topicName)
-    {
-        var producer = (KafkaProducer)serviceProvider.GetServices(typeof(IKafkaProducer)).First()!;
-        await producer.DeleteTopicAsync(topicName);
-    }
-    private NotificationOrder GetOrder()
+    private static NotificationOrder GetOrder()
     {
         return new NotificationOrder()
         {

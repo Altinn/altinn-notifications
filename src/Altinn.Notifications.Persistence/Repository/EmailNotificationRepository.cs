@@ -29,7 +29,7 @@ public class EmailNotificationRepository : IEmailNotificationsRepository
     }
 
     /// <inheritdoc/>
-    public async Task AddEmailNotification(EmailNotification notification, DateTime expiry)
+    public async Task AddNotification(EmailNotification notification, DateTime expiry)
     {
             await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_insertEmailNotificationSql);
 
