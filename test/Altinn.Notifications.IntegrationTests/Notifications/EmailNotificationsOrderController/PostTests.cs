@@ -18,9 +18,9 @@ using Microsoft.IdentityModel.Logging;
 
 using Xunit;
 
-namespace Altinn.Notifications.IntegrationTests.RepositoryTests;
+namespace Altinn.Notifications.IntegrationTests.Notifications.EmailNotificationsOrderController;
 
-public class EmailOrderTests : IClassFixture<IntegrationTestWebApplicationFactory<EmailNotificationOrdersController>>
+public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<EmailNotificationOrdersController>>
 {
     private const string _basePath = "/notifications/api/v1/orders/email";
 
@@ -28,7 +28,7 @@ public class EmailOrderTests : IClassFixture<IntegrationTestWebApplicationFactor
 
     private readonly EmailNotificationOrderRequestExt _orderRequestExt;
 
-    public EmailOrderTests(IntegrationTestWebApplicationFactory<EmailNotificationOrdersController> factory)
+    public PostTests(IntegrationTestWebApplicationFactory<EmailNotificationOrdersController> factory)
     {
         _factory = factory;
         _orderRequestExt = new()
@@ -71,8 +71,8 @@ public class EmailOrderTests : IClassFixture<IntegrationTestWebApplicationFactor
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-        Assert.Equal("https://platform.at22.altinn.cloud/notifications/api/v1/orders/" + orderId, response.Headers?.Location?.ToString());
         Guid.Parse(orderId);
+        Assert.Equal("https://platform.at22.altinn.cloud/notifications/api/v1/orders/" + orderId, response.Headers?.Location?.ToString());
     }
 
     private HttpClient GetTestClient()

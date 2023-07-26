@@ -1,5 +1,4 @@
 ﻿using Altinn.Notifications.Core.Models;
-using Altinn.Notifications.Core.Models.NotificationTemplate;
 
 namespace Altinn.Notifications.Core.Services.Interfaces;
 
@@ -11,7 +10,7 @@ public interface IEmailNotificationService
     /// <summary>
     /// Process all email notifications.
     /// </summary>
-    public Task CreateEmailNotification(string orderId, DateTime requestedSendTime, Recipient recipient);
+    public Task CreateNotification(string orderId, DateTime requestedSendTime, Recipient recipient);
 
     /// <summary>
     /// Stats the process of sending all ready email notifications

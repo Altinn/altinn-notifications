@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 using Altinn.Notifications.Core.Configuration;
@@ -9,7 +7,6 @@ using Altinn.Notifications.Core.Integrations.Interfaces;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Notification;
-using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Repository.Interfaces;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
@@ -23,8 +20,8 @@ using Xunit;
 namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 public class EmailNotificationServiceTests
 {
-    private const string emailQueueTopicName = "email.queue";
-    private readonly Email email = new Email(Guid.NewGuid().ToString(), "email.subject", "email.body", "from@domain.com", "to@domain.com", Altinn.Notifications.Core.Enums.EmailContentType.Plain);
+    private const string _emailQueueTopicName = "email.queue";
+    private readonly Email _email = new(Guid.NewGuid().ToString(), "email.subject", "email.body", "from@domain.com", "to@domain.com", Altinn.Notifications.Core.Enums.EmailContentType.Plain);
 
     [Fact]
     public async Task SendNotifications_ProducerCalledOnceForEachRetrievedEmail()
@@ -32,10 +29,10 @@ public class EmailNotificationServiceTests
         // Arrange 
         var repoMock = new Mock<IEmailNotificationsRepository>();
         repoMock.Setup(r => r.GetNewNotifications())
-            .ReturnsAsync(new List<Email>() { email, email, email });
+            .ReturnsAsync(new List<Email>() { _email, _email, _email });
 
         var producerMock = new Mock<IKafkaProducer>();
-        producerMock.Setup(p => p.ProduceAsync(It.Is<string>(s => s.Equals(emailQueueTopicName)), It.IsAny<string>()));
+        producerMock.Setup(p => p.ProduceAsync(It.Is<string>(s => s.Equals(_emailQueueTopicName)), It.IsAny<string>()));
 
         var service = GetTestService(repo: repoMock.Object, producer: producerMock.Object);
 
@@ -44,7 +41,7 @@ public class EmailNotificationServiceTests
 
         // Assert
         repoMock.Verify();
-        producerMock.Verify(p => p.ProduceAsync(It.Is<string>(s => s.Equals(emailQueueTopicName)), It.IsAny<string>()), Times.Exactly(3));
+        producerMock.Verify(p => p.ProduceAsync(It.Is<string>(s => s.Equals(_emailQueueTopicName)), It.IsAny<string>()), Times.Exactly(3));
     }
 
     [Fact]
@@ -72,7 +69,7 @@ public class EmailNotificationServiceTests
         var service = GetTestService(repo: repoMock.Object, guidOutput: id, dateTimeOutput: dateTimeOutput);
 
         // Act
-        await service.CreateEmailNotification("orderid", requestedSendTime, new Recipient("skd", new List<IAddressPoint>() { new EmailAddressPoint("skd@norge.no") }));
+        await service.CreateNotification("orderid", requestedSendTime, new Recipient("skd", new List<IAddressPoint>() { new EmailAddressPoint("skd@norge.no") }));
 
         // Assert
         repoMock.Verify();
@@ -102,7 +99,7 @@ public class EmailNotificationServiceTests
         var service = GetTestService(repo: repoMock.Object, guidOutput: id, dateTimeOutput: dateTimeOutput);
 
         // Act
-        await service.CreateEmailNotification("orderid", requestedSendTime, new Recipient("skd", new List<IAddressPoint>()));
+        await service.CreateNotification("orderid", requestedSendTime, new Recipient("skd", new List<IAddressPoint>()));
 
         // Assert
         repoMock.Verify();
@@ -131,6 +128,6 @@ public class EmailNotificationServiceTests
             producer = _producer.Object;
         }
 
-        return new EmailNotificationService(guidService.Object, dateTimeService.Object, repo, producer, Options.Create(new KafkaSettings { EmailQueueTopicName = emailQueueTopicName }));
+        return new EmailNotificationService(guidService.Object, dateTimeService.Object, repo, producer, Options.Create(new KafkaSettings { EmailQueueTopicName = _emailQueueTopicName }));
     }
 }

@@ -50,7 +50,6 @@ public class EmailNotificationOrderService : IEmailNotificationOrderService
 
         NotificationOrder savedOrder = await _repository.Create(order);
 
-        // push to kafka 
         return (savedOrder, null);
     }
 

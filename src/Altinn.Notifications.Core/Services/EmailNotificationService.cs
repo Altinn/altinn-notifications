@@ -42,17 +42,17 @@ public class EmailNotificationService : IEmailNotificationService
     }
 
     /// <inheritdoc/>
-    public async Task CreateEmailNotification(string orderId, DateTime requestedSendTime, Recipient recipient)
+    public async Task CreateNotification(string orderId, DateTime requestedSendTime, Recipient recipient)
     {
         EmailAddressPoint? addressPoint = recipient.AddressInfo.Find(a => a.AddressType == AddressType.Email) as EmailAddressPoint;
 
         if (!string.IsNullOrEmpty(addressPoint?.EmailAddress))
         {
-            await CreateEmailNotificationForRecipient(orderId, requestedSendTime, recipient.RecipientId, addressPoint.EmailAddress);
+            await CreateNotificationForRecipient(orderId, requestedSendTime, recipient.RecipientId, addressPoint.EmailAddress, EmailNotificationResultType.New);
         }
         else
         {
-            await CreateEmailNotificationForRecipient(orderId, requestedSendTime, recipient.RecipientId, string.Empty, EmailNotificationResultType.Failed_RecipientNotIdentified);
+            await CreateNotificationForRecipient(orderId, requestedSendTime, recipient.RecipientId, string.Empty, EmailNotificationResultType.Failed_RecipientNotIdentified);
         }
     }
 
@@ -67,7 +67,7 @@ public class EmailNotificationService : IEmailNotificationService
         }
     }
 
-    private async Task CreateEmailNotificationForRecipient(string orderId, DateTime requestedSendTime, string recipientId, string toAddress, EmailNotificationResultType result = EmailNotificationResultType.New)
+    private async Task CreateNotificationForRecipient(string orderId, DateTime requestedSendTime, string recipientId, string toAddress, EmailNotificationResultType result)
     {
         var emailNotification = new EmailNotification()
         {
