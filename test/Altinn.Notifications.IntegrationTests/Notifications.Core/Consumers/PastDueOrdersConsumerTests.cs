@@ -27,8 +27,8 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Core.Consumers;
 
 public class PastDueOrdersConsumerTests : IAsyncDisposable
 {
-    string _pastDueOrdersTopicName = Guid.NewGuid().ToString();
-    private IServiceProvider _serviceProvider;
+    private readonly string _pastDueOrdersTopicName = Guid.NewGuid().ToString();
+    private IServiceProvider _serviceProvider = new ServiceCollection().BuildServiceProvider();
 
     [Fact]
     public async Task RunTask_ConfirmExpectedSideEffects()

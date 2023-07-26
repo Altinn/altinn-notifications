@@ -29,16 +29,16 @@ public class EmailNotificationRepository : IEmailNotificationsRepository
     }
 
     /// <inheritdoc/>
-    public async Task AddEmailNotification(EmailNotification emailNotification, DateTime expiry)
+    public async Task AddEmailNotification(EmailNotification notification, DateTime expiry)
     {
             await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_insertEmailNotificationSql);
 
-            pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, new Guid(emailNotification.OrderId));
-            pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, new Guid(emailNotification.Id));
-            pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, emailNotification.RecipientId ?? (object)DBNull.Value);
-            pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, emailNotification.ToAddress);
-            pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, emailNotification.SendResult.Result.ToString());
-            pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, emailNotification.SendResult.ResultTime);
+            pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, new Guid(notification.OrderId));
+            pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, new Guid(notification.Id));
+            pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.RecipientId ?? (object)DBNull.Value);
+            pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.ToAddress);
+            pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.SendResult.Result.ToString());
+            pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, notification.SendResult.ResultTime);
             pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, expiry);
 
             await pgcom.ExecuteNonQueryAsync();      
