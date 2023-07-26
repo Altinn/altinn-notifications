@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Configuration;
+﻿using System;
+
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Extensions;
 using Altinn.Notifications.Core.Integrations.Consumers;
@@ -24,54 +25,20 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Core.Consumers;
 
-public class PastDueOrdersConsumerTests
+public class PastDueOrdersConsumerTests : IAsyncDisposable
 {
-    private readonly NotificationOrder _order = new()
-    {
-        Id = Guid.NewGuid().ToString(),
-        SendersReference = "senders-reference",
-        Templates = new List<INotificationTemplate>()
-            {
-                new EmailTemplate()
-                {
-                    Type = NotificationTemplateType.Email,
-                    FromAddress = "sender@domain.com",
-                    Subject = "email-subject",
-                    Body = "email-body",
-                    ContentType = EmailContentType.Html
-                }
-            },
-        RequestedSendTime = DateTime.UtcNow,
-        NotificationChannel = NotificationChannel.Email,
-        Creator = new("ttd"),
-        Created = DateTime.UtcNow,
-        Recipients = new List<Recipient>()
-            {
-                new Recipient()
-                {
-                    RecipientId = "recipient1",
-                    AddressInfo = new()
-                    {
-                        new EmailAddressPoint()
-                        {
-                            AddressType = AddressType.Email,
-                            EmailAddress = "recipient1@domain.com"
-                        }
-                    }
-                }
-            }
-    };
+    string _pastDueOrdersTopicName = Guid.NewGuid().ToString();
+    private IServiceProvider _serviceProvider;
 
     [Fact]
     public async Task RunTask_ConfirmExpectedSideEffects()
     {
         // Arrange
-        string pastDueOrdersTopicName = Guid.NewGuid().ToString();
-        IServiceProvider serviceProvider = SetUpServices(pastDueOrdersTopicName);
+        _serviceProvider = SetUpServices(_pastDueOrdersTopicName);
 
-        string orderId = await PopulateDbAndTopic(serviceProvider, pastDueOrdersTopicName);
+        string orderId = await PopulateDbAndTopic(_serviceProvider, _pastDueOrdersTopicName);
 
-        var consumerService = serviceProvider
+        var consumerService = _serviceProvider
             .GetServices<IHostedService>()
             .First(s => s.GetType() == typeof(PastDueOrdersConsumer));
 
@@ -81,17 +48,20 @@ public class PastDueOrdersConsumerTests
         await consumerService.StopAsync(CancellationToken.None);
 
         // Assert
-        var dataSource = (NpgsqlDataSource)serviceProvider.GetServices(typeof(NpgsqlDataSource)).First()!;
+        var dataSource = (NpgsqlDataSource)_serviceProvider.GetServices(typeof(NpgsqlDataSource)).First()!;
         long completedOrderCound = await SelectCompletedOrderCount(dataSource, orderId);
         long emailNotificationCount = await SelectEmailNotificationCount(dataSource, orderId);
 
-        // Cleanup
-        await DeleteTopic(serviceProvider, pastDueOrdersTopicName);
+
 
         Assert.Equal(1, completedOrderCound);
         Assert.Equal(1, emailNotificationCount);
     }
 
+    public async ValueTask DisposeAsync()
+    {
+        await DeleteTopic(_serviceProvider, _pastDueOrdersTopicName);
+    }
 
     private static IServiceProvider SetUpServices(string topicName)
     {
@@ -145,7 +115,7 @@ public class PastDueOrdersConsumerTests
     private async Task<string> PopulateDbAndTopic(IServiceProvider serviceProvider, string topicName)
     {
         var repository = (OrderRepository)serviceProvider.GetServices(typeof(IOrderRepository)).First()!;
-        var persistedOrder = await repository.Create(_order);
+        var persistedOrder = await repository.Create(GetOrder());
 
         var producer = (KafkaProducer)serviceProvider.GetServices(typeof(IKafkaProducer)).First()!;
         await producer.ProduceAsync(topicName, persistedOrder.Serialize());
@@ -157,5 +127,43 @@ public class PastDueOrdersConsumerTests
     {
         var producer = (KafkaProducer)serviceProvider.GetServices(typeof(IKafkaProducer)).First()!;
         await producer.DeleteTopicAsync(topicName);
+    }
+    private NotificationOrder GetOrder()
+    {
+        return new NotificationOrder()
+        {
+            Id = Guid.NewGuid().ToString(),
+            SendersReference = "senders-reference",
+            Templates = new List<INotificationTemplate>()
+            {
+                new EmailTemplate()
+                {
+                    Type = NotificationTemplateType.Email,
+                    FromAddress = "sender@domain.com",
+                    Subject = "email-subject",
+                    Body = "email-body",
+                    ContentType = EmailContentType.Html
+                }
+            },
+            RequestedSendTime = DateTime.UtcNow,
+            NotificationChannel = NotificationChannel.Email,
+            Creator = new("ttd"),
+            Created = DateTime.UtcNow,
+            Recipients = new List<Recipient>()
+            {
+                new Recipient()
+                {
+                    RecipientId = "recipient1",
+                    AddressInfo = new()
+                    {
+                        new EmailAddressPoint()
+                        {
+                            AddressType = AddressType.Email,
+                            EmailAddress = "recipient1@domain.com"
+                        }
+                    }
+                }
+            }
+        };
     }
 }
