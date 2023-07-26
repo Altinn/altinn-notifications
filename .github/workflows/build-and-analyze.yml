@@ -73,17 +73,11 @@ jobs:
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
 
           dotnet-sonarscanner end /d:sonar.login="${{ secrets.SONAR_TOKEN }}"
-      - name: Annotate Test Failures
+      - name: Parse .NET test result
         if: ${{ failure() }}
-        run: |
-          # Install XMLStarlet for parsing XML files
-          sudo apt-get update -y
-          sudo apt-get install -y xmlstarlet
-
-          # Parse the .trx file and identify the failed tests
-          failed_tests=$(xmlstarlet sel -t -v "//UnitTestResult[@outcome='Failed']//@testName" $GITHUB_WORKSPACE/unittests.trx)
-
-          # Annotate each failed test
-          for test in $failed_tests; do
-            echo "::error file=${GITHUB_WORKSPACE}/UnitTest1.cs,line=1,col=1::Test $test failed"
-          done
+        uses: NasAmin/trx-parser@v0.1
+        id: trx-parser
+        with:
+          TRX_PATH: ${{ github.workspace }}/TestResults #This should be the path to your TRX files
+          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}                   
+     
