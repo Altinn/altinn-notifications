@@ -14,13 +14,13 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.TriggerController;
 
-public class Trigger_PastDueOrdersTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.TriggerController>>
+public class Trigger_SendEmailNotificationsTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.TriggerController>>
 {
-    private const string _basePath = "/notifications/api/v1/trigger/pastdueorders";
+    private const string _basePath = "/notifications/api/v1/trigger/sendemail";
 
     private readonly IntegrationTestWebApplicationFactory<Controllers.TriggerController> _factory;
 
-    public Trigger_PastDueOrdersTests(IntegrationTestWebApplicationFactory<Controllers.TriggerController> factory)
+    public Trigger_SendEmailNotificationsTests(IntegrationTestWebApplicationFactory<Controllers.TriggerController> factory)
     {
         _factory = factory;
     }
