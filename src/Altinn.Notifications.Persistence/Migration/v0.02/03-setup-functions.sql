@@ -31,8 +31,8 @@ BEGIN
 RETURN query 
 	WITH updated AS (
 		UPDATE notifications.emailnotifications
-			SET result = 'sending'
-			WHERE result = 'new' 
+			SET result = 'Sending'
+			WHERE result = 'New' 
 			RETURNING _id, _orderid, notifications.emailnotifications.toaddress)
 	SELECT u._id, et.subject, et.body, et.fromaddress, u.toaddress, et.contenttype 
 	FROM updated u, notifications.emailtexts et
