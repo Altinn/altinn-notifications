@@ -63,7 +63,7 @@ public class EmailNotificationService : IEmailNotificationService
 
         foreach (Email email in emails)
         {
-            await _producer.ProduceAsync(_emailQueueTopicName, JsonSerializer.Serialize(email));
+            bool success = await _producer.ProduceAsync(_emailQueueTopicName, JsonSerializer.Serialize(email));
         }
     }
 

@@ -31,6 +31,7 @@ public class OrderRepository : IOrderRepository
     /// <inheritdoc/>
     public async Task<NotificationOrder> Create(NotificationOrder order)
     {
+        // check if this can be a transaction instead.
         long dbOrderId = await InsertOrder(order);
 
         EmailTemplate? emailTemplate = ExtractTemplates(order);

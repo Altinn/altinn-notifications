@@ -38,7 +38,7 @@ public class OrderProcessingService : IOrderProcessingService
 
         foreach (NotificationOrder order in pastDueOrders)
         {
-            await _producer.ProduceAsync(_pastDueOrdersTopic, order.Serialize());
+            bool success = await _producer.ProduceAsync(_pastDueOrdersTopic, order.Serialize());
         }
     }
 

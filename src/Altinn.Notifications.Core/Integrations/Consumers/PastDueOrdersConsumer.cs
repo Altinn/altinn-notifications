@@ -27,8 +27,8 @@ public class PastDueOrdersConsumer : IHostedService
     public PastDueOrdersConsumer(IOrderProcessingService orderProcessingService, IOptions<KafkaSettings> settings, ILogger<PastDueOrdersConsumer> logger)
     {
         _orderProcessingService = orderProcessingService;
-        _logger = logger;
         _settings = settings.Value;
+        _logger = logger;
         _cancellationTokenSource = new CancellationTokenSource();
 
         var consumerConfig = new ConsumerConfig

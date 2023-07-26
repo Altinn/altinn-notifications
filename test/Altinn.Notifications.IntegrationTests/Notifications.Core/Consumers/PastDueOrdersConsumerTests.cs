@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using Altinn.Notifications.Core.Configuration;
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Extensions;
 using Altinn.Notifications.Core.Integrations.Consumers;
 using Altinn.Notifications.Core.Integrations.Interfaces;
@@ -60,6 +61,7 @@ public class PastDueOrdersConsumerTests
             }
     };
 
+    [Fact]
     public async Task RunTask_ConfirmExpectedSideEffects()
     {
         // Arrange
@@ -88,16 +90,13 @@ public class PastDueOrdersConsumerTests
 
     private static IServiceProvider SetUpServices(string topicName)
     {
+        Environment.SetEnvironmentVariable("KafkaSettings__PastDueOrdersTopicName", topicName);
+        Environment.SetEnvironmentVariable("KafkaSettings__TopicList", $"[\"{topicName}\"]");
+
         var builder = new ConfigurationBuilder()
-            .AddJsonFile($"appsettings.json", optional: false)
-            .AddJsonFile("appsettings.IntegrationTest.json");
-
-        builder.AddInMemoryCollection(new List<KeyValuePair<string, string?>>()
-        {
-            new( "KafkaSettings:PastDueOrdersTopicName", topicName ),
-            new( "KafkaSettings:TopicList", $"[{topicName}]" )
-
-        });
+            .AddJsonFile($"appsettings.json")
+            .AddJsonFile("appsettings.IntegrationTest.json")
+            .AddEnvironmentVariables();     
 
         var config = builder.Build();
 
