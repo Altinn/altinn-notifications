@@ -84,6 +84,9 @@ public class PastDueOrdersConsumerTests
         long completedOrderCound = await SelectCompletedOrderCount(dataSource, orderId);
         long emailNotificationCount = await SelectEmailNotificationCount(dataSource, orderId);
 
+        // Cleanup
+        await DeleteTopic(serviceProvider, pastDueOrdersTopicName);
+
         Assert.Equal(1, completedOrderCound);
         Assert.Equal(1, emailNotificationCount);
     }
@@ -144,5 +147,11 @@ public class PastDueOrdersConsumerTests
         await producer.ProduceAsync(topicName, persistedOrder.Serialize());
 
         return persistedOrder.Id;
+    }
+
+    private async Task DeleteTopic(IServiceProvider serviceProvider, string topicName)
+    {
+        var producer = (KafkaProducer)serviceProvider.GetServices(typeof(IKafkaProducer)).First()!;
+        await producer.DeleteTopicAsync(topicName);
     }
 }

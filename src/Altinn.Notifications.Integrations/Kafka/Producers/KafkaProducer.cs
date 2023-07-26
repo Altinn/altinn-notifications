@@ -66,6 +66,22 @@ public class KafkaProducer : IKafkaProducer, IDisposable
     }
 
     /// <inheritdoc/>
+    public async Task<bool> DeleteTopicAsync(string topic)
+    {
+        using var adminClient = new AdminClientBuilder(new Dictionary<string, string>() { { "bootstrap.servers", _settings.BrokerAddress } }).Build();
+        try
+        {
+            await adminClient.DeleteTopicsAsync(new string[] { topic });
+            return true;
+        }
+        catch (DeleteTopicsException ex)
+        {
+            _logger.LogError(ex, "// KafkaProducer // DeleteTopic // Failed to delete topic '{Topic}'", topic);
+            throw;
+        }
+    }
+
+    /// <inheritdoc/>
     public void Dispose()
     {
         Dispose(true);
@@ -90,7 +106,7 @@ public class KafkaProducer : IKafkaProducer, IDisposable
             if (!existingTopics.Exists(t => t.Topic.Equals(topic, StringComparison.OrdinalIgnoreCase)))
             {
                 try
-                {
+                {      
                     adminClient.CreateTopicsAsync(new TopicSpecification[]
                     {
                         new TopicSpecification
