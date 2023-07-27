@@ -8,13 +8,12 @@ namespace Altinn.Notifications.Core.Services.Interfaces;
 public interface IEmailNotificationService
 {
     /// <summary>
-    /// Process all email notifications.
+    /// Creates a new email notification based on the provided orderId and recipient
     /// </summary>
     public Task CreateNotification(string orderId, DateTime requestedSendTime, Recipient recipient);
 
     /// <summary>
-    /// Stats the process of sending all ready email notifications
+    /// Starts the process of sending all ready email notifications
     /// </summary>
-    /// <returns></returns>
     public Task SendNotifications();
 }
