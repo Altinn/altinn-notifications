@@ -49,12 +49,10 @@ public class PastDueOrdersConsumerTests : IAsyncDisposable
 
         // Assert
         var dataSource = (NpgsqlDataSource)_serviceProvider.GetServices(typeof(NpgsqlDataSource)).First()!;
-        long completedOrderCound = await SelectCompletedOrderCount(dataSource, orderId);
+        long completedOrderCount = await SelectCompletedOrderCount(dataSource, orderId);
         long emailNotificationCount = await SelectEmailNotificationCount(dataSource, orderId);
 
-
-
-        Assert.Equal(1, completedOrderCound);
+        Assert.Equal(1, completedOrderCount);
         Assert.Equal(1, emailNotificationCount);
     }
 
