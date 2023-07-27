@@ -54,7 +54,7 @@ public class EmailNotificationRepository : IEmailNotificationsRepository
         {
             while (await reader.ReadAsync())
             {
-                EmailContentType emailContentType = (EmailContentType) Enum.Parse(typeof(EmailContentType), reader.GetValue<string>("contenttype"));
+                EmailContentType emailContentType = (EmailContentType)Enum.Parse(typeof(EmailContentType), reader.GetValue<string>("contenttype"));
                 
                 Email email = new Email(
                     reader.GetValue<int>("id").ToString(),
