@@ -56,7 +56,7 @@ public class EmailNotificationRepository : IEmailNotificationsRepository
             {
                 EmailContentType emailContentType = (EmailContentType)Enum.Parse(typeof(EmailContentType), reader.GetValue<string>("contenttype"));
                 
-                Email email = new Email(
+                var email = new Email(
                     reader.GetValue<int>("id").ToString(),
                     reader.GetValue<string>("subject"),
                     reader.GetValue<string>("body"),

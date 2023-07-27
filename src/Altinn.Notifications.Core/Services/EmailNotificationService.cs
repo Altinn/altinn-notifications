@@ -63,6 +63,7 @@ public class EmailNotificationService : IEmailNotificationService
 
         foreach (Email email in emails)
         {
+            // if false could set status back to Registered in db for order? 
             bool success = await _producer.ProduceAsync(_emailQueueTopicName, JsonSerializer.Serialize(email));
         }
     }
