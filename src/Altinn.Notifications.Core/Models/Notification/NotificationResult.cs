@@ -3,7 +3,7 @@
 namespace Altinn.Notifications.Core.Models.Notification;
 
 /// <summary>
-/// Notification result class
+/// A class represednting a notification result
 /// </summary>
 public class NotificationResult<TEnum>
     where TEnum : struct, Enum

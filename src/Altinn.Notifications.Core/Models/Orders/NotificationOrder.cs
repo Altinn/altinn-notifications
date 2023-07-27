@@ -104,7 +104,7 @@ public class NotificationOrder
     }
 
     /// <summary>
-    /// Try to parse a json string into the <see cref="NotificationOrder"/>
+    /// Try to parse a json string into a<see cref="NotificationOrder"/>
     /// </summary>
     public static bool TryParse(string input, out NotificationOrder value)
     {
