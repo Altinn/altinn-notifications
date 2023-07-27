@@ -10,7 +10,7 @@ using Microsoft.Extensions.Options;
 namespace Altinn.Notifications.Integrations.Kafka.Producers;
 
 /// <summary>
-/// Implementation of a kafka producer
+/// Implementation of a Kafka producer
 /// </summary>
 public class KafkaProducer : IKafkaProducer, IDisposable
 {
@@ -106,7 +106,7 @@ public class KafkaProducer : IKafkaProducer, IDisposable
             if (!existingTopics.Exists(t => t.Topic.Equals(topic, StringComparison.OrdinalIgnoreCase)))
             {
                 try
-                {      
+                {
                     adminClient.CreateTopicsAsync(new TopicSpecification[]
                     {
                         new TopicSpecification

@@ -1,12 +1,12 @@
 ﻿namespace Altinn.Notifications.Integrations.Configuration;
 
 /// <summary>
-/// Configuration object used to hold settings for a kafka integration settings.
+/// Configuration object used to hold settings for a Kafka integration settings.
 /// </summary>
 public class KafkaSettings
 {
     /// <summary>
-    /// The address of the kafka broker
+    /// The address of the Kafka broker
     /// </summary>
     public string BrokerAddress { get; set; } = string.Empty;
 
