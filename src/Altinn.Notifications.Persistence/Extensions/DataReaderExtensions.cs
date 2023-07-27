@@ -17,7 +17,7 @@ namespace Altinn.Notifications.Persistence.Extensions
         /// <returns>The reader value when present, otherwise the default value.</returns>
         public static T GetValue<T>(this IDataReader reader, string colName)
         {
-            return GetValue<T>(reader, colName, default);
+            return GetValue<T>(reader, colName, default!);
         }
 
         /// <summary>
@@ -52,7 +52,7 @@ namespace Altinn.Notifications.Persistence.Extensions
                     }
                     else
                     {
-                        return (T)Enum.Parse(typeof(T), dbValue.ToString());
+                        return (T)Enum.Parse(typeof(T), dbValue.ToString()!);
                     }
                 }
 
@@ -69,7 +69,7 @@ namespace Altinn.Notifications.Persistence.Extensions
                     = "Error trying to interpret data in column '{0}'. The reader value is '{1}', of type '{2}'. "
                     + "Attempt to interpret the value as type '{3}' failed.";
 
-                string strVal = dbValue.ToString();
+                string strVal = dbValue.ToString()!;
                 if (strVal.Length > 100)
                 {
                     strVal = string.Format($"{strVal.Substring(0, 100)} (truncated; length={strVal.Length}).");

@@ -11,7 +11,7 @@ using Microsoft.Extensions.Options;
 namespace Altinn.Notifications.Core.Integrations.Consumers;
 
 /// <summary>
-/// Kafka Consumer class for past due orders
+/// Kafka consumer class for past due orders
 /// </summary>
 public class PastDueOrdersConsumer : IHostedService
 {
@@ -24,7 +24,10 @@ public class PastDueOrdersConsumer : IHostedService
     /// <summary>
     /// Initializes a new instance of the <see cref="PastDueOrdersConsumer"/> class.
     /// </summary>
-    public PastDueOrdersConsumer(IOrderProcessingService orderProcessingService, IOptions<KafkaSettings> settings, ILogger<PastDueOrdersConsumer> logger)
+    public PastDueOrdersConsumer(
+    	IOrderProcessingService orderProcessingService, 
+    	IOptions<KafkaSettings> settings, 
+    	ILogger<PastDueOrdersConsumer> logger)
     {
         _orderProcessingService = orderProcessingService;
         _settings = settings.Value;
