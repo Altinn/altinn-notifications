@@ -20,8 +20,8 @@ public interface IEmailNotificationsRepository
     public Task AddNotification(EmailNotification notification, DateTime expiry);
 
     /// <summary>
-    /// Retrieves all email notifications with status 'new'
+    /// Retrieves all email notifications with status 'New'
     /// </summary>
-    /// <returns></returns>
+    /// <returns>A list of emails</returns>
     public Task<List<Email>> GetNewNotifications();
 }
