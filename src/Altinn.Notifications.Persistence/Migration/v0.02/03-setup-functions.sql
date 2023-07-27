@@ -6,10 +6,10 @@ AS $BODY$
 BEGIN
 RETURN QUERY
 	UPDATE notifications.orders
-	SET processedstatus = 'processing'
+	SET processedstatus = 'Processing'
 	WHERE _id IN (select _id 
 				 from notifications.orders 
-				 where processedstatus = 'registered' 
+				 where processedstatus = 'Registered' 
 				 and requestedsendtime <= now()
 				 limit 50)
 	RETURNING cast(notificationorder as text) AS notificationorders;

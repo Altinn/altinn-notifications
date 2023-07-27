@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS notifications.orders
 	created TIMESTAMPTZ NOT NULL,
 	requestedsendtime TIMESTAMPTZ NOT NULL,
 	processed TIMESTAMPTZ,
-	processedstatus orderprocessingstate DEFAULT 'registered',
+	processedstatus orderprocessingstate DEFAULT 'Registered',
 	notificationorder JSONB NOT NULL
 );
 
