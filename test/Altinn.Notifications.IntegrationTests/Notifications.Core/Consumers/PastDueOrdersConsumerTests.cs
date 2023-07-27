@@ -9,6 +9,7 @@ using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Repository.Interfaces;
 using Altinn.Notifications.Integrations.Extensions;
 using Altinn.Notifications.Integrations.Kafka.Producers;
+using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Extensions;
 using Altinn.Notifications.Persistence.Repository;
 
@@ -27,7 +28,7 @@ public class PastDueOrdersConsumerTests : IAsyncDisposable
 {
     private readonly string _pastDueOrdersTopicName = Guid.NewGuid().ToString();
     private IServiceProvider _serviceProvider = new ServiceCollection().BuildServiceProvider();
-    
+
     [Fact]
     public async Task RunTask_ConfirmExpectedSideEffects()
     {
@@ -56,9 +57,7 @@ public class PastDueOrdersConsumerTests : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        // Delete topic
-        var producer = (KafkaProducer)_serviceProvider.GetServices(typeof(IKafkaProducer)).First()!;
-        await producer.DeleteTopicAsync(_pastDueOrdersTopicName);
+        await KafkaUtil.DeleteTopicAsync(_pastDueOrdersTopicName);
         GC.SuppressFinalize(this);
     }
 
