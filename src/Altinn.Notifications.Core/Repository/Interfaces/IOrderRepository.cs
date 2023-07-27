@@ -22,7 +22,7 @@ public interface IOrderRepository
     public Task<List<NotificationOrder>> GetPastDueOrdersAndSetProcessingState();
 
     /// <summary>
-    /// Sets processing status status on an order
+    /// Sets processing status of an order
     /// </summary>
     public Task SetProcessingStatus(string orderId, OrderProcessingStatus status);
 }
