@@ -4,7 +4,7 @@ namespace Altinn.Notifications.Tests;
 public static class AssertUtils
 {
     /// <summary>
-    /// Checks equality for two types
+    /// Checks equivalency of two object of type T
     /// </summary>
     public static bool AreEquivalent<T>(T expected, T actual)
     {
