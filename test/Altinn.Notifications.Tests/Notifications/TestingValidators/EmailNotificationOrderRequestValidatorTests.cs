@@ -5,6 +5,8 @@ using System.Linq;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Validators;
 
+using FluentValidation;
+
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.TestingValidators;
@@ -15,6 +17,7 @@ public class EmailNotificationOrderRequestValidatorTests
 
     public EmailNotificationOrderRequestValidatorTests()
     {
+        ValidatorOptions.Global.LanguageManager.Enabled = false;
         _validator = new EmailNotificationOrderRequestValidator();
     }
 
