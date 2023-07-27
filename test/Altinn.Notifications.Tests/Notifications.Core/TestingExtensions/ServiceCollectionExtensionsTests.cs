@@ -14,31 +14,25 @@ public class ServiceCollectionExtensionsTests
     [Fact]
     public void AddCoreServices_KafkaSettingsMissing_ThrowsException()
     {
-        Environment.SetEnvironmentVariable("NotificationOrderConfig__DefaultEmailFromAddress", "noreply@altinn.no");
+        Environment.SetEnvironmentVariable("KafkaSettings__PastDueOrdersTopicName", null);
+        Environment.SetEnvironmentVariable("NotificationOrderConfig__DefaultEmailFromAddress", "value");
 
-        var builder = new ConfigurationBuilder()
-            .AddEnvironmentVariables();
-       
-        var config = builder.Build();
+        var config = new ConfigurationBuilder().AddEnvironmentVariables().Build();
 
-        IServiceCollection services = new ServiceCollection()
-           .AddLogging();   
+        IServiceCollection services = new ServiceCollection();
 
         Assert.Throws<ArgumentNullException>(() => services.AddCoreServices(config));
     }
 
-    [Fact]
-    public void AddCoreServices_NotificationOrderConfig_ThrowsException()
-    {
+     [Fact]
+     public void AddCoreServices_NotificationOrderConfigMissing_ThrowsException()
+     {
         Environment.SetEnvironmentVariable("KafkaSettings__PastDueOrdersTopicName", "value");
+        Environment.SetEnvironmentVariable("NotificationOrderConfig__DefaultEmailFromAddress",null);
 
-        var builder = new ConfigurationBuilder()
-            .AddEnvironmentVariables();
+        var config = new ConfigurationBuilder().AddEnvironmentVariables().Build();
 
-        var config = builder.Build();
-
-        IServiceCollection services = new ServiceCollection()
-           .AddLogging();
+        IServiceCollection services = new ServiceCollection();
 
         Assert.Throws<ArgumentNullException>(() => services.AddCoreServices(config));
     }
