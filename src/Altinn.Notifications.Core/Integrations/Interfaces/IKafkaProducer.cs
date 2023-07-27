@@ -13,7 +13,7 @@ public interface IKafkaProducer
     public Task<bool> ProduceAsync(string topic, string message);
 
     /// <summary>
-    /// Delete a kafka topic 
+    /// Delete a Kafka topic 
     /// </summary>
     /// <param name="topic">The topic to delete</param>
     public Task<bool> DeleteTopicAsync(string topic);
