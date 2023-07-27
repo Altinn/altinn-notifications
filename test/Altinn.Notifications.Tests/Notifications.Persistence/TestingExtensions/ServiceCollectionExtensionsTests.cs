@@ -15,10 +15,7 @@ public class ServiceCollectionExtensionsTests
     [Fact]
     public void AddPostgresRepositories_PostgreSettingsMissing_ThrowsException()
     {
-
-        var builder = new ConfigurationBuilder()
-
-        var config = builder.Build();
+        var config = new ConfigurationBuilder().Build();
 
         IServiceCollection services = new ServiceCollection()
            .AddLogging();
