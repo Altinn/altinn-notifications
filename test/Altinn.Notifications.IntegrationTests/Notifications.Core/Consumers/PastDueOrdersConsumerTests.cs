@@ -24,7 +24,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Core.Consumers;
 
-public class PastDueOrdersConsumerTests : IAsyncDisposable
+public class PastDueOrdersConsumerTests : IDisposable
 {
     private readonly string _pastDueOrdersTopicName = Guid.NewGuid().ToString();
     private IServiceProvider _serviceProvider = new ServiceCollection().BuildServiceProvider();
@@ -55,9 +55,9 @@ public class PastDueOrdersConsumerTests : IAsyncDisposable
         Assert.Equal(1, emailNotificationCount);
     }
 
-    public async ValueTask DisposeAsync()
+    public void Dispose()
     {
-        await KafkaUtil.DeleteTopicAsync(_pastDueOrdersTopicName);
+        KafkaUtil.DeleteTopicAsync(_pastDueOrdersTopicName);
         GC.SuppressFinalize(this);
     }
 

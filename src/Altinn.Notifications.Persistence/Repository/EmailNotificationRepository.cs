@@ -31,6 +31,8 @@ public class EmailNotificationRepository : IEmailNotificationsRepository
     /// <inheritdoc/>
     public async Task AddNotification(EmailNotification notification, DateTime expiry)
     {
+        try
+        {
             await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_insertEmailNotificationSql);
 
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, new Guid(notification.OrderId));
@@ -41,7 +43,12 @@ public class EmailNotificationRepository : IEmailNotificationsRepository
             pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, notification.SendResult.ResultTime);
             pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, expiry);
 
-            await pgcom.ExecuteNonQueryAsync();      
+            await pgcom.ExecuteNonQueryAsync();
+        }
+        catch (Exception e)
+        {
+            throw;
+        }               
     }
 
     /// <inheritdoc/>

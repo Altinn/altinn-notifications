@@ -39,6 +39,10 @@ public class OrderProcessingService : IOrderProcessingService
         foreach (NotificationOrder order in pastDueOrders)
         {
             bool success = await _producer.ProduceAsync(_pastDueOrdersTopic, order.Serialize());
+            if (!success)
+            {
+                await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.Registered);
+            }
         }
     }
 
@@ -57,6 +61,6 @@ public class OrderProcessingService : IOrderProcessingService
             }
         }
 
-        await _orderRepository.SetProcessingCompleted(order.Id);
+        await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.Completed);
     }
 }

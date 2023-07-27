@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Models.Orders;
+﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models.Orders;
 
 namespace Altinn.Notifications.Core.Repository.Interfaces;
 
@@ -21,7 +22,7 @@ public interface IOrderRepository
     public Task<List<NotificationOrder>> GetPastDueOrdersAndSetProcessingState();
 
     /// <summary>
-    /// Sets processing complete status on an order
+    /// Sets processing status status on an order
     /// </summary>
-    public Task SetProcessingCompleted(string orderId);
+    public Task SetProcessingStatus(string orderId, OrderProcessingStatus status);
 }

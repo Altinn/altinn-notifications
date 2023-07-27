@@ -96,7 +96,7 @@ public class OrderProcessingServiceTests
         serviceMock.Setup(s => s.CreateNotification(It.IsAny<string>(), It.Is<DateTime>(d => d.Equals(requested)), It.Is<Recipient>(r => AssertUtils.AreEquivalent(expectedRecipient, r))));
 
         var repoMock = new Mock<IOrderRepository>();
-        repoMock.Setup(r => r.SetProcessingCompleted(It.Is<string>(s => s.Equals("orderid"))));
+        repoMock.Setup(r => r.SetProcessingStatus(It.Is<string>(s => s.Equals("orderid")), It.Is<OrderProcessingStatus>(s => s == OrderProcessingStatus.Completed)));
 
         var service = GetTestService(repo: repoMock.Object, emailService: serviceMock.Object);
 
@@ -127,7 +127,7 @@ public class OrderProcessingServiceTests
             .ThrowsAsync(new Exception());
 
         var repoMock = new Mock<IOrderRepository>();
-        repoMock.Setup(r => r.SetProcessingCompleted(It.IsAny<string>()));
+        repoMock.Setup(r => r.SetProcessingStatus(It.IsAny<string>(), It.IsAny<OrderProcessingStatus>()));
 
         var service = GetTestService(repo: repoMock.Object, emailService: serviceMock.Object);
 
@@ -136,7 +136,7 @@ public class OrderProcessingServiceTests
 
         // Assert
         serviceMock.Verify(s => s.CreateNotification(It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<Recipient>()), Times.Once);
-        repoMock.Verify(r => r.SetProcessingCompleted(It.IsAny<string>()), Times.Never);
+        repoMock.Verify(r => r.SetProcessingStatus(It.IsAny<string>(), It.IsAny<OrderProcessingStatus>()), Times.Never);
     }
 
     private static OrderProcessingService GetTestService(IOrderRepository? repo = null, IEmailNotificationService? emailService = null, IKafkaProducer? producer = null)
