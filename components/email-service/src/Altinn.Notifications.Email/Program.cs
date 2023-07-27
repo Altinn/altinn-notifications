@@ -1,5 +1,6 @@
 using Altinn.Notifications.Email.Configuration;
 using Altinn.Notifications.Email.Health;
+using Altinn.Notifications.Email.Startup;
 
 using Azure.Identity;
 using Azure.Security.KeyVault.Secrets;
@@ -7,23 +8,23 @@ using Azure.Security.KeyVault.Secrets;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel;
-using Microsoft.Extensions.Logging.ApplicationInsights;
+using Microsoft.Extensions.FileProviders;
 
 ILogger logger;
 const string AppInsightsKeyName = "ApplicationInsights--InstrumentationKey";
 string applicationInsightsConnectionString = string.Empty;
 
-var builder = WebApplication.CreateBuilder(args);
+WebApplicationBuilder appBuilder = WebApplication.CreateBuilder(args);
 
 ConfigureWebHostCreationLogging();
 
-await SetConfigurationProviders(builder.Configuration);
+await SetConfigurationProviders(appBuilder.Configuration);
 
-ConfigureApplicationLogging(builder.Logging);
+appBuilder.Logging.ConfigureApplicationLogging(applicationInsightsConnectionString);
 
-ConfigureServices(builder.Services, builder.Configuration);
+ConfigureServices(appBuilder.Services, appBuilder.Configuration);
 
-var app = builder.Build();
+var app = appBuilder.Build();
 
 Configure();
 
@@ -31,9 +32,9 @@ app.Run();
 
 void ConfigureWebHostCreationLogging()
 {
-    var logFactory = LoggerFactory.Create(builder =>
+    var logFactory = LoggerFactory.Create(logBuilder =>
     {
-        builder
+        logBuilder
             .AddFilter("Altinn.Notifications.Email.Program", LogLevel.Debug)
             .AddConsole();
     });
@@ -43,29 +44,25 @@ void ConfigureWebHostCreationLogging()
 
 async Task SetConfigurationProviders(ConfigurationManager config)
 {
-    string basePath = Directory.GetParent(Directory.GetCurrentDirectory()).FullName;
-    config.SetBasePath(basePath);
-    string configJsonFile1 = $"{basePath}/altinn-appsettings/altinn-dbsettings-secret.json";
-    string configJsonFile2 = Directory.GetCurrentDirectory() + "/appsettings.json";
-
-    if (basePath == "/")
+    if (Directory.Exists("/altinn-appsettings"))
     {
-        configJsonFile2 = "/app/appsettings.json";
+        logger.LogWarning("Reading altinn-dbsettings-secret.json.");
+        IFileProvider fileProvider = new PhysicalFileProvider("/altinn-appsettings");
+        config.AddJsonFile(fileProvider, "altinn-dbsettings-secret.json", optional: true, reloadOnChange: true);
+    }
+    else
+    {
+        logger.LogWarning("Expected directory \"/altinn-appsettings\" not found.");
     }
 
-    config.AddJsonFile(configJsonFile1, optional: true, reloadOnChange: true);
-    config.AddJsonFile(configJsonFile2, optional: false, reloadOnChange: true);
-
     await ConnectToKeyVaultAndSetApplicationInsights(config);
-
-    config.AddEnvironmentVariables();
-    config.AddCommandLine(args);
 }
 
 async Task ConnectToKeyVaultAndSetApplicationInsights(ConfigurationManager config)
 {
     KeyVaultSettings keyVaultSettings = new();
     config.GetSection("kvSetting").Bind(keyVaultSettings);
+
     if (!string.IsNullOrEmpty(keyVaultSettings.ClientId) &&
         !string.IsNullOrEmpty(keyVaultSettings.TenantId) &&
         !string.IsNullOrEmpty(keyVaultSettings.ClientSecret) &&
@@ -81,52 +78,9 @@ async Task ConnectToKeyVaultAndSetApplicationInsights(ConfigurationManager confi
 
         SecretClient client = new(new Uri(keyVaultSettings.SecretUri), azureCredentials);
 
-        try
-        {
-            KeyVaultSecret keyVaultSecret = await client.GetSecretAsync(AppInsightsKeyName);
-            applicationInsightsConnectionString = string.Format("InstrumentationKey={0}", keyVaultSecret.Value);
-        }
-        catch (Exception vaultException)
-        {
-            logger.LogError(vaultException, $"Unable to read application insights key.");
-        }
+        KeyVaultSecret keyVaultSecret = await client.GetSecretAsync(AppInsightsKeyName);
+        applicationInsightsConnectionString = string.Format("InstrumentationKey={0}", keyVaultSecret.Value);
     }
-}
-
-void ConfigureApplicationLogging(ILoggingBuilder logging)
-{
-    // The default ASP.NET Core project templates call CreateDefaultBuilder, which adds the following logging providers:
-    // Console, Debug, EventSource
-    // https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-3.1
-
-    // Clear log providers
-    logging.ClearProviders();
-
-    // Setup up application insight if applicationInsightsConnectionString is available
-    if (!string.IsNullOrEmpty(applicationInsightsConnectionString))
-    {
-        // Add application insights https://docs.microsoft.com/en-us/azure/azure-monitor/app/ilogger
-        logging.AddApplicationInsights(
-            configureTelemetryConfiguration: (config) => config.ConnectionString = applicationInsightsConnectionString,
-            configureApplicationInsightsLoggerOptions: (options) => { });
-
-        // Optional: Apply filters to control what logs are sent to Application Insights.
-        // The following configures LogLevel Information or above to be sent to
-        // Application Insights for all categories.
-        logging.AddFilter<ApplicationInsightsLoggerProvider>(string.Empty, LogLevel.Warning);
-
-        // Adding the filter below to ensure logs of all severity from Program.cs
-        // is sent to ApplicationInsights.
-        logging.AddFilter<ApplicationInsightsLoggerProvider>(typeof(Program).FullName, LogLevel.Trace);
-    }
-    else
-    {
-        // If not application insight is available log to console
-        logging.AddFilter("Microsoft", LogLevel.Warning);
-        logging.AddFilter("System", LogLevel.Warning);
-    }
-
-    logging.AddConsole();
 }
 
 void ConfigureServices(IServiceCollection services, ConfigurationManager configuration)
