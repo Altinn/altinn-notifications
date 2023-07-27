@@ -11,19 +11,13 @@ namespace Altinn.Notifications.Tests.Notifications.Persistence.TestingExtensions
 
 public class WebApplicationExtensions
 {
-
     [Fact]
-    public void SetUpPostgreSql_PostgreSettings_ThrowsException()
+    public void SetUpPostgreSql_PostgreSettingsMissing_ThrowsException()
     {
-        Environment.SetEnvironmentVariable("PostgreSQLSettings_EnableDBConnection", "true");
 
-        var builder = new ConfigurationBuilder()
-            .AddEnvironmentVariables();
+        var config = new ConfigurationBuilder().Build();
 
-        var config = builder.Build();
-
-        var app = WebApplication.CreateBuilder()
-                         .Build();
+        var app = WebApplication.CreateBuilder().Build();
 
         Assert.Throws<ArgumentNullException>(() => app.SetUpPostgreSql(true, config));
     }
