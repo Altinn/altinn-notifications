@@ -31,17 +31,17 @@ public class EmailNotificationRepository : IEmailNotificationsRepository
     /// <inheritdoc/>
     public async Task AddNotification(EmailNotification notification, DateTime expiry)
     {
-            await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_insertEmailNotificationSql);
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_insertEmailNotificationSql);
 
-            pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, new Guid(notification.OrderId));
-            pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, new Guid(notification.Id));
-            pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.RecipientId ?? (object)DBNull.Value);
-            pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.ToAddress);
-            pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.SendResult.Result.ToString());
-            pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, notification.SendResult.ResultTime);
-            pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, expiry);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, new Guid(notification.OrderId));
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, new Guid(notification.Id));
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.RecipientId ?? (object)DBNull.Value);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.ToAddress);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.SendResult.Result.ToString());
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, notification.SendResult.ResultTime);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, expiry);
 
-            await pgcom.ExecuteNonQueryAsync();      
+        await pgcom.ExecuteNonQueryAsync();
     }
 
     /// <inheritdoc/>
@@ -55,7 +55,7 @@ public class EmailNotificationRepository : IEmailNotificationsRepository
             while (await reader.ReadAsync())
             {
                 EmailContentType emailContentType = (EmailContentType)Enum.Parse(typeof(EmailContentType), reader.GetValue<string>("contenttype"));
-                
+
                 var email = new Email(
                     reader.GetValue<int>("id").ToString(),
                     reader.GetValue<string>("subject"),

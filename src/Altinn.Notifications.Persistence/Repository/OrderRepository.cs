@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Models.NotificationTemplate;
+﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Repository.Interfaces;
 
@@ -16,7 +17,7 @@ public class OrderRepository : IOrderRepository
     private readonly NpgsqlDataSource _dataSource;
     private const string _insertOrderSql = "select notifications.insertorder($1, $2, $3, $4, $5, $6)"; // (_alternateid, _creatorname, _sendersreference, _created, _requestedsendtime, _notificationorder)
     private const string _insertEmailTextSql = "call notifications.insertemailtext($1, $2, $3, $4, $5)"; // (__orderid, _fromaddress, _subject, _body, _contenttype)
-    private const string _setProcessCompleted = "update notifications.orders set processedstatus = 'Completed' where alternateid=$1";
+    private const string _setProcessCompleted = "update notifications.orders set processedstatus =$1::orderprocessingstate where alternateid=$2";
     private const string _getOrdersPastSendTimeUpdateStatus = "select notifications.getorders_pastsendtime_updatestatus()";
 
     /// <summary>
@@ -44,12 +45,11 @@ public class OrderRepository : IOrderRepository
     }
 
     /// <inheritdoc/>
-    public async Task SetProcessingCompleted(string orderId)
+    public async Task SetProcessingStatus(string orderId, OrderProcessingStatus status)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_setProcessCompleted);
-
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, Guid.Parse(orderId));
-
         await pgcom.ExecuteNonQueryAsync();
     }
 
