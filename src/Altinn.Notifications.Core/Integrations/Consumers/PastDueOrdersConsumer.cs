@@ -8,6 +8,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
+using static Confluent.Kafka.ConfigPropertyNames;
+
 namespace Altinn.Notifications.Core.Integrations.Consumers;
 
 /// <summary>
@@ -38,20 +40,13 @@ public class PastDueOrdersConsumer : IHostedService
         {
             BootstrapServers = _settings.BrokerAddress,
             GroupId = _settings.ConsumerGroupId,
-            AutoOffsetReset = AutoOffsetReset.Earliest
+            EnableAutoCommit = false,
+            EnableAutoOffsetStore = false,
+            AutoOffsetReset = AutoOffsetReset.Earliest,
         };
 
         _consumer = new ConsumerBuilder<string, string>(consumerConfig)
-        .SetErrorHandler((_, e) => _logger.LogError("Error: {reason}", e.Reason))
-        .SetStatisticsHandler((_, json) => _logger.LogInformation("Statistics: {json}", json))
-        .SetPartitionsAssignedHandler((c, partitions) =>
-        {
-            _logger.LogInformation("Assigned partitions: [partitions]", string.Join(", ", partitions));
-        })
-        .SetPartitionsRevokedHandler((c, partitions) =>
-        {
-            _logger.LogInformation("Revoking assignment for partitions: [partitions]", string.Join(", ", partitions));
-        })
+        .SetErrorHandler((_, e) => _logger.LogError("// PastDueOrdersConsumer // Error: {reason}", e.Reason))
         .Build();
     }
 
@@ -87,10 +82,14 @@ public class PastDueOrdersConsumer : IHostedService
                 {
                     bool succeeded = NotificationOrder.TryParse(consumeResult.Message.Value, out NotificationOrder? order);
 
-                    if (succeeded)
+                    if (!succeeded)
                     {
-                        await _orderProcessingService.ProcessOrder(order!);
+                        continue;
                     }
+
+                    await _orderProcessingService.ProcessOrder(order!);
+                    _consumer.Commit(consumeResult);
+                    _consumer.StoreOffset(consumeResult);
                 }
             }
         }
@@ -100,7 +99,7 @@ public class PastDueOrdersConsumer : IHostedService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An error occurred while consuming messages");
+            _logger.LogError(ex, "// PastDueOrdersConsumer // ConsumeOrder // An error occurred while consuming messages");
             throw;
         }
     }
