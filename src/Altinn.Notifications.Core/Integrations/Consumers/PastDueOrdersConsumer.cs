@@ -25,9 +25,9 @@ public class PastDueOrdersConsumer : IHostedService
     /// Initializes a new instance of the <see cref="PastDueOrdersConsumer"/> class.
     /// </summary>
     public PastDueOrdersConsumer(
-    	IOrderProcessingService orderProcessingService, 
-    	IOptions<KafkaSettings> settings, 
-    	ILogger<PastDueOrdersConsumer> logger)
+        IOrderProcessingService orderProcessingService,
+        IOptions<KafkaSettings> settings,
+        ILogger<PastDueOrdersConsumer> logger)
     {
         _orderProcessingService = orderProcessingService;
         _settings = settings.Value;
