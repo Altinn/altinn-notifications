@@ -1,6 +1,4 @@
-﻿using System;
-
-using Altinn.Notifications.Core.Enums;
+﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Extensions;
 using Altinn.Notifications.Core.Integrations.Consumers;
 using Altinn.Notifications.Core.Integrations.Interfaces;
@@ -29,7 +27,7 @@ public class PastDueOrdersConsumerTests : IAsyncDisposable
 {
     private readonly string _pastDueOrdersTopicName = Guid.NewGuid().ToString();
     private IServiceProvider _serviceProvider = new ServiceCollection().BuildServiceProvider();
-
+    
     [Fact]
     public async Task RunTask_ConfirmExpectedSideEffects()
     {
@@ -57,7 +55,7 @@ public class PastDueOrdersConsumerTests : IAsyncDisposable
     }
 
     public async ValueTask DisposeAsync()
-    { 
+    {
         // Delete topic
         var producer = (KafkaProducer)_serviceProvider.GetServices(typeof(IKafkaProducer)).First()!;
         await producer.DeleteTopicAsync(_pastDueOrdersTopicName);
@@ -91,7 +89,7 @@ public class PastDueOrdersConsumerTests : IAsyncDisposable
 
     private static async Task<long> SelectCompletedOrderCount(NpgsqlDataSource dataSource, string orderId)
     {
-        string sql = $"select count(1) from notifications.orders where processedstatus = 'completed' and alternateid='{orderId}'";
+        string sql = $"select count(1) from notifications.orders where processedstatus = 'Completed' and alternateid='{orderId}'";
         return await RunSqlReturnCount(dataSource, sql);
     }
 

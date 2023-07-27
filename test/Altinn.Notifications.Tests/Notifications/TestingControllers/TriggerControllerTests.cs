@@ -29,7 +29,7 @@ public class TriggerControllerTests : IClassFixture<CustomWebApplicationFactory<
     }
 
     [Fact]
-    public async Task Trigger_PastDueOrders_RightServiceTriggered()
+    public async Task Trigger_PastDueOrders_OrderProcessingServiceCalled()
     {
         Mock<IOrderProcessingService> serviceMock = new();
         serviceMock
@@ -49,7 +49,7 @@ public class TriggerControllerTests : IClassFixture<CustomWebApplicationFactory<
     }
 
     [Fact]
-    public async Task Trigger_Trigger_SendEmailNotifications_RightServiceTriggered()
+    public async Task Trigger_Trigger_SendEmailNotifications_EmailNotificationServiceCalled()
     {
         Mock<IEmailNotificationService> serviceMock = new();
         serviceMock

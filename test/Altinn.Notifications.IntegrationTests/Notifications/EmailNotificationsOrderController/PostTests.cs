@@ -53,6 +53,10 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
         };
     }
 
+    /// <summary>
+    /// TODO add info about what we want to verify. Maybe check db that new row is persisted in order table. 
+    /// </summary>
+    /// <returns></returns>
     [Fact]
     public async Task Post_ServiceReturnsOrder_Accepted()
     {

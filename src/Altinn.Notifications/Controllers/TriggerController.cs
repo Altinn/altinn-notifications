@@ -27,7 +27,7 @@ public class TriggerController : ControllerBase
     }
 
     /// <summary>
-    /// Endpoint for triggering the processing of past due orders
+    /// Endpoint for starting the processing of past due orders
     /// </summary>
     [HttpPost]
     [Consumes("application/json")]
@@ -39,7 +39,7 @@ public class TriggerController : ControllerBase
     }
 
     /// <summary>
-    /// Endpoint for retrieving email notifications that are ready to send
+    /// Endpoint for starting the processing of emails that are ready to be sent
     /// </summary>
     [HttpPost]
     [Consumes("application/json")]

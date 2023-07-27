@@ -7,7 +7,7 @@ on:
     types: [opened, synchronize, reopened]
   workflow_dispatch:
 jobs:
-  build-and-test-analyze:
+  build-test-analyze:
     name: Build, test & analyze
     runs-on: ubuntu-latest
     services:
@@ -73,10 +73,10 @@ jobs:
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
 
           dotnet-sonarscanner end /d:sonar.login="${{ secrets.SONAR_TOKEN }}"
-      - name: Parse .NET test result
+      - name: Process .NET test result
         if: ${{ failure() }}
         uses: NasAmin/trx-parser@v0.3.0
         with:
-          TRX_PATH: ${{ github.workspace }}/TestResults #This should be the path to your TRX files
-          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}                   
-     
+          TRX_PATH: ${{ github.workspace }}/TestResults
+          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
