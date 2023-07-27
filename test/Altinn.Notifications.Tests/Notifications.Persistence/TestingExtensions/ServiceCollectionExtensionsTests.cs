@@ -13,12 +13,10 @@ public class ServiceCollectionExtensionsTests
 {
 
     [Fact]
-    public void AddPostgresRepositories_PostgreSettings_ThrowsException()
+    public void AddPostgresRepositories_PostgreSettingsMissing_ThrowsException()
     {
-        Environment.SetEnvironmentVariable("PostgreSQLSettings_EnableDBConnection", "true");
 
         var builder = new ConfigurationBuilder()
-            .AddEnvironmentVariables();
 
         var config = builder.Build();
 

@@ -14,7 +14,6 @@ public class WebApplicationExtensions
     [Fact]
     public void SetUpPostgreSql_PostgreSettingsMissing_ThrowsException()
     {
-
         var config = new ConfigurationBuilder().Build();
 
         var app = WebApplication.CreateBuilder().Build();
