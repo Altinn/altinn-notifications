@@ -29,6 +29,11 @@ public class PastDueOrdersConsumerTests : IDisposable
     private readonly string _pastDueOrdersTopicName = Guid.NewGuid().ToString();
     private IServiceProvider _serviceProvider = new ServiceCollection().BuildServiceProvider();
 
+    /// <summary>
+    /// When a new order is picked up by the consumer, we expect there to be an email notification created for the recipient states in the order.
+    /// We measure the sucess of this test by confirming that a new email notificaiton has been create with a reference to our order id
+    /// as well as confirming that the order now has the status 'Completed' set at its processing status
+    /// </summary>
     [Fact]
     public async Task RunTask_ConfirmExpectedSideEffects()
     {
@@ -55,9 +60,9 @@ public class PastDueOrdersConsumerTests : IDisposable
         Assert.Equal(1, emailNotificationCount);
     }
 
-    public void Dispose()
+    public async void Dispose()
     {
-        KafkaUtil.DeleteTopicAsync(_pastDueOrdersTopicName);
+        await KafkaUtil.DeleteTopicAsync(_pastDueOrdersTopicName);
         GC.SuppressFinalize(this);
     }
 
