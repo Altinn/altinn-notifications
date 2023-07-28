@@ -27,7 +27,7 @@ public class EmailNotificationServiceTests
     public async Task SendNotifications_ProducerCalledOnceForEachRetrievedEmail()
     {
         // Arrange 
-        var repoMock = new Mock<IEmailNotificationsRepository>();
+        var repoMock = new Mock<IEmailNotificationRepository>();
         repoMock.Setup(r => r.GetNewNotifications())
             .ReturnsAsync(new List<Email>() { _email, _email, _email });
 
@@ -64,7 +64,7 @@ public class EmailNotificationServiceTests
             ToAddress = "skd@norge.no"
         };
 
-        var repoMock = new Mock<IEmailNotificationsRepository>();
+        var repoMock = new Mock<IEmailNotificationRepository>();
         repoMock.Setup(r => r.AddNotification(It.Is<EmailNotification>(e => AssertUtils.AreEquivalent(expected, e)), It.Is<DateTime>(d => d == expectedExpiry)));
 
         var service = GetTestService(repo: repoMock.Object, guidOutput: id, dateTimeOutput: dateTimeOutput);
@@ -94,7 +94,7 @@ public class EmailNotificationServiceTests
             SendResult = new(Altinn.Notifications.Core.Enums.EmailNotificationResultType.Failed_RecipientNotIdentified, dateTimeOutput),
         };
 
-        var repoMock = new Mock<IEmailNotificationsRepository>();
+        var repoMock = new Mock<IEmailNotificationRepository>();
         repoMock.Setup(r => r.AddNotification(It.Is<EmailNotification>(e => AssertUtils.AreEquivalent(expected, e)), It.Is<DateTime>(d => d == expectedExpiry)));
 
         var service = GetTestService(repo: repoMock.Object, guidOutput: id, dateTimeOutput: dateTimeOutput);
@@ -106,7 +106,7 @@ public class EmailNotificationServiceTests
         repoMock.Verify();
     }
 
-    private static EmailNotificationService GetTestService(IEmailNotificationsRepository? repo = null, IKafkaProducer? producer = null, string? guidOutput = null, DateTime? dateTimeOutput = null)
+    private static EmailNotificationService GetTestService(IEmailNotificationRepository? repo = null, IKafkaProducer? producer = null, string? guidOutput = null, DateTime? dateTimeOutput = null)
     {
         var guidService = new Mock<IGuidService>();
         guidService
@@ -119,7 +119,7 @@ public class EmailNotificationServiceTests
             .Returns(dateTimeOutput ?? DateTime.UtcNow);
         if (repo == null)
         {
-            var _repo = new Mock<IEmailNotificationsRepository>();
+            var _repo = new Mock<IEmailNotificationRepository>();
             repo = _repo.Object;
         }
 

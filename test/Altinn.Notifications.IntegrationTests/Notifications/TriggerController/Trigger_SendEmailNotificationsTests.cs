@@ -28,11 +28,16 @@ public class Trigger_SendEmailNotificationsTests : IClassFixture<IntegrationTest
         _factory = factory;
     }
 
+    /// <summary>
+    /// When the send email endpoint is triggered, we expect all email notifications with status 'New' to be pushed to the
+    /// send email kafka topic and that each notification gets the result status 'Sending' in the database.
+    /// </summary>
     [Fact]
     public async Task Post_Ok()
     {
-        // Todo: ensure there is data in database before triggering processing.
         // Arrange
+        string notificationId = await TestdataUtil.PopulateDBWithOrderAndEmailNotification();
+
         HttpClient client = GetTestClient();
 
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath);
@@ -41,7 +46,10 @@ public class Trigger_SendEmailNotificationsTests : IClassFixture<IntegrationTest
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
 
         // Assert
+        string sql = $"select count(1) from notifications.emailnotifications where result = 'Sending' and alternateid='{notificationId}'";
+        int actual = await TestdataUtil.RunSqlReturnIntOutput(sql);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(1, actual);
     }
 
     public async void Dispose()

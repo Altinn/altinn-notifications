@@ -37,7 +37,6 @@ public class Trigger_PastDueOrdersTests : IClassFixture<IntegrationTestWebApplic
     {
         // Arrange
         string orderId = await TestdataUtil.PopulateDBWithOrder();
-        string sql = $"select count(1) from notifications.orders where processedstatus = 'Processing' and alternateid='{orderId}'";
 
         HttpClient client = GetTestClient();
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath);
@@ -46,6 +45,7 @@ public class Trigger_PastDueOrdersTests : IClassFixture<IntegrationTestWebApplic
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
 
         // Assert
+        string sql = $"select count(1) from notifications.orders where processedstatus = 'Processing' and alternateid='{orderId}'";
         int actual = await TestdataUtil.RunSqlReturnIntOutput(sql);
         
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);

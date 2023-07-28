@@ -13,7 +13,7 @@ namespace Altinn.Notifications.Persistence.Repository;
 /// <summary>
 /// Implementation of order repository logic
 /// </summary>
-public class EmailNotificationRepository : IEmailNotificationsRepository
+public class EmailNotificationRepository : IEmailNotificationRepository
 {
     private readonly NpgsqlDataSource _dataSource;
     private const string _insertEmailNotificationSql = "call notifications.insertemailnotification($1, $2, $3, $4, $5, $6, $7)"; // (__orderid, _alternateid, _recipientid, _toaddress, _result, _resulttime, _expirytime)

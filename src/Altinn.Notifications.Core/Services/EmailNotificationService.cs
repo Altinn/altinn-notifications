@@ -20,7 +20,7 @@ public class EmailNotificationService : IEmailNotificationService
 {
     private readonly IGuidService _guid;
     private readonly IDateTimeService _dateTime;
-    private readonly IEmailNotificationsRepository _repository;
+    private readonly IEmailNotificationRepository _repository;
     private readonly IKafkaProducer _producer;
     private readonly string _emailQueueTopicName;
 
@@ -30,7 +30,7 @@ public class EmailNotificationService : IEmailNotificationService
     public EmailNotificationService(
         IGuidService guid,
         IDateTimeService dateTime,
-        IEmailNotificationsRepository repository,
+        IEmailNotificationRepository repository,
         IKafkaProducer producer,
         IOptions<KafkaSettings> kafkaSettings)
     {

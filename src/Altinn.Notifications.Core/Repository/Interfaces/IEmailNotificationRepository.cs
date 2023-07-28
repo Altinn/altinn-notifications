@@ -7,7 +7,7 @@ namespace Altinn.Notifications.Core.Repository.Interfaces;
 /// <summary>
 /// Interface describing all repository operations related to an email notification
 /// </summary>
-public interface IEmailNotificationsRepository
+public interface IEmailNotificationRepository
 {
     /// <summary>
     /// Adds a new email notification to the database
