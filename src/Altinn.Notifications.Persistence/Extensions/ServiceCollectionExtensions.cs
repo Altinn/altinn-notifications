@@ -26,7 +26,11 @@ public static class ServiceCollectionExtensions
             throw new ArgumentNullException(nameof(config), "Required PostgreSQLSettings is missing from application configuration");
         }
 
-        string connectionString = string.Format(settings.ConnectionString, settings.NotificationsDbPwd);
+        string password = string.IsNullOrEmpty(settings.NotificationsDbPwd) ?
+           config.GetValue<string>("PostgreSQLSettings:notificationsDbPwd")!.ToString() :
+           settings.NotificationsDbPwd;
+
+        string connectionString = string.Format(settings.ConnectionString, password);
 
         return services
         .AddSingleton<IOrderRepository, OrderRepository>()
