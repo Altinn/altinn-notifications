@@ -36,7 +36,7 @@ public class Trigger_SendEmailNotificationsTests : IClassFixture<IntegrationTest
     public async Task Post_Ok()
     {
         // Arrange
-        Guid notificationId = await TestdataUtil.PopulateDBWithOrderAndEmailNotification();
+        Guid notificationId = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
 
         HttpClient client = GetTestClient();
 
@@ -47,7 +47,7 @@ public class Trigger_SendEmailNotificationsTests : IClassFixture<IntegrationTest
 
         // Assert
         string sql = $"select count(1) from notifications.emailnotifications where result = 'Sending' and alternateid='{notificationId}'";
-        int actual = await TestdataUtil.RunSqlReturnIntOutput(sql);
+        int actual = await PostgreUtil.RunSqlReturnIntOutput(sql);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(1, actual);
     }

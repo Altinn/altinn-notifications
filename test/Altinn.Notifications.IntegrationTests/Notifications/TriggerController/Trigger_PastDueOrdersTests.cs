@@ -36,7 +36,7 @@ public class Trigger_PastDueOrdersTests : IClassFixture<IntegrationTestWebApplic
     public async Task Trigger_PastDueOrders_ResposeOk()
     {
         // Arrange
-        Guid orderId = await TestdataUtil.PopulateDBWithOrder();
+        Guid orderId = await PostgreUtil.PopulateDBWithOrder();
 
         HttpClient client = GetTestClient();
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath);
@@ -46,7 +46,7 @@ public class Trigger_PastDueOrdersTests : IClassFixture<IntegrationTestWebApplic
 
         // Assert
         string sql = $"select count(1) from notifications.orders where processedstatus = 'Processing' and alternateid='{orderId}'";
-        int actual = await TestdataUtil.RunSqlReturnIntOutput(sql);
+        int actual = await PostgreUtil.RunSqlReturnIntOutput(sql);
         
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(1, actual);

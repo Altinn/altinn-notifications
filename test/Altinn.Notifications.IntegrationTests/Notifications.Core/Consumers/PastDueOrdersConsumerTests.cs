@@ -110,7 +110,7 @@ public class PastDueOrdersConsumerTests : IDisposable
     private static async Task<long> SelectCompletedOrderCount(Guid orderId)
     {
         string sql = $"select count(1) from notifications.orders where processedstatus = 'Completed' and alternateid='{orderId}'";
-        return await TestdataUtil.RunSqlReturnIntOutput(sql);
+        return await PostgreUtil.RunSqlReturnIntOutput(sql);
     }
 
     private static async Task<long> SelectEmailNotificationCount(Guid orderId)
@@ -119,7 +119,7 @@ public class PastDueOrdersConsumerTests : IDisposable
                    "from notifications.emailnotifications e " +
                    "join notifications.orders o on e._orderid=o._id " +
                    $"where e._orderid = o._id and o.alternateid ='{orderId}'";
-        return await TestdataUtil.RunSqlReturnIntOutput(sql);
+        return await PostgreUtil.RunSqlReturnIntOutput(sql);
     }
 
     private static NotificationOrder GetOrder()
