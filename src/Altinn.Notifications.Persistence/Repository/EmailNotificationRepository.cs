@@ -16,8 +16,9 @@ namespace Altinn.Notifications.Persistence.Repository;
 public class EmailNotificationRepository : IEmailNotificationsRepository
 {
     private readonly NpgsqlDataSource _dataSource;
-    private readonly string _insertEmailNotificationSql = "call notifications.insertemailnotification($1, $2, $3, $4, $5, $6, $7)"; // (__orderid, _alternateid, _recipientid, _toaddress, _result, _resulttime, _expirytime)
-    private readonly string _getEmailNotificationsSql = "select * from notifications.getemails_statusnew_updatestatus()";
+    private const string _insertEmailNotificationSql = "call notifications.insertemailnotification($1, $2, $3, $4, $5, $6, $7)"; // (__orderid, _alternateid, _recipientid, _toaddress, _result, _resulttime, _expirytime)
+    private const string _getEmailNotificationsSql = "select * from notifications.getemails_statusnew_updatestatus()";
+    private const string _setResultStatus = "update notifications.emailnotifications set result =$1::emailnotificationresulttype where _id=$2";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotificationRepository"/> class.
@@ -69,5 +70,13 @@ public class EmailNotificationRepository : IEmailNotificationsRepository
         }
 
         return searchResult;
+    }
+
+    public async Task SetResultStatus(int emailId, EmailNotificationResultType status)
+    {
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_setResultStatus);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Bigint, emailId);
+        await pgcom.ExecuteNonQueryAsync();
     }
 }

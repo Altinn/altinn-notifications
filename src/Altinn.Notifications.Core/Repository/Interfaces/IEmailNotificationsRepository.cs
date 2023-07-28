@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
+﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 
@@ -24,4 +19,9 @@ public interface IEmailNotificationsRepository
     /// </summary>
     /// <returns>A list of emails</returns>
     public Task<List<Email>> GetNewNotifications();
+
+    /// <summary>
+    /// Sets result status of an email
+    /// </summary>
+    public Task SetResultStatus(int emailId, EmailNotificationResultType status);
 }
