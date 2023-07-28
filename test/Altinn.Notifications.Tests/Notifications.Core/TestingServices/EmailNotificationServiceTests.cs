@@ -32,7 +32,8 @@ public class EmailNotificationServiceTests
             .ReturnsAsync(new List<Email>() { _email, _email, _email });
 
         var producerMock = new Mock<IKafkaProducer>();
-        producerMock.Setup(p => p.ProduceAsync(It.Is<string>(s => s.Equals(_emailQueueTopicName)), It.IsAny<string>()));
+        producerMock.Setup(p => p.ProduceAsync(It.Is<string>(s => s.Equals(_emailQueueTopicName)), It.IsAny<string>()))
+            .ReturnsAsync(true);
 
         var service = GetTestService(repo: repoMock.Object, producer: producerMock.Object);
 
