@@ -18,7 +18,7 @@ $BODY$;
 
 CREATE OR REPLACE FUNCTION notifications.getemails_statusnew_updatestatus()
 RETURNS TABLE(
-    id bigint, 
+    alternateid UUID, 
     subject text,
 	body text,
 	fromaddress text,
@@ -33,8 +33,8 @@ RETURN query
 		UPDATE notifications.emailnotifications
 			SET result = 'Sending'
 			WHERE result = 'New' 
-			RETURNING _id, _orderid, notifications.emailnotifications.toaddress)
-	SELECT u._id, et.subject, et.body, et.fromaddress, u.toaddress, et.contenttype 
+			RETURNING alternateid, _orderid, notifications.emailnotifications.toaddress)
+	SELECT u._alternateid, et.subject, et.body, et.fromaddress, u.toaddress, et.contenttype 
 	FROM updated u, notifications.emailtexts et
 	WHERE u._orderid = et._orderid;	
 END;
