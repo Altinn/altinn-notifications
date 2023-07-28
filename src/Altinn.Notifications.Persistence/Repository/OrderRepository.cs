@@ -56,11 +56,11 @@ public class OrderRepository : IOrderRepository
     }
 
     /// <inheritdoc/>
-    public async Task SetProcessingStatus(string orderId, OrderProcessingStatus status)
+    public async Task SetProcessingStatus(Guid orderId, OrderProcessingStatus status)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_setProcessCompleted);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, Guid.Parse(orderId));
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, orderId);
         await pgcom.ExecuteNonQueryAsync();
     }
 
@@ -107,7 +107,7 @@ public class OrderRepository : IOrderRepository
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_insertOrderSql);
 
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, new Guid(order.Id));
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, order.Id);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, order.Creator.ShortName);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, order.SendersReference ?? (object)DBNull.Value);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, order.Created);

@@ -42,7 +42,7 @@ public class EmailNotificationService : IEmailNotificationService
     }
 
     /// <inheritdoc/>
-    public async Task CreateNotification(string orderId, DateTime requestedSendTime, Recipient recipient)
+    public async Task CreateNotification(Guid orderId, DateTime requestedSendTime, Recipient recipient)
     {
         EmailAddressPoint? addressPoint = recipient.AddressInfo.Find(a => a.AddressType == AddressType.Email) as EmailAddressPoint;
 
@@ -71,11 +71,11 @@ public class EmailNotificationService : IEmailNotificationService
         }
     }
 
-    private async Task CreateNotificationForRecipient(string orderId, DateTime requestedSendTime, string recipientId, string toAddress, EmailNotificationResultType result)
+    private async Task CreateNotificationForRecipient(Guid orderId, DateTime requestedSendTime, string recipientId, string toAddress, EmailNotificationResultType result)
     {
         var emailNotification = new EmailNotification()
         {
-            Id = _guid.NewGuidAsString(),
+            Id = _guid.NewGuid(),
             OrderId = orderId,
             RequestedSendTime = requestedSendTime,
             ToAddress = toAddress,

@@ -11,8 +11,8 @@ namespace Altinn.Notifications.Core.Services;
 public class GuidService : IGuidService
 {
     /// <inheritdoc/>
-    public string NewGuidAsString()
+    public Guid NewGuid()
     {
-        return Guid.NewGuid().ToString();
+        return Guid.NewGuid();
     }
 }

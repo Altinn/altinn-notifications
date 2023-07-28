@@ -40,7 +40,7 @@ public class PastDueOrdersConsumerTests : IDisposable
         // Arrange
         _serviceProvider = SetUpServices(_pastDueOrdersTopicName);
 
-        string orderId = await PopulateDbAndTopic(_serviceProvider, _pastDueOrdersTopicName);
+        Guid orderId = await PopulateDbAndTopic(_serviceProvider, _pastDueOrdersTopicName);
 
         var consumerService = _serviceProvider
             .GetServices<IHostedService>()
@@ -96,7 +96,7 @@ public class PastDueOrdersConsumerTests : IDisposable
         return services.BuildServiceProvider();
     }
 
-    private static async Task<string> PopulateDbAndTopic(IServiceProvider serviceProvider, string topicName)
+    private static async Task<Guid> PopulateDbAndTopic(IServiceProvider serviceProvider, string topicName)
     {
         var repository = (OrderRepository)serviceProvider.GetServices(typeof(IOrderRepository)).First()!;
         var persistedOrder = await repository.Create(GetOrder());
@@ -107,13 +107,13 @@ public class PastDueOrdersConsumerTests : IDisposable
         return persistedOrder.Id;
     }
 
-    private static async Task<long> SelectCompletedOrderCount(string orderId)
+    private static async Task<long> SelectCompletedOrderCount(Guid orderId)
     {
         string sql = $"select count(1) from notifications.orders where processedstatus = 'Completed' and alternateid='{orderId}'";
         return await TestdataUtil.RunSqlReturnIntOutput(sql);
     }
 
-    private static async Task<long> SelectEmailNotificationCount(string orderId)
+    private static async Task<long> SelectEmailNotificationCount(Guid orderId)
     {
         string sql = $"select count(1) " +
                    "from notifications.emailnotifications e " +
@@ -126,7 +126,7 @@ public class PastDueOrdersConsumerTests : IDisposable
     {
         return new NotificationOrder()
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = Guid.NewGuid(),
             SendersReference = "senders-reference",
             Templates = new List<INotificationTemplate>()
             {

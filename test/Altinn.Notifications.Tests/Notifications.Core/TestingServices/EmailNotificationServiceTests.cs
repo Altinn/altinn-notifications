@@ -22,7 +22,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 public class EmailNotificationServiceTests
 {
     private const string _emailQueueTopicName = "email.queue";
-    private readonly Email _email = new(Guid.NewGuid().ToString(), "email.subject", "email.body", "from@domain.com", "to@domain.com", Altinn.Notifications.Core.Enums.EmailContentType.Plain);
+    private readonly Email _email = new(Guid.NewGuid(), "email.subject", "email.body", "from@domain.com", "to@domain.com", Altinn.Notifications.Core.Enums.EmailContentType.Plain);
 
     [Fact]
     public async Task SendNotifications_ProducerCalledOnceForEachRetrievedEmail()
@@ -56,7 +56,7 @@ public class EmailNotificationServiceTests
             .ReturnsAsync(new List<Email>() { _email });
 
         repoMock
-            .Setup(r => r.SetResultStatus(It.IsAny<string>(), It.Is<EmailNotificationResultType>(t => t == EmailNotificationResultType.New)));
+            .Setup(r => r.SetResultStatus(It.IsAny<Guid>(), It.Is<EmailNotificationResultType>(t => t == EmailNotificationResultType.New)));
 
         var producerMock = new Mock<IKafkaProducer>();
         producerMock.Setup(p => p.ProduceAsync(It.Is<string>(s => s.Equals(_emailQueueTopicName)), It.IsAny<string>()))
@@ -77,7 +77,8 @@ public class EmailNotificationServiceTests
     public async Task CreateEmailNotification_ToAddressDefined_ResultNew()
     {
         // Arrange
-        string id = Guid.NewGuid().ToString();
+        Guid id = Guid.NewGuid();
+        Guid orderId = Guid.NewGuid();
         DateTime requestedSendTime = DateTime.UtcNow;
         DateTime dateTimeOutput = DateTime.UtcNow;
         DateTime expectedExpiry = requestedSendTime.AddHours(1);
@@ -85,7 +86,7 @@ public class EmailNotificationServiceTests
         EmailNotification expected = new()
         {
             Id = id,
-            OrderId = "orderid",
+            OrderId = orderId,
             RecipientId = "skd",
             RequestedSendTime = requestedSendTime,
             SendResult = new(Altinn.Notifications.Core.Enums.EmailNotificationResultType.New, dateTimeOutput),
@@ -98,7 +99,7 @@ public class EmailNotificationServiceTests
         var service = GetTestService(repo: repoMock.Object, guidOutput: id, dateTimeOutput: dateTimeOutput);
 
         // Act
-        await service.CreateNotification("orderid", requestedSendTime, new Recipient("skd", new List<IAddressPoint>() { new EmailAddressPoint("skd@norge.no") }));
+        await service.CreateNotification(orderId, requestedSendTime, new Recipient("skd", new List<IAddressPoint>() { new EmailAddressPoint("skd@norge.no") }));
 
         // Assert
         repoMock.Verify();
@@ -108,7 +109,8 @@ public class EmailNotificationServiceTests
     public async Task CreateEmailNotification_ToAddressDefined_ResultFailedRecipientNotDefined()
     {
         // Arrange
-        string id = Guid.NewGuid().ToString();
+        Guid id = Guid.NewGuid();
+        Guid orderId = Guid.NewGuid();
         DateTime requestedSendTime = DateTime.UtcNow;
         DateTime dateTimeOutput = DateTime.UtcNow;
         DateTime expectedExpiry = dateTimeOutput;
@@ -116,7 +118,7 @@ public class EmailNotificationServiceTests
         EmailNotification expected = new()
         {
             Id = id,
-            OrderId = "orderid",
+            OrderId = orderId,
             RecipientId = "skd",
             RequestedSendTime = requestedSendTime,
             SendResult = new(Altinn.Notifications.Core.Enums.EmailNotificationResultType.Failed_RecipientNotIdentified, dateTimeOutput),
@@ -128,18 +130,18 @@ public class EmailNotificationServiceTests
         var service = GetTestService(repo: repoMock.Object, guidOutput: id, dateTimeOutput: dateTimeOutput);
 
         // Act
-        await service.CreateNotification("orderid", requestedSendTime, new Recipient("skd", new List<IAddressPoint>()));
+        await service.CreateNotification(orderId, requestedSendTime, new Recipient("skd", new List<IAddressPoint>()));
 
         // Assert
         repoMock.Verify();
     }
 
-    private static EmailNotificationService GetTestService(IEmailNotificationRepository? repo = null, IKafkaProducer? producer = null, string? guidOutput = null, DateTime? dateTimeOutput = null)
+    private static EmailNotificationService GetTestService(IEmailNotificationRepository? repo = null, IKafkaProducer? producer = null, Guid? guidOutput = null, DateTime? dateTimeOutput = null)
     {
         var guidService = new Mock<IGuidService>();
         guidService
-            .Setup(g => g.NewGuidAsString())
-            .Returns(guidOutput ?? Guid.NewGuid().ToString());
+            .Setup(g => g.NewGuid())
+            .Returns(guidOutput ?? Guid.NewGuid());
 
         var dateTimeService = new Mock<IDateTimeService>();
         dateTimeService

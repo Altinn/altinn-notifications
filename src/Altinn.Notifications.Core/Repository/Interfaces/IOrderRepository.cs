@@ -24,5 +24,5 @@ public interface IOrderRepository
     /// <summary>
     /// Sets processing status of an order
     /// </summary>
-    public Task SetProcessingStatus(string orderId, OrderProcessingStatus status);
+    public Task SetProcessingStatus(Guid orderId, OrderProcessingStatus status);
 }

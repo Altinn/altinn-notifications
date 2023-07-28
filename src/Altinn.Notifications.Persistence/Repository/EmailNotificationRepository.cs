@@ -34,8 +34,8 @@ public class EmailNotificationRepository : IEmailNotificationRepository
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_insertEmailNotificationSql);
 
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, new Guid(notification.OrderId));
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, new Guid(notification.Id));
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notification.OrderId);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notification.Id);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.RecipientId ?? (object)DBNull.Value);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.ToAddress);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.SendResult.Result.ToString());
@@ -58,7 +58,7 @@ public class EmailNotificationRepository : IEmailNotificationRepository
                 EmailContentType emailContentType = (EmailContentType)Enum.Parse(typeof(EmailContentType), reader.GetValue<string>("contenttype"));
 
                 var email = new Email(
-                    reader.GetValue<Guid>("alternateid").ToString(),
+                    reader.GetValue<Guid>("alternateid"),
                     reader.GetValue<string>("subject"),
                     reader.GetValue<string>("body"),
                     reader.GetValue<string>("fromaddress"),
@@ -73,7 +73,7 @@ public class EmailNotificationRepository : IEmailNotificationRepository
     }
 
     /// <inheritdoc/>
-    public async Task SetResultStatus(string notificationId, EmailNotificationResultType status)
+    public async Task SetResultStatus(Guid notificationId, EmailNotificationResultType status)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_setResultStatus);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());

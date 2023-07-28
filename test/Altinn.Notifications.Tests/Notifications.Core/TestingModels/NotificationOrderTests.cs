@@ -20,7 +20,7 @@ public class NotificationOrderTests
 
     public NotificationOrderTests()
     {
-        string id = Guid.NewGuid().ToString();
+        Guid id = Guid.NewGuid();
 
         _order = new()
         {
