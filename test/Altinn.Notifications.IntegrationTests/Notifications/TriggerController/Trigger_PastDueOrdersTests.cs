@@ -36,7 +36,7 @@ public class Trigger_PastDueOrdersTests : IClassFixture<IntegrationTestWebApplic
     public async Task Trigger_PastDueOrders_ResposeOk()
     {
         // Arrange
-        Guid orderId = await PostgreUtil.PopulateDBWithOrder();
+        Guid orderId = await PostgreUtil.PopulateDBWithOrderAndReturnId();
 
         HttpClient client = GetTestClient();
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath);

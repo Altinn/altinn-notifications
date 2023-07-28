@@ -14,7 +14,7 @@ namespace Altinn.Notifications.IntegrationTests.Utils;
 
 public class PostgreUtil
 {
-    public static async Task<Guid> PopulateDBWithOrder()
+    public static async Task<Guid> PopulateDBWithOrderAndReturnId()
     {
         var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IOrderRepository) });
         OrderRepository repository = (OrderRepository)serviceList.First(i => i.GetType() == typeof(OrderRepository));
@@ -22,6 +22,16 @@ public class PostgreUtil
         order.Id = Guid.NewGuid();
         var persistedOrder = await repository.Create(order);
         return persistedOrder.Id;
+    }
+
+    public static async Task<NotificationOrder> PopulateDBWithOrder()
+    {
+        var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IOrderRepository) });
+        OrderRepository repository = (OrderRepository)serviceList.First(i => i.GetType() == typeof(OrderRepository));
+        var order = TestdataUtil.NotificationOrder_EmailTemplate_OneRecipient();
+        order.Id = Guid.NewGuid();
+        var persistedOrder = await repository.Create(order);
+        return persistedOrder;
     }
 
     public static async Task<Guid> PopulateDBWithOrderAndEmailNotification()

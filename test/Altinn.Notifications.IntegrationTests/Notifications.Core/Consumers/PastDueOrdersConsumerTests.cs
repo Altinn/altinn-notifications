@@ -98,8 +98,7 @@ public class PastDueOrdersConsumerTests : IDisposable
 
     private static async Task<Guid> PopulateDbAndTopic(IServiceProvider serviceProvider, string topicName)
     {
-        var repository = (OrderRepository)serviceProvider.GetServices(typeof(IOrderRepository)).First()!;
-        var persistedOrder = await repository.Create(GetOrder());
+        var persistedOrder = await PostgreUtil.PopulateDBWithOrder();
 
         var producer = (KafkaProducer)serviceProvider.GetServices(typeof(IKafkaProducer)).First()!;
         await producer.ProduceAsync(topicName, persistedOrder.Serialize());
@@ -121,43 +120,5 @@ public class PastDueOrdersConsumerTests : IDisposable
                    $"where e._orderid = o._id and o.alternateid ='{orderId}'";
         return await PostgreUtil.RunSqlReturnIntOutput(sql);
     }
-
-    private static NotificationOrder GetOrder()
-    {
-        return new NotificationOrder()
-        {
-            Id = Guid.NewGuid(),
-            SendersReference = "senders-reference",
-            Templates = new List<INotificationTemplate>()
-            {
-                new EmailTemplate()
-                {
-                    Type = NotificationTemplateType.Email,
-                    FromAddress = "sender@domain.com",
-                    Subject = "email-subject",
-                    Body = "email-body",
-                    ContentType = EmailContentType.Html
-                }
-            },
-            RequestedSendTime = DateTime.UtcNow,
-            NotificationChannel = NotificationChannel.Email,
-            Creator = new("ttd"),
-            Created = DateTime.UtcNow,
-            Recipients = new List<Recipient>()
-            {
-                new Recipient()
-                {
-                    RecipientId = "recipient1",
-                    AddressInfo = new()
-                    {
-                        new EmailAddressPoint()
-                        {
-                            AddressType = AddressType.Email,
-                            EmailAddress = "recipient1@domain.com"
-                        }
-                    }
-                }
-            }
-        };
-    }
+    
 }

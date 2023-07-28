@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Persistence.Extensions;
+﻿using Altinn.Notifications.Core.Extensions;
+using Altinn.Notifications.Persistence.Extensions;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
@@ -34,5 +35,4 @@ public static class ServiceUtil
 
         return outputServices;
     }
-
 }
