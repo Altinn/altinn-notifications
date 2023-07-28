@@ -89,7 +89,7 @@ public class EmailNotificationServiceTests
             OrderId = orderId,
             RecipientId = "skd",
             RequestedSendTime = requestedSendTime,
-            SendResult = new(Altinn.Notifications.Core.Enums.EmailNotificationResultType.New, dateTimeOutput),
+            SendResult = new(EmailNotificationResultType.New, dateTimeOutput),
             ToAddress = "skd@norge.no"
         };
 
@@ -102,7 +102,7 @@ public class EmailNotificationServiceTests
         await service.CreateNotification(orderId, requestedSendTime, new Recipient("skd", new List<IAddressPoint>() { new EmailAddressPoint("skd@norge.no") }));
 
         // Assert
-        repoMock.Verify();
+        repoMock.Verify(r => r.AddNotification(It.Is<EmailNotification>(e => AssertUtils.AreEquivalent(expected, e)), It.Is<DateTime>(d => d == expectedExpiry)), Times.Once);
     }
 
     [Fact]
@@ -121,7 +121,7 @@ public class EmailNotificationServiceTests
             OrderId = orderId,
             RecipientId = "skd",
             RequestedSendTime = requestedSendTime,
-            SendResult = new(Altinn.Notifications.Core.Enums.EmailNotificationResultType.Failed_RecipientNotIdentified, dateTimeOutput),
+            SendResult = new(EmailNotificationResultType.Failed_RecipientNotIdentified, dateTimeOutput),
         };
 
         var repoMock = new Mock<IEmailNotificationRepository>();

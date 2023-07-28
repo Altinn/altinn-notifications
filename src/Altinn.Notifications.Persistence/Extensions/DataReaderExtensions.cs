@@ -1,10 +1,12 @@
 using System.Data;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Altinn.Notifications.Persistence.Extensions;
 
 /// <summary>
 /// This class contains a set of extension methods for the <see cref="IDataReader"/> interface.
 /// </summary>
+[ExcludeFromCodeCoverage]
 public static class DataReaderExtensions
 {
     /// <summary>
