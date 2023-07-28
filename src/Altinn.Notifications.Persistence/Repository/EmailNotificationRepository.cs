@@ -72,6 +72,7 @@ public class EmailNotificationRepository : IEmailNotificationsRepository
         return searchResult;
     }
 
+    /// <inheritdoc/>
     public async Task SetResultStatus(int emailId, EmailNotificationResultType status)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_setResultStatus);
