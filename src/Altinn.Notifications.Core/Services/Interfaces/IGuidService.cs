@@ -8,5 +8,5 @@ public interface IGuidService
     /// <summary>
     /// Generates a new Guid
     /// </summary>
-    public string NewGuidAsString();
+    public Guid NewGuid();
 }

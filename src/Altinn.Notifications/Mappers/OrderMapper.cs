@@ -66,7 +66,7 @@ public static class OrderMapper
     {
         var orderExt = new NotificationOrderExt
         {
-            Id = order.Id,
+            Id = order.Id.ToString(),
             SendersReference = order.SendersReference,
             Created = order.Created,
             Creator = order.Creator.ShortName,

@@ -23,7 +23,7 @@ public class OrderMapperTests
 
         NotificationOrder order = new()
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = Guid.NewGuid(),
             SendersReference = "ref1337",
             Templates = new List<INotificationTemplate>() { new EmailTemplate("from@domain.com", "email-subject", "email-body", EmailContentType.Plain) },
             RequestedSendTime = sendTime,
@@ -35,7 +35,7 @@ public class OrderMapperTests
 
         NotificationOrderExt expected = new()
         {
-            Id = order.Id,
+            Id = order.Id.ToString(),
             Creator = "ttd",
             Created = created,
             NotificationChannel = NotificationChannel.Email,

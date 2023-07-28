@@ -36,7 +36,7 @@ public class Trigger_SendEmailNotificationsTests : IClassFixture<IntegrationTest
     public async Task Post_Ok()
     {
         // Arrange
-        string notificationId = await TestdataUtil.PopulateDBWithOrderAndEmailNotification();
+        Guid notificationId = await TestdataUtil.PopulateDBWithOrderAndEmailNotification();
 
         HttpClient client = GetTestClient();
 

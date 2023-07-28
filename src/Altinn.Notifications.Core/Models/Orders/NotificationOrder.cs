@@ -14,7 +14,7 @@ public class NotificationOrder
     /// <summary>
     /// Gets the id of the notification order
     /// </summary>
-    public string Id { get; internal set; } = string.Empty;
+    public Guid Id { get; internal set; } = Guid.Empty;
 
     /// <summary>
     /// Gets the senders reference of a notification
@@ -54,7 +54,7 @@ public class NotificationOrder
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationOrder"/> class.
     /// </summary>
-    public NotificationOrder(string id, string? sendersReference, List<INotificationTemplate> templates, DateTime requestedSendTime, NotificationChannel notificationChannel, Creator creator, DateTime created, List<Recipient> recipients)
+    public NotificationOrder(Guid id, string? sendersReference, List<INotificationTemplate> templates, DateTime requestedSendTime, NotificationChannel notificationChannel, Creator creator, DateTime created, List<Recipient> recipients)
     {
         Id = id;
         SendersReference = sendersReference;
@@ -121,7 +121,7 @@ public class NotificationOrder
             parsedOutput = Deserialize(input!);
 
             value = parsedOutput!;
-            return value.Id != null;
+            return value.Id != Guid.Empty;
         }
         catch
         {

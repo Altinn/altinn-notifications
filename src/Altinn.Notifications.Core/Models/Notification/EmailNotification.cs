@@ -8,10 +8,10 @@ namespace Altinn.Notifications.Core.Models.Notification;
 public class EmailNotification : INotification<EmailNotificationResultType>
 {
     /// <inheritdoc/>
-    public string Id { get; internal set; }
+    public Guid Id { get; internal set; }
 
     /// <inheritdoc/>
-    public string OrderId { get; internal set; }
+    public Guid OrderId { get; internal set; }
 
     /// <inheritdoc/>
     public DateTime RequestedSendTime { get; internal set; }
@@ -37,9 +37,9 @@ public class EmailNotification : INotification<EmailNotificationResultType>
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotification"/> class.
     /// </summary>
-    public EmailNotification(string orderId, DateTime sendTime)
+    public EmailNotification(Guid orderId, DateTime sendTime)
     {
-        Id = Guid.NewGuid().ToString();
+        Id = Guid.NewGuid();
         OrderId = orderId;
         RequestedSendTime = sendTime;
     }
@@ -49,8 +49,8 @@ public class EmailNotification : INotification<EmailNotificationResultType>
     /// </summary>
     internal EmailNotification()
     {
-        Id = string.Empty;
-        OrderId = string.Empty;
+        Id = Guid.Empty;
+        OrderId = Guid.Empty;
         RequestedSendTime = DateTime.MinValue;
     }
 }

@@ -13,12 +13,12 @@ public interface INotification<TEnum>
     /// <summary>
     /// Gets the id of the notification.
     /// </summary>
-    public string? Id { get; }
+    public Guid Id { get; }
 
     /// <summary>
     /// Gets the order id of the notification.
     /// </summary>
-    public string OrderId { get; }
+    public Guid OrderId { get; }
 
     /// <summary>
     /// Gets the requested send time of the notification.

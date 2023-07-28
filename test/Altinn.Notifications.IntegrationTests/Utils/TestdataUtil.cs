@@ -20,17 +20,17 @@ using Npgsql;
 namespace Altinn.Notifications.IntegrationTests.Utils;
 public static class TestdataUtil
 {
-    public static async Task<string> PopulateDBWithOrder()
+    public static async Task<Guid> PopulateDBWithOrder()
     {
         var serviceList = GetServices(new List<Type>() { typeof(IOrderRepository) });
         OrderRepository repository = (OrderRepository)serviceList.First(i => i.GetType() == typeof(OrderRepository));
         var order = NotificationOrder_EmailTemplate_OneRecipient();
-        order.Id = Guid.NewGuid().ToString();
+        order.Id = Guid.NewGuid();
         var persistedOrder = await repository.Create(order);
         return persistedOrder.Id;
     }
 
-    public static async Task<string> PopulateDBWithOrderAndEmailNotification()
+    public static async Task<Guid> PopulateDBWithOrderAndEmailNotification()
     {
         (NotificationOrder o, EmailNotification e) = GetOrderAndEmailNotification();
         var serviceList = GetServices(new List<Type>() { typeof(IOrderRepository), typeof(IEmailNotificationRepository) });
@@ -41,7 +41,7 @@ public static class TestdataUtil
         await orderRepo.Create(o);
         await notificationRepo.AddNotification(e, DateTime.UtcNow.AddDays(1));
 
-        return e.Id;
+        return e.Id!;
     }
 
     private static List<object> GetServices(List<Type> interfaceTypes)
@@ -102,13 +102,13 @@ public static class TestdataUtil
     public static (NotificationOrder order, EmailNotification notification) GetOrderAndEmailNotification()
     {
         NotificationOrder order = NotificationOrder_EmailTemplate_OneRecipient();
-        order.Id = Guid.NewGuid().ToString();
+        order.Id = Guid.NewGuid();
         var recipient = order.Recipients.First();
         EmailAddressPoint? addressPoint = recipient.AddressInfo.Find(a => a.AddressType == AddressType.Email) as EmailAddressPoint;
 
         var emailNotification = new EmailNotification()
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = Guid.NewGuid(),
             OrderId = order.Id,
             RequestedSendTime = order.RequestedSendTime,
             ToAddress = addressPoint!.EmailAddress,
