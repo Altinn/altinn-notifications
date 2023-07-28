@@ -32,9 +32,9 @@ string applicationInsightsConnectionString = string.Empty;
 var builder = WebApplication.CreateBuilder(args);
 
 ConfigureSetupLogging();
+await SetConfigurationProviders(builder.Configuration);
 ConfigureLogging(builder.Logging);
 ConfigureServices(builder.Services, builder.Configuration);
-await SetConfigurationProviders(builder.Configuration);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
