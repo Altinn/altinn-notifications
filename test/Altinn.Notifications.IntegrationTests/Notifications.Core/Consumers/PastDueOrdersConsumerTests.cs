@@ -52,9 +52,8 @@ public class PastDueOrdersConsumerTests : IDisposable
         await consumerService.StopAsync(CancellationToken.None);
 
         // Assert
-        var dataSource = (NpgsqlDataSource)_serviceProvider.GetServices(typeof(NpgsqlDataSource)).First()!;
-        long completedOrderCount = await SelectCompletedOrderCount(dataSource, orderId);
-        long emailNotificationCount = await SelectEmailNotificationCount(dataSource, orderId);
+        long completedOrderCount = await SelectCompletedOrderCount(orderId);
+        long emailNotificationCount = await SelectEmailNotificationCount(orderId);
 
         Assert.Equal(1, completedOrderCount);
         Assert.Equal(1, emailNotificationCount);
@@ -97,30 +96,6 @@ public class PastDueOrdersConsumerTests : IDisposable
         return services.BuildServiceProvider();
     }
 
-    private static async Task<long> SelectCompletedOrderCount(NpgsqlDataSource dataSource, string orderId)
-    {
-        string sql = $"select count(1) from notifications.orders where processedstatus = 'Completed' and alternateid='{orderId}'";
-        return await RunSqlReturnCount(dataSource, sql);
-    }
-
-    private static async Task<long> SelectEmailNotificationCount(NpgsqlDataSource dataSource, string orderId)
-    {
-        string sql = $"select count(1) " +
-                   "from notifications.emailnotifications e " +
-                   "join notifications.orders o on e._orderid=o._id " +
-                   $"where e._orderid = o._id and o.alternateid ='{orderId}'";
-        return await RunSqlReturnCount(dataSource, sql);
-    }
-
-    private static async Task<int> RunSqlReturnCount(NpgsqlDataSource dataSource, string sql)
-    {
-        await using NpgsqlCommand pgcom = dataSource.CreateCommand(sql);
-
-        await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync();
-        await reader.ReadAsync();
-        return (int)reader.GetInt64(0);
-    }
-
     private static async Task<string> PopulateDbAndTopic(IServiceProvider serviceProvider, string topicName)
     {
         var repository = (OrderRepository)serviceProvider.GetServices(typeof(IOrderRepository)).First()!;
@@ -130,6 +105,21 @@ public class PastDueOrdersConsumerTests : IDisposable
         await producer.ProduceAsync(topicName, persistedOrder.Serialize());
 
         return persistedOrder.Id;
+    }
+
+    private static async Task<long> SelectCompletedOrderCount(string orderId)
+    {
+        string sql = $"select count(1) from notifications.orders where processedstatus = 'Completed' and alternateid='{orderId}'";
+        return await TestdataUtil.RunSqlReturnIntOutput(sql);
+    }
+
+    private static async Task<long> SelectEmailNotificationCount(string orderId)
+    {
+        string sql = $"select count(1) " +
+                   "from notifications.emailnotifications e " +
+                   "join notifications.orders o on e._orderid=o._id " +
+                   $"where e._orderid = o._id and o.alternateid ='{orderId}'";
+        return await TestdataUtil.RunSqlReturnIntOutput(sql);
     }
 
     private static NotificationOrder GetOrder()

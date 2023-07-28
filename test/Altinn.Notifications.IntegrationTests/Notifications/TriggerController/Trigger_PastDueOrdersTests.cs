@@ -1,6 +1,5 @@
 ﻿using System.Net;
 
-using Altinn.Notifications.Core.Repository.Interfaces;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Tests.EndToEndTests;
@@ -36,18 +35,21 @@ public class Trigger_PastDueOrdersTests : IClassFixture<IntegrationTestWebApplic
     [Fact]
     public async Task Trigger_PastDueOrders_ResposeOk()
     {
-        // Todo: ensure there is data in database before triggering processing.
-
         // Arrange
-        HttpClient client = GetTestClient();
+        string orderId = await TestdataUtil.PopulateDBWithOrder();
+        string sql = $"select count(1) from notifications.orders where processedstatus = 'Processing' and alternateid='{orderId}'";
 
+        HttpClient client = GetTestClient();
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath);
 
         // Act
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
 
         // Assert
+        int actual = await TestdataUtil.RunSqlReturnIntOutput(sql);
+        
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(1, actual);
     }
 
     public async void Dispose()
