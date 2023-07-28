@@ -32,13 +32,24 @@ public class OrderRepository : IOrderRepository
     /// <inheritdoc/>
     public async Task<NotificationOrder> Create(NotificationOrder order)
     {
-        // check if this can be a transaction instead.
-        long dbOrderId = await InsertOrder(order);
-
-        EmailTemplate? emailTemplate = ExtractTemplates(order);
-        if (emailTemplate != null)
+        await using var connection = await _dataSource.OpenConnectionAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+        try
         {
-            await InsertEmailText(dbOrderId, emailTemplate.FromAddress, emailTemplate.Subject, emailTemplate.Body, emailTemplate.ContentType.ToString());
+            long dbOrderId = await InsertOrder(order);
+
+            EmailTemplate? emailTemplate = ExtractTemplates(order);
+            if (emailTemplate != null)
+            {
+                await InsertEmailText(dbOrderId, emailTemplate.FromAddress, emailTemplate.Subject, emailTemplate.Body, emailTemplate.ContentType.ToString());
+            }
+
+            await transaction.CommitAsync();
+        }
+        catch (Exception)
+        {
+            await transaction.RollbackAsync();
+            throw;
         }
 
         return order;
