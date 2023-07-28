@@ -62,8 +62,14 @@ public class PastDueOrdersConsumerTests : IDisposable
 
     public async void Dispose()
     {
-        await KafkaUtil.DeleteTopicAsync(_pastDueOrdersTopicName);
+        await Dispose(true);
+
         GC.SuppressFinalize(this);
+    }
+
+    protected virtual async Task Dispose(bool disposing)
+    {
+        await KafkaUtil.DeleteTopicAsync(_pastDueOrdersTopicName);
     }
 
     private static IServiceProvider SetUpServices(string topicName)
