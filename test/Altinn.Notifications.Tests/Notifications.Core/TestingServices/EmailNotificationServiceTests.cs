@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 
 using Altinn.Notifications.Core.Configuration;
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations.Interfaces;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
@@ -43,6 +44,33 @@ public class EmailNotificationServiceTests
         // Assert
         repoMock.Verify();
         producerMock.Verify(p => p.ProduceAsync(It.Is<string>(s => s.Equals(_emailQueueTopicName)), It.IsAny<string>()), Times.Exactly(3));
+    }
+
+
+    [Fact]
+    public async Task SendNotifications_ProducerReturnsFalse_RepositoryCalledToUpdateDB()
+    {
+        // Arrange 
+        var repoMock = new Mock<IEmailNotificationRepository>();
+        repoMock.Setup(r => r.GetNewNotifications())
+            .ReturnsAsync(new List<Email>() { _email });
+
+        repoMock
+            .Setup(r => r.SetResultStatus(It.IsAny<string>(), It.Is<EmailNotificationResultType>(t => t == EmailNotificationResultType.New)));
+
+        var producerMock = new Mock<IKafkaProducer>();
+        producerMock.Setup(p => p.ProduceAsync(It.Is<string>(s => s.Equals(_emailQueueTopicName)), It.IsAny<string>()))
+            .ReturnsAsync(false);
+
+        var service = GetTestService(repo: repoMock.Object, producer: producerMock.Object);
+
+        // Act
+        await service.SendNotifications();
+
+        // Assert
+        repoMock.Verify();
+        producerMock.VerifyAll();
+        repoMock.VerifyAll();
     }
 
     [Fact]

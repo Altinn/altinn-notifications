@@ -21,7 +21,7 @@ public interface IEmailNotificationRepository
     public Task<List<Email>> GetNewNotifications();
 
     /// <summary>
-    /// Sets result status of an email
+    /// Sets result status of an email notification
     /// </summary>
-    public Task SetResultStatus(int emailId, EmailNotificationResultType status);
+    public Task SetResultStatus(string notificationId, EmailNotificationResultType status);
 }
