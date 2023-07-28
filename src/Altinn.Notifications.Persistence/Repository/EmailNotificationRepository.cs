@@ -18,7 +18,7 @@ public class EmailNotificationRepository : IEmailNotificationRepository
     private readonly NpgsqlDataSource _dataSource;
     private const string _insertEmailNotificationSql = "call notifications.insertemailnotification($1, $2, $3, $4, $5, $6, $7)"; // (__orderid, _alternateid, _recipientid, _toaddress, _result, _resulttime, _expirytime)
     private const string _getEmailNotificationsSql = "select * from notifications.getemails_statusnew_updatestatus()";
-    private const string _setResultStatus = "update notifications.emailnotifications set result =$1::emailnotificationresulttype where _id=$2";
+    private const string _setResultStatus = "update notifications.emailnotifications set result =$1::emailnotificationresulttype where alternateid=$2";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotificationRepository"/> class.
