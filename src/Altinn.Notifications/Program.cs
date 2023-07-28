@@ -119,7 +119,6 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     services.AddHealthChecks().AddCheck<HealthCheck>("notifications_health_check");
 
     services.AddSingleton(config);
-
     if (!string.IsNullOrEmpty(applicationInsightsConnectionString))
     {
         services.AddSingleton(typeof(ITelemetryChannel), new ServerTelemetryChannel() { StorageFolder = "/tmp/logtelemetry" });
@@ -131,6 +130,8 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
 
         services.AddApplicationInsightsTelemetryProcessor<HealthTelemetryFilter>();
         services.AddSingleton<ITelemetryInitializer, CustomTelemetryInitializer>();
+        logger.LogInformation($"// Program // Connected to Application Insights");
+
     }
 
     services.Configure<GeneralSettings>(config.GetSection("GeneralSettings"));
