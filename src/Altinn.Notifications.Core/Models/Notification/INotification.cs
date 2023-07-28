@@ -1,21 +1,24 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using System;
+
+using Altinn.Notifications.Core.Enums;
 
 namespace Altinn.Notifications.Core.Models.Notification;
 
 /// <summary>
 /// Interface describing a base notification.
 /// </summary>
-public interface INotification
+public interface INotification<TEnum>
+    where TEnum : struct, Enum
 {
     /// <summary>
     /// Gets the id of the notification.
     /// </summary>
-    public string? Id { get; }
+    public Guid Id { get; }
 
     /// <summary>
     /// Gets the order id of the notification.
     /// </summary>
-    public string OrderId { get; }
+    public Guid OrderId { get; }
 
     /// <summary>
     /// Gets the requested send time of the notification.
@@ -26,4 +29,9 @@ public interface INotification
     /// Gets the notifiction channel for the notification.
     /// </summary>
     public NotificationChannel NotificationChannel { get; }
+
+    /// <summary>
+    /// Gets the send result of the notification.
+    /// </summary>
+    public NotificationResult<TEnum> SendResult { get; }
 }

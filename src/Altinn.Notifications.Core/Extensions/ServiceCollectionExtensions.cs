@@ -1,9 +1,11 @@
 ﻿using Altinn.Notifications.Core.Configuration;
+using Altinn.Notifications.Core.Integrations.Consumers;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace Altinn.Notifications.Core.Extensions;
 
@@ -19,10 +21,28 @@ public static class ServiceCollectionExtensions
     /// <param name="config">the configuration collection</param>
     public static IServiceCollection AddCoreServices(this IServiceCollection services, IConfiguration config)
     {
+        KafkaSettings? kafkaSettings = config.GetSection("KafkaSettings").Get<KafkaSettings>();
+
+        if (kafkaSettings == null)
+        {
+            throw new ArgumentNullException(nameof(config), "Required KafkaSettings is missing from application configuration");
+        }
+
+        NotificationOrderConfig? settings = config.GetSection("NotificationOrderConfig").Get<NotificationOrderConfig>();
+
+        if (settings == null)
+        {
+            throw new ArgumentNullException(nameof(config), "Required NotificationOrderConfig is missing from application configuration");
+        }
+
         return services
               .AddSingleton<IGuidService, GuidService>()
               .AddSingleton<IDateTimeService, DateTimeService>()
+              .AddSingleton<IOrderProcessingService, OrderProcessingService>()
               .AddSingleton<IEmailNotificationOrderService, EmailNotificationOrderService>()
+              .AddSingleton<IEmailNotificationService, EmailNotificationService>()
+              .AddSingleton<IHostedService, PastDueOrdersConsumer>()
+              .Configure<KafkaSettings>(config.GetSection("KafkaSettings"))
               .Configure<NotificationOrderConfig>(config.GetSection("NotificationOrderConfig"));
     }
 }

@@ -26,7 +26,7 @@ public class EmailNotificationOrderServiceTests
         // Arrange
         DateTime sendTime = DateTime.UtcNow;
         DateTime createdTime = DateTime.UtcNow.AddMinutes(-2);
-        string id = Guid.NewGuid().ToString();
+        Guid id = Guid.NewGuid();
 
         NotificationOrder expected = new()
         {
@@ -72,7 +72,7 @@ public class EmailNotificationOrderServiceTests
         // Arrange
         DateTime sendTime = DateTime.UtcNow;
         DateTime createdTime = DateTime.UtcNow.AddMinutes(-2);
-        string id = Guid.NewGuid().ToString();
+        Guid id = Guid.NewGuid();
 
         NotificationOrder expected = new()
         {
@@ -113,7 +113,7 @@ public class EmailNotificationOrderServiceTests
     }
 
 
-    public static EmailNotificationOrderService GetTestService(IOrderRepository? repository = null, string? guid = null, DateTime? dateTime = null)
+    public static EmailNotificationOrderService GetTestService(IOrderRepository? repository = null, Guid? guid = null, DateTime? dateTime = null)
     {
         if (repository == null)
         {
@@ -122,8 +122,8 @@ public class EmailNotificationOrderServiceTests
         }
 
         var guidMock = new Mock<IGuidService>();
-        guidMock.Setup(g => g.NewGuidAsString())
-            .Returns(guid ?? Guid.NewGuid().ToString());
+        guidMock.Setup(g => g.NewGuid())
+            .Returns(guid ?? Guid.NewGuid());
 
         var dateTimeMock = new Mock<IDateTimeService>();
         dateTimeMock.Setup(g => g.UtcNow())

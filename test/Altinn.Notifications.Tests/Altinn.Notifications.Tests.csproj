@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Altinn.Common.AccessToken" Version="2.0.0" />
+    <PackageReference Include="Altinn.Common.AccessToken" Version="3.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="7.0.9" />
     <PackageReference Include="Microsoft.IdentityModel.Logging" Version="6.32.0" />
     <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="6.32.0" />
@@ -37,10 +37,6 @@
     <ProjectReference Include="..\..\src\Altinn.Notifications.Integrations\Altinn.Notifications.Integrations.csproj" />
     <ProjectReference Include="..\..\src\Altinn.Notifications.Persistence\Altinn.Notifications.Persistence.csproj" />
     <ProjectReference Include="..\..\src\Altinn.Notifications\Altinn.Notifications.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="UnitTests\" />
   </ItemGroup>
 
   <ItemGroup>

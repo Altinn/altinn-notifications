@@ -20,7 +20,7 @@ public class NotificationOrderTests
 
     public NotificationOrderTests()
     {
-        string id = Guid.NewGuid().ToString();
+        Guid id = Guid.NewGuid();
 
         _order = new()
         {
@@ -135,6 +135,30 @@ public class NotificationOrderTests
     {
         var actual = NotificationOrder.Deserialize(serializedOrder);
         Assert.NotNull(actual);
+    }
+
+    [Fact]
+    public void TryParse_EmptyString_False()
+    {
+        bool actualResult = NotificationOrder.TryParse(string.Empty, out _);
+        Assert.False(actualResult);
+    }
+
+    [Fact]
+    public void TryParse_InvalidString_False()
+    {
+        bool actualResult = NotificationOrder.TryParse("{\"ticket\":\"noTicket\"}", out _);
+
+        Assert.False(actualResult);
+    }
+
+
+    [Fact]
+    public void TryParse_InvalidJsonExceptionThrown_False()
+    {
+        bool actualResult = NotificationOrder.TryParse("{\"ticket:\"noTicket\"}", out _);
+
+        Assert.False(actualResult);
     }
 }
 

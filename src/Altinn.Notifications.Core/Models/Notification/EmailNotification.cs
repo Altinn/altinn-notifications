@@ -3,15 +3,15 @@
 namespace Altinn.Notifications.Core.Models.Notification;
 
 /// <summary>
-/// Class describing an email notification and extends the <see cref="INotification"/>
+/// Class describing an email notification and extends the <see cref="INotification{EmailNotificationResultType}"/>
 /// </summary>
-public class EmailNotification : INotification
+public class EmailNotification : INotification<EmailNotificationResultType>
 {
     /// <inheritdoc/>
-    public string Id { get; internal set; }
+    public Guid Id { get; internal set; }
 
     /// <inheritdoc/>
-    public string OrderId { get; internal set; }
+    public Guid OrderId { get; internal set; }
 
     /// <inheritdoc/>
     public DateTime RequestedSendTime { get; internal set; }
@@ -30,11 +30,16 @@ public class EmailNotification : INotification
     public string ToAddress { get; internal set; } = string.Empty;
 
     /// <summary>
+    /// Get or sets the send result of the notification
+    /// </summary>
+    public NotificationResult<EmailNotificationResultType> SendResult { get; internal set; } = new(EmailNotificationResultType.New, DateTime.UtcNow);
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotification"/> class.
     /// </summary>
-    public EmailNotification(string orderId, DateTime sendTime)
+    public EmailNotification(Guid orderId, DateTime sendTime)
     {
-        Id = Guid.NewGuid().ToString();
+        Id = Guid.NewGuid();
         OrderId = orderId;
         RequestedSendTime = sendTime;
     }
@@ -44,8 +49,8 @@ public class EmailNotification : INotification
     /// </summary>
     internal EmailNotification()
     {
-        Id = string.Empty;
-        OrderId = string.Empty;
+        Id = Guid.Empty;
+        OrderId = Guid.Empty;
         RequestedSendTime = DateTime.MinValue;
     }
 }

@@ -59,3 +59,11 @@ In pgAdmin
   - platform_notifications (canlogin)
 - Create schema _notifications_ in notificationsdb with owner _platform_notifications_admin_
 
+## Setting up Kafka
+
+To run a Kafka broker and Kafdrop (visualization and administration tool) locally you need to have Docker installed on your machine.
+
+In a terminal navigate to the root of this repository
+and run command `docker-compose -f setup-kafka.yml up -d`
+
+Kafdrop will be available on localhost:9000

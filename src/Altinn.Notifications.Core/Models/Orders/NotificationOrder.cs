@@ -14,7 +14,7 @@ public class NotificationOrder
     /// <summary>
     /// Gets the id of the notification order
     /// </summary>
-    public string Id { get; internal set; } = string.Empty;
+    public Guid Id { get; internal set; } = Guid.Empty;
 
     /// <summary>
     /// Gets the senders reference of a notification
@@ -54,7 +54,7 @@ public class NotificationOrder
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationOrder"/> class.
     /// </summary>
-    public NotificationOrder(string id, string? sendersReference, List<INotificationTemplate> templates, DateTime requestedSendTime, NotificationChannel notificationChannel, Creator creator, DateTime created, List<Recipient> recipients)
+    public NotificationOrder(Guid id, string? sendersReference, List<INotificationTemplate> templates, DateTime requestedSendTime, NotificationChannel notificationChannel, Creator creator, DateTime created, List<Recipient> recipients)
     {
         Id = id;
         SendersReference = sendersReference;
@@ -101,5 +101,33 @@ public class NotificationOrder
                 PropertyNameCaseInsensitive = true,
                 Converters = { new JsonStringEnumConverter() }
             });
+    }
+
+    /// <summary>
+    /// Try to parse a json string into a<see cref="NotificationOrder"/>
+    /// </summary>
+    public static bool TryParse(string input, out NotificationOrder value)
+    {
+        NotificationOrder? parsedOutput;
+        value = new NotificationOrder();
+
+        if (string.IsNullOrEmpty(input))
+        {
+            return false;
+        }
+
+        try
+        {
+            parsedOutput = Deserialize(input!);
+
+            value = parsedOutput!;
+            return value.Id != Guid.Empty;
+        }
+        catch
+        {
+            // try parse, we simply return false if fails
+        }
+
+        return false;
     }
 }

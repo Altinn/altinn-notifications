@@ -1,5 +1,10 @@
-﻿using Microsoft.AspNetCore.Hosting;
+﻿using System.Linq;
+
+using Altinn.Notifications.Core.Integrations.Consumers;
+
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 
 namespace Altinn.Notifications.Tests.Notifications;
@@ -17,6 +22,13 @@ public class CustomWebApplicationFactory<TStartup> : WebApplicationFactory<TStar
             config.AddConfiguration(new ConfigurationBuilder()
                 .AddJsonFile("appsettings.Test.json")
                 .Build());
+        });
+
+        builder.ConfigureTestServices(services =>
+        {
+            var descriptor = services.Single(s => s.ImplementationType == typeof(PastDueOrdersConsumer));
+            services.Remove(descriptor);
+
         });
     }
 }

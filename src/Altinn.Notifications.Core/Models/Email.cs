@@ -10,7 +10,7 @@ public class Email
     /// <summary>
     /// Gets or sets the id of the email.
     /// </summary>
-    public string Id { get; set; }
+    public Guid Id { get; set; }
 
     /// <summary>
     /// Gets or sets the subject of the email.
@@ -40,7 +40,7 @@ public class Email
     /// <summary>
     /// Initializes a new instance of the <see cref="Email"/> class.
     /// </summary>
-    public Email(string id, string subject, string body, string fromAddress, string toAddress, EmailContentType contentType)
+    public Email(Guid id, string subject, string body, string fromAddress, string toAddress, EmailContentType contentType)
     {
         Id = id;
         Subject = subject;

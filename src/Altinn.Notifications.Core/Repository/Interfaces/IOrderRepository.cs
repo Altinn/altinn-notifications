@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Models.Orders;
+﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models.Orders;
 
 namespace Altinn.Notifications.Core.Repository.Interfaces;
 
@@ -8,16 +9,20 @@ namespace Altinn.Notifications.Core.Repository.Interfaces;
 public interface IOrderRepository
 {
     /// <summary>
-    /// Gets a notification order by id
-    /// </summary>
-    /// <param name="id">The id of the notification order to retrieve</param>
-    /// <returns>A notification order</returns>
-    public Task<NotificationOrder?> GetById(string id);
-
-    /// <summary>
     /// Creates a new notification order in the database
     /// </summary>
     /// <param name="order">The order to save</param>
     /// <returns>The saved notification order</returns>
     public Task<NotificationOrder> Create(NotificationOrder order);
+
+    /// <summary>
+    /// Gets a list of notification orders where requestedSendTime has passed
+    /// </summary>
+    /// <returns>A list of notification orders</returns>
+    public Task<List<NotificationOrder>> GetPastDueOrdersAndSetProcessingState();
+
+    /// <summary>
+    /// Sets processing status of an order
+    /// </summary>
+    public Task SetProcessingStatus(Guid orderId, OrderProcessingStatus status);
 }

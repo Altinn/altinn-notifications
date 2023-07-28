@@ -1,5 +1,8 @@
-﻿using Microsoft.AspNetCore.Hosting;
+﻿using Altinn.Notifications.Core.Integrations.Consumers;
+
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 
 namespace Altinn.Notifications.Tests.EndToEndTests;
@@ -18,6 +21,13 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
             config.AddConfiguration(new ConfigurationBuilder()
                 .AddJsonFile("appsettings.IntegrationTest.json")
                 .Build());
+        });
+
+        builder.ConfigureTestServices(services =>
+        {
+            var descriptor = services.Single(s => s.ImplementationType == typeof(PastDueOrdersConsumer));
+            services.Remove(descriptor);
+
         });
     }
 }

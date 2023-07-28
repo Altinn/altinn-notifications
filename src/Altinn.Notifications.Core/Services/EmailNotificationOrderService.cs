@@ -33,7 +33,7 @@ public class EmailNotificationOrderService : IEmailNotificationOrderService
     /// <inheritdoc/>
     public async Task<(NotificationOrder? Order, ServiceError? Error)> RegisterEmailNotificationOrder(NotificationOrderRequest orderRequest)
     {
-        string orderId = _guid.NewGuidAsString();
+        Guid orderId = _guid.NewGuid();
         DateTime created = _dateTime.UtcNow();
 
         var templates = SetFromAddressIfNotDefined(orderRequest.Templates);
@@ -50,7 +50,6 @@ public class EmailNotificationOrderService : IEmailNotificationOrderService
 
         NotificationOrder savedOrder = await _repository.Create(order);
 
-        // push to kafka 
         return (savedOrder, null);
     }
 
