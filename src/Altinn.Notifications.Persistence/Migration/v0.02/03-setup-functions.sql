@@ -33,8 +33,8 @@ RETURN query
 		UPDATE notifications.emailnotifications
 			SET result = 'Sending'
 			WHERE result = 'New' 
-			RETURNING alternateid, _orderid, notifications.emailnotifications.toaddress)
-	SELECT u._alternateid, et.subject, et.body, et.fromaddress, u.toaddress, et.contenttype 
+			RETURNING notifications.emailnotifications.alternateid, _orderid, notifications.emailnotifications.toaddress)
+	SELECT u.alternateid, et.subject, et.body, et.fromaddress, u.toaddress, et.contenttype 
 	FROM updated u, notifications.emailtexts et
 	WHERE u._orderid = et._orderid;	
 END;
