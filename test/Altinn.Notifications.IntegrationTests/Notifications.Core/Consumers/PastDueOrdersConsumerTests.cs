@@ -1,24 +1,8 @@
-﻿using Altinn.Notifications.Core.Enums;
-using Altinn.Notifications.Core.Extensions;
-using Altinn.Notifications.Core.Integrations.Consumers;
-using Altinn.Notifications.Core.Integrations.Interfaces;
-using Altinn.Notifications.Core.Models;
-using Altinn.Notifications.Core.Models.Address;
-using Altinn.Notifications.Core.Models.NotificationTemplate;
+﻿using Altinn.Notifications.Core.Integrations.Consumers;
 using Altinn.Notifications.Core.Models.Orders;
-using Altinn.Notifications.Core.Repository.Interfaces;
-using Altinn.Notifications.Integrations.Extensions;
-using Altinn.Notifications.Integrations.Kafka.Producers;
 using Altinn.Notifications.IntegrationTests.Utils;
-using Altinn.Notifications.Persistence.Extensions;
-using Altinn.Notifications.Persistence.Repository;
 
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-
-using Npgsql;
 
 using Xunit;
 
@@ -27,7 +11,6 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Core.Consumers;
 public class PastDueOrdersConsumerTests : IDisposable
 {
     private readonly string _pastDueOrdersTopicName = Guid.NewGuid().ToString();
-    private IServiceProvider _serviceProvider = new ServiceCollection().BuildServiceProvider();
 
     /// <summary>
     /// When a new order is picked up by the consumer, we expect there to be an email notification created for the recipient states in the order.
@@ -38,13 +21,20 @@ public class PastDueOrdersConsumerTests : IDisposable
     public async Task RunTask_ConfirmExpectedSideEffects()
     {
         // Arrange
-        _serviceProvider = SetUpServices(_pastDueOrdersTopicName);
+        Dictionary<string, string> vars = new()
+        {
+            {"KafkaSettings__PastDueOrdersTopicName", _pastDueOrdersTopicName },
+            {"KafkaSettings__TopicList", $"[\"{_pastDueOrdersTopicName}\"]" }
+        };
 
-        Guid orderId = await PopulateDbAndTopic(_serviceProvider, _pastDueOrdersTopicName);
+        PastDueOrdersConsumer consumerService = (PastDueOrdersConsumer)ServiceUtil
+                                                    .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
+                                                    .First(s => s.GetType() == typeof(PastDueOrdersConsumer))!;
 
-        var consumerService = _serviceProvider
-            .GetServices<IHostedService>()
-            .First(s => s.GetType() == typeof(PastDueOrdersConsumer));
+        NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithOrder();
+        await KafkaUtil.PublishMessageOnTopic(_pastDueOrdersTopicName, persistedOrder.Serialize());
+
+        Guid orderId = persistedOrder.Id;
 
         // Act
         await consumerService.StartAsync(CancellationToken.None);
@@ -71,41 +61,6 @@ public class PastDueOrdersConsumerTests : IDisposable
         await KafkaUtil.DeleteTopicAsync(_pastDueOrdersTopicName);
     }
 
-    private static IServiceProvider SetUpServices(string topicName)
-    {
-        Environment.SetEnvironmentVariable("KafkaSettings__PastDueOrdersTopicName", topicName);
-        Environment.SetEnvironmentVariable("KafkaSettings__TopicList", $"[\"{topicName}\"]");
-
-        var builder = new ConfigurationBuilder()
-            .AddJsonFile($"appsettings.json")
-            .AddJsonFile("appsettings.IntegrationTest.json")
-            .AddEnvironmentVariables();
-
-        var config = builder.Build();
-
-        WebApplication.CreateBuilder()
-                       .Build()
-                       .SetUpPostgreSql(true, config);
-
-        IServiceCollection services = new ServiceCollection()
-            .AddLogging()
-            .AddCoreServices(config)
-            .AddPostgresRepositories(config)
-            .AddKafkaServices(config);
-
-        return services.BuildServiceProvider();
-    }
-
-    private static async Task<Guid> PopulateDbAndTopic(IServiceProvider serviceProvider, string topicName)
-    {
-        var persistedOrder = await PostgreUtil.PopulateDBWithOrder();
-
-        var producer = (KafkaProducer)serviceProvider.GetServices(typeof(IKafkaProducer)).First()!;
-        await producer.ProduceAsync(topicName, persistedOrder.Serialize());
-
-        return persistedOrder.Id;
-    }
-
     private static async Task<long> SelectCompletedOrderCount(Guid orderId)
     {
         string sql = $"select count(1) from notifications.orders where processedstatus = 'Completed' and alternateid='{orderId}'";
@@ -120,5 +75,4 @@ public class PastDueOrdersConsumerTests : IDisposable
                    $"where e._orderid = o._id and o.alternateid ='{orderId}'";
         return await PostgreUtil.RunSqlReturnIntOutput(sql);
     }
-    
 }

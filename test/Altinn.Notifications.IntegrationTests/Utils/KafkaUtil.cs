@@ -1,4 +1,7 @@
-﻿using Confluent.Kafka;
+﻿using Altinn.Notifications.Core.Integrations.Interfaces;
+using Altinn.Notifications.Integrations.Kafka.Producers;
+
+using Confluent.Kafka;
 
 namespace Altinn.Notifications.IntegrationTests.Utils;
 public static class KafkaUtil
@@ -10,5 +13,13 @@ public static class KafkaUtil
     {
         using var adminClient = new AdminClientBuilder(new Dictionary<string, string>() { { "bootstrap.servers", _brokerAddress } }).Build();
         await adminClient.DeleteTopicsAsync(new string[] { topic });
+    }
+
+    public static async Task PublishMessageOnTopic(string topic, string message)
+    {
+        var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IKafkaProducer) });
+        KafkaProducer producerService = (KafkaProducer)serviceList.First(i => i.GetType() == typeof(KafkaProducer));
+
+        await producerService.ProduceAsync(topic, message);
     }
 }

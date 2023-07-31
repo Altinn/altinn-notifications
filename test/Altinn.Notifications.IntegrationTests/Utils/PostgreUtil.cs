@@ -1,18 +1,13 @@
 ﻿using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Repository.Interfaces;
-using Altinn.Notifications.Persistence.Extensions;
 using Altinn.Notifications.Persistence.Repository;
-
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 
 using Npgsql;
 
 namespace Altinn.Notifications.IntegrationTests.Utils;
 
-public class PostgreUtil
+public static class PostgreUtil
 {
     public static async Task<Guid> PopulateDBWithOrderAndReturnId()
     {
@@ -50,22 +45,8 @@ public class PostgreUtil
 
     public static async Task<int> RunSqlReturnIntOutput(string query)
     {
-        var builder = new ConfigurationBuilder()
-           .AddJsonFile($"appsettings.json")
-           .AddJsonFile("appsettings.IntegrationTest.json");
+        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) }).First()!;
 
-        var config = builder.Build();
-
-        WebApplication.CreateBuilder()
-                       .Build()
-                       .SetUpPostgreSql(true, config);
-
-        IServiceCollection services = new ServiceCollection()
-                        .AddPostgresRepositories(config);
-
-        var serviceProvider = services.BuildServiceProvider();
-
-        var dataSource = (NpgsqlDataSource)serviceProvider.GetServices(typeof(NpgsqlDataSource)).First()!;
         await using NpgsqlCommand pgcom = dataSource.CreateCommand(query);
 
         await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync();
@@ -74,5 +55,4 @@ public class PostgreUtil
 
         return count;
     }
-
 }
