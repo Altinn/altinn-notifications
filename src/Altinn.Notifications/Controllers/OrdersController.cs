@@ -13,7 +13,7 @@ namespace Altinn.Notifications.Controllers;
 /// <summary>
 /// Controller for all operations related to notification orders
 /// </summary>
-[Route("notifications/api/v1/orders/email")]
+[Route("notifications/api/v1/orders")]
 [ApiController]
 [Authorize]
 public class OrdersController : ControllerBase

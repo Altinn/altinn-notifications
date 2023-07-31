@@ -8,8 +8,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-using static Confluent.Kafka.ConfigPropertyNames;
-
 namespace Altinn.Notifications.Core.Integrations.Consumers;
 
 /// <summary>

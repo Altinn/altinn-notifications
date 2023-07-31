@@ -25,4 +25,18 @@ public interface IOrderRepository
     /// Sets processing status of an order
     /// </summary>
     public Task SetProcessingStatus(Guid orderId, OrderProcessingStatus status);
+
+    /// <summary>
+    /// Gets an order based on the provided id
+    /// </summary>
+    /// <param name="id">The order id</param>
+    /// <returns>A notification order if it exists</returns>
+    public Task<NotificationOrder> GetOrderById(Guid id);
+
+    /// <summary>
+    /// Gets an order based on the provided senders reference
+    /// </summary>
+    /// <param name="sendersReference">The senders reference</param>
+    /// <returns>A notification order if it exists</returns>
+    public Task<NotificationOrder> GetOrderBySendersReference(string sendersReference);
 }
