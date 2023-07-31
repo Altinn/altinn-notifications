@@ -131,7 +131,6 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
         services.AddApplicationInsightsTelemetryProcessor<HealthTelemetryFilter>();
         services.AddSingleton<ITelemetryInitializer, CustomTelemetryInitializer>();
         logger.LogInformation($"// Program // Connected to Application Insights");
-
     }
 
     services.Configure<GeneralSettings>(config.GetSection("GeneralSettings"));
