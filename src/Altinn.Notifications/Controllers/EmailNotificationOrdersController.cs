@@ -69,9 +69,7 @@ public class EmailNotificationOrdersController : ControllerBase
             return StatusCode(error.ErrorCode, error.ErrorMessage);
         }
 
-        NotificationOrderExt registeredOrderExt = registeredOrder!.MapToNotificationOrderExt();
-
-        string selfLink = _settings.BaseUri + "/notifications/api/v1/orders/" + registeredOrderExt.Id;
-        return Accepted(selfLink, registeredOrderExt.Id);
+        string selfLink = _settings.BaseUri + "/notifications/api/v1/orders/" + registeredOrder!.Id;
+        return Accepted(selfLink, registeredOrder.Id);
     }
 }
