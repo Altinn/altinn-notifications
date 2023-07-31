@@ -11,8 +11,8 @@ public interface IOrderService
     /// <summary>
     /// Retrieves a notification order by id
     /// </summary>
-    /// <param name="orderId">The order id</param>
-    public Task<(NotificationOrder? Order, ServiceError? Error)> GetOrderById(Guid orderId);
+    /// <param name="id">The order id</param>
+    public Task<(NotificationOrder? Order, ServiceError? Error)> GetOrderById(Guid id);
 
     /// <summary>
     /// Retrieves a notification order by senders reference

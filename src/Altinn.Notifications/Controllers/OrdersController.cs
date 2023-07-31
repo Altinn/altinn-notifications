@@ -31,14 +31,14 @@ public class OrdersController : ControllerBase
     /// <summary>
     /// Endpoint for retrieving an order by id
     /// </summary>
-    /// <param name="orderId">The order id</param>
+    /// <param name="id">The order id</param>
     /// <returns>The order that correspons to the provided id</returns>
     [HttpGet]
-    [Route("{orderId}")]
-    public async Task<ActionResult<NotificationOrderExt>> Get([FromRoute] Guid orderId)
+    [Route("{id}")]
+    public async Task<ActionResult<NotificationOrderExt>> GetById([FromRoute] Guid id)
     {
-        var res = await _orderService.GetOrderById(orderId);
-        return HandleServiceResult(res.Order, res.Error);
+        var (order, error) = await _orderService.GetOrderById(id);
+        return HandleServiceResult(order, error);
     }
 
     /// <summary>
@@ -47,18 +47,21 @@ public class OrdersController : ControllerBase
     /// <param name="sendersReference">The senders reference</param>
     /// <returns>The order that correspons to the provided senders reference</returns>
     [HttpGet]
-    public async Task<ActionResult<NotificationOrderExt>> Get([FromQuery] string sendersReference)
+    public async Task<ActionResult<NotificationOrderExt>> GetBySendersRef([FromQuery] string sendersReference)
     {
         if (string.IsNullOrEmpty(sendersReference))
         {
             return BadRequest();
         }
 
-        var res = await _orderService.GetOrderBySendersReference(sendersReference);
-        return HandleServiceResult(res.Order, res.Error);
+        var (order, error) = await _orderService.GetOrderBySendersReference(sendersReference);
+        return HandleServiceResult(order, error);
     }
 
-    private ActionResult<NotificationOrderExt> HandleServiceResult(NotificationOrder? order, ServiceError? error)
+    /// <summary>
+    /// Processes the output from the service result
+    /// </summary>
+    internal ActionResult<NotificationOrderExt> HandleServiceResult(NotificationOrder? order, ServiceError? error)
     {
         if (error != null)
         {
@@ -66,9 +69,7 @@ public class OrdersController : ControllerBase
         }
 
         // basic authorization check to verify caller has access to order
-        string? requestingOrg = User.GetOrg();
-
-        if (requestingOrg != order!.Creator.ShortName)
+        if (User.GetOrg() != order!.Creator.ShortName)
         {
             return Forbid();
         }
