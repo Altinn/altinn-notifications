@@ -1,6 +1,4 @@
-﻿using System.Text.Json;
-
-using Altinn.Notifications.Core.Extensions;
+﻿using Altinn.Notifications.Core.Extensions;
 using Altinn.Notifications.Integrations.Extensions;
 using Altinn.Notifications.Persistence.Extensions;
 
