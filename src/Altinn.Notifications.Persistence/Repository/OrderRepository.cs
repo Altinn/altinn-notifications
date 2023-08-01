@@ -20,7 +20,7 @@ public class OrderRepository : IOrderRepository
     private const string _getOrdersBySendersReferenceSql = "select notificationorder from notifications.orders where sendersreference=$1 and creatorname=$2";
     private const string _insertOrderSql = "select notifications.insertorder($1, $2, $3, $4, $5, $6)"; // (_alternateid, _creatorname, _sendersreference, _created, _requestedsendtime, _notificationorder)
     private const string _insertEmailTextSql = "call notifications.insertemailtext($1, $2, $3, $4, $5)"; // (__orderid, _fromaddress, _subject, _body, _contenttype)
-    private const string _setProcessCompleted = "update notifications.orders set processed = NOW(), processedstatus =$1::orderprocessingstate where alternateid=$2";
+    private const string _setProcessCompleted = "update notifications.orders set processedstatus =$1::orderprocessingstate where alternateid=$2";
     private const string _getOrdersPastSendTimeUpdateStatus = "select notifications.getorders_pastsendtime_updatestatus()";
 
     /// <summary>
@@ -126,10 +126,10 @@ public class OrderRepository : IOrderRepository
 
         return searchResult;
     }
-        
+
     /// <summary>
-         /// Extracts relevant templates from a notification order
-         /// </summary>
+    /// Extracts relevant templates from a notification order
+    /// </summary>
     internal static EmailTemplate? ExtractTemplates(NotificationOrder order)
     {
         EmailTemplate? emailTemplate = null;

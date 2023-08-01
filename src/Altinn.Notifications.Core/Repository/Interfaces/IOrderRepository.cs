@@ -40,6 +40,6 @@ public interface IOrderRepository
     /// </summary>
     /// <param name="sendersReference">The senders reference</param>
     /// <param name="creator">The short name of the order creator</param>
-    /// <returns>A notification order if it exists</returns>
+    /// <returns>A list of notification orders</returns>
     public Task<List<NotificationOrder>> GetOrdersBySendersReference(string sendersReference, string creator);
 }
