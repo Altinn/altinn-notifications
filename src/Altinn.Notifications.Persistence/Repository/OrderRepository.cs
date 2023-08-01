@@ -15,9 +15,12 @@ namespace Altinn.Notifications.Persistence.Repository;
 public class OrderRepository : IOrderRepository
 {
     private readonly NpgsqlDataSource _dataSource;
+
+    private const string _getOrderByIdSql = "select * from notifications.orders where alternateid=$1";
+    private const string _getOrderBySendersReferenceSql = "select * from notifications.orders where sendersreference=$1";
     private const string _insertOrderSql = "select notifications.insertorder($1, $2, $3, $4, $5, $6)"; // (_alternateid, _creatorname, _sendersreference, _created, _requestedsendtime, _notificationorder)
     private const string _insertEmailTextSql = "call notifications.insertemailtext($1, $2, $3, $4, $5)"; // (__orderid, _fromaddress, _subject, _body, _contenttype)
-    private const string _setProcessCompleted = "update notifications.orders set processedstatus =$1::orderprocessingstate where alternateid=$2";
+    private const string _setProcessCompleted = "update notifications.orders set processed = NOW(), processedstatus =$1::orderprocessingstate where alternateid=$2";
     private const string _getOrdersPastSendTimeUpdateStatus = "select notifications.getorders_pastsendtime_updatestatus()";
 
     /// <summary>
@@ -27,6 +30,31 @@ public class OrderRepository : IOrderRepository
     public OrderRepository(NpgsqlDataSource dataSource)
     {
         _dataSource = dataSource;
+    }
+
+    /// <inheritdoc/>
+    public Task<NotificationOrder> GetOrderById(Guid id)
+    {
+        throw new NotImplementedException();
+    }
+
+    /// <inheritdoc/>
+    public async Task<NotificationOrder> GetOrderBySendersReference(string sendersReference)
+    {
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getOrderBySendersReferenceSql);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, sendersReference);
+
+        NotificationOrder order = null;
+
+        await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync())
+        {
+            while (await reader.ReadAsync())
+            {
+                order = NotificationOrder.Deserialize(reader[0]?.ToString()!)!;
+            }
+        }
+
+        return order;
     }
 
     /// <inheritdoc/>

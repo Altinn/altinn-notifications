@@ -21,14 +21,28 @@ public class OrderService : IOrderService
     }
 
     /// <inheritdoc/>
-    public Task<(NotificationOrder? Order, ServiceError? Error)> GetOrderById(Guid id)
+    public async Task<(NotificationOrder? Order, ServiceError? Error)> GetOrderById(Guid id)
     {
-        throw new NotImplementedException();
+        NotificationOrder order = await _repo.GetOrderById(id);
+
+        if (order == null)
+        {
+            return (null, new ServiceError(404));
+        }
+
+        return (order, null);
     }
 
     /// <inheritdoc/>
-    public Task<(NotificationOrder? Order, ServiceError? Error)> GetOrderBySendersReference(string senderRef)
+    public async Task<(NotificationOrder? Order, ServiceError? Error)> GetOrderBySendersReference(string senderRef)
     {
-        throw new NotImplementedException();
+        NotificationOrder order = await _repo.GetOrderBySendersReference(senderRef);
+
+        if (order == null)
+        {
+            return (null, new ServiceError(404));
+        }
+
+        return (order, null);
     }
 }

@@ -210,7 +210,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<CustomWebApp
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
         Assert.Equal("https://platform.at22.altinn.cloud/notifications/api/v1/orders/" + _order.Id, response.Headers?.Location?.ToString());
-        Assert.Equal($"\"{_order.Id}\"", actualOrderId);
+        Assert.Equal($"{_order.Id}", actualOrderId);
 
         serviceMock.VerifyAll();
     }

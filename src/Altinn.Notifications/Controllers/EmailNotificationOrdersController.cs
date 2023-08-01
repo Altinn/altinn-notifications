@@ -70,6 +70,6 @@ public class EmailNotificationOrdersController : ControllerBase
         }
 
         string selfLink = _settings.BaseUri + "/notifications/api/v1/orders/" + registeredOrder!.Id;
-        return Accepted(selfLink, registeredOrder.Id);
+        return Accepted(selfLink, registeredOrder.Id.ToString());
     }
 }
