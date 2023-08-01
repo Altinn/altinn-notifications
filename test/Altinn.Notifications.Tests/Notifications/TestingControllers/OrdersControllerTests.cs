@@ -65,6 +65,23 @@ public class OrdersControllerTests : IClassFixture<CustomWebApplicationFactory<O
     }
 
     [Fact]
+    public async Task GetBySendersRef_CalledByUser_ReturnsForbidden()
+    {
+        //Arrange
+        HttpClient client = GetTestClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetUserToken(1337));
+
+        string url = _basePath + "?sendersReference=" + "internal-ref";
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
     public async Task GetById_MissingBearer_ReturnsUnauthorized()
     {
         //Arrange
@@ -77,6 +94,23 @@ public class OrdersControllerTests : IClassFixture<CustomWebApplicationFactory<O
 
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetById_CalledByUser_ReturnsForbidden()
+    {
+        //Arrange
+        HttpClient client = GetTestClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetUserToken(1337));
+
+        string url = _basePath + "/" + Guid.NewGuid();
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Fact]
