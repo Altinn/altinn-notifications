@@ -68,17 +68,4 @@ public class NotificationOrderExt
     /// </summary>
     [JsonPropertyName("links")]
     public ResourceLinksExt Links { get; set; } = new ResourceLinksExt();
-
-    /// <summary>
-    /// Json serialized the <see cref="NotificationOrderExt"/>
-    /// </summary>
-    public string Serialize()
-    {
-        return JsonSerializer.Serialize(this, new JsonSerializerOptions
-        {
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-
-            Converters = { new JsonStringEnumConverter() },
-        });
-    }
 }
