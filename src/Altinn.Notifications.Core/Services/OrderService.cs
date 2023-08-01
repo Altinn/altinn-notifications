@@ -21,9 +21,9 @@ public class OrderService : IOrderService
     }
 
     /// <inheritdoc/>
-    public async Task<(NotificationOrder? Order, ServiceError? Error)> GetOrderById(Guid id)
+    public async Task<(NotificationOrder? Order, ServiceError? Error)> GetOrderById(Guid id, string creator)
     {
-        NotificationOrder order = await _repo.GetOrderById(id);
+        NotificationOrder? order = await _repo.GetOrderById(id, creator);
 
         if (order == null)
         {
@@ -34,15 +34,10 @@ public class OrderService : IOrderService
     }
 
     /// <inheritdoc/>
-    public async Task<(NotificationOrder? Order, ServiceError? Error)> GetOrderBySendersReference(string senderRef)
+    public async Task<(List<NotificationOrder>? Orders, ServiceError? Error)> GetOrdersBySendersReference(string senderRef, string creator)
     {
-        NotificationOrder order = await _repo.GetOrderBySendersReference(senderRef);
+        List<NotificationOrder> orders = await _repo.GetOrdersBySendersReference(senderRef, creator);
 
-        if (order == null)
-        {
-            return (null, new ServiceError(404));
-        }
-
-        return (order, null);
+        return (orders, null);
     }
 }

@@ -12,11 +12,13 @@ public interface IOrderService
     /// Retrieves a notification order by id
     /// </summary>
     /// <param name="id">The order id</param>
-    public Task<(NotificationOrder? Order, ServiceError? Error)> GetOrderById(Guid id);
+    /// <param name="creator">The creator of the orders</param>
+    public Task<(NotificationOrder? Order, ServiceError? Error)> GetOrderById(Guid id, string creator);
 
     /// <summary>
     /// Retrieves a notification order by senders reference
     /// </summary>
     /// <param name="senderRef">The senders reference</param>
-    public Task<(NotificationOrder? Order, ServiceError? Error)> GetOrderBySendersReference(string senderRef);
+    /// <param name="creator">The creator of the orders</param>
+    public Task<(List<NotificationOrder> Orders, ServiceError? Error)> GetOrdersBySendersReference(string senderRef, string creator);
 }

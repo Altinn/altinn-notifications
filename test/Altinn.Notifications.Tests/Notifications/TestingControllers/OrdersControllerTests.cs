@@ -16,8 +16,6 @@ using Altinn.Notifications.Tests.Notifications.Utils;
 
 using AltinnCore.Authentication.JwtCookie;
 
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -87,8 +85,8 @@ public class OrdersControllerTests : IClassFixture<CustomWebApplicationFactory<O
         //Arrange
         var orderService = new Mock<IOrderService>();
         orderService
-             .Setup(o => o.GetOrderBySendersReference(It.Is<string>(s => s.Equals("internal-ref"))))
-             .ReturnsAsync((_order, null));
+             .Setup(o => o.GetOrdersBySendersReference(It.Is<string>(s => s.Equals("internal-ref")), It.Is<string>(s => s.Equals("ttd"))))
+             .ReturnsAsync((new List<NotificationOrder>() { _order }, null));
 
         HttpClient client = GetTestClient(orderService.Object);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
@@ -112,7 +110,7 @@ public class OrdersControllerTests : IClassFixture<CustomWebApplicationFactory<O
 
         var orderService = new Mock<IOrderService>();
         orderService
-             .Setup(o => o.GetOrderById(It.Is<Guid>(g => g.Equals(orderId))))
+             .Setup(o => o.GetOrderById(It.Is<Guid>(g => g.Equals(orderId)), It.Is<string>(s => s.Equals("ttd"))))
              .ReturnsAsync((_order, null));
 
         HttpClient client = GetTestClient(orderService.Object);
@@ -130,40 +128,28 @@ public class OrdersControllerTests : IClassFixture<CustomWebApplicationFactory<O
     }
 
     [Fact]
-    public void HandleServiceResult_RequestorDoesNotMatchCreator_ReturnsForbidden()
+    public async Task GetById_ServicerReturnsError_StatusCodeMatchesError()
     {
-        // Arrange
-        var httpContextMock = new Mock<HttpContext>();
-        httpContextMock.Setup(c => c.User).Returns(PrincipalUtil.GetClaimsPrincipal("nav", "987485654"));
+        //Arrange
+        Guid orderId = Guid.NewGuid();
 
-        var controller = new OrdersController(null);
-        controller.ControllerContext = new();
-        controller.ControllerContext.HttpContext = httpContextMock.Object;
+        var orderService = new Mock<IOrderService>();
+        orderService
+             .Setup(o => o.GetOrderById(It.Is<Guid>(g => g.Equals(orderId)), It.Is<string>(s => s.Equals("ttd"))))
+             .ReturnsAsync((null, new ServiceError(404)));
+
+        HttpClient client = GetTestClient(orderService.Object);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
+
+        string url = _basePath + "/" + orderId;
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
 
         // Act
-        var res = controller.HandleServiceResult(_order, null);
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
 
         // Assert
-        Assert.IsType<ForbidResult>(res.Result);
-    }
-
-    [Fact]
-    public void HandleServiceResult_ServicerReturnsError_StatusCodeMatchesError()
-    {
-        // Arrange
-        var httpContextMock = new Mock<HttpContext>();
-        httpContextMock.Setup(c => c.User).Returns(PrincipalUtil.GetClaimsPrincipal("ttd", "987485654"));
-
-        var controller = new OrdersController(null);
-        controller.ControllerContext = new();
-        controller.ControllerContext.HttpContext = httpContextMock.Object;
-
-        // Act
-        var res = controller.HandleServiceResult(null, new ServiceError(404));
-
-        // Assert
-        Assert.IsType<ObjectResult>(res.Result);
-        Assert.Equal(404, (res.Result as ObjectResult)!.StatusCode);
+        orderService.VerifyAll();
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     private HttpClient GetTestClient(IOrderService? orderService = null)
@@ -172,12 +158,12 @@ public class OrdersControllerTests : IClassFixture<CustomWebApplicationFactory<O
         {
             var _orderService = new Mock<IOrderService>();
             _orderService
-                .Setup(o => o.GetOrderById(It.IsAny<Guid>()))
+                .Setup(o => o.GetOrderById(It.IsAny<Guid>(), It.IsAny<string>()))
                 .ReturnsAsync((_order, null));
 
             _orderService
-                 .Setup(o => o.GetOrderBySendersReference(It.IsAny<string>()))
-                 .ReturnsAsync((_order, null));
+                 .Setup(o => o.GetOrdersBySendersReference(It.IsAny<string>(), It.IsAny<string>()))
+                 .ReturnsAsync((new List<NotificationOrder>() { _order }, null));
 
             orderService = _orderService.Object;
         }

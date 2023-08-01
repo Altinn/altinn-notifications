@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
+using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Controllers;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
@@ -236,15 +237,22 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<CustomWebApp
         HttpClient client = _factory.WithWebHostBuilder(builder =>
         {
             IdentityModelEventSource.ShowPII = true;
+            
 
             builder.ConfigureTestServices(services =>
             {
+                services.Configure<GeneralSettings>(opts =>
+                {
+                    opts.BaseUri = "https://platform.at22.altinn.cloud";
+                });
+
                 services.AddSingleton(validator);
                 services.AddSingleton(orderService);
 
                 // Set up mock authentication so that not well known endpoint is used
                 services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
             });
+
         }).CreateClient();
 
         return client;

@@ -64,6 +64,12 @@ public class NotificationOrderExt
     public EmailTemplateExt? EmailTemplate { get; set; }
 
     /// <summary>
+    /// Gets or sets the link of the order
+    /// </summary>
+    [JsonPropertyName("links")]
+    public ResourceLinksExt Links { get; set; }
+
+    /// <summary>
     /// Json serialized the <see cref="NotificationOrderExt"/>
     /// </summary>
     public string Serialize()

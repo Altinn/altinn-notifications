@@ -1,6 +1,4 @@
-﻿using Altinn.Notifications.Core.Models;
-using Altinn.Notifications.Core.Models.Orders;
-using Altinn.Notifications.Core.Services.Interfaces;
+﻿using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
@@ -37,8 +35,23 @@ public class OrdersController : ControllerBase
     [Route("{id}")]
     public async Task<ActionResult<NotificationOrderExt>> GetById([FromRoute] Guid id)
     {
-        var (order, error) = await _orderService.GetOrderById(id);
-        return HandleServiceResult(order, error);
+        string? expectedCreator = User.GetOrg();
+        if (expectedCreator == null)
+        {
+            return Forbid();
+        }
+
+        var (order, error) = await _orderService.GetOrderById(id, expectedCreator);
+
+        if (error != null)
+        {
+            return StatusCode(error.ErrorCode, error.ErrorMessage);
+        }
+
+        var orderExt = order.MapToNotificationOrderExt();
+        orderExt.SetResourceLinks();
+
+        return orderExt;
     }
 
     /// <summary>
@@ -47,33 +60,28 @@ public class OrdersController : ControllerBase
     /// <param name="sendersReference">The senders reference</param>
     /// <returns>The order that correspons to the provided senders reference</returns>
     [HttpGet]
-    public async Task<ActionResult<NotificationOrderExt>> GetBySendersRef([FromQuery] string sendersReference)
+    public async Task<ActionResult<NotificationOrderListExt>> GetBySendersRef([FromQuery] string sendersReference)
     {
         if (string.IsNullOrEmpty(sendersReference))
         {
             return BadRequest();
         }
 
-        var (order, error) = await _orderService.GetOrderBySendersReference(sendersReference);
-        return HandleServiceResult(order, error);
-    }
+        string? expectedCreator = User.GetOrg();
+        if (expectedCreator == null)
+        {
+            return Forbid();
+        }
 
-    /// <summary>
-    /// Processes the output from the service result
-    /// </summary>
-    internal ActionResult<NotificationOrderExt> HandleServiceResult(NotificationOrder? order, ServiceError? error)
-    {
+        var (orders, error) = await _orderService.GetOrdersBySendersReference(sendersReference, expectedCreator);
+
         if (error != null)
         {
             return StatusCode(error.ErrorCode, error.ErrorMessage);
         }
 
-        // basic authorization check to verify caller has access to order
-        if (User.GetOrg() != order!.Creator.ShortName)
-        {
-            return Forbid();
-        }
-
-        return order.MapToNotificationOrderExt();
+        var orderList = orders.MapToNotificationOrderListExt();
+        orderList.SetResourceLinks();
+        return orderList;
     }
 }

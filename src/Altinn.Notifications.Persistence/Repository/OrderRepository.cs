@@ -16,8 +16,8 @@ public class OrderRepository : IOrderRepository
 {
     private readonly NpgsqlDataSource _dataSource;
 
-    private const string _getOrderByIdSql = "select notificationorder, processedstatus from notifications.orders where alternateid=$1";
-    private const string _getOrderBySendersReferenceSql = "select notificationorder, processedstatus from notifications.orders where sendersreference=$1";
+    private const string _getOrderByIdSql = "select notificationorder from notifications.orders where alternateid=$1 and creatorname=$2";
+    private const string _getOrdersBySendersReferenceSql = "select notificationorder from notifications.orders where sendersreference=$1 and creatorname=$2";
     private const string _insertOrderSql = "select notifications.insertorder($1, $2, $3, $4, $5, $6)"; // (_alternateid, _creatorname, _sendersreference, _created, _requestedsendtime, _notificationorder)
     private const string _insertEmailTextSql = "call notifications.insertemailtext($1, $2, $3, $4, $5)"; // (__orderid, _fromaddress, _subject, _body, _contenttype)
     private const string _setProcessCompleted = "update notifications.orders set processed = NOW(), processedstatus =$1::orderprocessingstate where alternateid=$2";
@@ -33,16 +33,11 @@ public class OrderRepository : IOrderRepository
     }
 
     /// <inheritdoc/>
-    public Task<NotificationOrder> GetOrderById(Guid id)
+    public async Task<NotificationOrder?> GetOrderById(Guid id, string creator)
     {
-        throw new NotImplementedException();
-    }
-
-    /// <inheritdoc/>
-    public async Task<NotificationOrder> GetOrderBySendersReference(string sendersReference)
-    {
-        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getOrderBySendersReferenceSql);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, sendersReference);
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getOrderByIdSql);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, id);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, creator);
 
         NotificationOrder order = null;
 
@@ -55,6 +50,27 @@ public class OrderRepository : IOrderRepository
         }
 
         return order;
+    }
+
+    /// <inheritdoc/>
+    public async Task<List<NotificationOrder>> GetOrdersBySendersReference(string sendersReference, string creator)
+    {
+        List<NotificationOrder> searchResult = new();
+
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getOrdersBySendersReferenceSql);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, sendersReference);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, creator);
+
+        await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync())
+        {
+            while (await reader.ReadAsync())
+            {
+                NotificationOrder notificationOrder = NotificationOrder.Deserialize(reader[0]?.ToString()!)!;
+                searchResult.Add(notificationOrder);
+            }
+        }
+
+        return searchResult;
     }
 
     /// <inheritdoc/>
@@ -110,10 +126,10 @@ public class OrderRepository : IOrderRepository
 
         return searchResult;
     }
-
+        
     /// <summary>
-    /// Extracts relevant templates from a notification order
-    /// </summary>
+         /// Extracts relevant templates from a notification order
+         /// </summary>
     internal static EmailTemplate? ExtractTemplates(NotificationOrder order)
     {
         EmailTemplate? emailTemplate = null;
