@@ -173,7 +173,7 @@ public class OrdersControllerTests : IClassFixture<CustomWebApplicationFactory<O
              .ReturnsAsync((null, new ServiceError(404)));
 
         HttpClient client = GetTestClient(orderService.Object);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttdd"));
 
         string url = _basePath + "/" + orderId;
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
