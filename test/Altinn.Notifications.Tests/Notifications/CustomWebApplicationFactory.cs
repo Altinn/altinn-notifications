@@ -27,8 +27,8 @@ public class CustomWebApplicationFactory<TStartup> : WebApplicationFactory<TStar
             config.AddConfiguration(configuration);
 
             // overriding initialization of extension class with test settings
-            var uri = configuration["GeneralSettings:BaseUri"];
-            ResourceLinkExtensions.Initialize(uri);
+            string? uri = configuration["GeneralSettings:BaseUri"];
+            ResourceLinkExtensions.Initialize(uri!);
         });
 
         builder.ConfigureTestServices(services =>

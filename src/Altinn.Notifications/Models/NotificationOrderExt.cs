@@ -67,7 +67,7 @@ public class NotificationOrderExt
     /// Gets or sets the link of the order
     /// </summary>
     [JsonPropertyName("links")]
-    public ResourceLinksExt Links { get; set; }
+    public ResourceLinksExt Links { get; set; } = new ResourceLinksExt();
 
     /// <summary>
     /// Json serialized the <see cref="NotificationOrderExt"/>

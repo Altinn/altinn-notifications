@@ -39,7 +39,7 @@ public class OrderRepository : IOrderRepository
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, id);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, creator);
 
-        NotificationOrder order = null;
+        NotificationOrder? order = null;
 
         await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync())
         {

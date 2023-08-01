@@ -56,11 +56,11 @@ public static class ResourceLinkExtensions
         }
     }
 
-        /// <summary>
-        /// Gets the self link for the provided notification order
-        /// </summary>
-        /// <exception cref="InvalidOperationException">Exception if class has not been initialized in Program.cs</exception>
-        public static string GetSelfLink(this NotificationOrder order)
+    /// <summary>
+    /// Gets the self link for the provided notification order
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Exception if class has not been initialized in Program.cs</exception>
+    public static string GetSelfLink(this NotificationOrder order)
     {
         if (_baseUri == null)
         {

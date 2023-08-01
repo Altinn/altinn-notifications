@@ -48,7 +48,7 @@ public class OrdersController : ControllerBase
             return StatusCode(error.ErrorCode, error.ErrorMessage);
         }
 
-        var orderExt = order.MapToNotificationOrderExt();
+        var orderExt = order!.MapToNotificationOrderExt();
         orderExt.SetResourceLinks();
 
         return orderExt;
