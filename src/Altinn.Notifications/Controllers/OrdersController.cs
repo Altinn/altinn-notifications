@@ -16,14 +16,14 @@ namespace Altinn.Notifications.Controllers;
 [Authorize]
 public class OrdersController : ControllerBase
 {
-    private readonly IOrderService _orderService;
+    private readonly IGetOrderService _getOrderService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrdersController"/> class.
     /// </summary>
-    public OrdersController(IOrderService orderService)
+    public OrdersController(IGetOrderService getOrderService)
     {
-        _orderService = orderService;
+        _getOrderService = getOrderService;
     }
 
     /// <summary>
@@ -41,7 +41,7 @@ public class OrdersController : ControllerBase
             return Forbid();
         }
 
-        var (order, error) = await _orderService.GetOrderById(id, expectedCreator);
+        var (order, error) = await _getOrderService.GetOrderById(id, expectedCreator);
 
         if (error != null)
         {
@@ -62,18 +62,13 @@ public class OrdersController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<NotificationOrderListExt>> GetBySendersRef([FromQuery] string sendersReference)
     {
-        if (string.IsNullOrEmpty(sendersReference))
-        {
-            return BadRequest();
-        }
-
         string? expectedCreator = User.GetOrg();
         if (expectedCreator == null)
         {
             return Forbid();
         }
 
-        var (orders, error) = await _orderService.GetOrdersBySendersReference(sendersReference, expectedCreator);
+        var (orders, error) = await _getOrderService.GetOrdersBySendersReference(sendersReference, expectedCreator);
 
         if (error != null)
         {

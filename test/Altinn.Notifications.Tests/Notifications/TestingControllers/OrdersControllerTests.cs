@@ -117,7 +117,7 @@ public class OrdersControllerTests : IClassFixture<CustomWebApplicationFactory<O
     public async Task GetBySendersRef_CorrespondingServiceMethodCalled()
     {
         //Arrange
-        var orderService = new Mock<IOrderService>();
+        var orderService = new Mock<IGetOrderService>();
         orderService
              .Setup(o => o.GetOrdersBySendersReference(It.Is<string>(s => s.Equals("internal-ref")), It.Is<string>(s => s.Equals("ttd"))))
              .ReturnsAsync((new List<NotificationOrder>() { _order }, null));
@@ -142,7 +142,7 @@ public class OrdersControllerTests : IClassFixture<CustomWebApplicationFactory<O
         //Arrange
         Guid orderId = Guid.NewGuid();
 
-        var orderService = new Mock<IOrderService>();
+        var orderService = new Mock<IGetOrderService>();
         orderService
              .Setup(o => o.GetOrderById(It.Is<Guid>(g => g.Equals(orderId)), It.Is<string>(s => s.Equals("ttd"))))
              .ReturnsAsync((_order, null));
@@ -167,13 +167,13 @@ public class OrdersControllerTests : IClassFixture<CustomWebApplicationFactory<O
         //Arrange
         Guid orderId = Guid.NewGuid();
 
-        var orderService = new Mock<IOrderService>();
+        var orderService = new Mock<IGetOrderService>();
         orderService
              .Setup(o => o.GetOrderById(It.Is<Guid>(g => g.Equals(orderId)), It.Is<string>(s => s.Equals("ttd"))))
              .ReturnsAsync((null, new ServiceError(404)));
 
         HttpClient client = GetTestClient(orderService.Object);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttdd"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
 
         string url = _basePath + "/" + orderId;
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
@@ -186,11 +186,11 @@ public class OrdersControllerTests : IClassFixture<CustomWebApplicationFactory<O
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    private HttpClient GetTestClient(IOrderService? orderService = null)
+    private HttpClient GetTestClient(IGetOrderService? orderService = null)
     {
         if (orderService == null)
         {
-            var _orderService = new Mock<IOrderService>();
+            var _orderService = new Mock<IGetOrderService>();
             _orderService
                 .Setup(o => o.GetOrderById(It.IsAny<Guid>(), It.IsAny<string>()))
                 .ReturnsAsync((_order, null));

@@ -4,9 +4,9 @@ using Altinn.Notifications.Core.Models.Orders;
 namespace Altinn.Notifications.Core.Services.Interfaces;
 
 /// <summary>
-/// Interface for operations related to notification orders
+/// Interface for operations related to retrieving notification orders
 /// </summary>
-public interface IOrderService
+public interface IGetOrderService
 {
     /// <summary>
     /// Retrieves a notification order by id

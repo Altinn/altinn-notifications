@@ -6,16 +6,16 @@ using Altinn.Notifications.Core.Services.Interfaces;
 namespace Altinn.Notifications.Core.Services;
 
 /// <summary>
-/// Implementation of the <see cref="IOrderService"/>
+/// Implementation of the <see cref="IGetOrderService"/>
 /// </summary>
-public class OrderService : IOrderService
+public class GetOrderService : IGetOrderService
 {
     private readonly IOrderRepository _repo;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="OrderService"/> class.
+    /// Initializes a new instance of the <see cref="GetOrderService"/> class.
     /// </summary>
-    public OrderService(IOrderRepository repo)
+    public GetOrderService(IOrderRepository repo)
     {
         _repo = repo;
     }
