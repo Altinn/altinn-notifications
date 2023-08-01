@@ -16,8 +16,8 @@ public class OrderRepository : IOrderRepository
 {
     private readonly NpgsqlDataSource _dataSource;
 
-    private const string _getOrderByIdSql = "select * from notifications.orders where alternateid=$1";
-    private const string _getOrderBySendersReferenceSql = "select * from notifications.orders where sendersreference=$1";
+    private const string _getOrderByIdSql = "select notificationorder, processedstatus from notifications.orders where alternateid=$1";
+    private const string _getOrderBySendersReferenceSql = "select notificationorder, processedstatus from notifications.orders where sendersreference=$1";
     private const string _insertOrderSql = "select notifications.insertorder($1, $2, $3, $4, $5, $6)"; // (_alternateid, _creatorname, _sendersreference, _created, _requestedsendtime, _notificationorder)
     private const string _insertEmailTextSql = "call notifications.insertemailtext($1, $2, $3, $4, $5)"; // (__orderid, _fromaddress, _subject, _body, _contenttype)
     private const string _setProcessCompleted = "update notifications.orders set processed = NOW(), processedstatus =$1::orderprocessingstate where alternateid=$2";
