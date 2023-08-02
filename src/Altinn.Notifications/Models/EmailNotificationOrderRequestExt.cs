@@ -1,5 +1,4 @@
-﻿using System.Net.Mail;
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using Altinn.Notifications.Core.Enums;
@@ -48,7 +47,7 @@ public class EmailNotificationOrderRequestExt
     /// Gets or sets the senders reference on the notification
     /// </summary>
     [JsonPropertyName("sendersReference")]
-    public string SendersReference { get; set; } = string.Empty;
+    public string? SendersReference { get; set; }
 
     /// <summary>
     /// Gets or sets the list of recipients

@@ -27,14 +27,15 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
 
     private readonly IntegrationTestWebApplicationFactory<EmailNotificationOrdersController> _factory;
 
-    private readonly EmailNotificationOrderRequestExt _orderRequestExt;
+    private readonly string  _serializedOrderRequestExt;
+    private readonly string _serializedOrderRequestWithoutSendersRefExt;
 
     private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
 
     public PostTests(IntegrationTestWebApplicationFactory<EmailNotificationOrdersController> factory)
     {
         _factory = factory;
-        _orderRequestExt = new()
+        EmailNotificationOrderRequestExt orderRequestExt = new()
         {
             Body = "email-body",
             ContentType = EmailContentType.Html,
@@ -54,6 +55,11 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
             RequestedSendTime = DateTime.UtcNow,
             Subject = "email-subject"
         };
+
+        _serializedOrderRequestExt = orderRequestExt.Serialize();
+        orderRequestExt.SendersReference = null;
+
+        _serializedOrderRequestWithoutSendersRefExt = orderRequestExt.Serialize();
     }
 
     [Fact]
@@ -65,7 +71,29 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
 
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
         {
-            Content = new StringContent(_orderRequestExt.Serialize(), Encoding.UTF8, "application/json")
+            Content = new StringContent(_serializedOrderRequestExt, Encoding.UTF8, "application/json")
+        };
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        string orderId = await response.Content.ReadAsStringAsync();
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        Guid.Parse(orderId);
+        Assert.Equal("https://platform.at22.altinn.cloud/notifications/api/v1/orders/" + orderId, response.Headers?.Location?.ToString());
+    }
+
+    [Fact]
+    public async Task Post_OrderWithoutSendersRef_Accepted()
+    {
+        // Arrange
+        HttpClient client = GetTestClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
+
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
+        {
+            Content = new StringContent(_serializedOrderRequestWithoutSendersRefExt, Encoding.UTF8, "application/json")
         };
 
         // Act
