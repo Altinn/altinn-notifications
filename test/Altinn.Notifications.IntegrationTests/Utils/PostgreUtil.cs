@@ -19,12 +19,18 @@ public static class PostgreUtil
         return persistedOrder.Id;
     }
 
-    public static async Task<NotificationOrder> PopulateDBWithOrder()
+    public static async Task<NotificationOrder> PopulateDBWithOrder(string? sendersReference = null)
     {
         var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IOrderRepository) });
         OrderRepository repository = (OrderRepository)serviceList.First(i => i.GetType() == typeof(OrderRepository));
         var order = TestdataUtil.NotificationOrder_EmailTemplate_OneRecipient();
         order.Id = Guid.NewGuid();
+
+        if (sendersReference != null)
+        {
+            order.SendersReference = sendersReference;
+        }
+
         var persistedOrder = await repository.Create(order);
         return persistedOrder;
     }

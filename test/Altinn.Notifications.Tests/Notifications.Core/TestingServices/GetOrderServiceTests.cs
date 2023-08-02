@@ -97,7 +97,7 @@ public class GetOrderServiceTests
         var repoMock = new Mock<IOrderRepository>();
         repoMock
             .Setup(r => r.GetOrdersBySendersReference(It.Is<string>(s => s.Equals("sendersRef")), It.Is<string>(s => s.Equals("ttd"))))
-            .ReturnsAsync(new List<NotificationOrder>() { new NotificationOrder(), new NotificationOrder() , new NotificationOrder() });
+            .ReturnsAsync(new List<NotificationOrder>() { new NotificationOrder(), new NotificationOrder(), new NotificationOrder() });
 
         var service = GetTestService(repoMock.Object);
 
@@ -111,7 +111,7 @@ public class GetOrderServiceTests
         Assert.Null(actuallError);
     }
 
-    private GetOrderService GetTestService(IOrderRepository? repo = null)
+    private static GetOrderService GetTestService(IOrderRepository? repo = null)
     {
         if (repo == null)
         {
