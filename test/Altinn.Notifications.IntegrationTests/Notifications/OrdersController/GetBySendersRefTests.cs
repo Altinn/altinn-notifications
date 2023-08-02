@@ -18,15 +18,18 @@ using System.Text.Json.Serialization;
 using System.Text.Json;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Core.Models.Orders;
+using NpgsqlTypes;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.OrdersController;
 
 
-public class GetBySendersRefTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.OrdersController>>
+public class GetBySendersRefTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.OrdersController>>, IDisposable
 {
     private const string _basePath = "/notifications/api/v1/orders";
 
     private readonly IntegrationTestWebApplicationFactory<Controllers.OrdersController> _factory;
+
+    private readonly string _sendersRefBase = $"ref-{Guid.NewGuid()}";
 
     public GetBySendersRefTests(IntegrationTestWebApplicationFactory<Controllers.OrdersController> factory)
     {
@@ -37,11 +40,12 @@ public class GetBySendersRefTests : IClassFixture<IntegrationTestWebApplicationF
     public async Task GetBySendersRef_NoMatchInDb_ReturnsOK_EmptyList()
     {
         // Arrange
-        string uri = $"{_basePath}?sendersReference={Guid.NewGuid()}";
+        string sendersReference = $"{_sendersRefBase}-{Guid.NewGuid()}";
 
         HttpClient client = GetTestClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
 
+        string uri = $"{_basePath}?sendersReference={sendersReference}";
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, uri);
 
         // Act
@@ -59,7 +63,7 @@ public class GetBySendersRefTests : IClassFixture<IntegrationTestWebApplicationF
     public async Task GetBySendersRef_SingleMatchInDb_ReturnsOk_SingleElementInlList()
     {
         // Arrange
-        string sendersReference = $"ref-{Guid.NewGuid()}";
+        string sendersReference = $"{_sendersRefBase}-{Guid.NewGuid()}";
         NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithOrder(sendersReference: sendersReference);
 
         HttpClient client = GetTestClient();
@@ -85,7 +89,7 @@ public class GetBySendersRefTests : IClassFixture<IntegrationTestWebApplicationF
     public async Task GetBySendersRef_MultipleMatchInDb_ReturnsOk_MultipleElementInlList()
     {
         // Arrange
-        string sendersReference = $"ref-{Guid.NewGuid()}";
+        string sendersReference = $"{_sendersRefBase}-{Guid.NewGuid()}";
         NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithOrder(sendersReference: sendersReference);
         await PostgreUtil.PopulateDBWithOrder(sendersReference: sendersReference);
 
@@ -108,6 +112,18 @@ public class GetBySendersRefTests : IClassFixture<IntegrationTestWebApplicationF
         Assert.DoesNotContain(actual.Orders, o => o.Creator != "ttd");
     }
 
+    public async void Dispose()
+    {
+        await Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual async Task Dispose(bool disposing)
+    {
+        string sql = $"delete from notifications.orders where sendersreference like '{_sendersRefBase}%'";
+        await PostgreUtil.RunSql(sql);
+    }
+
     private HttpClient GetTestClient()
     {
         HttpClient client = _factory.WithWebHostBuilder(builder =>
@@ -124,5 +140,4 @@ public class GetBySendersRefTests : IClassFixture<IntegrationTestWebApplicationF
 
         return client;
     }
-
 }

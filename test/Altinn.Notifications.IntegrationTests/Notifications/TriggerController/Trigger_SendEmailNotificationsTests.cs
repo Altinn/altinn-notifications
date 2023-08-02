@@ -22,6 +22,7 @@ public class Trigger_SendEmailNotificationsTests : IClassFixture<IntegrationTest
 
     private readonly IntegrationTestWebApplicationFactory<Controllers.TriggerController> _factory;
     private readonly string _topicName = Guid.NewGuid().ToString();
+    private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
 
     public Trigger_SendEmailNotificationsTests(IntegrationTestWebApplicationFactory<Controllers.TriggerController> factory)
     {
@@ -36,7 +37,7 @@ public class Trigger_SendEmailNotificationsTests : IClassFixture<IntegrationTest
     public async Task Post_Ok()
     {
         // Arrange
-        Guid notificationId = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
+        Guid notificationId = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(sendersReference: _sendersRef);
 
         HttpClient client = GetTestClient();
 
@@ -61,7 +62,10 @@ public class Trigger_SendEmailNotificationsTests : IClassFixture<IntegrationTest
 
     protected virtual async Task Dispose(bool disposing)
     {
-        await KafkaUtil.DeleteTopicAsync(_topicName);
+        string sql = $"delete from notifications.orders where sendersreference = '{_sendersRef}'";
+        await PostgreUtil.RunSql(sql);
+
+        await KafkaUtil.DeleteTopicAsync(_topicName);  
     }
 
     private HttpClient GetTestClient()

@@ -22,6 +22,7 @@ public class Trigger_PastDueOrdersTests : IClassFixture<IntegrationTestWebApplic
 
     private readonly IntegrationTestWebApplicationFactory<Controllers.TriggerController> _factory;
     private readonly string _topicName = Guid.NewGuid().ToString();
+    private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
 
     public Trigger_PastDueOrdersTests(IntegrationTestWebApplicationFactory<Controllers.TriggerController> factory)
     {
@@ -36,7 +37,7 @@ public class Trigger_PastDueOrdersTests : IClassFixture<IntegrationTestWebApplic
     public async Task Trigger_PastDueOrders_ResposeOk()
     {
         // Arrange
-        Guid orderId = await PostgreUtil.PopulateDBWithOrderAndReturnId();
+        Guid orderId = await PostgreUtil.PopulateDBWithOrderAndReturnId(sendersReference: _sendersRef);
 
         HttpClient client = GetTestClient();
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath);
@@ -61,6 +62,9 @@ public class Trigger_PastDueOrdersTests : IClassFixture<IntegrationTestWebApplic
 
     protected virtual async Task Dispose(bool disposing)
     {
+        string sql = $"delete from notifications.orders where sendersreference = '{_sendersRef}'";
+        await PostgreUtil.RunSql(sql);
+
         await KafkaUtil.DeleteTopicAsync(_topicName);
     }
 

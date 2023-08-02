@@ -22,11 +22,13 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.OrdersController;
 
-public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.OrdersController>>
+public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.OrdersController>>, IDisposable
 {
     private const string _basePath = "/notifications/api/v1/orders";
 
     private readonly IntegrationTestWebApplicationFactory<Controllers.OrdersController> _factory;
+
+    private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
 
     public GetByIdTests(IntegrationTestWebApplicationFactory<Controllers.OrdersController> factory)
     {
@@ -56,7 +58,7 @@ public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<C
     public async Task GetById_SingleMatchInDb_ReturnsOk()
     {
         // Arrange
-        NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithOrder();
+        NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithOrder(sendersReference: _sendersRef);
 
         // mapping to orderExt, but not using it directly to ensure mapping logic isn't affecting test result
         var mappedExtOrder = persistedOrder.MapToNotificationOrderExt();
@@ -97,6 +99,19 @@ public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<C
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equivalent(expected, actual);
+    }
+
+    public async void Dispose()
+    {
+        await Dispose(true);
+
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual async Task Dispose(bool disposing)
+    {
+        string sql = $"delete from notifications.orders where sendersreference = '{_sendersRef}'";
+        await PostgreUtil.RunSql(sql);
     }
 
     private HttpClient GetTestClient()

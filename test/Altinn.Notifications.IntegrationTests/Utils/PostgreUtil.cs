@@ -9,14 +9,10 @@ namespace Altinn.Notifications.IntegrationTests.Utils;
 
 public static class PostgreUtil
 {
-    public static async Task<Guid> PopulateDBWithOrderAndReturnId()
+    public static async Task<Guid> PopulateDBWithOrderAndReturnId(string? sendersReference = null)
     {
-        var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IOrderRepository) });
-        OrderRepository repository = (OrderRepository)serviceList.First(i => i.GetType() == typeof(OrderRepository));
-        var order = TestdataUtil.NotificationOrder_EmailTemplate_OneRecipient();
-        order.Id = Guid.NewGuid();
-        var persistedOrder = await repository.Create(order);
-        return persistedOrder.Id;
+        var order = await PopulateDBWithOrder(sendersReference);
+        return order.Id;
     }
 
     public static async Task<NotificationOrder> PopulateDBWithOrder(string? sendersReference = null)
@@ -35,13 +31,18 @@ public static class PostgreUtil
         return persistedOrder;
     }
 
-    public static async Task<Guid> PopulateDBWithOrderAndEmailNotification()
+    public static async Task<Guid> PopulateDBWithOrderAndEmailNotification(string? sendersReference = null)
     {
         (NotificationOrder o, EmailNotification e) = TestdataUtil.GetOrderAndEmailNotification();
         var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IOrderRepository), typeof(IEmailNotificationRepository) });
 
         OrderRepository orderRepo = (OrderRepository)serviceList.First(i => i.GetType() == typeof(OrderRepository));
         EmailNotificationRepository notificationRepo = (EmailNotificationRepository)serviceList.First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        if (sendersReference != null)
+        {
+            o.SendersReference = sendersReference;
+        }
 
         await orderRepo.Create(o);
         await notificationRepo.AddNotification(e, DateTime.UtcNow.AddDays(1));
@@ -60,5 +61,13 @@ public static class PostgreUtil
         int count = (int)reader.GetInt64(0);
 
         return count;
+    }
+
+    public static async Task RunSql(string query)
+    {
+        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) }).First()!;
+
+        await using NpgsqlCommand pgcom = dataSource.CreateCommand(query);
+        await pgcom.ExecuteNonQueryAsync();
     }
 }

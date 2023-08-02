@@ -4,6 +4,7 @@ using System.Text;
 
 using Altinn.Notifications.Controllers;
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Tests.EndToEndTests;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
@@ -20,13 +21,15 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.EmailNotificationsOrderController;
 
-public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<EmailNotificationOrdersController>>
+public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<EmailNotificationOrdersController>>, IDisposable
 {
     private const string _basePath = "/notifications/api/v1/orders/email";
 
     private readonly IntegrationTestWebApplicationFactory<EmailNotificationOrdersController> _factory;
 
     private readonly EmailNotificationOrderRequestExt _orderRequestExt;
+
+    private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
 
     public PostTests(IntegrationTestWebApplicationFactory<EmailNotificationOrdersController> factory)
     {
@@ -47,7 +50,7 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
                     EmailAddress ="recipient2@domain.com"
                 }
             },
-            SendersReference = "senders-reference",
+            SendersReference = _sendersRef,
             RequestedSendTime = DateTime.UtcNow,
             Subject = "email-subject"
         };
@@ -73,6 +76,19 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
         Guid.Parse(orderId);
         Assert.Equal("https://platform.at22.altinn.cloud/notifications/api/v1/orders/" + orderId, response.Headers?.Location?.ToString());
+    }
+
+    public async void Dispose()
+    {
+        await Dispose(true);
+
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual async Task Dispose(bool disposing)
+    {
+        string sql = $"delete from notifications.orders where sendersreference = '{_sendersRef}'";
+        await PostgreUtil.RunSql(sql);
     }
 
     private HttpClient GetTestClient()
