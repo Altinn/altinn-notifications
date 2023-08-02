@@ -70,6 +70,8 @@ function TC01_PostEmailNotificationOrderRequest(data) {
       (r) => r.status === 202,
     "POST valid email notification order request. Location header providedStatus is 202 Accepted":
       (r) => selfLink,
+    "POST valid email notification order request. Response body is not an empty string":
+      (r) => r.body
   });
 
   addErrorCount(success);
@@ -88,8 +90,8 @@ function TC02_GetNotificationOrderById(data, selfLink) {
   response = notificationsApi.getOrderByUrl(selfLink, data.token);
 
   success = check(response, {
-    "GET notification order by id. Status is 200 OK": (r) => r.status === 200,
-  });
+    "GET notification order by id. Status is 200 OK": (r) => r.status === 200
+    });
 
   addErrorCount(success);
 }
