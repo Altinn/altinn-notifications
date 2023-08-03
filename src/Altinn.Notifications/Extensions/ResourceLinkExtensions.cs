@@ -6,7 +6,7 @@ using Altinn.Notifications.Models;
 namespace Altinn.Notifications.Extensions;
 
 /// <summary>
-/// Gets or sets the 
+/// Extension class for ResourceLinks
 /// </summary>
 public static class ResourceLinkExtensions
 {
