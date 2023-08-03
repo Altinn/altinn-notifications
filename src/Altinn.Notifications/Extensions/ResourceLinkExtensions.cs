@@ -13,7 +13,7 @@ public static class ResourceLinkExtensions
     private static string? _baseUri;
 
     /// <summary>
-    /// Initializes the ResourceLinkHelper with the base URI from settings.
+    /// Initializes the ResourceLinkExtensions with the base URI from settings.
     /// </summary>
     /// <remarks>
     /// Should be called during startup to ensure base url is set
@@ -31,7 +31,7 @@ public static class ResourceLinkExtensions
     {
         if (_baseUri == null)
         {
-            throw new InvalidOperationException("ResourceLinkHelper has not been initialized with the base URI.");
+            throw new InvalidOperationException("ResourceLinkExtensions has not been initialized with the base URI.");
         }
 
         string self = _baseUri + "/notifications/api/v1/orders/" + order.Id;
@@ -64,7 +64,7 @@ public static class ResourceLinkExtensions
     {
         if (_baseUri == null)
         {
-            throw new InvalidOperationException("ResourceLinkHelper has not been initialized with the base URI.");
+            throw new InvalidOperationException("ResourceLinkExtensions has not been initialized with the base URI.");
         }
 
         return _baseUri + "/notifications/api/v1/orders/" + order!.Id;
