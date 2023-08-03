@@ -66,7 +66,7 @@ public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<C
         string refLinkBase = "https://platform.at22.altinn.cloud/notifications/api/v1/orders";
         string id = persistedOrder.Id.ToString();
 
-        NotificationOrderExt expected = new NotificationOrderExt
+        NotificationOrderExt expected = new()
         {
             Id = persistedOrder.Id.ToString(),
             SendersReference = persistedOrder.SendersReference,

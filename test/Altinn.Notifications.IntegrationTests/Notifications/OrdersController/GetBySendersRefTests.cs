@@ -81,8 +81,8 @@ public class GetBySendersRefTests : IClassFixture<IntegrationTestWebApplicationF
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(1, actual.Count);
         Assert.Single(actual.Orders);
-        Assert.Equal(persistedOrder.Id.ToString(), actual.Orders.First().Id);
-        Assert.Equal(sendersReference, actual.Orders.First().SendersReference);
+        Assert.Equal(persistedOrder.Id.ToString(), actual.Orders[0].Id);
+        Assert.Equal(sendersReference, actual.Orders[0].SendersReference);
     }
 
     [Fact]
@@ -90,7 +90,7 @@ public class GetBySendersRefTests : IClassFixture<IntegrationTestWebApplicationF
     {
         // Arrange
         string sendersReference = $"{_sendersRefBase}-{Guid.NewGuid()}";
-        NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithOrder(sendersReference: sendersReference);
+        await PostgreUtil.PopulateDBWithOrder(sendersReference: sendersReference);
         await PostgreUtil.PopulateDBWithOrder(sendersReference: sendersReference);
 
         HttpClient client = GetTestClient();
@@ -107,7 +107,7 @@ public class GetBySendersRefTests : IClassFixture<IntegrationTestWebApplicationF
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(2, actual.Count);
-        Assert.NotNull(actual.Orders.First());
+        Assert.NotNull(actual.Orders[0]);
         Assert.DoesNotContain(actual.Orders, o => o.SendersReference != sendersReference);
         Assert.DoesNotContain(actual.Orders, o => o.Creator != "ttd");
     }

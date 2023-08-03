@@ -1,6 +1,4 @@
-﻿using System.Runtime;
-
-using Altinn.Notifications.Core.Models.Orders;
+﻿using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Models;
 
 namespace Altinn.Notifications.Extensions;
