@@ -11,6 +11,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Core.Consumers;
 public class PastDueOrdersConsumerTests : IDisposable
 {
     private readonly string _pastDueOrdersTopicName = Guid.NewGuid().ToString();
+    private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
 
     /// <summary>
     /// When a new order is picked up by the consumer, we expect there to be an email notification created for the recipient states in the order.
@@ -31,7 +32,7 @@ public class PastDueOrdersConsumerTests : IDisposable
                                                     .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
                                                     .First(s => s.GetType() == typeof(PastDueOrdersConsumer))!;
 
-        NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithOrder();
+        NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithOrder(sendersReference: _sendersRef);
         await KafkaUtil.PublishMessageOnTopic(_pastDueOrdersTopicName, persistedOrder.Serialize());
 
         Guid orderId = persistedOrder.Id;
@@ -59,6 +60,8 @@ public class PastDueOrdersConsumerTests : IDisposable
     protected virtual async Task Dispose(bool disposing)
     {
         await KafkaUtil.DeleteTopicAsync(_pastDueOrdersTopicName);
+        string sql = $"delete from notifications.orders where sendersreference = '{_sendersRef}'";
+        await PostgreUtil.RunSql(sql);
     }
 
     private static async Task<long> SelectCompletedOrderCount(Guid orderId)

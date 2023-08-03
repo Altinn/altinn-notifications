@@ -4,6 +4,7 @@ using System.Text;
 
 using Altinn.Notifications.Controllers;
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Tests.EndToEndTests;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
@@ -20,18 +21,21 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.EmailNotificationsOrderController;
 
-public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<EmailNotificationOrdersController>>
+public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<EmailNotificationOrdersController>>, IDisposable
 {
     private const string _basePath = "/notifications/api/v1/orders/email";
 
     private readonly IntegrationTestWebApplicationFactory<EmailNotificationOrdersController> _factory;
 
-    private readonly EmailNotificationOrderRequestExt _orderRequestExt;
+    private readonly string  _serializedOrderRequestExt;
+    private readonly string _serializedOrderRequestWithoutSendersRefExt;
+
+    private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
 
     public PostTests(IntegrationTestWebApplicationFactory<EmailNotificationOrdersController> factory)
     {
         _factory = factory;
-        _orderRequestExt = new()
+        EmailNotificationOrderRequestExt orderRequestExt = new()
         {
             Body = "email-body",
             ContentType = EmailContentType.Html,
@@ -47,10 +51,15 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
                     EmailAddress ="recipient2@domain.com"
                 }
             },
-            SendersReference = "senders-reference",
+            SendersReference = _sendersRef,
             RequestedSendTime = DateTime.UtcNow,
             Subject = "email-subject"
         };
+
+        _serializedOrderRequestExt = orderRequestExt.Serialize();
+        orderRequestExt.SendersReference = null;
+
+        _serializedOrderRequestWithoutSendersRefExt = orderRequestExt.Serialize();
     }
 
     [Fact]
@@ -62,7 +71,7 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
 
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
         {
-            Content = new StringContent(_orderRequestExt.Serialize(), Encoding.UTF8, "application/json")
+            Content = new StringContent(_serializedOrderRequestExt, Encoding.UTF8, "application/json")
         };
 
         // Act
@@ -73,6 +82,41 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
         Guid.Parse(orderId);
         Assert.Equal("https://platform.at22.altinn.cloud/notifications/api/v1/orders/" + orderId, response.Headers?.Location?.ToString());
+    }
+
+    [Fact]
+    public async Task Post_OrderWithoutSendersRef_Accepted()
+    {
+        // Arrange
+        HttpClient client = GetTestClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
+
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
+        {
+            Content = new StringContent(_serializedOrderRequestWithoutSendersRefExt, Encoding.UTF8, "application/json")
+        };
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        string orderId = await response.Content.ReadAsStringAsync();
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        Guid.Parse(orderId);
+        Assert.Equal("https://platform.at22.altinn.cloud/notifications/api/v1/orders/" + orderId, response.Headers?.Location?.ToString());
+    }
+
+    public async void Dispose()
+    {
+        await Dispose(true);
+
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual async Task Dispose(bool disposing)
+    {
+        string sql = $"delete from notifications.orders where sendersreference = '{_sendersRef}'";
+        await PostgreUtil.RunSql(sql);
     }
 
     private HttpClient GetTestClient()

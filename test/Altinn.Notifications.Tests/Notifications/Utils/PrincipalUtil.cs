@@ -68,6 +68,7 @@ public static class PrincipalUtil
 
         return token;
     }
+
     public static string GetUserToken(int userId, int authenticationLevel = 2, string? scope = null)
     {
         ClaimsPrincipal principal = GetClaimsPrincipal(userId, authenticationLevel, scope);

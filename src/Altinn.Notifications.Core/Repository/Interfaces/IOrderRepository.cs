@@ -1,4 +1,5 @@
 ﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Orders;
 
 namespace Altinn.Notifications.Core.Repository.Interfaces;
@@ -25,4 +26,20 @@ public interface IOrderRepository
     /// Sets processing status of an order
     /// </summary>
     public Task SetProcessingStatus(Guid orderId, OrderProcessingStatus status);
+
+    /// <summary>
+    /// Gets an order based on the provided id within the provided creator scope
+    /// </summary>
+    /// <param name="id">The order id</param>
+    /// <param name="creator">The short name of the order creator</param>
+    /// <returns>A notification order if it exists</returns>
+    public Task<NotificationOrder?> GetOrderById(Guid id, string creator);
+
+    /// <summary>
+    /// Gets an order based on the provided senders reference within the provided creator scope
+    /// </summary>
+    /// <param name="sendersReference">The senders reference</param>
+    /// <param name="creator">The short name of the order creator</param>
+    /// <returns>A list of notification orders</returns>
+    public Task<List<NotificationOrder>> GetOrdersBySendersReference(string sendersReference, string creator);
 }
