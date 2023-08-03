@@ -40,7 +40,7 @@ public static class TestdataUtil
     {
         return new NotificationOrder()
         {
-            SendersReference = "senders-reference",
+            SendersReference = "local-testing",
             Templates = new List<INotificationTemplate>()
             {
                 new EmailTemplate()

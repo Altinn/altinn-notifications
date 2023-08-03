@@ -50,15 +50,6 @@ public static class OrderMapper
         return recipientExt;
     }
 
-    private static string? GetEmailFromAddressList(List<IAddressPoint> addressPoints)
-    {
-        var emailAddressPoint = addressPoints
-            .Find(a => a.AddressType.Equals(AddressType.Email))
-            as EmailAddressPoint;
-
-        return emailAddressPoint?.EmailAddress;
-    }
-
     /// <summary>
     /// Maps a <see cref="NotificationOrder"/> to a <see cref="NotificationOrderExt"/>
     /// </summary>
@@ -97,5 +88,30 @@ public static class OrderMapper
         }
 
         return orderExt;
+    }
+
+    /// <summary>
+    /// Maps a list of <see cref="NotificationOrder"/> to a <see cref="NotificationOrderListExt"/>
+    /// </summary>
+    public static NotificationOrderListExt MapToNotificationOrderListExt(this List<NotificationOrder> orders)
+    {
+        NotificationOrderListExt ordersExt = new();
+
+        ordersExt.Count = orders.Count;
+        foreach (NotificationOrder order in orders)
+        {
+            ordersExt.Orders.Add(order.MapToNotificationOrderExt());
+        }
+
+        return ordersExt;
+    }
+
+    private static string? GetEmailFromAddressList(List<IAddressPoint> addressPoints)
+    {
+        var emailAddressPoint = addressPoints
+            .Find(a => a.AddressType.Equals(AddressType.Email))
+            as EmailAddressPoint;
+
+        return emailAddressPoint?.EmailAddress;
     }
 }

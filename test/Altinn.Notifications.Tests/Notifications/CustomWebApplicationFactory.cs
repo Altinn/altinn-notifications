@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 
 using Altinn.Notifications.Core.Integrations.Consumers;
+using Altinn.Notifications.Extensions;
 
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -17,11 +18,17 @@ public class CustomWebApplicationFactory<TStartup> : WebApplicationFactory<TStar
     /// <param name="builder">IWebHostBuilder</param>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.ConfigureAppConfiguration(config =>
+        IConfiguration configuration = new ConfigurationBuilder()
+        .AddJsonFile("appsettings.Test.json")
+        .Build();
+
+        builder.ConfigureAppConfiguration((hostingContext, config) =>
         {
-            config.AddConfiguration(new ConfigurationBuilder()
-                .AddJsonFile("appsettings.Test.json")
-                .Build());
+            config.AddConfiguration(configuration);
+
+            // overriding initialization of extension class with test settings
+            string? uri = configuration["GeneralSettings:BaseUri"];
+            ResourceLinkExtensions.Initialize(uri!);
         });
 
         builder.ConfigureTestServices(services =>

@@ -25,16 +25,14 @@ public class EmailNotificationOrdersController : ControllerBase
 {
     private readonly IValidator<EmailNotificationOrderRequestExt> _validator;
     private readonly IEmailNotificationOrderService _orderService;
-    private readonly GeneralSettings _settings;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotificationOrdersController"/> class.
     /// </summary>
-    public EmailNotificationOrdersController(IValidator<EmailNotificationOrderRequestExt> validator, IEmailNotificationOrderService orderService, IOptions<GeneralSettings> settings)
+    public EmailNotificationOrdersController(IValidator<EmailNotificationOrderRequestExt> validator, IEmailNotificationOrderService orderService)
     {
         _validator = validator;
         _orderService = orderService;
-        _settings = settings.Value;
     }
 
     /// <summary>
@@ -69,9 +67,7 @@ public class EmailNotificationOrdersController : ControllerBase
             return StatusCode(error.ErrorCode, error.ErrorMessage);
         }
 
-        NotificationOrderExt registeredOrderExt = registeredOrder!.MapToNotificationOrderExt();
-
-        string selfLink = _settings.BaseUri + "/notifications/api/v1/orders/" + registeredOrderExt.Id;
-        return Accepted(selfLink, registeredOrderExt.Id);
+        string selfLink = registeredOrder!.GetSelfLink();
+        return Accepted(selfLink, registeredOrder!.Id.ToString());
     }
 }
