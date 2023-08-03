@@ -1,5 +1,4 @@
 import * as tokenGenerator from "./api/token-generator.js";
-import http from 'k6/http';
 const environment = __ENV.env.toLowerCase();
 
 /*
@@ -17,16 +16,4 @@ export function getAltinnTokenForOrg(scopes, org = "ttd", orgNo = "991825827") {
   };
 
   return tokenGenerator.generateEnterpriseToken(queryParams);
-}
-
-export function getAltinnTokenForUser(userId, partyId, pid) {
-  //TODO: Handle login for prod
-  var queryParams = {
-    env: environment,
-    userId: userId,
-    partyId: partyId,
-    pid: pid,
-  };
-
-  return tokenGenerator.generatePersonalToken(queryParams);
 }

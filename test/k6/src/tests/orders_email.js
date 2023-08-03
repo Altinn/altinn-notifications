@@ -66,12 +66,13 @@ function TC01_PostEmailNotificationOrderRequest(data) {
   var selfLink = response.headers["Location"];
 
   success = check(response, {
-    "POST valid email notification order request. Status is 202 Accepted":
-      (r) => r.status === 202,
-    "POST valid email notification order request. Location header providedStatus is 202 Accepted":
+    "POST email notification order request. Status is 202 Accepted": (
+      r
+    ) => r.status === 202,
+    "POST email notification order request. Location header providedStatus is 202 Accepted":
       (r) => selfLink,
-    "POST valid email notification order request. Response body is not an empty string":
-      (r) => r.body
+    "POST email notification order request. Response body is not an empty string":
+      (r) => r.body,
   });
 
   addErrorCount(success);
@@ -86,13 +87,25 @@ function TC01_PostEmailNotificationOrderRequest(data) {
 // 02 - GET notification order by id
 function TC02_GetNotificationOrderById(data, selfLink) {
   var response, success;
-
+  var expectedId = selfLink.split("/").slice(-1)[0];
   response = notificationsApi.getOrderByUrl(selfLink, data.token);
 
   success = check(response, {
-    "GET notification order by id. Status is 200 OK": (r) => r.status === 200
-    });
+    "GET notification order by id. Status is 200 OK": (r) => r.status === 200,
+  });
 
+  addErrorCount(success);
+  if (!success) {
+    // only continue to parse and check content if success response code
+    stopIterationOnFail(success);
+  }
+
+  success = check(JSON.parse(response.body), {
+    "GET notification order by id. Id property is a match": (order) =>
+      order.id === expectedId,
+    "GET notification order by id. Creator property is a match": (order) =>
+      order.creator === "ttd",
+  });
   addErrorCount(success);
 }
 
@@ -111,6 +124,17 @@ function TC03_GetNotificationOrderBySendersReference(data) {
   });
 
   addErrorCount(success);
+  if (!success) {
+    // only continue to parse and check content if success response code
+    stopIterationOnFail(success);
+  }
+
+  success = check(JSON.parse(response.body), {
+    "GET notification order by senders reference. Count is equal to 1":(orderList) =>
+    orderList.count === 1,
+    "GET notification order by senders reference. Orderlist contains one element":(orderList) =>
+    Array.isArray(orderList.orders) && orderList.orders.length == 1
+  });
 }
 
 /*
@@ -121,7 +145,6 @@ function TC03_GetNotificationOrderBySendersReference(data) {
 export default function (data) {
   try {
     if (data.runFullTestSet) {
-
       var selfLink = TC01_PostEmailNotificationOrderRequest(data);
       TC02_GetNotificationOrderById(data, selfLink);
       TC03_GetNotificationOrderBySendersReference(data);

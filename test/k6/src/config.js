@@ -15,8 +15,6 @@ export let baseUrl = baseUrls[environment];
 export var tokenGenerator = {
   getEnterpriseToken:
     "https://altinn-testtools-token-generator.azurewebsites.net/api/GetEnterpriseToken",
-  getPersonalToken:
-    "https://altinn-testtools-token-generator.azurewebsites.net/api/GetPersonalToken",
 };
 
 // Platform Notifications
