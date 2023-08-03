@@ -5,7 +5,7 @@
     -e tokenGeneratorUserName=autotest `
     -e tokenGeneratorUserPwd=*** `
     -e env=*** `
-    -e toAddress=*** `
+    -e emailRecipient=*** `
     -e runFullTestSet=true
 
     For use case tests omit environment variable runFullTestSet or set value to false
@@ -21,7 +21,7 @@ const orderRequestJson = JSON.parse(
 import { generateJUnitXML, reportPath } from "../report.js";
 import { addErrorCount, stopIterationOnFail } from "../errorhandler.js";
 const scopes = "none";
-const toAddress = __ENV.toAddress.toLowerCase();
+const emailRecipient = __ENV.emailRecipient.toLowerCase();
 
 export const options = {
   thresholds: {
@@ -36,7 +36,7 @@ export function setup() {
   var orderRequest = orderRequestJson;
   orderRequest.recipients = [
     {
-      emailAddress: toAddress,
+      emailAddress: emailRecipient,
     },
   ];
   orderRequest.sendersReference = sendersReference;

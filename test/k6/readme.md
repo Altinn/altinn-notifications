@@ -33,8 +33,6 @@ Run test suite by specifying filename.
 
 For example:
 
->$> docker-compose run k6 run /src/tests/events/post.js -e tokenGeneratorUserName=*** -e tokenGeneratorUserPwd=*** -e env=***
-
  >$> docker-compose run k6 run /src/tests/orders_email.js `
     -e tokenGeneratorUserName=autotest `
     -e tokenGeneratorUserPwd=*** `
