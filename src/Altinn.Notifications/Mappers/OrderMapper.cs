@@ -95,9 +95,11 @@ public static class OrderMapper
     /// </summary>
     public static NotificationOrderListExt MapToNotificationOrderListExt(this List<NotificationOrder> orders)
     {
-        NotificationOrderListExt ordersExt = new();
+        NotificationOrderListExt ordersExt = new()
+        {
+            Count = orders.Count
+        };
 
-        ordersExt.Count = orders.Count;
         foreach (NotificationOrder order in orders)
         {
             ordersExt.Orders.Add(order.MapToNotificationOrderExt());

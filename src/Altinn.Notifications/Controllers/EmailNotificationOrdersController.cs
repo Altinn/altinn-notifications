@@ -1,5 +1,4 @@
-﻿using Altinn.Notifications.Configuration;
-using Altinn.Notifications.Core.Models;
+﻿using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
@@ -11,7 +10,6 @@ using FluentValidation;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Controllers;
 
