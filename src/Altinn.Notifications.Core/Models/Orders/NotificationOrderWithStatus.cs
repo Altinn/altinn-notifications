@@ -7,36 +7,24 @@ namespace Altinn.Notifications.Core.Models.Orders;
 /// <summary>
 /// A class representing a registered notification order with status information. 
 /// </summary>
-public class NotificationOrderWithStatus
+public class NotificationOrderWithStatus : IBaseNotificationOrder
 {
-    /// <summary>
-    /// Gets the id of the notification order
-    /// </summary>
-    public string Id { get; internal set; } = string.Empty;
+    /// <inheritdoc/>>
+    public Guid Id { get; internal set; }
 
-    /// <summary>
-    /// Gets the senders reference of the notification
-    /// </summary>
+    /// <inheritdoc/>>
     public string? SendersReference { get; internal set; }
 
-    /// <summary>
-    /// Gets the requested send time of the notification
-    /// </summary>
+    /// <inheritdoc/>>
     public DateTime RequestedSendTime { get; internal set; }
 
-    /// <summary>
-    /// Gets the short name of the creator of the notification order
-    /// </summary>
+    /// <inheritdoc/>>
     public Creator Creator { get; internal set; } = new(string.Empty);
 
-    /// <summary>
-    /// Gets the date and time of when the notification order was created
-    /// </summary>
+    /// <inheritdoc/>>
     public DateTime Created { get; internal set; }
 
-    /// <summary>
-    /// Gets the preferred notification channel of the notification order
-    /// </summary>
+    /// <inheritdoc/>>
     public NotificationChannel NotificationChannel { get; internal set; }
 
     /// <summary>

@@ -12,41 +12,29 @@ namespace Altinn.Notifications.Models;
 /// <remarks>
 /// External representaion to be used in the API.
 /// </remarks>
-public class NotificationOrderExt
+public class NotificationOrderExt : IBaseNotificationOrderExt
 {
-    /// <summary>
-    /// Gets or sets the id of the notification order
-    /// </summary>
+    /// <inheritdoc/>>
     [JsonPropertyName("id")]
     public string Id { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Gets or sets the short name of the creator of the notification order
-    /// </summary>
+    /// <inheritdoc/>>
     [JsonPropertyName("creator")]
     public string Creator { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Gets or sets the senders reference of the notification
-    /// </summary>
+    /// <inheritdoc/>>
     [JsonPropertyName("sendersReference")]
     public string? SendersReference { get; set; }
 
-    /// <summary>
-    /// Gets or sets the requested send time of the notification
-    /// </summary>
+    /// <inheritdoc/>>
     [JsonPropertyName("requestedSendTime")]
     public DateTime RequestedSendTime { get; set; }
 
-    /// <summary>
-    /// Gets or sets the date and time of when the notification order was created
-    /// </summary>
+    /// <inheritdoc/>>
     [JsonPropertyName("created")]
     public DateTime Created { get; set; }
 
-    /// <summary>
-    /// Gets or sets the preferred notification channel of the notification order
-    /// </summary>
+    /// <inheritdoc/>>
     [JsonPropertyName("notificationChannel")]
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public NotificationChannel NotificationChannel { get; set; }

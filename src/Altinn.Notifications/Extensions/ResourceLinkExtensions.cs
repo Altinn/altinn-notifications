@@ -43,18 +43,6 @@ public static class ResourceLinkExtensions
     }
 
     /// <summary>
-    /// Sets the resource links on each external notification order in the list
-    /// </summary>
-    /// <exception cref="InvalidOperationException">Exception if class has not been initialized in Program.cs</exception>
-    public static void SetResourceLinks(this NotificationOrderListExt orderList)
-    {
-        foreach (NotificationOrderExt order in orderList.Orders)
-        {
-            order.SetResourceLinks();
-        }
-    }
-
-    /// <summary>
     /// Gets the self link for the provided notification order
     /// </summary>
     /// <exception cref="InvalidOperationException">Exception if class has not been initialized in Program.cs</exception>

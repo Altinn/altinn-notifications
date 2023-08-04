@@ -35,37 +35,16 @@ public static class OrderMapper
     }
 
     /// <summary>
-    /// Maps a List of <see cref="Recipient"/> to a List of <see cref="RecipientExt"/>
-    /// </summary>
-    public static List<RecipientExt> MapToRecipientExt(this List<Recipient> recipients)
-    {
-        var recipientExt = new List<RecipientExt>();
-
-        recipientExt.AddRange(
-            recipients.Select(r => new RecipientExt
-            {
-                Id = r.RecipientId,
-                EmailAddress = GetEmailFromAddressList(r.AddressInfo)
-            }));
-
-        return recipientExt;
-    }
-
-    /// <summary>
     /// Maps a <see cref="NotificationOrder"/> to a <see cref="NotificationOrderExt"/>
     /// </summary>
     public static NotificationOrderExt MapToNotificationOrderExt(this NotificationOrder order)
     {
-        var orderExt = new NotificationOrderExt
-        {
-            Id = order.Id.ToString(),
-            SendersReference = order.SendersReference,
-            Created = order.Created,
-            Creator = order.Creator.ShortName,
-            NotificationChannel = order.NotificationChannel,
-            Recipients = order.Recipients.MapToRecipientExt(),
-            RequestedSendTime = order.RequestedSendTime
-        };
+        var orderExt = new NotificationOrderExt();
+
+        orderExt.MapBaseNotificationOrder(order);
+        orderExt.SetResourceLinks();
+
+        orderExt.Recipients = order.Recipients.MapToRecipientExt();
 
         foreach (var template in order.Templates)
         {
@@ -88,8 +67,6 @@ public static class OrderMapper
             }
         }
 
-        orderExt.SetResourceLinks();
-
         return orderExt;
     }
 
@@ -98,19 +75,11 @@ public static class OrderMapper
     /// </summary>
     public static NotificationOrderWithStatusExt MapToNotificationOrderWithStatusExt(this NotificationOrderWithStatus order)
     {
-        var orderExt = new NotificationOrderWithStatusExt
-        {
-            Id = order.Id.ToString(),
-            SendersReference = order.SendersReference,
-            Created = order.Created,
-            Creator = order.Creator.ShortName,
-            NotificationChannel = order.NotificationChannel,
+        var orderExt = new NotificationOrderWithStatusExt();
+        orderExt.MapBaseNotificationOrder(order);
 
-            RequestedSendTime = order.RequestedSendTime
-        };
-
-        // set resourceLinks
-
+        orderExt.NotificationStatusSummary = new();
+        orderExt.ProcessingStatus = new();
         return orderExt;
     }
 
@@ -129,9 +98,36 @@ public static class OrderMapper
             ordersExt.Orders.Add(order.MapToNotificationOrderExt());
         }
 
-        ordersExt.SetResourceLinks();
-
         return ordersExt;
+    }
+
+    /// <summary>
+    /// Maps a List of <see cref="Recipient"/> to a List of <see cref="RecipientExt"/>
+    /// </summary>
+    internal static List<RecipientExt> MapToRecipientExt(this List<Recipient> recipients)
+    {
+        var recipientExt = new List<RecipientExt>();
+
+        recipientExt.AddRange(
+            recipients.Select(r => new RecipientExt
+            {
+                Id = r.RecipientId,
+                EmailAddress = GetEmailFromAddressList(r.AddressInfo)
+            }));
+
+        return recipientExt;
+    }
+
+    private static IBaseNotificationOrderExt MapBaseNotificationOrder(this IBaseNotificationOrderExt orderExt, IBaseNotificationOrder order)
+    {
+        orderExt.Id = order.Id.ToString();
+        orderExt.SendersReference = order.SendersReference;
+        orderExt.Created = order.Created;
+        orderExt.Creator = order.Creator.ShortName;
+        orderExt.NotificationChannel = order.NotificationChannel;
+        orderExt.RequestedSendTime = order.RequestedSendTime;
+
+        return orderExt;
     }
 
     private static string? GetEmailFromAddressList(List<IAddressPoint> addressPoints)
