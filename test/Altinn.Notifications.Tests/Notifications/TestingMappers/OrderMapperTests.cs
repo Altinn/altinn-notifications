@@ -160,4 +160,118 @@ public class OrderMapperTests
         // Assert
         Assert.Equivalent(expected, actual, true);
     }
+
+    [Fact]
+    public void MapToNotificationOrderWithStatusExt_EmailStatusProvided_AreEquivalent()
+    {
+        // Arrange
+        DateTime sendTime = DateTime.UtcNow;
+        DateTime created = DateTime.UtcNow;
+        DateTime lastUpdated = DateTime.UtcNow;
+
+        NotificationOrderWithStatus orderToMap = new()
+        {
+            Id = Guid.NewGuid(),
+            Created = created,
+            Creator = new("ttd"),
+            NotificationChannel = NotificationChannel.Email,
+            RequestedSendTime = sendTime,
+            SendersReference = "senders-ref",
+            ProcessingStatus = new()
+            {
+                LastUpdate = lastUpdated,
+                Status = "Registered",
+                StatusDescription = "The order has been registered, but not processed yet. No notifications are generated"
+            },
+            NotificationStatuses = new()
+            {
+                { NotificationTemplateType.Email, new NotificationStatus() { Generated = 15,Succeeded = 10  } }
+            }
+        };
+
+
+        NotificationOrderWithStatusExt expected = new()
+        {
+            Id = orderToMap.Id.ToString(),
+            Created = created,
+            Creator = "ttd",
+            NotificationChannel = NotificationChannel.Email,
+            RequestedSendTime = sendTime,
+            SendersReference = "senders-ref",
+            ProcessingStatus = new()
+            {
+                Status = "Registered",
+                StatusDescription = "The order has been registered, but not processed yet. No notifications are generated",
+                LastUpdate = lastUpdated
+            },
+            NotificationStatusSummary = new NotificationsStatusSummaryExt()
+            {
+                Email = new()
+                {
+                    Generated = 15,
+                    Succeeded = 10,
+                    Links = new()
+                    {
+                        Self = $"https://platform.at22.altinn.cloud/notifications/api/v1/orders/{orderToMap.Id}/notifications/email"
+                    }
+                }
+            }
+        };
+
+        // Act
+        var actual = orderToMap.MapToNotificationOrderWithStatusExt();
+
+        // Assert
+        Assert.Equivalent(expected, actual, true);
+    }
+
+    [Fact]
+    public void MapToNotificationOrderWithStatusExt_NoNotificationStatusProvided_AreEquivalent()
+    {
+
+        // Arrange
+        DateTime sendTime = DateTime.UtcNow;
+        DateTime created = DateTime.UtcNow;
+        DateTime lastUpdated = DateTime.UtcNow;
+
+        NotificationOrderWithStatus orderToMap = new()
+        {
+            Id = Guid.NewGuid(),
+            Created = created,
+            Creator = new("ttd"),
+            NotificationChannel = NotificationChannel.Email,
+            RequestedSendTime = sendTime,
+            SendersReference = "senders-ref",
+            ProcessingStatus = new()
+            {
+                LastUpdate = lastUpdated,
+                Status = "Registered",
+                StatusDescription = "The order has been registered, but not processed yet. No notifications are generated"
+            }           
+        };
+
+
+        NotificationOrderWithStatusExt expected = new()
+        {
+            Id = orderToMap.Id.ToString(),
+            Created = created,
+            Creator = "ttd",
+            NotificationChannel = NotificationChannel.Email,
+            RequestedSendTime = sendTime,
+            SendersReference = "senders-ref",
+            ProcessingStatus = new()
+            {
+                Status = "Registered",
+                StatusDescription = "The order has been registered, but not processed yet. No notifications are generated",
+                LastUpdate = lastUpdated
+            }
+        };
+
+        // Act
+        var actual = orderToMap.MapToNotificationOrderWithStatusExt();
+
+        // Assert
+        Assert.Equivalent(expected, actual, true);
+
+    }
 }

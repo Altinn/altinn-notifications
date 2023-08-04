@@ -84,25 +84,29 @@ public static class OrderMapper
             StatusDescription = order.ProcessingStatus.StatusDescription
         };
 
-        orderExt.NotificationStatusSummary = new();
-        foreach (var entry in order.NotificationStatuses)
+        if (order.NotificationStatuses.Any())
         {
-            NotificationTemplateType notificationType = entry.Key;
-            NotificationStatus status = entry.Value;
-
-            switch (notificationType)
+            orderExt.NotificationStatusSummary = new();
+            foreach (var entry in order.NotificationStatuses)
             {
-                case NotificationTemplateType.Email:
-                    orderExt.NotificationStatusSummary.Email = new()
-                    {
-                        Generated = status.Generated,
-                        Succeeded = status.Succeeded
-                    };
-                    break;
+                NotificationTemplateType notificationType = entry.Key;
+                NotificationStatus status = entry.Value;
+
+                switch (notificationType)
+                {
+                    case NotificationTemplateType.Email:
+                        orderExt.NotificationStatusSummary.Email = new()
+                        {
+                            Generated = status.Generated,
+                            Succeeded = status.Succeeded
+                        };
+                        break;
+                }
             }
+
+            orderExt.NotificationSummarResourceLinks();
         }
 
-        orderExt.NotificationSummarResourceLinks();
         return orderExt;
     }
 

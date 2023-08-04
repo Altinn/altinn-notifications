@@ -71,7 +71,7 @@ public class ProcessingStatus
 /// <remarks>
 /// External representaion to be used in the API.
 /// </remarks>
-public abstract class NotificationStatus
+public class NotificationStatus
 {
     /// <summary>
     /// Gets the number of generated notifications
