@@ -287,7 +287,7 @@ public class OrdersControllerTests : IClassFixture<CustomWebApplicationFactory<O
 
         // Act
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
-        var responseString = await response.Content.ReadAsStringAsync();
+        await response.Content.ReadAsStringAsync();
 
         // Assert
         orderService.VerifyAll();

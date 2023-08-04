@@ -62,6 +62,12 @@ public class NotificationOrderTests
         {
             { "id", id },
             { "sendersReference", "senders-reference" },
+            { "requestedSendTime", "2023-02-14T08:15:00Z"},
+            { "notificationChannel", "Email" },
+            { "creator", new JsonObject() {
+                { "shortName", "ttd" }
+            }},
+            { "created", "2022-02-14T08:15:00Z"},
             {
                 "templates",  new JsonArray()
                 {
@@ -75,12 +81,6 @@ public class NotificationOrderTests
                     }
                 }
             },
-            { "requestedSendTime", "2023-02-14T08:15:00Z"},
-            { "notificationChannel", "Email" },
-            { "creator", new JsonObject() {
-                { "shortName", "ttd" }
-            }},
-            { "created", "2022-02-14T08:15:00Z"},
             { "recipients", new JsonArray()
                 {
                     new JsonObject() {
