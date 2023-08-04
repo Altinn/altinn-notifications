@@ -12,18 +12,22 @@ public static class ResourceLinkExtensionsTests
     [Fact]
     public static void SetResourceLinks_ThrowsExceptionIfNotInitialized()
     {
+        ResourceLinkExtensions.Initialize(null);
         Assert.Throws<InvalidOperationException>(() => { ResourceLinkExtensions.SetResourceLinks(new NotificationOrderExt()); });
     }
 
     [Fact]
     public static void NotificationSummaryResourceLinkss_ThrowsExceptionIfNotInitialized()
     {
+        ResourceLinkExtensions.Initialize(null);
         Assert.Throws<InvalidOperationException>(() => { ResourceLinkExtensions.NotificationSummaryResourceLinks(new NotificationOrderWithStatusExt()); });
     }
 
     [Fact]
     public static void GetSelfLink_ThrowsExceptionIfNotInitialized()
     {
+        ResourceLinkExtensions.Initialize(null);
+
         Assert.Throws<InvalidOperationException>(() => { ResourceLinkExtensions.GetSelfLink(new NotificationOrder()); });
     }
 }
