@@ -20,5 +20,12 @@ public interface IGetOrderService
     /// </summary>
     /// <param name="senderRef">The senders reference</param>
     /// <param name="creator">The creator of the orders</param>
-    public Task<(List<NotificationOrder> Orders, ServiceError? Error)> GetOrdersBySendersReference(string senderRef, string creator);
+    public Task<(List<NotificationOrder>? Orders, ServiceError? Error)> GetOrdersBySendersReference(string senderRef, string creator);
+
+    /// <summary>
+    /// Retrieves a notification order with process and notification status by id
+    /// </summary>
+    /// <param name="id">The order id</param>
+    /// <param name="creator">The creator of the orders</param>
+    public Task<(NotificationOrderWithStatus? Order, ServiceError? Error)> GetOrderWithStatuById(Guid id, string creator);
 }

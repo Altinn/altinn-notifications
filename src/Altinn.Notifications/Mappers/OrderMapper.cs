@@ -3,6 +3,7 @@ using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Models;
 
 namespace Altinn.Notifications.Mappers;
@@ -87,6 +88,29 @@ public static class OrderMapper
             }
         }
 
+        orderExt.SetResourceLinks();
+
+        return orderExt;
+    }
+
+    /// <summary>
+    /// Maps a <see cref="NotificationOrderWithStatus"/> to a <see cref="NotificationOrderWithStatusExt"/>
+    /// </summary>
+    public static NotificationOrderWithStatusExt MapToNotificationOrderWithStatusExt(this NotificationOrderWithStatus order)
+    {
+        var orderExt = new NotificationOrderWithStatusExt
+        {
+            Id = order.Id.ToString(),
+            SendersReference = order.SendersReference,
+            Created = order.Created,
+            Creator = order.Creator.ShortName,
+            NotificationChannel = order.NotificationChannel,
+
+            RequestedSendTime = order.RequestedSendTime
+        };
+
+        // set resourceLinks
+
         return orderExt;
     }
 
@@ -104,6 +128,8 @@ public static class OrderMapper
         {
             ordersExt.Orders.Add(order.MapToNotificationOrderExt());
         }
+
+        ordersExt.SetResourceLinks();
 
         return ordersExt;
     }

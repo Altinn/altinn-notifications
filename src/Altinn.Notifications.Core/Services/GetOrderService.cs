@@ -40,4 +40,10 @@ public class GetOrderService : IGetOrderService
 
         return (orders, null);
     }
+
+    /// <inheritdoc/>
+    public Task<(NotificationOrderWithStatus? Order, ServiceError? Error)> GetOrderWithStatuById(Guid id, string creator)
+    {
+        throw new NotImplementedException();
+    }
 }

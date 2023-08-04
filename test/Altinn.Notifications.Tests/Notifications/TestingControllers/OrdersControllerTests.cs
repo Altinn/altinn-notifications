@@ -11,11 +11,17 @@ using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Extensions;
+using Altinn.Notifications.Models;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using Altinn.Notifications.Tests.Notifications.Utils;
 
 using AltinnCore.Authentication.JwtCookie;
 
+using Confluent.Kafka;
+
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -47,6 +53,8 @@ public class OrdersControllerTests : IClassFixture<CustomWebApplicationFactory<O
             new Creator("ttd"),
              DateTime.UtcNow,
             new List<Recipient>());
+
+        ResourceLinkExtensions.Initialize("https://platform.at22.altinn.cloud");
     }
 
     [Fact]
@@ -82,6 +90,50 @@ public class OrdersControllerTests : IClassFixture<CustomWebApplicationFactory<O
     }
 
     [Fact]
+    public async Task GetBySendersRef_CorrespondingServiceMethodCalled()
+    {
+        //Arrange
+        var orderService = new Mock<IGetOrderService>();
+        orderService
+             .Setup(o => o.GetOrdersBySendersReference(It.Is<string>(s => s.Equals("internal-ref")), It.Is<string>(s => s.Equals("ttd"))))
+             .ReturnsAsync((new List<NotificationOrder>() { _order }, null));
+
+        HttpClient client = GetTestClient(orderService.Object);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
+
+        string url = _basePath + "?sendersReference=" + "internal-ref";
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
+        orderService.VerifyAll();
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetBySendersRef_ReturnsObjectOfTypeNotificationOrderListExt()
+    {
+        var orderService = new Mock<IGetOrderService>();
+        orderService
+             .Setup(o => o.GetOrdersBySendersReference(It.IsAny<string>(), It.IsAny<string>()))
+             .ReturnsAsync((new List<NotificationOrder>() { _order }, null));
+
+        var controller = new OrdersController(orderService.Object);
+
+        controller.ControllerContext.HttpContext = new DefaultHttpContext()
+        {
+
+            User = PrincipalUtil.GetClaimsPrincipal("ttd", "987654321")
+        };
+
+        var res = await controller.GetBySendersRef("senders-ref");
+
+        Assert.IsType<ActionResult<NotificationOrderListExt>>(res);
+    }
+
+    [Fact]
     public async Task GetById_MissingBearer_ReturnsUnauthorized()
     {
         //Arrange
@@ -111,29 +163,6 @@ public class OrdersControllerTests : IClassFixture<CustomWebApplicationFactory<O
 
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task GetBySendersRef_CorrespondingServiceMethodCalled()
-    {
-        //Arrange
-        var orderService = new Mock<IGetOrderService>();
-        orderService
-             .Setup(o => o.GetOrdersBySendersReference(It.Is<string>(s => s.Equals("internal-ref")), It.Is<string>(s => s.Equals("ttd"))))
-             .ReturnsAsync((new List<NotificationOrder>() { _order }, null));
-
-        HttpClient client = GetTestClient(orderService.Object);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
-
-        string url = _basePath + "?sendersReference=" + "internal-ref";
-        HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
-
-        // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
-
-        // Assert
-        orderService.VerifyAll();
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     [Fact]
@@ -184,6 +213,131 @@ public class OrdersControllerTests : IClassFixture<CustomWebApplicationFactory<O
         // Assert
         orderService.VerifyAll();
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetById_ReturnsObjectOfTypeNotificationOrderExt()
+    {
+        var orderService = new Mock<IGetOrderService>();
+        orderService
+             .Setup(o => o.GetOrderById(It.IsAny<Guid>(), It.IsAny<string>()))
+             .ReturnsAsync((new NotificationOrder(), null));
+
+        var controller = new OrdersController(orderService.Object);
+
+        controller.ControllerContext.HttpContext = new DefaultHttpContext()
+        {
+
+            User = PrincipalUtil.GetClaimsPrincipal("ttd", "987654321")
+        };
+
+        var res = await controller.GetById(Guid.NewGuid());
+
+        Assert.IsType<ActionResult<NotificationOrderExt>>(res);
+    }
+
+    [Fact]
+    public async Task GetWithStatusById_MissingBearer_ReturnsUnauthorized()
+    {
+        //Arrange
+        HttpClient client = GetTestClient();
+        string url = _basePath + "/" + Guid.NewGuid() + "/status";
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetWithStatusById_CalledByUser_ReturnsForbidden()
+    {
+        //Arrange
+        HttpClient client = GetTestClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetUserToken(1337));
+
+        string url = _basePath + "/" + Guid.NewGuid() + "/status";
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetWithStatusById_CorrespondingServiceMethodCalled()
+    {
+        //Arrange
+        Guid orderId = Guid.NewGuid();
+
+        var orderService = new Mock<IGetOrderService>();
+        orderService
+             .Setup(o => o.GetOrderWithStatuById(It.Is<Guid>(g => g.Equals(orderId)), It.Is<string>(s => s.Equals("ttd"))))
+             .ReturnsAsync((new NotificationOrderWithStatus(), null));
+
+        HttpClient client = GetTestClient(orderService.Object);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
+
+        string url = _basePath + "/" + orderId + "/status";
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        var responseString = await response.Content.ReadAsStringAsync();
+
+        // Assert
+        orderService.VerifyAll();
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetWithStatusById_ServicerReturnsError_StatusCodeMatchesError()
+    {
+        //Arrange
+        Guid orderId = Guid.NewGuid();
+
+        var orderService = new Mock<IGetOrderService>();
+        orderService
+             .Setup(o => o.GetOrderWithStatuById(It.Is<Guid>(g => g.Equals(orderId)), It.Is<string>(s => s.Equals("ttd"))))
+             .ReturnsAsync((null, new ServiceError(404)));
+
+        HttpClient client = GetTestClient(orderService.Object);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
+
+        string url = _basePath + "/" + orderId + "/status";
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
+        orderService.VerifyAll();
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetWithStatusById_ReturnsObjectOfTypeNotificationOrderWithStatusExt()
+    {
+        var orderService = new Mock<IGetOrderService>();
+        orderService
+             .Setup(o => o.GetOrderWithStatuById(It.IsAny<Guid>(), It.IsAny<string>()))
+             .ReturnsAsync((new NotificationOrderWithStatus(), null));
+
+        var controller = new OrdersController(orderService.Object);
+
+        controller.ControllerContext.HttpContext = new DefaultHttpContext()
+        {
+
+            User = PrincipalUtil.GetClaimsPrincipal("ttd", "987654321")
+        };
+
+        var res = await controller.GetWithStatusById(Guid.NewGuid());
+
+        Assert.IsType<ActionResult<NotificationOrderWithStatusExt>>(res);
     }
 
     private HttpClient GetTestClient(IGetOrderService? orderService = null)

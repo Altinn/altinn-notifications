@@ -6,6 +6,7 @@ using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
 
@@ -14,6 +15,11 @@ using Xunit;
 namespace Altinn.Notifications.Tests.Notifications.TestingMappers;
 public class OrderMapperTests
 {
+    public OrderMapperTests()
+    {
+        ResourceLinkExtensions.Initialize("https://platform.at22.altinn.cloud");
+    }
+
     [Fact]
     public void MapToNotificationOrderExt_AreEquivalent()
     {
@@ -48,6 +54,12 @@ public class OrderMapperTests
                 ContentType = EmailContentType.Plain,
                 FromAddress = "from@domain.com",
                 Subject = "email-subject"
+            },
+            Links = new OrderResourceLinksExt()
+            {
+                Self = $"https://platform.at22.altinn.cloud/notifications/api/v1/orders/{order.Id}",
+                Notifications = $"https://platform.at22.altinn.cloud/notifications/api/v1/orders/{order.Id}/notifications",
+                Status = $"https://platform.at22.altinn.cloud/notifications/api/v1/orders/{order.Id}/status"
             }
         };
 
