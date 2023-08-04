@@ -8,7 +8,7 @@ namespace Altinn.Notifications.Models;
 /// A class representing a registered notification order with status information. 
 /// </summary>
 /// <remarks>
-/// External representaion to be used in the API.
+/// External representation to be used in the API.
 /// </remarks>
 public class NotificationOrderWithStatusExt
 {
