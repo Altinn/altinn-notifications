@@ -1,5 +1,4 @@
 using Altinn.Notifications.Core.Configuration;
-using Altinn.Notifications.Core.Integrations.Interfaces;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
 
@@ -14,30 +13,24 @@ namespace Altinn.Notifications.Core.Integrations.Consumers;
 /// <summary>
 /// Kafka consumer class for past due orders
 /// </summary>
-public class PastDueOrdersConsumer : IHostedService
+public class PastDueOrdersConsumerRetryFirst : IHostedService
 {
     private readonly IOrderProcessingService _orderProcessingService;
-    private readonly ILogger<PastDueOrdersConsumer> _logger;
-    private readonly IKafkaProducer _producer;
+    private readonly ILogger<PastDueOrdersConsumerRetryFirst> _logger;
     private readonly KafkaSettings _settings;
-    private readonly string _pastDueOrdersTopicRetry1;
     private readonly CancellationTokenSource _cancellationTokenSource;
     private readonly IConsumer<string, string> _consumer;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="PastDueOrdersConsumer"/> class.
     /// </summary>
-    public PastDueOrdersConsumer(
+    public PastDueOrdersConsumerRetryFirst(
         IOrderProcessingService orderProcessingService,
-        IKafkaProducer producer,
         IOptions<KafkaSettings> settings,
-        ILogger<PastDueOrdersConsumer> logger)
+        ILogger<PastDueOrdersConsumerRetryFirst> logger)
     {
         _orderProcessingService = orderProcessingService;
         _settings = settings.Value;
         _logger = logger;
-        _producer = producer;
-        _pastDueOrdersTopicRetry1 = settings.Value.PastDueOrdersTopicNameRetry1;
         _cancellationTokenSource = new CancellationTokenSource();
 
         var consumerConfig = new ConsumerConfig
@@ -50,14 +43,14 @@ public class PastDueOrdersConsumer : IHostedService
         };
 
         _consumer = new ConsumerBuilder<string, string>(consumerConfig)
-        .SetErrorHandler((_, e) => _logger.LogError("// PastDueOrdersConsumer // Error: {reason}", e.Reason))
+        .SetErrorHandler((_, e) => _logger.LogError("// PastDueOrdersConsumerRetryFirst // Error: {reason}", e.Reason))
         .Build();
     }
 
-    /// <inheritdoc/>
+       /// <inheritdoc/>
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _consumer.Subscribe(_settings.PastDueOrdersTopicName);
+        _consumer.Subscribe(_settings.PastDueOrdersTopicNameRetry1);
 
         Task.Run(() => ConsumeOrder(_cancellationTokenSource.Token), cancellationToken);
 
@@ -93,7 +86,8 @@ public class PastDueOrdersConsumer : IHostedService
                         continue;
                     }
 
-                    await _orderProcessingService.ProcessOrder(order!);
+                    // new method on processorder
+                    // await _orderProcessingService.ProcessOrder(order!);
                     _consumer.Commit(consumeResult);
                     _consumer.StoreOffset(consumeResult);
                 }
@@ -105,8 +99,7 @@ public class PastDueOrdersConsumer : IHostedService
         }
         catch (Exception ex)
         {
-            await _producer.ProduceAsync(_pastDueOrdersTopicRetry1, message!);
-            _logger.LogError(ex, "// PastDueOrdersConsumer // ConsumeOrder // An error occurred while consuming messages");
+            _logger.LogError(ex, "// PastDueOrdersConsumerRetryFirst // ConsumeOrder // An error occurred while consuming messages");
             throw;
         }
     }

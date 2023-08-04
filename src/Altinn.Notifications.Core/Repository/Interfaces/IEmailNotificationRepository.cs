@@ -24,4 +24,10 @@ public interface IEmailNotificationRepository
     /// Sets result status of an email notification
     /// </summary>
     public Task SetResultStatus(Guid notificationId, EmailNotificationResultType status);
+
+    /// <summary>
+    /// Retrieves all email notifications for an order
+    /// </summary>
+    /// <returns>A list of emails</returns>
+    public Task<List<Email>> GetNotifications(string orderid);
 }

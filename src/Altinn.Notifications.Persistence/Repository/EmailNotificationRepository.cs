@@ -80,4 +80,9 @@ public class EmailNotificationRepository : IEmailNotificationRepository
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId);
         await pgcom.ExecuteNonQueryAsync();
     }
+
+    public Task<List<Email>> GetNotifications(string orderid)
+    {
+        throw new NotImplementedException();
+    }
 }

@@ -63,4 +63,24 @@ public class OrderProcessingService : IOrderProcessingService
 
         await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.Completed);
     }
+
+    /// <inheritdoc/>
+    public async Task ProcessOrderRetryFirst(NotificationOrder order)
+    {
+        NotificationChannel ch = order.NotificationChannel;
+
+        // Get all existing email notifications on order from emailservice
+
+        foreach (Recipient recipient in order.Recipients)
+        {
+            switch (ch)
+            {
+                case NotificationChannel.Email:
+                    await _emailService.CreateNotification(order.Id, order.RequestedSendTime, recipient);
+                    break;
+            }
+        }
+
+        await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.Completed);
+    }
 }
