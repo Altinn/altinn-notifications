@@ -35,7 +35,7 @@ public class NotificationOrderWithStatus : IBaseNotificationOrder
     /// <summary>
     /// Gets the summary of the notifiications statuses
     /// </summary>
-    public NotificationsStatusSummary NotificationStatusSummary { get; internal set; } = new();
+    public Dictionary<NotificationTemplateType, NotificationStatus> NotificationStatuses { get; set; } = new();
 }
 
 /// <summary>
@@ -63,24 +63,6 @@ public class ProcessingStatus
     /// </summary>
     [JsonPropertyName("lastUpdate")]
     public DateTime LastUpdate { get; internal set; }
-}
-
-/// <summary>
-/// A class representing a summary of status overviews of all notification channels
-/// </summary>
-public class NotificationsStatusSummary
-{
-    /// <summary>
-    /// Gets the status of the email notifications
-    /// </summary>
-    public EmailNotificationStatus? Email { get; internal set; }
-}
-
-/// <summary>
-/// A class representing a status overview for email notifications 
-/// </summary>
-public class EmailNotificationStatus : NotificationStatus
-{
 }
 
 /// <summary>

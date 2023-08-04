@@ -42,8 +42,6 @@ public static class OrderMapper
         var orderExt = new NotificationOrderExt();
 
         orderExt.MapBaseNotificationOrder(order);
-        orderExt.SetResourceLinks();
-
         orderExt.Recipients = order.Recipients.MapToRecipientExt();
 
         foreach (var template in order.Templates)
@@ -67,6 +65,7 @@ public static class OrderMapper
             }
         }
 
+        orderExt.SetResourceLinks();
         return orderExt;
     }
 
@@ -78,8 +77,32 @@ public static class OrderMapper
         var orderExt = new NotificationOrderWithStatusExt();
         orderExt.MapBaseNotificationOrder(order);
 
+        orderExt.ProcessingStatus = new()
+        {
+            LastUpdate = order.ProcessingStatus.LastUpdate,
+            Status = order.ProcessingStatus.Status,
+            StatusDescription = order.ProcessingStatus.StatusDescription
+        };
+
         orderExt.NotificationStatusSummary = new();
-        orderExt.ProcessingStatus = new();
+        foreach (var entry in order.NotificationStatuses)
+        {
+            NotificationTemplateType notificationType = entry.Key;
+            NotificationStatus status = entry.Value;
+
+            switch (notificationType)
+            {
+                case NotificationTemplateType.Email:
+                    orderExt.NotificationStatusSummary.Email = new()
+                    {
+                        Generated = status.Generated,
+                        Succeeded = status.Succeeded
+                    };
+                    break;
+            }
+        }
+
+        orderExt.NotificationSummarResourceLinks();
         return orderExt;
     }
 
