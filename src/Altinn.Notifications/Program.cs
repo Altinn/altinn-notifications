@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 
 using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core.Extensions;
+using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Health;
 using Altinn.Notifications.Integrations.Extensions;
 using Altinn.Notifications.Models;
@@ -131,14 +132,14 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
         services.AddApplicationInsightsTelemetryProcessor<HealthTelemetryFilter>();
         services.AddSingleton<ITelemetryInitializer, CustomTelemetryInitializer>();
         logger.LogInformation($"// Program // Connected to Application Insights");
-
     }
+
+    GeneralSettings generalSettings = config.GetSection("GeneralSettings").Get<GeneralSettings>();
 
     services.Configure<GeneralSettings>(config.GetSection("GeneralSettings"));
     services.AddAuthentication(JwtCookieDefaults.AuthenticationScheme)
           .AddJwtCookie(JwtCookieDefaults.AuthenticationScheme, options =>
           {
-              GeneralSettings generalSettings = config.GetSection("GeneralSettings").Get<GeneralSettings>();
               options.JwtCookieName = generalSettings.JwtCookieName;
               options.MetadataAddress = generalSettings.OpenIdWellKnownEndpoint;
               options.TokenValidationParameters = new TokenValidationParameters
@@ -157,6 +158,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
               }
           });
 
+    ResourceLinkExtensions.Initialize(generalSettings.BaseUri);
     AddInputModelValidators(services);
     services.AddCoreServices(config);
     services.AddKafkaServices(config);

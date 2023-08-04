@@ -17,7 +17,7 @@ public static class TestdataUtil
     {
         NotificationOrder order = NotificationOrder_EmailTemplate_OneRecipient();
         order.Id = Guid.NewGuid();
-        var recipient = order.Recipients.First();
+        var recipient = order.Recipients[0];
         EmailAddressPoint? addressPoint = recipient.AddressInfo.Find(a => a.AddressType == AddressType.Email) as EmailAddressPoint;
 
         var emailNotification = new EmailNotification()
@@ -40,7 +40,7 @@ public static class TestdataUtil
     {
         return new NotificationOrder()
         {
-            SendersReference = "senders-reference",
+            SendersReference = "local-testing",
             Templates = new List<INotificationTemplate>()
             {
                 new EmailTemplate()
