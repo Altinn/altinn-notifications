@@ -104,7 +104,7 @@ public static class OrderMapper
                 }
             }
 
-            orderExt.NotificationSummarResourceLinks();
+            orderExt.NotificationSummaryResourceLinks();
         }
 
         return orderExt;
