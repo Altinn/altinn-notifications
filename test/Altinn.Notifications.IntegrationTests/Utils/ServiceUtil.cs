@@ -23,7 +23,7 @@ public static class ServiceUtil
         var builder = new ConfigurationBuilder()
             .AddJsonFile($"appsettings.json")
             .AddJsonFile("appsettings.IntegrationTest.json")
-            .AddEnvironmentVariables();     
+            .AddEnvironmentVariables();
 
         var config = builder.Build();
 
@@ -31,11 +31,12 @@ public static class ServiceUtil
                        .Build()
                        .SetUpPostgreSql(true, config);
 
-        IServiceCollection services = new ServiceCollection()
-            .AddLogging()
-            .AddPostgresRepositories(config)
-            .AddKafkaServices(config)
-            .AddCoreServices(config);
+        IServiceCollection services = new ServiceCollection();
+
+        services.AddLogging();
+        services.AddPostgresRepositories(config);
+        services.AddCoreServices(config);
+        services.AddKafkaServices(config);
 
         var serviceProvider = services.BuildServiceProvider();
         List<object> outputServices = new();
