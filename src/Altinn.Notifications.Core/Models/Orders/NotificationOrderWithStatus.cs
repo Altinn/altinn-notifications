@@ -56,7 +56,7 @@ public class ProcessingStatus
     /// Gets the description
     /// </summary>
     [JsonPropertyName("description")]
-    public string StatusDescription { get; internal set; } = string.Empty;
+    public string? StatusDescription { get; internal set; }
 
     /// <summary>
     /// Gets the date time of when the status was last updated

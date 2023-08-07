@@ -20,7 +20,7 @@ public class ProcessingStatusExt
     /// Gets or sets the description
     /// </summary>
     [JsonPropertyName("description")]
-    public string StatusDescription { get; set; } = string.Empty;
+    public string? StatusDescription { get; set; }
 
     /// <summary>
     /// Gets or sets the date time of when the status was last updated
