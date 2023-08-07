@@ -1,6 +1,6 @@
-using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Integrations.Configuration;
 
 using Confluent.Kafka;
 

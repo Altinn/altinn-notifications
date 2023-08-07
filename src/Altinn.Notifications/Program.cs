@@ -161,7 +161,10 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     ResourceLinkExtensions.Initialize(generalSettings.BaseUri);
     AddInputModelValidators(services);
     services.AddCoreServices(config);
+
     services.AddKafkaServices(config);
+    services.AddKafkaHealthChecks(config);
+
     services.AddPostgresRepositories(config);
 }
 
