@@ -36,6 +36,35 @@ public class NotificationOrderWithStatus : IBaseNotificationOrder
     /// Gets the summary of the notifiications statuses
     /// </summary>
     public Dictionary<NotificationTemplateType, NotificationStatus> NotificationStatuses { get; set; } = new();
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="NotificationOrderWithStatus"/> class.
+    /// </summary>
+    public NotificationOrderWithStatus(Guid id, string? sendersReference, DateTime requestedSendTime, Creator creator, DateTime created, NotificationChannel notificationChannel, ProcessingStatus processingStatus)
+    {
+        Id = id;
+        SendersReference = sendersReference;
+        RequestedSendTime = requestedSendTime;
+        Creator = creator;
+        Created = created;
+        NotificationChannel = notificationChannel;
+        ProcessingStatus = processingStatus;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="NotificationOrderWithStatus"/> class.
+    /// </summary>
+    internal NotificationOrderWithStatus()
+    {
+    }
+
+    /// <summary>
+    /// Adds an entry to the notification statuses for the provided type
+    /// </summary>
+    public void SetNotificationStatuses(NotificationTemplateType type, int generated, int succeeded)
+    {
+        NotificationStatuses.Add(type, new NotificationStatus() { Generated = generated, Succeeded = succeeded });
+    }
 }
 
 /// <summary>
@@ -50,19 +79,36 @@ public class ProcessingStatus
     /// Gets the status
     /// </summary>
     [JsonPropertyName("status")]
-    public string Status { get; internal set; } = string.Empty;
+    public OrderProcessingStatus Status { get; internal set; }
 
     /// <summary>
     /// Gets the description
     /// </summary>
     [JsonPropertyName("description")]
-    public string StatusDescription { get; internal set; } = string.Empty;
+    public string? StatusDescription { get; internal set; }
 
     /// <summary>
     /// Gets the date time of when the status was last updated
     /// </summary>
     [JsonPropertyName("lastUpdate")]
     public DateTime LastUpdate { get; internal set; }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProcessingStatus"/> class.
+    /// </summary>
+    public ProcessingStatus(OrderProcessingStatus status, DateTime lastUpdate, string? statusDescription = null)
+    {
+        Status = status;
+        StatusDescription = statusDescription;
+        LastUpdate = lastUpdate;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProcessingStatus"/> class.
+    /// </summary>
+    internal ProcessingStatus()
+    {
+    }
 }
 
 /// <summary>

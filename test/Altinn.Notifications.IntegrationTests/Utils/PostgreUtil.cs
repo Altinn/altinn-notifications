@@ -31,7 +31,8 @@ public static class PostgreUtil
         return persistedOrder;
     }
 
-    public static async Task<Guid> PopulateDBWithOrderAndEmailNotification(string? sendersReference = null)
+    public static async Task<(NotificationOrder Order, EmailNotification EmailNotification)>
+        PopulateDBWithOrderAndEmailNotification(string? sendersReference = null)
     {
         (NotificationOrder o, EmailNotification e) = TestdataUtil.GetOrderAndEmailNotification();
         var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IOrderRepository), typeof(IEmailNotificationRepository) });
@@ -47,7 +48,7 @@ public static class PostgreUtil
         await orderRepo.Create(o);
         await notificationRepo.AddNotification(e, DateTime.UtcNow.AddDays(1));
 
-        return e.Id!;
+        return (o, e);
     }
 
     public static async Task<int> RunSqlReturnIntOutput(string query)

@@ -52,10 +52,10 @@ public static class TestdataUtil
                     ContentType = EmailContentType.Html
                 }
             },
-            RequestedSendTime = DateTime.UtcNow,
+            RequestedSendTime = new DateTime(2023,06,16,08,50,00, DateTimeKind.Utc),
             NotificationChannel = NotificationChannel.Email,
             Creator = new("ttd"),
-            Created = DateTime.UtcNow,
+            Created = new DateTime(2023, 06, 16, 08,45, 00, DateTimeKind.Utc),
             Recipients = new List<Recipient>()
             {
                 new Recipient()

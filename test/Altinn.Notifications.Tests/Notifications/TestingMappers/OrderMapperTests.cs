@@ -180,7 +180,7 @@ public class OrderMapperTests
             ProcessingStatus = new()
             {
                 LastUpdate = lastUpdated,
-                Status = "Registered",
+                Status = OrderProcessingStatus.Registered,
                 StatusDescription = "The order has been registered, but not processed yet. No notifications are generated"
             },
             NotificationStatuses = new()
@@ -245,7 +245,7 @@ public class OrderMapperTests
             ProcessingStatus = new()
             {
                 LastUpdate = lastUpdated,
-                Status = "Registered",
+                Status = OrderProcessingStatus.Registered,
                 StatusDescription = "The order has been registered, but not processed yet. No notifications are generated"
             }           
         };

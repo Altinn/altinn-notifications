@@ -80,7 +80,7 @@ public static class OrderMapper
         orderExt.ProcessingStatus = new()
         {
             LastUpdate = order.ProcessingStatus.LastUpdate,
-            Status = order.ProcessingStatus.Status,
+            Status = order.ProcessingStatus.Status.ToString(),
             StatusDescription = order.ProcessingStatus.StatusDescription
         };
 

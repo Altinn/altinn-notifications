@@ -1,7 +1,9 @@
 ﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Repository.Interfaces;
+using Altinn.Notifications.Persistence.Extensions;
 
 using Npgsql;
 
@@ -22,6 +24,7 @@ public class OrderRepository : IOrderRepository
     private const string _insertEmailTextSql = "call notifications.insertemailtext($1, $2, $3, $4, $5)"; // (__orderid, _fromaddress, _subject, _body, _contenttype)
     private const string _setProcessCompleted = "update notifications.orders set processedstatus =$1::orderprocessingstate where alternateid=$2";
     private const string _getOrdersPastSendTimeUpdateStatus = "select notifications.getorders_pastsendtime_updatestatus()";
+    private const string _getOrderIncludeStatus = "select * from notifications.getorder_includestatus($1, $2)"; // _alternateid,  creator
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderRepository"/> class.
@@ -125,6 +128,43 @@ public class OrderRepository : IOrderRepository
         }
 
         return searchResult;
+    }
+
+    /// <inheritdoc/>
+    public async Task<NotificationOrderWithStatus?> GetOrderWithStatusById(Guid id, string creator)
+    {
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getOrderIncludeStatus);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, id);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, creator);
+
+        NotificationOrderWithStatus? order = null;
+
+        await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync())
+        {
+            while (await reader.ReadAsync())
+            {
+                order = new(
+                    reader.GetValue<Guid>("alternateid"),
+                    reader.GetValue<string>("sendersreference"),
+                    reader.GetValue<DateTime>("requestedsendtime"), // all decimals are not included
+                    new Creator(reader.GetValue<string>("creatorname")),
+                    reader.GetValue<DateTime>("created"),
+                    NotificationChannel.Email,
+                    new ProcessingStatus(
+                        reader.GetValue<OrderProcessingStatus>("processedstatus"),
+                        reader.GetValue<DateTime>("processed")));
+
+                int generatedEmail = (int)reader.GetValue<long>("generatedEmailCount");
+                int succeededEmail = (int)reader.GetValue<long>("succeededEmailCount");
+
+                if (generatedEmail > 0)
+                {
+                    order.SetNotificationStatuses(NotificationTemplateType.Email, generatedEmail, succeededEmail);
+                }
+            }
+        }
+
+        return order;
     }
 
     /// <summary>
