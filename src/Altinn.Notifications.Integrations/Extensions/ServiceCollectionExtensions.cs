@@ -25,7 +25,7 @@ public static class ServiceCollectionExtensions
         services
         .AddSingleton<IKafkaProducer, KafkaProducer>()
         .AddSingleton<IHostedService, PastDueOrdersConsumer>()
-               .Configure<KafkaSettings>(config.GetSection("KafkaSettings"));
+        .Configure<KafkaSettings>(config.GetSection("KafkaSettings"));
     }
 
     /// <summary>
@@ -33,13 +33,11 @@ public static class ServiceCollectionExtensions
     /// </summary>
     /// <param name="services">service collection.</param>
     /// <param name="config">the configuration collection</param>
-    public static IServiceCollection AddKafkaHealthChecks(this IServiceCollection services, IConfiguration config)
+    public static void AddKafkaHealthChecks(this IServiceCollection services, IConfiguration config)
     {
         KafkaSettings kafkaSettings = config!.GetSection("KafkaSettings").Get<KafkaSettings>()!;
 
         services.AddHealthChecks()
         .AddCheck("notifications_kafka_health_check", new KafkaHealthCheck(kafkaSettings.BrokerAddress, kafkaSettings.HealthCheckTopic, kafkaSettings.ConsumerGroupId));
-
-        return services;
     }
 }

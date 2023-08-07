@@ -34,9 +34,7 @@ public class KafkaHealthCheck : IHealthCheck
         var config = new ProducerConfig
         {
             BootstrapServers = brokerAddress,
-            Acks = Acks.All,
-            EnableDeliveryReports = true,
-            EnableIdempotence = true,
+            Acks = Acks.Leader,
             MessageSendMaxRetries = 3,
             RetryBackoffMs = 1000
         };
