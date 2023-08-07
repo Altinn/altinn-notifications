@@ -34,7 +34,6 @@ public class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFact
         _factory = factory;
     }
 
-
     [Fact]
     public async Task GetWithStatusById_NoMatchInDb_ReturnsNotFound()
     {
@@ -85,7 +84,6 @@ public class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFact
                     {
                         Self = $"{refLinkBase}/{persistedOrder.Id}/notifications/email"
                     }
-
                 }
             }
         };
@@ -169,7 +167,6 @@ public class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFact
             {
                 // Set up mock authentication so that not well known endpoint is used
                 services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
-
             });
         }).CreateClient();
 

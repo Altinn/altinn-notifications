@@ -24,8 +24,8 @@ public class PastDueOrdersConsumerTests : IDisposable
         // Arrange
         Dictionary<string, string> vars = new()
         {
-            {"KafkaSettings__PastDueOrdersTopicName", _pastDueOrdersTopicName },
-            {"KafkaSettings__TopicList", $"[\"{_pastDueOrdersTopicName}\"]" }
+            { "KafkaSettings__PastDueOrdersTopicName", _pastDueOrdersTopicName },
+            { "KafkaSettings__TopicList", $"[\"{_pastDueOrdersTopicName}\"]" }
         };
 
         PastDueOrdersConsumer consumerService = (PastDueOrdersConsumer)ServiceUtil

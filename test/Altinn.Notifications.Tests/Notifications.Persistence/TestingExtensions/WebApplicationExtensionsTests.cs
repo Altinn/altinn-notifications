@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Persistence.TestingExtensions;
 
-public class WebApplicationExtensions
+public class WebApplicationExtensionsTests
 {
     [Fact]
     public void SetUpPostgreSql_PostgreSettingsMissing_ThrowsException()

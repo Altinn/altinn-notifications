@@ -11,7 +11,6 @@ namespace Altinn.Notifications.Tests.Notifications.Persistence.TestingExtensions
 
 public class ServiceCollectionExtensionsTests
 {
-
     [Fact]
     public void AddPostgresRepositories_PostgreSettingsMissing_ThrowsException()
     {

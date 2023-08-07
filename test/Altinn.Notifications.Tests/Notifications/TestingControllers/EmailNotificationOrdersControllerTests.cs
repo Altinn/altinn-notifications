@@ -74,15 +74,14 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<CustomWebApp
             DateTime.UtcNow,
             NotificationChannel.Email,
             new Creator("ttd"),
-             DateTime.UtcNow,
+            DateTime.UtcNow,
             new List<Recipient>());
-
     }
 
     [Fact]
     public async Task Post_MissingBearerToken_Unauthorized()
     {
-        //Arrange
+        // Arrange
         HttpClient client = GetTestClient();
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath);
 
@@ -122,7 +121,6 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<CustomWebApp
         _validator.Setup(v => v.Validate(It.IsAny<EmailNotificationOrderRequestExt>()))
             .Returns(new ValidationResult(new List<ValidationFailure> { new ValidationFailure("SomeProperty", "SomeError") }));
 
-
         HttpClient client = GetTestClient(_validator.Object);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
 
@@ -135,7 +133,6 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<CustomWebApp
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
         string content = await response.Content.ReadAsStringAsync();
         ProblemDetails? actual = JsonSerializer.Deserialize<ProblemDetails>(content, _options);
-
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -169,8 +166,6 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<CustomWebApp
         serviceMock.Setup(s => s.RegisterEmailNotificationOrder(It.IsAny<NotificationOrderRequest>()))
             .ReturnsAsync((null, new ServiceError(500)));
 
-
-
         HttpClient client = GetTestClient(orderService: serviceMock.Object);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
 
@@ -181,7 +176,6 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<CustomWebApp
 
         // Act
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
-
 
         // Assert
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
@@ -216,7 +210,6 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<CustomWebApp
         serviceMock.VerifyAll();
     }
 
-
     private HttpClient GetTestClient(IValidator<EmailNotificationOrderRequestExt>? validator = null, IEmailNotificationOrderService? orderService = null)
     {
         if (validator == null)
@@ -233,11 +226,9 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<CustomWebApp
             orderService = _orderService.Object;
         }
 
-
         HttpClient client = _factory.WithWebHostBuilder(builder =>
         {
             IdentityModelEventSource.ShowPII = true;
-            
 
             builder.ConfigureTestServices(services =>
             {
@@ -252,7 +243,6 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<CustomWebApp
                 // Set up mock authentication so that not well known endpoint is used
                 services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
             });
-
         }).CreateClient();
 
         return client;

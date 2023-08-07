@@ -18,6 +18,7 @@ using Moq;
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.TestingControllers;
+
 public class TriggerControllerTests : IClassFixture<CustomWebApplicationFactory<TriggerController>>
 {
     private readonly CustomWebApplicationFactory<TriggerController> _factory;
@@ -75,11 +76,11 @@ public class TriggerControllerTests : IClassFixture<CustomWebApplicationFactory<
             var _orderProcessingService = new Mock<IOrderProcessingService>();
             orderProcessingService = _orderProcessingService.Object;
         }
+
         if (emailNotificationService == null)
         {
             var _emailNotificationService = new Mock<IEmailNotificationService>();
             emailNotificationService = _emailNotificationService.Object;
-
         }
 
         HttpClient client = _factory.WithWebHostBuilder(builder =>

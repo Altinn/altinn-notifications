@@ -1,6 +1,7 @@
 ﻿using Xunit;
 
 namespace Altinn.Notifications.Tests;
+
 public static class AssertUtils
 {
     /// <summary>

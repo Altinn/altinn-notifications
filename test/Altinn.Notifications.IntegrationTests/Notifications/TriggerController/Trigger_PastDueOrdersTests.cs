@@ -88,7 +88,6 @@ public class Trigger_PastDueOrdersTests : IClassFixture<IntegrationTestWebApplic
 
                 // Set up mock authentication so that not well known endpoint is used
                 services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
-
             });
         }).CreateClient();
 

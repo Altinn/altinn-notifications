@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 
 namespace Altinn.Notifications.Tests.Notifications;
+
 public class CustomWebApplicationFactory<TStartup> : WebApplicationFactory<TStartup>
       where TStartup : class
 {
@@ -35,7 +36,6 @@ public class CustomWebApplicationFactory<TStartup> : WebApplicationFactory<TStar
         {
             var descriptor = services.Single(s => s.ImplementationType == typeof(PastDueOrdersConsumer));
             services.Remove(descriptor);
-
         });
     }
 }

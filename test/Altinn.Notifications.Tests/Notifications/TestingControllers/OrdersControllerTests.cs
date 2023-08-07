@@ -39,7 +39,6 @@ public class OrdersControllerTests : IClassFixture<CustomWebApplicationFactory<O
     private readonly CustomWebApplicationFactory<OrdersController> _factory;
     private readonly NotificationOrder _order;
 
-
     public OrdersControllerTests(CustomWebApplicationFactory<OrdersController> factory)
     {
         _factory = factory;
@@ -51,7 +50,7 @@ public class OrdersControllerTests : IClassFixture<CustomWebApplicationFactory<O
             DateTime.UtcNow,
             NotificationChannel.Email,
             new Creator("ttd"),
-             DateTime.UtcNow,
+            DateTime.UtcNow,
             new List<Recipient>());
 
         ResourceLinkExtensions.Initialize("https://platform.at22.altinn.cloud");
@@ -60,7 +59,7 @@ public class OrdersControllerTests : IClassFixture<CustomWebApplicationFactory<O
     [Fact]
     public async Task GetBySendersRef_MissingBearer_ReturnsUnauthorized()
     {
-        //Arrange
+        // Arrange
         HttpClient client = GetTestClient();
         string url = _basePath + "?sendersReference=" + "internal-ref";
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
@@ -75,7 +74,7 @@ public class OrdersControllerTests : IClassFixture<CustomWebApplicationFactory<O
     [Fact]
     public async Task GetBySendersRef_CalledByUser_ReturnsForbidden()
     {
-        //Arrange
+        // Arrange
         HttpClient client = GetTestClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetUserToken(1337));
 
@@ -92,7 +91,7 @@ public class OrdersControllerTests : IClassFixture<CustomWebApplicationFactory<O
     [Fact]
     public async Task GetBySendersRef_CorrespondingServiceMethodCalled()
     {
-        //Arrange
+        // Arrange
         var orderService = new Mock<IGetOrderService>();
         orderService
              .Setup(o => o.GetOrdersBySendersReference(It.Is<string>(s => s.Equals("internal-ref")), It.Is<string>(s => s.Equals("ttd"))))
@@ -124,7 +123,6 @@ public class OrdersControllerTests : IClassFixture<CustomWebApplicationFactory<O
 
         controller.ControllerContext.HttpContext = new DefaultHttpContext()
         {
-
             User = PrincipalUtil.GetClaimsPrincipal("ttd", "987654321")
         };
 
@@ -136,7 +134,7 @@ public class OrdersControllerTests : IClassFixture<CustomWebApplicationFactory<O
     [Fact]
     public async Task GetById_MissingBearer_ReturnsUnauthorized()
     {
-        //Arrange
+        // Arrange
         HttpClient client = GetTestClient();
         string url = _basePath + "/" + Guid.NewGuid();
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
@@ -151,7 +149,7 @@ public class OrdersControllerTests : IClassFixture<CustomWebApplicationFactory<O
     [Fact]
     public async Task GetById_CalledByUser_ReturnsForbidden()
     {
-        //Arrange
+        // Arrange
         HttpClient client = GetTestClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetUserToken(1337));
 
@@ -168,7 +166,7 @@ public class OrdersControllerTests : IClassFixture<CustomWebApplicationFactory<O
     [Fact]
     public async Task GetById_CorrespondingServiceMethodCalled()
     {
-        //Arrange
+        // Arrange
         Guid orderId = Guid.NewGuid();
 
         var orderService = new Mock<IGetOrderService>();
@@ -193,7 +191,7 @@ public class OrdersControllerTests : IClassFixture<CustomWebApplicationFactory<O
     [Fact]
     public async Task GetById_ServicerReturnsError_StatusCodeMatchesError()
     {
-        //Arrange
+        // Arrange
         Guid orderId = Guid.NewGuid();
 
         var orderService = new Mock<IGetOrderService>();
@@ -227,7 +225,6 @@ public class OrdersControllerTests : IClassFixture<CustomWebApplicationFactory<O
 
         controller.ControllerContext.HttpContext = new DefaultHttpContext()
         {
-
             User = PrincipalUtil.GetClaimsPrincipal("ttd", "987654321")
         };
 
@@ -239,7 +236,7 @@ public class OrdersControllerTests : IClassFixture<CustomWebApplicationFactory<O
     [Fact]
     public async Task GetWithStatusById_MissingBearer_ReturnsUnauthorized()
     {
-        //Arrange
+        // Arrange
         HttpClient client = GetTestClient();
         string url = _basePath + "/" + Guid.NewGuid() + "/status";
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
@@ -254,7 +251,7 @@ public class OrdersControllerTests : IClassFixture<CustomWebApplicationFactory<O
     [Fact]
     public async Task GetWithStatusById_CalledByUser_ReturnsForbidden()
     {
-        //Arrange
+        // Arrange
         HttpClient client = GetTestClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetUserToken(1337));
 
@@ -271,7 +268,7 @@ public class OrdersControllerTests : IClassFixture<CustomWebApplicationFactory<O
     [Fact]
     public async Task GetWithStatusById_CorrespondingServiceMethodCalled()
     {
-        //Arrange
+        // Arrange
         Guid orderId = Guid.NewGuid();
 
         var orderService = new Mock<IGetOrderService>();
@@ -297,7 +294,7 @@ public class OrdersControllerTests : IClassFixture<CustomWebApplicationFactory<O
     [Fact]
     public async Task GetWithStatusById_ServicerReturnsError_StatusCodeMatchesError()
     {
-        //Arrange
+        // Arrange
         Guid orderId = Guid.NewGuid();
 
         var orderService = new Mock<IGetOrderService>();
@@ -331,7 +328,6 @@ public class OrdersControllerTests : IClassFixture<CustomWebApplicationFactory<O
 
         controller.ControllerContext.HttpContext = new DefaultHttpContext()
         {
-
             User = PrincipalUtil.GetClaimsPrincipal("ttd", "987654321")
         };
 

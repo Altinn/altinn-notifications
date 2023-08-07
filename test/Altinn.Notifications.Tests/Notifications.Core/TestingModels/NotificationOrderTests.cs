@@ -27,7 +27,7 @@ public class NotificationOrderTests
             Id = id,
             SendersReference = "senders-reference",
             Templates = new List<INotificationTemplate>()
-             {
+            {
                  new EmailTemplate()
                  {
                      Type = NotificationTemplateType.Email,
@@ -62,35 +62,44 @@ public class NotificationOrderTests
         {
             { "id", id },
             { "sendersReference", "senders-reference" },
-            { "requestedSendTime", "2023-02-14T08:15:00Z"},
+            { "requestedSendTime", "2023-02-14T08:15:00Z" },
             { "notificationChannel", "Email" },
-            { "creator", new JsonObject() {
-                { "shortName", "ttd" }
-            }},
-            { "created", "2022-02-14T08:15:00Z"},
+            {
+                "creator", new JsonObject()
+                {
+                    { "shortName", "ttd" }
+                }
+            },
+            { "created", "2022-02-14T08:15:00Z" },
             {
                 "templates",  new JsonArray()
                 {
-                    new JsonObject() {
-                        {"$", "email" },
-                        {"type","Email" },
-                        {"fromAddress","sender@domain.com" },
-                        {"subject", "email-subject" },
-                        {"body","email-body" },
-                        {"contentType", "Html" }
+                    new JsonObject()
+                    {
+                        { "$", "email" },
+                        { "type", "Email" },
+                        { "fromAddress", "sender@domain.com" },
+                        { "subject", "email-subject" },
+                        { "body", "email-body" },
+                        { "contentType", "Html" }
                     }
                 }
             },
-            { "recipients", new JsonArray()
+            {
+                "recipients", new JsonArray()
                 {
-                    new JsonObject() {
-                        { "recipientId", "recipient1" },
-                        { "addressInfo",  new JsonArray()
+                    new JsonObject()
+                    {
+                        {
+                            "recipientId", "recipient1"
+                        },
+                        {
+                            "addressInfo",  new JsonArray()
                             {
                              new JsonObject()
                              {
-                                 {"$", "email" },
-                                 {"addressType", "Email" },
+                                 { "$", "email" },
+                                 { "addressType", "Email" },
                                  { "emailAddress", "recipient1@domain.com" }
                              }
                             }
@@ -152,7 +161,6 @@ public class NotificationOrderTests
         Assert.False(actualResult);
     }
 
-
     [Fact]
     public void TryParse_InvalidJsonExceptionThrown_False()
     {
@@ -161,4 +169,3 @@ public class NotificationOrderTests
         Assert.False(actualResult);
     }
 }
-

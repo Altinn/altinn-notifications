@@ -19,6 +19,7 @@ using Moq;
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
+
 public class OrderProcessingServiceTests
 {
     private const string _pastDueTopicName = "orders.pastdue";
@@ -87,7 +88,7 @@ public class OrderProcessingServiceTests
             RequestedSendTime = requested,
             Recipients = new List<Recipient>()
             {
-                new Recipient("skd", new List<IAddressPoint>() { new EmailAddressPoint("test@test.com")})
+                new Recipient("skd", new List<IAddressPoint>() { new EmailAddressPoint("test@test.com") })
             }
         };
 
@@ -121,7 +122,6 @@ public class OrderProcessingServiceTests
                 new Recipient(),
             }
         };
-
 
         var serviceMock = new Mock<IEmailNotificationService>();
         serviceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>()))
@@ -159,6 +159,7 @@ public class OrderProcessingServiceTests
             var _producer = new Mock<IKafkaProducer>();
             producer = _producer.Object;
         }
+
         var kafkaSettings = new KafkaSettings() { PastDueOrdersTopicName = _pastDueTopicName };
 
         return new OrderProcessingService(repo, emailService, producer, Options.Create(kafkaSettings));

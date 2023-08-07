@@ -35,7 +35,6 @@ public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<C
         _factory = factory;
     }
 
-
     [Fact]
     public async Task GetById_NoMatchInDb_ReturnsNotFound()
     {
@@ -124,7 +123,6 @@ public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<C
             {
                 // Set up mock authentication so that not well known endpoint is used
                 services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
-
             });
         }).CreateClient();
 

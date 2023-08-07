@@ -4,16 +4,12 @@ using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
-using Altinn.Notifications.Persistence.Extensions;
-
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Altinn.Notifications.IntegrationTests.Utils;
+
 public static class TestdataUtil
 {
-    public static (NotificationOrder order, EmailNotification notification) GetOrderAndEmailNotification()
+    public static (NotificationOrder Order, EmailNotification Notification) GetOrderAndEmailNotification()
     {
         NotificationOrder order = NotificationOrder_EmailTemplate_OneRecipient();
         order.Id = Guid.NewGuid();
@@ -52,10 +48,10 @@ public static class TestdataUtil
                     ContentType = EmailContentType.Html
                 }
             },
-            RequestedSendTime = new DateTime(2023,06,16,08,50,00, DateTimeKind.Utc),
+            RequestedSendTime = new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc),
             NotificationChannel = NotificationChannel.Email,
             Creator = new("ttd"),
-            Created = new DateTime(2023, 06, 16, 08,45, 00, DateTimeKind.Utc),
+            Created = new DateTime(2023, 06, 16, 08, 45, 00, DateTimeKind.Utc),
             Recipients = new List<Recipient>()
             {
                 new Recipient()

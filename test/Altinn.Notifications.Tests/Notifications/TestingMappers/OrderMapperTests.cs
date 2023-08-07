@@ -13,6 +13,7 @@ using Altinn.Notifications.Models;
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.TestingMappers;
+
 public class OrderMapperTests
 {
     public OrderMapperTests()
@@ -73,7 +74,6 @@ public class OrderMapperTests
     [Fact]
     public void MapToRecipientExt_AllPropertiesPresent_AreEquivalent()
     {
-
         // Arrange 
         Recipient input = new()
         {
@@ -100,7 +100,6 @@ public class OrderMapperTests
     [Fact]
     public void MapToRecipientExt_NoEmailPresent_AreEquivalent()
     {
-
         // Arrange 
         Recipient input = new()
         {
@@ -140,17 +139,20 @@ public class OrderMapperTests
         {
             SendersReference = "senders-reference",
             Creator = new Creator("ttd"),
-            Templates = new List<INotificationTemplate>() {
+            Templates = new List<INotificationTemplate>()
+            {
                 new EmailTemplate(
                     "sender@domain.com",
                     "email-subject",
                     "email-body",
-                    EmailContentType.Html)},
+                    EmailContentType.Html)
+            },
             RequestedSendTime = sendTime,
             NotificationChannel = NotificationChannel.Email,
-            Recipients = new List<Recipient>() {
-                        new Recipient(){ AddressInfo =new List<IAddressPoint>(){new EmailAddressPoint("recipient1@domain.com")}},
-                        new Recipient(){ AddressInfo =new List<IAddressPoint>(){new EmailAddressPoint("recipient2@domain.com")}}
+            Recipients = new List<Recipient>()
+            {
+                        new Recipient() { AddressInfo = new List<IAddressPoint>() { new EmailAddressPoint("recipient1@domain.com") } },
+                        new Recipient() { AddressInfo = new List<IAddressPoint>() { new EmailAddressPoint("recipient2@domain.com") } }
             }
         };
 
@@ -185,10 +187,9 @@ public class OrderMapperTests
             },
             NotificationStatuses = new()
             {
-                { NotificationTemplateType.Email, new NotificationStatus() { Generated = 15,Succeeded = 10  } }
+                { NotificationTemplateType.Email, new NotificationStatus() { Generated = 15, Succeeded = 10 } }
             }
         };
-
 
         NotificationOrderWithStatusExt expected = new()
         {
@@ -228,7 +229,6 @@ public class OrderMapperTests
     [Fact]
     public void MapToNotificationOrderWithStatusExt_NoNotificationStatusProvided_AreEquivalent()
     {
-
         // Arrange
         DateTime sendTime = DateTime.UtcNow;
         DateTime created = DateTime.UtcNow;
@@ -247,9 +247,8 @@ public class OrderMapperTests
                 LastUpdate = lastUpdated,
                 Status = OrderProcessingStatus.Registered,
                 StatusDescription = "The order has been registered, but not processed yet. No notifications are generated"
-            }           
+            }
         };
-
 
         NotificationOrderWithStatusExt expected = new()
         {
@@ -272,6 +271,5 @@ public class OrderMapperTests
 
         // Assert
         Assert.Equivalent(expected, actual, true);
-
     }
 }

@@ -89,7 +89,6 @@ public class Trigger_SendEmailNotificationsTests : IClassFixture<IntegrationTest
 
                 // Set up mock authentication so that not well known endpoint is used               
                 services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
-
             });
         }).CreateClient();
 
