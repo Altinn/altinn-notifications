@@ -20,5 +20,5 @@ public interface IGetOrderService
     /// </summary>
     /// <param name="senderRef">The senders reference</param>
     /// <param name="creator">The creator of the orders</param>
-    public Task<(List<NotificationOrder> Orders, ServiceError? Error)> GetOrdersBySendersReference(string senderRef, string creator);
+    public Task<(List<NotificationOrder>? Orders, ServiceError? Error)> GetOrdersBySendersReference(string senderRef, string creator);
 }

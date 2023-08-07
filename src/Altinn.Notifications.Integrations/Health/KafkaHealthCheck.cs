@@ -50,7 +50,7 @@ public class KafkaHealthCheck : IHealthCheck
         {
             // Produce a test message to the health check topic
             var testMessage = new Message<Null, string> { Value = "test" };
-            await _producer.ProduceAsync(_healthCheckTopic, testMessage);
+            await _producer.ProduceAsync(_healthCheckTopic, testMessage, cancellationToken);
 
             // Consume the test message from the health check topic
             var consumeResult = _consumer.Consume(TimeSpan.FromSeconds(1));
