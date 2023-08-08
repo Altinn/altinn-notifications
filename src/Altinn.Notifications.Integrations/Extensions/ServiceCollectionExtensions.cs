@@ -22,10 +22,17 @@ public static class ServiceCollectionExtensions
     /// <param name="config">the configuration collection</param>
     public static void AddKafkaServices(this IServiceCollection services, IConfiguration config)
     {
+        KafkaSettings kafkaSettings = config!.GetSection("KafkaSettings").Get<KafkaSettings>()!;
+
+        if (kafkaSettings == null)
+        {
+            throw new ArgumentNullException(nameof(config), "Required KafkaSettings is missing from application configuration");
+        }
+        
         services
         .AddSingleton<IKafkaProducer, KafkaProducer>()
         .AddSingleton<IHostedService, PastDueOrdersConsumer>()
-        .Configure<KafkaSettings>(config.GetSection("KafkaSettings"));
+        .Configure<KafkaSettings>(kafkaSettings);
     }
 
     /// <summary>
