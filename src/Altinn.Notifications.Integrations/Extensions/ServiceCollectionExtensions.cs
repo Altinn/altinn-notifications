@@ -37,6 +37,11 @@ public static class ServiceCollectionExtensions
     {
         KafkaSettings kafkaSettings = config!.GetSection("KafkaSettings").Get<KafkaSettings>()!;
 
+        if (kafkaSettings == null)
+        {
+            throw new ArgumentNullException(nameof(config), "Required KafkaSettings is missing from application configuration");
+        }
+
         services.AddHealthChecks()
         .AddCheck("notifications_kafka_health_check", new KafkaHealthCheck(kafkaSettings.BrokerAddress, kafkaSettings.HealthCheckTopic, kafkaSettings.ConsumerGroupId));
     }
