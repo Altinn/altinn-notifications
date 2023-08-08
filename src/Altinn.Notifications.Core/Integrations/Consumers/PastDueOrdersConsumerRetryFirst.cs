@@ -11,7 +11,7 @@ using Microsoft.Extensions.Options;
 namespace Altinn.Notifications.Core.Integrations.Consumers;
 
 /// <summary>
-/// Kafka consumer class for past due orders
+/// Kafka consumer class for past due orders, first retry
 /// </summary>
 public class PastDueOrdersConsumerRetryFirst : IHostedService
 {
@@ -20,8 +20,9 @@ public class PastDueOrdersConsumerRetryFirst : IHostedService
     private readonly KafkaSettings _settings;
     private readonly CancellationTokenSource _cancellationTokenSource;
     private readonly IConsumer<string, string> _consumer;
+    
     /// <summary>
-    /// Initializes a new instance of the <see cref="PastDueOrdersConsumer"/> class.
+    /// Initializes a new instance of the <see cref="PastDueOrdersConsumerRetryFirst"/> class.
     /// </summary>
     public PastDueOrdersConsumerRetryFirst(
         IOrderProcessingService orderProcessingService,
@@ -50,7 +51,7 @@ public class PastDueOrdersConsumerRetryFirst : IHostedService
        /// <inheritdoc/>
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _consumer.Subscribe(_settings.PastDueOrdersTopicNameRetry1);
+        _consumer.Subscribe(_settings.PastDueOrdersTopicNameRetryFirst);
 
         Task.Run(() => ConsumeOrder(_cancellationTokenSource.Token), cancellationToken);
 
@@ -86,8 +87,7 @@ public class PastDueOrdersConsumerRetryFirst : IHostedService
                         continue;
                     }
 
-                    // new method on processorder
-                    // await _orderProcessingService.ProcessOrder(order!);
+                    await _orderProcessingService.ProcessOrderRetryFirst(order!);
                     _consumer.Commit(consumeResult);
                     _consumer.StoreOffset(consumeResult);
                 }

@@ -18,7 +18,7 @@ public class KafkaSettings
     /// <summary>
     /// The name of the past due orders retry1 topic
     /// </summary>
-    public string PastDueOrdersTopicNameRetry1 { get; set; } = string.Empty;
+    public string PastDueOrdersTopicNameRetryFirst { get; set; } = string.Empty;
 
     /// <summary>
     /// The name of the general email queue topic

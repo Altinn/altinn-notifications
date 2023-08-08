@@ -1,6 +1,7 @@
 ﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
+using Altinn.Notifications.Core.Models.Recipients;
 
 namespace Altinn.Notifications.Core.Repository.Interfaces;
 
@@ -26,8 +27,8 @@ public interface IEmailNotificationRepository
     public Task SetResultStatus(Guid notificationId, EmailNotificationResultType status);
 
     /// <summary>
-    /// Retrieves all email notifications for an order
+    /// Retrieves all email recipients for an order
     /// </summary>
     /// <returns>A list of emails</returns>
-    public Task<List<Email>> GetNotifications(string orderid);
+    public Task<List<EmailRecipient>> GetRecipients(Guid orderid);
 }

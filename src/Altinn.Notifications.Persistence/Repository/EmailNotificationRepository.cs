@@ -1,6 +1,7 @@
 ﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
+using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Repository.Interfaces;
 using Altinn.Notifications.Persistence.Extensions;
 
@@ -19,6 +20,7 @@ public class EmailNotificationRepository : IEmailNotificationRepository
     private const string _insertEmailNotificationSql = "call notifications.insertemailnotification($1, $2, $3, $4, $5, $6, $7)"; // (__orderid, _alternateid, _recipientid, _toaddress, _result, _resulttime, _expirytime)
     private const string _getEmailNotificationsSql = "select * from notifications.getemails_statusnew_updatestatus()";
     private const string _setResultStatus = "update notifications.emailnotifications set result =$1::emailnotificationresulttype where alternateid=$2";
+    private const string _getEmailRecipients = "select * from notifications.getemailrecipients($1)"; // (_alternateid)
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotificationRepository"/> class.
@@ -81,8 +83,21 @@ public class EmailNotificationRepository : IEmailNotificationRepository
         await pgcom.ExecuteNonQueryAsync();
     }
 
-    public Task<List<Email>> GetNotifications(string orderid)
+    /// <inheritdoc/>
+    public async Task<List<EmailRecipient>> GetRecipients(Guid notificationId)
     {
-        throw new NotImplementedException();
+        List<EmailRecipient> searchResult = new();
+
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getEmailRecipients);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId);
+        await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync())
+        {
+            while (await reader.ReadAsync())
+            {
+                searchResult.Add(new EmailRecipient(reader.GetValue<string>("recipientid"), reader.GetValue<string>("toaddress")));
+            }
+        }
+
+        return searchResult;
     }
 }
