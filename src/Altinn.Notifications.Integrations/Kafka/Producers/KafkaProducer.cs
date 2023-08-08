@@ -28,7 +28,12 @@ public class KafkaProducer : IKafkaProducer, IDisposable
 
         var config = new ProducerConfig
         {
-            BootstrapServers = _settings.BrokerAddress,
+            BootstrapServers = _settings.BrokerAddress, 
+            SslEndpointIdentificationAlgorithm = SslEndpointIdentificationAlgorithm.Https,
+            SecurityProtocol = SecurityProtocol.SaslSsl,
+            SaslMechanism = SaslMechanism.Plain,
+            SaslUsername = _settings.SaslUsername,
+            SaslPassword = _settings.SaslPassword,
             Acks = Acks.All,
             EnableDeliveryReports = true,
             EnableIdempotence = true,
