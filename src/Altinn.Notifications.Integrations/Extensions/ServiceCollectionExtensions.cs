@@ -1,7 +1,7 @@
-﻿using Altinn.Notifications.Core.Integrations.Consumers;
-using Altinn.Notifications.Core.Integrations.Interfaces;
+﻿using Altinn.Notifications.Core.Integrations.Interfaces;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Health;
+using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.Integrations.Kafka.Producers;
 
 using Microsoft.Extensions.Configuration;
@@ -22,17 +22,17 @@ public static class ServiceCollectionExtensions
     /// <param name="config">the configuration collection</param>
     public static void AddKafkaServices(this IServiceCollection services, IConfiguration config)
     {
-        KafkaSettings kafkaSettings = config!.GetSection("KafkaSettings").Get<KafkaSettings>()!;
+        KafkaSettings? kafkaSettings = config.GetSection("KafkaSettings").Get<KafkaSettings>();
 
         if (kafkaSettings == null)
         {
             throw new ArgumentNullException(nameof(config), "Required KafkaSettings is missing from application configuration");
         }
-        
+
         services
         .AddSingleton<IKafkaProducer, KafkaProducer>()
         .AddSingleton<IHostedService, PastDueOrdersConsumer>()
-        .Configure<KafkaSettings>(kafkaSettings);
+        .Configure<KafkaSettings>(config.GetSection("KafkaSettings"));
     }
 
     /// <summary>
