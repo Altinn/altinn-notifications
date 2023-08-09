@@ -165,7 +165,7 @@ public class OrderProcessingServiceTests
         var service = GetTestService(emailRepo: emailRepoMock.Object, emailService: serviceMock.Object);
 
         // Act
-        await service.ProcessOrderRetryFirst(order);
+        await service.ProcessOrderRetry(order);
 
         // Assert
         serviceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>()), Times.Once);
@@ -199,7 +199,7 @@ public class OrderProcessingServiceTests
         var service = GetTestService(repo: repoMock.Object, emailRepo: emailRepoMock.Object, emailService: serviceMock.Object);
 
         // Act
-        await Assert.ThrowsAsync<Exception>(async () => await service.ProcessOrderRetryFirst(order));
+        await Assert.ThrowsAsync<Exception>(async () => await service.ProcessOrderRetry(order));
 
         // Assert
         serviceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>()), Times.Once);

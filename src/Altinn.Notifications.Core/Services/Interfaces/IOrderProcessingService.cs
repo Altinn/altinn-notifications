@@ -20,5 +20,5 @@ public interface IOrderProcessingService
     /// <summary>
     /// Retry processing of an order
     /// </summary>
-    public Task ProcessOrderRetryFirst(NotificationOrder order);
+    public Task ProcessOrderRetry(NotificationOrder order);
 }

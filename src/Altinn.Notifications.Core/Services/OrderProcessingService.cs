@@ -69,7 +69,7 @@ public class OrderProcessingService : IOrderProcessingService
     }
 
     /// <inheritdoc/>
-    public async Task ProcessOrderRetryFirst(NotificationOrder order)
+    public async Task ProcessOrderRetry(NotificationOrder order)
     {
         NotificationChannel ch = order.NotificationChannel;
 

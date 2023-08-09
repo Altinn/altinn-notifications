@@ -20,7 +20,7 @@ public class PastDueOrdersConsumer : IHostedService
     private readonly ILogger<PastDueOrdersConsumer> _logger;
     private readonly IKafkaProducer _producer;
     private readonly KafkaSettings _settings;
-    private readonly string _pastDueOrdersTopicRetryFirst;
+    private readonly string _pastDueOrdersTopicRetry;
     private readonly CancellationTokenSource _cancellationTokenSource;
     private readonly IConsumer<string, string> _consumer;
 
@@ -37,7 +37,7 @@ public class PastDueOrdersConsumer : IHostedService
         _settings = settings.Value;
         _logger = logger;
         _producer = producer;
-        _pastDueOrdersTopicRetryFirst = settings.Value.PastDueOrdersTopicNameRetryFirst;
+        _pastDueOrdersTopicRetry = settings.Value.PastDueOrdersTopicNameRetry;
         _cancellationTokenSource = new CancellationTokenSource();
 
         var consumerConfig = new ConsumerConfig
@@ -105,7 +105,7 @@ public class PastDueOrdersConsumer : IHostedService
         }
         catch (Exception ex)
         {
-            await _producer.ProduceAsync(_pastDueOrdersTopicRetryFirst, message!);
+            await _producer.ProduceAsync(_pastDueOrdersTopicRetry, message!);
             _logger.LogError(ex, "// PastDueOrdersConsumer // ConsumeOrder // An error occurred while consuming messages");
             throw;
         }
