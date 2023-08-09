@@ -1,7 +1,7 @@
 namespace Altinn.Notifications.Core.Models.Recipients;
 
 /// <summary>
-/// Class representing a email recipient
+/// Class representing an email recipient
 /// </summary>
 public class EmailRecipient
 {
@@ -13,14 +13,5 @@ public class EmailRecipient
     /// <summary>
     /// Gets or sets the toaddress
     /// </summary>
-    public string ToAddress { get; set; }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EmailRecipient"/> class.
-    /// </summary>
-    public EmailRecipient(string recipientId, string toAddress)
-    {
-        RecipientId = recipientId;
-        ToAddress = toAddress;
-    }
+    public string ToAddress { get; set; } = string.Empty;
 }

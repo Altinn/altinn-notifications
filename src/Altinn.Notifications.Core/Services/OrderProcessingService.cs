@@ -82,12 +82,12 @@ public class OrderProcessingService : IOrderProcessingService
                 case NotificationChannel.Email:
                     EmailAddressPoint? addressPoint = recipient.AddressInfo.Find(a => a.AddressType == AddressType.Email) as EmailAddressPoint;
 
-                    if (!emailRecipients.Any(er => er.RecipientId == (string.IsNullOrEmpty(recipient.RecipientId) ? null : recipient.RecipientId)
+                    if (!emailRecipients.Exists(er => er.RecipientId == (string.IsNullOrEmpty(recipient.RecipientId) ? null : recipient.RecipientId)
                         && er.ToAddress.Equals(addressPoint?.EmailAddress)))
                     {
                         await _emailService.CreateNotification(order.Id, order.RequestedSendTime, recipient);
                     }
-                    
+
                     break;
             }
         }

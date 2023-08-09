@@ -30,5 +30,5 @@ public interface IEmailNotificationRepository
     /// Retrieves all email recipients for an order
     /// </summary>
     /// <returns>A list of emails</returns>
-    public Task<List<EmailRecipient>> GetRecipients(Guid orderid);
+    public Task<List<EmailRecipient>> GetRecipients(Guid notificationid);
 }

@@ -94,7 +94,11 @@ public class EmailNotificationRepository : IEmailNotificationRepository
         {
             while (await reader.ReadAsync())
             {
-                searchResult.Add(new EmailRecipient(reader.GetValue<string>("recipientid"), reader.GetValue<string>("toaddress")));
+                searchResult.Add(new EmailRecipient() 
+                { 
+                    RecipientId = reader.GetValue<string>("recipientid"),
+                    ToAddress = reader.GetValue<string>("toaddress")
+                });
             }
         }
 

@@ -160,7 +160,7 @@ public class OrderProcessingServiceTests
         serviceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>()));
 
         var emailRepoMock = new Mock<IEmailNotificationRepository>();
-        emailRepoMock.Setup(e => e.GetRecipients(It.IsAny<Guid>())).ReturnsAsync(new List<EmailRecipient>() { new EmailRecipient("skd", "test@test.com")});
+        emailRepoMock.Setup(e => e.GetRecipients(It.IsAny<Guid>())).ReturnsAsync(new List<EmailRecipient>() { new EmailRecipient() { RecipientId = "skd", ToAddress = "test@test.com"}});
 
         var service = GetTestService(emailRepo: emailRepoMock.Object, emailService: serviceMock.Object);
 
@@ -194,7 +194,7 @@ public class OrderProcessingServiceTests
         repoMock.Setup(r => r.SetProcessingStatus(It.IsAny<Guid>(), It.IsAny<OrderProcessingStatus>()));
 
         var emailRepoMock = new Mock<IEmailNotificationRepository>();
-        emailRepoMock.Setup(e => e.GetRecipients(It.IsAny<Guid>())).ReturnsAsync(new List<EmailRecipient>() { new EmailRecipient("skd", "test@test.com")});
+        emailRepoMock.Setup(e => e.GetRecipients(It.IsAny<Guid>())).ReturnsAsync(new List<EmailRecipient>() { new EmailRecipient() { RecipientId = "skd", ToAddress = "test@test.com"}});
 
         var service = GetTestService(repo: repoMock.Object, emailRepo: emailRepoMock.Object, emailService: serviceMock.Object);
 
