@@ -33,4 +33,24 @@ public static class ServiceCollectionExtensions
         .AddSingleton<IEmailNotificationRepository, EmailNotificationRepository>()
         .AddNpgsqlDataSource(connectionString, builder => builder.EnableParameterLogging(settings.LogParameters));
     }
+
+    /// <summary>
+    /// Adds postgresql health checks
+    /// </summary>
+    /// <param name="services">service collection.</param>
+    /// <param name="config">the configuration collection</param>
+    public static void AddPostgresHealthChecks(this IServiceCollection services, IConfiguration config)
+    {
+        PostgreSqlSettings? settings = config.GetSection("PostgreSQLSettings").Get<PostgreSqlSettings>();
+
+        if (settings == null)
+        {
+            throw new ArgumentNullException(nameof(config), "Required PostgreSQLSettings is missing from application configuration");
+        }
+
+        string connectionString = string.Format(settings.ConnectionString, settings.NotificationsDbPwd);
+
+        services.AddHealthChecks()
+            .AddNpgSql(connectionString, name: "notifications_postgres_health_check");
+    }
 }
