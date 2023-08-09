@@ -28,7 +28,7 @@ public class KafkaProducer : IKafkaProducer, IDisposable
 
         var config = new ProducerConfig
         {
-            BootstrapServers = _settings.BrokerAddress, 
+            BootstrapServers = _settings.BrokerAddress,
             SslEndpointIdentificationAlgorithm = SslEndpointIdentificationAlgorithm.Https,
             SecurityProtocol = SecurityProtocol.SaslSsl,
             SaslMechanism = SaslMechanism.Plain,
@@ -87,7 +87,16 @@ public class KafkaProducer : IKafkaProducer, IDisposable
 
     private void EnsureTopicsExist()
     {
-        using var adminClient = new AdminClientBuilder(new Dictionary<string, string>() { { "bootstrap.servers", _settings.BrokerAddress } }).Build();
+        using var adminClient = new AdminClientBuilder(
+            new Dictionary<string, string>()
+            {
+                { "bootstrap.servers", _settings.BrokerAddress },
+                { "security.protocol", "SASL_SSL" },
+                { "sasl.mechanisms", "PLAIN" },
+                { "sasl.username", _settings.SaslUsername },
+                { "sasl.password", _settings.SaslPassword }
+            })
+            .Build();
         var existingTopics = adminClient.GetMetadata(TimeSpan.FromSeconds(10)).Topics;
 
         foreach (string topic in _settings.TopicList)
