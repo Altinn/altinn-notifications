@@ -163,11 +163,11 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     services.AddCoreServices(config);
 
     services.AddKafkaServices(config);
-    services.AddKafkaHealthChecks(config);
 
+    // services.AddKafkaHealthChecks(config);
     services.AddPostgresRepositories(config);
 
-    // services.AddPostgresHealthChecks(config);
+    services.AddPostgresHealthChecks(config);
 }
 
 async Task SetConfigurationProviders(ConfigurationManager config)
