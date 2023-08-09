@@ -87,15 +87,29 @@ public class KafkaProducer : IKafkaProducer, IDisposable
 
     private void EnsureTopicsExist()
     {
-        using var adminClient = new AdminClientBuilder(
-            new Dictionary<string, string>()
+        bool isDevelopment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development";
+        Dictionary<string, string> settings;
+
+        if (!isDevelopment)
+        {
+            settings = new Dictionary<string, string>()
             {
                 { "bootstrap.servers", _settings.BrokerAddress },
                 { "security.protocol", "SASL_SSL" },
                 { "sasl.mechanisms", "PLAIN" },
                 { "sasl.username", _settings.SaslUsername },
                 { "sasl.password", _settings.SaslPassword }
-            })
+            };
+        }
+        else
+        {
+            settings = new Dictionary<string, string>()
+            {
+                { "bootstrap.servers", _settings.BrokerAddress }
+            };
+        }
+
+        using var adminClient = new AdminClientBuilder(settings)
             .Build();
         var existingTopics = adminClient.GetMetadata(TimeSpan.FromSeconds(10)).Topics;
 
@@ -111,7 +125,7 @@ public class KafkaProducer : IKafkaProducer, IDisposable
                         {
                             Name = topic,
                             NumPartitions = 6,
-                            ReplicationFactor = 3 
+                            ReplicationFactor = 3
                         }
                     }).Wait();
                     _logger.LogInformation("// KafkaProducer // EnsureTopicsExists // Topic '{Topic}' created successfully.", topic);
