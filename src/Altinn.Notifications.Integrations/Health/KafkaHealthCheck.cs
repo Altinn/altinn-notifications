@@ -9,9 +9,11 @@ namespace Altinn.Notifications.Integrations.Health;
 /// </summary>
 public class KafkaHealthCheck : IHealthCheck, IDisposable
 {
-    private readonly IProducer<Null, string> _producer;
+    private readonly IProducer<string, string> _producer;
     private readonly IConsumer<string, string> _consumer;
+    private readonly string _messageKey = Guid.NewGuid().ToString();
     private readonly string _healthCheckTopic;
+    private bool _partitionAssigned;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="KafkaHealthCheck"/> class.
@@ -39,7 +41,7 @@ public class KafkaHealthCheck : IHealthCheck, IDisposable
             RetryBackoffMs = 1000
         };
 
-        _producer = new ProducerBuilder<Null, string>(config).Build();
+        _producer = new ProducerBuilder<string, string>(config).Build();
         _consumer.Subscribe(_healthCheckTopic);
     }
 
@@ -49,17 +51,33 @@ public class KafkaHealthCheck : IHealthCheck, IDisposable
         try
         {
             // Produce a test message to the health check topic
-            var testMessage = new Message<Null, string> { Value = "test" };
-            await _producer.ProduceAsync(_healthCheckTopic, testMessage, cancellationToken);
+            var testMessage = new Message<string, string> { Key = _messageKey, Value = "test" };
+            var deliveryResult = await _producer.ProduceAsync(_healthCheckTopic, testMessage, cancellationToken);
+
+            if (deliveryResult == null || deliveryResult.Status != PersistenceStatus.Persisted)
+            {
+                return HealthCheckResult.Unhealthy("Unable to produce test message on Kafka health check topic.");
+            }
+
+            // Ensure consumer reads from the same partition that is being written to
+            if (!_partitionAssigned)
+            {
+                var partitions = new List<TopicPartitionOffset>
+                {
+                    new TopicPartitionOffset(_healthCheckTopic, deliveryResult.Partition, Offset.Beginning)
+                };
+
+                _consumer.Assign(partitions);
+                _partitionAssigned = true;
+            }
 
             // Consume the test message from the health check topic
             var consumeResult = _consumer.Consume(TimeSpan.FromSeconds(1));
+
             if (consumeResult == null || consumeResult.Message.Value != "test")
             {
                 return HealthCheckResult.Unhealthy("Unable to consume test message from Kafka health check topic.");
             }
-
-            _consumer.Commit(consumeResult);
 
             return HealthCheckResult.Healthy();
         }
