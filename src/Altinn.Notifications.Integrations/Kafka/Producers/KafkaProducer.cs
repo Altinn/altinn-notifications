@@ -110,8 +110,8 @@ public class KafkaProducer : IKafkaProducer, IDisposable
                         new TopicSpecification
                         {
                             Name = topic,
-                            NumPartitions = 1, // Set the desired number of partitions
-                            ReplicationFactor = 1 // Set the desired replication factor
+                            NumPartitions = 6,
+                            ReplicationFactor = 3 
                         }
                     }).Wait();
                     _logger.LogInformation("// KafkaProducer // EnsureTopicsExists // Topic '{Topic}' created successfully.", topic);
