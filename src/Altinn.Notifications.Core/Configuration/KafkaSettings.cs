@@ -11,6 +11,16 @@ public class KafkaSettings
     public string BrokerAddress { get; set; } = string.Empty;
 
     /// <summary>
+    /// The sasl username
+    /// </summary>
+    public string SaslUsername { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The sasl password
+    /// </summary>
+    public string SaslPassword { get; set; } = string.Empty;
+
+    /// <summary>
     /// The name of the past due orders topic
     /// </summary>
     public string PastDueOrdersTopicName { get; set; } = string.Empty;

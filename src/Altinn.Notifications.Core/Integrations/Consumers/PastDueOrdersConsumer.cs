@@ -37,12 +37,17 @@ public class PastDueOrdersConsumer : IHostedService
         var consumerConfig = new ConsumerConfig
         {
             BootstrapServers = _settings.BrokerAddress,
+            SslEndpointIdentificationAlgorithm = SslEndpointIdentificationAlgorithm.Https,
+            SecurityProtocol = SecurityProtocol.SaslSsl,
+            SaslMechanism = SaslMechanism.Plain,
+            SaslUsername = _settings.SaslUsername,
+            SaslPassword = _settings.SaslPassword,
             GroupId = _settings.ConsumerGroupId,
             EnableAutoCommit = false,
             EnableAutoOffsetStore = false,
             AutoOffsetReset = AutoOffsetReset.Earliest,
         };
-
+     
         _consumer = new ConsumerBuilder<string, string>(consumerConfig)
         .SetErrorHandler((_, e) => _logger.LogError("// PastDueOrdersConsumer // Error: {reason}", e.Reason))
         .Build();
