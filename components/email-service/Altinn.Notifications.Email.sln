@@ -3,13 +3,15 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Altinn.Notifications.Email", "src\Altinn.Notifications.Email\Altinn.Notifications.Email.csproj", "{73886DAA-DE40-4B72-B7E5-C7DD7AFBA6FC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Altinn.Notifications.Email", "src\Altinn.Notifications.Email\Altinn.Notifications.Email.csproj", "{560E000A-D3C6-4B73-8893-1E87498A3D19}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Altinn.Notifications.Email.Core", "src\Altinn.Notifications.Email.Core\Altinn.Notifications.Email.Core.csproj", "{20F0D453-0541-4BCD-8ABA-D854C34C9473}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Altinn.Notifications.Email.Core", "src\Altinn.Notifications.Email.Core\Altinn.Notifications.Email.Core.csproj", "{8823A1D7-BFA1-40EC-B9D5-C1032FD7133F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Altinn.Notifications.Email.Integrations", "src\Altinn.Notifications.Email.Integrations\Altinn.Notifications.Email.Integrations.csproj", "{5DE732DB-502E-4491-80A3-4AA3B55328C4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Altinn.Notifications.Email.Integrations", "src\Altinn.Notifications.Email.Integrations\Altinn.Notifications.Email.Integrations.csproj", "{5D57ECC2-4931-4852-B501-2F2B6DADE6EF}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Altinn.Notifications.Email.Tests", "test\Altinn.Notifications.Email.Tests\Altinn.Notifications.Email.Tests.csproj", "{82304ABF-A556-4599-BBE0-713A06C073BB}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Altinn.Notifications.Email.IntegrationTests", "test\Altinn.Notifications.Email.IntegrationTests\Altinn.Notifications.Email.IntegrationTests.csproj", "{B44965DA-892E-4AC3-A44C-D60A613004F7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,22 +19,26 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{73886DAA-DE40-4B72-B7E5-C7DD7AFBA6FC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{73886DAA-DE40-4B72-B7E5-C7DD7AFBA6FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{73886DAA-DE40-4B72-B7E5-C7DD7AFBA6FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{73886DAA-DE40-4B72-B7E5-C7DD7AFBA6FC}.Release|Any CPU.Build.0 = Release|Any CPU
-		{20F0D453-0541-4BCD-8ABA-D854C34C9473}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{20F0D453-0541-4BCD-8ABA-D854C34C9473}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{20F0D453-0541-4BCD-8ABA-D854C34C9473}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{20F0D453-0541-4BCD-8ABA-D854C34C9473}.Release|Any CPU.Build.0 = Release|Any CPU
-		{5DE732DB-502E-4491-80A3-4AA3B55328C4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{5DE732DB-502E-4491-80A3-4AA3B55328C4}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{5DE732DB-502E-4491-80A3-4AA3B55328C4}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{5DE732DB-502E-4491-80A3-4AA3B55328C4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{560E000A-D3C6-4B73-8893-1E87498A3D19}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{560E000A-D3C6-4B73-8893-1E87498A3D19}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{560E000A-D3C6-4B73-8893-1E87498A3D19}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{560E000A-D3C6-4B73-8893-1E87498A3D19}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8823A1D7-BFA1-40EC-B9D5-C1032FD7133F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8823A1D7-BFA1-40EC-B9D5-C1032FD7133F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8823A1D7-BFA1-40EC-B9D5-C1032FD7133F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8823A1D7-BFA1-40EC-B9D5-C1032FD7133F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5D57ECC2-4931-4852-B501-2F2B6DADE6EF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5D57ECC2-4931-4852-B501-2F2B6DADE6EF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5D57ECC2-4931-4852-B501-2F2B6DADE6EF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5D57ECC2-4931-4852-B501-2F2B6DADE6EF}.Release|Any CPU.Build.0 = Release|Any CPU
 		{82304ABF-A556-4599-BBE0-713A06C073BB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{82304ABF-A556-4599-BBE0-713A06C073BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{82304ABF-A556-4599-BBE0-713A06C073BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{82304ABF-A556-4599-BBE0-713A06C073BB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B44965DA-892E-4AC3-A44C-D60A613004F7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B44965DA-892E-4AC3-A44C-D60A613004F7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B44965DA-892E-4AC3-A44C-D60A613004F7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B44965DA-892E-4AC3-A44C-D60A613004F7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

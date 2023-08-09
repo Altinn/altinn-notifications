@@ -1,5 +1,7 @@
 using Altinn.Notifications.Email.Configuration;
+using Altinn.Notifications.Email.Core.Configuration;
 using Altinn.Notifications.Email.Health;
+using Altinn.Notifications.Email.Integrations.Configuration;
 using Altinn.Notifications.Email.Startup;
 
 using Azure.Identity;
@@ -88,6 +90,9 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddControllers();
     services.AddHealthChecks().AddCheck<HealthCheck>("notifications_emails_health_check");
 
+    services.AddCoreServices(configuration);
+    services.AddIntegrationServices(configuration);
+
     if (!string.IsNullOrEmpty(applicationInsightsConnectionString))
     {
         services.AddSingleton(typeof(ITelemetryChannel), new ServerTelemetryChannel { StorageFolder = "/tmp/logtelemetry" });
@@ -98,8 +103,6 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
 
         // services.AddApplicationInsightsTelemetryProcessor<HealthTelemetryFilter>();
         services.AddSingleton<ITelemetryInitializer, CustomTelemetryInitializer>();
-
-        logger.LogInformation("Program // ApplicationInsightsTelemetryKey = {applicationInsightsConnectionString}", applicationInsightsConnectionString);
     }
 }
 
