@@ -100,7 +100,7 @@ public class PastDueOrdersConsumerRetry : IHostedService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "// PastDueOrdersConsumerRetry // ConsumeOrder // An error occurred while consuming messages // OrderId: {orderid}", (order == null ? "NotificationOrder is null" : order.Id));
+            _logger.LogError(ex, "// PastDueOrdersConsumerRetry // ConsumeOrder // An error occurred while consuming messages // OrderId: {orderid}", order == null ? "NotificationOrder is null" : order.Id);
         }
     }
 }
