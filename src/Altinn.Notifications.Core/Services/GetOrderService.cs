@@ -34,7 +34,7 @@ public class GetOrderService : IGetOrderService
     }
 
     /// <inheritdoc/>
-    public async Task<(List<NotificationOrder>? Orders, ServiceError? Error)> GetOrdersBySendersReference(string senderRef, string creator)
+    public async Task<(List<NotificationOrder> Orders, ServiceError? Error)> GetOrdersBySendersReference(string senderRef, string creator)
     {
         List<NotificationOrder> orders = await _repo.GetOrdersBySendersReference(senderRef, creator);
 

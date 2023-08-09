@@ -7,7 +7,7 @@ namespace Altinn.Notifications.Integrations.Health;
 /// <summary>
 /// Health check service confirming Kafka connenctivity
 /// </summary>
-public class KafkaHealthCheck : IHealthCheck
+public class KafkaHealthCheck : IHealthCheck, IDisposable
 {
     private readonly IProducer<Null, string> _producer;
     private readonly IConsumer<string, string> _consumer;
@@ -67,5 +67,22 @@ public class KafkaHealthCheck : IHealthCheck
         {
             return HealthCheckResult.Unhealthy(ex.Message);
         }
+    }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Disposes the kafka producer and consumer
+    /// </summary>
+    protected virtual void Dispose(bool disposing)
+    {
+        _consumer.Close();
+        _consumer.Dispose();
+        _producer.Dispose();
     }
 }
