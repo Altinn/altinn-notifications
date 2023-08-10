@@ -10,28 +10,14 @@ namespace Altinn.Notifications.Integrations.Health;
 public class KafkaHealthCheck : IHealthCheck, IDisposable
 {
     private readonly IProducer<Null, string> _producer;
-    private readonly IConsumer<string, string> _consumer;
     private readonly string _healthCheckTopic;
-    private int count;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="KafkaHealthCheck"/> class.
     /// </summary>
-    public KafkaHealthCheck(string brokerAddress, string healthCheckTopic, string consumerGroupId)
+    public KafkaHealthCheck(string brokerAddress, string healthCheckTopic)
     {
         _healthCheckTopic = healthCheckTopic;
-
-        var consumerConfig = new ConsumerConfig
-        {
-            BootstrapServers = brokerAddress,
-            GroupId = consumerGroupId,
-            EnableAutoCommit = false,
-            EnableAutoOffsetStore = false,
-            AutoOffsetReset = AutoOffsetReset.Earliest,
-            PartitionAssignmentStrategy = PartitionAssignmentStrategy.RoundRobin
-        };
-
-        _consumer = new ConsumerBuilder<string, string>(consumerConfig).Build();
 
         var config = new ProducerConfig
         {
@@ -42,9 +28,6 @@ public class KafkaHealthCheck : IHealthCheck, IDisposable
         };
 
         _producer = new ProducerBuilder<Null, string>(config).Build();
-        _consumer.Subscribe(_healthCheckTopic);
-
-        Console.WriteLine("// Kafka Health Check // constructor completed");
     }
 
     /// <inheritdoc/>
@@ -52,38 +35,19 @@ public class KafkaHealthCheck : IHealthCheck, IDisposable
     {
         try
         {
-            Console.WriteLine("// Kafka Health Check // Checking health \t " + count + "\t " + DateTime.UtcNow);
-            ++count;
-
             // Produce a test message to the health check topic
             var testMessage = new Message<Null, string> { Value = "test" };
-            await _producer.ProduceAsync(_healthCheckTopic, testMessage, cancellationToken);
-            await _producer.ProduceAsync(_healthCheckTopic, testMessage, cancellationToken);
             var deliveryResult = await _producer.ProduceAsync(_healthCheckTopic, testMessage, cancellationToken);
 
             if (deliveryResult == null || deliveryResult.Status != PersistenceStatus.Persisted)
             {
-                Console.WriteLine("// Kafka Health Check // Unable to produce test message on Kafka health check topic.");
-
                 return HealthCheckResult.Unhealthy("Unable to produce test message on Kafka health check topic.");
-            }
-
-            // Consume the test message from the health check topic
-            var consumeResult = _consumer.Consume(TimeSpan.FromSeconds(1));
-
-            if (consumeResult == null || consumeResult.Message.Value != "test")
-            {
-                Console.WriteLine("// Kafka Health Check // Unable to consume test message from Kafka health check topic.");
-
-                return HealthCheckResult.Unhealthy("Unable to consume test message from Kafka health check topic.");
             }
 
             return HealthCheckResult.Healthy();
         }
         catch (Exception ex)
         {
-            Console.WriteLine("// Kafka Health Check // Exception {0}", ex.Message);
-
             return HealthCheckResult.Unhealthy(ex.Message);
         }
     }
@@ -100,8 +64,6 @@ public class KafkaHealthCheck : IHealthCheck, IDisposable
     /// </summary>
     protected virtual void Dispose(bool disposing)
     {
-        _consumer.Close();
-        _consumer.Dispose();
         _producer.Dispose();
     }
 }
