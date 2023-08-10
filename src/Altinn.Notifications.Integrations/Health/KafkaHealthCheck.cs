@@ -58,6 +58,8 @@ public class KafkaHealthCheck : IHealthCheck, IDisposable
 
             // Produce a test message to the health check topic
             var testMessage = new Message<string, string> { Key = _messageKey, Value = "test" };
+            await _producer.ProduceAsync(_healthCheckTopic, testMessage, cancellationToken);
+            await _producer.ProduceAsync(_healthCheckTopic, testMessage, cancellationToken);
             var deliveryResult = await _producer.ProduceAsync(_healthCheckTopic, testMessage, cancellationToken);
 
             if (deliveryResult == null || deliveryResult.Status != PersistenceStatus.Persisted)
