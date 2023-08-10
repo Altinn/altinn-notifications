@@ -1,9 +1,13 @@
 ﻿using Altinn.Notifications.Core.Repository.Interfaces;
 using Altinn.Notifications.Persistence.Configuration;
+using Altinn.Notifications.Persistence.Health;
 using Altinn.Notifications.Persistence.Repository;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
+using Npgsql;
 
 namespace Altinn.Notifications.Persistence.Extensions;
 
@@ -50,7 +54,9 @@ public static class ServiceCollectionExtensions
 
         string connectionString = string.Format(settings.ConnectionString, settings.NotificationsDbPwd);
 
+        var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
+
         services.AddHealthChecks()
-            .AddNpgSql(connectionString, name: "notifications_postgres_health_check");
+            .AddCheck("notifications_postgres_health_check", new PostgresHealthCheck(dataSourceBuilder.Build()));
     }
 }
