@@ -23,6 +23,8 @@ public class PastDueOrdersConsumerRetryTests : IDisposable
     public async Task RunTask_ConfirmExpectedSideEffects()
     {
         // Arrange
+        TestdataUtil.SetEnvAsDev();
+
         Dictionary<string, string> vars = new()
         {
             {"KafkaSettings__PastDueOrdersTopicNameRetry", _retryTopicName },

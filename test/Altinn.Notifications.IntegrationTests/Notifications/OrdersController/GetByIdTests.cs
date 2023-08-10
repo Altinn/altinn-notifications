@@ -7,7 +7,6 @@ using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
-using Altinn.Notifications.Tests.EndToEndTests;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using Altinn.Notifications.Tests.Notifications.Utils;
 

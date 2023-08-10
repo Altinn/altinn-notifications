@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Integrations.Interfaces;
+﻿using Altinn.Notifications.Controllers;
+using Altinn.Notifications.Core.Integrations.Interfaces;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Health;
 using Altinn.Notifications.Integrations.Kafka.Producers;
@@ -15,13 +16,15 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations;
 
-public class KafkaHealthCheckTests : IAsyncLifetime
+public class KafkaHealthCheckTests : IAsyncLifetime, IClassFixture<IntegrationTestWebApplicationFactory<KafkaHealthCheck>>
 {
     private readonly string _topicName = Guid.NewGuid().ToString();
     private readonly KafkaSettings _settings;
 
     public KafkaHealthCheckTests()
     {
+        TestdataUtil.SetEnvAsDev();
+
         IConfiguration configuration = new ConfigurationBuilder()
                        .AddJsonFile("appsettings.json")
                        .Build();

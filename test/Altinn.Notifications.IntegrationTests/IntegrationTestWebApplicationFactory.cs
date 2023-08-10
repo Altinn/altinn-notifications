@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 
-namespace Altinn.Notifications.Tests.EndToEndTests;
+namespace Altinn.Notifications.IntegrationTests;
 
 public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFactory<TStartup>
       where TStartup : class

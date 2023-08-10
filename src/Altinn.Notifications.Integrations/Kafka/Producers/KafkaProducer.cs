@@ -12,7 +12,7 @@ namespace Altinn.Notifications.Integrations.Kafka.Producers;
 /// <summary>
 /// Implementation of a Kafka producer
 /// </summary>
-public class KafkaProducer : KafkaBaseClient, IKafkaProducer, IDisposable
+public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
 {
     private readonly IProducer<Null, string> _producer;
     private readonly KafkaSettings _settings;
@@ -82,7 +82,6 @@ public class KafkaProducer : KafkaBaseClient, IKafkaProducer, IDisposable
 
     private void EnsureTopicsExist()
     {
-        bool isDevelopment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development";
         Dictionary<string, string> settings;
         settings = new Dictionary<string, string>()
             {

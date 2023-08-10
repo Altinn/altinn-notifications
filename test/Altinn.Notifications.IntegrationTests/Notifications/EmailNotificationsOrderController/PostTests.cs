@@ -6,7 +6,6 @@ using Altinn.Notifications.Controllers;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Models;
-using Altinn.Notifications.Tests.EndToEndTests;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using Altinn.Notifications.Tests.Notifications.Utils;
 
