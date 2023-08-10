@@ -31,7 +31,7 @@ public class PostgresHealthCheck : IHealthCheck
             using var command = connection.CreateCommand();
             command.CommandText = "select 1;";
 
-            var result = await command.ExecuteScalarAsync(cancellationToken);
+            await command.ExecuteScalarAsync(cancellationToken);
 
             return HealthCheckResult.Healthy();
         }
