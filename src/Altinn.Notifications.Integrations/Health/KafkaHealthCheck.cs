@@ -14,6 +14,7 @@ public class KafkaHealthCheck : IHealthCheck, IDisposable
     private readonly string _messageKey = Guid.NewGuid().ToString();
     private readonly string _healthCheckTopic;
     private bool _partitionAssigned;
+    private int count;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="KafkaHealthCheck"/> class.
@@ -52,7 +53,8 @@ public class KafkaHealthCheck : IHealthCheck, IDisposable
     {
         try
         {
-            Console.WriteLine("// Kafka Health Check // Checking health.. ");
+            Console.WriteLine("// Kafka Health Check // Checking health.. " + count);
+            ++count;
 
             // Produce a test message to the health check topic
             var testMessage = new Message<string, string> { Key = _messageKey, Value = "test" };
@@ -60,6 +62,8 @@ public class KafkaHealthCheck : IHealthCheck, IDisposable
 
             if (deliveryResult == null || deliveryResult.Status != PersistenceStatus.Persisted)
             {
+                Console.WriteLine("// Kafka Health Check // Unable to produce test message on Kafka health check topic.");
+
                 return HealthCheckResult.Unhealthy("Unable to produce test message on Kafka health check topic.");
             }
 
@@ -80,6 +84,8 @@ public class KafkaHealthCheck : IHealthCheck, IDisposable
 
             if (consumeResult == null || consumeResult.Message.Value != "test")
             {
+                Console.WriteLine("// Kafka Health Check // Unable to consume test message from Kafka health check topic.");
+
                 return HealthCheckResult.Unhealthy("Unable to consume test message from Kafka health check topic.");
             }
 
@@ -87,6 +93,8 @@ public class KafkaHealthCheck : IHealthCheck, IDisposable
         }
         catch (Exception ex)
         {
+            Console.WriteLine("// Kafka Health Check // Exception {0}", ex.Message);
+
             return HealthCheckResult.Unhealthy(ex.Message);
         }
     }
