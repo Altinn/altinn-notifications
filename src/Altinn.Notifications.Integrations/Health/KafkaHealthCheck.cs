@@ -67,13 +67,6 @@ public class KafkaHealthCheck : IHealthCheck, IDisposable
                 return HealthCheckResult.Unhealthy("Unable to produce test message on Kafka health check topic.");
             }
 
-            var partitions = new List<TopicPartitionOffset>
-                {
-                    new TopicPartitionOffset(_healthCheckTopic, deliveryResult.Partition, Offset.Beginning)
-                };
-
-            _consumer.Assign(partitions);
-
             // Consume the test message from the health check topic
             var consumeResult = _consumer.Consume(TimeSpan.FromSeconds(1));
 
