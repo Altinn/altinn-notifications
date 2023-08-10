@@ -9,11 +9,9 @@ namespace Altinn.Notifications.Integrations.Health;
 /// </summary>
 public class KafkaHealthCheck : IHealthCheck, IDisposable
 {
-    private readonly IProducer<string, string> _producer;
+    private readonly IProducer<Null, string> _producer;
     private readonly IConsumer<string, string> _consumer;
-    private readonly string _messageKey = Guid.NewGuid().ToString();
     private readonly string _healthCheckTopic;
-    private bool _partitionAssigned;
     private int count;
 
     /// <summary>
@@ -30,6 +28,7 @@ public class KafkaHealthCheck : IHealthCheck, IDisposable
             EnableAutoCommit = false,
             EnableAutoOffsetStore = false,
             AutoOffsetReset = AutoOffsetReset.Earliest,
+            PartitionAssignmentStrategy = PartitionAssignmentStrategy.RoundRobin
         };
 
         _consumer = new ConsumerBuilder<string, string>(consumerConfig).Build();
@@ -42,7 +41,7 @@ public class KafkaHealthCheck : IHealthCheck, IDisposable
             RetryBackoffMs = 1000
         };
 
-        _producer = new ProducerBuilder<string, string>(config).Build();
+        _producer = new ProducerBuilder<Null, string>(config).Build();
         _consumer.Subscribe(_healthCheckTopic);
 
         Console.WriteLine("// Kafka Health Check // constructor completed");
@@ -53,11 +52,11 @@ public class KafkaHealthCheck : IHealthCheck, IDisposable
     {
         try
         {
-            Console.WriteLine("// Kafka Health Check // Checking health \t " + count+ "\t " + DateTime.UtcNow);
+            Console.WriteLine("// Kafka Health Check // Checking health \t " + count + "\t " + DateTime.UtcNow);
             ++count;
 
             // Produce a test message to the health check topic
-            var testMessage = new Message<string, string> { Key = _messageKey, Value = "test" };
+            var testMessage = new Message<Null, string> { Value = "test" };
             await _producer.ProduceAsync(_healthCheckTopic, testMessage, cancellationToken);
             await _producer.ProduceAsync(_healthCheckTopic, testMessage, cancellationToken);
             var deliveryResult = await _producer.ProduceAsync(_healthCheckTopic, testMessage, cancellationToken);
