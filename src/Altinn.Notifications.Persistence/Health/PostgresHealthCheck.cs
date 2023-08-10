@@ -38,6 +38,7 @@ public class PostgresHealthCheck : IHealthCheck
             command.CommandText = "select 1;";
 
             var result = await command.ExecuteScalarAsync(cancellationToken);
+            Console.WriteLine($"// PostgresHealthCheck //Is healthy {result!.ToString()}");
 
             return HealthCheckResult.Healthy();
         }
