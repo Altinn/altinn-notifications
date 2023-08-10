@@ -57,6 +57,14 @@ public class PastDueOrdersConsumer : IHostedService, IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
+        Dispose(true);
+    }
+
+    /// <summary>
+    /// Close and dispose the consumer
+    /// </summary>
+    protected virtual void Dispose(bool disposing)
+    {
         _consumer.Close();
         _consumer.Dispose();
     }
