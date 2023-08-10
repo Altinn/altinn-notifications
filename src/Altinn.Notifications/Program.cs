@@ -164,8 +164,8 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     services.AddKafkaServices(config);
     services.AddPostgresRepositories(config);
     services.AddKafkaHealthChecks(config);
-
-    // services.AddPostgresHealthChecks(config);
+    
+    services.AddPostgresHealthChecks(config);
 }
 
 async Task SetConfigurationProviders(ConfigurationManager config)
