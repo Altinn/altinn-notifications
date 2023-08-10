@@ -8,7 +8,7 @@ namespace Altinn.Notifications.Integrations.Kafka;
 /// <summary>
 /// Base class
 /// </summary>
-public abstract class KafkaBaseClient
+public class SharedClientConfig
 {
     /// <summary>
     /// Generic client configuration to use for kafka producer, consumer and admin
@@ -21,9 +21,9 @@ public abstract class KafkaBaseClient
     public TopicSpecification TopicSpecification { get; }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="KafkaBaseClient"/> class.
+    /// Initializes a new instance of the <see cref="SharedClientConfig"/> class.
     /// </summary>
-    protected KafkaBaseClient(KafkaSettings settings)
+    public SharedClientConfig(KafkaSettings settings)
     {
         bool isDevelopment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development";
 
@@ -49,15 +49,6 @@ public abstract class KafkaBaseClient
             topicSpec.NumPartitions = 6;
             topicSpec.ReplicationFactor = 3;
         }
-
-        /*
-         
-         
-                { "bootstrap.servers", _settings.BrokerAddress },
-                { "security.protocol", "SASL_SSL" },
-                { "sasl.mechanisms", "PLAIN" },
-                { "sasl.username", _settings.SaslUsername },
-                { "sasl.password", _settings.SaslPassword }*/
 
         ClientConfig = config;
         TopicSpecification = topicSpec;

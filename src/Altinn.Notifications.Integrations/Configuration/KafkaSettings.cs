@@ -31,9 +31,19 @@ public class KafkaSettings
     public string PastDueOrdersTopicName { get; set; } = string.Empty;
 
     /// <summary>
+    /// The name of the past due orders retry topic
+    /// </summary>
+    public string PastDueOrdersTopicNameRetry { get; set; } = string.Empty;
+
+    /// <summary>
     /// The name of the general email queue topic
     /// </summary>
     public string EmailQueueTopicName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The name of the health check topic
+    /// </summary>
+    public string HealthCheckTopic { get; set; } = string.Empty;
 
     /// <summary>
     /// The group id for all consumers of the Altinn Notifications service
