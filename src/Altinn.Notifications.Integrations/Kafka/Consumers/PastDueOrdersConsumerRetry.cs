@@ -48,8 +48,17 @@ public class PastDueOrdersConsumerRetry : IHostedService, IDisposable
         .Build();
     }
 
-    /// <inheritdoc/>    
+    /// <inheritdoc/>
     public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Close and dispose the consumer
+    /// </summary>
+    protected virtual void Dispose(bool disposing)
     {
         _consumer.Close();
         _consumer.Dispose();
