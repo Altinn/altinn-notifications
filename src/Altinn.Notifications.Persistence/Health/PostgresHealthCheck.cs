@@ -7,7 +7,7 @@ namespace Altinn.Notifications.Persistence.Health;
 /// <summary>
 /// Health check service confirming Postgre connenctivity
 /// </summary>
-public class PostgresHealthCheck : IHealthCheck
+public class PostgresHealthCheck : IHealthCheck, IDisposable
 {
     private readonly NpgsqlDataSource _dataSource;
 
@@ -37,7 +37,23 @@ public class PostgresHealthCheck : IHealthCheck
         }
         catch (Exception ex)
         {
-            return new HealthCheckResult(context.Registration.FailureStatus, description: ex.Message, exception: ex);
+           return HealthCheckResult.Unhealthy(exception: ex);
         }
+    }
+
+    /// <inheritdoc/>
+    public async void Dispose()
+    {
+        await Dispose(true);
+
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Dispose implementation
+    /// </summary>
+    protected virtual async Task Dispose(bool disposing)
+    {
+        await _dataSource.DisposeAsync();
     }
 }
