@@ -28,7 +28,7 @@ public class PastDueOrdersConsumerTests : IDisposable
             {"KafkaSettings__TopicList", $"[\"{_pastDueOrdersTopicName}\"]" }
         };
 
-        PastDueOrdersConsumer consumerService = (PastDueOrdersConsumer)ServiceUtil
+        using PastDueOrdersConsumer consumerService = (PastDueOrdersConsumer)ServiceUtil
                                                     .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
                                                     .First(s => s.GetType() == typeof(PastDueOrdersConsumer))!;
 
@@ -59,9 +59,9 @@ public class PastDueOrdersConsumerTests : IDisposable
 
     protected virtual async Task Dispose(bool disposing)
     {
-        await KafkaUtil.DeleteTopicAsync(_pastDueOrdersTopicName);
         string sql = $"delete from notifications.orders where sendersreference = '{_sendersRef}'";
         await PostgreUtil.RunSql(sql);
+        await KafkaUtil.DeleteTopicAsync(_pastDueOrdersTopicName);
     }
 
     private static async Task<long> SelectCompletedOrderCount(Guid orderId)

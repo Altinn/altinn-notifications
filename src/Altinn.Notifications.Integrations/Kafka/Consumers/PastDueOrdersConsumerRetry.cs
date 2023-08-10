@@ -1,4 +1,3 @@
-using Altinn.Notifications.Core.Integrations.Interfaces;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Integrations.Configuration;
@@ -12,37 +11,32 @@ using Microsoft.Extensions.Options;
 namespace Altinn.Notifications.Integrations.Kafka.Consumers;
 
 /// <summary>
-/// Kafka consumer class for past due orders
+/// Kafka consumer class for past due orders, first retry
 /// </summary>
-public class PastDueOrdersConsumer : KafkaBaseClient, IHostedService, IDisposable
+public class PastDueOrdersConsumerRetry : IHostedService, IDisposable
 {
     private readonly IOrderProcessingService _orderProcessingService;
-    private readonly ILogger<PastDueOrdersConsumer> _logger;
-    private readonly IKafkaProducer _producer;
+    private readonly ILogger<PastDueOrdersConsumerRetry> _logger;
     private readonly KafkaSettings _settings;
-    private readonly string _retryTopic;
     private readonly CancellationTokenSource _cancellationTokenSource;
     private readonly IConsumer<string, string> _consumer;
-
+    
     /// <summary>
-    /// Initializes a new instance of the <see cref="PastDueOrdersConsumer"/> class.
+    /// Initializes a new instance of the <see cref="PastDueOrdersConsumerRetry"/> class.
     /// </summary>
-    public PastDueOrdersConsumer(
+    public PastDueOrdersConsumerRetry(
         IOrderProcessingService orderProcessingService,
-        IKafkaProducer producer,
         IOptions<KafkaSettings> settings,
-        ILogger<PastDueOrdersConsumer> logger)
-        : base(settings.Value)
+        ILogger<PastDueOrdersConsumerRetry> logger)
     {
         _orderProcessingService = orderProcessingService;
         _settings = settings.Value;
         _logger = logger;
-        _producer = producer;
-        _retryTopic = settings.Value.PastDueOrdersTopicNameRetry;
         _cancellationTokenSource = new CancellationTokenSource();
 
-        var consumerConfig = new ConsumerConfig(ClientConfig)
+        var consumerConfig = new ConsumerConfig
         {
+            BootstrapServers = _settings.BrokerAddress,
             GroupId = _settings.ConsumerGroupId,
             EnableAutoCommit = false,
             EnableAutoOffsetStore = false,
@@ -50,7 +44,7 @@ public class PastDueOrdersConsumer : KafkaBaseClient, IHostedService, IDisposabl
         };
 
         _consumer = new ConsumerBuilder<string, string>(consumerConfig)
-        .SetErrorHandler((_, e) => _logger.LogError("// PastDueOrdersConsumer // Error: {reason}", e.Reason))
+        .SetErrorHandler((_, e) => _logger.LogError("// PastDueOrdersConsumerRetry // Error: {reason}", e.Reason))
         .Build();
     }
 
@@ -73,7 +67,7 @@ public class PastDueOrdersConsumer : KafkaBaseClient, IHostedService, IDisposabl
     /// <inheritdoc/>
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _consumer.Subscribe(_settings.PastDueOrdersTopicName);
+        _consumer.Subscribe(_settings.PastDueOrdersTopicNameRetry);
 
         Task.Run(() => ConsumeOrder(_cancellationTokenSource.Token), cancellationToken);
 
@@ -90,7 +84,7 @@ public class PastDueOrdersConsumer : KafkaBaseClient, IHostedService, IDisposabl
 
     private async Task ConsumeOrder(CancellationToken cancellationToken)
     {
-        string message = string.Empty;
+        NotificationOrder? order = null;
         try
         {
             while (!cancellationToken.IsCancellationRequested)
@@ -98,15 +92,14 @@ public class PastDueOrdersConsumer : KafkaBaseClient, IHostedService, IDisposabl
                 var consumeResult = _consumer.Consume(cancellationToken);
                 if (consumeResult != null)
                 {
-                    message = consumeResult.Message.Value;
-                    bool succeeded = NotificationOrder.TryParse(message, out NotificationOrder? order);
+                    bool succeeded = NotificationOrder.TryParse(consumeResult.Message.Value, out order);
 
                     if (!succeeded)
                     {
                         continue;
                     }
 
-                    await _orderProcessingService.ProcessOrder(order!);
+                    await _orderProcessingService.ProcessOrderRetry(order!);
                     _consumer.Commit(consumeResult);
                     _consumer.StoreOffset(consumeResult);
                 }
@@ -118,9 +111,7 @@ public class PastDueOrdersConsumer : KafkaBaseClient, IHostedService, IDisposabl
         }
         catch (Exception ex)
         {
-            await _producer.ProduceAsync(_retryTopic, message!);
-            _logger.LogError(ex, "// PastDueOrdersConsumer // ConsumeOrder // An error occurred while consuming messages");
-            throw;
+            _logger.LogError(ex, "// PastDueOrdersConsumerRetry // ConsumeOrder // An error occurred while consuming messages // OrderId: {orderid}", order == null ? "NotificationOrder is null" : order.Id);
         }
     }
 }

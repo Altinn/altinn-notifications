@@ -2,7 +2,9 @@
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations.Interfaces;
 using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Repository.Interfaces;
 using Altinn.Notifications.Core.Services.Interfaces;
 
@@ -16,6 +18,7 @@ namespace Altinn.Notifications.Core.Services;
 public class OrderProcessingService : IOrderProcessingService
 {
     private readonly IOrderRepository _orderRepository;
+    private readonly IEmailNotificationRepository _emailNotificationRepository;
     private readonly IEmailNotificationService _emailService;
     private readonly IKafkaProducer _producer;
     private readonly string _pastDueOrdersTopic;
@@ -23,9 +26,10 @@ public class OrderProcessingService : IOrderProcessingService
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderProcessingService"/> class.
     /// </summary>
-    public OrderProcessingService(IOrderRepository orderRepository, IEmailNotificationService emailService, IKafkaProducer producer, IOptions<KafkaSettings> kafkaSettings)
+    public OrderProcessingService(IOrderRepository orderRepository, IEmailNotificationRepository emailNotificationRepository, IEmailNotificationService emailService, IKafkaProducer producer, IOptions<KafkaSettings> kafkaSettings)
     {
         _orderRepository = orderRepository;
+        _emailNotificationRepository = emailNotificationRepository;
         _emailService = emailService;
         _producer = producer;
         _pastDueOrdersTopic = kafkaSettings.Value.PastDueOrdersTopicName;
@@ -57,6 +61,33 @@ public class OrderProcessingService : IOrderProcessingService
             {
                 case NotificationChannel.Email:
                     await _emailService.CreateNotification(order.Id, order.RequestedSendTime, recipient);
+                    break;
+            }
+        }
+
+        await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.Completed);
+    }
+
+    /// <inheritdoc/>
+    public async Task ProcessOrderRetry(NotificationOrder order)
+    {
+        NotificationChannel ch = order.NotificationChannel;
+
+        List<EmailRecipient> emailRecipients = await _emailNotificationRepository.GetRecipients(order.Id);
+
+        foreach (Recipient recipient in order.Recipients)
+        {
+            switch (ch)
+            {
+                case NotificationChannel.Email:
+                    EmailAddressPoint? addressPoint = recipient.AddressInfo.Find(a => a.AddressType == AddressType.Email) as EmailAddressPoint;
+
+                    if (!emailRecipients.Exists(er => er.RecipientId == (string.IsNullOrEmpty(recipient.RecipientId) ? null : recipient.RecipientId)
+                        && er.ToAddress.Equals(addressPoint?.EmailAddress)))
+                    {
+                        await _emailService.CreateNotification(order.Id, order.RequestedSendTime, recipient);
+                    }
+
                     break;
             }
         }
