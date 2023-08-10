@@ -1,5 +1,4 @@
 ﻿using Altinn.Notifications.Core.Configuration;
-using Altinn.Notifications.Core.Integrations.Consumers;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 
@@ -42,7 +41,6 @@ public static class ServiceCollectionExtensions
               .AddSingleton<IEmailNotificationOrderService, EmailNotificationOrderService>()
               .AddSingleton<IEmailNotificationService, EmailNotificationService>()
               .AddSingleton<IGetOrderService, GetOrderService>()
-              .AddSingleton<IHostedService, PastDueOrdersConsumer>()
               .Configure<KafkaSettings>(config.GetSection("KafkaSettings"))
               .Configure<NotificationOrderConfig>(config.GetSection("NotificationOrderConfig"));
     }

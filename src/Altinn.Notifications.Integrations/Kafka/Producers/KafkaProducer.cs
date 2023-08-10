@@ -12,7 +12,7 @@ namespace Altinn.Notifications.Integrations.Kafka.Producers;
 /// <summary>
 /// Implementation of a Kafka producer
 /// </summary>
-public class KafkaProducer : IKafkaProducer, IDisposable
+public class KafkaProducer : KafkaBaseClient, IKafkaProducer, IDisposable
 {
     private readonly IProducer<Null, string> _producer;
     private readonly KafkaSettings _settings;
@@ -22,18 +22,13 @@ public class KafkaProducer : IKafkaProducer, IDisposable
     /// Initializes a new instance of the <see cref="KafkaProducer"/> class.
     /// </summary>
     public KafkaProducer(IOptions<KafkaSettings> settings, ILogger<IKafkaProducer> logger)
+        : base(settings.Value)
     {
         _settings = settings.Value;
         _logger = logger;
 
-        var config = new ProducerConfig
+        var config = new ProducerConfig(ClientConfig)
         {
-            BootstrapServers = _settings.BrokerAddress,
-            SslEndpointIdentificationAlgorithm = SslEndpointIdentificationAlgorithm.Https,
-            SecurityProtocol = SecurityProtocol.SaslSsl,
-            SaslMechanism = SaslMechanism.Plain,
-            SaslUsername = _settings.SaslUsername,
-            SaslPassword = _settings.SaslPassword,
             Acks = Acks.All,
             EnableDeliveryReports = true,
             EnableIdempotence = true,
@@ -89,25 +84,10 @@ public class KafkaProducer : IKafkaProducer, IDisposable
     {
         bool isDevelopment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development";
         Dictionary<string, string> settings;
-
-        if (!isDevelopment)
-        {
-            settings = new Dictionary<string, string>()
-            {
-                { "bootstrap.servers", _settings.BrokerAddress },
-                { "security.protocol", "SASL_SSL" },
-                { "sasl.mechanisms", "PLAIN" },
-                { "sasl.username", _settings.SaslUsername },
-                { "sasl.password", _settings.SaslPassword }
-            };
-        }
-        else
-        {
-            settings = new Dictionary<string, string>()
+        settings = new Dictionary<string, string>()
             {
                 { "bootstrap.servers", _settings.BrokerAddress }
             };
-        }
 
         using var adminClient = new AdminClientBuilder(settings)
             .Build();
@@ -121,11 +101,11 @@ public class KafkaProducer : IKafkaProducer, IDisposable
                 {
                     adminClient.CreateTopicsAsync(new TopicSpecification[]
                     {
-                        new TopicSpecification
+                        new TopicSpecification()
                         {
                             Name = topic,
-                            NumPartitions = 6,
-                            ReplicationFactor = 3
+                            NumPartitions = TopicSpecification.NumPartitions,
+                            ReplicationFactor = TopicSpecification.ReplicationFactor
                         }
                     }).Wait();
                     _logger.LogInformation("// KafkaProducer // EnsureTopicsExists // Topic '{Topic}' created successfully.", topic);

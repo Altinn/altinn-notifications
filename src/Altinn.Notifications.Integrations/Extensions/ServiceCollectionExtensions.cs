@@ -1,9 +1,11 @@
 ﻿using Altinn.Notifications.Core.Integrations.Interfaces;
 using Altinn.Notifications.Integrations.Configuration;
+using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.Integrations.Kafka.Producers;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace Altinn.Notifications.Integrations.Extensions;
 
@@ -21,6 +23,7 @@ public static class ServiceCollectionExtensions
     {
         return services
               .AddSingleton<IKafkaProducer, KafkaProducer>()
+              .AddSingleton<IHostedService, PastDueOrdersConsumer>()
               .Configure<KafkaSettings>(config.GetSection("KafkaSettings"));
     }
 }

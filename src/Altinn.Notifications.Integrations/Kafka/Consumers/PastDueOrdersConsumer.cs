@@ -1,6 +1,6 @@
-using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Integrations.Configuration;
 
 using Confluent.Kafka;
 
@@ -8,12 +8,12 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Altinn.Notifications.Core.Integrations.Consumers;
+namespace Altinn.Notifications.Integrations.Kafka.Consumers;
 
 /// <summary>
 /// Kafka consumer class for past due orders
 /// </summary>
-public class PastDueOrdersConsumer : IHostedService
+public class PastDueOrdersConsumer : KafkaBaseClient, IHostedService
 {
     private readonly IOrderProcessingService _orderProcessingService;
     private readonly ILogger<PastDueOrdersConsumer> _logger;
@@ -28,26 +28,21 @@ public class PastDueOrdersConsumer : IHostedService
         IOrderProcessingService orderProcessingService,
         IOptions<KafkaSettings> settings,
         ILogger<PastDueOrdersConsumer> logger)
+        : base(settings.Value)
     {
         _orderProcessingService = orderProcessingService;
         _settings = settings.Value;
         _logger = logger;
         _cancellationTokenSource = new CancellationTokenSource();
 
-        var consumerConfig = new ConsumerConfig
+        var consumerConfig = new ConsumerConfig(ClientConfig)
         {
-            BootstrapServers = _settings.BrokerAddress,
-            SslEndpointIdentificationAlgorithm = SslEndpointIdentificationAlgorithm.Https,
-            SecurityProtocol = SecurityProtocol.SaslSsl,
-            SaslMechanism = SaslMechanism.Plain,
-            SaslUsername = _settings.SaslUsername,
-            SaslPassword = _settings.SaslPassword,
             GroupId = _settings.ConsumerGroupId,
             EnableAutoCommit = false,
             EnableAutoOffsetStore = false,
             AutoOffsetReset = AutoOffsetReset.Earliest,
         };
-     
+
         _consumer = new ConsumerBuilder<string, string>(consumerConfig)
         .SetErrorHandler((_, e) => _logger.LogError("// PastDueOrdersConsumer // Error: {reason}", e.Reason))
         .Build();
