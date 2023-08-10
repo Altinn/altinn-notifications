@@ -43,6 +43,8 @@ public class KafkaHealthCheck : IHealthCheck, IDisposable
 
         _producer = new ProducerBuilder<string, string>(config).Build();
         _consumer.Subscribe(_healthCheckTopic);
+
+        Console.WriteLine("// Kafka Health Check // constructor completed");
     }
 
     /// <inheritdoc/>
