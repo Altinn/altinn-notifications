@@ -13,7 +13,7 @@ namespace Altinn.Notifications.Core.Integrations.Consumers;
 /// <summary>
 /// Kafka consumer class for past due orders, first retry
 /// </summary>
-public class PastDueOrdersConsumerRetry : IHostedService
+public class PastDueOrdersConsumerRetry : IHostedService, IDisposable
 {
     private readonly IOrderProcessingService _orderProcessingService;
     private readonly ILogger<PastDueOrdersConsumerRetry> _logger;
@@ -48,7 +48,14 @@ public class PastDueOrdersConsumerRetry : IHostedService
         .Build();
     }
 
-       /// <inheritdoc/>
+    /// <inheritdoc/>    
+    public void Dispose()
+    {
+        _consumer.Close();
+        _consumer.Dispose();
+    }
+
+    /// <inheritdoc/>
     public Task StartAsync(CancellationToken cancellationToken)
     {
         _consumer.Subscribe(_settings.PastDueOrdersTopicNameRetry);
@@ -62,9 +69,6 @@ public class PastDueOrdersConsumerRetry : IHostedService
     public Task StopAsync(CancellationToken cancellationToken)
     {
         _cancellationTokenSource.Cancel();
-
-        _consumer.Close();
-        _consumer.Dispose();
 
         return Task.CompletedTask;
     }

@@ -14,7 +14,7 @@ namespace Altinn.Notifications.Core.Integrations.Consumers;
 /// <summary>
 /// Kafka consumer class for past due orders
 /// </summary>
-public class PastDueOrdersConsumer : IHostedService
+public class PastDueOrdersConsumer : IHostedService, IDisposable
 {
     private readonly IOrderProcessingService _orderProcessingService;
     private readonly ILogger<PastDueOrdersConsumer> _logger;
@@ -55,6 +55,13 @@ public class PastDueOrdersConsumer : IHostedService
     }
 
     /// <inheritdoc/>
+    public void Dispose()
+    {
+        _consumer.Close();
+        _consumer.Dispose();
+    }
+
+    /// <inheritdoc/>
     public Task StartAsync(CancellationToken cancellationToken)
     {
         _consumer.Subscribe(_settings.PastDueOrdersTopicName);
@@ -68,10 +75,6 @@ public class PastDueOrdersConsumer : IHostedService
     public Task StopAsync(CancellationToken cancellationToken)
     {
         _cancellationTokenSource.Cancel();
-
-        _consumer.Close();
-        _consumer.Dispose();
-
         return Task.CompletedTask;
     }
 

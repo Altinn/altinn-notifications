@@ -8,13 +8,13 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Core.Consumers;
 
-public class PastDueOrdersConsumerTests : IDisposable
+public class PastDueOrdersConsumerRetryTests : IDisposable
 {
-    private readonly string _pastDueOrdersTopicName = Guid.NewGuid().ToString();
+    private readonly string _retryTopicName = Guid.NewGuid().ToString();
     private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
 
     /// <summary>
-    /// When a new order is picked up by the consumer, we expect there to be an email notification created for the recipient states in the order.
+    /// When a new order is picked up by the consumer (this will be the retry mechanism), we expect there to be an email notification created for the recipient states in the order.
     /// We measure the sucess of this test by confirming that a new email notificaiton has been create with a reference to our order id
     /// as well as confirming that the order now has the status 'Completed' set at its processing status
     /// </summary>
@@ -24,23 +24,23 @@ public class PastDueOrdersConsumerTests : IDisposable
         // Arrange
         Dictionary<string, string> vars = new()
         {
-            {"KafkaSettings__PastDueOrdersTopicName", _pastDueOrdersTopicName },
-            {"KafkaSettings__TopicList", $"[\"{_pastDueOrdersTopicName}\"]" }
+            {"KafkaSettings__PastDueOrdersTopicNameRetry", _retryTopicName },
+            {"KafkaSettings__TopicList", $"[\"{_retryTopicName}\"]" }
         };
 
-        using PastDueOrdersConsumer consumerService = (PastDueOrdersConsumer)ServiceUtil
+        using PastDueOrdersConsumerRetry consumerRetryService = (PastDueOrdersConsumerRetry)ServiceUtil
                                                     .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
-                                                    .First(s => s.GetType() == typeof(PastDueOrdersConsumer))!;
+                                                    .First(s => s.GetType() == typeof(PastDueOrdersConsumerRetry))!;
 
         NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithOrder(sendersReference: _sendersRef);
-        await KafkaUtil.PublishMessageOnTopic(_pastDueOrdersTopicName, persistedOrder.Serialize());
+        await KafkaUtil.PublishMessageOnTopic(_retryTopicName, persistedOrder.Serialize());
 
         Guid orderId = persistedOrder.Id;
 
         // Act
-        await consumerService.StartAsync(CancellationToken.None);
+        await consumerRetryService.StartAsync(CancellationToken.None);
         await Task.Delay(10000);
-        await consumerService.StopAsync(CancellationToken.None);
+        await consumerRetryService.StopAsync(CancellationToken.None);
 
         // Assert
         long completedOrderCount = await SelectCompletedOrderCount(orderId);
@@ -59,9 +59,9 @@ public class PastDueOrdersConsumerTests : IDisposable
 
     protected virtual async Task Dispose(bool disposing)
     {
+        await KafkaUtil.DeleteTopicAsync(_retryTopicName);
         string sql = $"delete from notifications.orders where sendersreference = '{_sendersRef}'";
         await PostgreUtil.RunSql(sql);
-        await KafkaUtil.DeleteTopicAsync(_pastDueOrdersTopicName);
     }
 
     private static async Task<long> SelectCompletedOrderCount(Guid orderId)

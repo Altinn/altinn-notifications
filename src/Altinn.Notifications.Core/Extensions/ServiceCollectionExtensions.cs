@@ -43,6 +43,7 @@ public static class ServiceCollectionExtensions
               .AddSingleton<IEmailNotificationService, EmailNotificationService>()
               .AddSingleton<IGetOrderService, GetOrderService>()
               .AddSingleton<IHostedService, PastDueOrdersConsumer>()
+              .AddSingleton<IHostedService, PastDueOrdersConsumerRetry>()
               .Configure<KafkaSettings>(config.GetSection("KafkaSettings"))
               .Configure<NotificationOrderConfig>(config.GetSection("NotificationOrderConfig"));
     }
