@@ -1,5 +1,4 @@
-﻿using Altinn.Notifications.Core.Configuration;
-using Altinn.Notifications.Core.Integrations.Consumers;
+﻿﻿using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 
@@ -19,7 +18,7 @@ public static class ServiceCollectionExtensions
     /// </summary>
     /// <param name="services">service collection.</param>
     /// <param name="config">the configuration collection</param>
-    public static IServiceCollection AddCoreServices(this IServiceCollection services, IConfiguration config)
+    public static void AddCoreServices(this IServiceCollection services, IConfiguration config)
     {
         KafkaSettings? kafkaSettings = config.GetSection("KafkaSettings").Get<KafkaSettings>();
 
@@ -35,16 +34,16 @@ public static class ServiceCollectionExtensions
             throw new ArgumentNullException(nameof(config), "Required NotificationOrderConfig is missing from application configuration");
         }
 
-        return services
-              .AddSingleton<IGuidService, GuidService>()
-              .AddSingleton<IDateTimeService, DateTimeService>()
-              .AddSingleton<IOrderProcessingService, OrderProcessingService>()
-              .AddSingleton<IEmailNotificationOrderService, EmailNotificationOrderService>()
-              .AddSingleton<IEmailNotificationService, EmailNotificationService>()
-              .AddSingleton<IGetOrderService, GetOrderService>()
-              .AddSingleton<IHostedService, PastDueOrdersConsumer>()
-              .AddSingleton<IHostedService, PastDueOrdersConsumerRetry>()
-              .Configure<KafkaSettings>(config.GetSection("KafkaSettings"))
-              .Configure<NotificationOrderConfig>(config.GetSection("NotificationOrderConfig"));
+        services
+            .AddSingleton<IGuidService, GuidService>()
+            .AddSingleton<IDateTimeService, DateTimeService>()
+            .AddSingleton<IOrderProcessingService, OrderProcessingService>()
+            .AddSingleton<IEmailNotificationOrderService, EmailNotificationOrderService>()
+            .AddSingleton<IEmailNotificationService, EmailNotificationService>()
+            .AddSingleton<IGetOrderService, GetOrderService>()
+            .AddSingleton<IHostedService, PastDueOrdersConsumer>()
+            .AddSingleton<IHostedService, PastDueOrdersConsumerRetry>()
+            .Configure<KafkaSettings>(config.GetSection("KafkaSettings"))
+            .Configure<NotificationOrderConfig>(config.GetSection("NotificationOrderConfig"));
     }
 }

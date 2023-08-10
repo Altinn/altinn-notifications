@@ -12,6 +12,7 @@ using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Repository.Interfaces;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Integrations.Configuration;
 
 using Microsoft.Extensions.Options;
 
@@ -232,7 +233,7 @@ public class OrderProcessingServiceTests
             var _producer = new Mock<IKafkaProducer>();
             producer = _producer.Object;
         }
-        var kafkaSettings = new KafkaSettings() { PastDueOrdersTopicName = _pastDueTopicName };
+        var kafkaSettings = new Altinn.Notifications.Core.Configuration.KafkaSettings() { PastDueOrdersTopicName = _pastDueTopicName };
 
         return new OrderProcessingService(repo, emailRepo, emailService, producer, Options.Create(kafkaSettings));
     }

@@ -1,9 +1,12 @@
 ﻿using Altinn.Notifications.Core.Integrations.Interfaces;
 using Altinn.Notifications.Integrations.Configuration;
+using Altinn.Notifications.Integrations.Health;
+using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.Integrations.Kafka.Producers;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace Altinn.Notifications.Integrations.Extensions;
 
@@ -13,14 +16,40 @@ namespace Altinn.Notifications.Integrations.Extensions;
 public static class ServiceCollectionExtensions
 {
     /// <summary>
-    /// Adds core services and configurations to DI container.
+    /// Adds kafka services and configurations to DI container.
     /// </summary>
     /// <param name="services">service collection.</param>
     /// <param name="config">the configuration collection</param>
-    public static IServiceCollection AddKafkaServices(this IServiceCollection services, IConfiguration config)
+    public static void AddKafkaServices(this IServiceCollection services, IConfiguration config)
     {
-        return services
-              .AddSingleton<IKafkaProducer, KafkaProducer>()
-              .Configure<KafkaSettings>(config.GetSection("KafkaSettings"));
+        KafkaSettings? kafkaSettings = config.GetSection("KafkaSettings").Get<KafkaSettings>();
+
+        if (kafkaSettings == null)
+        {
+            throw new ArgumentNullException(nameof(config), "Required KafkaSettings is missing from application configuration");
+        }
+
+        services
+        .AddSingleton<IKafkaProducer, KafkaProducer>()
+        .AddSingleton<IHostedService, PastDueOrdersConsumer>()
+        .Configure<KafkaSettings>(config.GetSection("KafkaSettings"));
+    }
+
+    /// <summary>
+    /// Adds kafka health checks
+    /// </summary>
+    /// <param name="services">service collection.</param>
+    /// <param name="config">the configuration collection</param>
+    public static void AddKafkaHealthChecks(this IServiceCollection services, IConfiguration config)
+    {
+        KafkaSettings kafkaSettings = config!.GetSection("KafkaSettings").Get<KafkaSettings>()!;
+
+        if (kafkaSettings == null)
+        {
+            throw new ArgumentNullException(nameof(config), "Required KafkaSettings is missing from application configuration");
+        }
+
+        services.AddHealthChecks()
+        .AddCheck("notifications_kafka_health_check", new KafkaHealthCheck(kafkaSettings.BrokerAddress, kafkaSettings.HealthCheckTopic, kafkaSettings.ConsumerGroupId));
     }
 }
