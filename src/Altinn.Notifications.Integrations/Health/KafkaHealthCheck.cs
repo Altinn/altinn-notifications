@@ -52,6 +52,8 @@ public class KafkaHealthCheck : IHealthCheck, IDisposable
     {
         try
         {
+            Console.WriteLine("// Kafka Health Check // Checking health.. ");
+
             // Produce a test message to the health check topic
             var testMessage = new Message<string, string> { Key = _messageKey, Value = "test" };
             var deliveryResult = await _producer.ProduceAsync(_healthCheckTopic, testMessage, cancellationToken);
