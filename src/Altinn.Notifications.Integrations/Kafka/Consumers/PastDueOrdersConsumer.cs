@@ -75,6 +75,7 @@ public class PastDueOrdersConsumer : IHostedService, IDisposable
     public Task StopAsync(CancellationToken cancellationToken)
     {
         _cancellationTokenSource.Cancel();
+
         return Task.CompletedTask;
     }
 

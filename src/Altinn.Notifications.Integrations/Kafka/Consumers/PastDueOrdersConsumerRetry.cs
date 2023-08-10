@@ -1,6 +1,6 @@
-using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Integrations.Configuration;
 
 using Confluent.Kafka;
 
@@ -75,7 +75,6 @@ public class PastDueOrdersConsumerRetry : IHostedService, IDisposable
 
     private async Task ConsumeOrder(CancellationToken cancellationToken)
     {
-        string message = string.Empty;
         NotificationOrder? order = null;
         try
         {
@@ -84,8 +83,7 @@ public class PastDueOrdersConsumerRetry : IHostedService, IDisposable
                 var consumeResult = _consumer.Consume(cancellationToken);
                 if (consumeResult != null)
                 {
-                    message = consumeResult.Message.Value;
-                    bool succeeded = NotificationOrder.TryParse(message, out order);
+                    bool succeeded = NotificationOrder.TryParse(consumeResult.Message.Value, out order);
 
                     if (!succeeded)
                     {

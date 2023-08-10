@@ -1,5 +1,6 @@
-﻿using Altinn.Notifications.Core.Integrations.Consumers;
+﻿
 using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.IntegrationTests.Utils;
 
 using Microsoft.Extensions.Hosting;
