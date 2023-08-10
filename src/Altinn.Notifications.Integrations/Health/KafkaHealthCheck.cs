@@ -53,7 +53,7 @@ public class KafkaHealthCheck : IHealthCheck, IDisposable
     {
         try
         {
-            Console.WriteLine("// Kafka Health Check // Checking health.. " + count);
+            Console.WriteLine("// Kafka Health Check // Checking health \t " + count+ "\t " + DateTime.UtcNow);
             ++count;
 
             // Produce a test message to the health check topic
