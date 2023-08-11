@@ -42,7 +42,6 @@ public class PastDueOrdersConsumerTests : IDisposable
         await consumerService.StartAsync(CancellationToken.None);
         await Task.Delay(10000);
         await consumerService.StopAsync(CancellationToken.None);
-        consumerService.Dispose();
 
         // Assert
         long completedOrderCount = await SelectCompletedOrderCount(orderId);
