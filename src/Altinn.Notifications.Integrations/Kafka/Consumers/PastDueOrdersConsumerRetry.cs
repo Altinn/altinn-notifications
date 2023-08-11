@@ -34,10 +34,11 @@ public class PastDueOrdersConsumerRetry : IHostedService, IDisposable
         _logger = logger;
         _cancellationTokenSource = new CancellationTokenSource();
 
-        var consumerConfig = new ConsumerConfig
+        var config = new SharedClientConfig(settings.Value);
+
+        var consumerConfig = new ConsumerConfig(config.ClientConfig)
         {
-            BootstrapServers = _settings.BrokerAddress,
-            GroupId = _settings.ConsumerGroupId,
+            GroupId = settings.Value.ConsumerGroupId,
             EnableAutoCommit = false,
             EnableAutoOffsetStore = false,
             AutoOffsetReset = AutoOffsetReset.Earliest,
