@@ -120,7 +120,6 @@ public class PastDueOrdersConsumer : IHostedService, IDisposable
         {
             await _producer.ProduceAsync(_retryTopic, message!);
             _logger.LogError(ex, "// PastDueOrdersConsumer // ConsumeOrder // An error occurred while consuming messages");
-            throw;
         }
     }
 }
