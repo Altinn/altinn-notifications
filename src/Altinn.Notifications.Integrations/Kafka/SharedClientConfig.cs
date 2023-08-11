@@ -11,7 +11,12 @@ namespace Altinn.Notifications.Integrations.Kafka;
 public class SharedClientConfig
 {
     /// <summary>
-    /// Generic client configuration to use for kafka producer, consumer and admin
+    /// Admin client configuration to use for kafka admin
+    /// </summary>
+    public AdminClientConfig AdminClientConfig { get; }
+
+    /// <summary>
+    /// Generic client configuration to use for kafka producer and consumer 
     /// </summary>
     public ClientConfig ClientConfig { get; }
 
@@ -27,6 +32,11 @@ public class SharedClientConfig
     {
         bool isDevelopment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development";
 
+        var adminConfig = new AdminClientConfig()
+        {
+            BootstrapServers = settings.BrokerAddress,
+        };
+
         var config = new ClientConfig
         {
             BootstrapServers = settings.BrokerAddress,
@@ -40,6 +50,12 @@ public class SharedClientConfig
 
         if (!isDevelopment)
         {
+            adminConfig.SslEndpointIdentificationAlgorithm = SslEndpointIdentificationAlgorithm.Https;
+            adminConfig.SecurityProtocol = SecurityProtocol.SaslSsl;
+            adminConfig.SaslMechanism = SaslMechanism.Plain;
+            adminConfig.SaslUsername = settings.SaslUsername;
+            adminConfig.SaslPassword = settings.SaslPassword;
+
             config.SslEndpointIdentificationAlgorithm = SslEndpointIdentificationAlgorithm.Https;
             config.SecurityProtocol = SecurityProtocol.SaslSsl;
             config.SaslMechanism = SaslMechanism.Plain;
@@ -50,6 +66,7 @@ public class SharedClientConfig
             topicSpec.ReplicationFactor = 3;
         }
 
+        AdminClientConfig = adminConfig;
         ClientConfig = config;
         TopicSpecification = topicSpec;
     }

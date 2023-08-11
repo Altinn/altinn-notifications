@@ -88,7 +88,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
                 { "bootstrap.servers", _settings.BrokerAddress }
             };
 
-        using var adminClient = new AdminClientBuilder(settings)
+        using var adminClient = new AdminClientBuilder(AdminClientConfig)
             .Build();
         var existingTopics = adminClient.GetMetadata(TimeSpan.FromSeconds(10)).Topics;
 
