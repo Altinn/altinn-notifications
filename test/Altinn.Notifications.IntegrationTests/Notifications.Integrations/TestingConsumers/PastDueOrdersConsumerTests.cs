@@ -32,9 +32,12 @@ public class PastDueOrdersConsumerTests : IDisposable
             {"KafkaSettings__TopicList", $"[\"{_pastDueOrdersTopicName}\"]" }
         };
 
-            NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithOrder(sendersReference: _sendersRef);
-            await KafkaUtil.PublishMessageOnTopic(_pastDueOrdersTopicName, persistedOrder.Serialize());
-            Guid orderId = persistedOrder.Id;
+        using PastDueOrdersConsumer consumerService = (PastDueOrdersConsumer)ServiceUtil
+                                                    .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
+                                                    .First(s => s.GetType() == typeof(PastDueOrdersConsumer))!;
+
+        NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithOrder(sendersReference: _sendersRef);
+        await KafkaUtil.PublishMessageOnTopic(_pastDueOrdersTopicName, persistedOrder.Serialize());
 
             using PastDueOrdersConsumer consumerService = (PastDueOrdersConsumer)ServiceUtil
                             .GetServices(new List<Type>() { typeof(IHostedService) }, vars)

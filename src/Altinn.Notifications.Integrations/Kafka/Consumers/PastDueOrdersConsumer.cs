@@ -16,6 +16,7 @@ public class PastDueOrdersConsumer : KafkaConsumerBase<PastDueOrdersConsumer>
     private readonly IOrderProcessingService _orderProcessingService;
     private readonly IKafkaProducer _producer;
     private readonly string _retryTopic;
+    private readonly string _retryTopic;
     private readonly CancellationTokenSource _cancellationTokenSource;
 
     /// <summary>
