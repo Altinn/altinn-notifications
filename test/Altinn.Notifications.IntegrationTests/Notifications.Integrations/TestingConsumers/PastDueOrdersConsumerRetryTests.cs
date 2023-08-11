@@ -23,19 +23,19 @@ public class PastDueOrdersConsumerRetryTests : IDisposable
     public async Task RunTask_ConfirmExpectedSideEffects()
     {
         // Arrange
+        TestdataUtil.SetEnvAsDev();
+
         Dictionary<string, string> vars = new()
         {
             {"KafkaSettings__PastDueOrdersTopicNameRetry", _retryTopicName },
             {"KafkaSettings__TopicList", $"[\"{_retryTopicName}\"]" }
         };
 
-
         NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithOrder(sendersReference: _sendersRef);
         await KafkaUtil.PublishMessageOnTopic(_retryTopicName, persistedOrder.Serialize());
-
         Guid orderId = persistedOrder.Id;
 
-        using PastDueOrdersConsumerRetry consumerRetryService = (PastDueOrdersConsumerRetry)ServiceUtil
+        PastDueOrdersConsumerRetry consumerRetryService = (PastDueOrdersConsumerRetry)ServiceUtil
                                                     .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
                                                     .First(s => s.GetType() == typeof(PastDueOrdersConsumerRetry))!;
         // Act
@@ -59,6 +59,8 @@ public class PastDueOrdersConsumerRetryTests : IDisposable
     public async Task RunTask_ConfirmChangeOfStatus()
     {
         // Arrange
+        TestdataUtil.SetEnvAsDev();
+
         Dictionary<string, string> vars = new()
         {
             {"KafkaSettings__PastDueOrdersTopicNameRetry", _retryTopicName },
