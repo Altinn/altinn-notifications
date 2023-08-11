@@ -82,12 +82,6 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
 
     private void EnsureTopicsExist()
     {
-        Dictionary<string, string> settings;
-        settings = new Dictionary<string, string>()
-            {
-                { "bootstrap.servers", _settings.BrokerAddress }
-            };
-
         using var adminClient = new AdminClientBuilder(AdminClientConfig)
             .Build();
         var existingTopics = adminClient.GetMetadata(TimeSpan.FromSeconds(10)).Topics;
