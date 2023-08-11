@@ -50,6 +50,25 @@ public static class PostgreUtil
         return e.Id!;
     }
 
+    public static async Task<NotificationOrder> PopulateDBWithOrderAndEmailNotificationReturnOrder(string? sendersReference = null)
+    {
+        (NotificationOrder o, EmailNotification e) = TestdataUtil.GetOrderAndEmailNotification();
+        var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IOrderRepository), typeof(IEmailNotificationRepository) });
+
+        OrderRepository orderRepo = (OrderRepository)serviceList.First(i => i.GetType() == typeof(OrderRepository));
+        EmailNotificationRepository notificationRepo = (EmailNotificationRepository)serviceList.First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        if (sendersReference != null)
+        {
+            o.SendersReference = sendersReference;
+        }
+
+        await orderRepo.Create(o);
+        await notificationRepo.AddNotification(e, DateTime.UtcNow.AddDays(1));
+
+        return o;
+    }
+
     public static async Task<int> RunSqlReturnIntOutput(string query)
     {
         NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
@@ -61,6 +80,20 @@ public static class PostgreUtil
         int count = (int)reader.GetInt64(0);
 
         return count;
+    }
+
+    public static async Task<string> RunSqlReturnStringOutput(string query)
+    {
+        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
+
+        await using NpgsqlCommand pgcom = dataSource.CreateCommand(query);
+
+        await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync();
+        await reader.ReadAsync();
+
+        string result = reader.GetString(0);
+
+        return result;
     }
 
     public static async Task RunSql(string query)
