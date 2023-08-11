@@ -1,0 +1,33 @@
+name: Use Case - TT02
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    environment: TT02
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Run email notification order use case tests
+      run:  |
+          cd test/k6
+          docker-compose run k6 run /src/tests/orders_email.js -e env=${{ vars.ENV }} -e tokenGeneratorUserName=${{ secrets.TOKENGENERATOR_USERNAME }} -e tokenGeneratorUserPwd=${{ secrets.TOKENGENERATOR_USERPASSWORD }} -e emailRecipient=${{ secrets.AUTOMATEDTEST_EMAILRECIPIENT }}
+    - name: Build failure report
+      if: failure()
+      run: |
+          report=":warning: Notifications use case test failure in ${{ matrix.environment }} :warning: \n"
+          report+="\n Workflow available here: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo "stepreport="$report >> $GITHUB_ENV
+    - name: Report failure to Slack
+      if: failure()
+      id: slack
+      uses: slackapi/slack-github-action@v1.24.0
+      with:
+        payload: |
+            {
+              "text": "${{ env.stepreport }}"
+            }
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL_PROD }}
+

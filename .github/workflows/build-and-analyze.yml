@@ -2,6 +2,9 @@ name: .NET Analysis
 on:
   push:
     branches: [ main ]
+    paths-ignore:
+      - "test/k6/**"
+      - ".github/**"
   pull_request:
     branches: [ main ]
     types: [opened, synchronize, reopened]
