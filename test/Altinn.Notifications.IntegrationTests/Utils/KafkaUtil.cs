@@ -1,7 +1,5 @@
-﻿using Altinn.Notifications.Core.Integrations.Interfaces;
-using Altinn.Notifications.Integrations.Kafka.Producers;
-
-using Confluent.Kafka;
+﻿using Confluent.Kafka;
+using Confluent.Kafka.Admin;
 
 namespace Altinn.Notifications.IntegrationTests.Utils;
 public static class KafkaUtil
@@ -23,11 +21,33 @@ public static class KafkaUtil
         }
     }
 
-    public static async Task PublishMessageOnTopic(string topic, string message)
+    public static async Task<bool> PublishMessageOnTopic(string topic, string message)
     {
-        var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IKafkaProducer) });
-        KafkaProducer producerService = (KafkaProducer)serviceList.First(i => i.GetType() == typeof(KafkaProducer));
+        using var adminClient = new AdminClientBuilder(new Dictionary<string, string>() { { "bootstrap.servers", _brokerAddress } }).Build();
+        await adminClient.CreateTopicsAsync(new TopicSpecification[]
+                   {
+                        new TopicSpecification()
+                        {
+                            Name = topic,
+                            NumPartitions = 1,
+                            ReplicationFactor = 1
+                        }
+                   });
 
-        await producerService.ProduceAsync(topic, message);
+        var config = new ProducerConfig()
+        {
+            BootstrapServers = _brokerAddress,
+            Acks = Acks.All,
+            EnableDeliveryReports = true
+        };
+
+        using var _producer = new ProducerBuilder<Null, string>(config).Build();
+        var r = await _producer.ProduceAsync(topic, new Message<Null, string>
+        {
+            Value = message
+        });
+
+
+        return r.Status == PersistenceStatus.Persisted;
     }
 }
