@@ -19,8 +19,9 @@ public class CustomWebApplicationFactory<TStartup> : WebApplicationFactory<TStar
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         IConfiguration configuration = new ConfigurationBuilder()
-        .AddJsonFile("appsettings.Test.json")
-        .Build();
+            .AddJsonFile("appsettings.json")
+            .AddJsonFile("appsettings.Test.json")
+            .Build();
 
         builder.ConfigureAppConfiguration((hostingContext, config) =>
         {
