@@ -43,8 +43,8 @@ public static class ServiceUtil
 
         foreach (Type interfaceType in interfaceTypes)
         {
-            object outputServiceObject = serviceProvider.GetServices(interfaceType).First()!;
-            outputServices.Add(outputServiceObject);
+            var outputServiceObject = serviceProvider.GetServices(interfaceType)!;
+            outputServices.AddRange(outputServiceObject!);
         }
 
         return outputServices;

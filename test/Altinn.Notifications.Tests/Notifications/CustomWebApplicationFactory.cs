@@ -35,6 +35,8 @@ public class CustomWebApplicationFactory<TStartup> : WebApplicationFactory<TStar
         {
             var descriptor = services.Single(s => s.ImplementationType == typeof(PastDueOrdersConsumer));
             services.Remove(descriptor);
+            descriptor = services.Single(s => s.ImplementationType == typeof(PastDueOrdersConsumerRetry));
+            services.Remove(descriptor);
 
         });
     }

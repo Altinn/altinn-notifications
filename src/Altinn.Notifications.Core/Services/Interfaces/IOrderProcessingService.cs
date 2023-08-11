@@ -16,4 +16,9 @@ public interface IOrderProcessingService
     /// Processes a notification order
     /// </summary>
     public Task ProcessOrder(NotificationOrder order);
+
+    /// <summary>
+    /// Retry processing of an order
+    /// </summary>
+    public Task ProcessOrderRetry(NotificationOrder order);
 }
