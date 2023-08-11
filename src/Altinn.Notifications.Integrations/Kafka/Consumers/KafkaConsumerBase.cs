@@ -40,7 +40,7 @@ public abstract class KafkaConsumerBase<T> : BackgroundService
         };
 
         _consumer = new ConsumerBuilder<string, string>(consumerConfig)
-            .SetErrorHandler((_, e) => _logger.LogError($"// {GetType().Name} // Error: {e.Reason}"))
+            .SetErrorHandler((_, e) => _logger.LogError("// { Class } // Error: { e.Reason }", GetType().Name, e.Reason))
             .Build();
         _topicName = topicName;
     }
@@ -101,7 +101,7 @@ public abstract class KafkaConsumerBase<T> : BackgroundService
         catch (Exception ex)
         {
             await retryOrderFunc(message!);
-            _logger.LogError(ex, $"// {GetType().Name} // ConsumeOrder // An error occurred while consuming messages");
+            _logger.LogError(ex, "// {Class} // ConsumeOrder // An error occurred while consuming messages", GetType().Name);
         }
     }
 }
