@@ -1,5 +1,6 @@
 ﻿using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
+using Altinn.Notifications.IntegrationTests.Utils;
 
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -17,6 +18,8 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
     /// <param name="builder">IWebHostBuilder</param>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        TestdataUtil.SetEnvAsDev();
+
         IConfiguration configuration = new ConfigurationBuilder()
                 .AddJsonFile("appsettings.IntegrationTest.json")
         .Build();

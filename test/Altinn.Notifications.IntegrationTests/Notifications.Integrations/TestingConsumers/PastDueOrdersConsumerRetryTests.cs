@@ -11,6 +11,11 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Core.Consumers;
 
 public class PastDueOrdersConsumerRetryTests : IDisposable
 {
+    public PastDueOrdersConsumerRetryTests()
+    {
+        TestdataUtil.SetEnvAsDev();
+    }
+
     private readonly string _retryTopicName = Guid.NewGuid().ToString();
     private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
 
