@@ -29,15 +29,15 @@ public class PastDueOrdersConsumerRetryTests : IDisposable
             {"KafkaSettings__TopicList", $"[\"{_retryTopicName}\"]" }
         };
 
-        using PastDueOrdersConsumerRetry consumerRetryService = (PastDueOrdersConsumerRetry)ServiceUtil
-                                                    .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
-                                                    .First(s => s.GetType() == typeof(PastDueOrdersConsumerRetry))!;
 
         NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithOrder(sendersReference: _sendersRef);
         await KafkaUtil.PublishMessageOnTopic(_retryTopicName, persistedOrder.Serialize());
 
         Guid orderId = persistedOrder.Id;
 
+        using PastDueOrdersConsumerRetry consumerRetryService = (PastDueOrdersConsumerRetry)ServiceUtil
+                                                    .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
+                                                    .First(s => s.GetType() == typeof(PastDueOrdersConsumerRetry))!;
         // Act
         await consumerRetryService.StartAsync(CancellationToken.None);
         await Task.Delay(10000);
@@ -65,15 +65,13 @@ public class PastDueOrdersConsumerRetryTests : IDisposable
             {"KafkaSettings__TopicList", $"[\"{_retryTopicName}\"]" }
         };
 
+        NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithOrderAndEmailNotificationReturnOrder(sendersReference: _sendersRef);
+        await KafkaUtil.PublishMessageOnTopic(_retryTopicName, persistedOrder.Serialize());
+        Guid orderId = persistedOrder.Id;
+
         using PastDueOrdersConsumerRetry consumerRetryService = (PastDueOrdersConsumerRetry)ServiceUtil
                                                     .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
                                                     .First(s => s.GetType() == typeof(PastDueOrdersConsumerRetry))!;
-
-        NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithOrderAndEmailNotificationReturnOrder(sendersReference: _sendersRef);
-        
-        await KafkaUtil.PublishMessageOnTopic(_retryTopicName, persistedOrder.Serialize());
-
-        Guid orderId = persistedOrder.Id;
 
         // Act
         await consumerRetryService.StartAsync(CancellationToken.None);

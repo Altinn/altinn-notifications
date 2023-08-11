@@ -21,34 +21,42 @@ public class PastDueOrdersConsumerTests : IDisposable
     [Fact]
     public async Task RunTask_ConfirmExpectedSideEffects()
     {
-        // Arrange
-        TestdataUtil.SetEnvAsDev();
+        try
+        {
+            // Arrange
+            TestdataUtil.SetEnvAsDev();
 
-        Dictionary<string, string> vars = new()
+            Dictionary<string, string> vars = new()
         {
             {"KafkaSettings__PastDueOrdersTopicName", _pastDueOrdersTopicName },
             {"KafkaSettings__TopicList", $"[\"{_pastDueOrdersTopicName}\"]" }
         };
+            NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithOrder(sendersReference: _sendersRef);
+            Guid orderId = persistedOrder.Id;
+            await KafkaUtil.PublishMessageOnTopic(_pastDueOrdersTopicName, persistedOrder.Serialize());
 
-        using PastDueOrdersConsumer consumerService = (PastDueOrdersConsumer)ServiceUtil
-                                                    .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
-                                                    .First(s => s.GetType() == typeof(PastDueOrdersConsumer))!;
+            PastDueOrdersConsumer consumerService = (PastDueOrdersConsumer)ServiceUtil
+                                                        .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
+                                                        .First(s => s.GetType() == typeof(PastDueOrdersConsumer))!;
 
-        NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithOrder(sendersReference: _sendersRef);
-        Guid orderId = persistedOrder.Id;
-        await KafkaUtil.PublishMessageOnTopic(_pastDueOrdersTopicName, persistedOrder.Serialize());
+            // Act
+            await consumerService.StartAsync(CancellationToken.None);
+            await Task.Delay(10000);
+            await consumerService.StopAsync(CancellationToken.None);
 
-        // Act
-        await consumerService.StartAsync(CancellationToken.None);
-        await Task.Delay(10000);
-        await consumerService.StopAsync(CancellationToken.None);
+            // Assert
+            long completedOrderCount = await SelectCompletedOrderCount(orderId);
+            long emailNotificationCount = await SelectEmailNotificationCount(orderId);
 
-        // Assert
-        long completedOrderCount = await SelectCompletedOrderCount(orderId);
-        long emailNotificationCount = await SelectEmailNotificationCount(orderId);
+            Assert.Equal(1, completedOrderCount);
+            Assert.Equal(1, emailNotificationCount);
 
-        Assert.Equal(1, completedOrderCount);
-        Assert.Equal(1, emailNotificationCount);
+        }
+        catch (Exception)
+        {
+
+            throw;
+        }
     }
 
     public async void Dispose()
