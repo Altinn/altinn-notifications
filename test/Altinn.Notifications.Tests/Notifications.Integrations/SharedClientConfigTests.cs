@@ -6,10 +6,20 @@ using Altinn.Notifications.Integrations.Kafka;
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Integrations;
-public class SharedClientConfigTests
+public class SharedClientConfigTests : IDisposable
 {
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
 
-    [Theory]   
+    protected virtual void Dispose(bool disposing)
+    {
+        Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
+    }
+
+    [Theory]
     [InlineData("Production", true)]
     [InlineData("Staging", true)]
     [InlineData("Development", false)]
