@@ -91,5 +91,5 @@ jobs:
         if: ${{ failure() }}
         uses: NasAmin/trx-parser@v0.4.0
         with:
-          TRX_PATH: ${{ github.workspace }}/TestResults
+          TRX_PATH: ${{ github.workspace }}test/TestResults
           REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
