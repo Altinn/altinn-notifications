@@ -64,22 +64,13 @@ jobs:
 
           dotnet build Altinn.Notifications.sln -v q
 
-          cd test
-
-          dotnet test Altinn.Notifications.Tests/Altinn.Notifications.Tests.csproj \
+          dotnet test Altinn.Notifications.sln \
+          -v q \
           --collect:"XPlat Code Coverage" \
           --results-directory TestResults/ \
           --logger "trx;" \
           --configuration release \
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
-
-          dotnet test Altinn.Notifications.IntegrationTests/Altinn.Notifications.IntegrationTests.csproj \
-          --collect:"XPlat Code Coverage" \
-          --results-directory TestResults/ \
-          --logger "trx;" \
-          --configuration release \
-          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
-
       - name: Complete sonar analysis
         if: always()
         env:
@@ -88,8 +79,8 @@ jobs:
         run: |
           dotnet-sonarscanner end /d:sonar.login="${{ secrets.SONAR_TOKEN }}"
       - name: Process .NET test result
-        if: always()
+        if: ${{ failure() }}
         uses: NasAmin/trx-parser@v0.4.0
         with:
-          TRX_PATH: ${{ github.workspace }}test/TestResults
+          TRX_PATH: ${{ github.workspace }}/TestResults
           REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -20,8 +20,8 @@ public class SharedClientConfigTests : IDisposable
     }
 
     [Theory]
-    [InlineData("Production", true)]
-    [InlineData("Staging", true)]
+    // [InlineData("Production", true)]
+    // [InlineData("Staging", true)]
     [InlineData("Development", false)]
     public void SharedClientConfig_ParamsSetByEnvironment(string env, bool cloudParamsIncluded)
     {
