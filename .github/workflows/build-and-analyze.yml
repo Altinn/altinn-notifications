@@ -64,13 +64,22 @@ jobs:
 
           dotnet build Altinn.Notifications.sln -v q
 
-          dotnet test Altinn.Notifications.sln \
-          -v q \
+          cd test
+
+          dotnet test Altinn.Notifications.Tests/Altinn.Notifications.Tests.csproj \
           --collect:"XPlat Code Coverage" \
           --results-directory TestResults/ \
           --logger "trx;" \
           --configuration release \
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+
+          dotnet test Altinn.Notifications.Integrations/Altinn.Notifications.Integrations.csproj \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults/ \
+          --logger "trx;" \
+          --configuration release \
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+
       - name: Complete sonar analysis
         if: always()
         env:
