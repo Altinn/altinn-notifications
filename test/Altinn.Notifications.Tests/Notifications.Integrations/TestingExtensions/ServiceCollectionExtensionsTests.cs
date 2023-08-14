@@ -7,34 +7,33 @@ using Microsoft.Extensions.DependencyInjection;
 
 using Xunit;
 
-namespace Altinn.Notifications.Tests.Notifications.Integrations.TestingExtensions
+namespace Altinn.Notifications.Tests.Notifications.Integrations.TestingExtensions;
+
+public class ServiceCollectionExtensionsTests
 {
-    public class ServiceCollectionExtensionsTests
+
+    [Fact]
+    public void AddKafkaServices_KafkaSettingsMissing_ThrowsException()
     {
+        Environment.SetEnvironmentVariable("KafkaSettings", null);
 
-        [Fact]
-        public void AddKafkaServices_KafkaSettingsMissing_ThrowsException()
-        {
-            Environment.SetEnvironmentVariable("KafkaSettings", null);
+        var config = new ConfigurationBuilder().AddEnvironmentVariables().Build();
 
-            var config = new ConfigurationBuilder().AddEnvironmentVariables().Build();
+        IServiceCollection services = new ServiceCollection();
 
-            IServiceCollection services = new ServiceCollection();
+        Assert.Throws<ArgumentNullException>(() => services.AddKafkaServices(config));
+    }
 
-            Assert.Throws<ArgumentNullException>(() => services.AddKafkaServices(config));
-        }
+    [Fact]
+    public void AddKafkaHealthChecks_KafkaSettingsMissing_ThrowsException()
+    {
+        Environment.SetEnvironmentVariable("KafkaSettings", null);
 
-        [Fact]
-        public void AddKafkaHealthChecks_KafkaSettingsMissing_ThrowsException()
-        {
-            Environment.SetEnvironmentVariable("KafkaSettings", null);
+        var config = new ConfigurationBuilder().Build();
 
-            var config = new ConfigurationBuilder().Build();
+        IServiceCollection services = new ServiceCollection()
+           .AddLogging();
 
-            IServiceCollection services = new ServiceCollection()
-               .AddLogging();
-
-            Assert.Throws<ArgumentNullException>(() => services.AddKafkaHealthChecks(config));
-        }
+        Assert.Throws<ArgumentNullException>(() => services.AddKafkaHealthChecks(config));
     }
 }

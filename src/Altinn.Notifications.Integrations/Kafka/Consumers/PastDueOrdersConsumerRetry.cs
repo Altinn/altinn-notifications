@@ -2,13 +2,8 @@ using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Integrations.Configuration;
 
-using Confluent.Kafka;
-
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-
-using static Confluent.Kafka.ConfigPropertyNames;
 
 namespace Altinn.Notifications.Integrations.Kafka.Consumers;
 
