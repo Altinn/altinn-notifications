@@ -73,7 +73,7 @@ jobs:
           --configuration release \
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
 
-          dotnet test Altinn.Notifications.Integrations/Altinn.Notifications.Integrations.csproj \
+          dotnet test Altinn.Notifications.IntegrationTests/Altinn.Notifications.IntegrationTests.csproj \
           --collect:"XPlat Code Coverage" \
           --results-directory TestResults/ \
           --logger "trx;" \
