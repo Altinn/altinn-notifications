@@ -65,7 +65,6 @@ jobs:
           dotnet build Altinn.Notifications.sln -v q
 
           dotnet test Altinn.Notifications.sln \
-          -v q \
           --collect:"XPlat Code Coverage" \
           --results-directory TestResults/ \
           --logger "trx;" \
