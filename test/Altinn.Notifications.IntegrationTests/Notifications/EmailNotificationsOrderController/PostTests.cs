@@ -6,7 +6,6 @@ using Altinn.Notifications.Controllers;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Models;
-using Altinn.Notifications.Tests.EndToEndTests;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using Altinn.Notifications.Tests.Notifications.Utils;
 
@@ -81,7 +80,7 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
         Guid.Parse(orderId);
-        Assert.Equal("https://platform.at22.altinn.cloud/notifications/api/v1/orders/" + orderId, response.Headers?.Location?.ToString());
+        Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + orderId, response.Headers?.Location?.ToString());
     }
 
     [Fact]
@@ -103,7 +102,7 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
         Guid.Parse(orderId);
-        Assert.Equal("https://platform.at22.altinn.cloud/notifications/api/v1/orders/" + orderId, response.Headers?.Location?.ToString());
+        Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + orderId, response.Headers?.Location?.ToString());
     }
 
     public async void Dispose()

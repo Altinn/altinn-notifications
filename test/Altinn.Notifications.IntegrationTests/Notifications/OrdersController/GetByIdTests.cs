@@ -7,7 +7,6 @@ using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
-using Altinn.Notifications.Tests.EndToEndTests;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using Altinn.Notifications.Tests.Notifications.Utils;
 
@@ -63,7 +62,7 @@ public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<C
         // mapping to orderExt, but not using it directly to ensure mapping logic isn't affecting test result
         var mappedExtOrder = persistedOrder.MapToNotificationOrderExt();
 
-        string refLinkBase = "https://platform.at22.altinn.cloud/notifications/api/v1/orders";
+        string refLinkBase = "http://localhost:5090/notifications/api/v1/orders";
         string id = persistedOrder.Id.ToString();
 
         NotificationOrderExt expected = new()
