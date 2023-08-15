@@ -2,7 +2,6 @@
 
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.IntegrationTests.Utils;
-using Altinn.Notifications.Tests.EndToEndTests;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 
 using AltinnCore.Authentication.JwtCookie;

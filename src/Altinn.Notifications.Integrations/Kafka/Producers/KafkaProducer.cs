@@ -12,7 +12,7 @@ namespace Altinn.Notifications.Integrations.Kafka.Producers;
 /// <summary>
 /// Implementation of a Kafka producer
 /// </summary>
-public class KafkaProducer : IKafkaProducer, IDisposable
+public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
 {
     private readonly IProducer<Null, string> _producer;
     private readonly KafkaSettings _settings;
@@ -22,13 +22,13 @@ public class KafkaProducer : IKafkaProducer, IDisposable
     /// Initializes a new instance of the <see cref="KafkaProducer"/> class.
     /// </summary>
     public KafkaProducer(IOptions<KafkaSettings> settings, ILogger<IKafkaProducer> logger)
+        : base(settings.Value)
     {
         _settings = settings.Value;
         _logger = logger;
 
-        var config = new ProducerConfig
+        var config = new ProducerConfig(ClientConfig)
         {
-            BootstrapServers = _settings.BrokerAddress,
             Acks = Acks.All,
             EnableDeliveryReports = true,
             EnableIdempotence = true,
@@ -82,7 +82,8 @@ public class KafkaProducer : IKafkaProducer, IDisposable
 
     private void EnsureTopicsExist()
     {
-        using var adminClient = new AdminClientBuilder(new Dictionary<string, string>() { { "bootstrap.servers", _settings.BrokerAddress } }).Build();
+        using var adminClient = new AdminClientBuilder(AdminClientConfig)
+            .Build();
         var existingTopics = adminClient.GetMetadata(TimeSpan.FromSeconds(10)).Topics;
 
         foreach (string topic in _settings.TopicList)
@@ -93,11 +94,11 @@ public class KafkaProducer : IKafkaProducer, IDisposable
                 {
                     adminClient.CreateTopicsAsync(new TopicSpecification[]
                     {
-                        new TopicSpecification
+                        new TopicSpecification()
                         {
                             Name = topic,
-                            NumPartitions = 1, // Set the desired number of partitions
-                            ReplicationFactor = 1 // Set the desired replication factor
+                            NumPartitions = TopicSpecification.NumPartitions,
+                            ReplicationFactor = TopicSpecification.ReplicationFactor
                         }
                     }).Wait();
                     _logger.LogInformation("// KafkaProducer // EnsureTopicsExists // Topic '{Topic}' created successfully.", topic);

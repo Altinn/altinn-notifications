@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Net;
-using System.Net.Http;
+﻿using System.Net;
 using System.Net.Http.Headers;
-using System.Threading.Tasks;
 
-using Altinn.Notifications.Controllers;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
@@ -25,16 +20,16 @@ using Moq;
 
 using Xunit;
 
-namespace Altinn.Notifications.Tests.Notifications.TestingControllers;
-public class OrdersControllerTests : IClassFixture<CustomWebApplicationFactory<OrdersController>>
+namespace Altinn.Notifications.IntegrationTests.Notifications.TestingControllers;
+public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.OrdersController>>
 {
     private const string _basePath = "/notifications/api/v1/orders";
 
-    private readonly CustomWebApplicationFactory<OrdersController> _factory;
+    private readonly IntegrationTestWebApplicationFactory<Controllers.OrdersController> _factory;
     private readonly NotificationOrder _order;
 
 
-    public OrdersControllerTests(CustomWebApplicationFactory<OrdersController> factory)
+    public OrdersControllerTests(IntegrationTestWebApplicationFactory<Controllers.OrdersController> factory)
     {
         _factory = factory;
 

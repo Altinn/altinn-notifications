@@ -4,15 +4,15 @@ using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
-using Altinn.Notifications.Persistence.Extensions;
-
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Altinn.Notifications.IntegrationTests.Utils;
 public static class TestdataUtil
 {
+    public static void SetEnvAsDev()
+    {
+        Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
+    }
+
     public static (NotificationOrder order, EmailNotification notification) GetOrderAndEmailNotification()
     {
         NotificationOrder order = NotificationOrder_EmailTemplate_OneRecipient();

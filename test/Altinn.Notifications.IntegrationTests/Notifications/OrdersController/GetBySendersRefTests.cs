@@ -1,7 +1,5 @@
 ﻿using System.Net.Http.Headers;
 using System.Net;
-
-using Altinn.Notifications.Tests.EndToEndTests;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using Altinn.Notifications.Tests.Notifications.Utils;
 
