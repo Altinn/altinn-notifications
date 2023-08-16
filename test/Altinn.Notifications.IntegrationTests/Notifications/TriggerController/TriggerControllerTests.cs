@@ -14,7 +14,7 @@ using Moq;
 
 using Xunit;
 
-namespace Altinn.Notifications.IntegrationTests.Notifications.TestingControllers;
+namespace Altinn.Notifications.IntegrationTests.Notifications.TriggerController;
 public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.TriggerController>>
 {
     private readonly IntegrationTestWebApplicationFactory<Controllers.TriggerController> _factory;

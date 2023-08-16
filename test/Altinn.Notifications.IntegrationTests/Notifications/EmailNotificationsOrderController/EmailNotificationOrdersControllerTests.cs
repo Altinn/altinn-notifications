@@ -30,7 +30,7 @@ using Xunit;
 
 using ValidationResult = FluentValidation.Results.ValidationResult;
 
-namespace Altinn.Notifications.IntegrationTests.Notifications.TestingControllers;
+namespace Altinn.Notifications.IntegrationTests.Notifications.EmailNotificationsOrderController;
 
 public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.EmailNotificationOrdersController>>
 {
