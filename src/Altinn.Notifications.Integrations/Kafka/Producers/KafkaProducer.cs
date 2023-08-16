@@ -82,41 +82,33 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
 
     private void EnsureTopicsExist()
     {
-        try
-        {
-            using var adminClient = new AdminClientBuilder(AdminClientConfig)
-        .Build();
-            var existingTopics = adminClient.GetMetadata(TimeSpan.FromSeconds(10)).Topics;
+        using var adminClient = new AdminClientBuilder(AdminClientConfig)
+            .Build();
+        var existingTopics = adminClient.GetMetadata(TimeSpan.FromSeconds(10)).Topics;
 
-            foreach (string topic in _settings.TopicList)
+        foreach (string topic in _settings.TopicList)
+        {
+            if (!existingTopics.Exists(t => t.Topic.Equals(topic, StringComparison.OrdinalIgnoreCase)))
             {
-                if (!existingTopics.Exists(t => t.Topic.Equals(topic, StringComparison.OrdinalIgnoreCase)))
+                try
                 {
-                    try
+                    adminClient.CreateTopicsAsync(new TopicSpecification[]
                     {
-                        adminClient.CreateTopicsAsync(new TopicSpecification[]
-                        {
                         new TopicSpecification()
                         {
                             Name = topic,
                             NumPartitions = TopicSpecification.NumPartitions,
                             ReplicationFactor = TopicSpecification.ReplicationFactor
                         }
-                        }).Wait();
-                        _logger.LogInformation("// KafkaProducer // EnsureTopicsExists // Topic '{Topic}' created successfully.", topic);
-                    }
-                    catch (CreateTopicsException ex)
-                    {
-                        _logger.LogError(ex, "// KafkaProducer // EnsureTopicsExists // Failed to create topic '{Topic}'", topic);
-                        throw;
-                    }
+                    }).Wait();
+                    _logger.LogInformation("// KafkaProducer // EnsureTopicsExists // Topic '{Topic}' created successfully.", topic);
+                }
+                catch (CreateTopicsException ex)
+                {
+                    _logger.LogError(ex, "// KafkaProducer // EnsureTopicsExists // Failed to create topic '{Topic}'", topic);
+                    throw;
                 }
             }
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine($"// KafkaProducer // EnsureTopicsExists //  {e}");
-            throw;
         }
     }
 }

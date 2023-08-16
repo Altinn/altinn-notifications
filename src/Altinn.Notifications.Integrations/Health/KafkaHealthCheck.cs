@@ -25,9 +25,7 @@ public class KafkaHealthCheck : SharedClientConfig, IHealthCheck, IDisposable
 
         var config = new ProducerConfig(ClientConfig)
         {
-            Acks = Acks.All,
-            EnableDeliveryReports = true,
-            EnableIdempotence = true,
+            Acks = Acks.Leader,
             MessageSendMaxRetries = 3,
             RetryBackoffMs = 1000
         };
