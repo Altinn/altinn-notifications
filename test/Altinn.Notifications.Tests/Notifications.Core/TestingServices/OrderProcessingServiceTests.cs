@@ -234,7 +234,7 @@ public class OrderProcessingServiceTests
             producer = _producer.Object;
         }
 
-        var kafkaSettings = new KafkaSettings() { PastDueOrdersTopicName = _pastDueTopicName };
+        var kafkaSettings = new Altinn.Notifications.Core.Configuration.KafkaSettings() { PastDueOrdersTopicName = _pastDueTopicName };
 
         return new OrderProcessingService(repo, emailRepo, emailService, producer, Options.Create(kafkaSettings));
     }

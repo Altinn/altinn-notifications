@@ -38,7 +38,7 @@ public class KafkaHealthCheckTests : IAsyncLifetime
     [Fact]
     public async Task CheckHealthAsync_ReturnsHealthyResult()
     {
-        using KafkaHealthCheck healthCheck = new KafkaHealthCheck(_settings.BrokerAddress, _topicName);
+        using KafkaHealthCheck healthCheck = new(_settings.BrokerAddress, _topicName);
         HealthCheckResult res = await healthCheck.CheckHealthAsync(new HealthCheckContext());
 
         Assert.Equal(HealthStatus.Healthy, res.Status);

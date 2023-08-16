@@ -62,6 +62,7 @@ public abstract class KafkaConsumerBase<T> : BackgroundService
     {
         _consumer.Close();
         _consumer.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     /// <summary>

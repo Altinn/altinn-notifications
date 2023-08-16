@@ -28,7 +28,7 @@ public class SharedClientConfigTests : IDisposable
         // Arrange
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", env);
 
-        KafkaSettings settings = new KafkaSettings()
+        KafkaSettings settings = new()
         {
             BrokerAddress = "localhost:9092",
             SaslPassword = "password",
