@@ -48,8 +48,7 @@ public class OrdersController : ControllerBase
             return StatusCode(error.ErrorCode, error.ErrorMessage);
         }
 
-        var orderExt = order!.MapToNotificationOrderExt();
-        return orderExt;
+        return order!.MapToNotificationOrderExt();
     }
 
     /// <summary>
@@ -73,8 +72,7 @@ public class OrdersController : ControllerBase
             return StatusCode(error.ErrorCode, error.ErrorMessage);
         }
 
-        var orderList = orders!.MapToNotificationOrderListExt();
-        return orderList;
+        return orders!.MapToNotificationOrderListExt();
     }
 
     /// <summary>
@@ -99,7 +97,6 @@ public class OrdersController : ControllerBase
             return StatusCode(error.ErrorCode, error.ErrorMessage);
         }
 
-        var orderExt = order!.MapToNotificationOrderWithStatusExt();
-        return orderExt;
+        return order!.MapToNotificationOrderWithStatusExt();
     }
 }
