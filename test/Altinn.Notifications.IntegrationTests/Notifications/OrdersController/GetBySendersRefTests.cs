@@ -1,12 +1,5 @@
-﻿using System.Net;
-using System.Net.Http.Headers;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-
-using Altinn.Notifications.Core.Models.Orders;
-using Altinn.Notifications.IntegrationTests.Utils;
-using Altinn.Notifications.Models;
-using Altinn.Notifications.Tests.EndToEndTests;
+﻿using System.Net.Http.Headers;
+using System.Net;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using Altinn.Notifications.Tests.Notifications.Utils;
 
@@ -18,8 +11,15 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Logging;
 
 using Xunit;
+using Altinn.Notifications.Models;
+using System.Text.Json.Serialization;
+using System.Text.Json;
+using Altinn.Notifications.IntegrationTests.Utils;
+using Altinn.Notifications.Core.Models.Orders;
+using NpgsqlTypes;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.OrdersController;
+
 
 public class GetBySendersRefTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.OrdersController>>, IDisposable
 {
@@ -132,6 +132,7 @@ public class GetBySendersRefTests : IClassFixture<IntegrationTestWebApplicationF
             {
                 // Set up mock authentication so that not well known endpoint is used
                 services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
+
             });
         }).CreateClient();
 

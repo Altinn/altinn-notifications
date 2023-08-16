@@ -1,5 +1,5 @@
-﻿using Altinn.Notifications.Core.Integrations.Consumers;
-using Altinn.Notifications.Core.Models.Orders;
+﻿using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.IntegrationTests.Utils;
 
 using Microsoft.Extensions.Hosting;
@@ -10,6 +10,11 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Core.Consumers;
 
 public class PastDueOrdersConsumerTests : IDisposable
 {
+    public PastDueOrdersConsumerTests()
+    {
+        TestdataUtil.SetEnvAsDev();
+    }
+
     private readonly string _pastDueOrdersTopicName = Guid.NewGuid().ToString();
     private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
 
@@ -28,7 +33,7 @@ public class PastDueOrdersConsumerTests : IDisposable
             { "KafkaSettings__TopicList", $"[\"{_pastDueOrdersTopicName}\"]" }
         };
 
-        PastDueOrdersConsumer consumerService = (PastDueOrdersConsumer)ServiceUtil
+        using PastDueOrdersConsumer consumerService = (PastDueOrdersConsumer)ServiceUtil
                                                     .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
                                                     .First(s => s.GetType() == typeof(PastDueOrdersConsumer))!;
 
@@ -59,9 +64,9 @@ public class PastDueOrdersConsumerTests : IDisposable
 
     protected virtual async Task Dispose(bool disposing)
     {
-        await KafkaUtil.DeleteTopicAsync(_pastDueOrdersTopicName);
         string sql = $"delete from notifications.orders where sendersreference = '{_sendersRef}'";
         await PostgreUtil.RunSql(sql);
+        await KafkaUtil.DeleteTopicAsync(_pastDueOrdersTopicName);
     }
 
     private static async Task<long> SelectCompletedOrderCount(Guid orderId)

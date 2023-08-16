@@ -1,4 +1,7 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
+
+using Altinn.Notifications.Core.Enums;
 
 namespace Altinn.Notifications.Core.Models;
 
@@ -48,5 +51,20 @@ public class Email
         FromAddress = fromAddress;
         ToAddress = toAddress;
         ContentType = contentType;
+    }
+
+    /// <summary>
+    /// Json serializes the <see cref="Email"/>
+    /// </summary>
+    public string Serialize()
+    {
+        return JsonSerializer.Serialize(
+            this,
+            new JsonSerializerOptions
+            {
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                Converters = { new JsonStringEnumConverter() }
+            });
     }
 }

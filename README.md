@@ -13,7 +13,6 @@ The API layer that consumes services provided by _Altinn.Notifications.Core_
 Relevant implementations:
 - Controllers
 - Program.cs
-- Kafka consumer implementation
 
 
 ### Altinn.Notifications.Core
@@ -28,7 +27,7 @@ Relevant implementations:
 The infrastructure layer that implements the interfaces defined in _Altinn.Notifications.Core_ for integrations towards 3rd-party libraries and systems.
 
 Relevant implementations:
-- Kafka producer implementation
+- Kafka producer and consumer implementation
 - Clients for communicating with Altinn Platform components
 
 

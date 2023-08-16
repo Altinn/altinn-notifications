@@ -1,14 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Net;
-using System.Net.Http;
+﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 using Altinn.Notifications.Configuration;
-using Altinn.Notifications.Controllers;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
@@ -35,20 +30,20 @@ using Xunit;
 
 using ValidationResult = FluentValidation.Results.ValidationResult;
 
-namespace Altinn.Notifications.Tests.Notifications.TestingControllers;
+namespace Altinn.Notifications.IntegrationTests.Notifications.TestingControllers;
 
-public class EmailNotificationOrdersControllerTests : IClassFixture<CustomWebApplicationFactory<EmailNotificationOrdersController>>
+public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.EmailNotificationOrdersController>>
 {
     private const string _basePath = "/notifications/api/v1/orders/email";
 
-    private readonly CustomWebApplicationFactory<EmailNotificationOrdersController> _factory;
+    private readonly IntegrationTestWebApplicationFactory<Controllers.EmailNotificationOrdersController> _factory;
 
     private readonly JsonSerializerOptions _options;
 
     private readonly EmailNotificationOrderRequestExt _orderRequestExt;
     private readonly NotificationOrder _order;
 
-    public EmailNotificationOrdersControllerTests(CustomWebApplicationFactory<EmailNotificationOrdersController> factory)
+    public EmailNotificationOrdersControllerTests(IntegrationTestWebApplicationFactory<Controllers.EmailNotificationOrdersController> factory)
     {
         _factory = factory;
         _options = new JsonSerializerOptions
@@ -74,14 +69,15 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<CustomWebApp
             DateTime.UtcNow,
             NotificationChannel.Email,
             new Creator("ttd"),
-            DateTime.UtcNow,
+             DateTime.UtcNow,
             new List<Recipient>());
+
     }
 
     [Fact]
     public async Task Post_MissingBearerToken_Unauthorized()
     {
-        // Arrange
+        //Arrange
         HttpClient client = GetTestClient();
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath);
 
@@ -121,6 +117,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<CustomWebApp
         _validator.Setup(v => v.Validate(It.IsAny<EmailNotificationOrderRequestExt>()))
             .Returns(new ValidationResult(new List<ValidationFailure> { new ValidationFailure("SomeProperty", "SomeError") }));
 
+
         HttpClient client = GetTestClient(_validator.Object);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
 
@@ -133,6 +130,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<CustomWebApp
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
         string content = await response.Content.ReadAsStringAsync();
         ProblemDetails? actual = JsonSerializer.Deserialize<ProblemDetails>(content, _options);
+
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -166,6 +164,8 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<CustomWebApp
         serviceMock.Setup(s => s.RegisterEmailNotificationOrder(It.IsAny<NotificationOrderRequest>()))
             .ReturnsAsync((null, new ServiceError(500)));
 
+
+
         HttpClient client = GetTestClient(orderService: serviceMock.Object);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
 
@@ -176,6 +176,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<CustomWebApp
 
         // Act
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
 
         // Assert
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
@@ -204,11 +205,12 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<CustomWebApp
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-        Assert.Equal("https://platform.at22.altinn.cloud/notifications/api/v1/orders/" + _order.Id, response.Headers?.Location?.ToString());
+        Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + _order.Id, response.Headers?.Location?.ToString());
         Assert.Equal($"{_order.Id}", actualOrderId);
 
         serviceMock.VerifyAll();
     }
+
 
     private HttpClient GetTestClient(IValidator<EmailNotificationOrderRequestExt>? validator = null, IEmailNotificationOrderService? orderService = null)
     {
@@ -226,15 +228,17 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<CustomWebApp
             orderService = _orderService.Object;
         }
 
+
         HttpClient client = _factory.WithWebHostBuilder(builder =>
         {
             IdentityModelEventSource.ShowPII = true;
+
 
             builder.ConfigureTestServices(services =>
             {
                 services.Configure<GeneralSettings>(opts =>
                 {
-                    opts.BaseUri = "https://platform.at22.altinn.cloud";
+                    opts.BaseUri = "http://localhost:5090";
                 });
 
                 services.AddSingleton(validator);
@@ -243,6 +247,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<CustomWebApp
                 // Set up mock authentication so that not well known endpoint is used
                 services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
             });
+
         }).CreateClient();
 
         return client;
