@@ -30,8 +30,7 @@ public class SharedClientConfig
     /// </summary>
     public SharedClientConfig(KafkaSettings settings)
     {
-        bool isDevelopment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development"
-          || Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Staging";
+        bool isDevelopment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development";
 
         var adminConfig = new AdminClientConfig()
         {
