@@ -1,4 +1,7 @@
-﻿using Confluent.Kafka;
+﻿using Altinn.Notifications.Integrations.Configuration;
+using Altinn.Notifications.Integrations.Kafka;
+
+using Confluent.Kafka;
 
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
@@ -7,7 +10,7 @@ namespace Altinn.Notifications.Integrations.Health;
 /// <summary>
 /// Health check service confirming Kafka connenctivity
 /// </summary>
-public class KafkaHealthCheck : IHealthCheck, IDisposable
+public class KafkaHealthCheck : SharedClientConfig, IHealthCheck, IDisposable
 {
     private readonly IProducer<Null, string> _producer;
     private readonly string _healthCheckTopic;
@@ -15,13 +18,13 @@ public class KafkaHealthCheck : IHealthCheck, IDisposable
     /// <summary>
     /// Initializes a new instance of the <see cref="KafkaHealthCheck"/> class.
     /// </summary>
-    public KafkaHealthCheck(string brokerAddress, string healthCheckTopic)
+    public KafkaHealthCheck(KafkaSettings settings)
+        : base(settings)
     {
-        _healthCheckTopic = healthCheckTopic;
+        _healthCheckTopic = settings.HealthCheckTopic;
 
-        var config = new ProducerConfig
+        var config = new ProducerConfig(ClientConfig)
         {
-            BootstrapServers = brokerAddress,
             Acks = Acks.Leader,
             MessageSendMaxRetries = 3,
             RetryBackoffMs = 1000

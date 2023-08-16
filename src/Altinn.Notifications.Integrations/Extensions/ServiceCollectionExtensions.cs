@@ -51,6 +51,6 @@ public static class ServiceCollectionExtensions
         }
 
         services.AddHealthChecks()
-        .AddCheck("notifications_kafka_health_check", new KafkaHealthCheck(kafkaSettings.BrokerAddress, kafkaSettings.HealthCheckTopic));
+        .AddCheck("notifications_kafka_health_check", new KafkaHealthCheck(kafkaSettings));
     }
 }
