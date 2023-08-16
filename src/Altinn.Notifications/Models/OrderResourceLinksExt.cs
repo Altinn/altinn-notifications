@@ -8,7 +8,7 @@ namespace Altinn.Notifications.Models;
 /// <remarks>
 /// External representaion to be used in the API.
 /// </remarks>
-public class ResourceLinksExt
+public class OrderResourceLinksExt
 {
     /// <summary>
     /// Gets or sets the self link 

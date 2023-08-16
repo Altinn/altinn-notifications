@@ -26,7 +26,7 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
 
     private readonly IntegrationTestWebApplicationFactory<EmailNotificationOrdersController> _factory;
 
-    private readonly string  _serializedOrderRequestExt;
+    private readonly string _serializedOrderRequestExt;
     private readonly string _serializedOrderRequestWithoutSendersRefExt;
 
     private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
@@ -43,11 +43,11 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
             {
                 new RecipientExt
                 {
-                    EmailAddress ="recipient1@domain.com"
+                    EmailAddress = "recipient1@domain.com"
                 },
                 new RecipientExt
                 {
-                    EmailAddress ="recipient2@domain.com"
+                    EmailAddress = "recipient2@domain.com"
                 }
             },
             SendersReference = _sendersRef,

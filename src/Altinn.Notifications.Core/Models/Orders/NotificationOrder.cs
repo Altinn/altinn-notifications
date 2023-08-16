@@ -9,42 +9,30 @@ namespace Altinn.Notifications.Core.Models.Orders;
 /// <summary>
 /// Class representing a notification order
 /// </summary>
-public class NotificationOrder
+public class NotificationOrder : IBaseNotificationOrder
 {
-    /// <summary>
-    /// Gets the id of the notification order
-    /// </summary>
+    /// <inheritdoc/>>
     public Guid Id { get; internal set; } = Guid.Empty;
 
-    /// <summary>
-    /// Gets the senders reference of a notification
-    /// </summary>
+    /// <inheritdoc/>>
     public string? SendersReference { get; internal set; }
+
+    /// <inheritdoc/>>
+    public DateTime RequestedSendTime { get; internal set; }
+
+    /// <inheritdoc/>>
+    public NotificationChannel NotificationChannel { get; internal set; }
+
+    /// <inheritdoc/>>
+    public Creator Creator { get; internal set; }
+
+    /// <inheritdoc/>>
+    public DateTime Created { get; internal set; }
 
     /// <summary>
     /// Gets the templates to create notifications based of
     /// </summary>
     public List<INotificationTemplate> Templates { get; internal set; } = new List<INotificationTemplate>();
-
-    /// <summary>
-    /// Gets the requested send time for the notification(s)
-    /// </summary>
-    public DateTime RequestedSendTime { get; internal set; }
-
-    /// <summary>
-    /// Gets the preferred notification channel
-    /// </summary>
-    public NotificationChannel NotificationChannel { get; internal set; }
-
-    /// <summary>
-    /// Gets the creator of the notification
-    /// </summary>
-    public Creator Creator { get; internal set; }
-
-    /// <summary>
-    /// Gets the date and time for when the notification order was created
-    /// </summary>
-    public DateTime Created { get; internal set; }
 
     /// <summary>
     /// Gets a list of recipients

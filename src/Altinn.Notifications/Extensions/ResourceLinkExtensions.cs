@@ -43,14 +43,24 @@ public static class ResourceLinkExtensions
     }
 
     /// <summary>
-    /// Sets the resource links on each external notification order in the list
+    /// Gets the self link for the provided notification order
     /// </summary>
     /// <exception cref="InvalidOperationException">Exception if class has not been initialized in Program.cs</exception>
-    public static void SetResourceLinks(this NotificationOrderListExt orderList)
+    public static void NotificationSummaryResourceLinks(this NotificationOrderWithStatusExt order)
     {
-        foreach (NotificationOrderExt order in orderList.Orders)
+        if (_baseUri == null)
         {
-            order.SetResourceLinks();
+            throw new InvalidOperationException("ResourceLinkExtensions has not been initialized with the base URI.");
+        }
+
+        string baseUri = $"{_baseUri}/notifications/api/v1/orders/{order!.Id}/notifications/";
+
+        if (order.NotificationStatusSummary?.Email != null)
+        {
+            order.NotificationStatusSummary.Email.Links = new()
+            {
+                Self = baseUri + "email"
+            };
         }
     }
 

@@ -17,9 +17,9 @@ using Moq;
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
+
 public class EmailNotificationOrderServiceTests
 {
-
     [Fact]
     public async Task RegisterEmailNotificationOrder_ExpectedInputToRepository()
     {
@@ -58,7 +58,7 @@ public class EmailNotificationOrderServiceTests
 
         var service = GetTestService(repoMock.Object, id, createdTime);
 
-        //Act
+        // Act
         (NotificationOrder? actual, ServiceError? _) = await service.RegisterEmailNotificationOrder(input);
 
         // Assert
@@ -94,7 +94,7 @@ public class EmailNotificationOrderServiceTests
             Recipients = { },
             SendersReference = "senders-reference",
             RequestedSendTime = sendTime,
-            Templates = { new EmailTemplate { Body = "email-body"} }
+            Templates = { new EmailTemplate { Body = "email-body" } }
         };
 
         Mock<IOrderRepository> repoMock = new();
@@ -104,14 +104,13 @@ public class EmailNotificationOrderServiceTests
 
         var service = GetTestService(repoMock.Object, id, createdTime);
 
-        //Act
+        // Act
         (NotificationOrder? actual, ServiceError? _) = await service.RegisterEmailNotificationOrder(input);
 
         // Assert
         Assert.Equivalent(expected, actual, true);
         repoMock.VerifyAll();
     }
-
 
     public static EmailNotificationOrderService GetTestService(IOrderRepository? repository = null, Guid? guid = null, DateTime? dateTime = null)
     {

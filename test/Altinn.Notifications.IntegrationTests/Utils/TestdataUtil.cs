@@ -6,6 +6,7 @@ using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 
 namespace Altinn.Notifications.IntegrationTests.Utils;
+
 public static class TestdataUtil
 {
     public static void SetEnvAsDev()
@@ -13,7 +14,7 @@ public static class TestdataUtil
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
     }
 
-    public static (NotificationOrder order, EmailNotification notification) GetOrderAndEmailNotification()
+    public static (NotificationOrder Order, EmailNotification Notification) GetOrderAndEmailNotification()
     {
         NotificationOrder order = NotificationOrder_EmailTemplate_OneRecipient();
         order.Id = Guid.NewGuid();
@@ -52,10 +53,10 @@ public static class TestdataUtil
                     ContentType = EmailContentType.Html
                 }
             },
-            RequestedSendTime = DateTime.UtcNow,
+            RequestedSendTime = new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc),
             NotificationChannel = NotificationChannel.Email,
             Creator = new("ttd"),
-            Created = DateTime.UtcNow,
+            Created = new DateTime(2023, 06, 16, 08, 45, 00, DateTimeKind.Utc),
             Recipients = new List<Recipient>()
             {
                 new Recipient()

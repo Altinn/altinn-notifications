@@ -48,10 +48,7 @@ public class OrdersController : ControllerBase
             return StatusCode(error.ErrorCode, error.ErrorMessage);
         }
 
-        var orderExt = order!.MapToNotificationOrderExt();
-        orderExt.SetResourceLinks();
-
-        return orderExt;
+        return order!.MapToNotificationOrderExt();
     }
 
     /// <summary>
@@ -75,8 +72,31 @@ public class OrdersController : ControllerBase
             return StatusCode(error.ErrorCode, error.ErrorMessage);
         }
 
-        var orderList = orders.MapToNotificationOrderListExt();
-        orderList.SetResourceLinks();
-        return orderList;
+        return orders!.MapToNotificationOrderListExt();
+    }
+
+    /// <summary>
+    /// Endpoint for retrieving an order with processing and notificatio status by id
+    /// </summary>
+    /// <param name="id">The order id</param>
+    /// <returns>The order that correspons to the provided id</returns>
+    [HttpGet]
+    [Route("{id}/status")]
+    public async Task<ActionResult<NotificationOrderWithStatusExt>> GetWithStatusById([FromRoute] Guid id)
+    {
+        string? expectedCreator = User.GetOrg();
+        if (expectedCreator == null)
+        {
+            return Forbid();
+        }
+
+        var (order, error) = await _getOrderService.GetOrderWithStatuById(id, expectedCreator);
+
+        if (error != null)
+        {
+            return StatusCode(error.ErrorCode, error.ErrorMessage);
+        }
+
+        return order!.MapToNotificationOrderWithStatusExt();
     }
 }

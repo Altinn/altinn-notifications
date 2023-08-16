@@ -1,5 +1,6 @@
 ﻿using System.Net;
 
+using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
@@ -36,7 +37,7 @@ public class Trigger_SendEmailNotificationsTests : IClassFixture<IntegrationTest
     public async Task Post_Ok()
     {
         // Arrange
-        Guid notificationId = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(sendersReference: _sendersRef);
+        (_, EmailNotification notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(sendersReference: _sendersRef);
 
         HttpClient client = GetTestClient();
 
@@ -46,7 +47,7 @@ public class Trigger_SendEmailNotificationsTests : IClassFixture<IntegrationTest
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
 
         // Assert
-        string sql = $"select count(1) from notifications.emailnotifications where result = 'Sending' and alternateid='{notificationId}'";
+        string sql = $"select count(1) from notifications.emailnotifications where result = 'Sending' and alternateid='{notification.Id}'";
         int actual = await PostgreUtil.RunSqlReturnIntOutput(sql);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(1, actual);
@@ -64,7 +65,7 @@ public class Trigger_SendEmailNotificationsTests : IClassFixture<IntegrationTest
         string sql = $"delete from notifications.orders where sendersreference = '{_sendersRef}'";
         await PostgreUtil.RunSql(sql);
 
-        await KafkaUtil.DeleteTopicAsync(_topicName);  
+        await KafkaUtil.DeleteTopicAsync(_topicName);
     }
 
     private HttpClient GetTestClient()
@@ -87,7 +88,6 @@ public class Trigger_SendEmailNotificationsTests : IClassFixture<IntegrationTest
 
                 // Set up mock authentication so that not well known endpoint is used               
                 services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
-
             });
         }).CreateClient();
 

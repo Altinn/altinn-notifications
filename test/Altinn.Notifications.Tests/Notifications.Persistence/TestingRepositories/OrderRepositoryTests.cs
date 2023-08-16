@@ -6,6 +6,7 @@ using Altinn.Notifications.Persistence.Repository;
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Persistence.TestingRepositories;
+
 public class OrderRepositoryTests
 {
     [Fact]
@@ -29,7 +30,7 @@ public class OrderRepositoryTests
             }
         };
 
-        //Act
+        // Act
         EmailTemplate? actual = OrderRepository.ExtractTemplates(input);
 
         // Assert
@@ -37,14 +38,13 @@ public class OrderRepositoryTests
         Assert.Equivalent(expected, actual);
     }
 
-
     [Fact]
     public void ExtractTemplates_EmptyListOfTemplates_NullForAllTemplates()
     {
         // Arrange
         NotificationOrder input = new();
 
-        //Act
+        // Act
         EmailTemplate? actualEmailTemplate = OrderRepository.ExtractTemplates(input);
 
         // Assert

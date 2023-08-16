@@ -5,7 +5,6 @@ using System.Text.Json.Serialization;
 
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.IntegrationTests.Utils;
-using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using Altinn.Notifications.Tests.Notifications.Utils;
@@ -21,7 +20,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.OrdersController;
 
-public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.OrdersController>>, IDisposable
+public class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.OrdersController>>, IDisposable
 {
     private const string _basePath = "/notifications/api/v1/orders";
 
@@ -29,16 +28,16 @@ public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<C
 
     private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
 
-    public GetByIdTests(IntegrationTestWebApplicationFactory<Controllers.OrdersController> factory)
+    public GetWithStatusById(IntegrationTestWebApplicationFactory<Controllers.OrdersController> factory)
     {
         _factory = factory;
     }
 
     [Fact]
-    public async Task GetById_NoMatchInDb_ReturnsNotFound()
+    public async Task GetWithStatusById_NoMatchInDb_ReturnsNotFound()
     {
         // Arrange
-        string uri = $"{_basePath}/{Guid.NewGuid()}";
+        string uri = $"{_basePath}/{Guid.NewGuid()}/status";
 
         HttpClient client = GetTestClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
@@ -53,36 +52,42 @@ public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<C
     }
 
     [Fact]
-    public async Task GetById_SingleMatchInDb_ReturnsOk()
+    public async Task GetWithStatusById_SingleMatchInDbAndOneEmail_ReturnsOk()
     {
         // Arrange
-        NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithOrder(sendersReference: _sendersRef);
-
-        // mapping to orderExt, but not using it directly to ensure mapping logic isn't affecting test result
-        var mappedExtOrder = persistedOrder.MapToNotificationOrderExt();
+        (NotificationOrder persistedOrder, _) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(sendersReference: _sendersRef);
 
         string refLinkBase = "http://localhost:5090/notifications/api/v1/orders";
-        string id = persistedOrder.Id.ToString();
 
-        NotificationOrderExt expected = new()
+        NotificationOrderWithStatusExt expected = new()
         {
             Id = persistedOrder.Id.ToString(),
             SendersReference = persistedOrder.SendersReference,
             Creator = "ttd",
             Created = persistedOrder.Created,
-            Links = new()
-            {
-                Notifications = $"{refLinkBase}/{id}/notifications",
-                Self = $"{refLinkBase}/{id}",
-                Status = $"{refLinkBase}/{id}/status"
-            },
             NotificationChannel = persistedOrder.NotificationChannel,
             RequestedSendTime = persistedOrder.RequestedSendTime,
-            Recipients = mappedExtOrder.Recipients,
-            EmailTemplate = mappedExtOrder.EmailTemplate
+            ProcessingStatus = new()
+            {
+                LastUpdate = persistedOrder.Created,
+                Status = "Registered",
+                StatusDescription = "Order has been registered and is awaiting requested send time before processing"
+            },
+            NotificationStatusSummary = new NotificationsStatusSummaryExt()
+            {
+                Email = new()
+                {
+                    Generated = 1,
+                    Succeeded = 0,
+                    Links = new()
+                    {
+                        Self = $"{refLinkBase}/{persistedOrder.Id}/notifications/email"
+                    }
+                }
+            }
         };
 
-        string uri = $"{_basePath}/{persistedOrder.Id}";
+        string uri = $"{_basePath}/{persistedOrder.Id}/status";
 
         HttpClient client = GetTestClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
@@ -92,7 +97,46 @@ public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<C
         // Act
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
         string resString = await response.Content.ReadAsStringAsync();
-        NotificationOrderExt? actual = JsonSerializer.Deserialize<NotificationOrderExt>(resString, new JsonSerializerOptions { Converters = { new JsonStringEnumConverter() } });
+        NotificationOrderWithStatusExt? actual = JsonSerializer.Deserialize<NotificationOrderWithStatusExt>(resString, new JsonSerializerOptions { Converters = { new JsonStringEnumConverter() } });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equivalent(expected, actual);
+    }
+
+    [Fact]
+    public async Task GetWithStatusById_SingleMatchInDb_ReturnsOk()
+    {
+        // Arrange
+        NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithOrder(sendersReference: _sendersRef);
+
+        NotificationOrderWithStatusExt expected = new()
+        {
+            Id = persistedOrder.Id.ToString(),
+            SendersReference = persistedOrder.SendersReference,
+            Creator = "ttd",
+            Created = persistedOrder.Created,
+            NotificationChannel = persistedOrder.NotificationChannel,
+            RequestedSendTime = persistedOrder.RequestedSendTime,
+            ProcessingStatus = new()
+            {
+                LastUpdate = persistedOrder.Created,
+                Status = "Registered",
+                StatusDescription = "Order has been registered and is awaiting requested send time before processing"
+            }
+        };
+
+        string uri = $"{_basePath}/{persistedOrder.Id}/status";
+
+        HttpClient client = GetTestClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
+
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, uri);
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        string resString = await response.Content.ReadAsStringAsync();
+        NotificationOrderWithStatusExt? actual = JsonSerializer.Deserialize<NotificationOrderWithStatusExt>(resString, new JsonSerializerOptions { Converters = { new JsonStringEnumConverter() } });
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);

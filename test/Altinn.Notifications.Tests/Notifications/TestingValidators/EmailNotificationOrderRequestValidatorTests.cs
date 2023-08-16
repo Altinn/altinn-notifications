@@ -45,8 +45,8 @@ public class EmailNotificationOrderRequestValidatorTests
             FromAddress = "sender@domain.com",
             Recipients = new List<RecipientExt>() { new RecipientExt() { Id = "16069412345" } },
             Body = "This is an email body"
-
         };
+
         var actual = _validator.Validate(order);
 
         Assert.False(actual.IsValid);
@@ -79,7 +79,6 @@ public class EmailNotificationOrderRequestValidatorTests
             Subject = "This is an email subject",
             Recipients = new List<RecipientExt>() { new RecipientExt() { Id = "16069412345", EmailAddress = "recipient2@domain.com" } },
             Body = "This is an email body"
-
         };
 
         var actual = _validator.Validate(order);

@@ -1,25 +1,20 @@
 ﻿using System.Text.Json.Serialization;
 
 using Altinn.Notifications.Core.Enums;
-using Altinn.Notifications.Core.Models.NotificationTemplate;
 
 namespace Altinn.Notifications.Models;
 
 /// <summary>
-/// A class representing a registered notification order. 
+/// A class representing a registered notification order with status information. 
 /// </summary>
 /// <remarks>
-/// External representaion to be used in the API.
+/// External representation to be used in the API.
 /// </remarks>
-public class NotificationOrderExt : IBaseNotificationOrderExt
+public class NotificationOrderWithStatusExt : IBaseNotificationOrderExt
 {
     /// <inheritdoc/>>
     [JsonPropertyName("id")]
     public string Id { get; set; } = string.Empty;
-
-    /// <inheritdoc/>>
-    [JsonPropertyName("creator")]
-    public string Creator { get; set; } = string.Empty;
 
     /// <inheritdoc/>>
     [JsonPropertyName("sendersReference")]
@@ -28,6 +23,10 @@ public class NotificationOrderExt : IBaseNotificationOrderExt
     /// <inheritdoc/>>
     [JsonPropertyName("requestedSendTime")]
     public DateTime RequestedSendTime { get; set; }
+
+    /// <inheritdoc/>>
+    [JsonPropertyName("creator")]
+    public string Creator { get; set; } = string.Empty;
 
     /// <inheritdoc/>>
     [JsonPropertyName("created")]
@@ -39,20 +38,14 @@ public class NotificationOrderExt : IBaseNotificationOrderExt
     public NotificationChannel NotificationChannel { get; set; }
 
     /// <summary>
-    /// Gets or sets the list of recipients
+    /// Gets or sets the processing status of the notication order
     /// </summary>
-    [JsonPropertyName("recipients")]
-    public List<RecipientExt> Recipients { get; set; } = new List<RecipientExt>();
+    [JsonPropertyName("processingStatus")]
+    public ProcessingStatusExt ProcessingStatus { get; set; } = new();
 
     /// <summary>
-    /// Gets or sets the emailTemplate
+    /// Gets or sets the summary of the notifiications statuses
     /// </summary>
-    [JsonPropertyName("emailTemplate")]
-    public EmailTemplateExt? EmailTemplate { get; set; }
-
-    /// <summary>
-    /// Gets or sets the link of the order
-    /// </summary>
-    [JsonPropertyName("links")]
-    public OrderResourceLinksExt Links { get; set; } = new OrderResourceLinksExt();
+    [JsonPropertyName("notificationsStatusSummary")]
+    public NotificationsStatusSummaryExt? NotificationStatusSummary { get; set; }
 }

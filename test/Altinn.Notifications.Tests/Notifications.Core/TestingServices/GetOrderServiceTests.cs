@@ -92,7 +92,6 @@ public class GetOrderServiceTests
     [Fact]
     public async Task GetOrdersBySendersReference_GetOrdersBySendersReferenceCalledInRepo_ListOfOrdersReturned()
     {
-
         // Arrange
         var repoMock = new Mock<IOrderRepository>();
         repoMock
@@ -120,6 +119,5 @@ public class GetOrderServiceTests
         }
 
         return new GetOrderService(repo);
-
     }
 }

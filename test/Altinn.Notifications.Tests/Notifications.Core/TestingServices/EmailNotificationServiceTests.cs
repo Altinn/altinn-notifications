@@ -19,6 +19,7 @@ using Moq;
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
+
 public class EmailNotificationServiceTests
 {
     private const string _emailQueueTopicName = "email.queue";
@@ -45,7 +46,6 @@ public class EmailNotificationServiceTests
         repoMock.Verify();
         producerMock.Verify(p => p.ProduceAsync(It.Is<string>(s => s.Equals(_emailQueueTopicName)), It.IsAny<string>()), Times.Exactly(3));
     }
-
 
     [Fact]
     public async Task SendNotifications_ProducerReturnsFalse_RepositoryCalledToUpdateDB()
