@@ -57,7 +57,7 @@ public class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFact
         // Arrange
         (NotificationOrder persistedOrder, _) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(sendersReference: _sendersRef);
 
-        string refLinkBase = "https://platform.at22.altinn.cloud/notifications/api/v1/orders";
+        string refLinkBase = "http://localhost:5090/notifications/api/v1/orders";
 
         NotificationOrderWithStatusExt expected = new()
         {
