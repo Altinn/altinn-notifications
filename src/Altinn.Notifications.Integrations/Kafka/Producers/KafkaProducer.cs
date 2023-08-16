@@ -115,7 +115,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
         }
         catch (Exception e)
         {
-            _logger.LogInformation("// KafkaProducer // EnsureTopicsExists //  '{e}", e);
+            Console.WriteLine($"// KafkaProducer // EnsureTopicsExists //  {e}");
             throw;
         }
     }
