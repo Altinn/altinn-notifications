@@ -1,5 +1,4 @@
 ﻿using Altinn.Notifications.Core.Enums;
-using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Orders;
 
 namespace Altinn.Notifications.Core.Repository.Interfaces;
