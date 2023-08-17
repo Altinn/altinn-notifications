@@ -181,7 +181,8 @@ export default function (data) {
     } else {
       // Limited test set for use case tests
       var selfLink = TC01_PostEmailNotificationOrderRequest(data);
-      TC02_GetNotificationOrderById(data, selfLink);
+      let id = selfLink.split("/").pop();
+      TC02_GetNotificationOrderById(data, selfLink, id);
     }
   } catch (error) {
     addErrorCount(false);
