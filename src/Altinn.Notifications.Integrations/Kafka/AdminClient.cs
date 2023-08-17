@@ -29,7 +29,7 @@ public class AdminClient : BackgroundService
     }
 
     /// <inheritdoc/>
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using var adminClient = new AdminClientBuilder(_clientConfig.AdminClientConfig)
                     .Build();
@@ -41,15 +41,16 @@ public class AdminClient : BackgroundService
             {
                 try
                 {
-                    adminClient.CreateTopicsAsync(new TopicSpecification[]
-                    {
+                    await adminClient.CreateTopicsAsync(new TopicSpecification[]
+                      {
                         new TopicSpecification()
                         {
                             Name = topic,
                             NumPartitions = _clientConfig.TopicSpecification.NumPartitions,
                             ReplicationFactor = _clientConfig.TopicSpecification.ReplicationFactor
                         }
-                    }).Wait();
+                      });
+
                     _logger.LogInformation("// AdminClient // ExecuteAsync // Topic '{Topic}' created successfully.", topic);
                 }
                 catch (CreateTopicsException ex)
@@ -59,7 +60,5 @@ public class AdminClient : BackgroundService
                 }
             }
         }
-
-        return Task.CompletedTask;
     }
 }

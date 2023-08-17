@@ -15,7 +15,6 @@ namespace Altinn.Notifications.Integrations.Kafka.Producers;
 public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
 {
     private readonly IProducer<Null, string> _producer;
-    private readonly KafkaSettings _settings;
     private readonly ILogger<IKafkaProducer> _logger;
 
     /// <summary>
@@ -24,7 +23,6 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     public KafkaProducer(IOptions<KafkaSettings> settings, ILogger<IKafkaProducer> logger)
         : base(settings.Value)
     {
-        _settings = settings.Value;
         _logger = logger;
 
         var config = new ProducerConfig(ClientConfig)
