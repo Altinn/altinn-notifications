@@ -10,7 +10,7 @@ using Microsoft.Extensions.Options;
 namespace Altinn.Notifications.Integrations.Kafka;
 
 /// <summary>
-/// Admin client with required setup for use of Kafka
+/// Admin client responsible for preparing application for integration with Kafka
 /// </summary>
 public class AdminClient : BackgroundService
 {
@@ -50,11 +50,11 @@ public class AdminClient : BackgroundService
                             ReplicationFactor = _clientConfig.TopicSpecification.ReplicationFactor
                         }
                     }).Wait();
-                    _logger.LogInformation("// KafkaProducer // EnsureTopicsExists // Topic '{Topic}' created successfully.", topic);
+                    _logger.LogInformation("// AdminClient // ExecuteAsync // Topic '{Topic}' created successfully.", topic);
                 }
                 catch (CreateTopicsException ex)
                 {
-                    _logger.LogError(ex, "// KafkaProducer // EnsureTopicsExists // Failed to create topic '{Topic}'", topic);
+                    _logger.LogError(ex, "// AdminClient // ExecuteAsync // Failed to create topic '{Topic}'", topic);
                     throw;
                 }
             }
