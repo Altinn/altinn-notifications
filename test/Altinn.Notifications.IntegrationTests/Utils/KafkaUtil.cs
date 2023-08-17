@@ -11,8 +11,15 @@ public static class KafkaUtil
 
     public static async Task DeleteTopicAsync(string topic)
     {
-        using var adminClient = new AdminClientBuilder(new Dictionary<string, string>() { { "bootstrap.servers", _brokerAddress } }).Build();
-        await adminClient.DeleteTopicsAsync(new string[] { topic });
+        try
+        {
+            using var adminClient = new AdminClientBuilder(new Dictionary<string, string>() { { "bootstrap.servers", _brokerAddress } }).Build();
+            await adminClient.DeleteTopicsAsync(new string[] { topic });
+        }
+        catch (Exception)
+        {
+            // no biggie if topic is not deleted
+        }
     }
 
     public static async Task PublishMessageOnTopic(string topic, string message)

@@ -37,7 +37,6 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
         };
 
         _producer = new ProducerBuilder<Null, string>(config).Build();
-        EnsureTopicsExist();
     }
 
     /// <inheritdoc/>
@@ -78,37 +77,5 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     protected virtual void Dispose(bool disposing)
     {
         _producer.Flush();
-    }
-
-    private void EnsureTopicsExist()
-    {
-        using var adminClient = new AdminClientBuilder(AdminClientConfig)
-            .Build();
-        var existingTopics = adminClient.GetMetadata(TimeSpan.FromSeconds(10)).Topics;
-
-        foreach (string topic in _settings.TopicList)
-        {
-            if (!existingTopics.Exists(t => t.Topic.Equals(topic, StringComparison.OrdinalIgnoreCase)))
-            {
-                try
-                {
-                    adminClient.CreateTopicsAsync(new TopicSpecification[]
-                    {
-                        new TopicSpecification()
-                        {
-                            Name = topic,
-                            NumPartitions = TopicSpecification.NumPartitions,
-                            ReplicationFactor = TopicSpecification.ReplicationFactor
-                        }
-                    }).Wait();
-                    _logger.LogInformation("// KafkaProducer // EnsureTopicsExists // Topic '{Topic}' created successfully.", topic);
-                }
-                catch (CreateTopicsException ex)
-                {
-                    _logger.LogError(ex, "// KafkaProducer // EnsureTopicsExists // Failed to create topic '{Topic}'", topic);
-                    throw;
-                }
-            }
-        }
     }
 }

@@ -1,12 +1,12 @@
 ﻿using Altinn.Notifications.Core.Integrations.Interfaces;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Health;
+using Altinn.Notifications.Integrations.Kafka;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.Integrations.Kafka.Producers;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 
 namespace Altinn.Notifications.Integrations.Extensions;
 
@@ -31,6 +31,7 @@ public static class ServiceCollectionExtensions
 
         services
         .AddSingleton<IKafkaProducer, KafkaProducer>()
+        .AddHostedService<AdminClient>()
         .AddHostedService<PastDueOrdersConsumer>()
         .AddHostedService<PastDueOrdersConsumerRetry>()
         .Configure<KafkaSettings>(config.GetSection("KafkaSettings"));
