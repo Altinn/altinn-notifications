@@ -140,7 +140,6 @@ function TC04_GetNotificationOrderWithStatus(data, orderId) {
   var response, success;
 
   response = notificationsApi.getOrderWithStatus(orderId, data.token);
-  console.log(response);
   success = check(response, {
     "GET notification order with status. Status is 200 OK": (r) =>
       r.status === 200,
