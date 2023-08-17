@@ -66,9 +66,8 @@ function TC01_PostEmailNotificationOrderRequest(data) {
   var selfLink = response.headers["Location"];
 
   success = check(response, {
-    "POST email notification order request. Status is 202 Accepted": (
-      r
-    ) => r.status === 202,
+    "POST email notification order request. Status is 202 Accepted": (r) =>
+      r.status === 202,
     "POST email notification order request. Location header providedStatus is 202 Accepted":
       (r) => selfLink,
     "POST email notification order request. Response body is not an empty string":
@@ -85,9 +84,8 @@ function TC01_PostEmailNotificationOrderRequest(data) {
 }
 
 // 02 - GET notification order by id
-function TC02_GetNotificationOrderById(data, selfLink) {
+function TC02_GetNotificationOrderById(data, selfLink, orderId) {
   var response, success;
-  var expectedId = selfLink.split("/").slice(-1)[0];
   response = notificationsApi.getOrderByUrl(selfLink, data.token);
 
   success = check(response, {
@@ -102,7 +100,7 @@ function TC02_GetNotificationOrderById(data, selfLink) {
 
   success = check(JSON.parse(response.body), {
     "GET notification order by id. Id property is a match": (order) =>
-      order.id === expectedId,
+      order.id === orderId,
     "GET notification order by id. Creator property is a match": (order) =>
       order.creator === "ttd",
   });
@@ -137,17 +135,49 @@ function TC03_GetNotificationOrderBySendersReference(data) {
   });
 }
 
+// 04 - GET notification order with status
+function TC04_GetNotificationOrderWithStatus(data, orderId) {
+  var response, success;
+
+  response = notificationsApi.getOrderWithStatus(orderId, data.token);
+  success = check(response, {
+    "GET notification order with status. Status is 200 OK": (r) =>
+      r.status === 200,
+  });
+
+  addErrorCount(success);
+  if (!success) {
+    // only continue to parse and check content if success response code
+    stopIterationOnFail(success);
+  }
+
+  success = check(JSON.parse(response.body), {
+    "GET notification order with status. Id property is a match": (order) =>
+      order.id === orderId,
+    "GET notification order with status. NotificationChannel is email": (
+      order
+    ) => order.notificationChannel === "Email",
+    "GET notification order with status. ProcessingStatus is defined": (
+      order
+    ) => order.processingStatus,
+  });
+  addErrorCount(success);
+}
+
 /*
  * 01 - POST email notification order request
  * 02 - GET notification order by id
  * 03 - GET notification order by senders reference
+ * 04 - GET notification order with status
  */
 export default function (data) {
   try {
     if (data.runFullTestSet) {
       var selfLink = TC01_PostEmailNotificationOrderRequest(data);
-      TC02_GetNotificationOrderById(data, selfLink);
+      let id = selfLink.split("/").pop();
+      TC02_GetNotificationOrderById(data, selfLink, id);
       TC03_GetNotificationOrderBySendersReference(data);
+      TC04_GetNotificationOrderWithStatus(data, id);
     } else {
       // Limited test set for use case tests
       var selfLink = TC01_PostEmailNotificationOrderRequest(data);

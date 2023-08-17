@@ -15,7 +15,7 @@ export function postEmailNotificationOrder(serializedOrder, token) {
 }
 
 export function getOrderById(id, token) {
-  var endpoint = config.notifications.orders + id;
+  var endpoint = config.notifications.orders_fromId(id);
   return getOrderByUrl(endpoint, queryParams, token);
 }
 
@@ -28,7 +28,14 @@ export function getOrderByUrl(url, token) {
 
 export function getOrderBySendersReference(sendersReference, token) {
   var endpoint =
-    config.notifications.orders + "?sendersReference=" + sendersReference;
+    config.notifications.orders_fromSendersRef(sendersReference);
+  var params = apiHelpers.buildHeaderWithBearer(token);
+  var response = http.get(endpoint, params);
+  return response;
+}
+
+export function getOrderWithStatus(orderId, token) {
+  var endpoint = config.notifications.orders_status(orderId);
   var params = apiHelpers.buildHeaderWithBearer(token);
   var response = http.get(endpoint, params);
   return response;
