@@ -29,7 +29,7 @@ public class PastDueOrdersConsumer : KafkaConsumerBase<PastDueOrdersConsumer>
     {
         _orderProcessingService = orderProcessingService;
         _producer = producer;
-        _retryTopic = settings.Value.PastDueOrdersTopicNameRetry;
+        _retryTopic = settings.Value.PastDueOrdersRetryTopicName;
     }
 
     /// <inheritdoc/>

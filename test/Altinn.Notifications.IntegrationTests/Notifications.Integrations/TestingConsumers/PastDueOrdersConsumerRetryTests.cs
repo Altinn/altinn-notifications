@@ -9,9 +9,9 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Core.Consumers;
 
-public class PastDueOrdersConsumerRetryTests : IDisposable
+public class PastDueOrdersRetryConsumerTests : IDisposable
 {
-    public PastDueOrdersConsumerRetryTests()
+    public PastDueOrdersRetryConsumerTests()
     {
         TestdataUtil.SetEnvAsDev();
     }
@@ -30,13 +30,13 @@ public class PastDueOrdersConsumerRetryTests : IDisposable
         // Arrange
         Dictionary<string, string> vars = new()
         {
-            {"KafkaSettings__PastDueOrdersTopicNameRetry", _retryTopicName },
+            {"KafkaSettings__PastDueOrdersRetryTopicName", _retryTopicName },
             {"KafkaSettings__TopicList", $"[\"{_retryTopicName}\"]" }
         };
 
-        using PastDueOrdersConsumerRetry consumerRetryService = (PastDueOrdersConsumerRetry)ServiceUtil
+        using PastDueOrdersRetryConsumer consumerRetryService = (PastDueOrdersRetryConsumer)ServiceUtil
                                                     .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
-                                                    .First(s => s.GetType() == typeof(PastDueOrdersConsumerRetry))!;
+                                                    .First(s => s.GetType() == typeof(PastDueOrdersRetryConsumer))!;
 
         NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithOrder(sendersReference: _sendersRef);
         await KafkaUtil.PublishMessageOnTopic(_retryTopicName, persistedOrder.Serialize());
@@ -66,13 +66,13 @@ public class PastDueOrdersConsumerRetryTests : IDisposable
         // Arrange
         Dictionary<string, string> vars = new()
         {
-            {"KafkaSettings__PastDueOrdersTopicNameRetry", _retryTopicName },
+            {"KafkaSettings__PastDueOrdersRetryTopicName", _retryTopicName },
             {"KafkaSettings__TopicList", $"[\"{_retryTopicName}\"]" }
         };
 
-        using PastDueOrdersConsumerRetry consumerRetryService = (PastDueOrdersConsumerRetry)ServiceUtil
+        using PastDueOrdersRetryConsumer consumerRetryService = (PastDueOrdersRetryConsumer)ServiceUtil
                                                     .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
-                                                    .First(s => s.GetType() == typeof(PastDueOrdersConsumerRetry))!;
+                                                    .First(s => s.GetType() == typeof(PastDueOrdersRetryConsumer))!;
 
         NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithOrderAndEmailNotificationReturnOrder(sendersReference: _sendersRef);
         
