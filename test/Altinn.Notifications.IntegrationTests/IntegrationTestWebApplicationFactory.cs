@@ -37,7 +37,7 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
         {
             var descriptor = services.Single(s => s.ImplementationType == typeof(PastDueOrdersConsumer));
             services.Remove(descriptor);
-            descriptor = services.Single(s => s.ImplementationType == typeof(PastDueOrdersConsumerRetry));
+            descriptor = services.Single(s => s.ImplementationType == typeof(PastDueOrdersRetryConsumer));
             services.Remove(descriptor);
 
         });

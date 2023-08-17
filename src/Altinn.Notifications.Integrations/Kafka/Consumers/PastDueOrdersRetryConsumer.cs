@@ -1,4 +1,4 @@
-using Altinn.Notifications.Core.Models.Orders;
+﻿using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Integrations.Configuration;
 
@@ -10,18 +10,18 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers;
 /// <summary>
 /// Kafka consumer class for past due orders, first retry
 /// </summary>
-public class PastDueOrdersConsumerRetry : KafkaConsumerBase<PastDueOrdersConsumerRetry>
+public class PastDueOrdersRetryConsumer : KafkaConsumerBase<PastDueOrdersRetryConsumer>
 {
     private readonly IOrderProcessingService _orderProcessingService;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="PastDueOrdersConsumerRetry"/> class.
+    /// Initializes a new instance of the <see cref="PastDueOrdersRetryConsumer"/> class.
     /// </summary>
-    public PastDueOrdersConsumerRetry(
+    public PastDueOrdersRetryConsumer(
         IOrderProcessingService orderProcessingService,
         IOptions<KafkaSettings> settings,
-        ILogger<PastDueOrdersConsumerRetry> logger)
-        : base(settings, logger, settings.Value.PastDueOrdersTopicNameRetry)
+        ILogger<PastDueOrdersRetryConsumer> logger)
+        : base(settings, logger, settings.Value.PastDueOrdersRetryTopicName)
     {
         _orderProcessingService = orderProcessingService;
     }
