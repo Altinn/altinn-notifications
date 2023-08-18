@@ -22,8 +22,6 @@ public class KafkaHealthCheckTests : IAsyncLifetime
 
     public KafkaHealthCheckTests()
     {
-        TestdataUtil.SetEnvAsDev();
-
         IConfiguration configuration = new ConfigurationBuilder()
                        .AddJsonFile("appsettings.json")
                        .Build();

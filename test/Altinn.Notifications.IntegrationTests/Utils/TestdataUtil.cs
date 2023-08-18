@@ -9,11 +9,6 @@ namespace Altinn.Notifications.IntegrationTests.Utils;
 
 public static class TestdataUtil
 {
-    public static void SetEnvAsDev()
-    {
-        Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
-    }
-
     public static (NotificationOrder Order, EmailNotification Notification) GetOrderAndEmailNotification()
     {
         NotificationOrder order = NotificationOrder_EmailTemplate_OneRecipient();

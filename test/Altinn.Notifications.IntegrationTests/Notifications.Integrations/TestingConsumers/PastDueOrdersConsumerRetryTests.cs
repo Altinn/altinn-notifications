@@ -11,11 +11,6 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Core.Consumers;
 
 public class PastDueOrdersRetryConsumerTests : IDisposable
 {
-    public PastDueOrdersRetryConsumerTests()
-    {
-        TestdataUtil.SetEnvAsDev();
-    }
-
     private readonly string _retryTopicName = Guid.NewGuid().ToString();
     private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
 
@@ -75,7 +70,7 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
                                                     .First(s => s.GetType() == typeof(PastDueOrdersRetryConsumer))!;
 
         NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithOrderAndEmailNotificationReturnOrder(sendersReference: _sendersRef);
-        
+
         await KafkaUtil.PublishMessageOnTopic(_retryTopicName, persistedOrder.Serialize());
 
         Guid orderId = persistedOrder.Id;

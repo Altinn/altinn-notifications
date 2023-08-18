@@ -10,11 +10,6 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Core.Consumers;
 
 public class PastDueOrdersConsumerTests : IDisposable
 {
-    public PastDueOrdersConsumerTests()
-    {
-        TestdataUtil.SetEnvAsDev();
-    }
-
     private readonly string _pastDueOrdersTopicName = Guid.NewGuid().ToString();
     private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
 
