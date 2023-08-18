@@ -21,6 +21,7 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
         TestdataUtil.SetEnvAsDev();
 
         IConfiguration configuration = new ConfigurationBuilder()
+                .AddJsonFile("appsettings.json")
                 .AddJsonFile("appsettings.IntegrationTest.json")
         .Build();
 

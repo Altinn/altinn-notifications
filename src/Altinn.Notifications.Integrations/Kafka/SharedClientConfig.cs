@@ -30,8 +30,6 @@ public class SharedClientConfig
     /// </summary>
     public SharedClientConfig(KafkaSettings settings)
     {
-        bool isDevelopment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development";
-
         var adminConfig = new AdminClientConfig()
         {
             BootstrapServers = settings.BrokerAddress,
@@ -48,7 +46,7 @@ public class SharedClientConfig
             ReplicationFactor = 1
         };
 
-        if (!isDevelopment)
+        if (!string.IsNullOrEmpty(settings.SaslUsername) && !string.IsNullOrEmpty(settings.SaslPassword))
         {
             adminConfig.SslEndpointIdentificationAlgorithm = SslEndpointIdentificationAlgorithm.Https;
             adminConfig.SecurityProtocol = SecurityProtocol.SaslSsl;
