@@ -6,40 +6,30 @@ using Altinn.Notifications.Integrations.Kafka;
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Integrations;
-public class SharedClientConfigTests : IDisposable
+public class SharedClientConfigTests
 {
-    public void Dispose()
-    {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
-
-    protected virtual void Dispose(bool disposing)
-    {
-        Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
-    }
-
     [Theory]
-    [InlineData("Production", true)]
-    [InlineData("Staging", true)]
-    [InlineData("Development", false)]
-    public void SharedClientConfig_ParamsSetByEnvironment(string env, bool cloudParamsIncluded)
+    [InlineData(true)]
+    [InlineData(false)]
+    public void SharedClientConfig_ParamsSetBySASLProperties(bool includeUsernameAndPassword)
     {
         // Arrange
-        Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", env);
-
         KafkaSettings settings = new()
         {
-            BrokerAddress = "localhost:9092",
-            SaslPassword = "password",
-            SaslUsername = "username"
+            BrokerAddress = "localhost:9092"
         };
+
+        if (includeUsernameAndPassword)
+        {
+            settings.SaslUsername = "username";
+            settings.SaslPassword = "password";
+        }
 
         // Act
         var config = new SharedClientConfig(settings);
 
         // Assert
-        if (cloudParamsIncluded)
+        if (includeUsernameAndPassword)
         {
             Assert.Equal(6, config.TopicSpecification.NumPartitions);
             Assert.NotNull(config.AdminClientConfig.SaslMechanism);

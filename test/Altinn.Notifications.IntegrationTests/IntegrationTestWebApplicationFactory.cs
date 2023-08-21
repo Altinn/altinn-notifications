@@ -18,9 +18,8 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
     /// <param name="builder">IWebHostBuilder</param>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        TestdataUtil.SetEnvAsDev();
-
         IConfiguration configuration = new ConfigurationBuilder()
+                .AddJsonFile("appsettings.json")
                 .AddJsonFile("appsettings.IntegrationTest.json")
         .Build();
 
