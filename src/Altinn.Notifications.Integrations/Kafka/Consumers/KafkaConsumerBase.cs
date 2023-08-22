@@ -86,7 +86,6 @@ public abstract class KafkaConsumerBase<T> : BackgroundService
                     _consumer.Commit(consumeResult);
                     _consumer.StoreOffset(consumeResult);
                 }
-
             }
             catch (OperationCanceledException)
             {
