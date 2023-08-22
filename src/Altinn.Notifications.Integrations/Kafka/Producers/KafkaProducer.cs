@@ -73,11 +73,12 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     }
 
     /// <summary>
-    /// Flushs the producer
+    /// Disposes the producer
     /// </summary>
     protected virtual void Dispose(bool disposing)
     {
         _producer.Flush();
+        _producer?.Dispose();
     }
 
     private void EnsureTopicsExist()

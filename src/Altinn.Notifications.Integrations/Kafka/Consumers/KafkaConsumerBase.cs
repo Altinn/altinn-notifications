@@ -47,7 +47,7 @@ public abstract class KafkaConsumerBase<T> : BackgroundService
 
     /// <inheritdoc/>
     protected override abstract Task ExecuteAsync(CancellationToken stoppingToken);
- 
+
     /// <inheritdoc/>
     public override Task StartAsync(CancellationToken cancellationToken)
     {
@@ -66,43 +66,37 @@ public abstract class KafkaConsumerBase<T> : BackgroundService
     }
 
     /// <summary>
-    /// Consuming a notification order from kafka topic and calling processing or retry function
+    /// Consuming a message from kafka topic and calling processing and potentially retry function
     /// </summary>
-    protected async Task ConsumeOrder(
-        Func<NotificationOrder, Task> processOrderFunc,
-        Func<string, Task> retryOrderFunc,
+    protected async Task ConsumeMessage(
+        Func<string, Task> processMessageFunc,
+        Func<string, Task> retryMessageFunc,
         CancellationToken stoppingToken)
     {
         string message = string.Empty;
-        try
+
+        while (!stoppingToken.IsCancellationRequested)
         {
-            while (!stoppingToken.IsCancellationRequested)
+            try
             {
                 var consumeResult = _consumer.Consume(stoppingToken);
                 if (consumeResult != null)
                 {
-                    message = consumeResult.Message.Value;
-                    bool succeeded = NotificationOrder.TryParse(message, out NotificationOrder? order);
-
-                    if (!succeeded)
-                    {
-                        continue;
-                    }
-
-                    await processOrderFunc(order!);
+                    await processMessageFunc(consumeResult.Message.Value);
                     _consumer.Commit(consumeResult);
                     _consumer.StoreOffset(consumeResult);
                 }
+
             }
-        }
-        catch (OperationCanceledException)
-        {
-            // Expected when cancellationToken is canceled
-        }
-        catch (Exception ex)
-        {
-            await retryOrderFunc(message!);
-            _logger.LogError(ex, "// {Class} // ConsumeOrder // An error occurred while consuming messages", GetType().Name);
+            catch (OperationCanceledException)
+            {
+                // Expected when cancellationToken is canceled
+            }
+            catch (Exception ex)
+            {
+                await retryMessageFunc(message!);
+                _logger.LogError(ex, "// {Class} // ConsumeOrder // An error occurred while consuming messages", GetType().Name);
+            }
         }
     }
 }
