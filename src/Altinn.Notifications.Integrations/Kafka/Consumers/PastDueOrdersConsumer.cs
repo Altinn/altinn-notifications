@@ -35,11 +35,18 @@ public class PastDueOrdersConsumer : KafkaConsumerBase<PastDueOrdersConsumer>
     /// <inheritdoc/>
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        return Task.Run(() => ConsumeOrder(ProcessOrder, RetryOrder, stoppingToken), stoppingToken);
+        return Task.Run(() => ConsumeMessage(ProcessOrder, RetryOrder, stoppingToken), stoppingToken);
     }
 
-    private async Task ProcessOrder(NotificationOrder order)
+    private async Task ProcessOrder(string message)
     {
+        bool succeeded = NotificationOrder.TryParse(message, out NotificationOrder order);
+
+        if (!succeeded)
+        {
+            return;
+        }
+
         await _orderProcessingService.ProcessOrder(order);
     }
 

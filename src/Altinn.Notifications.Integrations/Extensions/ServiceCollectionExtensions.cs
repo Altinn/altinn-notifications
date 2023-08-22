@@ -6,7 +6,6 @@ using Altinn.Notifications.Integrations.Kafka.Producers;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 
 namespace Altinn.Notifications.Integrations.Extensions;
 
@@ -22,7 +21,7 @@ public static class ServiceCollectionExtensions
     /// <param name="config">the configuration collection</param>
     public static void AddKafkaServices(this IServiceCollection services, IConfiguration config)
     {
-        KafkaSettings? kafkaSettings = config.GetSection("KafkaSettings").Get<KafkaSettings>();
+        KafkaSettings? kafkaSettings = config.GetSection(nameof(KafkaSettings)).Get<KafkaSettings>();
 
         if (kafkaSettings == null)
         {
@@ -33,7 +32,7 @@ public static class ServiceCollectionExtensions
         .AddSingleton<IKafkaProducer, KafkaProducer>()
         .AddHostedService<PastDueOrdersConsumer>()
         .AddHostedService<PastDueOrdersRetryConsumer>()
-        .Configure<KafkaSettings>(config.GetSection("KafkaSettings"));
+        .Configure<KafkaSettings>(config.GetSection(nameof(KafkaSettings)));
     }
 
     /// <summary>
@@ -43,7 +42,7 @@ public static class ServiceCollectionExtensions
     /// <param name="config">the configuration collection</param>
     public static void AddKafkaHealthChecks(this IServiceCollection services, IConfiguration config)
     {
-        KafkaSettings kafkaSettings = config!.GetSection("KafkaSettings").Get<KafkaSettings>()!;
+        KafkaSettings kafkaSettings = config!.GetSection(nameof(KafkaSettings)).Get<KafkaSettings>()!;
 
         if (kafkaSettings == null)
         {

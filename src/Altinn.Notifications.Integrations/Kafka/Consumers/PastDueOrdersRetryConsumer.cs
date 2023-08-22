@@ -2,6 +2,8 @@
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Integrations.Configuration;
 
+using Confluent.Kafka;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -29,11 +31,18 @@ public class PastDueOrdersRetryConsumer : KafkaConsumerBase<PastDueOrdersRetryCo
     /// <inheritdoc/>
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        return Task.Run(() => ConsumeOrder(ProcessOrder, RetryOrder, stoppingToken), stoppingToken);
+        return Task.Run(() => ConsumeMessage(ProcessOrder, RetryOrder, stoppingToken), stoppingToken);
     }
 
-    private async Task ProcessOrder(NotificationOrder order)
+    private async Task ProcessOrder(string message)
     {
+        bool succeeded = NotificationOrder.TryParse(message, out NotificationOrder order);
+
+        if (!succeeded)
+        {
+            return;
+        }
+
         await _orderProcessingService.ProcessOrderRetry(order!);
     }
 
