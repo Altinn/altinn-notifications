@@ -78,7 +78,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     protected virtual void Dispose(bool disposing)
     {
         _producer.Flush();
-        _producer?.Dispose();
+        _producer.Dispose();
     }
 
     private void EnsureTopicsExist()
