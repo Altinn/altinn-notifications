@@ -56,6 +56,8 @@ public class SharedClientConfig
 
         if (!string.IsNullOrEmpty(settings.Admin.SaslUsername) && !string.IsNullOrEmpty(settings.Admin.SaslPassword))
         {
+            Console.WriteLine("// SASL registered and being set");
+
             adminConfig.SslEndpointIdentificationAlgorithm = SslEndpointIdentificationAlgorithm.Https;
             adminConfig.SecurityProtocol = SecurityProtocol.SaslSsl;
             adminConfig.SaslMechanism = SaslMechanism.Plain;
