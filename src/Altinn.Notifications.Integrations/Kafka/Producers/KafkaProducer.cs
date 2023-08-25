@@ -27,7 +27,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
         _settings = settings.Value;
         _logger = logger;
 
-        var config = new ProducerConfig(ClientConfig)
+        var config = new ProducerConfig(ProducerSettings)
         {
             Acks = Acks.All,
             EnableDeliveryReports = true,
@@ -83,11 +83,11 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
 
     private void EnsureTopicsExist()
     {
-        using var adminClient = new AdminClientBuilder(AdminClientConfig)
+        using var adminClient = new AdminClientBuilder(AdminClientSettings)
             .Build();
         var existingTopics = adminClient.GetMetadata(TimeSpan.FromSeconds(10)).Topics;
 
-        foreach (string topic in _settings.TopicList)
+        foreach (string topic in _settings.Admin.TopicList)
         {
             if (!existingTopics.Exists(t => t.Topic.Equals(topic, StringComparison.OrdinalIgnoreCase)))
             {

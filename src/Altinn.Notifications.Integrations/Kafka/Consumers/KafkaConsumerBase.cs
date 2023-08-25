@@ -31,9 +31,9 @@ public abstract class KafkaConsumerBase<T> : BackgroundService
 
         var config = new SharedClientConfig(settings.Value);
 
-        var consumerConfig = new ConsumerConfig(config.ClientConfig)
+        var consumerConfig = new ConsumerConfig(config.ConsumerSettings)
         {
-            GroupId = settings.Value.ConsumerGroupId,
+            GroupId = settings.Value.Consumer.GroupId,
             EnableAutoCommit = false,
             EnableAutoOffsetStore = false,
             AutoOffsetReset = AutoOffsetReset.Earliest,

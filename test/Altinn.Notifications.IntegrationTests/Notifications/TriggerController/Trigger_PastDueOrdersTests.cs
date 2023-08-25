@@ -78,7 +78,7 @@ public class Trigger_PastDueOrdersTests : IClassFixture<IntegrationTestWebApplic
                 // set up temp topic
                 services.Configure<KafkaSettings>(opts =>
                 {
-                    opts.TopicList = new List<string> { _topicName };
+                    opts.Admin.TopicList = new List<string> { _topicName };
                 });
                 services.Configure<Altinn.Notifications.Core.Configuration.KafkaSettings>(opts =>
                 {

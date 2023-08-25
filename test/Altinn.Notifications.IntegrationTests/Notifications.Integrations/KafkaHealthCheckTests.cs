@@ -27,7 +27,7 @@ public class KafkaHealthCheckTests : IAsyncLifetime
                        .Build();
 
         KafkaSettings? settings = configuration.GetSection("KafkaSettings").Get<KafkaSettings>();
-        settings!.TopicList = new List<string>() { _topicName };
+        settings!.Admin.TopicList = new List<string>() { _topicName };
 
         _settings = settings;
         _ = new KafkaProducer(Options.Create(settings), Mock.Of<ILogger<IKafkaProducer>>());
