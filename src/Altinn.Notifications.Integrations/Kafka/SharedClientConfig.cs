@@ -1,6 +1,4 @@
-﻿using Altinn.Notifications.Integrations.Configuration;
-
-using Confluent.Kafka;
+﻿using Confluent.Kafka;
 using Confluent.Kafka.Admin;
 
 namespace Altinn.Notifications.Integrations.Kafka;
@@ -13,12 +11,17 @@ public class SharedClientConfig
     /// <summary>
     /// Admin client configuration to use for kafka admin
     /// </summary>
-    public AdminClientConfig AdminClientConfig { get; }
+    public AdminClientConfig AdminClientSettings { get; }
 
     /// <summary>
-    /// Generic client configuration to use for kafka producer and consumer 
+    /// Generic client configuration to use for kafka producer
     /// </summary>
-    public ClientConfig ClientConfig { get; }
+    public ClientConfig ProducerSettings { get; }
+
+    /// <summary>
+    /// Generic client configuration to use for kafka consumer 
+    /// </summary>
+    public ClientConfig ConsumerSettings { get; }
 
     /// <summary>
     /// TopicSpecification
@@ -28,16 +31,21 @@ public class SharedClientConfig
     /// <summary>
     /// Initializes a new instance of the <see cref="SharedClientConfig"/> class.
     /// </summary>
-    public SharedClientConfig(KafkaSettings settings)
+    public SharedClientConfig(Configuration.KafkaSettings settings)
     {
         var adminConfig = new AdminClientConfig()
         {
             BootstrapServers = settings.BrokerAddress,
         };
 
-        var config = new ClientConfig
+        var producerConfig = new ClientConfig
         {
             BootstrapServers = settings.BrokerAddress,
+        };
+
+        var consumerConfig = new ClientConfig
+        {
+            BootstrapServers = settings.BrokerAddress
         };
 
         var topicSpec = new TopicSpecification()
@@ -46,26 +54,33 @@ public class SharedClientConfig
             ReplicationFactor = 1
         };
 
-        if (!string.IsNullOrEmpty(settings.SaslUsername) && !string.IsNullOrEmpty(settings.SaslPassword))
+        if (!string.IsNullOrEmpty(settings.Admin.SaslUsername) && !string.IsNullOrEmpty(settings.Admin.SaslPassword))
         {
             adminConfig.SslEndpointIdentificationAlgorithm = SslEndpointIdentificationAlgorithm.Https;
             adminConfig.SecurityProtocol = SecurityProtocol.SaslSsl;
             adminConfig.SaslMechanism = SaslMechanism.Plain;
-            adminConfig.SaslUsername = settings.SaslUsername;
-            adminConfig.SaslPassword = settings.SaslPassword;
+            adminConfig.SaslUsername = settings.Admin.SaslUsername;
+            adminConfig.SaslPassword = settings.Admin.SaslPassword;
 
-            config.SslEndpointIdentificationAlgorithm = SslEndpointIdentificationAlgorithm.Https;
-            config.SecurityProtocol = SecurityProtocol.SaslSsl;
-            config.SaslMechanism = SaslMechanism.Plain;
-            config.SaslUsername = settings.SaslUsername;
-            config.SaslPassword = settings.SaslPassword;
+            producerConfig.SslEndpointIdentificationAlgorithm = SslEndpointIdentificationAlgorithm.Https;
+            producerConfig.SecurityProtocol = SecurityProtocol.SaslSsl;
+            producerConfig.SaslMechanism = SaslMechanism.Plain;
+            producerConfig.SaslUsername = settings.Producer.SaslUsername;
+            producerConfig.SaslPassword = settings.Producer.SaslPassword;
+
+            consumerConfig.SslEndpointIdentificationAlgorithm = SslEndpointIdentificationAlgorithm.Https;
+            consumerConfig.SecurityProtocol = SecurityProtocol.SaslSsl;
+            consumerConfig.SaslMechanism = SaslMechanism.Plain;
+            consumerConfig.SaslUsername = settings.Consumer.SaslUsername;
+            consumerConfig.SaslPassword = settings.Consumer.SaslPassword;
 
             topicSpec.NumPartitions = 6;
             topicSpec.ReplicationFactor = 3;
         }
 
-        AdminClientConfig = adminConfig;
-        ClientConfig = config;
+        AdminClientSettings = adminConfig;
+        ProducerSettings = producerConfig;
+        ConsumerSettings = consumerConfig;
         TopicSpecification = topicSpec;
     }
 }

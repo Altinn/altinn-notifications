@@ -21,8 +21,8 @@ public class SharedClientConfigTests
 
         if (includeUsernameAndPassword)
         {
-            settings.SaslUsername = "username";
-            settings.SaslPassword = "password";
+            settings.Admin.SaslUsername = "username";
+            settings.Admin.SaslPassword = "password";
         }
 
         // Act
@@ -32,13 +32,13 @@ public class SharedClientConfigTests
         if (includeUsernameAndPassword)
         {
             Assert.Equal(6, config.TopicSpecification.NumPartitions);
-            Assert.NotNull(config.AdminClientConfig.SaslMechanism);
-            Assert.Equal("username", config.ClientConfig.SaslUsername);
+            Assert.NotNull(config.AdminClientSettings.SaslMechanism);
+            Assert.Equal("username", config.AdminClientSettings.SaslUsername);
         }
         else
         {
-            Assert.Null(config.AdminClientConfig.SaslMechanism);
-            Assert.True(string.IsNullOrEmpty(config.ClientConfig.SaslUsername));
+            Assert.Null(config.AdminClientSettings.SaslMechanism);
+            Assert.True(string.IsNullOrEmpty(config.AdminClientSettings.SaslUsername));
             Assert.Equal(1, config.TopicSpecification.NumPartitions);
         }
     }

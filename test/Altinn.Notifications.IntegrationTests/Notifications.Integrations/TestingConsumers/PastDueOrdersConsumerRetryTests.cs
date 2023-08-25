@@ -26,7 +26,7 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
         Dictionary<string, string> vars = new()
         {
             {"KafkaSettings__PastDueOrdersRetryTopicName", _retryTopicName },
-            {"KafkaSettings__TopicList", $"[\"{_retryTopicName}\"]" }
+            {"KafkaSettings__Admin__TopicList", $"[\"{_retryTopicName}\"]" }
         };
 
         using PastDueOrdersRetryConsumer consumerRetryService = (PastDueOrdersRetryConsumer)ServiceUtil
@@ -62,7 +62,7 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
         Dictionary<string, string> vars = new()
         {
             {"KafkaSettings__PastDueOrdersRetryTopicName", _retryTopicName },
-            {"KafkaSettings__TopicList", $"[\"{_retryTopicName}\"]" }
+            {"KafkaSettings__Admin__TopicList", $"[\"{_retryTopicName}\"]" }
         };
 
         using PastDueOrdersRetryConsumer consumerRetryService = (PastDueOrdersRetryConsumer)ServiceUtil
