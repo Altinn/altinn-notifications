@@ -5,7 +5,7 @@ using FluentValidation;
 namespace Altinn.Notifications.Validators;
 
 /// <summary>
-/// Claass contining validation logic for the <see cref="EmailNotificationOrderRequestExt"/> model
+/// Class containing validation logic for the <see cref="EmailNotificationOrderRequestExt"/> model
 /// </summary>
 public class EmailNotificationOrderRequestValidator : AbstractValidator<EmailNotificationOrderRequestExt>
 {
@@ -22,7 +22,7 @@ public class EmailNotificationOrderRequestValidator : AbstractValidator<EmailNot
 
         RuleFor(order => order.RequestedSendTime)
           .Must(sendTime => sendTime >= DateTime.UtcNow.AddMinutes(-5))
-          .WithMessage("Send time must be in the future. Leave blank to send immediatly.");
+          .WithMessage("Send time must be in the future. Leave blank to send immediately.");
 
         RuleFor(order => order.Body).NotEmpty();
         RuleFor(order => order.Subject).NotEmpty();

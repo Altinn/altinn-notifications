@@ -68,7 +68,7 @@ public class EmailNotificationOrderRequestValidatorTests
         var actual = _validator.Validate(order);
 
         Assert.False(actual.IsValid);
-        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("Send time must be in the future. Leave blank to send immediatly."));
+        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("Send time must be in the future. Leave blank to send immediately."));
     }
 
     [Fact]
