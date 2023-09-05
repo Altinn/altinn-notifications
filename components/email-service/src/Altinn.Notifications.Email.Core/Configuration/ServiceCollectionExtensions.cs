@@ -1,4 +1,5 @@
 ﻿using Altinn.Notifications.Email.Core.Sending;
+
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -25,6 +26,7 @@ public static class ServiceCollectionExtensions
         }
 
         services.AddSingleton<ISendingService, SendingService>()
+                .AddSingleton<IStatusService, StatusService>()
                 .AddSingleton(topicSettings);
 
         return services;
