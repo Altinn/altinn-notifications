@@ -1,6 +1,4 @@
-﻿using Altinn.Notifications.Email.Integrations.Consumers;
-
-namespace Altinn.Notifications.Email.Integrations.Configuration;
+﻿namespace Altinn.Notifications.Email.Integrations.Configuration;
 
 /// <summary>
 /// Configuration object used to hold integration settings for a Kafka.
@@ -13,23 +11,95 @@ public class KafkaSettings
     public string BrokerAddress { get; set; } = string.Empty;
 
     /// <summary>
-    /// Settings specific for the <see cref="EmailSendingConsumer"/> consumer.
+    /// The consumer settings
     /// </summary>
-    public EmailSendingConsumerSettings EmailSendingConsumerSettings { get; set; } = new();
+    public ConsumerSettings Consumer { get; set; } = new();
+
+    /// <summary>
+    /// The producer settings
+    /// </summary>
+    public ProducerSettings Producer { get; set; } = new();
+
+    /// <summary>
+    /// The producer settings
+    /// </summary>
+    public AdminSettings Admin { get; set; } = new();  
+
+    /// <summary>
+    /// The name of the email sending accepted topic
+    /// </summary>
+    public string EmailSendingAcceptedTopicName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The name of the email sending accepted retry topic
+    /// </summary>
+    public string EmailSendingAcceptedRetryTopicName { get; set; } = string.Empty;    
+
+    /// <summary>
+    /// The name of the send email queue topic
+    /// </summary>
+    public string SendEmailQueueTopicName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The name of the send email queue retry  topic
+    /// </summary>    
+    public string SendEmailQueueRetryTopicName { get; set; } = string.Empty;
 }
 
 /// <summary>
-/// Configuration object for the <see cref="EmailSendingConsumer"/>.
+/// Kafka Consumer specific settings
 /// </summary>
-public class EmailSendingConsumerSettings
+public class ConsumerSettings
 {
     /// <summary>
     /// The group id for all consumers of the Altinn Notifications service
     /// </summary>
-    public string ConsumerGroupId { get; set; } = string.Empty;
-    
+    public string GroupId { get; set; } = string.Empty;
+
     /// <summary>
-    /// The name of the past due orders topic 
+    /// The SASL username
     /// </summary>
-    public string TopicName { get; set; } = string.Empty;
+    public string SaslUsername { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The SASL password
+    /// </summary>
+    public string SaslPassword { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Kafka Producer specific settings
+/// </summary>
+public class ProducerSettings
+{
+    /// <summary>
+    /// The SASL username
+    /// </summary>
+    public string SaslUsername { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The SASL password
+    /// </summary>
+    public string SaslPassword { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Kafka admin client specific settings
+/// </summary>
+public class AdminSettings
+{
+    /// <summary>
+    /// The SASL username
+    /// </summary>
+    public string SaslUsername { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The SASL password
+    /// </summary>
+    public string SaslPassword { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The list of topics the admin client is responsible for ensuring that exist
+    /// </summary>
+    public List<string> TopicList { get; set; } = new List<string>();
 }

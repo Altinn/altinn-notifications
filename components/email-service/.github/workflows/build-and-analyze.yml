@@ -53,7 +53,12 @@ jobs:
           --logger "trx;" \
           --configuration release \
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
-
+      - name: Complete sonar analysis
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
           dotnet-sonarscanner end /d:sonar.login="${{ secrets.SONAR_TOKEN }}"
       - name: Process .NET test result
         if: ${{ failure() }}

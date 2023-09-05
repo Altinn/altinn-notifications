@@ -1,14 +1,16 @@
 ﻿using System.Text.Json;
 
-using Altinn.Notifications.Email.Core;
+using Altinn.Notifications.Email.Core.Dependencies;
+using Altinn.Notifications.Email.Core.Sending;
 using Altinn.Notifications.Email.Integrations.Configuration;
 using Altinn.Notifications.Email.Integrations.Consumers;
+using Altinn.Notifications.Email.Integrations.Producers;
 using Altinn.Notifications.Email.IntegrationTests.Utils;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-using NSubstitute;
+using Moq;
 
 using Xunit;
 
@@ -16,89 +18,104 @@ namespace Altinn.Notifications.Email.IntegrationTests.Integrations;
 
 public sealed class EmailSendingConsumerTests : IAsyncLifetime
 {
-    private readonly string TestTopic = Guid.NewGuid().ToString();
+    private readonly string EmailSendingConsumerTopic = Guid.NewGuid().ToString();
+    private readonly string EmailSendingAcceptedProducerTopic = Guid.NewGuid().ToString();
 
-    IEmailService _emailServiceMock;
+    private readonly KafkaSettings _kafkaSettings;
+    private ServiceProvider? _serviceProvider;
 
     public EmailSendingConsumerTests()
     {
-        _emailServiceMock = Substitute.For<IEmailService>();
+        _kafkaSettings = new KafkaSettings
+        {
+            BrokerAddress = "localhost:9092",
+            Consumer = new()
+            {
+                GroupId = "email-sending-consumer"
+            },
+            SendEmailQueueTopicName = EmailSendingConsumerTopic,
+            EmailSendingAcceptedTopicName = EmailSendingAcceptedProducerTopic,
+            Admin = new()
+            {
+                TopicList = new List<string> { EmailSendingConsumerTopic, EmailSendingAcceptedProducerTopic }
+            }
+        };
     }
 
     public async Task InitializeAsync()
     {
-        await KafkaUtil.CreateTopicsAsync(TestTopic);
+        await Task.CompletedTask;
     }
 
     public async Task DisposeAsync()
     {
-        await KafkaUtil.DeleteTopicAsync(TestTopic);
+        await KafkaUtil.DeleteTopicAsync(EmailSendingConsumerTopic);
+        await KafkaUtil.DeleteTopicAsync(EmailSendingAcceptedProducerTopic);
     }
 
     [Fact]
     public async Task ConsumeEmailTest_Successfull_deserialization_of_message_Service_called_once()
     {
         // Arrange
-        Core.Models.Email email =
-            new(Guid.NewGuid(), "test", "body", "fromAddress", "toAddress", Core.Models.EmailContentType.Plain);
+        Mock<ISendingService> serviceMock = new();
+        serviceMock.Setup(es => es.SendAsync(It.IsAny<Core.Sending.Email>()));
 
-        await KafkaUtil.PostMessage(TestTopic, JsonSerializer.Serialize(email));
+        Core.Sending.Email email =
+            new(Guid.NewGuid(), "test", "body", "fromAddress", "toAddress", EmailContentType.Plain);
 
-        using EmailSendingConsumer sut = GetEmailSendingConsumer();
+        using SendEmailQueueConsumer sut = GetEmailSendingConsumer(serviceMock.Object);
+        using CommonProducer kafkaProducer = KafkaUtil.GetKafkaProducer(_serviceProvider!);
 
         // Act
+        await kafkaProducer.ProduceAsync(EmailSendingConsumerTopic, JsonSerializer.Serialize(email));
+
         await sut.StartAsync(CancellationToken.None);
         await Task.Delay(10000);
         await sut.StopAsync(CancellationToken.None);
 
         // Assert
-        await _emailServiceMock.Received().SendEmail(Arg.Any<Core.Models.Email>());
+        serviceMock.Verify(es => es.SendAsync(It.IsAny<Core.Sending.Email>()), Times.Once);
     }
 
     [Fact]
     public async Task ConsumeEmailTest_Deserialization_of_message_fails_Never_calls_service()
     {
         // Arrange
-        await KafkaUtil.PostMessage(TestTopic, "Not an email");
-
-        using EmailSendingConsumer sut = GetEmailSendingConsumer();
+        Mock<ISendingService> serviceMock = new();
+        serviceMock.Setup(es => es.SendAsync(It.IsAny<Core.Sending.Email>()));
+        using SendEmailQueueConsumer sut = GetEmailSendingConsumer(serviceMock.Object);
+        using CommonProducer kafkaProducer = KafkaUtil.GetKafkaProducer(_serviceProvider!);
 
         // Act
+        await kafkaProducer.ProduceAsync(EmailSendingConsumerTopic, "Not an email");
+
         await sut.StartAsync(CancellationToken.None);
         await Task.Delay(10000);
         await sut.StopAsync(CancellationToken.None);
 
         // Assert
-        await _emailServiceMock.DidNotReceive().SendEmail(Arg.Any<Core.Models.Email>());
+        serviceMock.Verify(es => es.SendAsync(It.IsAny<Core.Sending.Email>()), Times.Never);
     }
 
-    private EmailSendingConsumer GetEmailSendingConsumer()
+    private SendEmailQueueConsumer GetEmailSendingConsumer(ISendingService sendingService)
     {
-        var kafkaSettings = new KafkaSettings
-        {
-            BrokerAddress = "localhost:9092",
-            EmailSendingConsumerSettings = new()
-            {
-                ConsumerGroupId = "email-sending-consumer",
-                TopicName = TestTopic
-            }
-        };
 
         IServiceCollection services = new ServiceCollection()
             .AddLogging()
-            .AddSingleton(kafkaSettings)
-            .AddSingleton(_emailServiceMock)
-            .AddHostedService<EmailSendingConsumer>();
+            .AddSingleton(_kafkaSettings)
+            .AddSingleton<ICommonProducer, CommonProducer>()
+            .AddSingleton(sendingService)
+            .AddHostedService<SendEmailQueueConsumer>();
 
-        var serviceProvider = services.BuildServiceProvider();
+        _serviceProvider = services.BuildServiceProvider();
 
-        var sut = serviceProvider.GetService(typeof(IHostedService)) as EmailSendingConsumer;
+        var emailSendingConsumer = _serviceProvider.GetService(typeof(IHostedService)) as SendEmailQueueConsumer;
 
-        if (sut == null)
+        if (emailSendingConsumer == null)
         {
             Assert.Fail("Unable to create an instance of EmailSendingConsumer.");
         }
 
-        return sut;
+        return emailSendingConsumer;
     }
 }

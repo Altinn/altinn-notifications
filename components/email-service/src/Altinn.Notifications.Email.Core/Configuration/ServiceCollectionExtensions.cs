@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Altinn.Notifications.Email.Core.Sending;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Altinn.Notifications.Email.Core.Configuration;
@@ -16,7 +17,15 @@ public static class ServiceCollectionExtensions
     /// <returns>The given service collection.</returns>
     public static IServiceCollection AddCoreServices(this IServiceCollection services, IConfiguration config)
     {
-        services.AddSingleton<IEmailService, EmailService>();
+        TopicSettings topicSettings = config!.GetSection("KafkaSettings").Get<TopicSettings>()!;
+
+        if (topicSettings == null)
+        {
+            throw new ArgumentNullException(nameof(config), "Required Kafka topic settings is missing from application configuration");
+        }
+
+        services.AddSingleton<ISendingService, SendingService>()
+                .AddSingleton(topicSettings);
 
         return services;
     }

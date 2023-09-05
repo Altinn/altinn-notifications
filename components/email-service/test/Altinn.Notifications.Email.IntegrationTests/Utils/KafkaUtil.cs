@@ -1,5 +1,12 @@
-﻿using Confluent.Kafka;
+﻿using Altinn.Notifications.Email.Core.Dependencies;
+using Altinn.Notifications.Email.Integrations.Producers;
+
+using Confluent.Kafka;
 using Confluent.Kafka.Admin;
+
+using Microsoft.Extensions.DependencyInjection;
+
+using Xunit;
 
 namespace Altinn.Notifications.Email.IntegrationTests.Utils;
 
@@ -28,28 +35,15 @@ public static class KafkaUtil
         });
     }
 
-    public static async Task PostMessage(string topic, string message)
+    public static CommonProducer GetKafkaProducer(ServiceProvider serviceProvider)
     {
-        var config = new ProducerConfig
-        {
-            BootstrapServers = _brokerAddress,
-            Acks = Acks.All,
-            EnableDeliveryReports = true,
-            EnableIdempotence = true,
-            MessageSendMaxRetries = 3,
-            RetryBackoffMs = 1000
-        };
+        var kafkaProducer = serviceProvider.GetService(typeof(ICommonProducer)) as CommonProducer;
 
-        using var producer = new ProducerBuilder<Null, string>(config).Build();
-
-        DeliveryResult<Null, string> result = await producer.ProduceAsync(topic, new Message<Null, string>
+        if (kafkaProducer == null)
         {
-            Value = message
-        });
-
-        if (result.Status != PersistenceStatus.Persisted)
-        {
-            throw new Exception($"Non positive result: {result.Status}");
+            Assert.Fail("Unable to create an instance of KafkaProducer.");
         }
+
+        return kafkaProducer;
     }
 }

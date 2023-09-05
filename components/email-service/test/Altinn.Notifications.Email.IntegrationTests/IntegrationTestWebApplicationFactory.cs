@@ -24,7 +24,9 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
 
         builder.ConfigureTestServices(services =>
         {
-            var descriptor = services.Single(s => s.ImplementationType == typeof(EmailSendingConsumer));
+            var descriptor = services.Single(s => s.ImplementationType == typeof(SendEmailQueueConsumer));
+            services.Remove(descriptor);
+            descriptor = services.Single(s => s.ImplementationType == typeof(EmailSendingAcceptedConsumer));
             services.Remove(descriptor);
         });
     }

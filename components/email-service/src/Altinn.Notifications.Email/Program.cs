@@ -101,7 +101,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
             ConnectionString = applicationInsightsConnectionString
         });
 
-        // services.AddApplicationInsightsTelemetryProcessor<HealthTelemetryFilter>();
+        services.AddApplicationInsightsTelemetryProcessor<HealthTelemetryFilter>();
         services.AddSingleton<ITelemetryInitializer, CustomTelemetryInitializer>();
     }
 }

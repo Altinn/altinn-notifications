@@ -1,4 +1,4 @@
-﻿namespace Altinn.Notifications.Email.Core.Models;
+﻿namespace Altinn.Notifications.Email.Core.Sending;
 
 /// <summary>
 /// Enum describing different possible content types for an email.
