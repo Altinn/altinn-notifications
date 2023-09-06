@@ -18,7 +18,7 @@ public class EmailTests
         _email = new Email(id, "subject", "body", "from@domain.com", "to@domain.com", EmailContentType.Html);
         _serializedEmail = new JsonObject()
         {
-            { "id", id },
+            { "notificationId", id },
              { "subject", "subject" },
             {"body", "body" },
             {"fromAddress", "from@domain.com" },

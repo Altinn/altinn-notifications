@@ -43,9 +43,9 @@ public class Email
     /// <summary>
     /// Initializes a new instance of the <see cref="Email"/> class.
     /// </summary>
-    public Email(Guid id, string subject, string body, string fromAddress, string toAddress, EmailContentType contentType)
+    public Email(Guid notificationId, string subject, string body, string fromAddress, string toAddress, EmailContentType contentType)
     {
-        NotificationId = id;
+        NotificationId = notificationId;
         Subject = subject;
         Body = body;
         FromAddress = fromAddress;
