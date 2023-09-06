@@ -10,7 +10,7 @@ using Microsoft.Extensions.Options;
 namespace Altinn.Notifications.Integrations.Kafka.Consumers;
 
 /// <summary>
-/// Base class for Kafka Consumer of Notification Orders
+/// Base class for Kafka Consumer messages
 /// </summary>
 public abstract class KafkaConsumerBase<T> : BackgroundService
     where T : class

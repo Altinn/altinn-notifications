@@ -19,7 +19,7 @@ public class EmailNotificationRepository : IEmailNotificationRepository
     private readonly NpgsqlDataSource _dataSource;
     private const string _insertEmailNotificationSql = "call notifications.insertemailnotification($1, $2, $3, $4, $5, $6, $7)"; // (__orderid, _alternateid, _recipientid, _toaddress, _result, _resulttime, _expirytime)
     private const string _getEmailNotificationsSql = "select * from notifications.getemails_statusnew_updatestatus()";
-    private const string _setResultStatus = "update notifications.emailnotifications set result =$1::emailnotificationresulttype where alternateid=$2";
+    private const string _setResultStatus = "call notifications.updateemailstatus($1, $2)"; // (_alternateid, _result)
     private const string _getEmailRecipients = "select * from notifications.getemailrecipients($1)"; // (_alternateid)
 
     /// <summary>
@@ -78,8 +78,8 @@ public class EmailNotificationRepository : IEmailNotificationRepository
     public async Task SetResultStatus(Guid notificationId, EmailNotificationResultType status)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_setResultStatus);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
         await pgcom.ExecuteNonQueryAsync();
     }
 

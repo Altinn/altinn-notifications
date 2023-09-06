@@ -1,6 +1,4 @@
-﻿using System.Text.Json;
-
-using Altinn.Notifications.Core.Configuration;
+﻿using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations.Interfaces;
 using Altinn.Notifications.Core.Models;
@@ -66,9 +64,15 @@ public class EmailNotificationService : IEmailNotificationService
             bool success = await _producer.ProduceAsync(_emailQueueTopicName, email.Serialize());
             if (!success)
             {
-                await _repository.SetResultStatus(email.Id, EmailNotificationResultType.New);
+                await _repository.SetResultStatus(email.NotificationId, EmailNotificationResultType.New);
             }
         }
+    }
+
+    /// <inheritdoc/>
+    public async Task UpdateStatusNotification(SendOperationResult sendOperationResult)
+    {
+        await _repository.SetResultStatus(sendOperationResult.NotificationId, (EmailNotificationResultType)sendOperationResult.SendResult!);
     }
 
     private async Task CreateNotificationForRecipient(Guid orderId, DateTime requestedSendTime, string recipientId, string toAddress, EmailNotificationResultType result)

@@ -1,4 +1,5 @@
 ﻿using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Core.Models.Notification;
 
 namespace Altinn.Notifications.Core.Services.Interfaces;
 
@@ -16,4 +17,9 @@ public interface IEmailNotificationService
     /// Starts the process of sending all ready email notifications
     /// </summary>
     public Task SendNotifications();
+
+    /// <summary>
+    /// Update send status for a notification
+    /// </summary>
+    public Task UpdateStatusNotification(SendOperationResult sendOperationResult);
 }

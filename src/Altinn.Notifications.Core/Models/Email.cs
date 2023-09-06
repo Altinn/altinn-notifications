@@ -13,7 +13,7 @@ public class Email
     /// <summary>
     /// Gets or sets the id of the email.
     /// </summary>
-    public Guid Id { get; set; }
+    public Guid NotificationId { get; set; }
 
     /// <summary>
     /// Gets or sets the subject of the email.
@@ -45,7 +45,7 @@ public class Email
     /// </summary>
     public Email(Guid id, string subject, string body, string fromAddress, string toAddress, EmailContentType contentType)
     {
-        Id = id;
+        NotificationId = id;
         Subject = subject;
         Body = body;
         FromAddress = fromAddress;

@@ -21,6 +21,11 @@ public enum EmailNotificationResultType
     Succeeded,
 
     /// <summary>
+    /// Email delivered to recipient
+    /// </summary>
+    Delivered,
+
+    /// <summary>
     /// Recipient to address was not identified
     /// </summary>
     Failed_RecipientNotIdentified
