@@ -17,6 +17,7 @@ public class SendNotificationOperationIdentifierTests
             {
                 { "notificationId", _notificationId },
                 { "operationId", "operation-identifier" },
+                {"lastStatusCheck", "1994-06-16T08:00:00Z" }
             }.ToJsonString();
     }
 
@@ -27,7 +28,8 @@ public class SendNotificationOperationIdentifierTests
         SendNotificationOperationIdentifier identifier = new()
         {
             NotificationId = _notificationId,
-            OperationId = "operation-identifier"
+            OperationId = "operation-identifier",
+            LastStatusCheck = new DateTime(1994, 06, 16, 08, 00, 00, DateTimeKind.Utc)
         };
 
         string expected = _serialiedIdentfier;

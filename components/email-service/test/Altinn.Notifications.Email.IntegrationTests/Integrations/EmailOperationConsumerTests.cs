@@ -17,7 +17,6 @@ namespace Altinn.Notifications.Email.IntegrationTests.Integrations
     public class EmailOperationConsumerTests : IAsyncLifetime
     {
         private readonly string EmailSendingAcceptedTopicName = Guid.NewGuid().ToString();
-        private readonly string EmailSendingAcceptedRetryTopicName = Guid.NewGuid().ToString();
         private ServiceProvider? _serviceProvider;
         private readonly string _validTopicMessage = $"{{ \"NotificationId\": \"{Guid.NewGuid()}\", \"OperationId\" : \"operationId\" }}";
 
@@ -29,7 +28,6 @@ namespace Altinn.Notifications.Email.IntegrationTests.Integrations
         async Task IAsyncLifetime.DisposeAsync()
         {
             await KafkaUtil.DeleteTopicAsync(EmailSendingAcceptedTopicName);
-            await KafkaUtil.DeleteTopicAsync(EmailSendingAcceptedRetryTopicName);
         }
 
         [Fact]
@@ -100,10 +98,9 @@ namespace Altinn.Notifications.Email.IntegrationTests.Integrations
                     GroupId = "email-sending-consumer"
                 },
                 EmailSendingAcceptedTopicName = EmailSendingAcceptedTopicName,
-                EmailSendingAcceptedRetryTopicName = EmailSendingAcceptedRetryTopicName,
                 Admin = new()
                 {
-                    TopicList = new List<string> { EmailSendingAcceptedTopicName, EmailSendingAcceptedRetryTopicName }
+                    TopicList = new List<string> { EmailSendingAcceptedTopicName }
                 }
             };
 
@@ -112,7 +109,8 @@ namespace Altinn.Notifications.Email.IntegrationTests.Integrations
                 .AddSingleton(kafkaSettings)
                 .AddSingleton<ICommonProducer, CommonProducer>()
                 .AddSingleton(statusService)
-                .AddHostedService<EmailSendingAcceptedConsumer>();
+                .AddHostedService<EmailSendingAcceptedConsumer>()
+                .AddSingleton<IDateTimeService, DateTimeService>();
 
             _serviceProvider = services.BuildServiceProvider();
 

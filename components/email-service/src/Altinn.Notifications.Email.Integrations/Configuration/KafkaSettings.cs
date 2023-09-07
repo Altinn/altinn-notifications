@@ -23,17 +23,12 @@ public class KafkaSettings
     /// <summary>
     /// The producer settings
     /// </summary>
-    public AdminSettings Admin { get; set; } = new();  
+    public AdminSettings Admin { get; set; } = new();
 
     /// <summary>
     /// The name of the email sending accepted topic
     /// </summary>
     public string EmailSendingAcceptedTopicName { get; set; } = string.Empty;
-
-    /// <summary>
-    /// The name of the email sending accepted retry topic
-    /// </summary>
-    public string EmailSendingAcceptedRetryTopicName { get; set; } = string.Empty;    
 
     /// <summary>
     /// The name of the send email queue topic

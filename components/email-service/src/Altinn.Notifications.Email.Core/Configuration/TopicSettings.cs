@@ -9,11 +9,6 @@ public class TopicSettings
     /// The name of the email sending accepted topic
     /// </summary>
     public string EmailSendingAcceptedTopicName { get; set; } = string.Empty;
-
-    /// <summary>
-    /// The name of the email sending accepted retry topic
-    /// </summary>
-    public string EmailSendingAcceptedRetryTopicName { get; set; } = string.Empty;
     
     /// <summary>
     /// The name of the email status updated topic

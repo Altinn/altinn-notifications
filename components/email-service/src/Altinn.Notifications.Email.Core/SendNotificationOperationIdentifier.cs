@@ -19,6 +19,11 @@ namespace Altinn.Notifications.Email.Core
         public string OperationId { get; set; } = string.Empty;
 
         /// <summary>
+        /// When the operation id was last checked against the send client
+        /// </summary>
+        public DateTime LastStatusCheck { get; set; } = DateTime.UtcNow;
+
+        /// <summary>
         /// Json serializes the <see cref="SendNotificationOperationIdentifier"/>
         /// </summary>
         public string Serialize()

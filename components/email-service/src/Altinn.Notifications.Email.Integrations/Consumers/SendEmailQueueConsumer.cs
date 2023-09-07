@@ -10,10 +10,11 @@ namespace Altinn.Notifications.Email.Integrations.Consumers;
 /// <summary>
 /// Kafka consumer class for handling the email queue.
 /// </summary>
-public sealed class SendEmailQueueConsumer : KafkaConsumerBase<SendEmailQueueConsumer>
+public sealed class SendEmailQueueConsumer : KafkaConsumerBase
 {
     private readonly ISendingService _emailService;
     private readonly ICommonProducer _producer;
+    private readonly ILogger<SendEmailQueueConsumer> _logger;
     private readonly string _retryTopicName;
 
     /// <summary>
@@ -29,6 +30,7 @@ public sealed class SendEmailQueueConsumer : KafkaConsumerBase<SendEmailQueueCon
         _emailService = emailService;
         _producer = producer;
         _retryTopicName = kafkaSettings.SendEmailQueueRetryTopicName;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -43,6 +45,8 @@ public sealed class SendEmailQueueConsumer : KafkaConsumerBase<SendEmailQueueCon
 
         if (!succeeded)
         {
+            _logger.LogError("// SendEmailQueueConsumer // ConsumeEmail // Deserialization of message failed. {Message}", message);
+
             return;
         }
 

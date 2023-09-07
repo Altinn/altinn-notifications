@@ -27,6 +27,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<ISendingService, SendingService>()
                 .AddSingleton<IStatusService, StatusService>()
+                .AddSingleton<IDateTimeService, DateTimeService>()
                 .AddSingleton(topicSettings);
 
         return services;
