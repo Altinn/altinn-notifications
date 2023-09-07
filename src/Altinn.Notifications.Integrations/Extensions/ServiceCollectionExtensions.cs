@@ -32,6 +32,7 @@ public static class ServiceCollectionExtensions
         .AddSingleton<IKafkaProducer, KafkaProducer>()
         .AddHostedService<PastDueOrdersConsumer>()
         .AddHostedService<PastDueOrdersRetryConsumer>()
+        .AddHostedService<EmailStatusConsumer>()
         .Configure<KafkaSettings>(config.GetSection(nameof(KafkaSettings)));
     }
 

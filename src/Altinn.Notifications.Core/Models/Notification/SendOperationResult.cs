@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models.Orders;
 
 namespace Altinn.Notifications.Core.Models.Notification;
 
@@ -23,6 +24,21 @@ public class SendOperationResult
     /// The email send result
     /// </summary>
     public EmailNotificationResultType? SendResult { get; set; }
+
+    /// <summary>
+    /// Json serializes the <see cref="SendOperationResult"/>
+    /// </summary>
+    public string Serialize()
+    {
+        return JsonSerializer.Serialize(
+            this,
+            new JsonSerializerOptions
+            {
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                Converters = { new JsonStringEnumConverter() }
+            });
+    }
 
     /// <summary>
     /// Deserialize a json string into the <see cref="SendOperationResult"/>

@@ -75,11 +75,12 @@ public class EmailNotificationRepository : IEmailNotificationRepository
     }
 
     /// <inheritdoc/>
-    public async Task SetResultStatus(Guid notificationId, EmailNotificationResultType status)
+    public async Task SetResultStatus(Guid notificationId, EmailNotificationResultType status, string? operationId)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_setResultStatus);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, operationId ?? (object)DBNull.Value);
         await pgcom.ExecuteNonQueryAsync();
     }
 

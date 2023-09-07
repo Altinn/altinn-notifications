@@ -1,2 +1,2 @@
 ﻿ALTER TABLE notifications.emailnotifications
-ADD COLUMN operationid text;
+ADD COLUMN IF NOT EXISTS operationid text;

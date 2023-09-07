@@ -47,7 +47,7 @@ public class EmailStatusConsumer : KafkaConsumerBase<EmailStatusConsumer>
             return;
         }
 
-        await _emailNotificationsService.UpdateStatusNotification(result);
+        await _emailNotificationsService.UpdateSendStatus(result);
     }
 
     private async Task RetryOrder(string message)

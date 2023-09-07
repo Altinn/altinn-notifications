@@ -16,7 +16,7 @@ public enum EmailNotificationResultType
     Sending,
 
     /// <summary>
-    /// Email notification sent and delivered
+    /// Email notification sent
     /// </summary>
     Succeeded,
 
