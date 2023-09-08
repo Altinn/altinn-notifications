@@ -67,7 +67,7 @@ public class EmailStatusConsumerTests : IDisposable
         await KafkaUtil.DeleteTopicAsync(_statusUpdatedTopicName);
     }
 
-    private async Task<string> SelectEmailNotificationStatus(Guid notificationId)
+    private static async Task<string> SelectEmailNotificationStatus(Guid notificationId)
     {
         string sql = $"select result from notifications.emailnotifications where alternateid = '{notificationId}'";
         return await PostgreUtil.RunSqlReturnStringOutput(sql);
