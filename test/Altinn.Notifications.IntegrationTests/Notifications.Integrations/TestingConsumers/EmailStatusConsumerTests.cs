@@ -48,7 +48,7 @@ public class EmailStatusConsumerTests : IDisposable
         // Assert
 
         string emailNotificationStatus = await SelectEmailNotificationStatus(Notification.Id);
-        Assert.Equal(emailNotificationStatus, EmailNotificationResultType.Succeeded.ToString());
+        Assert.Equal(EmailNotificationResultType.Succeeded.ToString(), emailNotificationStatus);
 
     }
 
