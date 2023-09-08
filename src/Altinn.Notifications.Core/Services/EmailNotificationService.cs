@@ -64,7 +64,7 @@ public class EmailNotificationService : IEmailNotificationService
             bool success = await _producer.ProduceAsync(_emailQueueTopicName, email.Serialize());
             if (!success)
             {
-                await _repository.SetResultStatus(email.NotificationId, EmailNotificationResultType.New, null);
+                await _repository.UpdateSendStatus(email.NotificationId, EmailNotificationResultType.New, null);
             }
         }
     }
@@ -72,7 +72,7 @@ public class EmailNotificationService : IEmailNotificationService
     /// <inheritdoc/>
     public async Task UpdateSendStatus(SendOperationResult sendOperationResult)
     {
-        await _repository.SetResultStatus(sendOperationResult.NotificationId, (EmailNotificationResultType)sendOperationResult.SendResult!, sendOperationResult.OperationId);
+        await _repository.UpdateSendStatus(sendOperationResult.NotificationId, (EmailNotificationResultType)sendOperationResult.SendResult!, sendOperationResult.OperationId);
     }
 
     private async Task CreateNotificationForRecipient(Guid orderId, DateTime requestedSendTime, string recipientId, string toAddress, EmailNotificationResultType result)
