@@ -48,4 +48,17 @@ public class ServiceCollectionExtensionsTests
         // Assert
         Assert.Equal(expectedExceptionMessage, exception.Message);
     }
+
+
+    [Fact]
+    public void AddKafkaHealthChecks_KafkaSettingsMissing_ThrowsException()
+    {
+        Environment.SetEnvironmentVariable("KafkaSettings", null);
+
+        var config = new ConfigurationBuilder().Build();
+
+        IServiceCollection services = new ServiceCollection();
+
+        Assert.Throws<ArgumentNullException>(() => services.AddIntegrationHealthChecks(config));
+    }
 }

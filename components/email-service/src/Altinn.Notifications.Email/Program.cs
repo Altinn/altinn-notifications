@@ -92,7 +92,8 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
 
     services.AddCoreServices(configuration);
     services.AddIntegrationServices(configuration);
-
+    services.AddIntegrationHealthChecks(configuration);
+    
     if (!string.IsNullOrEmpty(applicationInsightsConnectionString))
     {
         services.AddSingleton(typeof(ITelemetryChannel), new ServerTelemetryChannel { StorageFolder = "/tmp/logtelemetry" });

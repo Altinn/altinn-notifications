@@ -1,6 +1,7 @@
 ﻿using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Integrations.Clients;
 using Altinn.Notifications.Email.Integrations.Consumers;
+using Altinn.Notifications.Email.Integrations.Health;
 using Altinn.Notifications.Email.Integrations.Producers;
 
 using Microsoft.Extensions.Configuration;
@@ -43,5 +44,23 @@ public static class ServiceCollectionExtensions
             .AddSingleton(kafkaSettings)
             .AddSingleton(communicationServicesSettings);
         return services;
+    }
+
+    /// <summary>
+    /// Adds health checks for integrations 
+    /// </summary>
+    /// <param name="services">service collection.</param>
+    /// <param name="config">the configuration collection</param>
+    public static void AddIntegrationHealthChecks(this IServiceCollection services, IConfiguration config)
+    {
+        KafkaSettings kafkaSettings = config!.GetSection(nameof(KafkaSettings)).Get<KafkaSettings>()!;
+
+        if (kafkaSettings == null)
+        {
+            throw new ArgumentNullException(nameof(config), "Required Kafka settings is missing from application configuration");
+        }
+
+        services.AddHealthChecks()
+        .AddCheck("notifications_kafka_health_check", new KafkaHealthCheck(kafkaSettings));
     }
 }
