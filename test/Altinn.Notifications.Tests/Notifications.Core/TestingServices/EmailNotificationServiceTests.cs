@@ -137,7 +137,7 @@ public class EmailNotificationServiceTests
     }
 
     [Fact]
-    public async Task UpdateSendStatus()
+    public async Task UpdateSendStatus_SendResultDefined_Succeded()
     {
         // Arrange
         Guid notificationid = Guid.NewGuid();
@@ -147,7 +147,7 @@ public class EmailNotificationServiceTests
         { 
             NotificationId = notificationid,
             OperationId = operationId,
-            SendResult= EmailNotificationResultType.Succeeded
+            SendResult = EmailNotificationResultType.Succeeded
         };
 
         var repoMock = new Mock<IEmailNotificationRepository>();
@@ -157,8 +157,8 @@ public class EmailNotificationServiceTests
 
         // Act
         await service.UpdateSendStatus(sendOperationResult);
-        // Assert
 
+        // Assert
         repoMock.Verify();
     }
 
