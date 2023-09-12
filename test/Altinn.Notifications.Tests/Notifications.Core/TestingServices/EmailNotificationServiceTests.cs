@@ -137,7 +137,7 @@ public class EmailNotificationServiceTests
     }
 
     [Fact]
-    public async Task UpdateStatusNotification()
+    public async Task UpdateSendStatus()
     {
         // Arrange
         Guid notificationid = Guid.NewGuid();

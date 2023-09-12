@@ -24,7 +24,7 @@ public interface IEmailNotificationRepository
     /// <summary>
     /// Sets result status of an email notification and update operation id
     /// </summary>
-    public Task UpdateSendStatus(Guid notificationId, EmailNotificationResultType status, string? operationId);
+    public Task UpdateSendStatus(Guid notificationId, EmailNotificationResultType status, string? operationId = null);
 
     /// <summary>
     /// Retrieves all email recipients for an order

@@ -64,7 +64,7 @@ public class EmailNotificationService : IEmailNotificationService
             bool success = await _producer.ProduceAsync(_emailQueueTopicName, email.Serialize());
             if (!success)
             {
-                await _repository.UpdateSendStatus(email.NotificationId, EmailNotificationResultType.New, null);
+                await _repository.UpdateSendStatus(email.NotificationId, EmailNotificationResultType.New);
             }
         }
     }

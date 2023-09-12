@@ -46,10 +46,8 @@ public class EmailStatusConsumerTests : IDisposable
         await consumerService.StopAsync(CancellationToken.None);
 
         // Assert
-
         string emailNotificationStatus = await SelectEmailNotificationStatus(Notification.Id);
         Assert.Equal(EmailNotificationResultType.Succeeded.ToString(), emailNotificationStatus);
-
     }
 
     public async void Dispose()
