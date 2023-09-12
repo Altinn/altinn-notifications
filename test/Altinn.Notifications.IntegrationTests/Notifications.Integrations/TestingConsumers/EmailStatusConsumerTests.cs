@@ -29,7 +29,7 @@ public class EmailStatusConsumerTests : IDisposable
                                                     .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
                                                     .First(s => s.GetType() == typeof(EmailStatusConsumer))!;
 
-        (NotificationOrder Order, EmailNotification Notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(_sendersRef);
+        _ = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(_sendersRef);
 
         SendOperationResult sendOperationResult = new()
         {
