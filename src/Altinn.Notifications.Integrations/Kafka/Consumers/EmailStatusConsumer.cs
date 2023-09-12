@@ -33,7 +33,7 @@ public class EmailStatusConsumer : KafkaConsumerBase<EmailStatusConsumer>
         _emailNotificationsService = emailNotificationsService;
         _producer = producer;
         _retryTopicName = settings.Value.EmailStatusUpdatedTopicName;
-        _logger= logger;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
