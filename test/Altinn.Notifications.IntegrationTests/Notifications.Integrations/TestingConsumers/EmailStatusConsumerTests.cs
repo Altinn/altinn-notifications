@@ -1,6 +1,5 @@
 ﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Notification;
-using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.IntegrationTests.Utils;
 
@@ -10,7 +9,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Core.Consumers;
 
-public class EmailStatusConsumerTests : IDisposable
+public class EmailStatusConsumerTests : IAsyncLifetime
 {
     private readonly string _statusUpdatedTopicName = Guid.NewGuid().ToString();
     private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
@@ -50,11 +49,14 @@ public class EmailStatusConsumerTests : IDisposable
         Assert.Equal(EmailNotificationResultType.Succeeded.ToString(), emailNotificationStatus);
     }
 
-    public async void Dispose()
+    public Task InitializeAsync()
+    {
+        return Task.CompletedTask;
+    }
+
+    public async Task DisposeAsync()
     {
         await Dispose(true);
-
-        GC.SuppressFinalize(this);
     }
 
     protected virtual async Task Dispose(bool disposing)
