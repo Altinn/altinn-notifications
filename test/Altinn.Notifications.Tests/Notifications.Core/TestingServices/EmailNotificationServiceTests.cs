@@ -56,7 +56,7 @@ public class EmailNotificationServiceTests
             .ReturnsAsync(new List<Email>() { _email });
 
         repoMock
-            .Setup(r => r.SetResultStatus(It.IsAny<Guid>(), It.Is<EmailNotificationResultType>(t => t == EmailNotificationResultType.New)));
+            .Setup(r => r.UpdateSendStatus(It.IsAny<Guid>(), It.Is<EmailNotificationResultType>(t => t == EmailNotificationResultType.New), It.IsAny<string?>()));
 
         var producerMock = new Mock<IKafkaProducer>();
         producerMock.Setup(p => p.ProduceAsync(It.Is<string>(s => s.Equals(_emailQueueTopicName)), It.IsAny<string>()))
@@ -131,6 +131,32 @@ public class EmailNotificationServiceTests
 
         // Act
         await service.CreateNotification(orderId, requestedSendTime, new Recipient("skd", new List<IAddressPoint>()));
+
+        // Assert
+        repoMock.Verify();
+    }
+
+    [Fact]
+    public async Task UpdateSendStatus_SendResultDefined_Succeded()
+    {
+        // Arrange
+        Guid notificationid = Guid.NewGuid();
+        string operationId = Guid.NewGuid().ToString();
+
+        SendOperationResult sendOperationResult = new()
+        { 
+            NotificationId = notificationid,
+            OperationId = operationId,
+            SendResult = EmailNotificationResultType.Succeeded
+        };
+
+        var repoMock = new Mock<IEmailNotificationRepository>();
+        repoMock.Setup(r => r.UpdateSendStatus(It.Is<Guid>(n => n == notificationid), It.Is<EmailNotificationResultType>(e => e == EmailNotificationResultType.Succeeded), It.Is<string>(s => s.Equals(operationId))));
+
+        var service = GetTestService(repo: repoMock.Object);
+
+        // Act
+        await service.UpdateSendStatus(sendOperationResult);
 
         // Assert
         repoMock.Verify();

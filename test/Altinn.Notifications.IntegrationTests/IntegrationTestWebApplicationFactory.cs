@@ -1,6 +1,5 @@
 ﻿using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
-using Altinn.Notifications.IntegrationTests.Utils;
 
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -38,7 +37,8 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
             services.Remove(descriptor);
             descriptor = services.Single(s => s.ImplementationType == typeof(PastDueOrdersRetryConsumer));
             services.Remove(descriptor);
-
+            descriptor = services.Single(s => s.ImplementationType == typeof(EmailStatusConsumer));
+            services.Remove(descriptor);
         });
     }
 }

@@ -22,9 +22,9 @@ public interface IEmailNotificationRepository
     public Task<List<Email>> GetNewNotifications();
 
     /// <summary>
-    /// Sets result status of an email notification
+    /// Sets result status of an email notification and update operation id
     /// </summary>
-    public Task SetResultStatus(Guid notificationId, EmailNotificationResultType status);
+    public Task UpdateSendStatus(Guid notificationId, EmailNotificationResultType status, string? operationId = null);
 
     /// <summary>
     /// Retrieves all email recipients for an order
