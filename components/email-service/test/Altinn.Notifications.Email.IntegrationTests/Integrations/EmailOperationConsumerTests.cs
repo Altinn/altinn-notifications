@@ -16,9 +16,10 @@ namespace Altinn.Notifications.Email.IntegrationTests.Integrations
 {
     public class EmailOperationConsumerTests : IAsyncLifetime
     {
-        private readonly string EmailSendingAcceptedTopicName = Guid.NewGuid().ToString();
-        private ServiceProvider? _serviceProvider;
+        private readonly string _emailSendingAcceptedTopicName = Guid.NewGuid().ToString();
         private readonly string _validTopicMessage = $"{{ \"NotificationId\": \"{Guid.NewGuid()}\", \"OperationId\" : \"operationId\" }}";
+
+        private ServiceProvider? _serviceProvider;
 
         public async Task InitializeAsync()
         {
@@ -27,7 +28,7 @@ namespace Altinn.Notifications.Email.IntegrationTests.Integrations
 
         async Task IAsyncLifetime.DisposeAsync()
         {
-            await KafkaUtil.DeleteTopicAsync(EmailSendingAcceptedTopicName);
+            await KafkaUtil.DeleteTopicAsync(_emailSendingAcceptedTopicName);
         }
 
         [Fact]
@@ -49,7 +50,6 @@ namespace Altinn.Notifications.Email.IntegrationTests.Integrations
             // Assert
             serviceMock.Verify(m => m.UpdateSendStatus(It.IsAny<SendNotificationOperationIdentifier>()), Times.Once);
         }
-
 
         [Fact]
         public async Task ConsumeOperation_DeserialisationFails_ServiceIsNotCalled()
@@ -77,8 +77,9 @@ namespace Altinn.Notifications.Email.IntegrationTests.Integrations
             {
                 Assert.Fail("Unable to populate kafka topic. _serviceProvider is null.");
             }
+
             using CommonProducer kafkaProducer = KafkaUtil.GetKafkaProducer(_serviceProvider);
-            await kafkaProducer.ProduceAsync(EmailSendingAcceptedTopicName, message);
+            await kafkaProducer.ProduceAsync(_emailSendingAcceptedTopicName, message);
         }
 
         private EmailSendingAcceptedConsumer GetConsumer(IStatusService? statusService = null)
@@ -97,10 +98,10 @@ namespace Altinn.Notifications.Email.IntegrationTests.Integrations
                 {
                     GroupId = "email-sending-consumer"
                 },
-                EmailSendingAcceptedTopicName = EmailSendingAcceptedTopicName,
+                EmailSendingAcceptedTopicName = _emailSendingAcceptedTopicName,
                 Admin = new()
                 {
-                    TopicList = new List<string> { EmailSendingAcceptedTopicName }
+                    TopicList = new List<string> { _emailSendingAcceptedTopicName }
                 }
             };
 

@@ -18,8 +18,8 @@ namespace Altinn.Notifications.Email.IntegrationTests.Integrations;
 
 public sealed class EmailSendingConsumerTests : IAsyncLifetime
 {
-    private readonly string EmailSendingConsumerTopic = Guid.NewGuid().ToString();
-    private readonly string EmailSendingAcceptedProducerTopic = Guid.NewGuid().ToString();
+    private readonly string _emailSendingConsumerTopic = Guid.NewGuid().ToString();
+    private readonly string _emailSendingAcceptedProducerTopic = Guid.NewGuid().ToString();
 
     private readonly KafkaSettings _kafkaSettings;
     private ServiceProvider? _serviceProvider;
@@ -33,11 +33,11 @@ public sealed class EmailSendingConsumerTests : IAsyncLifetime
             {
                 GroupId = "email-sending-consumer"
             },
-            SendEmailQueueTopicName = EmailSendingConsumerTopic,
-            EmailSendingAcceptedTopicName = EmailSendingAcceptedProducerTopic,
+            SendEmailQueueTopicName = _emailSendingConsumerTopic,
+            EmailSendingAcceptedTopicName = _emailSendingAcceptedProducerTopic,
             Admin = new()
             {
-                TopicList = new List<string> { EmailSendingConsumerTopic, EmailSendingAcceptedProducerTopic }
+                TopicList = new List<string> { _emailSendingConsumerTopic, _emailSendingAcceptedProducerTopic }
             }
         };
     }
@@ -49,8 +49,8 @@ public sealed class EmailSendingConsumerTests : IAsyncLifetime
 
     public async Task DisposeAsync()
     {
-        await KafkaUtil.DeleteTopicAsync(EmailSendingConsumerTopic);
-        await KafkaUtil.DeleteTopicAsync(EmailSendingAcceptedProducerTopic);
+        await KafkaUtil.DeleteTopicAsync(_emailSendingConsumerTopic);
+        await KafkaUtil.DeleteTopicAsync(_emailSendingAcceptedProducerTopic);
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public sealed class EmailSendingConsumerTests : IAsyncLifetime
         using CommonProducer kafkaProducer = KafkaUtil.GetKafkaProducer(_serviceProvider!);
 
         // Act
-        await kafkaProducer.ProduceAsync(EmailSendingConsumerTopic, JsonSerializer.Serialize(email));
+        await kafkaProducer.ProduceAsync(_emailSendingConsumerTopic, JsonSerializer.Serialize(email));
 
         await sut.StartAsync(CancellationToken.None);
         await Task.Delay(10000);
@@ -87,7 +87,7 @@ public sealed class EmailSendingConsumerTests : IAsyncLifetime
         using CommonProducer kafkaProducer = KafkaUtil.GetKafkaProducer(_serviceProvider!);
 
         // Act
-        await kafkaProducer.ProduceAsync(EmailSendingConsumerTopic, "Not an email");
+        await kafkaProducer.ProduceAsync(_emailSendingConsumerTopic, "Not an email");
 
         await sut.StartAsync(CancellationToken.None);
         await Task.Delay(10000);
@@ -99,7 +99,6 @@ public sealed class EmailSendingConsumerTests : IAsyncLifetime
 
     private SendEmailQueueConsumer GetEmailSendingConsumer(ISendingService sendingService)
     {
-
         IServiceCollection services = new ServiceCollection()
             .AddLogging()
             .AddSingleton(_kafkaSettings)

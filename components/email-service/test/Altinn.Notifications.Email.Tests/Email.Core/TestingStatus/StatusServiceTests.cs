@@ -56,7 +56,6 @@ public class StatusServiceTests
         producerMock.VerifyAll();
     }
 
-
     [Fact]
     public async Task UpdateSendStatus_SendResultIsSending_LatStatusCheckUpdatedAndPublishedBackOnTopic()
     {

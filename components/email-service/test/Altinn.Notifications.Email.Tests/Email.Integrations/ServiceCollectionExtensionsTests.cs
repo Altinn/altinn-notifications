@@ -49,7 +49,6 @@ public class ServiceCollectionExtensionsTests
         Assert.Equal(expectedExceptionMessage, exception.Message);
     }
 
-
     [Fact]
     public void AddKafkaHealthChecks_KafkaSettingsMissing_ThrowsException()
     {

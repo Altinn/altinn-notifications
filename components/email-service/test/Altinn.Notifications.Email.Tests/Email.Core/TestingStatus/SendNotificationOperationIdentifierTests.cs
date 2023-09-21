@@ -17,7 +17,7 @@ public class SendNotificationOperationIdentifierTests
             {
                 { "notificationId", _notificationId },
                 { "operationId", "operation-identifier" },
-                {"lastStatusCheck", "1994-06-16T08:00:00Z" }
+                { "lastStatusCheck", "1994-06-16T08:00:00Z" }
             }.ToJsonString();
     }
 

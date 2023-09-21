@@ -24,8 +24,4 @@
       <Link>stylecop.json</Link>
     </AdditionalFiles>
   </ItemGroup>
-
-  <PropertyGroup Condition="'$(Configuration)'=='Debug'">
-    <CodeAnalysisRuleSet>..\..\Altinn3.ruleset</CodeAnalysisRuleSet>
-  </PropertyGroup>
 </Project>

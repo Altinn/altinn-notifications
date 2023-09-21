@@ -25,10 +25,9 @@ public class SendOperationResultTests
         {
             { "notificationId", id },
             { "operationId",  "operation-id" },
-            {"sendResult", "Sending" }
+            { "sendResult", "Sending" }
         }.ToJsonString();
     }
-
 
     [Fact]
     public void SerializeToJson()

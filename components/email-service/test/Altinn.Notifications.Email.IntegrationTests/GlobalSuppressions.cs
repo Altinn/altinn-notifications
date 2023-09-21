@@ -5,4 +5,4 @@
 
 using System.Diagnostics.CodeAnalysis;
 
-[assembly: SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1633:File should have header", Justification = "No header required")]
+[assembly: SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1600:Elements should be documented", Justification = "Test description should be in the name of the test.", Scope = "module")]

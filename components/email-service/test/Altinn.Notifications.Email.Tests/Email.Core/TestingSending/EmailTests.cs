@@ -1,8 +1,11 @@
 ﻿using System.Text.Json.Nodes;
+
 using Altinn.Notifications.Email.Core.Sending;
+
 using Xunit;
 
 namespace Altinn.Notifications.Email.Tests.Email.Core.Sending;
+
 public class EmailTests
 {
     private readonly string _serializedEmail;
