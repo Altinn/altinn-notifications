@@ -6,6 +6,7 @@ using Altinn.Notifications.Integrations.Kafka;
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Integrations;
+
 public class SharedClientConfigTests
 {
     [Theory]

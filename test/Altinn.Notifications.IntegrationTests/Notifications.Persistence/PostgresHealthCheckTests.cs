@@ -39,7 +39,7 @@ public class PostgresHealthCheckTests
     [Fact]
     public async Task CheckHealthAsync_InvalidConnectionString_ReturnsUnhealthyResult()
     {
-       var tempDataSource = new NpgsqlDataSourceBuilder("Host=localhost;Port=5432;Username=platform_notifications;Password={0};Database=notificationsdb").Build();
+        var tempDataSource = new NpgsqlDataSourceBuilder("Host=localhost;Port=5432;Username=platform_notifications;Password={0};Database=notificationsdb").Build();
 
         using PostgresHealthCheck healthCheck = new(tempDataSource);
         HealthCheckResult res = await healthCheck.CheckHealthAsync(new HealthCheckContext());

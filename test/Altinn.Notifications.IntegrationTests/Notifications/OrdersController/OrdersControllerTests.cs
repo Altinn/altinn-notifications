@@ -21,13 +21,13 @@ using Moq;
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.TestingControllers;
+
 public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.OrdersController>>
 {
     private const string _basePath = "/notifications/api/v1/orders";
 
     private readonly IntegrationTestWebApplicationFactory<Controllers.OrdersController> _factory;
     private readonly NotificationOrder _order;
-
 
     public OrdersControllerTests(IntegrationTestWebApplicationFactory<Controllers.OrdersController> factory)
     {
@@ -40,14 +40,14 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
             DateTime.UtcNow,
             NotificationChannel.Email,
             new Creator("ttd"),
-             DateTime.UtcNow,
+            DateTime.UtcNow,
             new List<Recipient>());
     }
 
     [Fact]
     public async Task GetBySendersRef_MissingBearer_ReturnsUnauthorized()
     {
-        //Arrange
+        // Arrange
         HttpClient client = GetTestClient();
         string url = _basePath + "?sendersReference=" + "internal-ref";
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
@@ -62,7 +62,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
     [Fact]
     public async Task GetBySendersRef_CalledByUser_ReturnsForbidden()
     {
-        //Arrange
+        // Arrange
         HttpClient client = GetTestClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetUserToken(1337));
 
@@ -79,7 +79,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
     [Fact]
     public async Task GetById_MissingBearer_ReturnsUnauthorized()
     {
-        //Arrange
+        // Arrange
         HttpClient client = GetTestClient();
         string url = _basePath + "/" + Guid.NewGuid();
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
@@ -94,7 +94,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
     [Fact]
     public async Task GetById_CalledByUser_ReturnsForbidden()
     {
-        //Arrange
+        // Arrange
         HttpClient client = GetTestClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetUserToken(1337));
 
@@ -111,7 +111,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
     [Fact]
     public async Task GetBySendersRef_CorrespondingServiceMethodCalled()
     {
-        //Arrange
+        // Arrange
         var orderService = new Mock<IGetOrderService>();
         orderService
              .Setup(o => o.GetOrdersBySendersReference(It.Is<string>(s => s.Equals("internal-ref")), It.Is<string>(s => s.Equals("ttd"))))
@@ -134,7 +134,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
     [Fact]
     public async Task GetById_CorrespondingServiceMethodCalled()
     {
-        //Arrange
+        // Arrange
         Guid orderId = Guid.NewGuid();
 
         var orderService = new Mock<IGetOrderService>();
@@ -159,7 +159,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
     [Fact]
     public async Task GetById_ServicerReturnsError_StatusCodeMatchesError()
     {
-        //Arrange
+        // Arrange
         Guid orderId = Guid.NewGuid();
 
         var orderService = new Mock<IGetOrderService>();
@@ -185,16 +185,16 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
     {
         if (orderService == null)
         {
-            var _orderService = new Mock<IGetOrderService>();
-            _orderService
+            var orderServiceMock = new Mock<IGetOrderService>();
+            orderServiceMock
                 .Setup(o => o.GetOrderById(It.IsAny<Guid>(), It.IsAny<string>()))
                 .ReturnsAsync((_order, null));
 
-            _orderService
+            orderServiceMock
                  .Setup(o => o.GetOrdersBySendersReference(It.IsAny<string>(), It.IsAny<string>()))
                  .ReturnsAsync((new List<NotificationOrder>() { _order }, null));
 
-            orderService = _orderService.Object;
+            orderService = orderServiceMock.Object;
         }
 
         HttpClient client = _factory.WithWebHostBuilder(builder =>

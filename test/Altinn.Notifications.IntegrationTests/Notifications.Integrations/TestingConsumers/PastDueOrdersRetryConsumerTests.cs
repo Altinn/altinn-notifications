@@ -1,5 +1,4 @@
-﻿
-using Altinn.Notifications.Core.Models.Orders;
+﻿using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.IntegrationTests.Utils;
 
@@ -25,8 +24,8 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
         // Arrange
         Dictionary<string, string> vars = new()
         {
-            {"KafkaSettings__PastDueOrdersRetryTopicName", _retryTopicName },
-            {"KafkaSettings__Admin__TopicList", $"[\"{_retryTopicName}\"]" }
+            { "KafkaSettings__PastDueOrdersRetryTopicName", _retryTopicName },
+            { "KafkaSettings__Admin__TopicList", $"[\"{_retryTopicName}\"]" }
         };
 
         using PastDueOrdersRetryConsumer consumerRetryService = (PastDueOrdersRetryConsumer)ServiceUtil
@@ -61,8 +60,8 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
         // Arrange
         Dictionary<string, string> vars = new()
         {
-            {"KafkaSettings__PastDueOrdersRetryTopicName", _retryTopicName },
-            {"KafkaSettings__Admin__TopicList", $"[\"{_retryTopicName}\"]" }
+            { "KafkaSettings__PastDueOrdersRetryTopicName", _retryTopicName },
+            { "KafkaSettings__Admin__TopicList", $"[\"{_retryTopicName}\"]" }
         };
 
         using PastDueOrdersRetryConsumer consumerRetryService = (PastDueOrdersRetryConsumer)ServiceUtil

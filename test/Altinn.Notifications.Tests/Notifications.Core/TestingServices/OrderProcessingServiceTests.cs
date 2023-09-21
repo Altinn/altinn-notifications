@@ -153,7 +153,7 @@ public class OrderProcessingServiceTests
             Recipients = new List<Recipient>()
             {
                 new Recipient(),
-                new Recipient("skd", new List<IAddressPoint>() { new EmailAddressPoint("test@test.com")})
+                new Recipient("skd", new List<IAddressPoint>() { new EmailAddressPoint("test@test.com") })
             }
         };
 
@@ -161,7 +161,7 @@ public class OrderProcessingServiceTests
         serviceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>()));
 
         var emailRepoMock = new Mock<IEmailNotificationRepository>();
-        emailRepoMock.Setup(e => e.GetRecipients(It.IsAny<Guid>())).ReturnsAsync(new List<EmailRecipient>() { new EmailRecipient() { RecipientId = "skd", ToAddress = "test@test.com"}});
+        emailRepoMock.Setup(e => e.GetRecipients(It.IsAny<Guid>())).ReturnsAsync(new List<EmailRecipient>() { new EmailRecipient() { RecipientId = "skd", ToAddress = "test@test.com" } });
 
         var service = GetTestService(emailRepo: emailRepoMock.Object, emailService: serviceMock.Object);
 
@@ -186,7 +186,6 @@ public class OrderProcessingServiceTests
             }
         };
 
-
         var serviceMock = new Mock<IEmailNotificationService>();
         serviceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>()))
             .ThrowsAsync(new Exception());
@@ -195,7 +194,7 @@ public class OrderProcessingServiceTests
         repoMock.Setup(r => r.SetProcessingStatus(It.IsAny<Guid>(), It.IsAny<OrderProcessingStatus>()));
 
         var emailRepoMock = new Mock<IEmailNotificationRepository>();
-        emailRepoMock.Setup(e => e.GetRecipients(It.IsAny<Guid>())).ReturnsAsync(new List<EmailRecipient>() { new EmailRecipient() { RecipientId = "skd", ToAddress = "test@test.com"}});
+        emailRepoMock.Setup(e => e.GetRecipients(It.IsAny<Guid>())).ReturnsAsync(new List<EmailRecipient>() { new EmailRecipient() { RecipientId = "skd", ToAddress = "test@test.com" } });
 
         var service = GetTestService(repo: repoMock.Object, emailRepo: emailRepoMock.Object, emailService: serviceMock.Object);
 
@@ -212,26 +211,26 @@ public class OrderProcessingServiceTests
     {
         if (repo == null)
         {
-            var _repo = new Mock<IOrderRepository>();
-            repo = _repo.Object;
+            var repoMock = new Mock<IOrderRepository>();
+            repo = repoMock.Object;
         }
 
         if (emailRepo == null)
         {
-            var _emailRepo = new Mock<IEmailNotificationRepository>();
-            emailRepo = _emailRepo.Object;
+            var emailRepoMock = new Mock<IEmailNotificationRepository>();
+            emailRepo = emailRepoMock.Object;
         }
 
         if (emailService == null)
         {
-            var _emailService = new Mock<IEmailNotificationService>();
-            emailService = _emailService.Object;
+            var emailServiceMock = new Mock<IEmailNotificationService>();
+            emailService = emailServiceMock.Object;
         }
 
         if (producer == null)
         {
-            var _producer = new Mock<IKafkaProducer>();
-            producer = _producer.Object;
+            var producerMock = new Mock<IKafkaProducer>();
+            producer = producerMock.Object;
         }
 
         var kafkaSettings = new Altinn.Notifications.Core.Configuration.KafkaSettings() { PastDueOrdersTopicName = _pastDueTopicName };

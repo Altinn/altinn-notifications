@@ -175,14 +175,14 @@ public class EmailNotificationServiceTests
             .Returns(dateTimeOutput ?? DateTime.UtcNow);
         if (repo == null)
         {
-            var _repo = new Mock<IEmailNotificationRepository>();
-            repo = _repo.Object;
+            var repoMock = new Mock<IEmailNotificationRepository>();
+            repo = repoMock.Object;
         }
 
         if (producer == null)
         {
-            var _producer = new Mock<IKafkaProducer>();
-            producer = _producer.Object;
+            var producerMock = new Mock<IKafkaProducer>();
+            producer = producerMock.Object;
         }
 
         return new EmailNotificationService(guidService.Object, dateTimeService.Object, repo, producer, Options.Create(new KafkaSettings { EmailQueueTopicName = _emailQueueTopicName }));

@@ -11,7 +11,6 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.TestingExtension
 
 public class ServiceCollectionExtensionsTests
 {
-
     [Fact]
     public void AddKafkaServices_KafkaSettingsMissing_ThrowsException()
     {

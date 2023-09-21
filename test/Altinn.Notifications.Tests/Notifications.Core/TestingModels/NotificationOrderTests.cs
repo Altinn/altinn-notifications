@@ -11,6 +11,7 @@ using Altinn.Notifications.Core.Models.Orders;
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Core.TestingModels;
+
 public class NotificationOrderTests
 {
     private readonly string _serializedOrder;

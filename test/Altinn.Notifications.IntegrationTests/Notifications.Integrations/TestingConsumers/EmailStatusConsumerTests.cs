@@ -28,16 +28,15 @@ public class EmailStatusConsumerTests : IAsyncLifetime
                                                     .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
                                                     .First(s => s.GetType() == typeof(EmailStatusConsumer))!;
 
-        (_, EmailNotification Notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(_sendersRef);
+        (_, EmailNotification notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(_sendersRef);
 
         SendOperationResult sendOperationResult = new()
         {
-            NotificationId = Notification.Id,
+            NotificationId = notification.Id,
             OperationId = Guid.NewGuid().ToString(),
             SendResult = EmailNotificationResultType.Succeeded
         };
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
-
 
         // Act
         await consumerService.StartAsync(CancellationToken.None);
@@ -45,7 +44,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         await consumerService.StopAsync(CancellationToken.None);
 
         // Assert
-        string emailNotificationStatus = await SelectEmailNotificationStatus(Notification.Id);
+        string emailNotificationStatus = await SelectEmailNotificationStatus(notification.Id);
         Assert.Equal(EmailNotificationResultType.Succeeded.ToString(), emailNotificationStatus);
     }
 

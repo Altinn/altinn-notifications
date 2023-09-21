@@ -114,8 +114,8 @@ public class GetOrderServiceTests
     {
         if (repo == null)
         {
-            var _repo = new Mock<IOrderRepository>();
-            repo = _repo.Object;
+            var repoMock = new Mock<IOrderRepository>();
+            repo = repoMock.Object;
         }
 
         return new GetOrderService(repo);

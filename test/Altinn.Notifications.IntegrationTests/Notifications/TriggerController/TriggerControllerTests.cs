@@ -15,6 +15,7 @@ using Moq;
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.TriggerController;
+
 public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.TriggerController>>
 {
     private readonly IntegrationTestWebApplicationFactory<Controllers.TriggerController> _factory;
@@ -69,14 +70,14 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
     {
         if (orderProcessingService == null)
         {
-            var _orderProcessingService = new Mock<IOrderProcessingService>();
-            orderProcessingService = _orderProcessingService.Object;
+            var orderProcessingServiceMock = new Mock<IOrderProcessingService>();
+            orderProcessingService = orderProcessingServiceMock.Object;
         }
+
         if (emailNotificationService == null)
         {
-            var _emailNotificationService = new Mock<IEmailNotificationService>();
-            emailNotificationService = _emailNotificationService.Object;
-
+            var emailNotificationServiceMock = new Mock<IEmailNotificationService>();
+            emailNotificationService = emailNotificationServiceMock.Object;
         }
 
         HttpClient client = _factory.WithWebHostBuilder(builder =>

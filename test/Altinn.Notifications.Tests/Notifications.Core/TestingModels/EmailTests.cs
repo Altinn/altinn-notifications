@@ -7,6 +7,7 @@ using Altinn.Notifications.Core.Models;
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Core.TestingModels;
+
 public class EmailTests
 {
     private readonly Email _email;
@@ -19,15 +20,13 @@ public class EmailTests
         _serializedEmail = new JsonObject()
         {
             { "notificationId", id },
-             { "subject", "subject" },
-            {"body", "body" },
-            {"fromAddress", "from@domain.com" },
-            {"toAddress", "to@domain.com" },
-            {"contentType", "Html" },
-
+            { "subject", "subject" },
+            { "body", "body" },
+            { "fromAddress", "from@domain.com" },
+            { "toAddress", "to@domain.com" },
+            { "contentType", "Html" },
         }.ToJsonString();
     }
-
 
     [Fact]
     public void SerializeToJson()
