@@ -220,7 +220,6 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
     public async Task Post_OrderWithoutFromAddress_StringEmptyUsedAsServiceInput_Accepted()
     {
         // Arrange
-
         Mock<IEmailNotificationOrderService> serviceMock = new();
 
         serviceMock.Setup(s => s.RegisterEmailNotificationOrder(It.IsAny<NotificationOrderRequest>()))
