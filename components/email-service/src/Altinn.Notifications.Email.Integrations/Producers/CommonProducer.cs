@@ -61,7 +61,7 @@ public sealed class CommonProducer : ICommonProducer, IDisposable
         catch (ProduceException<long, string> ex)
         {
             _logger.LogError(ex, "// KafkaProducer // ProduceAsync // Permanent error: {Message} for message (value: '{DeliveryResult}')", ex.Message, ex.DeliveryResult.Value);
-            throw;
+            return false;
         }
 
         return true;
