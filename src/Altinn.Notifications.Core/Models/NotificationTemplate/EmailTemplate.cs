@@ -33,9 +33,9 @@ public class EmailTemplate : INotificationTemplate
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailTemplate"/> class.
     /// </summary>
-    public EmailTemplate(string fromAddress, string subject, string body, EmailContentType contentType)
+    public EmailTemplate(string? fromAddress, string subject, string body, EmailContentType contentType)
     {
-        FromAddress = fromAddress;
+        FromAddress = fromAddress ?? string.Empty;
         Subject = subject;
         Body = body;
         ContentType = contentType;

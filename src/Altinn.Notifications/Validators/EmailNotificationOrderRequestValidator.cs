@@ -26,6 +26,5 @@ public class EmailNotificationOrderRequestValidator : AbstractValidator<EmailNot
 
         RuleFor(order => order.Body).NotEmpty();
         RuleFor(order => order.Subject).NotEmpty();
-        RuleFor(order => order.FromAddress).NotEmpty();
     }
 }
