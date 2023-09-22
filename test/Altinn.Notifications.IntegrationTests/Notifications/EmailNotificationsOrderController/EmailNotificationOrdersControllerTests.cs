@@ -201,8 +201,8 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
         Assert.NotNull(orderIdObjectExt);
-        Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + _order.Id, response.Headers?.Location?.ToString());
         Assert.Equal(_order.Id, orderIdObjectExt.OrderId);
+        Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + _order.Id, response.Headers?.Location?.ToString());
 
         serviceMock.VerifyAll();
     }
