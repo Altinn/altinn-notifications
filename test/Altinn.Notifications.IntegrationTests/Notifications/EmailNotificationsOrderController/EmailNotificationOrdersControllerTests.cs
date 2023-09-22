@@ -217,7 +217,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
     }
 
     [Fact]
-    public async Task Post_OrderWithoutFromAddress_NullUsedAsServiceInput_Accepted()
+    public async Task Post_OrderWithoutFromAddress_StringEmptyUsedAsServiceInput_Accepted()
     {
         // Arrange
 
@@ -231,7 +231,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
                     .FirstOrDefault();
 
                 Assert.NotNull(emailTemplate);
-                Assert.Null(emailTemplate.FromAddress);
+                Assert.Empty(emailTemplate.FromAddress);
             })
             .ReturnsAsync((_order, null));
 
