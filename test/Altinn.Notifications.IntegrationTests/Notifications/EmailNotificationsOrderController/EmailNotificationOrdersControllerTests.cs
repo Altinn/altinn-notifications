@@ -181,8 +181,19 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
     public async Task Post_ServiceReturnsOrder_Accepted()
     {
         // Arrange
+        string expectedFromAddress = "sender@domain.com";
+
         Mock<IEmailNotificationOrderService> serviceMock = new();
         serviceMock.Setup(s => s.RegisterEmailNotificationOrder(It.IsAny<NotificationOrderRequest>()))
+              .Callback<NotificationOrderRequest>(orderRequest =>
+              {
+                  var emailTemplate = orderRequest.Templates
+                      .OfType<EmailTemplate>()
+                      .FirstOrDefault();
+
+                  Assert.NotNull(emailTemplate);
+                  Assert.Equal(expectedFromAddress, emailTemplate.FromAddress);
+              })
             .ReturnsAsync((_order, null));
 
         HttpClient client = GetTestClient(orderService: serviceMock.Object);
@@ -191,6 +202,55 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
         {
             Content = new StringContent(_orderRequestExt.Serialize(), Encoding.UTF8, "application/json")
+        };
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        string actualOrderId = await response.Content.ReadAsStringAsync();
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + _order.Id, response.Headers?.Location?.ToString());
+        Assert.Equal($"{_order.Id}", actualOrderId);
+
+        serviceMock.VerifyAll();
+    }
+
+    [Fact]
+    public async Task Post_OrderWithoutFromAddress_NullUsedAsServiceInput_Accepted()
+    {
+        // Arrange
+
+        Mock<IEmailNotificationOrderService> serviceMock = new();
+
+        serviceMock.Setup(s => s.RegisterEmailNotificationOrder(It.IsAny<NotificationOrderRequest>()))
+            .Callback<NotificationOrderRequest>(orderRequest =>
+            {
+                var emailTemplate = orderRequest.Templates
+                    .OfType<EmailTemplate>()
+                    .FirstOrDefault();
+
+                Assert.NotNull(emailTemplate);
+                Assert.Null(emailTemplate.FromAddress);
+            })
+            .ReturnsAsync((_order, null));
+
+        HttpClient client = GetTestClient(orderService: serviceMock.Object);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
+
+        EmailNotificationOrderRequestExt request = new()
+        {
+            Body = "email-body",
+            ContentType = EmailContentType.Html,
+            Recipients = new List<RecipientExt>() { new RecipientExt() { EmailAddress = "recipient1@domain.com" }, new RecipientExt() { EmailAddress = "recipient2@domain.com" } },
+            SendersReference = "senders-reference",
+            RequestedSendTime = DateTime.UtcNow,
+            Subject = "email-subject",
+        };
+
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
+        {
+            Content = new StringContent(request.Serialize(), Encoding.UTF8, "application/json")
         };
 
         // Act

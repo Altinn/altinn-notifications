@@ -72,21 +72,6 @@ public class EmailNotificationOrderRequestValidatorTests
     }
 
     [Fact]
-    public void Validate_FromAddressMissing_ReturnsFalse()
-    {
-        var order = new EmailNotificationOrderRequestExt()
-        {
-            Subject = "This is an email subject",
-            Recipients = new List<RecipientExt>() { new RecipientExt() { Id = "16069412345", EmailAddress = "recipient2@domain.com" } },
-            Body = "This is an email body"
-        };
-
-        var actual = _validator.Validate(order);
-        Assert.False(actual.IsValid);
-        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("'From Address' must not be empty."));
-    }
-
-    [Fact]
     public void Validate_SubjectMissing_ReturnsFalse()
     {
         var order = new EmailNotificationOrderRequestExt()
