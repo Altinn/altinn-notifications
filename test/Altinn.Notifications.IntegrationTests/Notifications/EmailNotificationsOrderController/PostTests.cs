@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Json;
 
 using Altinn.Notifications.Controllers;
 using Altinn.Notifications.Core.Enums;
@@ -75,12 +76,13 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
 
         // Act
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
-        string orderId = await response.Content.ReadAsStringAsync();
+        string respoonseString = await response.Content.ReadAsStringAsync();
+        OrderIdExt? orderIdObjectExt = JsonSerializer.Deserialize<OrderIdExt>(respoonseString);
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-        Guid.Parse(orderId);
-        Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + orderId, response.Headers?.Location?.ToString());
+        Assert.NotNull(orderIdObjectExt);
+        Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + orderIdObjectExt.OrderId, response.Headers?.Location?.ToString());
     }
 
     [Fact]
@@ -97,12 +99,13 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
 
         // Act
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
-        string orderId = await response.Content.ReadAsStringAsync();
+        string respoonseString = await response.Content.ReadAsStringAsync();
+        OrderIdExt? orderIdObjectExt = JsonSerializer.Deserialize<OrderIdExt>(respoonseString);
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-        Guid.Parse(orderId);
-        Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + orderId, response.Headers?.Location?.ToString());
+        Assert.NotNull(orderIdObjectExt);
+        Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + orderIdObjectExt.OrderId, response.Headers?.Location?.ToString());
     }
 
     public async void Dispose()
