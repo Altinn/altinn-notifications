@@ -206,12 +206,14 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
 
         // Act
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
-        string actualOrderId = await response.Content.ReadAsStringAsync();
+        string respoonseString = await response.Content.ReadAsStringAsync();
+        OrderIdExt? orderIdObjectExt = JsonSerializer.Deserialize<OrderIdExt>(respoonseString);
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        Assert.NotNull(orderIdObjectExt);
+        Assert.Equal(_order.Id, orderIdObjectExt.OrderId);
         Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + _order.Id, response.Headers?.Location?.ToString());
-        Assert.Equal($"{_order.Id}", actualOrderId);
 
         serviceMock.VerifyAll();
     }
@@ -254,12 +256,15 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
 
         // Act
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
-        string actualOrderId = await response.Content.ReadAsStringAsync();
+        string respoonseString = await response.Content.ReadAsStringAsync();
+        OrderIdExt? orderIdObjectExt = JsonSerializer.Deserialize<OrderIdExt>(respoonseString);
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        Assert.NotNull(orderIdObjectExt);
+        Assert.Equal(_order.Id, orderIdObjectExt.OrderId);
+
         Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + _order.Id, response.Headers?.Location?.ToString());
-        Assert.Equal($"{_order.Id}", actualOrderId);
 
         serviceMock.VerifyAll();
     }

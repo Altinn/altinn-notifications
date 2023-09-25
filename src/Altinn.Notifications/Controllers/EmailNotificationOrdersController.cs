@@ -66,6 +66,6 @@ public class EmailNotificationOrdersController : ControllerBase
         }
 
         string selfLink = registeredOrder!.GetSelfLink();
-        return Accepted(selfLink, registeredOrder!.Id.ToString());
+        return Accepted(selfLink, new OrderIdExt(registeredOrder!.Id));
     }
 }
