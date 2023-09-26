@@ -102,6 +102,7 @@ public abstract class KafkaConsumerBase<T> : BackgroundService
                     _consumer.Commit(consumeResult);
                     _consumer.StoreOffset(consumeResult);
                 }
+                
                 _logger.LogError(ex, "// {Class} // ConsumeOrder // An error occurred while consuming messages", GetType().Name);
             }
         }
