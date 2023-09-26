@@ -82,7 +82,8 @@ public abstract class KafkaConsumerBase<T> : BackgroundService
                 var consumeResult = _consumer.Consume(stoppingToken);
                 if (consumeResult != null)
                 {
-                    await processMessageFunc(consumeResult.Message.Value);
+                    message = consumeResult.Message.Value;
+                    await processMessageFunc(message);
                     _consumer.Commit(consumeResult);
                     _consumer.StoreOffset(consumeResult);
                 }
