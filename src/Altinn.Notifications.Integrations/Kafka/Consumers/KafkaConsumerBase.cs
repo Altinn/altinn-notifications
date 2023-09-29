@@ -74,15 +74,17 @@ public abstract class KafkaConsumerBase<T> : BackgroundService
         CancellationToken stoppingToken)
     {
         string message = string.Empty;
+        ConsumeResult<string, string>? consumeResult = null;
 
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                var consumeResult = _consumer.Consume(stoppingToken);
+                consumeResult = _consumer.Consume(stoppingToken);
                 if (consumeResult != null)
                 {
-                    await processMessageFunc(consumeResult.Message.Value);
+                    message = consumeResult.Message.Value;
+                    await processMessageFunc(message);
                     _consumer.Commit(consumeResult);
                     _consumer.StoreOffset(consumeResult);
                 }
@@ -94,6 +96,13 @@ public abstract class KafkaConsumerBase<T> : BackgroundService
             catch (Exception ex)
             {
                 await retryMessageFunc(message!);
+
+                if (consumeResult != null)
+                {
+                    _consumer.Commit(consumeResult);
+                    _consumer.StoreOffset(consumeResult);
+                }
+                
                 _logger.LogError(ex, "// {Class} // ConsumeOrder // An error occurred while consuming messages", GetType().Name);
             }
         }
