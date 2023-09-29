@@ -59,7 +59,9 @@ public class EmailNotificationOrderServiceTests
         var service = GetTestService(repoMock.Object, id, createdTime);
 
         // Act
-        (NotificationOrder? actual, ServiceError? _) = await service.RegisterEmailNotificationOrder(input);
+        Result<NotificationOrder, ServiceError> result = await service.RegisterEmailNotificationOrder(input);
+        NotificationOrder? actual =
+            result.Match<NotificationOrder?>(successValue => successValue, failureValue => null);
 
         // Assert
         Assert.Equivalent(expected, actual, true);
@@ -105,7 +107,9 @@ public class EmailNotificationOrderServiceTests
         var service = GetTestService(repoMock.Object, id, createdTime);
 
         // Act
-        (NotificationOrder? actual, ServiceError? _) = await service.RegisterEmailNotificationOrder(input);
+        Result<NotificationOrder, ServiceError> result = await service.RegisterEmailNotificationOrder(input);
+        NotificationOrder? actual = 
+            result.Match<NotificationOrder?>(successValue => successValue, failureValue => null);
 
         // Assert
         Assert.Equivalent(expected, actual, true);
@@ -132,6 +136,8 @@ public class EmailNotificationOrderServiceTests
         {
             DefaultEmailFromAddress = "noreply@altinn.no"
         });
-        return new EmailNotificationOrderService(repository, guidMock.Object, dateTimeMock.Object, config);
+
+        var orgConfigMock = new Mock<IApplicationOwnerConfigRepository>();
+        return new EmailNotificationOrderService(repository, guidMock.Object, dateTimeMock.Object, orgConfigMock.Object, config);
     }
 }

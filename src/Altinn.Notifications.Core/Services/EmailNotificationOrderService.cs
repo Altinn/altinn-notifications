@@ -17,21 +17,29 @@ public class EmailNotificationOrderService : IEmailNotificationOrderService
     private readonly IOrderRepository _repository;
     private readonly IGuidService _guid;
     private readonly IDateTimeService _dateTime;
+    private readonly IApplicationOwnerConfigRepository _applicationOwnerConfigRepository;
+
     private readonly string _defaultFromAddress;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotificationOrderService"/> class.
     /// </summary>
-    public EmailNotificationOrderService(IOrderRepository repository, IGuidService guid, IDateTimeService dateTime, IOptions<NotificationOrderConfig> config)
+    public EmailNotificationOrderService(
+        IOrderRepository repository,
+        IGuidService guid,
+        IDateTimeService dateTime,
+        IApplicationOwnerConfigRepository applicationOwnerConfigRepository,
+        IOptions<NotificationOrderConfig> config)
     {
         _repository = repository;
         _guid = guid;
         _dateTime = dateTime;
+        _applicationOwnerConfigRepository = applicationOwnerConfigRepository;
         _defaultFromAddress = config.Value.DefaultEmailFromAddress;
     }
 
     /// <inheritdoc/>
-    public async Task<(NotificationOrder? Order, ServiceError? Error)> RegisterEmailNotificationOrder(NotificationOrderRequest orderRequest)
+    public async Task<Result<NotificationOrder, ServiceError>> RegisterEmailNotificationOrder(NotificationOrderRequest orderRequest)
     {
         Guid orderId = _guid.NewGuid();
         DateTime created = _dateTime.UtcNow();
@@ -50,7 +58,7 @@ public class EmailNotificationOrderService : IEmailNotificationOrderService
 
         NotificationOrder savedOrder = await _repository.Create(order);
 
-        return (savedOrder, null);
+        return savedOrder;
     }
 
     private List<INotificationTemplate> SetFromAddressIfNotDefined(List<INotificationTemplate> templates)

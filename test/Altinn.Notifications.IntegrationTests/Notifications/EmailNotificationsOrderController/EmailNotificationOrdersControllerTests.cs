@@ -159,7 +159,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
         // Arrange
         Mock<IEmailNotificationOrderService> serviceMock = new();
         serviceMock.Setup(s => s.RegisterEmailNotificationOrder(It.IsAny<NotificationOrderRequest>()))
-            .ReturnsAsync((null, new ServiceError(500)));
+            .ReturnsAsync(new ServiceError(500));
 
         HttpClient client = GetTestClient(orderService: serviceMock.Object);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
@@ -194,7 +194,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
                   Assert.NotNull(emailTemplate);
                   Assert.Equal(expectedFromAddress, emailTemplate.FromAddress);
               })
-            .ReturnsAsync((_order, null));
+            .ReturnsAsync(_order);
 
         HttpClient client = GetTestClient(orderService: serviceMock.Object);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
@@ -234,7 +234,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
                 Assert.NotNull(emailTemplate);
                 Assert.Empty(emailTemplate.FromAddress);
             })
-            .ReturnsAsync((_order, null));
+            .ReturnsAsync(_order);
 
         HttpClient client = GetTestClient(orderService: serviceMock.Object);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));

@@ -5,7 +5,6 @@ using Altinn.Notifications.Persistence.Repository;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 using Npgsql;
 
@@ -35,6 +34,7 @@ public static class ServiceCollectionExtensions
         return services
         .AddSingleton<IOrderRepository, OrderRepository>()
         .AddSingleton<IEmailNotificationRepository, EmailNotificationRepository>()
+        .AddSingleton<IApplicationOwnerConfigRepository, ApplicationOwnerConfigRepository>()
         .AddNpgsqlDataSource(connectionString, builder => builder.EnableParameterLogging(settings.LogParameters));
     }
 
