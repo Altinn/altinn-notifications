@@ -12,8 +12,8 @@ namespace Altinn.Notifications.Persistence.Repository;
 /// </summary>
 public class ApplicationOwnerConfigRepository : IApplicationOwnerConfigRepository
 {
-    private const string _getOrgSettingsSql = 
-        "SELECT _id, orgid, fromaddresses FROM notifications.applicationownerconfig WHERE orgid=$1";
+    private const string _getOrgSettingsSql =
+        "SELECT _id, orgid, emailaddresses, smsnames FROM notifications.applicationownerconfig WHERE orgid=$1";
 
     private readonly NpgsqlDataSource _dataSource;
 
@@ -39,7 +39,8 @@ public class ApplicationOwnerConfigRepository : IApplicationOwnerConfigRepositor
             ApplicationOwnerConfig applicationOwnerConfig = new ApplicationOwnerConfig
             {
                 OrgId = reader.GetString(1),
-                FromAddress = reader.GetString(2)
+                EmailAddresses = reader.GetString(2)?.Split(',').ToList() ?? new List<string>(),
+                SmsNames = reader.GetString(3)?.Split(',').ToList() ?? new List<string>()
             };
             return applicationOwnerConfig;
         }
