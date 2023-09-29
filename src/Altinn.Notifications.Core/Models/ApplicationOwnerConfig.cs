@@ -6,9 +6,18 @@
 public class ApplicationOwnerConfig
 {
     /// <summary>
+    /// Initializes a new instance of the <see cref="ApplicationOwnerConfig"/> class for the given org id.
+    /// </summary>
+    /// <param name="orgId">The unique org id for an application owner.</param>
+    public ApplicationOwnerConfig(string orgId)
+    {
+        OrgId = orgId;
+    }
+
+    /// <summary>
     /// The unique identifier of an application owner.
     /// </summary>
-    public string OrgId { get; set; } = string.Empty;
+    public string OrgId { get; }
 
     /// <summary>
     /// A pre registered list of approved email addresses that an application owner can use as from address.

@@ -10,10 +10,18 @@ namespace Altinn.Notifications.Persistence.Repository;
 /// <summary>
 /// Implementation of order repository logic
 /// </summary>
-public class ApplicationOwnerConfigRepository : IApplicationOwnerConfigRepository
+public sealed class ApplicationOwnerConfigRepository : IApplicationOwnerConfigRepository
 {
-    private const string _getOrgSettingsSql =
-        "SELECT _id, orgid, emailaddresses, smsnames FROM notifications.applicationownerconfig WHERE orgid=$1";
+    private const string _selectApplicationOwnerConfigSql =
+        "SELECT _id, orgid, emailaddresses, smsnames " +
+        "FROM notifications.applicationownerconfig " +
+        "WHERE orgid=$1";
+
+    private const string _writeApplicationOwnerConfigSql =
+        "INSERT INTO notifications.applicationownerconfig(orgid, emailaddresses, smsnames) " +
+        "  VALUES ($1, $2, $3) " +
+        "ON CONFLICT (orgid) " +
+        "  DO UPDATE SET emailaddresses = $2, smsnames = $3";
 
     private readonly NpgsqlDataSource _dataSource;
 
@@ -27,24 +35,35 @@ public class ApplicationOwnerConfigRepository : IApplicationOwnerConfigRepositor
     }
 
     /// <inheritdoc/>
-    public async Task<ApplicationOwnerConfig?> GetOrgSettings(string orgId)
+    public async Task<ApplicationOwnerConfig?> GetApplicationOwnerConfig(string orgId)
     {
-        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getOrgSettingsSql);
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_selectApplicationOwnerConfigSql);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, orgId);
 
         await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync();
 
         if (await reader.ReadAsync())
         {
-            ApplicationOwnerConfig applicationOwnerConfig = new ApplicationOwnerConfig
+            ApplicationOwnerConfig applicationOwnerConfig = new(reader.GetString(1))
             {
-                OrgId = reader.GetString(1),
-                EmailAddresses = reader.GetString(2)?.Split(',').ToList() ?? new List<string>(),
-                SmsNames = reader.GetString(3)?.Split(',').ToList() ?? new List<string>()
+                EmailAddresses = reader.GetString(2).Split(',').ToList(),
+                SmsNames = reader.GetString(3).Split(',').ToList()
             };
+
             return applicationOwnerConfig;
         }
 
         return null;
+    }
+
+    /// <inheritdoc/>
+    public async Task WriteApplicationOwnerConfig(ApplicationOwnerConfig applicationOwnerConfig)
+    {
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_writeApplicationOwnerConfigSql);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, applicationOwnerConfig.OrgId);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.Join(',', applicationOwnerConfig.EmailAddresses));
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.Join(',', applicationOwnerConfig.SmsNames));
+
+        _ = await pgcom.ExecuteNonQueryAsync();
     }
 }
