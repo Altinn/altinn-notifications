@@ -58,12 +58,12 @@ public class EmailNotificationOrdersController : ControllerBase
         var orderRequest = emailNotificationOrderRequest.MapToOrderRequest(creator);
         var result = await _orderService.RegisterEmailNotificationOrder(orderRequest);
 
-        return result.Match<ActionResult>(
+        return result.Match(
             successValue =>
             {
                 string selfLink = successValue.GetSelfLink();
                 return Accepted(selfLink, new OrderIdExt(successValue.Id));
             },
-            errorValue => StatusCode(errorValue.ErrorCode, errorValue.ErrorMessage));
+            errorValue => ValidationProblem(errorValue.ErrorMessage, statusCode: errorValue.ErrorCode));
     }
 }

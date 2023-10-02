@@ -41,15 +41,31 @@ public class EmailNotificationOrderService : IEmailNotificationOrderService
     /// <inheritdoc/>
     public async Task<Result<NotificationOrder, ServiceError>> RegisterEmailNotificationOrder(NotificationOrderRequest orderRequest)
     {
+        ApplicationOwnerConfig? config = 
+            await _applicationOwnerConfigRepository.GetApplicationOwnerConfig(orderRequest.Creator.ShortName);
+
+        foreach (var template in orderRequest.Templates.OfType<EmailTemplate>())
+        {
+            if (string.IsNullOrEmpty(template.FromAddress))
+            {
+                template.FromAddress = _defaultFromAddress;
+            }
+            else
+            {
+                if (config is not null && !config.EmailAddresses.Contains(template.FromAddress))
+                {
+                    return new ServiceError(400, "All given from address must be registered as approved by Altinn.");
+                }
+            }
+        }
+
         Guid orderId = _guid.NewGuid();
         DateTime created = _dateTime.UtcNow();
-
-        var templates = SetFromAddressIfNotDefined(orderRequest.Templates);
 
         var order = new NotificationOrder(
             orderId,
             orderRequest.SendersReference,
-            templates,
+            orderRequest.Templates,
             orderRequest.RequestedSendTime,
             orderRequest.NotificationChannel,
             orderRequest.Creator,
@@ -59,15 +75,5 @@ public class EmailNotificationOrderService : IEmailNotificationOrderService
         NotificationOrder savedOrder = await _repository.Create(order);
 
         return savedOrder;
-    }
-
-    private List<INotificationTemplate> SetFromAddressIfNotDefined(List<INotificationTemplate> templates)
-    {
-        foreach (var template in templates.OfType<EmailTemplate>().Where(template => string.IsNullOrEmpty(template.FromAddress)))
-        {
-            template.FromAddress = _defaultFromAddress;
-        }
-
-        return templates;
     }
 }

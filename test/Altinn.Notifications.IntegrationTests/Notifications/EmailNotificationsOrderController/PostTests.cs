@@ -21,7 +21,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.EmailNotificationsOrderController;
 
-public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<EmailNotificationOrdersController>>, IDisposable
+public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<EmailNotificationOrdersController>>, IAsyncLifetime
 {
     private const string _basePath = "/notifications/api/v1/orders/email";
 
@@ -31,6 +31,7 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
     private readonly string _serializedOrderRequestWithoutSendersRefExt;
 
     private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
+    private readonly string _applicationOwnerId = Guid.NewGuid().ToString();
 
     public PostTests(IntegrationTestWebApplicationFactory<EmailNotificationOrdersController> factory)
     {
@@ -57,9 +58,20 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
         };
 
         _serializedOrderRequestExt = orderRequestExt.Serialize();
-        orderRequestExt.SendersReference = null;
 
+        orderRequestExt.SendersReference = null;
         _serializedOrderRequestWithoutSendersRefExt = orderRequestExt.Serialize();
+    }
+
+    public async Task InitializeAsync()
+    {
+        await Task.CompletedTask;
+    }
+
+    public async Task DisposeAsync()
+    {
+        await PostgreUtil.RunSql($"DELETE FROM notifications.orders WHERE sendersreference = '{_sendersRef}'");
+        await PostgreUtil.RunSql($"DELETE FROM notifications.applicationownerconfig WHERE orgid='{_applicationOwnerId}'");
     }
 
     [Fact]
@@ -106,19 +118,6 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
         Assert.NotNull(orderIdObjectExt);
         Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + orderIdObjectExt.OrderId, response.Headers?.Location?.ToString());
-    }
-
-    public async void Dispose()
-    {
-        await Dispose(true);
-
-        GC.SuppressFinalize(this);
-    }
-
-    protected virtual async Task Dispose(bool disposing)
-    {
-        string sql = $"delete from notifications.orders where sendersreference = '{_sendersRef}'";
-        await PostgreUtil.RunSql(sql);
     }
 
     private HttpClient GetTestClient()

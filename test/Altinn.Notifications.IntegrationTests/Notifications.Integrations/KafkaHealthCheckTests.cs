@@ -43,14 +43,14 @@ public class KafkaHealthCheckTests : IAsyncLifetime
     }
 
     /// <inheritdoc/>
-    public async Task DisposeAsync()
+    public async Task InitializeAsync()
     {
-        await KafkaUtil.DeleteTopicAsync(_topicName);
+        await Task.CompletedTask;
     }
 
     /// <inheritdoc/>
-    public Task InitializeAsync()
+    public async Task DisposeAsync()
     {
-        return Task.CompletedTask;
+        await KafkaUtil.DeleteTopicAsync(_topicName);
     }
 }

@@ -14,6 +14,19 @@ public class EmailStatusConsumerTests : IAsyncLifetime
     private readonly string _statusUpdatedTopicName = Guid.NewGuid().ToString();
     private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
 
+    public Task InitializeAsync()
+    {
+        return Task.CompletedTask;
+    }
+
+    public async Task DisposeAsync()
+    {
+        string sql = $"DELETE FROM notifications.orders WHERE sendersreference = '{_sendersRef}'";
+
+        await PostgreUtil.RunSql(sql);
+        await KafkaUtil.DeleteTopicAsync(_statusUpdatedTopicName);
+    }
+
     [Fact]
     public async Task RunTask_ConfirmExpectedSideEffects()
     {
@@ -46,24 +59,6 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         // Assert
         string emailNotificationStatus = await SelectEmailNotificationStatus(notification.Id);
         Assert.Equal(EmailNotificationResultType.Succeeded.ToString(), emailNotificationStatus);
-    }
-
-    public Task InitializeAsync()
-    {
-        return Task.CompletedTask;
-    }
-
-    public async Task DisposeAsync()
-    {
-        await Dispose(true);
-    }
-
-    protected virtual async Task Dispose(bool disposing)
-    {
-        string sql = $"delete from notifications.orders where sendersreference = '{_sendersRef}'";
-
-        await PostgreUtil.RunSql(sql);
-        await KafkaUtil.DeleteTopicAsync(_statusUpdatedTopicName);
     }
 
     private static async Task<string> SelectEmailNotificationStatus(Guid notificationId)

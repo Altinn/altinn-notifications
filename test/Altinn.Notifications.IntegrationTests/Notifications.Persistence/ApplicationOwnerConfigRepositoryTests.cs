@@ -1,4 +1,5 @@
 ﻿using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Configuration;
 using Altinn.Notifications.Persistence.Repository;
 
@@ -10,9 +11,11 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
-public class ApplicationOwnerConfigRepositoryTests
+public class ApplicationOwnerConfigRepositoryTests : IAsyncLifetime
 {
     private readonly NpgsqlDataSource _dataSource;
+
+    private readonly string _applicationOwnerId = Guid.NewGuid().ToString();
 
     public ApplicationOwnerConfigRepositoryTests()
     {
@@ -23,6 +26,16 @@ public class ApplicationOwnerConfigRepositoryTests
         string connectionString = string.Format(settings!.ConnectionString, settings.NotificationsDbPwd);
 
         _dataSource = new NpgsqlDataSourceBuilder(connectionString).Build();
+    }
+
+    public async Task InitializeAsync()
+    {
+        await Task.CompletedTask;
+    }
+
+    public async Task DisposeAsync()
+    {
+        await PostgreUtil.RunSql($"DELETE FROM notifications.applicationownerconfig WHERE orgid='{_applicationOwnerId}'");
     }
 
     [Fact]
@@ -44,13 +57,13 @@ public class ApplicationOwnerConfigRepositoryTests
         // Arrange
         var target = new ApplicationOwnerConfigRepository(_dataSource);
 
-        ApplicationOwnerConfig writtenAppOwnerConfig = new("ttd");
+        ApplicationOwnerConfig writtenAppOwnerConfig = new(_applicationOwnerId);
         writtenAppOwnerConfig.EmailAddresses.Add("noreply@altinn.cloud");
         writtenAppOwnerConfig.EmailAddresses.Add("doreply@altinn.cloud");
 
         // Act
         await target.WriteApplicationOwnerConfig(writtenAppOwnerConfig);
-        ApplicationOwnerConfig? readAppOwnerConfig = await target.GetApplicationOwnerConfig("ttd");
+        ApplicationOwnerConfig? readAppOwnerConfig = await target.GetApplicationOwnerConfig(_applicationOwnerId);
 
         // Assert
         Assert.Equivalent(writtenAppOwnerConfig, readAppOwnerConfig);
@@ -62,11 +75,11 @@ public class ApplicationOwnerConfigRepositoryTests
         // Arrange
         var target = new ApplicationOwnerConfigRepository(_dataSource);
 
-        ApplicationOwnerConfig firstWrite = new("ttd");
+        ApplicationOwnerConfig firstWrite = new(_applicationOwnerId);
         firstWrite.EmailAddresses.Add("noreply@altinn.cloud");
         firstWrite.EmailAddresses.Add("doreply@altinn.cloud");
 
-        ApplicationOwnerConfig secondWrite = new("ttd");
+        ApplicationOwnerConfig secondWrite = new(_applicationOwnerId);
         secondWrite.EmailAddresses.Add("baretullfra@altinn.cloud");
         secondWrite.SmsNames.Add("98989891");
         secondWrite.SmsNames.Add("53819");
@@ -74,7 +87,7 @@ public class ApplicationOwnerConfigRepositoryTests
         // Act
         await target.WriteApplicationOwnerConfig(firstWrite); 
         await target.WriteApplicationOwnerConfig(secondWrite);
-        ApplicationOwnerConfig? readAppOwnerConfig = await target.GetApplicationOwnerConfig("ttd");
+        ApplicationOwnerConfig? readAppOwnerConfig = await target.GetApplicationOwnerConfig(_applicationOwnerId);
 
         // Assert
         Assert.Equivalent(secondWrite, readAppOwnerConfig);
