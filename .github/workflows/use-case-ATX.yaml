@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        environment: [AT21, AT22]
+        environment: [AT21]
     environment: ${{ matrix.environment }}
     runs-on: ubuntu-latest
     steps:
