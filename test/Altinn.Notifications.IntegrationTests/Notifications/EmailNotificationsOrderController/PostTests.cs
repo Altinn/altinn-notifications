@@ -5,13 +5,14 @@ using System.Text.Json;
 
 using Altinn.Notifications.Controllers;
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using Altinn.Notifications.Tests.Notifications.Utils;
 
 using AltinnCore.Authentication.JwtCookie;
-
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -27,6 +28,8 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
 
     private readonly IntegrationTestWebApplicationFactory<EmailNotificationOrdersController> _factory;
 
+    private readonly JsonSerializerOptions _options;
+
     private readonly string _serializedOrderRequestExt;
     private readonly string _serializedOrderRequestWithoutSendersRefExt;
 
@@ -36,6 +39,11 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
     public PostTests(IntegrationTestWebApplicationFactory<EmailNotificationOrdersController> factory)
     {
         _factory = factory;
+        _options = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        };
+
         EmailNotificationOrderRequestExt orderRequestExt = new()
         {
             Body = "email-body",
@@ -118,6 +126,59 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
         Assert.NotNull(orderIdObjectExt);
         Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + orderIdObjectExt.OrderId, response.Headers?.Location?.ToString());
+    }
+
+    [Fact]
+    public async Task Post_OrderWithValidFromAddress_Accepted()
+    {
+        // Arrange
+        ApplicationOwnerConfig config = new(_applicationOwnerId);
+        config.EmailAddresses.Add("sender@domain.com");
+        await PostgreUtil.PopulateApplicationOwnerConfig(config);
+
+        HttpClient client = GetTestClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken(_applicationOwnerId));
+
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
+        {
+            Content = new StringContent(_serializedOrderRequestExt, Encoding.UTF8, "application/json")
+        };
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        string respoonseString = await response.Content.ReadAsStringAsync();
+        OrderIdExt? orderIdObjectExt = JsonSerializer.Deserialize<OrderIdExt>(respoonseString);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        Assert.NotNull(orderIdObjectExt);
+        Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + orderIdObjectExt.OrderId, response.Headers?.Location?.ToString());
+    }
+
+    [Fact]
+    public async Task Post_OrderWithInvalidFromAddress_BadRequest()
+    {
+        // Arrange
+        ApplicationOwnerConfig config = new(_applicationOwnerId);
+        config.EmailAddresses.Add("another@address.com");
+        await PostgreUtil.PopulateApplicationOwnerConfig(config);
+
+        HttpClient client = GetTestClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken(_applicationOwnerId));
+
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
+        {
+            Content = new StringContent(_serializedOrderRequestExt, Encoding.UTF8, "application/json")
+        };
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        string respoonseString = await response.Content.ReadAsStringAsync();
+        ProblemDetails? actual = JsonSerializer.Deserialize<ProblemDetails>(respoonseString, _options);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("One or more validation errors occurred.", actual?.Title);
     }
 
     private HttpClient GetTestClient()

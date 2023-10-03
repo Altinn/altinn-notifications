@@ -54,7 +54,7 @@ public class EmailNotificationOrderService : IEmailNotificationOrderService
             {
                 if (config is not null && !config.EmailAddresses.Contains(template.FromAddress))
                 {
-                    return new ServiceError(400, "All given from address must be registered as approved by Altinn.");
+                    return new ServiceError("fromAddress", "From address must be registered before use.");
                 }
             }
         }

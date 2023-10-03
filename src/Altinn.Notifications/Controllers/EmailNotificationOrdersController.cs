@@ -1,4 +1,6 @@
-﻿using Altinn.Notifications.Core.Services.Interfaces;
+﻿using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
@@ -44,7 +46,7 @@ public class EmailNotificationOrdersController : ControllerBase
         var validationResult = _validator.Validate(emailNotificationOrderRequest);
         if (!validationResult.IsValid)
         {
-            validationResult.AddToModelState(this.ModelState);
+            validationResult.AddToModelState(ModelState);
             return ValidationProblem(ModelState);
         }
 
@@ -55,8 +57,8 @@ public class EmailNotificationOrdersController : ControllerBase
             return Forbid();
         }
 
-        var orderRequest = emailNotificationOrderRequest.MapToOrderRequest(creator);
-        var result = await _orderService.RegisterEmailNotificationOrder(orderRequest);
+        NotificationOrderRequest orderRequest = emailNotificationOrderRequest.MapToOrderRequest(creator);
+        Result<NotificationOrder, ServiceError> result = await _orderService.RegisterEmailNotificationOrder(orderRequest);
 
         return result.Match(
             successValue =>
@@ -64,6 +66,15 @@ public class EmailNotificationOrdersController : ControllerBase
                 string selfLink = successValue.GetSelfLink();
                 return Accepted(selfLink, new OrderIdExt(successValue.Id));
             },
-            errorValue => ValidationProblem(errorValue.ErrorMessage, statusCode: errorValue.ErrorCode));
+            errorValue =>
+            {
+                if (errorValue.ErrorCode == 400)
+                {
+                    errorValue.AddToModelState(ModelState);
+                    return ValidationProblem(ModelState);
+                }
+
+                return Problem(errorValue.ErrorMessage, statusCode: errorValue.ErrorCode);
+            });
     }
 }

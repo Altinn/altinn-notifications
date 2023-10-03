@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Models.Notification;
+﻿using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Repository.Interfaces;
 using Altinn.Notifications.Persistence.Repository;
@@ -68,6 +69,15 @@ public static class PostgreUtil
         await notificationRepo.AddNotification(e, DateTime.UtcNow.AddDays(1));
 
         return o;
+    }
+
+    public static async Task PopulateApplicationOwnerConfig(ApplicationOwnerConfig applicationOwnerConfig)
+    {
+        var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IApplicationOwnerConfigRepository) });
+        ApplicationOwnerConfigRepository repository =
+            (ApplicationOwnerConfigRepository)serviceList.First(i => i.GetType() == typeof(ApplicationOwnerConfigRepository));
+
+        await repository.WriteApplicationOwnerConfig(applicationOwnerConfig);
     }
 
     public static async Task<int> RunSqlReturnIntOutput(string query)
