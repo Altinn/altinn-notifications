@@ -1,5 +1,6 @@
 ﻿using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Repository.Interfaces;
+using Altinn.Notifications.Persistence.Extensions;
 
 using Npgsql;
 
@@ -44,10 +45,13 @@ public sealed class ApplicationOwnerConfigRepository : IApplicationOwnerConfigRe
 
         if (await reader.ReadAsync())
         {
-            ApplicationOwnerConfig applicationOwnerConfig = new(reader.GetString(1))
+            string? emailAddresses = reader.GetValue<string?>("emailaddresses");
+            string? smsNames = reader.GetValue<string?>("smsnames");
+
+            ApplicationOwnerConfig applicationOwnerConfig = new(orgId)
             {
-                EmailAddresses = reader.GetString(2).Split(',').ToList(),
-                SmsNames = reader.GetString(3).Split(',').ToList()
+                EmailAddresses = emailAddresses?.Split(',').ToList() ?? new List<string>(),
+                SmsNames = smsNames?.Split(',').ToList() ?? new List<string>()
             };
 
             return applicationOwnerConfig;
@@ -59,10 +63,18 @@ public sealed class ApplicationOwnerConfigRepository : IApplicationOwnerConfigRe
     /// <inheritdoc/>
     public async Task WriteApplicationOwnerConfig(ApplicationOwnerConfig applicationOwnerConfig)
     {
+        string? emailAddresses = applicationOwnerConfig.EmailAddresses.Count > 0 
+            ? string.Join(',', applicationOwnerConfig.EmailAddresses)
+            : null;
+
+        string? smsNames = applicationOwnerConfig.SmsNames.Count > 0
+            ? string.Join(',', applicationOwnerConfig.SmsNames)
+            : null;
+
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_writeApplicationOwnerConfigSql);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, applicationOwnerConfig.OrgId);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.Join(',', applicationOwnerConfig.EmailAddresses));
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.Join(',', applicationOwnerConfig.SmsNames));
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, emailAddresses ?? (object)DBNull.Value);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, smsNames ?? (object)DBNull.Value);
 
         _ = await pgcom.ExecuteNonQueryAsync();
     }

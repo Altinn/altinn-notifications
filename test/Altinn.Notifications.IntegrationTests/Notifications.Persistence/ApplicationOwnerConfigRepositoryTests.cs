@@ -78,9 +78,9 @@ public class ApplicationOwnerConfigRepositoryTests : IAsyncLifetime
         ApplicationOwnerConfig firstWrite = new(_applicationOwnerId);
         firstWrite.EmailAddresses.Add("noreply@altinn.cloud");
         firstWrite.EmailAddresses.Add("doreply@altinn.cloud");
+        firstWrite.SmsNames.Add("98989891");
 
         ApplicationOwnerConfig secondWrite = new(_applicationOwnerId);
-        secondWrite.EmailAddresses.Add("baretullfra@altinn.cloud");
         secondWrite.SmsNames.Add("98989891");
         secondWrite.SmsNames.Add("53819");
 
