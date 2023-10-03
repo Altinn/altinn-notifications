@@ -64,6 +64,7 @@ public class EmailNotificationOrderServiceTests
             result.Match<NotificationOrder?>(successValue => successValue, failureValue => null);
 
         // Assert
+        Assert.True(result.IsSuccess);
         Assert.Equivalent(expected, actual, true);
         repoMock.VerifyAll();
     }
