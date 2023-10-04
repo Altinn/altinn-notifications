@@ -171,7 +171,6 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
 
         // Act
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
-        string respoonseString = await response.Content.ReadAsStringAsync();
 
         // Assert
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
