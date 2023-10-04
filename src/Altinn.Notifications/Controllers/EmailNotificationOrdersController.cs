@@ -10,6 +10,7 @@ using FluentValidation;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System;
 
 namespace Altinn.Notifications.Controllers;
 
@@ -66,15 +67,6 @@ public class EmailNotificationOrdersController : ControllerBase
                 string selfLink = successValue.GetSelfLink();
                 return Accepted(selfLink, new OrderIdExt(successValue.Id));
             },
-            errorValue =>
-            {
-                if (errorValue.ErrorCode == 400)
-                {
-                    errorValue.AddToModelState(ModelState);
-                    return ValidationProblem(ModelState);
-                }
-
-                return Problem(errorValue.ErrorMessage, statusCode: errorValue.ErrorCode);
-            });
+            errorValue => this.ServiceErrorResult(errorValue));
     }
 }
