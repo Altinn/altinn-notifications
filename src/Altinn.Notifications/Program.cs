@@ -42,7 +42,7 @@ ConfigureLogging(builder.Logging);
 ConfigureServices(builder.Services, builder.Configuration);
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c  =>
+builder.Services.AddSwaggerGen(c =>
 {
     IncludeXmlComments(c);
     c.EnableAnnotations();    
