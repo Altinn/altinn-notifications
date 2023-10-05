@@ -11,6 +11,9 @@ using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+using Swashbuckle.AspNetCore.Annotations;
+using Swashbuckle.AspNetCore.Filters;
+
 namespace Altinn.Notifications.Controllers;
 
 /// <summary>
@@ -19,6 +22,9 @@ namespace Altinn.Notifications.Controllers;
 [Route("notifications/api/v1/orders/email")]
 [ApiController]
 [Authorize]
+[SwaggerResponse(401, "Caller is unauthorized")]
+[SwaggerResponse(403, "Caller is not authorized to access the requested resource")]
+
 public class EmailNotificationOrdersController : ControllerBase
 {
     private readonly IValidator<EmailNotificationOrderRequestExt> _validator;
@@ -38,10 +44,14 @@ public class EmailNotificationOrdersController : ControllerBase
     /// The API will accept the request after som basic validation of the request.
     /// The system will also attempt to verify that it will be possible to fulfill the order.
     /// </summary>
-    /// <returns>The registered notification order</returns>
+    /// <returns>The id of the registered notification order</returns>
     [HttpPost]
     [Consumes("application/json")]
-    public async Task<ActionResult<NotificationOrderExt>> Post(EmailNotificationOrderRequestExt emailNotificationOrderRequest)
+    [Produces("application/json")]
+    [SwaggerResponse(202, "The notification order was accepted", typeof(OrderIdExt))]
+    [SwaggerResponse(400, "The notification order is invalid", typeof(ValidationProblemDetails))]
+    [SwaggerResponseHeader(202, "Location", "string", "Link to access the newly created notification order.")]
+    public async Task<ActionResult<OrderIdExt>> Post(EmailNotificationOrderRequestExt emailNotificationOrderRequest)
     {
         var validationResult = _validator.Validate(emailNotificationOrderRequest);
         if (!validationResult.IsValid)

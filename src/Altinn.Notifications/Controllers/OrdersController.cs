@@ -5,6 +5,9 @@ using Altinn.Notifications.Models;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace Altinn.Notifications.Controllers;
 
@@ -14,6 +17,8 @@ namespace Altinn.Notifications.Controllers;
 [Route("notifications/api/v1/orders")]
 [ApiController]
 [Authorize]
+[SwaggerResponse(401, "Caller is unauthorized")]
+[SwaggerResponse(403, "Caller is not authorized to access the requested resource")]
 public class OrdersController : ControllerBase
 {
     private readonly IGetOrderService _getOrderService;
@@ -33,6 +38,9 @@ public class OrdersController : ControllerBase
     /// <returns>The order that correspons to the provided id</returns>
     [HttpGet]
     [Route("{id}")]
+    [Produces("application/json")]
+    [SwaggerResponse(200, "The notification order matching the provided id was retrieved successfully", typeof(NotificationOrderExt))]
+    [SwaggerResponse(404, "No order with the provided id was found")]
     public async Task<ActionResult<NotificationOrderExt>> GetById([FromRoute] Guid id)
     {
         string? expectedCreator = User.GetOrg();
@@ -57,7 +65,9 @@ public class OrdersController : ControllerBase
     /// <param name="sendersReference">The senders reference</param>
     /// <returns>The order that correspons to the provided senders reference</returns>
     [HttpGet]
-    public async Task<ActionResult<NotificationOrderListExt>> GetBySendersRef([FromQuery] string sendersReference)
+    [Produces("application/json")]
+    [SwaggerResponse(200, "The list of notification orders matching the provided senders ref was retrieved successfully", typeof(NotificationOrderListExt))]
+    public async Task<ActionResult<NotificationOrderListExt>> GetBySendersRef([FromQuery, BindRequired] string sendersReference)
     {
         string? expectedCreator = User.GetOrg();
         if (expectedCreator == null)
@@ -82,6 +92,9 @@ public class OrdersController : ControllerBase
     /// <returns>The order that correspons to the provided id</returns>
     [HttpGet]
     [Route("{id}/status")]
+    [Produces("application/json")]
+    [SwaggerResponse(200, "The notification order matching the provided id was retrieved successfully", typeof(NotificationOrderExt))]
+    [SwaggerResponse(404, "No order with the provided id was found")]
     public async Task<ActionResult<NotificationOrderWithStatusExt>> GetWithStatusById([FromRoute] Guid id)
     {
         string? expectedCreator = User.GetOrg();

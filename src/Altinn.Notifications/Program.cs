@@ -1,4 +1,5 @@
 #nullable disable
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -24,6 +25,9 @@ using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel;
 using Microsoft.IdentityModel.Tokens;
 
+using Swashbuckle.AspNetCore.Filters;
+using Swashbuckle.AspNetCore.SwaggerGen;
+
 ILogger logger;
 
 string vaultApplicationInsightsKey = "ApplicationInsights--InstrumentationKey";
@@ -38,7 +42,12 @@ ConfigureLogging(builder.Logging);
 ConfigureServices(builder.Services, builder.Configuration);
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c  =>
+{
+    IncludeXmlComments(c);
+    c.EnableAnnotations();    
+    c.OperationFilter<AddResponseHeadersFilter>();
+});
 
 var app = builder.Build();
 app.SetUpPostgreSql(builder.Environment.IsDevelopment(), builder.Configuration);
@@ -213,4 +222,18 @@ void AddInputModelValidators(IServiceCollection services)
 {
     ValidatorOptions.Global.LanguageManager.Enabled = false;
     services.AddSingleton<IValidator<EmailNotificationOrderRequestExt>, EmailNotificationOrderRequestValidator>();
+}
+
+void IncludeXmlComments(SwaggerGenOptions swaggerGenOptions)
+{
+    try
+    {
+        string xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+        string xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+        swaggerGenOptions.IncludeXmlComments(xmlPath);
+    }
+    catch (Exception e)
+    {
+        logger.LogWarning(e, "Program // Exception when attempting to include the XML comments file(s).");
+    }
 }
