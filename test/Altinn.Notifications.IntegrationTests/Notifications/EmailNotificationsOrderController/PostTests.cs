@@ -39,7 +39,6 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
         {
             Body = "email-body",
             ContentType = EmailContentType.Html,
-            FromAddress = "sender@domain.com",
             Recipients = new List<RecipientExt>()
             {
                 new RecipientExt
