@@ -1,7 +1,7 @@
 #nullable disable
 using System.Text.Json;
 using System.Text.Json.Serialization;
-
+using Altinn.Common.PEP.Authorization;
 using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core.Extensions;
 using Altinn.Notifications.Extensions;
@@ -157,6 +157,13 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
                   options.RequireHttpsMetadata = false;
               }
           });
+
+    services.AddAuthorization(options =>
+    {
+        options.AddPolicy(
+            AuthorizationConstants.POLICY_SCOPE_CONFIG_ADMIN,
+            policy => policy.Requirements.Add(new ScopeAccessRequirement(AuthorizationConstants.SCOPE_CONFIG_ADMIN)));
+    });
 
     ResourceLinkExtensions.Initialize(generalSettings.BaseUri);
     AddInputModelValidators(services);

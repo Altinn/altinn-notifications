@@ -4,7 +4,6 @@ using Altinn.Notifications.Core.Services.Interfaces;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 
 namespace Altinn.Notifications.Core.Extensions;
 
@@ -41,6 +40,7 @@ public static class ServiceCollectionExtensions
             .AddSingleton<IEmailNotificationOrderService, EmailNotificationOrderService>()
             .AddSingleton<IEmailNotificationService, EmailNotificationService>()
             .AddSingleton<IGetOrderService, GetOrderService>()
+            .AddSingleton<IApplicationOwnerConfigService, ApplicationOwnerConfigService>()
             .Configure<KafkaSettings>(config.GetSection("KafkaSettings"))
             .Configure<NotificationOrderConfig>(config.GetSection("NotificationOrderConfig"));
     }
