@@ -235,7 +235,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
     public async Task Post_ValidAccessToken_ServiceReturnsOrder_Accepted()
     {
         // Arrange
-        string expectedFromAddress = "sender@domain.com";
+        string expectedFromAddress = "noreply@altinn.no";
 
         Mock<IEmailNotificationOrderService> serviceMock = new();
         serviceMock.Setup(s => s.RegisterEmailNotificationOrder(It.IsAny<NotificationOrderRequest>()))

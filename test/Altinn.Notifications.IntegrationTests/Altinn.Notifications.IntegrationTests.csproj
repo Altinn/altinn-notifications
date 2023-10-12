@@ -30,11 +30,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="appsettings.IntegrationTest.json" />
-    <None Remove="Notifications\EmailNotificationsOrderController\EmailNotificationOrdersControllerTests.cs~RFcff0f8.TMP" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Content Include="appsettings.IntegrationTest.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>

@@ -28,7 +28,7 @@ public class ServiceCollectionExtensionsTests
     {
         Environment.SetEnvironmentVariable("KafkaSettings", null);
 
-        var config = new ConfigurationBuilder().Build();
+        var config = new ConfigurationBuilder().AddEnvironmentVariables().Build();
 
         IServiceCollection services = new ServiceCollection()
            .AddLogging();
