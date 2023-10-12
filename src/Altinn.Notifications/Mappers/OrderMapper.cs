@@ -18,7 +18,7 @@ public static class OrderMapper
     /// </summary>
     public static NotificationOrderRequest MapToOrderRequest(this EmailNotificationOrderRequestExt extRequest, string creator)
     {
-        var emailTemplate = new EmailTemplate(extRequest.FromAddress, extRequest.Subject, extRequest.Body, extRequest.ContentType);
+        var emailTemplate = new EmailTemplate(null, extRequest.Subject, extRequest.Body, extRequest.ContentType);
 
         var recipients = new List<Recipient>();
 

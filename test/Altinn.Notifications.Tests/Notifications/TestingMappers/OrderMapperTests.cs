@@ -128,7 +128,6 @@ public class OrderMapperTests
         {
             Body = "email-body",
             ContentType = EmailContentType.Html,
-            FromAddress = "sender@domain.com",
             Recipients = new List<RecipientExt>() { new RecipientExt() { EmailAddress = "recipient1@domain.com" }, new RecipientExt() { EmailAddress = "recipient2@domain.com" } },
             SendersReference = "senders-reference",
             RequestedSendTime = sendTime,
@@ -142,7 +141,7 @@ public class OrderMapperTests
             Templates = new List<INotificationTemplate>()
             {
                 new EmailTemplate(
-                    "sender@domain.com",
+                    string.Empty,
                     "email-subject",
                     "email-body",
                     EmailContentType.Html)

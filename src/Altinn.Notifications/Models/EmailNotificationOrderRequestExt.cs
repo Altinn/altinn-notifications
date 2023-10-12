@@ -14,12 +14,6 @@ namespace Altinn.Notifications.Models;
 public class EmailNotificationOrderRequestExt
 {
     /// <summary>
-    /// Gets or sets the from address to use as sender of the email
-    /// </summary>
-    [JsonPropertyName("fromAddress")]
-    public string? FromAddress { get; set; }
-
-    /// <summary>
     /// Gets or sets the subject of the email 
     /// </summary>
     [JsonPropertyName("subject")]

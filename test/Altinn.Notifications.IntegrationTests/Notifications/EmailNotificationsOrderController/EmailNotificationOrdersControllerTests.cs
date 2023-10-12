@@ -56,7 +56,6 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
         {
             Body = "email-body",
             ContentType = EmailContentType.Html,
-            FromAddress = "sender@domain.com",
             Recipients = new List<RecipientExt>() { new RecipientExt() { EmailAddress = "recipient1@domain.com" }, new RecipientExt() { EmailAddress = "recipient2@domain.com" } },
             SendersReference = "senders-reference",
             RequestedSendTime = DateTime.UtcNow,
@@ -197,8 +196,6 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
     public async Task Post_ValidScope_ServiceReturnsOrder_Accepted()
     {
         // Arrange
-        string expectedFromAddress = "sender@domain.com";
-
         Mock<IEmailNotificationOrderService> serviceMock = new();
         serviceMock.Setup(s => s.RegisterEmailNotificationOrder(It.IsAny<NotificationOrderRequest>()))
               .Callback<NotificationOrderRequest>(orderRequest =>
@@ -208,7 +205,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
                       .FirstOrDefault();
 
                   Assert.NotNull(emailTemplate);
-                  Assert.Equal(expectedFromAddress, emailTemplate.FromAddress);
+                  Assert.Equal(string.Empty, emailTemplate.FromAddress);
               })
             .ReturnsAsync((_order, null));
 
