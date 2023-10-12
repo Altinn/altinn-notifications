@@ -89,7 +89,7 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
                 services.AddSingleton(orderProcessingService);
                 services.AddSingleton(emailNotificationService);
 
-                // Set up mock authentication so that not well known endpoint is used
+                // Set up mock authentication and authorization
                 services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
             });
         }).CreateClient();

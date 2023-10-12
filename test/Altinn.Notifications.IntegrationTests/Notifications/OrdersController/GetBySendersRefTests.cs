@@ -130,7 +130,7 @@ public class GetBySendersRefTests : IClassFixture<IntegrationTestWebApplicationF
 
             builder.ConfigureTestServices(services =>
             {
-                // Set up mock authentication so that not well known endpoint is used
+                // Set up mock authentication and authorization
                 services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
                 services.AddSingleton<IPublicSigningKeyProvider, PublicSigningKeyProviderMock>();
             });

@@ -130,7 +130,7 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
 
             builder.ConfigureTestServices(services =>
             {
-                // Set up mock authentication 
+                // Set up mock authentication and authorization
                 services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
                 services.AddSingleton<IPublicSigningKeyProvider, PublicSigningKeyProviderMock>();
             });

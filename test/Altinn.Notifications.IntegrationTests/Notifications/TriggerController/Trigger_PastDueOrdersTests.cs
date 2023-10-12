@@ -85,7 +85,7 @@ public class Trigger_PastDueOrdersTests : IClassFixture<IntegrationTestWebApplic
                     opts.PastDueOrdersTopicName = _topicName;
                 });
 
-                // Set up mock authentication so that not well known endpoint is used
+                // Set up mock authentication and authorization
                 services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
             });
         }).CreateClient();
