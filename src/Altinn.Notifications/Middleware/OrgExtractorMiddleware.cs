@@ -74,7 +74,7 @@ public class OrgExtractorMiddleware
 
     private static bool ShouldApplyMiddleware(string path)
     {
-        return !(path.Contains("/token") || path.Contains("/health"));
+        return !(path.Contains("/trigger") || path.Contains("/health"));
     }
 }
 
