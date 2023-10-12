@@ -1,5 +1,4 @@
 ﻿using Altinn.Notifications.Core.Services.Interfaces;
-using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
 
@@ -43,7 +42,8 @@ public class OrdersController : ControllerBase
     [SwaggerResponse(404, "No order with the provided id was found")]
     public async Task<ActionResult<NotificationOrderExt>> GetById([FromRoute] Guid id)
     {
-        string? expectedCreator = User.GetOrg();
+        string? expectedCreator = HttpContext.Items["Org"] as string;
+
         if (expectedCreator == null)
         {
             return Forbid();
@@ -69,7 +69,7 @@ public class OrdersController : ControllerBase
     [SwaggerResponse(200, "The list of notification orders matching the provided senders ref was retrieved successfully", typeof(NotificationOrderListExt))]
     public async Task<ActionResult<NotificationOrderListExt>> GetBySendersRef([FromQuery, BindRequired] string sendersReference)
     {
-        string? expectedCreator = User.GetOrg();
+        string? expectedCreator = HttpContext.Items["Org"] as string;
         if (expectedCreator == null)
         {
             return Forbid();
@@ -97,7 +97,7 @@ public class OrdersController : ControllerBase
     [SwaggerResponse(404, "No order with the provided id was found")]
     public async Task<ActionResult<NotificationOrderWithStatusExt>> GetWithStatusById([FromRoute] Guid id)
     {
-        string? expectedCreator = User.GetOrg();
+        string? expectedCreator = HttpContext.Items["Org"] as string;
         if (expectedCreator == null)
         {
             return Forbid();

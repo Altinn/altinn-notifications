@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 
+using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
@@ -88,10 +89,25 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
     }
 
     [Fact]
+    public async Task Post_InvalidScopeInToken_Forbidden()
+    {
+        // Arrange
+        HttpClient client = GetTestClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:dummmy.scope"));
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath);
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Post_EmptyBody_BadRequest()
     {
         HttpClient client = GetTestClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:notifications.create"));
 
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
         {
@@ -117,7 +133,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
             .Returns(new ValidationResult(new List<ValidationFailure> { new ValidationFailure("SomeProperty", "SomeError") }));
 
         HttpClient client = GetTestClient(validator.Object);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:notifications.create"));
 
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
         {
@@ -162,7 +178,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
             .ReturnsAsync((null, new ServiceError(500)));
 
         HttpClient client = GetTestClient(orderService: serviceMock.Object);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:notifications.create"));
 
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
         {
@@ -178,7 +194,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
     }
 
     [Fact]
-    public async Task Post_ServiceReturnsOrder_Accepted()
+    public async Task Post_ValidScope_ServiceReturnsOrder_Accepted()
     {
         // Arrange
         string expectedFromAddress = "sender@domain.com";
@@ -197,7 +213,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
             .ReturnsAsync((_order, null));
 
         HttpClient client = GetTestClient(orderService: serviceMock.Object);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:notifications.create"));
 
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
         {
@@ -207,10 +223,51 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
         // Act
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
         string respoonseString = await response.Content.ReadAsStringAsync();
-        OrderIdExt? orderIdObjectExt = JsonSerializer.Deserialize<OrderIdExt>(respoonseString);
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        OrderIdExt? orderIdObjectExt = JsonSerializer.Deserialize<OrderIdExt>(respoonseString);     
+        Assert.NotNull(orderIdObjectExt);
+        Assert.Equal(_order.Id, orderIdObjectExt.OrderId);
+        Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + _order.Id, response.Headers?.Location?.ToString());
+
+        serviceMock.VerifyAll();
+    }
+
+    [Fact]
+    public async Task Post_ValidAccessToken_ServiceReturnsOrder_Accepted()
+    {
+        // Arrange
+        string expectedFromAddress = "sender@domain.com";
+
+        Mock<IEmailNotificationOrderService> serviceMock = new();
+        serviceMock.Setup(s => s.RegisterEmailNotificationOrder(It.IsAny<NotificationOrderRequest>()))
+              .Callback<NotificationOrderRequest>(orderRequest =>
+              {
+                  var emailTemplate = orderRequest.Templates
+                      .OfType<EmailTemplate>()
+                      .FirstOrDefault();
+
+                  Assert.NotNull(emailTemplate);
+                  Assert.Equal(expectedFromAddress, emailTemplate.FromAddress);
+              })
+            .ReturnsAsync((_order, null));
+
+        HttpClient client = GetTestClient(orderService: serviceMock.Object);
+
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
+        {
+            Content = new StringContent(_orderRequestExt.Serialize(), Encoding.UTF8, "application/json")
+        };
+        httpRequestMessage.Headers.Add("PlatformAccessToken", PrincipalUtil.GetAccessToken("ttd", "apps-test"));
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        string respoonseString = await response.Content.ReadAsStringAsync();
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        OrderIdExt? orderIdObjectExt = JsonSerializer.Deserialize<OrderIdExt>(respoonseString);      
         Assert.NotNull(orderIdObjectExt);
         Assert.Equal(_order.Id, orderIdObjectExt.OrderId);
         Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + _order.Id, response.Headers?.Location?.ToString());
@@ -237,7 +294,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
             .ReturnsAsync((_order, null));
 
         HttpClient client = GetTestClient(orderService: serviceMock.Object);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:notifications.create"));
 
         EmailNotificationOrderRequestExt request = new()
         {
@@ -301,6 +358,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
 
                 // Set up mock authentication so that not well known endpoint is used
                 services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
+                services.AddSingleton<IPublicSigningKeyProvider, PublicSigningKeyProviderMock>();
             });
         }).CreateClient();
 

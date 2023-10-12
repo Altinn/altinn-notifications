@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
+using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Mappers;
@@ -122,6 +123,7 @@ public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<C
             {
                 // Set up mock authentication so that not well known endpoint is used
                 services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
+                services.AddSingleton<IPublicSigningKeyProvider, PublicSigningKeyProviderMock>();
             });
         }).CreateClient();
 

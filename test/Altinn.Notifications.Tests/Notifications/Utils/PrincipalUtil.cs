@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Security.Claims;
 
+using Altinn.Common.AccessToken.Constants;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 
 using AltinnCore.Authentication.Constants;
@@ -73,6 +74,21 @@ public static class PrincipalUtil
         ClaimsPrincipal principal = GetClaimsPrincipal(userId, authenticationLevel, scope);
 
         string token = JwtTokenMock.GenerateToken(principal, new TimeSpan(0, 1, 5));
+
+        return token;
+    }
+
+    public static string GetAccessToken(string issuer, string app)
+    {
+        List<Claim> claims = new()
+        {
+                new Claim(AccessTokenClaimTypes.App, app, ClaimValueTypes.String, issuer)
+        };
+
+        ClaimsIdentity identity = new("mock");
+        identity.AddClaims(claims);
+        ClaimsPrincipal principal = new(identity);
+        string token = JwtTokenMock.GenerateToken(principal, new TimeSpan(0, 1, 5), issuer);
 
         return token;
     }

@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 
+using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Controllers;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.IntegrationTests.Utils;
@@ -67,7 +68,7 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
     {
         // Arrange
         HttpClient client = GetTestClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:notifications.create"));
 
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
         {
@@ -77,10 +78,10 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
         // Act
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
         string respoonseString = await response.Content.ReadAsStringAsync();
-        OrderIdExt? orderIdObjectExt = JsonSerializer.Deserialize<OrderIdExt>(respoonseString);
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        OrderIdExt? orderIdObjectExt = JsonSerializer.Deserialize<OrderIdExt>(respoonseString);
         Assert.NotNull(orderIdObjectExt);
         Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + orderIdObjectExt.OrderId, response.Headers?.Location?.ToString());
     }
@@ -90,7 +91,7 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
     {
         // Arrange
         HttpClient client = GetTestClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:notifications.create"));
 
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
         {
@@ -100,10 +101,10 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
         // Act
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
         string respoonseString = await response.Content.ReadAsStringAsync();
-        OrderIdExt? orderIdObjectExt = JsonSerializer.Deserialize<OrderIdExt>(respoonseString);
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        OrderIdExt? orderIdObjectExt = JsonSerializer.Deserialize<OrderIdExt>(respoonseString);
         Assert.NotNull(orderIdObjectExt);
         Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + orderIdObjectExt.OrderId, response.Headers?.Location?.ToString());
     }
@@ -129,8 +130,9 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
 
             builder.ConfigureTestServices(services =>
             {
-                // Set up mock authentication so that not well known endpoint is used
+                // Set up mock authentication 
                 services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
+                services.AddSingleton<IPublicSigningKeyProvider, PublicSigningKeyProviderMock>();
             });
         }).CreateClient();
 
