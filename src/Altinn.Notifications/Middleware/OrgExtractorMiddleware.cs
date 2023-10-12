@@ -1,7 +1,7 @@
-﻿using AltinnCore.Authentication.Constants;
-
-using System.IdentityModel.Tokens.Jwt;
+﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+
+using AltinnCore.Authentication.Constants;
 
 namespace Altinn.Notifications.Middleware;
 
@@ -74,7 +74,7 @@ public class OrgExtractorMiddleware
 
     private static bool ShouldApplyMiddleware(string path)
     {
-        return !path.Contains("/token");
+        return !(path.Contains("/token") || path.Contains("/health"));
     }
 }
 
