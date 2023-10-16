@@ -61,7 +61,7 @@ public class EmailNotificationOrdersController : ControllerBase
             return ValidationProblem(ModelState);
         }
 
-        string? creator = HttpContext.Items["Org"] as string;
+        string? creator = HttpContext.GetOrg();
 
         if (creator == null)
         {
