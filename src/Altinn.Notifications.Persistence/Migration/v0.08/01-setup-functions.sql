@@ -6,10 +6,10 @@ BEGIN
 RETURN QUERY
 	UPDATE notifications.orders
 	SET processedstatus = 'Processing'
-	WHERE _id IN (select _id 
-				 from notifications.orders 
-				 where processedstatus = 'Registered' 
-				 and requestedsendtime <= now() + INTERVAL '30 seconds'
+	WHERE _id IN (select _id
+				 from notifications.orders
+				 where processedstatus = 'Registered'
+				 and requestedsendtime <= now() + INTERVAL '1 minute'
 				 limit 50)
 	RETURNING notificationorder AS notificationorders;
 END;
