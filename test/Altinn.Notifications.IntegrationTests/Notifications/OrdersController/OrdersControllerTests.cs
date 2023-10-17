@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Logging;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 
 using Moq;
 
@@ -29,6 +30,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
 
     private readonly IntegrationTestWebApplicationFactory<Controllers.OrdersController> _factory;
     private readonly NotificationOrder _order;
+    private readonly NotificationOrderWithStatus _orderWithStatus;
 
     public OrdersControllerTests(IntegrationTestWebApplicationFactory<Controllers.OrdersController> factory)
     {
@@ -43,6 +45,15 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
             new Creator("ttd"),
             DateTime.UtcNow,
             new List<Recipient>());
+
+        _orderWithStatus = new(
+            Guid.NewGuid(),
+            "senders-reference",
+            DateTime.UtcNow,
+            new Creator("ttd"),
+            DateTime.UtcNow,
+            NotificationChannel.Email,
+            new ProcessingStatus());
     }
 
     [Fact]
@@ -78,6 +89,69 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
     }
 
     [Fact]
+    public async Task GetBySendersRef_CalledWithInvalidScope_ReturnsForbidden()
+    {
+        // Arrange
+        HttpClient client = GetTestClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "dummy:scope"));
+
+        string url = _basePath + "?sendersReference=" + "internal-ref";
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetBySendersRef_ValidBearerToken_CorrespondingServiceMethodCalled()
+    {
+        // Arrange
+        var orderService = new Mock<IGetOrderService>();
+        orderService
+             .Setup(o => o.GetOrdersBySendersReference(It.Is<string>(s => s.Equals("internal-ref")), It.Is<string>(s => s.Equals("ttd"))))
+             .ReturnsAsync((new List<NotificationOrder>() { _order }, null));
+
+        HttpClient client = GetTestClient(orderService.Object);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:notifications.create"));
+
+        string url = _basePath + "?sendersReference=" + "internal-ref";
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
+        orderService.VerifyAll();
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetBySendersRef_ValidPlatformAccessToken_CorrespondingServiceMethodCalled()
+    {
+        // Arrange
+        var orderService = new Mock<IGetOrderService>();
+        orderService
+             .Setup(o => o.GetOrdersBySendersReference(It.Is<string>(s => s.Equals("internal-ref")), It.Is<string>(s => s.Equals("ttd"))))
+             .ReturnsAsync((new List<NotificationOrder>() { _order }, null));
+
+        HttpClient client = GetTestClient(orderService.Object);
+
+        string url = _basePath + "?sendersReference=" + "internal-ref";
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
+        httpRequestMessage.Headers.Add("PlatformAccessToken", PrincipalUtil.GetAccessToken("ttd", "apps-test"));
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
+        orderService.VerifyAll();
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
     public async Task GetById_MissingBearer_ReturnsUnauthorized()
     {
         // Arrange
@@ -110,30 +184,24 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
     }
 
     [Fact]
-    public async Task GetBySendersRef_CorrespondingServiceMethodCalled()
+    public async Task GetById_CalledWithInvalidScope_ReturnsForbidden()
     {
         // Arrange
-        var orderService = new Mock<IGetOrderService>();
-        orderService
-             .Setup(o => o.GetOrdersBySendersReference(It.Is<string>(s => s.Equals("internal-ref")), It.Is<string>(s => s.Equals("ttd"))))
-             .ReturnsAsync((new List<NotificationOrder>() { _order }, null));
+        HttpClient client = GetTestClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "dummy:scope"));
 
-        HttpClient client = GetTestClient(orderService.Object);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
-
-        string url = _basePath + "?sendersReference=" + "internal-ref";
+        string url = _basePath + "/" + Guid.NewGuid();
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
 
         // Act
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
 
         // Assert
-        orderService.VerifyAll();
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Fact]
-    public async Task GetById_CorrespondingServiceMethodCalled()
+    public async Task GetById_ValidBearerToken_CorrespondingServiceMethodCalled()
     {
         // Arrange
         Guid orderId = Guid.NewGuid();
@@ -144,7 +212,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
              .ReturnsAsync((_order, null));
 
         HttpClient client = GetTestClient(orderService.Object);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:notifications.create"));
 
         string url = _basePath + "/" + orderId;
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
@@ -158,7 +226,32 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
     }
 
     [Fact]
-    public async Task GetById_ServicerReturnsError_StatusCodeMatchesError()
+    public async Task GetById_ValidPlatformAccessToken_CorrespondingServiceMethodCalled()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+
+        var orderService = new Mock<IGetOrderService>();
+        orderService
+             .Setup(o => o.GetOrderById(It.Is<Guid>(g => g.Equals(orderId)), It.Is<string>(s => s.Equals("ttd"))))
+             .ReturnsAsync((_order, null));
+
+        HttpClient client = GetTestClient(orderService.Object);
+
+        string url = _basePath + "/" + orderId;
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
+        httpRequestMessage.Headers.Add("PlatformAccessToken", PrincipalUtil.GetAccessToken("ttd", "apps-test"));
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
+        orderService.VerifyAll();
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetById_ServiceReturnsError_StatusCodeMatchesError()
     {
         // Arrange
         Guid orderId = Guid.NewGuid();
@@ -169,9 +262,134 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
              .ReturnsAsync((null, new ServiceError(404)));
 
         HttpClient client = GetTestClient(orderService.Object);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:notifications.create"));
 
         string url = _basePath + "/" + orderId;
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
+        orderService.VerifyAll();
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetWithStatusById_MissingBearer_ReturnsUnauthorized()
+    {
+        // Arrange
+        HttpClient client = GetTestClient();
+        string url = _basePath + "/" + Guid.NewGuid() + "/status";
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetWithStatusById_CalledByUser_ReturnsForbidden()
+    {
+        // Arrange
+        HttpClient client = GetTestClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetUserToken(1337));
+
+        string url = _basePath + "/" + Guid.NewGuid() + "/status";
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetWithStatusById_CalledWithInvalidScope_ReturnsForbidden()
+    {
+        // Arrange
+        HttpClient client = GetTestClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "dummy:scope"));
+
+        string url = _basePath + "/" + Guid.NewGuid() + "/status";
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetWithStatusById_ValidBearerToken_CorrespondingServiceMethodCalled()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+
+        var orderService = new Mock<IGetOrderService>();
+        orderService
+             .Setup(o => o.GetOrderWithStatuById(It.Is<Guid>(g => g.Equals(orderId)), It.Is<string>(s => s.Equals("ttd"))))
+             .ReturnsAsync((_orderWithStatus, null));
+
+        HttpClient client = GetTestClient(orderService.Object);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:notifications.create"));
+
+        string url = _basePath + "/" + orderId + "/status";
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
+        orderService.VerifyAll();
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetWithStatusById_ValidPlatformAccessToken_CorrespondingServiceMethodCalled()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+
+        var orderService = new Mock<IGetOrderService>();
+        orderService
+             .Setup(o => o.GetOrderWithStatuById(It.Is<Guid>(g => g.Equals(orderId)), It.Is<string>(s => s.Equals("ttd"))))
+             .ReturnsAsync((_orderWithStatus, null));
+
+        HttpClient client = GetTestClient(orderService.Object);
+
+        string url = _basePath + "/" + orderId + "/status";
+
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
+        httpRequestMessage.Headers.Add("PlatformAccessToken", PrincipalUtil.GetAccessToken("ttd", "apps-test"));
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
+        orderService.VerifyAll();
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetWithStatusById_ServiceReturnsError_StatusCodeMatchesError()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+
+        var orderService = new Mock<IGetOrderService>();
+        orderService
+             .Setup(o => o.GetOrderWithStatuById(It.Is<Guid>(g => g.Equals(orderId)), It.Is<string>(s => s.Equals("ttd"))))
+             .ReturnsAsync((null, new ServiceError(404)));
+
+        HttpClient client = GetTestClient(orderService.Object);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:notifications.create"));
+
+        string url = _basePath + "/" + orderId + "/status";
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
 
         // Act

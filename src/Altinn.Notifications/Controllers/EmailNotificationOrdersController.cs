@@ -22,6 +22,7 @@ namespace Altinn.Notifications.Controllers;
 /// </summary>
 [Route("notifications/api/v1/orders/email")]
 [ApiController]
+[Authorize(Policy = AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS)]
 [SwaggerResponse(401, "Caller is unauthorized")]
 [SwaggerResponse(403, "Caller is not authorized to access the requested resource")]
 
@@ -45,7 +46,6 @@ public class EmailNotificationOrdersController : ControllerBase
     /// The system will also attempt to verify that it will be possible to fulfill the order.
     /// </summary>
     /// <returns>The id of the registered notification order</returns>
-    [Authorize(Policy = AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS)]
     [HttpPost]
     [Consumes("application/json")]
     [Produces("application/json")]

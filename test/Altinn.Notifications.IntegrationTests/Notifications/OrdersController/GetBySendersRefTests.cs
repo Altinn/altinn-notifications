@@ -41,7 +41,7 @@ public class GetBySendersRefTests : IClassFixture<IntegrationTestWebApplicationF
         string sendersReference = $"{_sendersRefBase}-{Guid.NewGuid()}";
 
         HttpClient client = GetTestClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:notifications.create"));
 
         string uri = $"{_basePath}?sendersReference={sendersReference}";
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, uri);
@@ -65,7 +65,7 @@ public class GetBySendersRefTests : IClassFixture<IntegrationTestWebApplicationF
         NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithOrder(sendersReference: sendersReference);
 
         HttpClient client = GetTestClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:notifications.create"));
 
         string uri = $"{_basePath}?sendersReference={sendersReference}";
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, uri);
@@ -92,7 +92,7 @@ public class GetBySendersRefTests : IClassFixture<IntegrationTestWebApplicationF
         await PostgreUtil.PopulateDBWithOrder(sendersReference: sendersReference);
 
         HttpClient client = GetTestClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:notifications.create"));
 
         string uri = $"{_basePath}?sendersReference={sendersReference}";
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, uri);
