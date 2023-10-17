@@ -6,7 +6,7 @@
 public static class HttpContextExtensions
 {
     /// <summary>
-    /// Get the org identifier string or null if it is not an org.
+    /// Get the org string from the context items or null if it is not defined
     /// </summary>        
     public static string? GetOrg(this HttpContext context)
     {
