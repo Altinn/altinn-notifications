@@ -95,7 +95,7 @@ public class OrdersController : ControllerBase
     [HttpGet]
     [Route("{id}/status")]
     [Produces("application/json")]
-    [SwaggerResponse(200, "The notification order matching the provided id was retrieved successfully", typeof(NotificationOrderExt))]
+    [SwaggerResponse(200, "The notification order matching the provided id was retrieved successfully", typeof(NotificationOrderWithStatusExt))]
     [SwaggerResponse(404, "No order with the provided id was found")]
     public async Task<ActionResult<NotificationOrderWithStatusExt>> GetWithStatusById([FromRoute] Guid id)
     {
