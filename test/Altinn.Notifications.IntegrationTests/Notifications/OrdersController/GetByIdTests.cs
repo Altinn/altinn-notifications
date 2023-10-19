@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
+using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Mappers;
@@ -41,7 +42,7 @@ public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<C
         string uri = $"{_basePath}/{Guid.NewGuid()}";
 
         HttpClient client = GetTestClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:notifications.create"));
 
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, uri);
 
@@ -85,7 +86,7 @@ public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<C
         string uri = $"{_basePath}/{persistedOrder.Id}";
 
         HttpClient client = GetTestClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:notifications.create"));
 
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, uri);
 
@@ -120,8 +121,9 @@ public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<C
 
             builder.ConfigureTestServices(services =>
             {
-                // Set up mock authentication so that not well known endpoint is used
+                // Set up mock authentication and authorization
                 services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
+                services.AddSingleton<IPublicSigningKeyProvider, PublicSigningKeyProviderMock>();
             });
         }).CreateClient();
 

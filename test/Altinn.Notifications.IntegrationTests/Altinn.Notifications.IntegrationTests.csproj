@@ -30,10 +30,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="appsettings.IntegrationTest.json" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Content Include="appsettings.IntegrationTest.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>

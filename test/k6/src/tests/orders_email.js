@@ -20,7 +20,7 @@ const orderRequestJson = JSON.parse(
 );
 import { generateJUnitXML, reportPath } from "../report.js";
 import { addErrorCount, stopIterationOnFail } from "../errorhandler.js";
-const scopes = "none";
+const scopes = "altinn:notifications.create";
 const emailRecipient = __ENV.emailRecipient.toLowerCase();
 
 export const options = {

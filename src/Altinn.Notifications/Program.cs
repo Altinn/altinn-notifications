@@ -3,11 +3,16 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
+using Altinn.Common.AccessToken;
+using Altinn.Common.AccessToken.Services;
+using Altinn.Common.PEP.Authorization;
+using Altinn.Notifications.Authorization;
 using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core.Extensions;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Health;
 using Altinn.Notifications.Integrations.Extensions;
+using Altinn.Notifications.Middleware;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Persistence.Extensions;
 using Altinn.Notifications.Validators;
@@ -23,6 +28,7 @@ using Microsoft.ApplicationInsights.AspNetCore.Extensions;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 
 using Swashbuckle.AspNetCore.Filters;
@@ -45,11 +51,12 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     IncludeXmlComments(c);
-    c.EnableAnnotations();    
+    c.EnableAnnotations();
     c.OperationFilter<AddResponseHeadersFilter>();
 });
 
 var app = builder.Build();
+
 app.SetUpPostgreSql(builder.Environment.IsDevelopment(), builder.Configuration);
 
 // Configure the HTTP request pipeline.
@@ -64,6 +71,8 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.MapHealthChecks("/health");
+
+app.UseOrgExtractor();
 
 app.Run();
 
@@ -144,7 +153,6 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     }
 
     GeneralSettings generalSettings = config.GetSection("GeneralSettings").Get<GeneralSettings>();
-
     services.Configure<GeneralSettings>(config.GetSection("GeneralSettings"));
     services.AddAuthentication(JwtCookieDefaults.AuthenticationScheme)
           .AddJwtCookie(JwtCookieDefaults.AuthenticationScheme, options =>
@@ -167,6 +175,8 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
               }
           });
 
+    AddAuthorizationRulesAndHandlers(services, config);
+
     ResourceLinkExtensions.Initialize(generalSettings.BaseUri);
     AddInputModelValidators(services);
     services.AddCoreServices(config);
@@ -174,8 +184,28 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     services.AddKafkaServices(config);
     services.AddKafkaHealthChecks(config);
 
-    services.AddPostgresRepositories(config);    
+    services.AddPostgresRepositories(config);
     services.AddPostgresHealthChecks(config);
+}
+
+void AddAuthorizationRulesAndHandlers(IServiceCollection services, IConfiguration config)
+{
+    services.AddAuthorization(options =>
+    {
+        options.AddPolicy(AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS, policy =>
+        {
+            policy.Requirements.Add(new CreateScopeOrAccessTokenRequirement(AuthorizationConstants.SCOPE_NOTIFICATIONS_CREATE));
+        });
+    });
+
+    services.AddTransient<IAuthorizationHandler, ScopeAccessHandler>();
+
+    // services required for access token handler
+    services.AddMemoryCache();
+    services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+    services.AddSingleton<IPublicSigningKeyProvider, PublicSigningKeyProvider>();
+    services.Configure<Altinn.Common.AccessToken.Configuration.KeyVaultSettings>(config.GetSection("kvSetting"));
+    services.AddSingleton<IAuthorizationHandler, AccessTokenHandler>();
 }
 
 async Task SetConfigurationProviders(ConfigurationManager config)

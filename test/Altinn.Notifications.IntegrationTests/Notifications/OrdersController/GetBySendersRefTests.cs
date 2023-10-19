@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
+using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Models;
@@ -40,7 +41,7 @@ public class GetBySendersRefTests : IClassFixture<IntegrationTestWebApplicationF
         string sendersReference = $"{_sendersRefBase}-{Guid.NewGuid()}";
 
         HttpClient client = GetTestClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:notifications.create"));
 
         string uri = $"{_basePath}?sendersReference={sendersReference}";
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, uri);
@@ -64,7 +65,7 @@ public class GetBySendersRefTests : IClassFixture<IntegrationTestWebApplicationF
         NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithOrder(sendersReference: sendersReference);
 
         HttpClient client = GetTestClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:notifications.create"));
 
         string uri = $"{_basePath}?sendersReference={sendersReference}";
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, uri);
@@ -91,7 +92,7 @@ public class GetBySendersRefTests : IClassFixture<IntegrationTestWebApplicationF
         await PostgreUtil.PopulateDBWithOrder(sendersReference: sendersReference);
 
         HttpClient client = GetTestClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:notifications.create"));
 
         string uri = $"{_basePath}?sendersReference={sendersReference}";
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, uri);
@@ -129,8 +130,9 @@ public class GetBySendersRefTests : IClassFixture<IntegrationTestWebApplicationF
 
             builder.ConfigureTestServices(services =>
             {
-                // Set up mock authentication so that not well known endpoint is used
+                // Set up mock authentication and authorization
                 services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
+                services.AddSingleton<IPublicSigningKeyProvider, PublicSigningKeyProviderMock>();
             });
         }).CreateClient();
 

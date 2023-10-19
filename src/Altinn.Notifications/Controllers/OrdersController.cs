@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Services.Interfaces;
+﻿using Altinn.Notifications.Configuration;
+using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
@@ -16,7 +17,7 @@ namespace Altinn.Notifications.Controllers;
 /// </summary>
 [Route("notifications/api/v1/orders")]
 [ApiController]
-[Authorize]
+[Authorize(Policy = AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS)]
 [SwaggerResponse(401, "Caller is unauthorized")]
 [SwaggerResponse(403, "Caller is not authorized to access the requested resource")]
 public class OrdersController : ControllerBase
@@ -43,7 +44,8 @@ public class OrdersController : ControllerBase
     [SwaggerResponse(404, "No order with the provided id was found")]
     public async Task<ActionResult<NotificationOrderExt>> GetById([FromRoute] Guid id)
     {
-        string? expectedCreator = User.GetOrg();
+        string? expectedCreator = HttpContext.GetOrg();
+
         if (expectedCreator == null)
         {
             return Forbid();
@@ -69,7 +71,7 @@ public class OrdersController : ControllerBase
     [SwaggerResponse(200, "The list of notification orders matching the provided senders ref was retrieved successfully", typeof(NotificationOrderListExt))]
     public async Task<ActionResult<NotificationOrderListExt>> GetBySendersRef([FromQuery, BindRequired] string sendersReference)
     {
-        string? expectedCreator = User.GetOrg();
+        string? expectedCreator = HttpContext.GetOrg();
         if (expectedCreator == null)
         {
             return Forbid();
@@ -93,11 +95,11 @@ public class OrdersController : ControllerBase
     [HttpGet]
     [Route("{id}/status")]
     [Produces("application/json")]
-    [SwaggerResponse(200, "The notification order matching the provided id was retrieved successfully", typeof(NotificationOrderExt))]
+    [SwaggerResponse(200, "The notification order matching the provided id was retrieved successfully", typeof(NotificationOrderWithStatusExt))]
     [SwaggerResponse(404, "No order with the provided id was found")]
     public async Task<ActionResult<NotificationOrderWithStatusExt>> GetWithStatusById([FromRoute] Guid id)
     {
-        string? expectedCreator = User.GetOrg();
+        string? expectedCreator = HttpContext.GetOrg();
         if (expectedCreator == null)
         {
             return Forbid();
