@@ -131,7 +131,7 @@ public class OrderRepository : IOrderRepository
         {
             while (await reader.ReadAsync())
             {
-                NotificationOrder notificationOrder = reader.GetFieldValue<NotificationOrder>("notificationorder");
+                NotificationOrder notificationOrder = reader.GetFieldValue<NotificationOrder>("notificationorders");
                 searchResult.Add(notificationOrder);
             }
         }
