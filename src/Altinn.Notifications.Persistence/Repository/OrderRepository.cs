@@ -5,6 +5,7 @@ using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Repository.Interfaces;
 using Altinn.Notifications.Persistence.Extensions;
+using Microsoft.ApplicationInsights;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -16,6 +17,7 @@ namespace Altinn.Notifications.Persistence.Repository;
 public class OrderRepository : IOrderRepository
 {
     private readonly NpgsqlDataSource _dataSource;
+    private readonly TelemetryClient _telemetryClient;
 
     private const string _getOrderByIdSql = "select notificationorder from notifications.orders where alternateid=$1 and creatorname=$2";
     private const string _getOrdersBySendersReferenceSql = "select notificationorder from notifications.orders where sendersreference=$1 and creatorname=$2";
@@ -29,15 +31,18 @@ public class OrderRepository : IOrderRepository
     /// Initializes a new instance of the <see cref="OrderRepository"/> class.
     /// </summary>
     /// <param name="dataSource">The npgsql data source.</param>
-    public OrderRepository(NpgsqlDataSource dataSource)
+    /// <param name="telemetryClient">Telemetry client</param>
+    public OrderRepository(NpgsqlDataSource dataSource, TelemetryClient telemetryClient = null)
     {
         _dataSource = dataSource;
+        _telemetryClient = telemetryClient;
     }
 
     /// <inheritdoc/>
     public async Task<NotificationOrder?> GetOrderById(Guid id, string creator)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getOrderByIdSql);
+        using TelemetryTracker tracker = new(_telemetryClient, pgcom);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, id);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, creator);
 
@@ -51,6 +56,7 @@ public class OrderRepository : IOrderRepository
             }
         }
 
+        tracker.Track();
         return order;
     }
 
@@ -60,6 +66,7 @@ public class OrderRepository : IOrderRepository
         List<NotificationOrder> searchResult = new();
 
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getOrdersBySendersReferenceSql);
+        using TelemetryTracker tracker = new(_telemetryClient, pgcom);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, sendersReference);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, creator);
 
@@ -72,6 +79,7 @@ public class OrderRepository : IOrderRepository
             }
         }
 
+        tracker.Track();
         return searchResult;
     }
 
@@ -105,9 +113,11 @@ public class OrderRepository : IOrderRepository
     public async Task SetProcessingStatus(Guid orderId, OrderProcessingStatus status)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_setProcessCompleted);
+        using TelemetryTracker tracker = new(_telemetryClient, pgcom);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, orderId);
         await pgcom.ExecuteNonQueryAsync();
+        tracker.Track();
     }
 
     /// <inheritdoc/>
@@ -116,7 +126,7 @@ public class OrderRepository : IOrderRepository
         List<NotificationOrder> searchResult = new();
 
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getOrdersPastSendTimeUpdateStatus);
-
+        using TelemetryTracker tracker = new(_telemetryClient, pgcom);
         await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync())
         {
             while (await reader.ReadAsync())
@@ -126,6 +136,7 @@ public class OrderRepository : IOrderRepository
             }
         }
 
+        tracker.Track();
         return searchResult;
     }
 
@@ -133,6 +144,7 @@ public class OrderRepository : IOrderRepository
     public async Task<NotificationOrderWithStatus?> GetOrderWithStatusById(Guid id, string creator)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getOrderIncludeStatus);
+        using TelemetryTracker tracker = new(_telemetryClient, pgcom);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, id);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, creator);
 
@@ -163,6 +175,7 @@ public class OrderRepository : IOrderRepository
             }
         }
 
+        tracker.Track();
         return order;
     }
 
@@ -189,6 +202,7 @@ public class OrderRepository : IOrderRepository
     private async Task<long> InsertOrder(NotificationOrder order)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_insertOrderSql);
+        using TelemetryTracker tracker = new(_telemetryClient, pgcom);
 
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, order.Id);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, order.Creator.ShortName);
@@ -199,12 +213,16 @@ public class OrderRepository : IOrderRepository
 
         await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync();
         await reader.ReadAsync();
-        return (long)reader.GetValue(0);
+
+        long orderId = (long)reader.GetValue(0);
+        tracker.Track();
+        return orderId;
     }
 
     private async Task InsertEmailText(long dbOrderId, string fromAddress, string subject, string body, string contentType)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_insertEmailTextSql);
+        using TelemetryTracker tracker = new(_telemetryClient, pgcom);
 
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Bigint, dbOrderId);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, fromAddress);
@@ -213,5 +231,6 @@ public class OrderRepository : IOrderRepository
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, contentType);
 
         await pgcom.ExecuteNonQueryAsync();
+        tracker.Track();
     }
 }
