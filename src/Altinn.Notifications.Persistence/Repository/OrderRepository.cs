@@ -1,12 +1,11 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using System.Data;
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Repository.Interfaces;
 using Altinn.Notifications.Persistence.Extensions;
-
 using Npgsql;
-
 using NpgsqlTypes;
 
 namespace Altinn.Notifications.Persistence.Repository;
@@ -48,7 +47,7 @@ public class OrderRepository : IOrderRepository
         {
             while (await reader.ReadAsync())
             {
-                order = NotificationOrder.Deserialize(reader[0]?.ToString()!)!;
+                order = reader.GetFieldValue<NotificationOrder>("notificationorder");
             }
         }
 
@@ -68,7 +67,7 @@ public class OrderRepository : IOrderRepository
         {
             while (await reader.ReadAsync())
             {
-                NotificationOrder notificationOrder = NotificationOrder.Deserialize(reader[0]?.ToString()!)!;
+                NotificationOrder notificationOrder = reader.GetFieldValue<NotificationOrder>("notificationorder");
                 searchResult.Add(notificationOrder);
             }
         }
@@ -122,7 +121,7 @@ public class OrderRepository : IOrderRepository
         {
             while (await reader.ReadAsync())
             {
-                NotificationOrder notificationOrder = NotificationOrder.Deserialize(reader[0]?.ToString()!)!;
+                NotificationOrder notificationOrder = reader.GetFieldValue<NotificationOrder>("notificationorder");
                 searchResult.Add(notificationOrder);
             }
         }
@@ -196,7 +195,7 @@ public class OrderRepository : IOrderRepository
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, order.SendersReference ?? (object)DBNull.Value);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, order.Created);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, order.RequestedSendTime);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Jsonb, order.Serialize());
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Jsonb, order);
 
         await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync();
         await reader.ReadAsync();
