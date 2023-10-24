@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Configuration;
+﻿using System.Diagnostics;
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations.Interfaces;
 using Altinn.Notifications.Core.Models;
@@ -7,7 +8,6 @@ using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Repository.Interfaces;
 using Altinn.Notifications.Core.Services.Interfaces;
-
 using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Core.Services;
@@ -38,16 +38,24 @@ public class OrderProcessingService : IOrderProcessingService
     /// <inheritdoc/>
     public async Task StartProcessingPastDueOrders()
     {
-        List<NotificationOrder> pastDueOrders = await _orderRepository.GetPastDueOrdersAndSetProcessingState();
-
-        foreach (NotificationOrder order in pastDueOrders)
+        Stopwatch sw = Stopwatch.StartNew();
+        List<NotificationOrder> pastDueOrders;
+        do
         {
-            bool success = await _producer.ProduceAsync(_pastDueOrdersTopic, order.Serialize());
-            if (!success)
+            pastDueOrders = await _orderRepository.GetPastDueOrdersAndSetProcessingState();
+
+            foreach (NotificationOrder order in pastDueOrders)
             {
-                await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.Registered);
+                bool success = await _producer.ProduceAsync(_pastDueOrdersTopic, order.Serialize());
+                if (!success)
+                {
+                    await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.Registered);
+                }
             }
         }
+        while (pastDueOrders.Count() >= 50 && sw.ElapsedMilliseconds < 60_000);
+
+        sw.Stop();
     }
 
     /// <inheritdoc/>
