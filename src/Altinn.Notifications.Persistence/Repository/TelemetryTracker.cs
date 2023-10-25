@@ -11,7 +11,7 @@ namespace Altinn.Notifications.Persistence.Repository
     {
         private readonly DateTime _startTime = DateTime.Now;
         private readonly Stopwatch _timer = Stopwatch.StartNew();
-        private readonly TelemetryClient _telemetryClient;
+        private readonly TelemetryClient? _telemetryClient;
         private readonly NpgsqlCommand _cmd;
         private bool _tracked = false;
 
@@ -20,7 +20,7 @@ namespace Altinn.Notifications.Persistence.Repository
         /// </summary>
         /// <param name="telemetryClient">Telemetry client from DI</param>
         /// <param name="cmd">The npgsql cmd</param>
-        public TelemetryTracker(TelemetryClient telemetryClient, NpgsqlCommand cmd)
+        public TelemetryTracker(TelemetryClient? telemetryClient, NpgsqlCommand cmd)
         {
             _telemetryClient = telemetryClient;
             _cmd = cmd;
@@ -29,12 +29,7 @@ namespace Altinn.Notifications.Persistence.Repository
         /// <inheritdoc/>
         public void Dispose()
         {
-            if (!_tracked)
-            {
-                Track(false);
-                _tracked = true;
-            }
-
+            Dispose(true);
             GC.SuppressFinalize(this);
         }
 
@@ -51,6 +46,19 @@ namespace Altinn.Notifications.Persistence.Repository
             }
 
             _tracked = true;
+        }
+
+        /// <summary>
+        /// Method to satisfy the dispose pattern
+        /// </summary>
+        /// <param name="disposing">Has disposed already been called?</param>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_tracked && disposing)
+            {
+                Track(false);
+                _tracked = true;
+            }
         }
     }
 }

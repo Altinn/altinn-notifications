@@ -53,7 +53,7 @@ public class OrderProcessingService : IOrderProcessingService
                 }
             }
         }
-        while (pastDueOrders.Count() >= 50 && sw.ElapsedMilliseconds < 60_000);
+        while (pastDueOrders.Count >= 50 && sw.ElapsedMilliseconds < 60_000);
 
         sw.Stop();
     }

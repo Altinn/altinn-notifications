@@ -17,7 +17,7 @@ namespace Altinn.Notifications.Persistence.Repository;
 public class OrderRepository : IOrderRepository
 {
     private readonly NpgsqlDataSource _dataSource;
-    private readonly TelemetryClient _telemetryClient;
+    private readonly TelemetryClient? _telemetryClient;
 
     private const string _getOrderByIdSql = "select notificationorder from notifications.orders where alternateid=$1 and creatorname=$2";
     private const string _getOrdersBySendersReferenceSql = "select notificationorder from notifications.orders where sendersreference=$1 and creatorname=$2";
@@ -32,7 +32,7 @@ public class OrderRepository : IOrderRepository
     /// </summary>
     /// <param name="dataSource">The npgsql data source.</param>
     /// <param name="telemetryClient">Telemetry client</param>
-    public OrderRepository(NpgsqlDataSource dataSource, TelemetryClient telemetryClient = null)
+    public OrderRepository(NpgsqlDataSource dataSource, TelemetryClient? telemetryClient = null)
     {
         _dataSource = dataSource;
         _telemetryClient = telemetryClient;

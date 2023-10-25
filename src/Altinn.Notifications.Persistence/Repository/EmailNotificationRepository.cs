@@ -16,7 +16,7 @@ namespace Altinn.Notifications.Persistence.Repository;
 public class EmailNotificationRepository : IEmailNotificationRepository
 {
     private readonly NpgsqlDataSource _dataSource;
-    private readonly TelemetryClient _telemetryClient;
+    private readonly TelemetryClient? _telemetryClient;
 
     private const string _insertEmailNotificationSql = "call notifications.insertemailnotification($1, $2, $3, $4, $5, $6, $7)"; // (__orderid, _alternateid, _recipientid, _toaddress, _result, _resulttime, _expirytime)
     private const string _getEmailNotificationsSql = "select * from notifications.getemails_statusnew_updatestatus()";
@@ -28,7 +28,7 @@ public class EmailNotificationRepository : IEmailNotificationRepository
     /// </summary>
     /// <param name="dataSource">The npgsql data source.</param>
     /// <param name="telemetryClient">Telemetry client</param>
-    public EmailNotificationRepository(NpgsqlDataSource dataSource, TelemetryClient telemetryClient = null)
+    public EmailNotificationRepository(NpgsqlDataSource dataSource, TelemetryClient? telemetryClient = null)
     {
         _dataSource = dataSource;
         _telemetryClient = telemetryClient;
