@@ -21,12 +21,9 @@ public static class ServiceCollectionExtensions
     /// <param name="config">the configuration collection</param>
     public static void AddKafkaServices(this IServiceCollection services, IConfiguration config)
     {
-        KafkaSettings? kafkaSettings = config.GetSection(nameof(KafkaSettings)).Get<KafkaSettings>();
-
-        if (kafkaSettings == null)
-        {
-            throw new ArgumentNullException(nameof(config), "Required KafkaSettings is missing from application configuration");
-        }
+        _ = config.GetSection(nameof(KafkaSettings))
+            .Get<KafkaSettings>()
+            ?? throw new ArgumentNullException(nameof(config), "Required KafkaSettings is missing from application configuration");
 
         services
         .AddSingleton<IKafkaProducer, KafkaProducer>()
@@ -43,12 +40,10 @@ public static class ServiceCollectionExtensions
     /// <param name="config">the configuration collection</param>
     public static void AddKafkaHealthChecks(this IServiceCollection services, IConfiguration config)
     {
-        KafkaSettings kafkaSettings = config!.GetSection(nameof(KafkaSettings)).Get<KafkaSettings>()!;
-
-        if (kafkaSettings == null)
-        {
-            throw new ArgumentNullException(nameof(config), "Required KafkaSettings is missing from application configuration");
-        }
+        KafkaSettings kafkaSettings = config!
+            .GetSection(nameof(KafkaSettings))
+            .Get<KafkaSettings>()
+            ?? throw new ArgumentNullException(nameof(config), "Required KafkaSettings is missing from application configuration");
 
         services.AddHealthChecks()
         .AddCheck("notifications_kafka_health_check", new KafkaHealthCheck(kafkaSettings));

@@ -1,5 +1,4 @@
-﻿using Altinn.Notifications.Core.Models.Orders;
-using Altinn.Notifications.Integrations.Configuration;
+﻿using Altinn.Notifications.Integrations.Configuration;
 
 using Confluent.Kafka;
 
@@ -103,7 +102,7 @@ public abstract class KafkaConsumerBase<T> : BackgroundService
                     _consumer.StoreOffset(consumeResult);
                 }
                 
-                _logger.LogError(ex, "// {Class} // ConsumeOrder // An error occurred while consuming messages", GetType().Name);
+                _logger.LogError(ex, "// {Class} // ConsumeMessage // An error occurred while consuming messages", GetType().Name);
             }
         }
     }

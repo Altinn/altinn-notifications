@@ -20,19 +20,13 @@ public static class ServiceCollectionExtensions
     /// <param name="config">the configuration collection</param>
     public static void AddCoreServices(this IServiceCollection services, IConfiguration config)
     {
-        KafkaSettings? kafkaSettings = config.GetSection("KafkaSettings").Get<KafkaSettings>();
+        _ = config.GetSection("KafkaSettings")
+            .Get<KafkaSettings>()
+            ?? throw new ArgumentNullException(nameof(config), "Required KafkaSettings is missing from application configuration");
 
-        if (kafkaSettings == null)
-        {
-            throw new ArgumentNullException(nameof(config), "Required KafkaSettings is missing from application configuration");
-        }
-
-        NotificationOrderConfig? settings = config.GetSection("NotificationOrderConfig").Get<NotificationOrderConfig>();
-
-        if (settings == null)
-        {
-            throw new ArgumentNullException(nameof(config), "Required NotificationOrderConfig is missing from application configuration");
-        }
+        _ = config.GetSection("NotificationOrderConfig")
+            .Get<NotificationOrderConfig>()
+            ?? throw new ArgumentNullException(nameof(config), "Required NotificationOrderConfig is missing from application configuration");
 
         services
             .AddSingleton<IGuidService, GuidService>()
