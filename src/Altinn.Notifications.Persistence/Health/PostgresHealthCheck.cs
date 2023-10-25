@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Logging;
 
 using Npgsql;
 
@@ -35,9 +36,13 @@ public class PostgresHealthCheck : IHealthCheck, IDisposable
 
             return HealthCheckResult.Healthy();
         }
+        catch (TaskCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
-           return HealthCheckResult.Unhealthy(exception: ex);
+            return HealthCheckResult.Unhealthy(exception: ex);
         }
     }
 
