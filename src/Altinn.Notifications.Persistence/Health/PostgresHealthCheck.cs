@@ -35,13 +35,9 @@ public class PostgresHealthCheck : IHealthCheck, IDisposable
 
             return HealthCheckResult.Healthy();
         }
-        catch (TaskCanceledException)
-        {
-            throw;
-        }
         catch (Exception ex)
         {
-            return HealthCheckResult.Unhealthy(exception: ex);
+           return HealthCheckResult.Unhealthy(exception: ex);
         }
     }
 
