@@ -4,9 +4,8 @@ using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Repository.Interfaces;
 using Altinn.Notifications.Persistence.Extensions;
-
+using Microsoft.ApplicationInsights;
 using Npgsql;
-
 using NpgsqlTypes;
 
 namespace Altinn.Notifications.Persistence.Repository;
@@ -17,6 +16,8 @@ namespace Altinn.Notifications.Persistence.Repository;
 public class EmailNotificationRepository : IEmailNotificationRepository
 {
     private readonly NpgsqlDataSource _dataSource;
+    private readonly TelemetryClient? _telemetryClient;
+
     private const string _insertEmailNotificationSql = "call notifications.insertemailnotification($1, $2, $3, $4, $5, $6, $7)"; // (__orderid, _alternateid, _recipientid, _toaddress, _result, _resulttime, _expirytime)
     private const string _getEmailNotificationsSql = "select * from notifications.getemails_statusnew_updatestatus()";
     private const string _updateEmailStatus = "call notifications.updateemailstatus($1, $2, $3)"; // (_alternateid, _result, _operationid)
@@ -26,15 +27,18 @@ public class EmailNotificationRepository : IEmailNotificationRepository
     /// Initializes a new instance of the <see cref="EmailNotificationRepository"/> class.
     /// </summary>
     /// <param name="dataSource">The npgsql data source.</param>
-    public EmailNotificationRepository(NpgsqlDataSource dataSource)
+    /// <param name="telemetryClient">Telemetry client</param>
+    public EmailNotificationRepository(NpgsqlDataSource dataSource, TelemetryClient? telemetryClient = null)
     {
         _dataSource = dataSource;
+        _telemetryClient = telemetryClient;
     }
 
     /// <inheritdoc/>
     public async Task AddNotification(EmailNotification notification, DateTime expiry)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_insertEmailNotificationSql);
+        using TelemetryTracker tracker = new(_telemetryClient, pgcom);
 
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notification.OrderId);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notification.Id);
@@ -45,6 +49,7 @@ public class EmailNotificationRepository : IEmailNotificationRepository
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, expiry);
 
         await pgcom.ExecuteNonQueryAsync();
+        tracker.Track();
     }
 
     /// <inheritdoc/>
@@ -52,6 +57,7 @@ public class EmailNotificationRepository : IEmailNotificationRepository
     {
         List<Email> searchResult = new();
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getEmailNotificationsSql);
+        using TelemetryTracker tracker = new(_telemetryClient, pgcom);
 
         await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync())
         {
@@ -71,6 +77,7 @@ public class EmailNotificationRepository : IEmailNotificationRepository
             }
         }
 
+        tracker.Track();
         return searchResult;
     }
 
@@ -78,10 +85,12 @@ public class EmailNotificationRepository : IEmailNotificationRepository
     public async Task UpdateSendStatus(Guid notificationId, EmailNotificationResultType status, string? operationId = null)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_updateEmailStatus);
+        using TelemetryTracker tracker = new(_telemetryClient, pgcom);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, operationId ?? (object)DBNull.Value);
         await pgcom.ExecuteNonQueryAsync();
+        tracker.Track();
     }
 
     /// <inheritdoc/>
@@ -90,6 +99,7 @@ public class EmailNotificationRepository : IEmailNotificationRepository
         List<EmailRecipient> searchResult = new();
 
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getEmailRecipients);
+        using TelemetryTracker tracker = new(_telemetryClient, pgcom);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId);
         await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync())
         {
@@ -103,6 +113,7 @@ public class EmailNotificationRepository : IEmailNotificationRepository
             }
         }
 
+        tracker.Track();
         return searchResult;
     }
 }
