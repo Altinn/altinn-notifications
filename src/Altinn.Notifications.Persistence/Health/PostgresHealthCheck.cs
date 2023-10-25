@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.Extensions.Logging;
 
 using Npgsql;
 
