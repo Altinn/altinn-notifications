@@ -3,8 +3,6 @@ using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Integrations.Configuration;
 
-using Confluent.Kafka;
-
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 

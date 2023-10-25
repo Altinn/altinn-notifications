@@ -21,12 +21,9 @@ public static class WebApplicationExtensions
     /// <param name="config">the configuration collection</param>
     public static void SetUpPostgreSql(this IApplicationBuilder app, bool isDevelopment, IConfiguration config)
     {
-        PostgreSqlSettings? settings = config.GetSection("PostgreSQLSettings").Get<PostgreSqlSettings>();
-
-        if (settings == null)
-        {
-            throw new ArgumentNullException(nameof(config), "Required PostgreSQLSettings is missing from application configuration");
-        }
+        PostgreSqlSettings? settings = config.GetSection("PostgreSQLSettings")
+            .Get<PostgreSqlSettings>()
+            ?? throw new ArgumentNullException(nameof(config), "Required PostgreSQLSettings is missing from application configuration");
 
         if (settings.EnableDBConnection)
         {
