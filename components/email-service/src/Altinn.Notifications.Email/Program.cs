@@ -92,7 +92,8 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
 
     services.AddCoreServices(configuration);
     services.AddIntegrationServices(configuration);
-    services.AddIntegrationHealthChecks(configuration);
+    
+    // services.AddIntegrationHealthChecks(configuration); // disabling health check due to instability
     
     if (!string.IsNullOrEmpty(applicationInsightsConnectionString))
     {
