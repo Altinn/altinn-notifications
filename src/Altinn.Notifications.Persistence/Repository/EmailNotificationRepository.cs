@@ -4,8 +4,9 @@ using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Repository.Interfaces;
 using Altinn.Notifications.Persistence.Extensions;
-using Microsoft.ApplicationInsights;
+
 using Npgsql;
+
 using NpgsqlTypes;
 
 namespace Altinn.Notifications.Persistence.Repository;
@@ -16,29 +17,40 @@ namespace Altinn.Notifications.Persistence.Repository;
 public class EmailNotificationRepository : IEmailNotificationRepository
 {
     private readonly NpgsqlDataSource _dataSource;
-    private readonly TelemetryClient _telemetryClient;
 
-    private const string _insertEmailNotificationSql = "call notifications.insertemailnotification($1, $2, $3, $4, $5, $6, $7)"; // (__orderid, _alternateid, _recipientid, _toaddress, _result, _resulttime, _expirytime)
-    private const string _getEmailNotificationsSql = "select * from notifications.getemails_statusnew_updatestatus()";
-    private const string _updateEmailStatus = "call notifications.updateemailstatus($1, $2, $3)"; // (_alternateid, _result, _operationid)
-    private const string _getEmailRecipients = "select * from notifications.getemailrecipients($1)"; // (_alternateid)
+    /// <summary>
+    /// Sql for inserting new email notification. Used by <see cref="AddNotification"/>
+    /// </summary>
+    internal const string _insertEmailNotificationSql = "call notifications.insertemailnotification($1, $2, $3, $4, $5, $6, $7)"; // (__orderid, _alternateid, _recipientid, _toaddress, _result, _resulttime, _expirytime)
+
+    /// <summary>
+    /// Sql for getting email notifications. Used by <see cref="GetNewNotifications"/>
+    /// </summary>
+    internal const string _getEmailNotificationsSql = "select * from notifications.getemails_statusnew_updatestatus()";
+
+    /// <summary>
+    /// Sql for updating email notification status. Used by <see cref="UpdateSendStatus"/>
+    /// </summary>
+    internal const string _updateEmailStatus = "call notifications.updateemailstatus($1, $2, $3)"; // (_alternateid, _result, _operationid)
+
+    /// <summary>
+    /// Sql for getting email recipients. Used by <see cref="GetRecipients"/>
+    /// </summary>
+    internal const string _getEmailRecipients = "select * from notifications.getemailrecipients($1)"; // (_alternateid)
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotificationRepository"/> class.
     /// </summary>
     /// <param name="dataSource">The npgsql data source.</param>
-    /// <param name="telemetryClient">Telemetry client</param>
-    public EmailNotificationRepository(NpgsqlDataSource dataSource, TelemetryClient telemetryClient = null)
+    public EmailNotificationRepository(NpgsqlDataSource dataSource)
     {
         _dataSource = dataSource;
-        _telemetryClient = telemetryClient;
     }
 
     /// <inheritdoc/>
     public async Task AddNotification(EmailNotification notification, DateTime expiry)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_insertEmailNotificationSql);
-        using TelemetryTracker tracker = new(_telemetryClient, pgcom);
 
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notification.OrderId);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notification.Id);
@@ -49,7 +61,6 @@ public class EmailNotificationRepository : IEmailNotificationRepository
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, expiry);
 
         await pgcom.ExecuteNonQueryAsync();
-        tracker.Track();
     }
 
     /// <inheritdoc/>
@@ -57,7 +68,6 @@ public class EmailNotificationRepository : IEmailNotificationRepository
     {
         List<Email> searchResult = new();
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getEmailNotificationsSql);
-        using TelemetryTracker tracker = new(_telemetryClient, pgcom);
 
         await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync())
         {
@@ -77,7 +87,6 @@ public class EmailNotificationRepository : IEmailNotificationRepository
             }
         }
 
-        tracker.Track();
         return searchResult;
     }
 
@@ -85,12 +94,10 @@ public class EmailNotificationRepository : IEmailNotificationRepository
     public async Task UpdateSendStatus(Guid notificationId, EmailNotificationResultType status, string? operationId = null)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_updateEmailStatus);
-        using TelemetryTracker tracker = new(_telemetryClient, pgcom);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, operationId ?? (object)DBNull.Value);
         await pgcom.ExecuteNonQueryAsync();
-        tracker.Track();
     }
 
     /// <inheritdoc/>
@@ -99,21 +106,19 @@ public class EmailNotificationRepository : IEmailNotificationRepository
         List<EmailRecipient> searchResult = new();
 
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getEmailRecipients);
-        using TelemetryTracker tracker = new(_telemetryClient, pgcom);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId);
         await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync())
         {
             while (await reader.ReadAsync())
             {
-                searchResult.Add(new EmailRecipient() 
-                { 
+                searchResult.Add(new EmailRecipient()
+                {
                     RecipientId = reader.GetValue<string>("recipientid"),
                     ToAddress = reader.GetValue<string>("toaddress")
                 });
             }
         }
 
-        tracker.Track();
         return searchResult;
     }
 }
