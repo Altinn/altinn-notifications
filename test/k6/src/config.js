@@ -7,9 +7,15 @@ export var baseUrls = {
   tt02: "tt02.altinn.no",
 };
 
+var maskinportenBaseUrls = {
+  tt02: "https://test.maskinporten.no/",
+  prod: "https://maskinporten.no/",
+};
+
 //Get values from environment
 const environment = __ENV.env.toLowerCase();
 export let baseUrl = baseUrls[environment];
+let maskinportenBaseUrl = maskinportenBaseUrls[environment];
 
 //AltinnTestTools
 export var tokenGenerator = {
@@ -30,4 +36,16 @@ export var notifications = {
   orders_fromSendersRef: function (sendersReference) {
     return `https://platform.${baseUrl}/notifications/api/v1/orders?sendersReference=${sendersReference}`;
   },
+};
+
+// Platform Authentication
+export var platformAuthentication = {
+  exchange:
+    "https://platform." + baseUrl + "/authentication/api/v1/exchange/maskinporten",
+};
+
+// Maskinporten
+export var maskinporten = {
+  audience: maskinportenBaseUrl,
+  token: maskinportenBaseUrl + "token",
 };
