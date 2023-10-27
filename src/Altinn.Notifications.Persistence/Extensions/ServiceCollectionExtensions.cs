@@ -41,15 +41,7 @@ public static class ServiceCollectionExtensions
     /// <param name="config">the configuration collection</param>
     public static void AddPostgresHealthChecks(this IServiceCollection services, IConfiguration config)
     {
-        PostgreSqlSettings? settings = config.GetSection("PostgreSQLSettings")
-            .Get<PostgreSqlSettings>()
-            ?? throw new ArgumentNullException(nameof(config), "Required PostgreSQLSettings is missing from application configuration");
-
-        string connectionString = string.Format(settings.ConnectionString, settings.NotificationsDbPwd);
-
-        var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
-
         services.AddHealthChecks()
-            .AddCheck("notifications_postgres_health_check", new PostgresHealthCheck(dataSourceBuilder.Build()));
+            .AddCheck<PostgresHealthCheck>("notifications_postgres_health_check");
     }
 }

@@ -16,24 +16,11 @@ public class ServiceCollectionExtensionsTests
     {
         Environment.SetEnvironmentVariable("PostgreSettings", null);
 
-        var config = new ConfigurationBuilder().Build();
+        var config = new ConfigurationBuilder().AddEnvironmentVariables().Build();
 
         IServiceCollection services = new ServiceCollection()
            .AddLogging();
 
         Assert.Throws<ArgumentNullException>(() => services.AddPostgresRepositories(config));
-    }
-
-    [Fact]
-    public void AddPostgresHealthChecks_PostgreSettingsMissing_ThrowsException()
-    {
-        Environment.SetEnvironmentVariable("PostgreSettings", null);
-
-        var config = new ConfigurationBuilder().Build();
-
-        IServiceCollection services = new ServiceCollection()
-           .AddLogging();
-
-        Assert.Throws<ArgumentNullException>(() => services.AddPostgresHealthChecks(config));
     }
 }

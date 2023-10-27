@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations;
 
-public class PostgresHealthCheckTests
+public sealed class PostgresHealthCheckTests : IAsyncDisposable
 {
     private readonly NpgsqlDataSource _dataSource;
 
@@ -30,7 +30,7 @@ public class PostgresHealthCheckTests
     [Fact]
     public async Task CheckHealthAsync_ReturnsHealthyResult()
     {
-        using PostgresHealthCheck healthCheck = new(_dataSource);
+        PostgresHealthCheck healthCheck = new(_dataSource);
         HealthCheckResult res = await healthCheck.CheckHealthAsync(new HealthCheckContext());
 
         Assert.Equal(HealthStatus.Healthy, res.Status);
@@ -41,9 +41,14 @@ public class PostgresHealthCheckTests
     {
         var tempDataSource = new NpgsqlDataSourceBuilder("Host=localhost;Port=5432;Username=platform_notifications;Password={0};Database=notificationsdb").Build();
 
-        using PostgresHealthCheck healthCheck = new(tempDataSource);
+        PostgresHealthCheck healthCheck = new(tempDataSource);
         HealthCheckResult res = await healthCheck.CheckHealthAsync(new HealthCheckContext());
 
         Assert.Equal(HealthStatus.Unhealthy, res.Status);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _dataSource.DisposeAsync();
     }
 }
