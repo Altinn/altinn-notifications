@@ -41,7 +41,7 @@ public class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFact
         string uri = $"{_basePath}/{Guid.NewGuid()}/status";
 
         HttpClient client = GetTestClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:notifications.create"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
 
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, uri);
 
@@ -91,7 +91,7 @@ public class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFact
         string uri = $"{_basePath}/{persistedOrder.Id}/status";
 
         HttpClient client = GetTestClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:notifications.create"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
 
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, uri);
 
@@ -130,7 +130,7 @@ public class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFact
         string uri = $"{_basePath}/{persistedOrder.Id}/status";
 
         HttpClient client = GetTestClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:notifications.create"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
 
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, uri);
 

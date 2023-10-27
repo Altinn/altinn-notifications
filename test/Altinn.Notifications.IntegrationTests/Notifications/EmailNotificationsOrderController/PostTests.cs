@@ -67,7 +67,7 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
     {
         // Arrange
         HttpClient client = GetTestClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:notifications.create"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
 
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
         {
@@ -90,7 +90,7 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
     {
         // Arrange
         HttpClient client = GetTestClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:notifications.create"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
 
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
         {

@@ -115,7 +115,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
              .ReturnsAsync((new List<NotificationOrder>() { _order }, null));
 
         HttpClient client = GetTestClient(orderService.Object);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:notifications.create"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
 
         string url = _basePath + "?sendersReference=" + "internal-ref";
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
@@ -212,7 +212,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
              .ReturnsAsync((_order, null));
 
         HttpClient client = GetTestClient(orderService.Object);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:notifications.create"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
 
         string url = _basePath + "/" + orderId;
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
@@ -262,7 +262,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
              .ReturnsAsync((null, new ServiceError(404)));
 
         HttpClient client = GetTestClient(orderService.Object);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:notifications.create"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
 
         string url = _basePath + "/" + orderId;
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
@@ -336,7 +336,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
              .ReturnsAsync((_orderWithStatus, null));
 
         HttpClient client = GetTestClient(orderService.Object);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:notifications.create"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
 
         string url = _basePath + "/" + orderId + "/status";
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
@@ -387,7 +387,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
              .ReturnsAsync((null, new ServiceError(404)));
 
         HttpClient client = GetTestClient(orderService.Object);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:notifications.create"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
 
         string url = _basePath + "/" + orderId + "/status";
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
