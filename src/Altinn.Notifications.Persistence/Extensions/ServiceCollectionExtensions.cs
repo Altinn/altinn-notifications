@@ -1,5 +1,6 @@
 ﻿using Altinn.Notifications.Core.Repository.Interfaces;
 using Altinn.Notifications.Persistence.Configuration;
+using Altinn.Notifications.Persistence.Health;
 using Altinn.Notifications.Persistence.Repository;
 
 using Microsoft.Extensions.Configuration;
@@ -44,7 +45,11 @@ public static class ServiceCollectionExtensions
             .Get<PostgreSqlSettings>()
             ?? throw new ArgumentNullException(nameof(config), "Required PostgreSQLSettings is missing from application configuration");
 
+        string connectionString = string.Format(settings.ConnectionString, settings.NotificationsDbPwd);
+
+        var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
+
         services.AddHealthChecks()
-             .AddNpgSql(string.Format(string.Format(settings.ConnectionString, settings.NotificationsDbPwd)), name: "notifications_postgres_health_check");
+            .AddCheck("notifications_postgres_health_check", new PostgresHealthCheck(dataSourceBuilder.Build()));
     }
 }
