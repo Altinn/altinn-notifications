@@ -42,7 +42,7 @@ public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<C
         string uri = $"{_basePath}/{Guid.NewGuid()}";
 
         HttpClient client = GetTestClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:notifications.create"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
 
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, uri);
 
@@ -86,7 +86,7 @@ public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<C
         string uri = $"{_basePath}/{persistedOrder.Id}";
 
         HttpClient client = GetTestClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:notifications.create"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
 
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, uri);
 

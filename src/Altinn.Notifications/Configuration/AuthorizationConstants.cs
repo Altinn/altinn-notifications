@@ -13,6 +13,6 @@
         /// <summary>
         /// Scope for allowing access to creating notifications
         /// </summary>
-        public const string SCOPE_NOTIFICATIONS_CREATE = "altinn:notifications.create";
+        public const string SCOPE_NOTIFICATIONS_CREATE = "altinn:serviceowner/notifications.create";
     }
 }
