@@ -4,6 +4,9 @@
     docker-compose run k6 run /src/tests/orders_email.js `
     -e tokenGeneratorUserName=autotest `
     -e tokenGeneratorUserPwd=*** `
+    -e mpClientId=*** `
+    -e mpKid=altinn-usecase-events `
+    -e encodedJwk=*** `
     -e env=*** `
     -e emailRecipient=*** `
     -e runFullTestSet=true

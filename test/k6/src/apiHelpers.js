@@ -49,3 +49,13 @@ export function buildHeaderWithBearerAndContentType(token) {
 
   return params;
 }
+
+export function buildHeaderWithContentType(contentType) {
+  var params = {
+    headers: {
+      "Content-Type": contentType
+    }
+  };
+
+  return params;
+}

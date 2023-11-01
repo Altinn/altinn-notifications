@@ -1,11 +1,11 @@
-name: Use Case - TT02
+name: Use Case - PROD
 
 on:
   workflow_dispatch:
 
 jobs:
   test:
-    environment: TT02
+    environment: Prod
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4

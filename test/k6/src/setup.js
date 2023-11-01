@@ -1,4 +1,7 @@
+import * as authentication from "./api/authentication.js";
+import * as maskinporten from "./api/maskinporten.js";
 import * as tokenGenerator from "./api/token-generator.js";
+
 const environment = __ENV.env.toLowerCase();
 
 /*
@@ -7,10 +10,14 @@ const environment = __ENV.env.toLowerCase();
  * @returns altinn token with the provided scopes for an org
  */
 export function getAltinnTokenForOrg(scopes, org = "ttd", orgNo = "991825827") {
-  //TODO: Handle login for prod
+  if ((environment == "prod" || environment == "tt02") && org == "ttd") {
+    var accessToken = maskinporten.generateAccessToken(scopes);
+    return authentication.exchangeToAltinnToken(accessToken, true);
+  }
+
   var queryParams = {
     env: environment,
-    scopes: scopes,
+    scopes: scopes.replace(/ /gi, ","),
     org: org,
     orgNo: orgNo,
   };
