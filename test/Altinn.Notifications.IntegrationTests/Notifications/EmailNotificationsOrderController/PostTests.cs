@@ -39,7 +39,7 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
         EmailNotificationOrderRequestExt orderRequestExt = new()
         {
             Body = "email-body",
-            ContentType = EmailContentType.Html,
+            ContentType = EmailContentTypeExt.Html,
             Recipients = new List<RecipientExt>()
             {
                 new RecipientExt

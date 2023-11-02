@@ -1,7 +1,5 @@
 ﻿using System.Text.Json.Serialization;
 
-using Altinn.Notifications.Core.Models.Address;
-
 namespace Altinn.Notifications.Models;
 
 /// <summary>

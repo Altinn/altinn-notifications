@@ -1,6 +1,4 @@
-﻿using Altinn.Notifications.Core.Enums;
-
-namespace Altinn.Notifications.Models;
+﻿namespace Altinn.Notifications.Models;
 
 /// <summary>
 /// A class representing the base properties of a registered notification order. 
@@ -38,5 +36,5 @@ public interface IBaseNotificationOrderExt
     /// <summary>
     /// Gets or sets the preferred notification channel of the notification order
     /// </summary>
-    public NotificationChannel NotificationChannel { get; set; }
+    public NotificationChannelExt NotificationChannel { get; set; }
 }

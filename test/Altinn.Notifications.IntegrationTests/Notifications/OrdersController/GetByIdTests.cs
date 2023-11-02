@@ -77,7 +77,7 @@ public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<C
                 Self = $"{refLinkBase}/{id}",
                 Status = $"{refLinkBase}/{id}/status"
             },
-            NotificationChannel = persistedOrder.NotificationChannel,
+            NotificationChannel = (NotificationChannelExt)persistedOrder.NotificationChannel,
             RequestedSendTime = persistedOrder.RequestedSendTime,
             Recipients = mappedExtOrder.Recipients,
             EmailTemplate = mappedExtOrder.EmailTemplate

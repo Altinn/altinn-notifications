@@ -66,7 +66,7 @@ public class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFact
             SendersReference = persistedOrder.SendersReference,
             Creator = "ttd",
             Created = persistedOrder.Created,
-            NotificationChannel = persistedOrder.NotificationChannel,
+            NotificationChannel = (NotificationChannelExt)persistedOrder.NotificationChannel,
             RequestedSendTime = persistedOrder.RequestedSendTime,
             ProcessingStatus = new()
             {
@@ -117,7 +117,7 @@ public class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFact
             SendersReference = persistedOrder.SendersReference,
             Creator = "ttd",
             Created = persistedOrder.Created,
-            NotificationChannel = persistedOrder.NotificationChannel,
+            NotificationChannel = (NotificationChannelExt)persistedOrder.NotificationChannel,
             RequestedSendTime = persistedOrder.RequestedSendTime,
             ProcessingStatus = new()
             {

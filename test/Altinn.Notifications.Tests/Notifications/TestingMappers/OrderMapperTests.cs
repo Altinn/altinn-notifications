@@ -45,14 +45,14 @@ public class OrderMapperTests
             Id = order.Id.ToString(),
             Creator = "ttd",
             Created = created,
-            NotificationChannel = NotificationChannel.Email,
+            NotificationChannel = NotificationChannelExt.Email,
             SendersReference = "ref1337",
             RequestedSendTime = sendTime,
             Recipients = new List<RecipientExt>(),
             EmailTemplate = new EmailTemplateExt
             {
                 Body = "email-body",
-                ContentType = EmailContentType.Plain,
+                ContentType = EmailContentTypeExt.Plain,
                 FromAddress = "from@domain.com",
                 Subject = "email-subject"
             },
@@ -127,7 +127,7 @@ public class OrderMapperTests
         EmailNotificationOrderRequestExt orderRequestExt = new()
         {
             Body = "email-body",
-            ContentType = EmailContentType.Html,
+            ContentType = EmailContentTypeExt.Html,
             Recipients = new List<RecipientExt>() { new RecipientExt() { EmailAddress = "recipient1@domain.com" }, new RecipientExt() { EmailAddress = "recipient2@domain.com" } },
             SendersReference = "senders-reference",
             RequestedSendTime = sendTime,
@@ -195,7 +195,7 @@ public class OrderMapperTests
             Id = orderToMap.Id.ToString(),
             Created = created,
             Creator = "ttd",
-            NotificationChannel = NotificationChannel.Email,
+            NotificationChannel = NotificationChannelExt.Email,
             RequestedSendTime = sendTime,
             SendersReference = "senders-ref",
             ProcessingStatus = new()
@@ -254,7 +254,7 @@ public class OrderMapperTests
             Id = orderToMap.Id.ToString(),
             Created = created,
             Creator = "ttd",
-            NotificationChannel = NotificationChannel.Email,
+            NotificationChannel = NotificationChannelExt.Email,
             RequestedSendTime = sendTime,
             SendersReference = "senders-ref",
             ProcessingStatus = new()

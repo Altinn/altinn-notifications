@@ -18,7 +18,7 @@ public static class OrderMapper
     /// </summary>
     public static NotificationOrderRequest MapToOrderRequest(this EmailNotificationOrderRequestExt extRequest, string creator)
     {
-        var emailTemplate = new EmailTemplate(null, extRequest.Subject, extRequest.Body, extRequest.ContentType);
+        var emailTemplate = new EmailTemplate(null, extRequest.Subject, extRequest.Body, (EmailContentType)extRequest.ContentType);
 
         var recipients = new List<Recipient>();
 
@@ -55,7 +55,7 @@ public static class OrderMapper
                     {
                         Body = emailTemplate!.Body,
                         FromAddress = emailTemplate.FromAddress,
-                        ContentType = emailTemplate.ContentType,
+                        ContentType = (EmailContentTypeExt)emailTemplate.ContentType,
                         Subject = emailTemplate.Subject
                     };
 
@@ -151,7 +151,7 @@ public static class OrderMapper
         orderExt.SendersReference = order.SendersReference;
         orderExt.Created = order.Created;
         orderExt.Creator = order.Creator.ShortName;
-        orderExt.NotificationChannel = order.NotificationChannel;
+        orderExt.NotificationChannel = (NotificationChannelExt)order.NotificationChannel;
         orderExt.RequestedSendTime = order.RequestedSendTime;
 
         return orderExt;

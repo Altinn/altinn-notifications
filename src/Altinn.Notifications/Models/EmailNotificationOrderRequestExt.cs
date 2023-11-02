@@ -1,8 +1,6 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 
-using Altinn.Notifications.Core.Enums;
-
 namespace Altinn.Notifications.Models;
 
 /// <summary>
@@ -28,11 +26,11 @@ public class EmailNotificationOrderRequestExt
     /// <summary>
     /// Gets or sets the content type of the email
     /// </summary>
-    [JsonPropertyName("content-type")]
-    public EmailContentType ContentType { get; set; } = EmailContentType.Plain;
+    [JsonPropertyName("contentType")]
+    public EmailContentTypeExt ContentType { get; set; } = EmailContentTypeExt.Plain;
 
     /// <summary>
-    /// Gets or sets the send time of the email. Defaults to UtcNow.        
+    /// Gets or sets the send time of the email. Defaults to UtcNow.
     /// </summary>
     [JsonPropertyName("requestedSendTime")]
     public DateTime RequestedSendTime { get; set; } = DateTime.UtcNow;
