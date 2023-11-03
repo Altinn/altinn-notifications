@@ -182,11 +182,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     services.AddCoreServices(config);
 
     services.AddKafkaServices(config);
-    
-    //// services.AddKafkaHealthChecks(config); // disabeling health check as it is believed to cause instability
-
     services.AddPostgresRepositories(config);
-    services.AddPostgresHealthChecks(config);
 }
 
 void AddAuthorizationRulesAndHandlers(IServiceCollection services, IConfiguration config)
