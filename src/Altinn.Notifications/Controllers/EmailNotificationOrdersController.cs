@@ -41,10 +41,12 @@ public class EmailNotificationOrdersController : ControllerBase
     }
 
     /// <summary>
-    /// Add an order to create an email notification. 
+    /// Add an email notification order.
+    /// </summary>
+    /// <remarks>
     /// The API will accept the request after som basic validation of the request.
     /// The system will also attempt to verify that it will be possible to fulfill the order.
-    /// </summary>
+    /// </remarks>
     /// <returns>The id of the registered notification order</returns>
     [HttpPost]
     [Consumes("application/json")]

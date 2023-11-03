@@ -45,5 +45,5 @@ public class NotificationOrderWithStatusExt : IBaseNotificationOrderExt
     /// Gets or sets the summary of the notifiications statuses
     /// </summary>
     [JsonPropertyName("notificationsStatusSummary")]
-    public NotificationsStatusSummaryExt? NotificationStatusSummary { get; set; }
+    public NotificationsStatusSummaryExt? NotificationsStatusSummary { get; set; }
 }

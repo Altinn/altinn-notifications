@@ -74,7 +74,7 @@ public class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFact
                 Status = "Registered",
                 StatusDescription = "Order has been registered and is awaiting requested send time before processing"
             },
-            NotificationStatusSummary = new NotificationsStatusSummaryExt()
+            NotificationsStatusSummary = new NotificationsStatusSummaryExt()
             {
                 Email = new()
                 {

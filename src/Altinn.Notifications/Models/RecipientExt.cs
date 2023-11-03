@@ -11,12 +11,6 @@ namespace Altinn.Notifications.Models;
 public class RecipientExt
 {
     /// <summary>
-    /// Gets or sets the recipient id
-    /// </summary>
-    [JsonPropertyName("id")]
-    public string? Id { get; set; }
-
-    /// <summary>
     /// Gets or sets the email address of the recipient
     /// </summary>
     [JsonPropertyName("emailAddress")]

@@ -33,7 +33,7 @@ public class OrdersController : ControllerBase
     }
 
     /// <summary>
-    /// Endpoint for retrieving an order by id
+    /// Endpoint for retrieving an order by id.
     /// </summary>
     /// <param name="id">The order id</param>
     /// <returns>The order that correspons to the provided id</returns>

@@ -27,7 +27,7 @@ public class EmailNotificationOrderRequestValidatorTests
         var order = new EmailNotificationOrderRequestExt()
         {
             Subject = "This is an email subject",
-            Recipients = new List<RecipientExt>() { new RecipientExt() { Id = "16069412345", EmailAddress = "recipient2@domain.com" } },
+            Recipients = new List<RecipientExt>() { new RecipientExt() { EmailAddress = "recipient2@domain.com" } },
             Body = "This is an email body"
         };
 
@@ -41,7 +41,7 @@ public class EmailNotificationOrderRequestValidatorTests
         var order = new EmailNotificationOrderRequestExt()
         {
             Subject = "This is an email subject",
-            Recipients = new List<RecipientExt>() { new RecipientExt() { Id = "16069412345" } },
+            Recipients = new List<RecipientExt>() { new RecipientExt() },
             Body = "This is an email body"
         };
 
@@ -57,7 +57,7 @@ public class EmailNotificationOrderRequestValidatorTests
         var order = new EmailNotificationOrderRequestExt()
         {
             Subject = "This is an email subject",
-            Recipients = new List<RecipientExt>() { new RecipientExt() { Id = "16069412345", EmailAddress = "recipient2@domain.com" } },
+            Recipients = new List<RecipientExt>() { new RecipientExt() { EmailAddress = "recipient2@domain.com" } },
             Body = "This is an email body",
             RequestedSendTime = DateTime.UtcNow.AddDays(-1)
         };
@@ -73,7 +73,7 @@ public class EmailNotificationOrderRequestValidatorTests
     {
         var order = new EmailNotificationOrderRequestExt()
         {
-            Recipients = new List<RecipientExt>() { new RecipientExt() { Id = "16069412345", EmailAddress = "recipient2@domain.com" } },
+            Recipients = new List<RecipientExt>() { new RecipientExt() { EmailAddress = "recipient2@domain.com" } },
             Body = "This is an email body"
         };
 
@@ -88,7 +88,7 @@ public class EmailNotificationOrderRequestValidatorTests
         var order = new EmailNotificationOrderRequestExt()
         {
             Subject = "This is an email subject",
-            Recipients = new List<RecipientExt>() { new RecipientExt() { Id = "16069412345", EmailAddress = "recipient2@domain.com" } },
+            Recipients = new List<RecipientExt>() { new RecipientExt() { EmailAddress = "recipient2@domain.com" } },
         };
 
         var actual = _validator.Validate(order);

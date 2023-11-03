@@ -86,29 +86,7 @@ public class OrderMapperTests
 
         RecipientExt expected = new()
         {
-            Id = "16069412345",
             EmailAddress = "input@domain.com"
-        };
-
-        // Act
-        var actual = new List<Recipient>() { input }.MapToRecipientExt();
-
-        // Assert
-        Assert.Equivalent(new List<RecipientExt>() { expected }, actual, true);
-    }
-
-    [Fact]
-    public void MapToRecipientExt_NoEmailPresent_AreEquivalent()
-    {
-        // Arrange 
-        Recipient input = new()
-        {
-            RecipientId = "16069412345"
-        };
-
-        RecipientExt expected = new()
-        {
-            Id = "16069412345"
         };
 
         // Act
@@ -204,7 +182,7 @@ public class OrderMapperTests
                 StatusDescription = "The order has been registered, but not processed yet. No notifications are generated",
                 LastUpdate = lastUpdated
             },
-            NotificationStatusSummary = new NotificationsStatusSummaryExt()
+            NotificationsStatusSummary = new NotificationsStatusSummaryExt()
             {
                 Email = new()
                 {
