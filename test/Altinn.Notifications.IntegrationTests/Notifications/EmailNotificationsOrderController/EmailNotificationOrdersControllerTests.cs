@@ -55,7 +55,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
         _orderRequestExt = new()
         {
             Body = "email-body",
-            ContentType = EmailContentType.Html,
+            ContentType = EmailContentTypeExt.Html,
             Recipients = new List<RecipientExt>() { new RecipientExt() { EmailAddress = "recipient1@domain.com" }, new RecipientExt() { EmailAddress = "recipient2@domain.com" } },
             SendersReference = "senders-reference",
             RequestedSendTime = DateTime.UtcNow,
@@ -294,7 +294,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
         EmailNotificationOrderRequestExt request = new()
         {
             Body = "email-body",
-            ContentType = EmailContentType.Html,
+            ContentType = EmailContentTypeExt.Html,
             Recipients = new List<RecipientExt>() { new RecipientExt() { EmailAddress = "recipient1@domain.com" }, new RecipientExt() { EmailAddress = "recipient2@domain.com" } },
             SendersReference = "senders-reference",
             RequestedSendTime = DateTime.UtcNow,

@@ -66,7 +66,7 @@ public class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFact
             SendersReference = persistedOrder.SendersReference,
             Creator = "ttd",
             Created = persistedOrder.Created,
-            NotificationChannel = persistedOrder.NotificationChannel,
+            NotificationChannel = (NotificationChannelExt)persistedOrder.NotificationChannel,
             RequestedSendTime = persistedOrder.RequestedSendTime,
             ProcessingStatus = new()
             {
@@ -74,7 +74,7 @@ public class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFact
                 Status = "Registered",
                 StatusDescription = "Order has been registered and is awaiting requested send time before processing"
             },
-            NotificationStatusSummary = new NotificationsStatusSummaryExt()
+            NotificationsStatusSummary = new NotificationsStatusSummaryExt()
             {
                 Email = new()
                 {
@@ -117,7 +117,7 @@ public class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFact
             SendersReference = persistedOrder.SendersReference,
             Creator = "ttd",
             Created = persistedOrder.Created,
-            NotificationChannel = persistedOrder.NotificationChannel,
+            NotificationChannel = (NotificationChannelExt)persistedOrder.NotificationChannel,
             RequestedSendTime = persistedOrder.RequestedSendTime,
             ProcessingStatus = new()
             {

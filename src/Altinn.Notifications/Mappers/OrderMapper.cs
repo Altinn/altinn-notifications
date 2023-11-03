@@ -18,12 +18,12 @@ public static class OrderMapper
     /// </summary>
     public static NotificationOrderRequest MapToOrderRequest(this EmailNotificationOrderRequestExt extRequest, string creator)
     {
-        var emailTemplate = new EmailTemplate(null, extRequest.Subject, extRequest.Body, extRequest.ContentType);
+        var emailTemplate = new EmailTemplate(null, extRequest.Subject, extRequest.Body, (EmailContentType)extRequest.ContentType);
 
         var recipients = new List<Recipient>();
 
         recipients.AddRange(
-            extRequest.Recipients.Select(r => new Recipient(r.Id ?? string.Empty, new List<IAddressPoint>() { new EmailAddressPoint(r.EmailAddress!) })));
+            extRequest.Recipients.Select(r => new Recipient(string.Empty, new List<IAddressPoint>() { new EmailAddressPoint(r.EmailAddress!) })));
 
         return new NotificationOrderRequest(
             extRequest.SendersReference,
@@ -55,7 +55,7 @@ public static class OrderMapper
                     {
                         Body = emailTemplate!.Body,
                         FromAddress = emailTemplate.FromAddress,
-                        ContentType = emailTemplate.ContentType,
+                        ContentType = (EmailContentTypeExt)emailTemplate.ContentType,
                         Subject = emailTemplate.Subject
                     };
 
@@ -86,7 +86,7 @@ public static class OrderMapper
 
         if (order.NotificationStatuses.Any())
         {
-            orderExt.NotificationStatusSummary = new();
+            orderExt.NotificationsStatusSummary = new();
             foreach (var entry in order.NotificationStatuses)
             {
                 NotificationTemplateType notificationType = entry.Key;
@@ -95,7 +95,7 @@ public static class OrderMapper
                 switch (notificationType)
                 {
                     case NotificationTemplateType.Email:
-                        orderExt.NotificationStatusSummary.Email = new()
+                        orderExt.NotificationsStatusSummary.Email = new()
                         {
                             Generated = status.Generated,
                             Succeeded = status.Succeeded
@@ -138,7 +138,6 @@ public static class OrderMapper
         recipientExt.AddRange(
             recipients.Select(r => new RecipientExt
             {
-                Id = r.RecipientId,
                 EmailAddress = GetEmailFromAddressList(r.AddressInfo)
             }));
 
@@ -151,7 +150,7 @@ public static class OrderMapper
         orderExt.SendersReference = order.SendersReference;
         orderExt.Created = order.Created;
         orderExt.Creator = order.Creator.ShortName;
-        orderExt.NotificationChannel = order.NotificationChannel;
+        orderExt.NotificationChannel = (NotificationChannelExt)order.NotificationChannel;
         orderExt.RequestedSendTime = order.RequestedSendTime;
 
         return orderExt;

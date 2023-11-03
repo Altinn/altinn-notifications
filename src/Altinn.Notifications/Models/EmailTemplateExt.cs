@@ -1,8 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-using Altinn.Notifications.Core.Enums;
-
-namespace Altinn.Notifications.Core.Models.NotificationTemplate;
+namespace Altinn.Notifications.Models;
 
 /// <summary>
 /// Template for an email notification
@@ -10,26 +8,26 @@ namespace Altinn.Notifications.Core.Models.NotificationTemplate;
 public class EmailTemplateExt
 {
     /// <summary>
-    /// Gets the from adress of emails created by the template    
+    /// Gets the from adress of emails created by the template
     /// </summary>
     [JsonPropertyName("fromAddress")]
-    public string? FromAddress { get; set; }
+    public string FromAddress { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets the subject of emails created by the template    
+    /// Gets the subject of emails created by the template
     /// </summary>
     [JsonPropertyName("subject")]
-    public string? Subject { get; set; }
+    public string Subject { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets the body of emails created by the template    
+    /// Gets the body of emails created by the template
     /// </summary>
     [JsonPropertyName("body")]
-    public string? Body { get; set; }
+    public string Body { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets the content type of emails created by the template
     /// </summary>
-    [JsonPropertyName("content-type")]
-    public EmailContentType? ContentType { get; set; }
+    [JsonPropertyName("contentType")]
+    public EmailContentTypeExt ContentType { get; set; } = EmailContentTypeExt.Plain;
 }

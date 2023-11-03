@@ -1,9 +1,9 @@
-﻿namespace Altinn.Notifications.Core.Enums;
+﻿namespace Altinn.Notifications.Models;
 
 /// <summary>
 /// Enum describing available notification channels.
 /// </summary>
-public enum NotificationChannel
+public enum NotificationChannelExt
 {
     /// <summary>
     /// The selected channel for the notification is email.

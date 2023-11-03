@@ -26,7 +26,12 @@ public class OrderProcessingService : IOrderProcessingService
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderProcessingService"/> class.
     /// </summary>
-    public OrderProcessingService(IOrderRepository orderRepository, IEmailNotificationRepository emailNotificationRepository, IEmailNotificationService emailService, IKafkaProducer producer, IOptions<KafkaSettings> kafkaSettings)
+    public OrderProcessingService(
+        IOrderRepository orderRepository, 
+        IEmailNotificationRepository emailNotificationRepository, 
+        IEmailNotificationService emailService, 
+        IKafkaProducer producer, 
+        IOptions<KafkaSettings> kafkaSettings)
     {
         _orderRepository = orderRepository;
         _emailNotificationRepository = emailNotificationRepository;

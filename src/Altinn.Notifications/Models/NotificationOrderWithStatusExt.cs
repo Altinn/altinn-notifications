@@ -1,7 +1,5 @@
 ﻿using System.Text.Json.Serialization;
 
-using Altinn.Notifications.Core.Enums;
-
 namespace Altinn.Notifications.Models;
 
 /// <summary>
@@ -35,7 +33,7 @@ public class NotificationOrderWithStatusExt : IBaseNotificationOrderExt
     /// <inheritdoc/>>
     [JsonPropertyName("notificationChannel")]
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public NotificationChannel NotificationChannel { get; set; }
+    public NotificationChannelExt NotificationChannel { get; set; }
 
     /// <summary>
     /// Gets or sets the processing status of the notication order
@@ -47,5 +45,5 @@ public class NotificationOrderWithStatusExt : IBaseNotificationOrderExt
     /// Gets or sets the summary of the notifiications statuses
     /// </summary>
     [JsonPropertyName("notificationsStatusSummary")]
-    public NotificationsStatusSummaryExt? NotificationStatusSummary { get; set; }
+    public NotificationsStatusSummaryExt? NotificationsStatusSummary { get; set; }
 }

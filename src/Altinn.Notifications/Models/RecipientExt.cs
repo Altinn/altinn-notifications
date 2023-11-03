@@ -1,7 +1,5 @@
 ﻿using System.Text.Json.Serialization;
 
-using Altinn.Notifications.Core.Models.Address;
-
 namespace Altinn.Notifications.Models;
 
 /// <summary>
@@ -12,12 +10,6 @@ namespace Altinn.Notifications.Models;
 /// </remarks>
 public class RecipientExt
 {
-    /// <summary>
-    /// Gets or sets the recipient id
-    /// </summary>
-    [JsonPropertyName("id")]
-    public string? Id { get; set; }
-
     /// <summary>
     /// Gets or sets the email address of the recipient
     /// </summary>
