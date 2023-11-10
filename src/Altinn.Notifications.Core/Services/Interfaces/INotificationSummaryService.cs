@@ -5,7 +5,7 @@ namespace Altinn.Notifications.Core.Services.Interfaces
 {
     /// <summary>
     /// Interface describing the notification summary service
-    /// </summary
+    /// </summary>
     public interface INotificationSummaryService
     {
         /// <summary>

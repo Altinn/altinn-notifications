@@ -16,10 +16,10 @@ namespace Altinn.Notifications.Core.Models.Notification
         public bool Succeeded { get; internal set; }
 
         /// <inheritdoc/> 
-        public EmailRecipient Recipient { get; internal set; } = new();
+        public EmailRecipient Recipient { get; internal set; }
 
         /// <inheritdoc/> 
-        public NotificationResult<EmailNotificationResultType> ResultStatus { get; internal set; } = new(EmailNotificationResultType.New, DateTime.UtcNow);
+        public NotificationResult<EmailNotificationResultType> ResultStatus { get; internal set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="EmailNotificationWithResult"/> class.
