@@ -1,6 +1,4 @@
-﻿using Altinn.Notifications.Core.Services.Interfaces;
-
-namespace Altinn.Notifications.Core.Models.Notification;
+﻿namespace Altinn.Notifications.Core.Models.Notification;
 
 /// <summary>
 /// A class represednting a notification result
@@ -18,6 +16,14 @@ public class NotificationResult<TEnum>
     }
 
     /// <summary>
+    /// Sets the result description
+    /// </summary>
+    public void SetResultDescription(string? description)
+    {
+        ResultDescription = description;
+    }
+
+    /// <summary>
     /// Gets the date and time for when the last result was set.
     /// </summary>
     public DateTime ResultTime { get; }
@@ -26,4 +32,9 @@ public class NotificationResult<TEnum>
     /// Gets the send result of the notification
     /// </summary>
     public TEnum Result { get; }
+
+    /// <summary>
+    /// Gets the description of the send result
+    /// </summary>
+    public string? ResultDescription { get; private set; }
 }

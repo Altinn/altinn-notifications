@@ -3,12 +3,12 @@
 namespace Altinn.Notifications.Models;
 
 /// <summary>
-/// A class representing a summary of status overviews of all notification channels
+/// A class representing a status summary
 /// </summary>
 /// <remarks>
 /// External representaion to be used in the API.
 /// </remarks>
-public class ProcessingStatusExt
+public class StatusExt
 {
     /// <summary>
     /// Gets or sets the status
