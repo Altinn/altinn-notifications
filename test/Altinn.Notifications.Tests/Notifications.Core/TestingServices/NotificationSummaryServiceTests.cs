@@ -1,13 +1,14 @@
 ﻿using System;
 
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Services;
 
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 {
-    public class NotificationSummaryServicTests
+    public class NotificationSummaryServiceTests
     {
         [Theory]
         [InlineData(EmailNotificationResultType.New, false)]
@@ -28,7 +29,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         [InlineData(EmailNotificationResultType.Succeeded, "The email has been accepted by the third party email service and will be sent shortly.")]
         [InlineData(EmailNotificationResultType.Delivered, "The email was delivered to the recipient. No errors reported, making it likely it was received by the recipient.")]
         [InlineData(EmailNotificationResultType.Failed_RecipientNotIdentified, "Email was not sent because the recipient's email address was not found.")]
-        [InlineData(EmailNotificationResultType.Failed_RecipientNotIdentified, "The email was not sent because the recipient's email address was not found.")],
+        [InlineData(EmailNotificationResultType.Failed_RecipientNotIdentified, "The email was not sent because the recipient's email address was not found.")]
         [InlineData(EmailNotificationResultType.Failed_InvalidEmailFormat, "The email was not sent because the recipient’s email address is in an invalid format.")]
         public void GetResultDescription_ExpectedDescription(EmailNotificationResultType result, string expected)
         {
@@ -44,6 +45,52 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 string resultDescrption = NotificationSummaryService.GetResultDescription(resultType);
                 Assert.NotEmpty(resultDescrption);
             }
+        }
+
+        [Fact]
+        public void ProcessNotificationResults_1_generated_1_successful()
+        {
+            // Arrange
+            EmailNotificationSummary summary = new(Guid.NewGuid())
+            {
+                Notifications = new()
+                {
+                    new EmailNotificationWithResult(
+                    Guid.NewGuid(),
+                    new Altinn.Notifications.Core.Models.Recipients.EmailRecipient(),
+                    new NotificationResult<EmailNotificationResultType>(EmailNotificationResultType.Succeeded, DateTime.UtcNow))
+                }
+            };
+
+            // Act 
+            NotificationSummaryService.ProcessNotificationResults(summary);
+            
+            // Assert
+            Assert.Equal(1, summary.Generated);
+            Assert.Equal(1, summary.Succeeded);
+        }
+
+        [Fact]
+        public void ProcessNotificationResults_1_generated_0_successful()
+        {
+            // Arrange
+            EmailNotificationSummary summary = new(Guid.NewGuid())
+            {
+                Notifications = new()
+                {
+                    new EmailNotificationWithResult(
+                    Guid.NewGuid(),
+                    new Altinn.Notifications.Core.Models.Recipients.EmailRecipient(),
+                    new NotificationResult<EmailNotificationResultType>(EmailNotificationResultType.Failed_RecipientNotIdentified, DateTime.UtcNow))
+                }
+            };
+
+            // Act 
+            NotificationSummaryService.ProcessNotificationResults(summary);
+
+            // Assert
+            Assert.Equal(1, summary.Generated);
+            Assert.Equal(0, summary.Succeeded);
         }
     }
 }
