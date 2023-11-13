@@ -33,5 +33,10 @@ public enum EmailNotificationResultType
     /// <summary>
     /// Invalid format for email address
     /// </summary>
-    Failed_InvalidEmailFormat 
+    Failed_InvalidEmailFormat,
+
+    /// <summary>
+    /// Failed, unknown reason
+    /// </summary>
+    Failed
 }
