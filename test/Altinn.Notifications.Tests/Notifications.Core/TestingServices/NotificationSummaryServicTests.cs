@@ -15,6 +15,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         [InlineData(EmailNotificationResultType.Succeeded, true)]
         [InlineData(EmailNotificationResultType.Delivered, true)]
         [InlineData(EmailNotificationResultType.Failed_RecipientNotIdentified, false)]
+        [InlineData(EmailNotificationResultType.Failed_InvalidEmailFormat, false)]
         public void IsSuccessResult_CheckResultForAllEnums(EmailNotificationResultType result, bool expectedIsSuccess)
         {
             bool actualIsSuccess = NotificationSummaryService.IsSuccessResult(result);
@@ -27,6 +28,8 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         [InlineData(EmailNotificationResultType.Succeeded, "The email has been accepted by the third party email service and will be sent shortly.")]
         [InlineData(EmailNotificationResultType.Delivered, "The email was delivered to the recipient. No errors reported, making it likely it was received by the recipient.")]
         [InlineData(EmailNotificationResultType.Failed_RecipientNotIdentified, "Email was not sent because the recipient's email address was not found.")]
+        [InlineData(EmailNotificationResultType.Failed_RecipientNotIdentified, "The email was not sent because the recipient's email address was not found.")],
+        [InlineData(EmailNotificationResultType.Failed_InvalidEmailFormat, "The email was not sent because the recipient’s email address is in an invalid format.")]
         public void GetResultDescription_ExpectedDescription(EmailNotificationResultType result, string expected)
         {
             string actual = NotificationSummaryService.GetResultDescription(result);
