@@ -54,7 +54,7 @@ namespace Altinn.Notifications.Core.Services
             return (summary, null);
         }
 
-        private void ProcessNotificationResults(EmailNotificationSummary summary)
+        private static void ProcessNotificationResults(EmailNotificationSummary summary)
         {
             summary.Generated = summary.Notifications.Count;
 
