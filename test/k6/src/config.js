@@ -36,6 +36,9 @@ export var notifications = {
   orders_fromSendersRef: function (sendersReference) {
     return `https://platform.${baseUrl}/notifications/api/v1/orders?sendersReference=${sendersReference}`;
   },
+  notifications_email: function (orderId) {
+    return `https://platform.${baseUrl}/notifications/api/v1/orders/${orderId}/notifications/email/`;
+  }
 };
 
 // Platform Authentication
