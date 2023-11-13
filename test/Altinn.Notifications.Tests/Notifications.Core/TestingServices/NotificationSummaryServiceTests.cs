@@ -28,7 +28,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         [InlineData(EmailNotificationResultType.Sending, "The email is being processed and will be attempted sent shortly.")]
         [InlineData(EmailNotificationResultType.Succeeded, "The email has been accepted by the third party email service and will be sent shortly.")]
         [InlineData(EmailNotificationResultType.Delivered, "The email was delivered to the recipient. No errors reported, making it likely it was received by the recipient.")]
-        [InlineData(EmailNotificationResultType.Failed_RecipientNotIdentified, "Email was not sent because the recipient's email address was not found.")]
+        [InlineData(EmailNotificationResultType.Failed, "The email was not sent due to an unspecified failure.")]
         [InlineData(EmailNotificationResultType.Failed_RecipientNotIdentified, "The email was not sent because the recipient's email address was not found.")]
         [InlineData(EmailNotificationResultType.Failed_InvalidEmailFormat, "The email was not sent because the recipient’s email address is in an invalid format.")]
         public void GetResultDescription_ExpectedDescription(EmailNotificationResultType result, string expected)
