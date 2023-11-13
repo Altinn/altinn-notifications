@@ -28,5 +28,10 @@ public enum EmailNotificationResultType
     /// <summary>
     /// Recipient to address was not identified
     /// </summary>
-    Failed_RecipientNotIdentified
+    Failed_RecipientNotIdentified,
+
+    /// <summary>
+    /// Invalid format for email address
+    /// </summary>
+    Failed_InvalidEmailFormat 
 }
