@@ -12,9 +12,16 @@ namespace Altinn.Notifications.Core.Services
     public class NotificationSummaryService : INotificationSummaryService
     {
         private readonly INotificationSummaryRepository _summaryRepository;
-        private readonly Dictionary<EmailNotificationResultType, string> _emailResultDescriptions;
+        private static Dictionary<EmailNotificationResultType, string> _emailResultDescriptions = new()
+            {
+                { EmailNotificationResultType.New, "The email has been created, but has not been picked up for processing yet." },
+                { EmailNotificationResultType.Sending, "The email is being processed and will be attempted sent shortly." },
+                { EmailNotificationResultType.Succeeded, "The email has been accepted by the third party email service and will be sent shortly." },
+                { EmailNotificationResultType.Delivered, "The email was delivered to the recipient. No errors reported, making it likely it was received by the recipient." },
+                { EmailNotificationResultType.Failed_RecipientNotIdentified, "Email was not sent because the recipient's email address was not found." }
+            };
 
-        private readonly List<EmailNotificationResultType> _successResults = new()
+        private static List<EmailNotificationResultType> _successResults = new()
         {
             EmailNotificationResultType.Succeeded,
             EmailNotificationResultType.Delivered
@@ -26,15 +33,6 @@ namespace Altinn.Notifications.Core.Services
         public NotificationSummaryService(INotificationSummaryRepository summaryRepository)
         {
             _summaryRepository = summaryRepository;
-
-            _emailResultDescriptions = new()
-            {
-                { EmailNotificationResultType.New, "The email has been created, but has not been picked up for processing yet." },
-                { EmailNotificationResultType.Sending, "The email is being processed and will be attempted sent shortly." },
-                { EmailNotificationResultType.Succeeded, "The email has been accepted by the third party email service and will be sent shortly." },
-                { EmailNotificationResultType.Delivered, "The email was delivered to the recipient. No errors reported, making it likely it was received by the recipient." },
-                { EmailNotificationResultType.Failed_RecipientNotIdentified, "Email was not sent because the recipient's email address was not found." }
-            };
         }
 
         /// <inheritdoc/>
@@ -62,14 +60,30 @@ namespace Altinn.Notifications.Core.Services
             foreach (EmailNotificationWithResult notification in summary.Notifications)
             {
                 NotificationResult<EmailNotificationResultType> resultStatus = notification.ResultStatus;
-                if (_successResults.Contains(resultStatus.Result))
+                if (IsSuccessResult(resultStatus.Result))
                 {
                     notification.Succeeded = true;
                     ++summary.Succeeded;
                 }
 
-                resultStatus.SetResultDescription(_emailResultDescriptions[resultStatus.Result]);
+                resultStatus.SetResultDescription(GetResultDescription(resultStatus.Result));
             }
+        }
+
+        /// <summary>
+        /// Checks if the <see cref="EmailNotificationResultType"/> is a success result
+        /// </summary>
+        internal static bool IsSuccessResult(EmailNotificationResultType result)
+        {
+            return _successResults.Contains(result);
+        }
+
+        /// <summary>
+        /// Gets the English description of the <see cref="EmailNotificationResultType"/>"
+        /// </summary>
+        internal static string GetResultDescription(EmailNotificationResultType result)
+        {
+            return _emailResultDescriptions[result];
         }
     }
 }

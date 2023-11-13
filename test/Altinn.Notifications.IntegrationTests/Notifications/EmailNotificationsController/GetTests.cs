@@ -110,6 +110,8 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.EmailNotifications
             Assert.True(summary?.Notifications.Count > 0);
             Assert.Equal(_orderId, summary?.OrderId);
             Assert.Equal(_notificationId, summary?.Notifications[0].Id);
+            Assert.Equal(1, summary?.Generated);
+            Assert.Equal(0, summary?.Succeeded);
         }
 
         private HttpClient GetTestClient()

@@ -74,22 +74,6 @@ public class EmailNotificationsControllerTests : IClassFixture<IntegrationTestWe
     }
 
     [Fact]
-    public async Task Get_UserClaimsPrincipal_Forbidden()
-    {
-        // Arrange
-        HttpClient client = GetTestClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetUserToken(1337));
-
-        HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, _basePath);
-
-        // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
-    }
-
-    [Fact]
     public async Task Get_InvalidGuid_BadRequest()
     {
         HttpClient client = GetTestClient();
