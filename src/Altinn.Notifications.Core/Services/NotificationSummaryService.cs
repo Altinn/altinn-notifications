@@ -59,10 +59,12 @@ namespace Altinn.Notifications.Core.Services
         {
             summary.Generated = summary.Notifications.Count;
 
-            foreach (NotificationResult<EmailNotificationResultType> resultStatus in summary.Notifications.Select(n => n.ResultStatus))
+            foreach (EmailNotificationWithResult notification in summary.Notifications)
             {
+                NotificationResult<EmailNotificationResultType> resultStatus = notification.ResultStatus;
                 if (_successResults.Contains(resultStatus.Result))
                 {
+                    notification.Succeeded = true;
                     ++summary.Succeeded;
                 }
 

@@ -27,28 +27,31 @@ namespace Altinn.Notifications.Mappers
         /// </summary>
         public static List<EmailNotificationWithResultExt> MapToEmailNotificationWithResultExt(this List<EmailNotificationWithResult> notifications)
         {
-            List<EmailNotificationWithResultExt> result = new List<EmailNotificationWithResultExt>();
-
-            foreach (var notification in notifications)
-            {
-                result.Add(new EmailNotificationWithResultExt()
-                {
-                    Id = notification.Id,
-                    Succeeded = notification.Succeeded,
-                    Recipient = new()
-                    {
-                        EmailAddress = notification.Recipient.ToAddress
-                    },
-                    SendStatus = new()
-                    {
-                        Status = notification.ResultStatus.Result.ToString(),
-                        StatusDescription = notification.ResultStatus.ResultDescription,
-                        LastUpdate = notification.ResultStatus.ResultTime
-                    }
-                });
-            }
+            List<EmailNotificationWithResultExt> result = notifications.Select(n => n.MapToEmailNotificationWithResultExt()).ToList();
 
             return result;
+        }
+
+        /// <summary>
+        /// Maps a  <see cref="EmailNotificationWithResult"/> to a <see cref="EmailNotificationWithResultExt"/>
+        /// </summary>       
+        public static EmailNotificationWithResultExt MapToEmailNotificationWithResultExt(this EmailNotificationWithResult notification)
+        {
+            return new EmailNotificationWithResultExt()
+            {
+                Id = notification.Id,
+                Succeeded = notification.Succeeded,
+                Recipient = new()
+                {
+                    EmailAddress = notification.Recipient.ToAddress
+                },
+                SendStatus = new()
+                {
+                    Status = notification.ResultStatus.Result.ToString(),
+                    StatusDescription = notification.ResultStatus.ResultDescription,
+                    LastUpdate = notification.ResultStatus.ResultTime
+                }
+            };
         }
     }
 }

@@ -70,6 +70,18 @@ public static class PostgreUtil
         return o;
     }
 
+    public static async Task DeleteOrderFromDb(string sendersRef)
+    {
+        string sql = $"delete from notifications.orders where sendersreference = '{sendersRef}'";
+        await PostgreUtil.RunSql(sql);
+    }
+
+    public static async Task DeleteOrderFromDb(Guid orderId)
+    {
+        string sql = $"delete from notifications.orders where alternateid = '{orderId}'";
+        await PostgreUtil.RunSql(sql);
+    }
+
     public static async Task<int> RunSqlReturnIntOutput(string query)
     {
         NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
