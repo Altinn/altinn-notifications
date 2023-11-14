@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Validators;
@@ -8,8 +7,6 @@ using Altinn.Notifications.Validators;
 using FluentValidation;
 
 using Xunit;
-
-using static Microsoft.ApplicationInsights.MetricDimensionNames.TelemetryContext;
 
 namespace Altinn.Notifications.Tests.Notifications.TestingValidators;
 
