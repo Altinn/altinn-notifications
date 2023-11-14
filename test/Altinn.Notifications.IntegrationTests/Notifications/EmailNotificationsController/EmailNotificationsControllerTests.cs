@@ -121,7 +121,7 @@ public class EmailNotificationsControllerTests : IClassFixture<IntegrationTestWe
     {
         // Arrange
         Guid id = Guid.NewGuid();
-        EmailNotificationSummary output = new EmailNotificationSummary(id)
+        EmailNotificationSummary output = new(id)
         {
             SendersReference = "senders-ref",
             Generated = 1,
@@ -157,7 +157,7 @@ public class EmailNotificationsControllerTests : IClassFixture<IntegrationTestWe
     {
         // Arrange
         Guid id = Guid.NewGuid();
-        EmailNotificationSummary output = new EmailNotificationSummary(id)
+        EmailNotificationSummary output = new(id)
         {
             SendersReference = "senders-ref",
             Generated = 1,

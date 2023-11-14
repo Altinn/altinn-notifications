@@ -12,7 +12,7 @@ namespace Altinn.Notifications.Core.Services
     public class NotificationSummaryService : INotificationSummaryService
     {
         private readonly INotificationSummaryRepository _summaryRepository;
-        private static Dictionary<EmailNotificationResultType, string> _emailResultDescriptions = new()
+        private readonly static Dictionary<EmailNotificationResultType, string> _emailResultDescriptions = new()
             {
                 { EmailNotificationResultType.New, "The email has been created, but has not been picked up for processing yet." },
                 { EmailNotificationResultType.Sending, "The email is being processed and will be attempted sent shortly." },
@@ -23,7 +23,7 @@ namespace Altinn.Notifications.Core.Services
                 { EmailNotificationResultType.Failed_InvalidEmailFormat, "The email was not sent because the recipient’s email address is in an invalid format." }
             };
 
-        private static List<EmailNotificationResultType> _successResults = new()
+        private readonly static List<EmailNotificationResultType> _successResults = new()
         {
             EmailNotificationResultType.Succeeded,
             EmailNotificationResultType.Delivered
