@@ -180,7 +180,7 @@ function TC05_GetEmailNotificationSummary(data, orderId) {
     "GET email notifications. Status is 200 OK": (r) =>
       r.status === 200,
   });
-console.log(response.body);
+
   addErrorCount(success);
   if (!success) {
     // only continue to parse and check content if success response code
