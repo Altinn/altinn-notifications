@@ -19,7 +19,7 @@ public class EmailNotificationOrderRequestValidator : AbstractValidator<EmailNot
         RuleFor(order => order.Recipients)
             .NotEmpty()
             .WithMessage("One or more recipient is required.")
-            .Must(recipients => recipients.All(a => IsValidEmail(a.EmailAddress)))
+            .Must(recipients => recipients.TrueForAll(a => IsValidEmail(a.EmailAddress)))
             .WithMessage("A valid email address must be provided for all recipients.");
 
         RuleFor(order => order.RequestedSendTime)
@@ -44,7 +44,7 @@ public class EmailNotificationOrderRequestValidator : AbstractValidator<EmailNot
 
         string emailRegexPattern = @"((&quot;[^&quot;]+&quot;)|(([a-zA-Z0-9!#$%&amp;'*+\-=?\^_`{|}~])+(\.([a-zA-Z0-9!#$%&amp;'*+\-=?\^_`{|}~])+)*))@((((([a-zA-Z0-9æøåÆØÅ]([a-zA-Z0-9\-æøåÆØÅ]{0,61})[a-zA-Z0-9æøåÆØÅ]\.)|[a-zA-Z0-9æøåÆØÅ]\.){1,9})([a-zA-Z]{2,14}))|((\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})))";
 
-        Regex regex = new Regex(emailRegexPattern);
+        Regex regex = new(emailRegexPattern, RegexOptions.None, TimeSpan.FromSeconds(1));
 
         Match match = regex.Match(email);
 

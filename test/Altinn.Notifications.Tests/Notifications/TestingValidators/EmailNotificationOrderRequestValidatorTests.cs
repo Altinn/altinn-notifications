@@ -117,7 +117,7 @@ public class EmailNotificationOrderRequestValidatorTests
     [InlineData("john.doe@sub.domain.example", true)]
     [InlineData("gratis-netflix+1@gmail.com", true)]
     [InlineData(".user@example.com", true)]
-    [InlineData((string)null, false)]
+    [InlineData("", false)]
     [InlineData("userexample.com", false)]
     [InlineData("user@", false)]
     [InlineData("@example.com", false)]
