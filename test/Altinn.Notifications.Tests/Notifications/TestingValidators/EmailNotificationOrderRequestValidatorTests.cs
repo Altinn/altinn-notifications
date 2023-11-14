@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Validators;
@@ -36,6 +35,22 @@ public class EmailNotificationOrderRequestValidatorTests
     }
 
     [Fact]
+    public void Validate_InvalidEmailFormatProvided_ReturnsFalse()
+    {
+        var order = new EmailNotificationOrderRequestExt()
+        {
+            Subject = "This is an email subject",
+            Recipients = new List<RecipientExt>() { new RecipientExt() { EmailAddress = "@domain.com" } },
+            Body = "This is an email body"
+        };
+
+        var actual = _validator.Validate(order);
+
+        Assert.False(actual.IsValid);
+        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("A valid email address must be provided for all recipients."));
+    }
+
+    [Fact]
     public void Validate_EmailNotDefinedForRecipient_ReturnFalse()
     {
         var order = new EmailNotificationOrderRequestExt()
@@ -48,7 +63,7 @@ public class EmailNotificationOrderRequestValidatorTests
         var actual = _validator.Validate(order);
 
         Assert.False(actual.IsValid);
-        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("Email address must be provided for all recipients."));
+        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("A valid email address must be provided for all recipients."));
     }
 
     [Fact]
@@ -94,5 +109,24 @@ public class EmailNotificationOrderRequestValidatorTests
         var actual = _validator.Validate(order);
         Assert.False(actual.IsValid);
         Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("'Body' must not be empty."));
+    }
+
+    [Theory]
+    [InlineData("stephanie@kul.no", true)]
+    [InlineData("bakken_kundeservice@sykkelverksted.com", true)]
+    [InlineData("john.doe@sub.domain.example", true)]
+    [InlineData("gratis-netflix+1@gmail.com", true)]
+    [InlineData(".user@example.com", true)]
+    [InlineData("", false)]
+    [InlineData("userexample.com", false)]
+    [InlineData("user@", false)]
+    [InlineData("@example.com", false)]
+    [InlineData("user@example..com", false)]
+    [InlineData("user@exa!mple.com", false)]
+    [InlineData("user.@example.com", false)]
+    public void IsValidEmail(string email, bool expectedResult)
+    {
+        bool actual = EmailNotificationOrderRequestValidator.IsValidEmail(email);
+        Assert.Equal(expectedResult, actual);
     }
 }
