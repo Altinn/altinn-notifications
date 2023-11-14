@@ -39,7 +39,7 @@ public class NotificationOrderWithStatusExt : IBaseNotificationOrderExt
     /// Gets or sets the processing status of the notication order
     /// </summary>
     [JsonPropertyName("processingStatus")]
-    public ProcessingStatusExt ProcessingStatus { get; set; } = new();
+    public StatusExt ProcessingStatus { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the summary of the notifiications statuses
