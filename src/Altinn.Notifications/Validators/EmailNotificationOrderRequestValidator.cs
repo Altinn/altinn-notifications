@@ -1,4 +1,6 @@
-﻿using Altinn.Notifications.Models;
+﻿using System.Text.RegularExpressions;
+
+using Altinn.Notifications.Models;
 
 using FluentValidation;
 
@@ -17,8 +19,8 @@ public class EmailNotificationOrderRequestValidator : AbstractValidator<EmailNot
         RuleFor(order => order.Recipients)
             .NotEmpty()
             .WithMessage("One or more recipient is required.")
-            .Must(recipients => recipients?.Exists(a => string.IsNullOrEmpty(a.EmailAddress)) == false)
-            .WithMessage("Email address must be provided for all recipients.");
+            .Must(recipients => recipients.All(a => IsValidEmail(a.EmailAddress)))
+            .WithMessage("A valid email address must be provided for all recipients.");
 
         RuleFor(order => order.RequestedSendTime)
           .Must(sendTime => sendTime >= DateTime.UtcNow.AddMinutes(-5))
@@ -26,5 +28,26 @@ public class EmailNotificationOrderRequestValidator : AbstractValidator<EmailNot
 
         RuleFor(order => order.Body).NotEmpty();
         RuleFor(order => order.Subject).NotEmpty();
+    }
+
+    /// <summary>
+    /// Validated as email address based on the Altinn 2 regex
+    /// </summary>
+    /// <param name="email">The string to validate as an email address</param>
+    /// <returns>A boolean indicating that the email is valid or not</returns>
+    internal static bool IsValidEmail(string? email)
+    {
+        if (string.IsNullOrEmpty(email))
+        {
+            return false;
+        }
+
+        string emailRegexPattern = @"((&quot;[^&quot;]+&quot;)|(([a-zA-Z0-9!#$%&amp;'*+\-=?\^_`{|}~])+(\.([a-zA-Z0-9!#$%&amp;'*+\-=?\^_`{|}~])+)*))@((((([a-zA-Z0-9æøåÆØÅ]([a-zA-Z0-9\-æøåÆØÅ]{0,61})[a-zA-Z0-9æøåÆØÅ]\.)|[a-zA-Z0-9æøåÆØÅ]\.){1,9})([a-zA-Z]{2,14}))|((\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})))";
+
+        Regex regex = new Regex(emailRegexPattern);
+
+        Match match = regex.Match(email);
+
+        return match.Success;
     }
 }
