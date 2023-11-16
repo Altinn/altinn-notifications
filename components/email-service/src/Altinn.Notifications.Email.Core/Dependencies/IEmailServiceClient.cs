@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Email.Core.Status;
+﻿using Altinn.Notifications.Email.Core.Models;
+using Altinn.Notifications.Email.Core.Status;
 
 namespace Altinn.Notifications.Email.Core.Dependencies;
 
@@ -11,8 +12,8 @@ public interface IEmailServiceClient
     /// Method for requesting the sending of an email.
     /// </summary>
     /// <param name="email">The email text</param>
-    /// <returns>An operation id for tracing the success of the task</returns>
-    Task<string> SendEmail(Sending.Email email);
+    /// <returns>An operation id for tracing the success of the task or emailSendResult if fail</returns>
+    Task<Result<string, EmailSendResult>> SendEmail(Sending.Email email);
 
     /// <summary>
     /// Method for retrieving updated send status of an email.

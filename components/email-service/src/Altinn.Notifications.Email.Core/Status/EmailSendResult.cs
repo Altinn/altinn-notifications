@@ -6,11 +6,6 @@
 public enum EmailSendResult
 {
     /// <summary>
-    /// Failed, to be specified
-    /// </summary>
-    Failed,
-
-    /// <summary>
     /// Email send operation running
     /// </summary>
     Sending,
@@ -23,5 +18,15 @@ public enum EmailSendResult
     /// <summary>
     /// Email delivered to recipient
     /// </summary>
-    Delivered
+    Delivered,
+
+    /// <summary>
+    /// Failed, unknown reason
+    /// </summary>
+    Failed,
+
+    /// <summary>
+    /// Invalid format for email address
+    /// </summary>
+    Failed_InvalidEmailFormat
 }

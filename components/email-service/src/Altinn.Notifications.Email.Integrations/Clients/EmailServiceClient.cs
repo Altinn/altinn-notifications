@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 
 using Altinn.Notifications.Email.Core.Dependencies;
+using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Core.Sending;
 using Altinn.Notifications.Email.Integrations.Configuration;
 
@@ -20,6 +21,8 @@ public class EmailServiceClient : IEmailServiceClient
 {
     private readonly EmailClient _emailClient;
     private readonly ILogger<IEmailServiceClient> _logger;
+    
+    private readonly string _failedInvalidEmailFormatErrorMessage = "Invalid format for email address";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailServiceClient"/> class.
@@ -37,7 +40,7 @@ public class EmailServiceClient : IEmailServiceClient
     /// </summary>
     /// <param name="email">The email</param>
     /// <returns>A Task representing the asyncrhonous operation.</returns>
-    public async Task<string> SendEmail(Core.Sending.Email email)
+    public async Task<Result<string, Core.Status.EmailSendResult>> SendEmail(Core.Sending.Email email)
     {
         EmailContent emailContent = new(email.Subject);
         switch (email.ContentType)
@@ -53,9 +56,24 @@ public class EmailServiceClient : IEmailServiceClient
         }
 
         EmailMessage emailMessage = new(email.FromAddress, email.ToAddress, emailContent);
+        try
+        {
+            EmailSendOperation emailSendOperation = await _emailClient.SendAsync(WaitUntil.Started, emailMessage);
 
-        EmailSendOperation emailSendOperation = await _emailClient.SendAsync(WaitUntil.Started, emailMessage);
-        return emailSendOperation.Id;
+            return emailSendOperation.Id;
+        }
+        catch (RequestFailedException e)
+        {
+            _logger.LogError(e, "// EmailServiceClient // SendEmail // Failed to send email, NotificationId {NotificationId}", email.NotificationId);
+            if (e.Message.Contains(_failedInvalidEmailFormatErrorMessage))
+            {
+                return Core.Status.EmailSendResult.Failed_InvalidEmailFormat;
+            }
+            else
+            {
+                return Core.Status.EmailSendResult.Failed;
+            }
+        }   
     }
 
     /// <summary>
