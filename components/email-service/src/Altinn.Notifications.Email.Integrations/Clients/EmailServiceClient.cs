@@ -21,7 +21,7 @@ public class EmailServiceClient : IEmailServiceClient
 {
     private readonly EmailClient _emailClient;
     private readonly ILogger<IEmailServiceClient> _logger;
-    
+
     private readonly string _failedInvalidEmailFormatErrorMessage = "Invalid format for email address";
 
     /// <summary>
@@ -73,7 +73,7 @@ public class EmailServiceClient : IEmailServiceClient
             {
                 return Core.Status.EmailSendResult.Failed;
             }
-        }   
+        }
     }
 
     /// <summary>
@@ -83,25 +83,34 @@ public class EmailServiceClient : IEmailServiceClient
     public async Task<Core.Status.EmailSendResult> GetOperationUpdate(string operationId)
     {
         var operation = new EmailSendOperation(operationId, _emailClient);
-        await operation.UpdateStatusAsync();
-        if (operation.HasCompleted && operation.HasValue)
+        try
         {
-            var status = operation.Value.Status;
-            if (status == EmailSendStatus.Succeeded)
+            await operation.UpdateStatusAsync();
+
+            if (operation.HasCompleted && operation.HasValue)
             {
-                return Core.Status.EmailSendResult.Succeeded;
+                var status = operation.Value.Status;
+                if (status == EmailSendStatus.Succeeded)
+                {
+                    return Core.Status.EmailSendResult.Succeeded;
+                }
+                else if (status == EmailSendStatus.Failed || status == EmailSendStatus.Canceled)
+                {
+                    // TODO: check the reasons for failure to create reasonable types
+                    var response = operation.WaitForCompletionResponse();
+                    _logger.LogError(
+                        "// EmailServiceClient // GetOperationUpdate // Operation {OperationId} failed with status {Status} and reason phrase {Reason}",
+                        operationId,
+                        status,
+                        response.ReasonPhrase);
+                    return Core.Status.EmailSendResult.Failed;
+                }
             }
-            else if (status == EmailSendStatus.Failed || status == EmailSendStatus.Canceled)
-            {
-                // TODO: check the reasons for failure to create reasonable types
-                var response = operation.WaitForCompletionResponse();
-                _logger.LogError(
-                    "// EmailServiceClient // GetOperationUpdate // Operation {OperationId} failed with status {Status} and reason phrase {Reason}",
-                    operationId,
-                    status,
-                    response.ReasonPhrase);
-                return Core.Status.EmailSendResult.Failed;
-            }
+        }
+        catch (RequestFailedException e)
+        {
+            _logger.LogError(e, "// EmailServiceClient // GetOperationUpdate // Exception thrown when getting status, OperationId {OperationId}", operationId);
+            return Core.Status.EmailSendResult.Failed;
         }
 
         return Core.Status.EmailSendResult.Sending;
