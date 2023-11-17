@@ -5,7 +5,6 @@ using System.Text.Json;
 
 using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Controllers;
-using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
@@ -63,7 +62,7 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
     }
 
     [Fact]
-    public async Task Post_ServiceReturnsOrderWIthId_Accepted()
+    public async Task Post_ServiceReturnsOrderWithId_Accepted()
     {
         // Arrange
         HttpClient client = GetTestClient();
@@ -117,8 +116,7 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
 
     protected virtual async Task Dispose(bool disposing)
     {
-        string sql = $"delete from notifications.orders where sendersreference = '{_sendersRef}'";
-        await PostgreUtil.RunSql(sql);
+        await PostgreUtil.DeleteOrderFromDb(_sendersRef);
     }
 
     private HttpClient GetTestClient()

@@ -95,8 +95,7 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
     protected virtual async Task Dispose(bool disposing)
     {
         await KafkaUtil.DeleteTopicAsync(_retryTopicName);
-        string sql = $"delete from notifications.orders where sendersreference = '{_sendersRef}'";
-        await PostgreUtil.RunSql(sql);
+        await PostgreUtil.DeleteOrderFromDb(_sendersRef);
     }
 
     private static async Task<long> SelectCompletedOrderCount(Guid orderId)

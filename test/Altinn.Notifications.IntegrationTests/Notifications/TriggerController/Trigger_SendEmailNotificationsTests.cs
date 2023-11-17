@@ -62,9 +62,7 @@ public class Trigger_SendEmailNotificationsTests : IClassFixture<IntegrationTest
 
     protected virtual async Task Dispose(bool disposing)
     {
-        string sql = $"delete from notifications.orders where sendersreference = '{_sendersRef}'";
-        await PostgreUtil.RunSql(sql);
-
+        await PostgreUtil.DeleteOrderFromDb(_sendersRef);
         await KafkaUtil.DeleteTopicAsync(_topicName);
     }
 
