@@ -58,7 +58,7 @@ public sealed class EmailSendingAcceptedConsumer : KafkaConsumerBase
 
         int diff = (int)(_dateTime.UtcNow() - operationIdentifier.LastStatusCheck).TotalMilliseconds;
 
-        if (diff < _processingDelay)
+        if (diff > 0 && diff < _processingDelay)
         {
             await Task.Delay(_processingDelay - diff);
         }
