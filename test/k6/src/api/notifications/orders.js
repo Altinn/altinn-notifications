@@ -6,7 +6,7 @@ import * as apiHelpers from "../../apiHelpers.js";
 
 export function getById(id, token) {
     var endpoint = config.notifications.orders_fromId(id);
-    return getByUrl(endpoint, queryParams, token);
+    return getByUrl(endpoint, token);
   }
 
   export function getByUrl(url, token) {
