@@ -16,7 +16,9 @@
 
 import { check } from "k6";
 import * as setupToken from "../setup.js";
-import * as notificationsApi from "../api/notifications.js";
+import * as emailNotificationsApi from "../api/notifications/notifications_email.js";
+import * as ordersApi from "../api/notifications/orders.js";
+import * as emailOrdersApi from "../api/notifications/orders_email.js";
 import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 const orderRequestJson = JSON.parse(
   open("../data/orders/01-email-request.json")
@@ -62,7 +64,7 @@ export function setup() {
 function TC01_PostEmailNotificationOrderRequest(data) {
   var response, success;
 
-  response = notificationsApi.postEmailNotificationOrder(
+  response = emailOrdersApi.postEmailNotificationOrder(
     JSON.stringify(data.orderRequest),
     data.token
   );
@@ -89,7 +91,7 @@ function TC01_PostEmailNotificationOrderRequest(data) {
 // 02 - GET notification order by id
 function TC02_GetNotificationOrderById(data, selfLink, orderId) {
   var response, success;
-  response = notificationsApi.getOrderByUrl(selfLink, data.token);
+  response = ordersApi.getByUrl(selfLink, data.token);
 
   success = check(response, {
     "GET notification order by id. Status is 200 OK": (r) => r.status === 200,
@@ -114,7 +116,7 @@ function TC02_GetNotificationOrderById(data, selfLink, orderId) {
 function TC03_GetNotificationOrderBySendersReference(data) {
   var response, success;
 
-  response = notificationsApi.getOrderBySendersReference(
+  response = ordersApi.getBySendersReference(
     data.sendersReference,
     data.token
   );
@@ -131,10 +133,12 @@ function TC03_GetNotificationOrderBySendersReference(data) {
   }
 
   success = check(JSON.parse(response.body), {
-    "GET notification order by senders reference. Count is equal to 1":(orderList) =>
-    orderList.count === 1,
-    "GET notification order by senders reference. Orderlist contains one element":(orderList) =>
-    Array.isArray(orderList.orders) && orderList.orders.length == 1
+    "GET notification order by senders reference. Count is equal to 1": (
+      orderList
+    ) => orderList.count === 1,
+    "GET notification order by senders reference. Orderlist contains one element":
+      (orderList) =>
+        Array.isArray(orderList.orders) && orderList.orders.length == 1,
   });
 }
 
@@ -142,7 +146,7 @@ function TC03_GetNotificationOrderBySendersReference(data) {
 function TC04_GetNotificationOrderWithStatus(data, orderId) {
   var response, success;
 
-  response = notificationsApi.getOrderWithStatus(orderId, data.token);
+  response = ordersApi.getWithStatus(orderId, data.token);
   success = check(response, {
     "GET notification order with status. Status is 200 OK": (r) =>
       r.status === 200,
@@ -167,11 +171,34 @@ function TC04_GetNotificationOrderWithStatus(data, orderId) {
   addErrorCount(success);
 }
 
+// 05 - GET email notification summary
+function TC05_GetEmailNotificationSummary(data, orderId) {
+  var response, success;
+
+  response =   emailNotificationsApi.getEmailNotifications(orderId, data.token);
+  success = check(response, {
+    "GET email notifications. Status is 200 OK": (r) =>
+      r.status === 200,
+  });
+
+  addErrorCount(success);
+  if (!success) {
+    // only continue to parse and check content if success response code
+    stopIterationOnFail(success);
+  }
+
+  success = check(JSON.parse(response.body), {
+    "GET email notifications. OrderId property is a match": (notificationSummary) =>
+    notificationSummary.orderId === orderId,
+  });
+}
+
 /*
  * 01 - POST email notification order request
  * 02 - GET notification order by id
  * 03 - GET notification order by senders reference
  * 04 - GET notification order with status
+ * 05 - GET email notification summary
  */
 export default function (data) {
   try {
@@ -181,11 +208,12 @@ export default function (data) {
       TC02_GetNotificationOrderById(data, selfLink, id);
       TC03_GetNotificationOrderBySendersReference(data);
       TC04_GetNotificationOrderWithStatus(data, id);
+      TC05_GetEmailNotificationSummary(data, id);
     } else {
       // Limited test set for use case tests
       var selfLink = TC01_PostEmailNotificationOrderRequest(data);
       let id = selfLink.split("/").pop();
-      TC02_GetNotificationOrderById(data, selfLink, id);
+      TC05_GetEmailNotificationSummary(data, id);
     }
   } catch (error) {
     addErrorCount(false);
