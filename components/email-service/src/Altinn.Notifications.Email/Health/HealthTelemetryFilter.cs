@@ -35,12 +35,7 @@ namespace Altinn.Notifications.Email.Health
 
         private static bool ExcludeItemTelemetry(ITelemetry item)
         {
-            if (item is RequestTelemetry request && request.Url.ToString().EndsWith("/health"))
-            {
-                return true;
-            }
-
-            return false;
+            return item is RequestTelemetry request && request.Url.ToString().EndsWith("/health");
         }
     }
 }
