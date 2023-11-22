@@ -50,4 +50,14 @@ public class EmailNotificationOrderRequestValidator : AbstractValidator<EmailNot
 
         return match.Success;
     }
+
+    /// <summary>
+    /// Validated whether the DateTime object has time zone
+    /// </summary>
+    /// <param name="sendTime">The DateTime object which need to be verified whether it has time zone or not</param>
+    /// <returns>A boolean indicating that the DateTime object has time zone or not</returns>
+    internal static bool HasTimeZone(DateTime sendTime)
+    {
+        return sendTime.Kind != DateTimeKind.Unspecified;
+    }
 }
