@@ -23,8 +23,10 @@ public class EmailNotificationOrderRequestValidator : AbstractValidator<EmailNot
             .WithMessage("A valid email address must be provided for all recipients.");
 
         RuleFor(order => order.RequestedSendTime)
-          .Must(sendTime => sendTime >= DateTime.UtcNow.AddMinutes(-5))
-          .WithMessage("Send time must be in the future. Leave blank to send immediately.");
+            .Must(sendTime => HasTimeZone(sendTime))
+            .WithMessage("No time zone specified.")
+            .Must(sendTime => sendTime >= DateTime.UtcNow.AddMinutes(-5))
+            .WithMessage("Send time must be in the future. Leave blank to send immediately.");
 
         RuleFor(order => order.Body).NotEmpty();
         RuleFor(order => order.Subject).NotEmpty();
