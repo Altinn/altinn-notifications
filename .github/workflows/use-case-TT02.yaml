@@ -2,6 +2,8 @@ name: Use Case - TT02
 
 on:
   workflow_dispatch:
+  schedule:
+  - cron: '*/15 * * * *'
 
 jobs:
   test:

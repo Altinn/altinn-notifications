@@ -46,6 +46,11 @@ public class KafkaSettings
     public string EmailStatusUpdatedTopicName { get; set; } = string.Empty;
 
     /// <summary>
+    /// The name of the platform service update topic 
+    /// </summary>
+    public string AltinnServiceUpdateTopicName { get; set; } = string.Empty;
+
+    /// <summary>
     /// The name of the health check topic
     /// </summary>
     public string HealthCheckTopic { get; set; } = string.Empty;
