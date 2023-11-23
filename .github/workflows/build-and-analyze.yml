@@ -82,6 +82,7 @@ jobs:
         run: |
           dotnet-sonarscanner end /d:sonar.login="${{ secrets.SONAR_TOKEN }}"
       - name: Process .NET test result
+        if: always()
         uses: NasAmin/trx-parser@v0.5.0
         with:
           TRX_PATH: ${{ github.workspace }}/TestResults
