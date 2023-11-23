@@ -14,6 +14,7 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers
     public class AltinnServiceUpdateConsumer : KafkaConsumerBase<AltinnServiceUpdateConsumer>
     {
         private readonly IAltinnServiceUpdateService _serviceUpdate;
+        private readonly ILogger<AltinnServiceUpdateConsumer> _logger;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AltinnServiceUpdateConsumer"/> class.
@@ -25,6 +26,7 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers
             : base(settings, logger, settings.Value.AltinnServiceUpdateTopicName)
         {
             _serviceUpdate = serviceUpdate;
+            _logger = logger;
         }
 
         /// <inheritdoc/>
@@ -39,6 +41,7 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers
 
             if (!succeeded)
             {
+                _logger.LogError("// AltinnServiceUpdateConsumer // ProcessServiceUpdate // Deserialization of message failed. {Message}", message);
                 return;
             }
 

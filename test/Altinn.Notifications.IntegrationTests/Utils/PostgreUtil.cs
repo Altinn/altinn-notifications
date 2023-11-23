@@ -2,6 +2,7 @@
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Repository.Interfaces;
 using Altinn.Notifications.Persistence.Repository;
+using Altinn.Notifications.Persistence.Extensions;
 
 using Npgsql;
 
@@ -105,6 +106,20 @@ public static class PostgreUtil
         await reader.ReadAsync();
 
         string result = reader.GetString(0);
+
+        return result;
+    }
+
+    public static async Task<T> RunSqlReturnOutput<T>(string query)
+    {
+        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
+
+        await using NpgsqlCommand pgcom = dataSource.CreateCommand(query);
+
+        await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync();
+        await reader.ReadAsync();
+
+        T result = reader.GetValue<T>(0);
 
         return result;
     }

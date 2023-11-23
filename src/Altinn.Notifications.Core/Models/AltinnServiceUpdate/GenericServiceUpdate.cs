@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
+
 using Altinn.Notifications.Core.Enums;
 
 namespace Altinn.Notifications.Core.Models.AltinnServiceUpdate
@@ -23,6 +24,22 @@ namespace Altinn.Notifications.Core.Models.AltinnServiceUpdate
         /// The data of the service update as a json serialized string
         /// </summary>
         public string Data { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Serialize the <see cref="GenericServiceUpdate"/> into a json string
+        /// </summary>
+        /// <returns></returns>
+        public string Serialize()
+        {
+            return JsonSerializer.Serialize(
+                this,
+                new JsonSerializerOptions
+                {
+                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    Converters = { new JsonStringEnumConverter() }
+                });
+        }
 
         /// <summary>
         /// Deserialize a json string into the <see cref="GenericServiceUpdate"/>

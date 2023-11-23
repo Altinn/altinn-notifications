@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.AltinnServiceUpdate;
 using Altinn.Notifications.Core.Repository.Interfaces;
@@ -27,13 +28,15 @@ namespace Altinn.Notifications.Core.Services
             switch (schema)
             {
                 case AltinnServiceUpdateSchema.ResourceLimitExceeded:
-                    ResourceLimitExceeded? update = JsonSerializer.Deserialize<ResourceLimitExceeded>(serializedData);
+                    bool success = ResourceLimitExceeded.Tryparse(serializedData, out ResourceLimitExceeded update);
 
-                    if (update != null)
+                    if (!success)
                     {
-                        await HandleResourceLimitExceeded(update);
+                        // log data
+                        return;
                     }
 
+                    await HandleResourceLimitExceeded(update);
                     return;
             }
         }

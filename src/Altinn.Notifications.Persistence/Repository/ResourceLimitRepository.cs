@@ -16,7 +16,7 @@ namespace Altinn.Notifications.Persistence.Repository
         private readonly NpgsqlDataSource _dataSource;
         private readonly TelemetryClient? _telemetryClient;
         private const string _setEmailTimeout = @"UPDATE notifications.resourcelimitlog
-                                                SET emaillimittimeout = '$1'
+                                                SET emaillimittimeout = $1
                                                 WHERE id = (SELECT MAX(id) FROM notifications.resourcelimitlog);";
 
         /// <summary>

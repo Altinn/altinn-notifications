@@ -33,6 +33,22 @@ namespace Altinn.Notifications.Core.Models.AltinnServiceUpdate
         }
 
         /// <summary>
+        /// Serialize the <see cref="ResourceLimitExceeded"/> into a json string
+        /// </summary>
+        /// <returns></returns>
+        public string Serialize()
+        {
+            return JsonSerializer.Serialize(
+                this,
+                new JsonSerializerOptions
+                {
+                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    Converters = { new JsonStringEnumConverter() }
+                });
+        }
+
+        /// <summary>
         /// Try to parse a json string into a<see cref="ResourceLimitExceeded"/>
         /// </summary>
         public static bool Tryparse(string input, out ResourceLimitExceeded value)
