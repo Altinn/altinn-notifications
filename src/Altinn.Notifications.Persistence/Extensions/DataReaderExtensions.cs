@@ -84,8 +84,8 @@ public static class DataReaderExtensions
         catch (Exception ex)
         {
             const string Message
-                = "Error trying to interpret data. The reader value is '{1}', of type '{2}'. "
-                + "Attempt to interpret the value as type '{3}' failed.";
+                = "Error trying to interpret data. The reader value is '{0}', of type '{1}'. "
+                + "Attempt to interpret the value as type '{2}' failed.";
 
             string strVal = dbValue.ToString()!;
             if (strVal.Length > 100)

@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.TestingConsumers;
 
-public class AltinnServiceUpdateConsumerTests : IAsyncLifetime
+public class AltinnServiceUpdateConsumerTests : IAsyncDisposable
 {
     private static string _serviceUpdateTopicName = Guid.NewGuid().ToString();
 
@@ -67,17 +67,12 @@ public class AltinnServiceUpdateConsumerTests : IAsyncLifetime
         return await PostgreUtil.RunSqlReturnOutput<DateTime>(sql);
     }
 
-    public async Task DisposeAsync()
+    async ValueTask IAsyncDisposable.DisposeAsync()
     {
         string sql = @"UPDATE notifications.resourcelimitlog
                         SET emaillimittimeout = NULL
                         WHERE id = (SELECT MAX(id) FROM notifications.resourcelimitlog)";
 
         await PostgreUtil.RunSql(sql);
-    }
-
-    public Task InitializeAsync()
-    {
-        return Task.CompletedTask;
     }
 }

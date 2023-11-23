@@ -6,7 +6,7 @@ using Microsoft.Extensions.Hosting;
 
 using Xunit;
 
-namespace Altinn.Notifications.IntegrationTests.Notifications.Core.Consumers;
+namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.TestingConsumers;
 
 public class PastDueOrdersConsumerTests : IDisposable
 {
@@ -23,10 +23,10 @@ public class PastDueOrdersConsumerTests : IDisposable
     {
         // Arrange
         Dictionary<string, string> vars = new()
-        {
-            { "KafkaSettings__PastDueOrdersTopicName", _pastDueOrdersTopicName },
-            { "KafkaSettings__Admin__TopicList", $"[\"{_pastDueOrdersTopicName}\"]" }
-        };
+    {
+        { "KafkaSettings__PastDueOrdersTopicName", _pastDueOrdersTopicName },
+        { "KafkaSettings__Admin__TopicList", $"[\"{_pastDueOrdersTopicName}\"]" }
+    };
 
         using PastDueOrdersConsumer consumerService = (PastDueOrdersConsumer)ServiceUtil
                                                     .GetServices(new List<Type>() { typeof(IHostedService) }, vars)

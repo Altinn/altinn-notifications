@@ -6,7 +6,7 @@ using Microsoft.Extensions.Hosting;
 
 using Xunit;
 
-namespace Altinn.Notifications.IntegrationTests.Notifications.Core.Consumers;
+namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.TestingConsumers;
 
 public class PastDueOrdersRetryConsumerTests : IDisposable
 {
@@ -23,10 +23,10 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
     {
         // Arrange
         Dictionary<string, string> vars = new()
-        {
-            { "KafkaSettings__PastDueOrdersRetryTopicName", _retryTopicName },
-            { "KafkaSettings__Admin__TopicList", $"[\"{_retryTopicName}\"]" }
-        };
+    {
+        { "KafkaSettings__PastDueOrdersRetryTopicName", _retryTopicName },
+        { "KafkaSettings__Admin__TopicList", $"[\"{_retryTopicName}\"]" }
+    };
 
         using PastDueOrdersRetryConsumer consumerRetryService = (PastDueOrdersRetryConsumer)ServiceUtil
                                                     .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
@@ -59,10 +59,10 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
     {
         // Arrange
         Dictionary<string, string> vars = new()
-        {
-            { "KafkaSettings__PastDueOrdersRetryTopicName", _retryTopicName },
-            { "KafkaSettings__Admin__TopicList", $"[\"{_retryTopicName}\"]" }
-        };
+    {
+        { "KafkaSettings__PastDueOrdersRetryTopicName", _retryTopicName },
+        { "KafkaSettings__Admin__TopicList", $"[\"{_retryTopicName}\"]" }
+    };
 
         using PastDueOrdersRetryConsumer consumerRetryService = (PastDueOrdersRetryConsumer)ServiceUtil
                                                     .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
