@@ -1,8 +1,8 @@
 ﻿using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Repository.Interfaces;
-using Altinn.Notifications.Persistence.Repository;
 using Altinn.Notifications.Persistence.Extensions;
+using Altinn.Notifications.Persistence.Repository;
 
 using Npgsql;
 
@@ -74,40 +74,7 @@ public static class PostgreUtil
     public static async Task DeleteOrderFromDb(string sendersRef)
     {
         string sql = $"delete from notifications.orders where sendersreference = '{sendersRef}'";
-        await PostgreUtil.RunSql(sql);
-    }
-
-    public static async Task DeleteOrderFromDb(Guid orderId)
-    {
-        string sql = $"delete from notifications.orders where alternateid = '{orderId}'";
-        await PostgreUtil.RunSql(sql);
-    }
-
-    public static async Task<int> RunSqlReturnIntOutput(string query)
-    {
-        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
-
-        await using NpgsqlCommand pgcom = dataSource.CreateCommand(query);
-
-        await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync();
-        await reader.ReadAsync();
-        int count = (int)reader.GetInt64(0);
-
-        return count;
-    }
-
-    public static async Task<string> RunSqlReturnStringOutput(string query)
-    {
-        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
-
-        await using NpgsqlCommand pgcom = dataSource.CreateCommand(query);
-
-        await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync();
-        await reader.ReadAsync();
-
-        string result = reader.GetString(0);
-
-        return result;
+        await RunSql(sql);
     }
 
     public static async Task<T> RunSqlReturnOutput<T>(string query)

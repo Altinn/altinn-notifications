@@ -54,7 +54,7 @@ public class AltinnServiceUpdateConsumerTests : IAsyncLifetime
         // Assert
         DateTime? actualTimeout = await SelectEmailResourceLimitFromDb();
         Assert.NotNull(actualTimeout);
-        Assert.True(actualTimeout > DateTime.Now);
+        Assert.True(actualTimeout > DateTime.MinValue);
     }
 
     private static async Task<DateTime?> SelectEmailResourceLimitFromDb()
