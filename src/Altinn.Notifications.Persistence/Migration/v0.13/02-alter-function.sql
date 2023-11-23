@@ -20,7 +20,8 @@ BEGIN
             FROM updated u, notifications.emailtexts et
             WHERE u._orderid = et._orderid;    
     ELSE 
-         RETURN QUERY SELECT * FROM notifications.emailtexts WHERE FALSE; 
+         RETURN QUERY SELECT NULL::uuid AS alternateid, NULL::text AS subject, NULL::text AS body, NULL::text AS fromaddress, NULL::text AS toaddress, NULL::text AS contenttype WHERE FALSE;
+
     END IF;
 END;
 $BODY$;
