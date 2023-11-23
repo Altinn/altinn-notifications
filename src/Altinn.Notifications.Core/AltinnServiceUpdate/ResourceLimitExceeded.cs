@@ -4,31 +4,31 @@ using System.Text.Json.Serialization;
 namespace Altinn.Notifications.Core.AltinnServiceUpdate
 {
     /// <summary>
-    /// A class representing a service update of the type Resource Limit
+    /// A class holding data on an exceeded resource limit in an Altinn service
     /// </summary>
-    public class ResourceLimitUpdate 
+    public class ResourceLimitExceeded
     {
         /// <summary>
-        /// The resource that is limited
+        /// The resource that has reached its capacity limit
         /// </summary>
-        public string Resource { get; set; }
+        public string Resource { get; set; } = string.Empty;
 
         /// <summary>
         /// The timeout in seconds until service is available again
         /// </summary>
         public int Timeout { get; set; }
-        
+
         /// <summary>
         /// The error message
         /// </summary>
-        public string ErrorMessage { get; set; }
+        public string ErrorMessage { get; set; } = string.Empty;
 
         /// <summary>
-        /// Deserialize a json string into the <see cref="ResourceLimitUpdate"/>
+        /// Deserialize a json string into the <see cref="ResourceLimitExceeded"/>
         /// </summary>
-        public static ResourceLimitUpdate? Deserialize(string serializedString)
+        public static ResourceLimitExceeded? Deserialize(string serializedString)
         {
-            return JsonSerializer.Deserialize<ResourceLimitUpdate>(
+            return JsonSerializer.Deserialize<ResourceLimitExceeded>(
                 serializedString,
                 new JsonSerializerOptions()
                 {
@@ -38,12 +38,12 @@ namespace Altinn.Notifications.Core.AltinnServiceUpdate
         }
 
         /// <summary>
-        /// Try to parse a json string into a<see cref="ResourceLimitUpdate"/>
+        /// Try to parse a json string into a<see cref="ResourceLimitExceeded"/>
         /// </summary>
-        public static bool Tryparse(string input, out ResourceLimitUpdate value)
+        public static bool Tryparse(string input, out ResourceLimitExceeded value)
         {
-            ResourceLimitUpdate? parsedOutput;
-            value = new ResourceLimitUpdate();
+            ResourceLimitExceeded? parsedOutput;
+            value = new ResourceLimitExceeded();
 
             if (string.IsNullOrEmpty(input))
             {

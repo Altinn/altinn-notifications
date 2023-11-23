@@ -6,8 +6,8 @@
 public enum AltinnServiceUpdateSchema
 {
     /// <summary>
-    /// The resource limit timeout schema
+    /// The resource limit exceeded schema
     /// </summary>
-    /// <remarks>Data of this schema should be mapped to a <see cref="TBD"/> object</remarks>
-    ResourceLimitTimeout
+    /// <remarks>Data of this schema should be mapped to a <see cref="ResourceLimitExceeded"/> object</remarks>
+    ResourceLimitExceeded
 }

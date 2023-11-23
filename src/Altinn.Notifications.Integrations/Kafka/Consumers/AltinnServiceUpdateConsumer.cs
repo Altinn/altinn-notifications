@@ -9,7 +9,7 @@ using Microsoft.Extensions.Options;
 namespace Altinn.Notifications.Integrations.Kafka.Consumers
 {
     /// <summary>
-    /// Kafka consumer class for platform service updates
+    /// Kafka consumer class for Altinn service updates
     /// </summary>
     public class AltinnServiceUpdateConsumer : KafkaConsumerBase<AltinnServiceUpdateConsumer>
     {

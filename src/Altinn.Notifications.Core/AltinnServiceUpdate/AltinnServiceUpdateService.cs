@@ -1,6 +1,6 @@
-﻿using System.Text.Json;
+﻿using Altinn.Notifications.Core.AltinnServiceUpdate;
 
-using Altinn.Notifications.Core.AltinnServiceUpdate;
+using Microsoft.Extensions.Logging;
 
 namespace Altinn.Notifications.Core.ServiceUpdate
 {
@@ -9,41 +9,32 @@ namespace Altinn.Notifications.Core.ServiceUpdate
     /// </summary>
     public class AltinnServiceUpdateService : IAltinnServiceUpdateService
     {
+        private readonly INotificationsEmailServiceUpdateService _notificationsEmail;
+        private readonly ILogger<IAltinnServiceUpdateService> _logger;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AltinnServiceUpdateService"/> class.
+        /// </summary>
+        public AltinnServiceUpdateService(
+            INotificationsEmailServiceUpdateService notificationsEmail,
+            ILogger<IAltinnServiceUpdateService> logger)
+        {
+            _notificationsEmail = notificationsEmail;
+            _logger = logger;
+        }
+
         /// <inheritdoc/>
-        public Task HandleServiceUpdate(AltinnService service, AltinnServiceUpdateSchema schema, string serializedData)
+        public async Task HandleServiceUpdate(AltinnService service, AltinnServiceUpdateSchema schema, string serializedData)
         {
             switch (service)
             {
                 case AltinnService.Notifications_Email:
-                    return HandleNotificationEmailUpdate(schema, serializedData);
+                    await _notificationsEmail.HandleServiceUpdate(schema, serializedData);
+                    return;
                 case AltinnService.Unknown:
-                    break;
+                    _logger.LogInformation("// AltinnServiceUpdateService // HandleServiceUpdate// Received service from unknown service {service}.", service);
+                    return;
             }
-
-            return Task.CompletedTask;
-        }
-
-        private async Task HandleNotificationEmailUpdate(AltinnServiceUpdateSchema schema, string serializedData)
-        {
-            switch (schema)
-            {
-                case AltinnServiceUpdateSchema.ResourceLimitTimeout:
-                    ResourceLimitUpdate? update = JsonSerializer.Deserialize<ResourceLimitUpdate>(serializedData);
-
-                    if (update != null)
-                    {
-                        await Handle_ResourceLimitTimeout(update);
-                    }
-
-                    break;
-            }
-
-            await Task.CompletedTask;
-        }
-
-        private Task Handle_ResourceLimitTimeout(ResourceLimitUpdate update)
-        {
-            // call relevant repository method for setting the timeout flag 
         }
     }
 }
