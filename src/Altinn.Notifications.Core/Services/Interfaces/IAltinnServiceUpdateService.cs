@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Altinn.Notifications.Core.AltinnServiceUpdate;
+using Altinn.Notifications.Core.Enums;
 
-namespace Altinn.Notifications.Core.ServiceUpdate
+namespace Altinn.Notifications.Core.Services.Interfaces
 {
     /// <summary>
     /// Interface describing the service responding to service updates from Altinn components
@@ -15,6 +15,6 @@ namespace Altinn.Notifications.Core.ServiceUpdate
         /// <summary>
         /// Method for handling an update from a service
         /// </summary>
-        public Task HandleServiceUpdate(AltinnService service, AltinnServiceUpdateSchema schema,  string serializedData);
+        public Task HandleServiceUpdate(string source, AltinnServiceUpdateSchema schema, string serializedData);
     }
 }

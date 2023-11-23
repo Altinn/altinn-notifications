@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Altinn.Notifications.Core.AltinnServiceUpdate
+namespace Altinn.Notifications.Core.Models.AltinnServiceUpdate
 {
     /// <summary>
     /// A class holding data on an exceeded resource limit in an Altinn service
@@ -14,14 +14,9 @@ namespace Altinn.Notifications.Core.AltinnServiceUpdate
         public string Resource { get; set; } = string.Empty;
 
         /// <summary>
-        /// The timeout in seconds until service is available again
+        /// The timestamp for when the service is available again
         /// </summary>
-        public int Timeout { get; set; }
-
-        /// <summary>
-        /// The error message
-        /// </summary>
-        public string ErrorMessage { get; set; } = string.Empty;
+        public DateTime ResetTime { get; set; }
 
         /// <summary>
         /// Deserialize a json string into the <see cref="ResourceLimitExceeded"/>

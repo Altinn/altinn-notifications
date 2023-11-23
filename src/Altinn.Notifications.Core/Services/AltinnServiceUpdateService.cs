@@ -1,8 +1,9 @@
-﻿using Altinn.Notifications.Core.AltinnServiceUpdate;
+﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Services.Interfaces;
 
 using Microsoft.Extensions.Logging;
 
-namespace Altinn.Notifications.Core.ServiceUpdate
+namespace Altinn.Notifications.Core.Services
 {
     /// <summary>
     /// Implementation of the <see cref="IAltinnServiceUpdateService"/> interface
@@ -24,15 +25,15 @@ namespace Altinn.Notifications.Core.ServiceUpdate
         }
 
         /// <inheritdoc/>
-        public async Task HandleServiceUpdate(AltinnService service, AltinnServiceUpdateSchema schema, string serializedData)
+        public async Task HandleServiceUpdate(string source, AltinnServiceUpdateSchema schema, string serializedData)
         {
-            switch (service)
+            switch (source)
             {
-                case AltinnService.Notifications_Email:
+                case "platform-notifications-email":
                     await _notificationsEmail.HandleServiceUpdate(schema, serializedData);
                     return;
-                case AltinnService.Unknown:
-                    _logger.LogInformation("// AltinnServiceUpdateService // HandleServiceUpdate// Received service from unknown service {service}.", service);
+                default:
+                    _logger.LogInformation("// AltinnServiceUpdateService // HandleServiceUpdate// Received service from unknown service {service}.", source);
                     return;
             }
         }

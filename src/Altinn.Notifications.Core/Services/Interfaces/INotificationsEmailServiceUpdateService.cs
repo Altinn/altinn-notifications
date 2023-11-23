@@ -1,4 +1,6 @@
-﻿namespace Altinn.Notifications.Core.AltinnServiceUpdate
+﻿using Altinn.Notifications.Core.Enums;
+
+namespace Altinn.Notifications.Core.Services.Interfaces
 {
     /// <summary>
     /// Interface describing the service responding to service updates from the Notifications Email component

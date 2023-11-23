@@ -1,5 +1,5 @@
-﻿using Altinn.Notifications.Core.AltinnServiceUpdate;
-using Altinn.Notifications.Core.ServiceUpdate;
+﻿using Altinn.Notifications.Core.Models.AltinnServiceUpdate;
+using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Integrations.Configuration;
 
 using Microsoft.Extensions.Logging;
@@ -42,7 +42,7 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers
                 return;
             }
 
-            await _serviceUpdate.HandleServiceUpdate(update.Source, update.Schema, update.Data);
+            await _serviceUpdate.HandleServiceUpdate(update.Source.ToLower().Trim(), update.Schema, update.Data);
         }
 
         private async Task RetryServiceUpdate(string message)

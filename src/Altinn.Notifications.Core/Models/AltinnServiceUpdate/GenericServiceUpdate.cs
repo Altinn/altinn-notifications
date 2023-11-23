@@ -1,7 +1,8 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
+using Altinn.Notifications.Core.Enums;
 
-namespace Altinn.Notifications.Core.AltinnServiceUpdate
+namespace Altinn.Notifications.Core.Models.AltinnServiceUpdate
 {
     /// <summary>
     /// A class representing a generic service update
@@ -11,7 +12,7 @@ namespace Altinn.Notifications.Core.AltinnServiceUpdate
         /// <summary>
         /// The source of the service update
         /// </summary>
-        public AltinnService Source { get; set; }
+        public string Source { get; set; } = string.Empty;
 
         /// <summary>
         /// The schema of the service update data
@@ -55,7 +56,7 @@ namespace Altinn.Notifications.Core.AltinnServiceUpdate
                 parsedOutput = Deserialize(input!);
 
                 value = parsedOutput!;
-                return value.Source != AltinnService.Unknown;
+                return !string.IsNullOrEmpty(value.Source);
             }
             catch
             {

@@ -1,8 +1,10 @@
 ﻿using System.Text.Json;
-
+using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models.AltinnServiceUpdate;
 using Altinn.Notifications.Core.Repository.Interfaces;
+using Altinn.Notifications.Core.Services.Interfaces;
 
-namespace Altinn.Notifications.Core.AltinnServiceUpdate
+namespace Altinn.Notifications.Core.Services
 {
     /// <summary>
     /// Implementation of the <see cref="INotificationsEmailServiceUpdateService"/> interface
@@ -38,7 +40,7 @@ namespace Altinn.Notifications.Core.AltinnServiceUpdate
 
         private async Task HandleResourceLimitExceeded(ResourceLimitExceeded update)
         {
-            await _resourceLimitRepository.SetEmailTimeout(DateTime.UtcNow.AddSeconds(update.Timeout));
+            await _resourceLimitRepository.SetEmailTimeout(update.ResetTime);
         }
     }
 }
