@@ -5,6 +5,8 @@ using Altinn.Notifications.Core.Models.AltinnServiceUpdate;
 using Altinn.Notifications.Core.Repository.Interfaces;
 using Altinn.Notifications.Core.Services.Interfaces;
 
+using Microsoft.Extensions.Logging;
+
 namespace Altinn.Notifications.Core.Services
 {
     /// <summary>
@@ -13,13 +15,17 @@ namespace Altinn.Notifications.Core.Services
     public class NotificationsEmailServiceUpdateService : INotificationsEmailServiceUpdateService
     {
         private readonly IResourceLimitRepository _resourceLimitRepository;
+        private readonly ILogger<INotificationsEmailServiceUpdateService> _logger;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NotificationsEmailServiceUpdateService"/> class.
         /// </summary>
-        public NotificationsEmailServiceUpdateService(IResourceLimitRepository resourceLimitRepository)
+        public NotificationsEmailServiceUpdateService(
+            IResourceLimitRepository resourceLimitRepository,
+            ILogger<INotificationsEmailServiceUpdateService> logger)
         {
             _resourceLimitRepository = resourceLimitRepository;
+            _logger = logger;
         }
 
         /// <inheritdoc/>
@@ -32,7 +38,7 @@ namespace Altinn.Notifications.Core.Services
 
                     if (!success)
                     {
-                        // log data
+                        _logger.LogError("// NotificationsEmailServiceUpdateService // HandleServiceUpdate // Failed to parse message {message} into schema {schema}", serializedData, schema);
                         return;
                     }
 
