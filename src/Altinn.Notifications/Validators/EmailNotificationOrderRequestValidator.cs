@@ -23,7 +23,7 @@ public class EmailNotificationOrderRequestValidator : AbstractValidator<EmailNot
             .WithMessage("A valid email address must be provided for all recipients.");
 
         RuleFor(order => order.RequestedSendTime)
-            .Must(sendTime => HasTimeZone(sendTime))
+            .Must(sendTime => sendTime.Kind != DateTimeKind.Unspecified)
             .WithMessage("No time zone specified.")
             .Must(sendTime => sendTime >= DateTime.UtcNow.AddMinutes(-5))
             .WithMessage("Send time must be in the future. Leave blank to send immediately.");
@@ -51,15 +51,5 @@ public class EmailNotificationOrderRequestValidator : AbstractValidator<EmailNot
         Match match = regex.Match(email);
 
         return match.Success;
-    }
-
-    /// <summary>
-    /// Validated whether the DateTime object has time zone
-    /// </summary>
-    /// <param name="sendTime">The DateTime object which need to be verified whether it has time zone or not</param>
-    /// <returns>A boolean indicating that the DateTime object has time zone or not</returns>
-    internal static bool HasTimeZone(DateTime sendTime)
-    {
-        return sendTime.Kind != DateTimeKind.Unspecified;
     }
 }
