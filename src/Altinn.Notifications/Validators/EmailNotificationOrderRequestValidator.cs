@@ -24,7 +24,7 @@ public class EmailNotificationOrderRequestValidator : AbstractValidator<EmailNot
 
         RuleFor(order => order.RequestedSendTime)
             .Must(sendTime => sendTime.Kind != DateTimeKind.Unspecified)
-            .WithMessage("No time zone specified.")
+            .WithMessage("The requested send time value must have specified a time zone.")
             .Must(sendTime => sendTime >= DateTime.UtcNow.AddMinutes(-5))
             .WithMessage("Send time must be in the future. Leave blank to send immediately.");
 
