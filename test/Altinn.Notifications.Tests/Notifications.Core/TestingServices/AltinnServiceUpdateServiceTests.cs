@@ -54,6 +54,7 @@ public class AltinnServiceUpdateServiceTests
         await service.HandleServiceUpdate("platform-unknown-service", AltinnServiceUpdateSchema.ResourceLimitExceeded, string.Empty);
 
         // Assert
+        #pragma warning disable CS8602 // Dereference of a possibly null reference.
         _loggerMock.Verify(
             x => x.Log(
             LogLevel.Information,
@@ -62,5 +63,6 @@ public class AltinnServiceUpdateServiceTests
             It.IsAny<Exception>(),
             (Func<It.IsAnyType, Exception?, string>)It.IsAny<object>()),
             Times.Once);
+       #pragma warning restore CS8602 // Dereference of a possibly null reference.
     }
 }
