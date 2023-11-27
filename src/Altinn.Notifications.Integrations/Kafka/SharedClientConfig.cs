@@ -74,8 +74,14 @@ public class SharedClientConfig
             consumerConfig.SaslUsername = settings.Consumer.SaslUsername;
             consumerConfig.SaslPassword = settings.Consumer.SaslPassword;
 
+            string retentionTime = settings.Admin.RetentionTime < 0 ? "-1" : TimeSpan.FromDays(settings.Admin.RetentionTime).TotalMilliseconds.ToString();
             topicSpec.NumPartitions = 6;
             topicSpec.ReplicationFactor = 3;
+            topicSpec.Configs = new Dictionary<string, string>()
+                                {
+                                    { "retention.ms", retentionTime },
+                                    { "cleanup.policy", "delete" }
+                                };
         }
 
         AdminClientSettings = adminConfig;
