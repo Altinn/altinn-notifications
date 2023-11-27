@@ -11,7 +11,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
 
 public class AltinnServiceUpdateConsumerTests : IAsyncLifetime
 {
-    private static string _serviceUpdateTopicName = Guid.NewGuid().ToString();
+    private static readonly string _serviceUpdateTopicName = Guid.NewGuid().ToString();
 
     /// <summary>
     /// Scenario: A new service update for Notifications email with a resource limit exceeded message

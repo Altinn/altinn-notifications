@@ -21,7 +21,7 @@ public static class DataReaderExtensions
     {
         object dbValue = reader[colName];
 
-        return GetValue<T>(reader, dbValue, default!);
+        return GetValue<T>(dbValue, default!);
     }
 
     /// <summary>
@@ -36,7 +36,7 @@ public static class DataReaderExtensions
     {
         object dbValue = reader[colNumber];
 
-        return GetValue<T>(reader, dbValue, default!);
+        return GetValue<T>(dbValue, default!);
     }
 
     /// <summary>
@@ -44,11 +44,10 @@ public static class DataReaderExtensions
     /// if the reader value is <see cref="DBNull.Value"/>.
     /// </summary>
     /// <typeparam name="T">Type of value to retrieve.</typeparam>
-    /// <param name="reader">Data reader positioned at a row.</param>
     /// <param name="dbValue">The db value as an object.</param>
     /// <param name="defaultValue">Default value to use if the reader value is <see cref="DBNull.Value"/>.</param>
     /// <returns>The reader value when present, otherwise the given default value.</returns>
-    public static T GetValue<T>(this IDataReader reader, object dbValue, T defaultValue)
+    private static T GetValue<T>(object dbValue, T defaultValue)
     {
         try
         {
