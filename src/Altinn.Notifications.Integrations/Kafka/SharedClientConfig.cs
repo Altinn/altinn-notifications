@@ -76,6 +76,11 @@ public class SharedClientConfig
 
             topicSpec.NumPartitions = 6;
             topicSpec.ReplicationFactor = 3;
+            topicSpec.Configs = new Dictionary<string, string>()
+                                {
+                                    { "retention.ms",  TimeSpan.FromDays(settings.Admin.RetentionTime).TotalMicroseconds.ToString() },
+                                    { "cleanup.policy", "delete" }
+                                };
         }
 
         AdminClientSettings = adminConfig;

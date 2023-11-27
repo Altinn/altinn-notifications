@@ -107,4 +107,9 @@ public class AdminSettings
     /// The list of topics the admin client is responsible for ensuring that exist
     /// </summary>
     public List<string> TopicList { get; set; } = new List<string>();
+
+    /// <summary>
+    /// The retention time in days for the topics
+    /// </summary>
+    public int RetentionTime { get; set; } = 7;
 }

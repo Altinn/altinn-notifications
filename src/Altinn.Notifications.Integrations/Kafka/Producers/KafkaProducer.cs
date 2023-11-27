@@ -99,7 +99,8 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
                         {
                             Name = topic,
                             NumPartitions = TopicSpecification.NumPartitions,
-                            ReplicationFactor = TopicSpecification.ReplicationFactor
+                            ReplicationFactor = TopicSpecification.ReplicationFactor,
+                            Configs = TopicSpecification.Configs
                         }
                     }).Wait();
                     _logger.LogInformation("// KafkaProducer // EnsureTopicsExists // Topic '{Topic}' created successfully.", topic);
