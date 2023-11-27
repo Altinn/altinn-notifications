@@ -29,7 +29,7 @@ public static class OrderMapper
             extRequest.SendersReference,
             creator,
             new List<INotificationTemplate>() { emailTemplate },
-            extRequest.RequestedSendTime,
+            extRequest.RequestedSendTime.ToUniversalTime(),
             NotificationChannel.Email,
             recipients);
     }
