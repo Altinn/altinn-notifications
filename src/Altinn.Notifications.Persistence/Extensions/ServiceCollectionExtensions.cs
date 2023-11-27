@@ -32,7 +32,9 @@ public static class ServiceCollectionExtensions
         .AddSingleton<IOrderRepository, OrderRepository>()
         .AddSingleton<IEmailNotificationRepository, EmailNotificationRepository>()
         .AddSingleton<INotificationSummaryRepository, NotificationSummaryRepository>()
-        .AddNpgsqlDataSource(connectionString, builder => builder.EnableParameterLogging(settings.LogParameters));
+        .AddNpgsqlDataSource(connectionString, builder =>
+            builder.EnableParameterLogging(settings.LogParameters)
+                   .EnableDynamicJson());
     }
 
     /// <summary>
