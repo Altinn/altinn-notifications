@@ -8,6 +8,15 @@ namespace Altinn.Notifications.Core.Models.AltinnServiceUpdate
     /// </summary>
     public class ResourceLimitExceeded
     {
+        private static readonly JsonSerializerOptions _serializerOptions = new JsonSerializerOptions()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
+            WriteIndented = true,
+            Converters = { new JsonStringEnumConverter() },
+            PropertyNameCaseInsensitive = true
+        };
+
         /// <summary>
         /// The resource that has reached its capacity limit
         /// </summary>
@@ -19,33 +28,12 @@ namespace Altinn.Notifications.Core.Models.AltinnServiceUpdate
         public DateTime ResetTime { get; set; }
 
         /// <summary>
-        /// Deserialize a json string into the <see cref="ResourceLimitExceeded"/>
-        /// </summary>
-        public static ResourceLimitExceeded? Deserialize(string serializedString)
-        {
-            return JsonSerializer.Deserialize<ResourceLimitExceeded>(
-                serializedString,
-                new JsonSerializerOptions()
-                {
-                    PropertyNameCaseInsensitive = true,
-                    Converters = { new JsonStringEnumConverter() }
-                });
-        }
-
-        /// <summary>
         /// Serialize the <see cref="ResourceLimitExceeded"/> into a json string
         /// </summary>
         /// <returns></returns>
         public string Serialize()
         {
-            return JsonSerializer.Serialize(
-                this,
-                new JsonSerializerOptions
-                {
-                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    Converters = { new JsonStringEnumConverter() }
-                });
+            return JsonSerializer.Serialize(this, _serializerOptions);
         }
 
         /// <summary>
@@ -63,7 +51,7 @@ namespace Altinn.Notifications.Core.Models.AltinnServiceUpdate
 
             try
             {
-                parsedOutput = Deserialize(input!);
+                parsedOutput = JsonSerializer.Deserialize<ResourceLimitExceeded>(input!, _serializerOptions);
 
                 value = parsedOutput!;
                 return !string.IsNullOrEmpty(value.Resource);

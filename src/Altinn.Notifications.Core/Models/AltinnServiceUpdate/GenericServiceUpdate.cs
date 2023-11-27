@@ -10,6 +10,15 @@ namespace Altinn.Notifications.Core.Models.AltinnServiceUpdate
     /// </summary>
     public class GenericServiceUpdate
     {
+        private static readonly JsonSerializerOptions _serializerOptions = new JsonSerializerOptions()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
+            WriteIndented = true,
+            Converters = { new JsonStringEnumConverter() },
+            PropertyNameCaseInsensitive = true
+        };
+
         /// <summary>
         /// The source of the service update
         /// </summary>
@@ -31,14 +40,7 @@ namespace Altinn.Notifications.Core.Models.AltinnServiceUpdate
         /// <returns></returns>
         public string Serialize()
         {
-            return JsonSerializer.Serialize(
-                this,
-                new JsonSerializerOptions
-                {
-                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    Converters = { new JsonStringEnumConverter() }
-                });
+            return JsonSerializer.Serialize(this, _serializerOptions);
         }
 
         /// <summary>
@@ -46,13 +48,7 @@ namespace Altinn.Notifications.Core.Models.AltinnServiceUpdate
         /// </summary>
         public static GenericServiceUpdate? Deserialize(string serializedString)
         {
-            return JsonSerializer.Deserialize<GenericServiceUpdate>(
-                serializedString,
-                new JsonSerializerOptions()
-                {
-                    PropertyNameCaseInsensitive = true,
-                    Converters = { new JsonStringEnumConverter() }
-                });
+            return JsonSerializer.Deserialize<GenericServiceUpdate>(serializedString, _serializerOptions);
         }
 
         /// <summary>
