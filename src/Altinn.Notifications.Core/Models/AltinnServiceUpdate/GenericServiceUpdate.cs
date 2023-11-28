@@ -44,14 +44,6 @@ namespace Altinn.Notifications.Core.Models.AltinnServiceUpdate
         }
 
         /// <summary>
-        /// Deserialize a json string into the <see cref="GenericServiceUpdate"/>
-        /// </summary>
-        public static GenericServiceUpdate? Deserialize(string serializedString)
-        {
-            return JsonSerializer.Deserialize<GenericServiceUpdate>(serializedString, _serializerOptions);
-        }
-
-        /// <summary>
         /// Try to parse a json string into a<see cref="GenericServiceUpdate"/>
         /// </summary>
         public static bool TryParse(string input, out GenericServiceUpdate value)
@@ -66,7 +58,7 @@ namespace Altinn.Notifications.Core.Models.AltinnServiceUpdate
 
             try
             {
-                parsedOutput = Deserialize(input!);
+                parsedOutput = JsonSerializer.Deserialize<GenericServiceUpdate>(input!, _serializerOptions);
 
                 value = parsedOutput!;
                 return !string.IsNullOrEmpty(value.Source);
