@@ -75,8 +75,14 @@ public class SharedClientConfig
             consumerConfig.SaslUsername = kafkaSettings.Consumer.SaslUsername;
             consumerConfig.SaslPassword = kafkaSettings.Consumer.SaslPassword;
 
+            string retentionTime = kafkaSettings.Admin.RetentionTime < 0 ? "-1" : TimeSpan.FromDays(kafkaSettings.Admin.RetentionTime).TotalMilliseconds.ToString();
             topicSpec.NumPartitions = 6;
             topicSpec.ReplicationFactor = 3;
+            topicSpec.Configs = new Dictionary<string, string>()
+                                {
+                                    { "retention.ms", retentionTime },
+                                    { "cleanup.policy", "delete" }
+                                };
         }
 
         AdminClientConfig = adminConfig;

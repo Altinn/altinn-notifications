@@ -92,7 +92,8 @@ public sealed class CommonProducer : ICommonProducer, IDisposable
                         {
                             Name = topic,
                             NumPartitions = _sharedClientConfig.TopicSpecification.NumPartitions,
-                            ReplicationFactor = _sharedClientConfig.TopicSpecification.ReplicationFactor
+                            ReplicationFactor = _sharedClientConfig.TopicSpecification.ReplicationFactor,
+                            Configs = _sharedClientConfig.TopicSpecification.Configs
                         }
                     }).Wait();
                     _logger.LogInformation("// KafkaProducer // EnsureTopicsExists // Topic '{Topic}' created successfully.", topic);
