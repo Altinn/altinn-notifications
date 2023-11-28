@@ -141,6 +141,42 @@ public class OrderMapperTests
     }
 
     [Fact]
+    public void MapToOrderRequest_SendTimeLocalConvertedToUtc_AreEquivalent()
+    {
+        DateTime sendTime = DateTime.Now; // Setting the time in Local time zone
+
+        // Arrange
+        EmailNotificationOrderRequestExt orderRequestExt = new()
+        {
+            Body = "email-body",
+            ContentType = EmailContentTypeExt.Html,
+            RequestedSendTime = sendTime, // Local time zone
+            Subject = "email-subject"
+        };
+
+        NotificationOrderRequest expected = new()
+        {
+            Creator = new Creator("ttd"),
+            Templates = new List<INotificationTemplate>()
+            {
+                new EmailTemplate(
+                    string.Empty,
+                    "email-subject",
+                    "email-body",
+                    EmailContentType.Html)
+            },
+            RequestedSendTime = sendTime.ToUniversalTime(),  // Expecting the time in UTC time zone
+            NotificationChannel = NotificationChannel.Email
+        };
+
+        // Act
+        var actual = orderRequestExt.MapToOrderRequest("ttd");
+
+        // Assert
+        Assert.Equivalent(expected, actual, true);
+    }
+
+    [Fact]
     public void MapToNotificationOrderWithStatusExt_EmailStatusProvided_AreEquivalent()
     {
         // Arrange

@@ -67,6 +67,55 @@ public class EmailNotificationOrderRequestValidatorTests
     }
 
     [Fact]
+    public void Validate_SendTimeHasLocalZone_ReturnsTrue()
+    {
+        var order = new EmailNotificationOrderRequestExt()
+        {
+            Subject = "This is an email subject",
+            Recipients = new List<RecipientExt>() { new RecipientExt() { EmailAddress = "recipient2@domain.com" } },
+            Body = "This is an email body",
+            RequestedSendTime = DateTime.Now
+        };
+
+        var actual = _validator.Validate(order);
+
+        Assert.True(actual.IsValid);
+    }
+
+    [Fact]
+    public void Validate_SendTimeHasUtcZone_ReturnsTrue()
+    {
+        var order = new EmailNotificationOrderRequestExt()
+        {
+            Subject = "This is an email subject",
+            Recipients = new List<RecipientExt>() { new RecipientExt() { EmailAddress = "recipient2@domain.com" } },
+            Body = "This is an email body",
+            RequestedSendTime = DateTime.UtcNow
+        };
+
+        var actual = _validator.Validate(order);
+
+        Assert.True(actual.IsValid);
+    }
+
+    [Fact]
+    public void Validate_SendTimeHasNoZone_ReturnsFalse()
+    {
+        var order = new EmailNotificationOrderRequestExt()
+        {
+            Subject = "This is an email subject",
+            Recipients = new List<RecipientExt>() { new RecipientExt() { EmailAddress = "recipient2@domain.com" } },
+            Body = "This is an email body",
+            RequestedSendTime = new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Unspecified)
+        };
+
+        var actual = _validator.Validate(order);
+
+        Assert.False(actual.IsValid);
+        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("The requested send time value must have specified a time zone."));
+    }
+
+    [Fact]
     public void Validate_SendTimePassed_ReturnsFalse()
     {
         var order = new EmailNotificationOrderRequestExt()
