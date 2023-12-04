@@ -11,7 +11,7 @@ namespace Altinn.Notifications.Core.Services
     public class AltinnServiceUpdateService : IAltinnServiceUpdateService
     {
         private readonly INotificationsEmailServiceUpdateService _notificationsEmail;
-        private readonly ILogger<IAltinnServiceUpdateService> _logger;
+        private readonly ILogger<AltinnServiceUpdateService> _logger;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AltinnServiceUpdateService"/> class.
