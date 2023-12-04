@@ -162,6 +162,35 @@ public class EmailNotificationServiceTests
         repoMock.Verify();
     }
 
+    [Fact]
+    public async Task UpdateSendStatus_TransientErrorResult_ConvertedToNew()
+    {
+        // Arrange
+        Guid notificationid = Guid.NewGuid();
+        string operationId = Guid.NewGuid().ToString();
+
+        SendOperationResult sendOperationResult = new()
+        {
+            NotificationId = notificationid,
+            OperationId = operationId,
+            SendResult = EmailNotificationResultType.Failed_TransientError
+        };
+
+        var repoMock = new Mock<IEmailNotificationRepository>();
+        repoMock.Setup(r => r.UpdateSendStatus(
+            It.Is<Guid>(n => n == notificationid), 
+            It.Is<EmailNotificationResultType>(e => e == EmailNotificationResultType.New), 
+            It.Is<string>(s => s.Equals(operationId))));
+
+        var service = GetTestService(repo: repoMock.Object);
+
+        // Act
+        await service.UpdateSendStatus(sendOperationResult);
+
+        // Assert
+        repoMock.Verify();
+    }
+
     private static EmailNotificationService GetTestService(IEmailNotificationRepository? repo = null, IKafkaProducer? producer = null, Guid? guidOutput = null, DateTime? dateTimeOutput = null)
     {
         var guidService = new Mock<IGuidService>();
