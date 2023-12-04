@@ -28,5 +28,15 @@ public enum EmailSendResult
     /// <summary>
     /// Invalid format for email address
     /// </summary>
-    Failed_InvalidEmailFormat
+    Failed_InvalidEmailFormat,
+
+    /// <summary>
+    /// Failed, recipient was suppressed
+    /// </summary>
+    Failed_SupressedRecipient,
+
+    /// <summary>
+    /// Transient error, retry later
+    /// </summary>
+    Failed_TransientError
 }
