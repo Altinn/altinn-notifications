@@ -22,7 +22,7 @@ namespace Altinn.Notifications.Core.Services
         /// </summary>
         public NotificationsEmailServiceUpdateService(
             IResourceLimitRepository resourceLimitRepository,
-            ILogger<INotificationsEmailServiceUpdateService> logger)
+            ILogger<NotificationsEmailServiceUpdateService> logger)
         {
             _resourceLimitRepository = resourceLimitRepository;
             _logger = logger;

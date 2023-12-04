@@ -18,7 +18,7 @@ namespace Altinn.Notifications.Core.Services
         /// </summary>
         public AltinnServiceUpdateService(
             INotificationsEmailServiceUpdateService notificationsEmail,
-            ILogger<IAltinnServiceUpdateService> logger)
+            ILogger<AltinnServiceUpdateService> logger)
         {
             _notificationsEmail = notificationsEmail;
             _logger = logger;
