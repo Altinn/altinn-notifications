@@ -7,7 +7,7 @@ using Microsoft.Extensions.Hosting;
 
 using Xunit;
 
-namespace Altinn.Notifications.IntegrationTests.Notifications.Core.Consumers;
+namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.TestingConsumers;
 
 public class EmailStatusConsumerTests : IAsyncLifetime
 {
@@ -67,6 +67,6 @@ public class EmailStatusConsumerTests : IAsyncLifetime
     private static async Task<string> SelectEmailNotificationStatus(Guid notificationId)
     {
         string sql = $"select result from notifications.emailnotifications where alternateid = '{notificationId}'";
-        return await PostgreUtil.RunSqlReturnStringOutput(sql);
+        return await PostgreUtil.RunSqlReturnOutput<string>(sql);
     }
 }

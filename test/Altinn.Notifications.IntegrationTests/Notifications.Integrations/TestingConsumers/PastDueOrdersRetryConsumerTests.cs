@@ -6,7 +6,7 @@ using Microsoft.Extensions.Hosting;
 
 using Xunit;
 
-namespace Altinn.Notifications.IntegrationTests.Notifications.Core.Consumers;
+namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.TestingConsumers;
 
 public class PastDueOrdersRetryConsumerTests : IDisposable
 {
@@ -23,10 +23,10 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
     {
         // Arrange
         Dictionary<string, string> vars = new()
-        {
-            { "KafkaSettings__PastDueOrdersRetryTopicName", _retryTopicName },
-            { "KafkaSettings__Admin__TopicList", $"[\"{_retryTopicName}\"]" }
-        };
+    {
+        { "KafkaSettings__PastDueOrdersRetryTopicName", _retryTopicName },
+        { "KafkaSettings__Admin__TopicList", $"[\"{_retryTopicName}\"]" }
+    };
 
         using PastDueOrdersRetryConsumer consumerRetryService = (PastDueOrdersRetryConsumer)ServiceUtil
                                                     .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
@@ -59,10 +59,10 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
     {
         // Arrange
         Dictionary<string, string> vars = new()
-        {
-            { "KafkaSettings__PastDueOrdersRetryTopicName", _retryTopicName },
-            { "KafkaSettings__Admin__TopicList", $"[\"{_retryTopicName}\"]" }
-        };
+    {
+        { "KafkaSettings__PastDueOrdersRetryTopicName", _retryTopicName },
+        { "KafkaSettings__Admin__TopicList", $"[\"{_retryTopicName}\"]" }
+    };
 
         using PastDueOrdersRetryConsumer consumerRetryService = (PastDueOrdersRetryConsumer)ServiceUtil
                                                     .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
@@ -101,7 +101,7 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
     private static async Task<long> SelectCompletedOrderCount(Guid orderId)
     {
         string sql = $"select count(1) from notifications.orders where processedstatus = 'Completed' and alternateid='{orderId}'";
-        return await PostgreUtil.RunSqlReturnIntOutput(sql);
+        return await PostgreUtil.RunSqlReturnOutput<long>(sql);
     }
 
     private static async Task<long> SelectEmailNotificationCount(Guid orderId)
@@ -110,12 +110,12 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
                    "from notifications.emailnotifications e " +
                    "join notifications.orders o on e._orderid=o._id " +
                    $"where e._orderid = o._id and o.alternateid ='{orderId}'";
-        return await PostgreUtil.RunSqlReturnIntOutput(sql);
+        return await PostgreUtil.RunSqlReturnOutput<long>(sql);
     }
 
     private static async Task<string> SelectProcessStatus(Guid orderId)
     {
         string sql = $"select processedstatus from notifications.orders where alternateid='{orderId}'";
-        return await PostgreUtil.RunSqlReturnStringOutput(sql);
+        return await PostgreUtil.RunSqlReturnOutput<string>(sql);
     }
 }

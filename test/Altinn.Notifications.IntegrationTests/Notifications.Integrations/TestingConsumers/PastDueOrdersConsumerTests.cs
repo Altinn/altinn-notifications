@@ -6,7 +6,7 @@ using Microsoft.Extensions.Hosting;
 
 using Xunit;
 
-namespace Altinn.Notifications.IntegrationTests.Notifications.Core.Consumers;
+namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.TestingConsumers;
 
 public class PastDueOrdersConsumerTests : IDisposable
 {
@@ -23,10 +23,10 @@ public class PastDueOrdersConsumerTests : IDisposable
     {
         // Arrange
         Dictionary<string, string> vars = new()
-        {
-            { "KafkaSettings__PastDueOrdersTopicName", _pastDueOrdersTopicName },
-            { "KafkaSettings__Admin__TopicList", $"[\"{_pastDueOrdersTopicName}\"]" }
-        };
+    {
+        { "KafkaSettings__PastDueOrdersTopicName", _pastDueOrdersTopicName },
+        { "KafkaSettings__Admin__TopicList", $"[\"{_pastDueOrdersTopicName}\"]" }
+    };
 
         using PastDueOrdersConsumer consumerService = (PastDueOrdersConsumer)ServiceUtil
                                                     .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
@@ -66,7 +66,7 @@ public class PastDueOrdersConsumerTests : IDisposable
     private static async Task<long> SelectCompletedOrderCount(Guid orderId)
     {
         string sql = $"select count(1) from notifications.orders where processedstatus = 'Completed' and alternateid='{orderId}'";
-        return await PostgreUtil.RunSqlReturnIntOutput(sql);
+        return await PostgreUtil.RunSqlReturnOutput<long>(sql);
     }
 
     private static async Task<long> SelectEmailNotificationCount(Guid orderId)
@@ -75,6 +75,6 @@ public class PastDueOrdersConsumerTests : IDisposable
                    "from notifications.emailnotifications e " +
                    "join notifications.orders o on e._orderid=o._id " +
                    $"where e._orderid = o._id and o.alternateid ='{orderId}'";
-        return await PostgreUtil.RunSqlReturnIntOutput(sql);
+        return await PostgreUtil.RunSqlReturnOutput<long>(sql);
     }
 }

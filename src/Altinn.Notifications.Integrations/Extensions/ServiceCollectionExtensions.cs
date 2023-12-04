@@ -30,6 +30,7 @@ public static class ServiceCollectionExtensions
         .AddHostedService<PastDueOrdersConsumer>()
         .AddHostedService<PastDueOrdersRetryConsumer>()
         .AddHostedService<EmailStatusConsumer>()
+        .AddHostedService<AltinnServiceUpdateConsumer>()
         .Configure<KafkaSettings>(config.GetSection(nameof(KafkaSettings)));
     }
 
