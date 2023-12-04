@@ -64,7 +64,7 @@ public class AltinnServiceUpdateConsumerTests : IAsyncLifetime
 	                   order by id desc
 	                   limit 1;";
 
-        return await PostgreUtil.RunSqlReturnOutput<DateTime>(sql);
+        return await PostgreUtil.RunSqlReturnOutput<DateTime?>(sql);
     }
 
     public Task InitializeAsync()

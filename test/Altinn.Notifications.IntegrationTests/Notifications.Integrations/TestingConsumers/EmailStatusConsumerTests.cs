@@ -19,10 +19,10 @@ public class EmailStatusConsumerTests : IAsyncLifetime
     {
         // Arrange
         Dictionary<string, string> vars = new()
-    {
-        { "KafkaSettings__EmailStatusUpdatedTopicName", _statusUpdatedTopicName },
-        { "KafkaSettings__Admin__TopicList", $"[\"{_statusUpdatedTopicName}\"]" }
-    };
+        {
+            { "KafkaSettings__EmailStatusUpdatedTopicName", _statusUpdatedTopicName },
+            { "KafkaSettings__Admin__TopicList", $"[\"{_statusUpdatedTopicName}\"]" }
+        };
 
         using EmailStatusConsumer consumerService = (EmailStatusConsumer)ServiceUtil
                                                     .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
