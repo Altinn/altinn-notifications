@@ -15,7 +15,7 @@ namespace Altinn.Notifications.Core.Services
     public class NotificationsEmailServiceUpdateService : INotificationsEmailServiceUpdateService
     {
         private readonly IResourceLimitRepository _resourceLimitRepository;
-        private readonly ILogger<INotificationsEmailServiceUpdateService> _logger;
+        private readonly ILogger<NotificationsEmailServiceUpdateService> _logger;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NotificationsEmailServiceUpdateService"/> class.
