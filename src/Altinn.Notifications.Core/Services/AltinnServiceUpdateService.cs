@@ -11,7 +11,7 @@ namespace Altinn.Notifications.Core.Services
     public class AltinnServiceUpdateService : IAltinnServiceUpdateService
     {
         private readonly INotificationsEmailServiceUpdateService _notificationsEmail;
-        private readonly ILogger<IAltinnServiceUpdateService> _logger;
+        private readonly ILogger<AltinnServiceUpdateService> _logger;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AltinnServiceUpdateService"/> class.
@@ -33,7 +33,7 @@ namespace Altinn.Notifications.Core.Services
                     await _notificationsEmail.HandleServiceUpdate(schema, serializedData);
                     return;
                 default:
-                    _logger.LogInformation("// AltinnServiceUpdateService // HandleServiceUpdate// Received service from unknown service {service}.", source);
+                    _logger.LogInformation("// AltinnServiceUpdateService // HandleServiceUpdate// Received update from unknown service {service}.", source);
                     return;
             }
         }

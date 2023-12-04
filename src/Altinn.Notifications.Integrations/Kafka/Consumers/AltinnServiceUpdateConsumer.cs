@@ -50,7 +50,7 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers
 
         private async Task RetryServiceUpdate(string message)
         {
-            // making two attempts, but no further action if it fails
+            // Making a second attempt, but no further action if it fails again.
             await ProcessServiceUpdate(message);
         }
     }

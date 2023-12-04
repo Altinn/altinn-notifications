@@ -59,7 +59,7 @@ public class AltinnServiceUpdateServiceTests
             x => x.Log(
             LogLevel.Information,
             It.IsAny<EventId>(),
-            It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Received service from unknown service")),
+            It.Is<It.IsAnyType>((v, t) => v!.ToString()!.Contains("Received service from unknown service")),
             It.IsAny<Exception>(),
             (Func<It.IsAnyType, Exception?, string>)It.IsAny<object>()),
             Times.Once);
