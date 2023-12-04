@@ -101,7 +101,7 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
     private static async Task<long> SelectCompletedOrderCount(Guid orderId)
     {
         string sql = $"select count(1) from notifications.orders where processedstatus = 'Completed' and alternateid='{orderId}'";
-        return (int)await PostgreUtil.RunSqlReturnOutput<long>(sql);
+        return await PostgreUtil.RunSqlReturnOutput<long>(sql);
     }
 
     private static async Task<long> SelectEmailNotificationCount(Guid orderId)
@@ -110,7 +110,7 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
                    "from notifications.emailnotifications e " +
                    "join notifications.orders o on e._orderid=o._id " +
                    $"where e._orderid = o._id and o.alternateid ='{orderId}'";
-        return (int)await PostgreUtil.RunSqlReturnOutput<long>(sql);
+        return await PostgreUtil.RunSqlReturnOutput<long>(sql);
     }
 
     private static async Task<string> SelectProcessStatus(Guid orderId)
