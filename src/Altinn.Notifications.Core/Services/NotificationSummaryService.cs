@@ -20,7 +20,9 @@ namespace Altinn.Notifications.Core.Services
                 { EmailNotificationResultType.Delivered, "The email was delivered to the recipient. No errors reported, making it likely it was received by the recipient." },
                 { EmailNotificationResultType.Failed, "The email was not sent due to an unspecified failure." },
                 { EmailNotificationResultType.Failed_RecipientNotIdentified, "The email was not sent because the recipient's email address was not found." },
-                { EmailNotificationResultType.Failed_InvalidEmailFormat, "The email was not sent because the recipient’s email address is in an invalid format." }
+                { EmailNotificationResultType.Failed_InvalidEmailFormat, "The email was not sent because the recipient’s email address is in an invalid format." },
+                { EmailNotificationResultType.Failed_SupressedRecipient, "The email was not sent because the recipient’s email address is suppressed by the third party email service." },
+                { EmailNotificationResultType.Failed_TransientError, "The email was not sent due to a transient error. We will retry sending the email." }                
             };
 
         private readonly static List<EmailNotificationResultType> _successResults = new()
