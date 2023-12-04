@@ -5,6 +5,7 @@ export var baseUrls = {
   at23: "at23.altinn.cloud",
   at24: "at24.altinn.cloud",
   tt02: "tt02.altinn.no",
+  prod: "altinn.no"
 };
 
 var maskinportenBaseUrls = {
