@@ -33,7 +33,7 @@ namespace Altinn.Notifications.Core.Services
                     await _notificationsEmail.HandleServiceUpdate(schema, serializedData);
                     return;
                 default:
-                    _logger.LogInformation("// AltinnServiceUpdateService // HandleServiceUpdate// Received service from unknown service {service}.", source);
+                    _logger.LogInformation("// AltinnServiceUpdateService // HandleServiceUpdate// Received update from unknown service {service}.", source);
                     return;
             }
         }
