@@ -38,5 +38,18 @@ public enum EmailNotificationResultType
     /// <summary>
     /// Invalid format for email address
     /// </summary>
-    Failed_InvalidEmailFormat
+    Failed_InvalidEmailFormat,
+
+    /// <summary>
+    /// Recipient supressed by email service
+    /// </summary>
+    Failed_SupressedRecipient,
+
+    /// <summary>
+    /// Transient error, retry later
+    /// </summary>
+    /// <remarks>
+    /// Should not be used externally or persisted in db.
+    /// Only used for processing and logic in service layer.</remarks>
+    Failed_TransientError
 }
