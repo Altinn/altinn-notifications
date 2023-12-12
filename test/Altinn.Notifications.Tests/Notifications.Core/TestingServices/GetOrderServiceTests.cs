@@ -115,14 +115,14 @@ public class GetOrderServiceTests
     [InlineData(OrderProcessingStatus.Registered, "Order has been registered and is awaiting requested send time before processing.")]
     [InlineData(OrderProcessingStatus.Processing, "Order processing is ongoing. Notifications are being generated.")]
     [InlineData(OrderProcessingStatus.Completed, "Order processing is completed. All notifications have been generated.")]
-    public void GetResultDescription_ExpectedDescription(OrderProcessingStatus status, string expected)
+    public void GetStatusDescription_ExpectedDescription(OrderProcessingStatus status, string expected)
     {
         string actual = GetOrderService.GetStatusDescription(status);
         Assert.Equal(expected, actual);
     }
 
     [Fact]
-    public void GetResultDescription_AllResultTypesHaveDescriptions()
+    public void GetStatusDescription_AllResultTypesHaveDescriptions()
     {
         foreach (OrderProcessingStatus statusType in Enum.GetValues(typeof(OrderProcessingStatus)))
         {
