@@ -22,7 +22,7 @@ public class GetOrderService : IGetOrderService
         _repo = repo;
         _descriptions = new()
         {
-            { OrderProcessingStatus.Registered, "Order has been registered and is awaiting requested send time before processing" },
+            { OrderProcessingStatus.Registered, "Order has been registered and is awaiting requested send time before processing." },
             { OrderProcessingStatus.Processing, "Order processing is ongoing. Notifications are being generated." },
             { OrderProcessingStatus.Completed, "Order processing is completed. All notifications have been generated." },
         };
