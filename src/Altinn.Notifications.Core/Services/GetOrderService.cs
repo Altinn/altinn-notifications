@@ -12,7 +12,12 @@ namespace Altinn.Notifications.Core.Services;
 public class GetOrderService : IGetOrderService
 {
     private readonly IOrderRepository _repo;
-    private readonly Dictionary<OrderProcessingStatus, string> _descriptions;
+    private readonly static Dictionary<OrderProcessingStatus, string> _descriptions = new()
+        {
+            { OrderProcessingStatus.Registered, "Order has been registered and is awaiting requested send time before processing." },
+            { OrderProcessingStatus.Processing, "Order processing is ongoing. Notifications are being generated." },
+            { OrderProcessingStatus.Completed, "Order processing is completed. All notifications have been generated." },
+        };
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GetOrderService"/> class.
@@ -20,12 +25,6 @@ public class GetOrderService : IGetOrderService
     public GetOrderService(IOrderRepository repo)
     {
         _repo = repo;
-        _descriptions = new()
-        {
-            { OrderProcessingStatus.Registered, "Order has been registered and is awaiting requested send time before processing" },
-            { OrderProcessingStatus.Processing, "Order processing is ongoing. Notifications are being generated." },
-            { OrderProcessingStatus.Completed, "Order processing is completed. All notifications have been generated." },
-        };
     }
 
     /// <inheritdoc/>
@@ -59,7 +58,15 @@ public class GetOrderService : IGetOrderService
             return (null, new ServiceError(404));
         }
 
-        order.ProcessingStatus.StatusDescription = _descriptions[order.ProcessingStatus.Status];
+        order.ProcessingStatus.StatusDescription = GetStatusDescription(order.ProcessingStatus.Status);
         return (order, null);
+    }
+
+    /// <summary>
+    /// Gets the English description of the <see cref="OrderProcessingStatus"/>"
+    /// </summary>
+    internal static string GetStatusDescription(OrderProcessingStatus result)
+    {
+        return _descriptions[result];
     }
 }

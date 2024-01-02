@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Repository.Interfaces;
 using Altinn.Notifications.Core.Services;
@@ -108,6 +109,26 @@ public class GetOrderServiceTests
         Assert.NotNull(actualOrders);
         Assert.Equal(3, actualOrders.Count);
         Assert.Null(actuallError);
+    }
+
+    [Theory]
+    [InlineData(OrderProcessingStatus.Registered, "Order has been registered and is awaiting requested send time before processing.")]
+    [InlineData(OrderProcessingStatus.Processing, "Order processing is ongoing. Notifications are being generated.")]
+    [InlineData(OrderProcessingStatus.Completed, "Order processing is completed. All notifications have been generated.")]
+    public void GetStatusDescription_ExpectedDescription(OrderProcessingStatus status, string expected)
+    {
+        string actual = GetOrderService.GetStatusDescription(status);
+        Assert.Equal(expected, actual);
+    }
+
+    [Fact]
+    public void GetStatusDescription_AllResultTypesHaveDescriptions()
+    {
+        foreach (OrderProcessingStatus statusType in Enum.GetValues(typeof(OrderProcessingStatus)))
+        {
+            string statusDescription = GetOrderService.GetStatusDescription(statusType);
+            Assert.NotEmpty(statusDescription);
+        }
     }
 
     private static GetOrderService GetTestService(IOrderRepository? repo = null)
