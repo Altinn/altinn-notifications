@@ -61,8 +61,12 @@ and run command `docker compose -f setup-kafka.yml up -d`
 Kafdrop will be available on localhost:9000
 
 ### Running the application
+The application runs on port 5090. See full details in Dockerfile.
+
 
 - In a terminal navigate to/src/Altinn.Notifications
 - Run `dotnet run ` or `dotnet watch`
 
-Application is now available on localhost:5090
+Application is now available on localhost:5090.
+
+
