@@ -36,33 +36,33 @@ The persistance layer that implements repository logic.
 
 ## Getting started
 
-The fastest way to get development going is to open the main solution Altinn.Notifications.sln and selecting 'Altinn.Notifications' as the start up project from Visual Studio. Browser should open automatically to the swagger ui for the API.
+### Prerequisites
+- [PostgreSQL](https://www.postgresql.org/download/) v15
+- [pgAdmin](https://www.pgadmin.org/download/)
+- [Docker](https://docs.docker.com/compose/install/)
 
-Alternatively:
+### Setting up PostgreSQL
 
-Start the backend in /src/Altinn.Notifications with `dotnet run` or `dotnet watch`
-
-
-## Setting up PostgreSQL
-
-To run Notifications locally you need to have PostgreSQL database installed.
-
-- [Download PostgreSQL](https://www.postgresql.org/download/) (Currently using 14 in Azure, but 15 works locally)
-- Install database server (choose your own admin password and save it some place you can find it again)
-- Start pgAdmin
+Ensure that both PostgreSQL and pgAdmin have been installed and start pgAdmin.
 
 In pgAdmin
 - Create database _notificationsdb_
-- Create the following users with password: _Password_ (see privileges in paranthesis)
+- Create the following users with password: _Password_ (see privileges in parentheses)
   - platform_notifications_admin (superuser, canlogin)
   - platform_notifications (canlogin)
 - Create schema _notifications_ in notificationsdb with owner _platform_notifications_admin_
 
-## Setting up Kafka
-
-To run a Kafka broker and Kafdrop (visualization and administration tool) locally you need to have Docker installed on your machine.
+### Setting up Kafka broker and visualization
+Ensure that Dokcer has been installed and is running.
 
 In a terminal navigate to the root of this repository
 and run command `docker compose -f setup-kafka.yml up -d`
 
 Kafdrop will be available on localhost:9000
+
+### Running the application
+
+- In a terminal navigate to/src/Altinn.Notifications
+- Run `dotnet run ` or `dotnet watch`
+
+Application is now available on localhost:5090
