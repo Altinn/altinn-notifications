@@ -64,7 +64,7 @@ Kafdrop will be available on localhost:9000
 The application runs on port 5090. See full details in Dockerfile.
 
 
-- In a terminal navigate to/src/Altinn.Notifications
+- In a terminal navigate to /src/Altinn.Notifications
 - Run `dotnet run ` or `dotnet watch`
 
 Application is now available on localhost:5090.
