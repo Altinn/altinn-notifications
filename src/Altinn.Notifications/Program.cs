@@ -187,13 +187,11 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
 
 void AddAuthorizationRulesAndHandlers(IServiceCollection services, IConfiguration config)
 {
-    services.AddAuthorization(options =>
-    {
-        options.AddPolicy(AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS, policy =>
+    services.AddAuthorizationBuilder()
+        .AddPolicy(AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS, policy =>
         {
             policy.Requirements.Add(new CreateScopeOrAccessTokenRequirement(AuthorizationConstants.SCOPE_NOTIFICATIONS_CREATE));
         });
-    });
 
     services.AddTransient<IAuthorizationHandler, ScopeAccessHandler>();
 

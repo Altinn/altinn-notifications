@@ -1,9 +1,9 @@
 ﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 using Altinn.Common.AccessToken.Services;
+using Altinn.Notifications.Core;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Models;
@@ -98,7 +98,7 @@ public class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFact
         // Act
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
         string resString = await response.Content.ReadAsStringAsync();
-        NotificationOrderWithStatusExt? actual = JsonSerializer.Deserialize<NotificationOrderWithStatusExt>(resString, new JsonSerializerOptions { Converters = { new JsonStringEnumConverter() } });
+        NotificationOrderWithStatusExt? actual = JsonSerializer.Deserialize<NotificationOrderWithStatusExt>(resString, JsonSerializerOptionsProvider.Options);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -137,7 +137,7 @@ public class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFact
         // Act
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
         string resString = await response.Content.ReadAsStringAsync();
-        NotificationOrderWithStatusExt? actual = JsonSerializer.Deserialize<NotificationOrderWithStatusExt>(resString, new JsonSerializerOptions { Converters = { new JsonStringEnumConverter() } });
+        NotificationOrderWithStatusExt? actual = JsonSerializer.Deserialize<NotificationOrderWithStatusExt>(resString, JsonSerializerOptionsProvider.Options);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);

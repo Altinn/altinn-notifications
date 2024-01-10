@@ -1,5 +1,3 @@
-using System;
-
 using AltinnCore.Authentication.JwtCookie;
 
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -22,7 +20,7 @@ public class JwtCookiePostConfigureOptionsStub : IPostConfigureOptions<JwtCookie
 
         options.CookieManager ??= new ChunkingCookieManager();
 
-        if (!string.IsNullOrEmpty(options.MetadataAddress) && !options.MetadataAddress.EndsWith("/", StringComparison.Ordinal))
+        if (!string.IsNullOrEmpty(options.MetadataAddress) && !options.MetadataAddress.EndsWith('/'))
         {
             options.MetadataAddress += "/";
         }

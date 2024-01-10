@@ -1,13 +1,12 @@
 ﻿using System.Text.Json;
-using System.Text.Json.Serialization;
+
 using Altinn.Notifications.Core.Enums;
-using Altinn.Notifications.Core.Models.Orders;
 
 namespace Altinn.Notifications.Core.Models.Notification;
 
 /// <summary>
 /// A class representing a send operation update object
-/// </summary>
+/// </summary>                              
 public class SendOperationResult
 {
     /// <summary>
@@ -30,14 +29,7 @@ public class SendOperationResult
     /// </summary>
     public string Serialize()
     {
-        return JsonSerializer.Serialize(
-            this,
-            new JsonSerializerOptions
-            {
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                Converters = { new JsonStringEnumConverter() }
-            });
+        return JsonSerializer.Serialize(this, JsonSerializerOptionsProvider.Options);
     }
 
     /// <summary>
@@ -46,12 +38,7 @@ public class SendOperationResult
     public static SendOperationResult? Deserialize(string serializedString)
     {
         return JsonSerializer.Deserialize<SendOperationResult>(
-            serializedString,
-            new JsonSerializerOptions()
-            {
-                PropertyNameCaseInsensitive = true,
-                Converters = { new JsonStringEnumConverter() }
-            });
+            serializedString, JsonSerializerOptionsProvider.Options);
     }
 
     /// <summary>

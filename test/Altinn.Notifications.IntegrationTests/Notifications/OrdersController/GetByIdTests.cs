@@ -1,9 +1,9 @@
 ﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 using Altinn.Common.AccessToken.Services;
+using Altinn.Notifications.Core;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Mappers;
@@ -93,7 +93,7 @@ public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<C
         // Act
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
         string resString = await response.Content.ReadAsStringAsync();
-        NotificationOrderExt? actual = JsonSerializer.Deserialize<NotificationOrderExt>(resString, new JsonSerializerOptions { Converters = { new JsonStringEnumConverter() } });
+        NotificationOrderExt? actual = JsonSerializer.Deserialize<NotificationOrderExt>(resString, JsonSerializerOptionsProvider.Options);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);

@@ -1,5 +1,4 @@
 ﻿using System.Text.Json;
-using System.Text.Json.Serialization;
 
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
@@ -67,14 +66,7 @@ public class NotificationOrder : IBaseNotificationOrder
     /// </summary>
     public string Serialize()
     {
-        return JsonSerializer.Serialize(
-            this,
-            new JsonSerializerOptions
-            {
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                Converters = { new JsonStringEnumConverter() }
-            });
+        return JsonSerializer.Serialize(this, JsonSerializerOptionsProvider.Options);
     }
 
     /// <summary>
@@ -82,13 +74,7 @@ public class NotificationOrder : IBaseNotificationOrder
     /// </summary>
     public static NotificationOrder? Deserialize(string serializedString)
     {
-        return JsonSerializer.Deserialize<NotificationOrder>(
-            serializedString,
-            new JsonSerializerOptions()
-            {
-                PropertyNameCaseInsensitive = true,
-                Converters = { new JsonStringEnumConverter() }
-            });
+        return JsonSerializer.Deserialize<NotificationOrder>(serializedString, JsonSerializerOptionsProvider.Options);
     }
 
     /// <summary>
