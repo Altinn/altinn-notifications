@@ -63,7 +63,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          dotnet-sonarscanner begin /k:"Altinn_altinn-notifications" /o:"altinn" /d:sonar.login="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" /d:sonar.exclusions="src/Altinn.Notifications.Persistence/Migration/**/*"
+          dotnet-sonarscanner begin /k:"Altinn_altinn-notifications" /o:"altinn" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" /d:sonar.exclusions="src/Altinn.Notifications.Persistence/Migration/**/*"
 
           dotnet build Altinn.Notifications.sln -v q
 
@@ -80,7 +80,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          dotnet-sonarscanner end /d:sonar.login="${{ secrets.SONAR_TOKEN }}"
+          dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
       - name: Process .NET test result
         if: always()
         uses: NasAmin/trx-parser@v0.5.0
