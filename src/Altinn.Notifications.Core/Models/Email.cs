@@ -1,5 +1,4 @@
 ﻿using System.Text.Json;
-using System.Text.Json.Serialization;
 
 using Altinn.Notifications.Core.Enums;
 
@@ -58,13 +57,6 @@ public class Email
     /// </summary>
     public string Serialize()
     {
-        return JsonSerializer.Serialize(
-            this,
-            new JsonSerializerOptions
-            {
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                Converters = { new JsonStringEnumConverter() }
-            });
+        return JsonSerializer.Serialize(this, JsonSerializerOptionsProvider.Options);
     }
 }

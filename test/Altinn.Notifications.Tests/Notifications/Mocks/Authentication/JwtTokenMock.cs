@@ -35,7 +35,7 @@ public static class JwtTokenMock
         return tokenstring;
     }
 
-    private static SigningCredentials GetSigningCredentials(string issuer)
+    private static X509SigningCredentials GetSigningCredentials(string issuer)
     {
         string certPath = "jwtselfsignedcert.pfx";
         if (!issuer.Equals("UnitTest"))

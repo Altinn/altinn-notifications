@@ -1,9 +1,9 @@
 ﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 using Altinn.Common.AccessToken.Services;
+using Altinn.Notifications.Core;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Models;
@@ -49,7 +49,7 @@ public class GetBySendersRefTests : IClassFixture<IntegrationTestWebApplicationF
         // Act
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
         string resString = await response.Content.ReadAsStringAsync();
-        NotificationOrderListExt actual = JsonSerializer.Deserialize<NotificationOrderListExt>(resString, new JsonSerializerOptions { Converters = { new JsonStringEnumConverter() } })!;
+        NotificationOrderListExt actual = JsonSerializer.Deserialize<NotificationOrderListExt>(resString, JsonSerializerOptionsProvider.Options)!;
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -73,7 +73,7 @@ public class GetBySendersRefTests : IClassFixture<IntegrationTestWebApplicationF
         // Act
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
         string resString = await response.Content.ReadAsStringAsync();
-        NotificationOrderListExt actual = JsonSerializer.Deserialize<NotificationOrderListExt>(resString, new JsonSerializerOptions { Converters = { new JsonStringEnumConverter() } })!;
+        NotificationOrderListExt actual = JsonSerializer.Deserialize<NotificationOrderListExt>(resString, JsonSerializerOptionsProvider.Options)!;
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -100,7 +100,7 @@ public class GetBySendersRefTests : IClassFixture<IntegrationTestWebApplicationF
         // Act
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
         string resString = await response.Content.ReadAsStringAsync();
-        NotificationOrderListExt actual = JsonSerializer.Deserialize<NotificationOrderListExt>(resString, new JsonSerializerOptions { Converters = { new JsonStringEnumConverter() } })!;
+        NotificationOrderListExt actual = JsonSerializer.Deserialize<NotificationOrderListExt>(resString, JsonSerializerOptionsProvider.Options)!;
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);

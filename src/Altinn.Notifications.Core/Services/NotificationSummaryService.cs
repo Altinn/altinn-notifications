@@ -49,7 +49,7 @@ namespace Altinn.Notifications.Core.Services
                 return (null, new ServiceError(404));
             }
 
-            if (summary.Notifications.Any())
+            if (summary.Notifications.Count != 0)
             {
                 ProcessNotificationResults(summary);
             }

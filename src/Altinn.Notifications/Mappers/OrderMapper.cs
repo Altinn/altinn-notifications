@@ -84,7 +84,7 @@ public static class OrderMapper
             StatusDescription = order.ProcessingStatus.StatusDescription
         };
 
-        if (order.NotificationStatuses.Any())
+        if (order.NotificationStatuses.Count != 0)
         {
             orderExt.NotificationsStatusSummary = new();
             foreach (var entry in order.NotificationStatuses)
