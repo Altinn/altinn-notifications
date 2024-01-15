@@ -1,29 +1,25 @@
-name: Use Case - AT
+name: Regression test - PROD
 
 on:
   workflow_dispatch:
   schedule:
-  - cron: '*/15 * * * *'
+  - cron: '0 12 * * 1-5'
 
 jobs:
   test:
-    strategy:
-      fail-fast: false
-      matrix:
-        environment: [AT21, AT22, AT23, AT24]
-    environment: ${{ matrix.environment }}
+    environment: Prod
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Run email notification order use case tests
+    - name: Run email notification order regression tests
       uses: grafana/k6-action@v0.3.1
       with:
         filename: test/k6/src/tests/orders_email.js
-        flags: -e env=${{ vars.ENV }} -e tokenGeneratorUserName=${{ secrets.TOKENGENERATOR_USERNAME }} -e tokenGeneratorUserPwd=${{ secrets.TOKENGENERATOR_USERPASSWORD }} -e emailRecipient=${{ secrets.AUTOMATEDTEST_EMAILRECIPIENT }}
+        flags: -e runFullTestSet=true k6 run /src/tests/orders_email.js -e env=${{ vars.ENV }} -e emailRecipient=${{ secrets.AUTOMATEDTEST_EMAILRECIPIENT }} -e mpClientId=${{ secrets.MP_CLIENT_ID }} -e mpKid=${{ secrets.MP_KID }} -e encodedJwk=${{ secrets.MP_ENCODEDJWK }}
     - name: Build failure report
       if: failure()
       run: |
-          report=":warning: Notifications use case test failure in ${{ matrix.environment }} :warning: \n"
+          report=":warning: Notifications regression test failure in ${{ vars.ENV }} :warning: \n"
           report+="\n Workflow available here: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           echo "stepreport="$report >> $GITHUB_ENV
     - name: Report failure to Slack
@@ -36,5 +32,5 @@ jobs:
               "text": "${{ env.stepreport }}"
             }
       env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL_TEST }}
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL_PROD }}
 

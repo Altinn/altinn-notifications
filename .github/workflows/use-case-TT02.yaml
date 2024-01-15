@@ -12,9 +12,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Run email notification order use case tests
-      run:  |
-          cd test/k6
-          docker-compose run k6 run /src/tests/orders_email.js -e env=${{ vars.ENV }} -e emailRecipient=${{ secrets.AUTOMATEDTEST_EMAILRECIPIENT }} -e mpClientId=${{ secrets.MP_CLIENT_ID }} -e mpKid=${{ secrets.MP_KID }} -e encodedJwk=${{ secrets.MP_ENCODEDJWK }}
+      uses: grafana/k6-action@v0.3.1
+      with:
+        filename: test/k6/src/tests/orders_email.js
+        flags: -e env=${{ vars.ENV }} -e emailRecipient=${{ secrets.AUTOMATEDTEST_EMAILRECIPIENT }} -e mpClientId=${{ secrets.MP_CLIENT_ID }} -e mpKid=${{ secrets.MP_KID }} -e encodedJwk=${{ secrets.MP_ENCODEDJWK }}
     - name: Build failure report
       if: failure()
       run: |
