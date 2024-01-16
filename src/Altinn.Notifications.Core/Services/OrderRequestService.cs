@@ -38,7 +38,7 @@ public class OrderRequestService : IOrderRequestService
         Guid orderId = _guid.NewGuid();
         DateTime created = _dateTime.UtcNow();
 
-        var templates = SetFromAddressOrSenderNumberIfNotDefined(orderRequest.Templates);
+        var templates = SetSenderIfNotDefined(orderRequest.Templates);
 
         var order = new NotificationOrder(
             orderId,
@@ -55,7 +55,7 @@ public class OrderRequestService : IOrderRequestService
         return (savedOrder, null);
     }
 
-    private List<INotificationTemplate> SetFromAddressOrSenderNumberIfNotDefined(List<INotificationTemplate> templates)
+    private List<INotificationTemplate> SetSenderIfNotDefined(List<INotificationTemplate> templates)
     {
         foreach (var template in templates.OfType<EmailTemplate>().Where(template => string.IsNullOrEmpty(template.FromAddress)))
         {
