@@ -18,7 +18,7 @@ public class OrderRequestService : IOrderRequestService
     private readonly IGuidService _guid;
     private readonly IDateTimeService _dateTime;
     private readonly string _defaultEmailFromAddress;
-    private readonly string _defaultSenderNumber;
+    private readonly string _defaultSmsSender;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderRequestService"/> class.
@@ -29,7 +29,7 @@ public class OrderRequestService : IOrderRequestService
         _guid = guid;
         _dateTime = dateTime;
         _defaultEmailFromAddress = config.Value.DefaultEmailFromAddress;
-        _defaultSenderNumber = config.Value.DefaultSenderNumber;
+        _defaultSmsSender = config.Value.DefaultSmsSender;
     }
 
     /// <inheritdoc/>
@@ -64,7 +64,7 @@ public class OrderRequestService : IOrderRequestService
 
         foreach (var template in templates.OfType<SmsTemplate>().Where(template => string.IsNullOrEmpty(template.SenderNumber)))
         {
-            template.SenderNumber = _defaultSenderNumber;
+            template.SenderNumber = _defaultSmsSender;
         }
 
         return templates;

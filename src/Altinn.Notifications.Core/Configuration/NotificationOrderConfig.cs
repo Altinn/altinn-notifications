@@ -13,5 +13,5 @@ public class NotificationOrderConfig
     /// <summary>
     /// Default sender number for sms notifications
     /// </summary>
-    public string DefaultSenderNumber { get; set; } = string.Empty;
+    public string DefaultSmsSender { get; set; } = string.Empty;
 }
