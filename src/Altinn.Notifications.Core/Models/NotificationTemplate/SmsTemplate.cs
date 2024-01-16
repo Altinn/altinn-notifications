@@ -3,7 +3,7 @@ using Altinn.Notifications.Core.Enums;
 namespace Altinn.Notifications.Core.Models.NotificationTemplate;
 
 /// <summary>
-/// Template for a SMS notification
+/// Template for an SMS notification
 /// </summary>
 public class SmsTemplate : INotificationTemplate
 {
