@@ -8,6 +8,7 @@ namespace Altinn.Notifications.Core.Models.NotificationTemplate;
 /// Base class for a notification template
 /// </summary>
 [JsonDerivedType(typeof(EmailTemplate), "email")]
+[JsonDerivedType(typeof(SmsTemplate), "sms")]
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "$")]
 public interface INotificationTemplate
 {
