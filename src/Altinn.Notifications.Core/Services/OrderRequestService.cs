@@ -10,9 +10,9 @@ using Microsoft.Extensions.Options;
 namespace Altinn.Notifications.Core.Services;
 
 /// <summary>
-/// Implementation of the <see cref="IEmailNotificationOrderService"/>. 
+/// Implementation of the <see cref="IOrderRequestService"/>. 
 /// </summary>
-public class EmailNotificationOrderService : IEmailNotificationOrderService
+public class OrderRequestService : IOrderRequestService
 {
     private readonly IOrderRepository _repository;
     private readonly IGuidService _guid;
@@ -20,9 +20,9 @@ public class EmailNotificationOrderService : IEmailNotificationOrderService
     private readonly string _defaultFromAddress;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="EmailNotificationOrderService"/> class.
+    /// Initializes a new instance of the <see cref="OrderRequestService"/> class.
     /// </summary>
-    public EmailNotificationOrderService(IOrderRepository repository, IGuidService guid, IDateTimeService dateTime, IOptions<NotificationOrderConfig> config)
+    public OrderRequestService(IOrderRepository repository, IGuidService guid, IDateTimeService dateTime, IOptions<NotificationOrderConfig> config)
     {
         _repository = repository;
         _guid = guid;

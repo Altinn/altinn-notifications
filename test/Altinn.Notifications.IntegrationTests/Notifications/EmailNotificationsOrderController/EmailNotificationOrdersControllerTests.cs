@@ -172,7 +172,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
     public async Task Post_ServiceReturnsError_ServerError()
     {
         // Arrange
-        Mock<IEmailNotificationOrderService> serviceMock = new();
+        Mock<IOrderRequestService> serviceMock = new();
         serviceMock.Setup(s => s.RegisterEmailNotificationOrder(It.IsAny<NotificationOrderRequest>()))
             .ReturnsAsync((null, new ServiceError(500)));
 
@@ -196,7 +196,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
     public async Task Post_ValidScope_ServiceReturnsOrder_Accepted()
     {
         // Arrange
-        Mock<IEmailNotificationOrderService> serviceMock = new();
+        Mock<IOrderRequestService> serviceMock = new();
         serviceMock.Setup(s => s.RegisterEmailNotificationOrder(It.IsAny<NotificationOrderRequest>()))
               .Callback<NotificationOrderRequest>(orderRequest =>
               {
@@ -235,7 +235,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
     public async Task Post_ValidAccessToken_ServiceReturnsOrder_Accepted()
     {
         // Arrange
-        Mock<IEmailNotificationOrderService> serviceMock = new();
+        Mock<IOrderRequestService> serviceMock = new();
         serviceMock.Setup(s => s.RegisterEmailNotificationOrder(It.IsAny<NotificationOrderRequest>()))
               .Callback<NotificationOrderRequest>(orderRequest =>
               {
@@ -274,7 +274,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
     public async Task Post_OrderWithoutFromAddress_StringEmptyUsedAsServiceInput_Accepted()
     {
         // Arrange
-        Mock<IEmailNotificationOrderService> serviceMock = new();
+        Mock<IOrderRequestService> serviceMock = new();
 
         serviceMock.Setup(s => s.RegisterEmailNotificationOrder(It.IsAny<NotificationOrderRequest>()))
             .Callback<NotificationOrderRequest>(orderRequest =>
@@ -321,7 +321,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
         serviceMock.VerifyAll();
     }
 
-    private HttpClient GetTestClient(IValidator<EmailNotificationOrderRequestExt>? validator = null, IEmailNotificationOrderService? orderService = null)
+    private HttpClient GetTestClient(IValidator<EmailNotificationOrderRequestExt>? validator = null, IOrderRequestService? orderService = null)
     {
         if (validator == null)
         {
@@ -333,7 +333,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
 
         if (orderService == null)
         {
-            var orderServiceMock = new Mock<IEmailNotificationOrderService>();
+            var orderServiceMock = new Mock<IOrderRequestService>();
             orderService = orderServiceMock.Object;
         }
 

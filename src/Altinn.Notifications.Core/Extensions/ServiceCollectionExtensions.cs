@@ -32,7 +32,7 @@ public static class ServiceCollectionExtensions
             .AddSingleton<IDateTimeService, DateTimeService>()
             .AddSingleton<IOrderProcessingService, OrderProcessingService>()
             .AddSingleton<IGetOrderService, GetOrderService>()
-            .AddSingleton<IEmailNotificationOrderService, EmailNotificationOrderService>()
+            .AddSingleton<IOrderRequestService, OrderRequestService>()
             .AddSingleton<INotificationSummaryService, NotificationSummaryService>()
             .AddSingleton<IEmailNotificationService, EmailNotificationService>()
             .AddSingleton<IAltinnServiceUpdateService, AltinnServiceUpdateService>()

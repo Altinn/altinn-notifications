@@ -18,7 +18,7 @@ using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 
-public class EmailNotificationOrderServiceTests
+public class OrderRequestServiceTests
 {
     [Fact]
     public async Task RegisterEmailNotificationOrder_ExpectedInputToRepository()
@@ -112,7 +112,7 @@ public class EmailNotificationOrderServiceTests
         repoMock.VerifyAll();
     }
 
-    public static EmailNotificationOrderService GetTestService(IOrderRepository? repository = null, Guid? guid = null, DateTime? dateTime = null)
+    public static OrderRequestService GetTestService(IOrderRepository? repository = null, Guid? guid = null, DateTime? dateTime = null)
     {
         if (repository == null)
         {
@@ -132,6 +132,6 @@ public class EmailNotificationOrderServiceTests
         {
             DefaultEmailFromAddress = "noreply@altinn.no"
         });
-        return new EmailNotificationOrderService(repository, guidMock.Object, dateTimeMock.Object, config);
+        return new OrderRequestService(repository, guidMock.Object, dateTimeMock.Object, config);
     }
 }

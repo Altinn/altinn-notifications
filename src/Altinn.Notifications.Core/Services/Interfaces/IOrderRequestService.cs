@@ -6,7 +6,7 @@ namespace Altinn.Notifications.Core.Services.Interfaces;
 /// <summary>
 /// Interface for the email notification order service
 /// </summary>
-public interface IEmailNotificationOrderService
+public interface IOrderRequestService
 {
     /// <summary>
     /// Registers a new order

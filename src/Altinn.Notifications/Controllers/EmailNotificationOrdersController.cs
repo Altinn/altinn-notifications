@@ -29,12 +29,12 @@ namespace Altinn.Notifications.Controllers;
 public class EmailNotificationOrdersController : ControllerBase
 {
     private readonly IValidator<EmailNotificationOrderRequestExt> _validator;
-    private readonly IEmailNotificationOrderService _orderService;
+    private readonly IOrderRequestService _orderService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotificationOrdersController"/> class.
     /// </summary>
-    public EmailNotificationOrdersController(IValidator<EmailNotificationOrderRequestExt> validator, IEmailNotificationOrderService orderService)
+    public EmailNotificationOrdersController(IValidator<EmailNotificationOrderRequestExt> validator, IOrderRequestService orderService)
     {
         _validator = validator;
         _orderService = orderService;
