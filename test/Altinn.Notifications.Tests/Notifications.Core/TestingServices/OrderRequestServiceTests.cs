@@ -21,7 +21,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 public class OrderRequestServiceTests
 {
     [Fact]
-    public async Task RegisterEmailNotificationOrder_ExpectedInputToRepository()
+    public async Task RegisterNotificationOrder_ExpectedInputToRepository()
     {
         // Arrange
         DateTime sendTime = DateTime.UtcNow;
@@ -59,7 +59,7 @@ public class OrderRequestServiceTests
         var service = GetTestService(repoMock.Object, id, createdTime);
 
         // Act
-        (NotificationOrder? actual, ServiceError? _) = await service.RegisterEmailNotificationOrder(input);
+        (NotificationOrder? actual, ServiceError? _) = await service.RegisterNotificationOrder(input);
 
         // Assert
         Assert.Equivalent(expected, actual, true);
@@ -67,7 +67,7 @@ public class OrderRequestServiceTests
     }
 
     [Fact]
-    public async Task RegisterEmailNotificationOrder_NoFromAddressDefaultInserted()
+    public async Task RegisterNotificationOrder_NoFromAddressDefaultInserted()
     {
         // Arrange
         DateTime sendTime = DateTime.UtcNow;
@@ -105,7 +105,7 @@ public class OrderRequestServiceTests
         var service = GetTestService(repoMock.Object, id, createdTime);
 
         // Act
-        (NotificationOrder? actual, ServiceError? _) = await service.RegisterEmailNotificationOrder(input);
+        (NotificationOrder? actual, ServiceError? _) = await service.RegisterNotificationOrder(input);
 
         // Assert
         Assert.Equivalent(expected, actual, true);

@@ -13,5 +13,5 @@ public interface IOrderRequestService
     /// </summary>
     /// <param name="orderRequest">The email notification order request</param>
     /// <returns>The registered notification order</returns>
-    public Task<(NotificationOrder? Order, ServiceError? Error)> RegisterEmailNotificationOrder(NotificationOrderRequest orderRequest);
+    public Task<(NotificationOrder? Order, ServiceError? Error)> RegisterNotificationOrder(NotificationOrderRequest orderRequest);
 }

@@ -71,7 +71,7 @@ public class EmailNotificationOrdersController : ControllerBase
         }
 
         var orderRequest = emailNotificationOrderRequest.MapToOrderRequest(creator);
-        (NotificationOrder? registeredOrder, ServiceError? error) = await _orderService.RegisterEmailNotificationOrder(orderRequest);
+        (NotificationOrder? registeredOrder, ServiceError? error) = await _orderService.RegisterNotificationOrder(orderRequest);
 
         if (error != null)
         {

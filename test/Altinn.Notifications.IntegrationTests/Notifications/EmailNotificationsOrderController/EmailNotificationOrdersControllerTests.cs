@@ -173,7 +173,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
     {
         // Arrange
         Mock<IOrderRequestService> serviceMock = new();
-        serviceMock.Setup(s => s.RegisterEmailNotificationOrder(It.IsAny<NotificationOrderRequest>()))
+        serviceMock.Setup(s => s.RegisterNotificationOrder(It.IsAny<NotificationOrderRequest>()))
             .ReturnsAsync((null, new ServiceError(500)));
 
         HttpClient client = GetTestClient(orderService: serviceMock.Object);
@@ -197,7 +197,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
     {
         // Arrange
         Mock<IOrderRequestService> serviceMock = new();
-        serviceMock.Setup(s => s.RegisterEmailNotificationOrder(It.IsAny<NotificationOrderRequest>()))
+        serviceMock.Setup(s => s.RegisterNotificationOrder(It.IsAny<NotificationOrderRequest>()))
               .Callback<NotificationOrderRequest>(orderRequest =>
               {
                   var emailTemplate = orderRequest.Templates
@@ -236,7 +236,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
     {
         // Arrange
         Mock<IOrderRequestService> serviceMock = new();
-        serviceMock.Setup(s => s.RegisterEmailNotificationOrder(It.IsAny<NotificationOrderRequest>()))
+        serviceMock.Setup(s => s.RegisterNotificationOrder(It.IsAny<NotificationOrderRequest>()))
               .Callback<NotificationOrderRequest>(orderRequest =>
               {
                   var emailTemplate = orderRequest.Templates
@@ -276,7 +276,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
         // Arrange
         Mock<IOrderRequestService> serviceMock = new();
 
-        serviceMock.Setup(s => s.RegisterEmailNotificationOrder(It.IsAny<NotificationOrderRequest>()))
+        serviceMock.Setup(s => s.RegisterNotificationOrder(It.IsAny<NotificationOrderRequest>()))
             .Callback<NotificationOrderRequest>(orderRequest =>
             {
                 var emailTemplate = orderRequest.Templates
