@@ -18,6 +18,7 @@ public class OrderRequestService : IOrderRequestService
     private readonly IGuidService _guid;
     private readonly IDateTimeService _dateTime;
     private readonly string _defaultEmailFromAddress;
+    private readonly string _defaultSenderNumber;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderRequestService"/> class.
@@ -28,6 +29,7 @@ public class OrderRequestService : IOrderRequestService
         _guid = guid;
         _dateTime = dateTime;
         _defaultEmailFromAddress = config.Value.DefaultEmailFromAddress;
+        _defaultSenderNumber = config.Value.DefaultSenderNumber;
     }
 
     /// <inheritdoc/>
@@ -36,7 +38,7 @@ public class OrderRequestService : IOrderRequestService
         Guid orderId = _guid.NewGuid();
         DateTime created = _dateTime.UtcNow();
 
-        var templates = SetFromAddressIfNotDefined(orderRequest.Templates);
+        var templates = SetFromAddressOrSenderNumberIfNotDefined(orderRequest.Templates);
 
         var order = new NotificationOrder(
             orderId,
@@ -53,11 +55,16 @@ public class OrderRequestService : IOrderRequestService
         return (savedOrder, null);
     }
 
-    private List<INotificationTemplate> SetFromAddressIfNotDefined(List<INotificationTemplate> templates)
+    private List<INotificationTemplate> SetFromAddressOrSenderNumberIfNotDefined(List<INotificationTemplate> templates)
     {
         foreach (var template in templates.OfType<EmailTemplate>().Where(template => string.IsNullOrEmpty(template.FromAddress)))
         {
             template.FromAddress = _defaultEmailFromAddress;
+        }
+
+        foreach (var template in templates.OfType<SmsTemplate>().Where(template => string.IsNullOrEmpty(template.SenderNumber)))
+        {
+            template.SenderNumber = _defaultSenderNumber;
         }
 
         return templates;
