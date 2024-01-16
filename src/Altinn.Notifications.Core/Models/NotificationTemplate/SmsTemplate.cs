@@ -16,7 +16,7 @@ public class SmsTemplate : INotificationTemplate
     public string SenderNumber { get; internal set; } = string.Empty;
 
     /// <summary>
-    /// Gets the body of emails created by the template    
+    /// Gets the body of SMSs created by the template    
     /// </summary>
     public string Body { get; internal set; } = string.Empty;
 
