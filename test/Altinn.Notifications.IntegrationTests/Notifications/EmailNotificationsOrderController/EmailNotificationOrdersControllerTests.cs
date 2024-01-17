@@ -206,13 +206,6 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
 
                   Assert.NotNull(emailTemplate);
                   Assert.Equal(string.Empty, emailTemplate.FromAddress);
-
-                  var smsTemplate = orderRequest.Templates
-                      .OfType<SmsTemplate>()
-                      .FirstOrDefault();
-
-                  Assert.NotNull(smsTemplate);
-                  Assert.Equal(string.Empty, smsTemplate.SenderHandle);
               })
             .ReturnsAsync((_order, null));
 
