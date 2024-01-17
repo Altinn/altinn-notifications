@@ -62,9 +62,9 @@ public class OrderRequestService : IOrderRequestService
             template.FromAddress = _defaultEmailFromAddress;
         }
 
-        foreach (var template in templates.OfType<SmsTemplate>().Where(template => string.IsNullOrEmpty(template.SenderNumber)))
+        foreach (var template in templates.OfType<SmsTemplate>().Where(template => string.IsNullOrEmpty(template.SenderHandle)))
         {
-            template.SenderNumber = _defaultSmsSender;
+            template.SenderHandle = _defaultSmsSender;
         }
 
         return templates;
