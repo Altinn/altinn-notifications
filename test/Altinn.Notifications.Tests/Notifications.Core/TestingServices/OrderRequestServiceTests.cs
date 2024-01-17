@@ -21,7 +21,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 public class OrderRequestServiceTests
 {
     [Fact]
-    public async Task RegisterNotificationOrder_ExpectedInputToRepository()
+    public async Task RegisterNotificationOrder_Email_ExpectedInputToRepository()
     {
         // Arrange
         DateTime sendTime = DateTime.UtcNow;
@@ -130,7 +130,8 @@ public class OrderRequestServiceTests
 
         var config = Options.Create<NotificationOrderConfig>(new()
         {
-            DefaultEmailFromAddress = "noreply@altinn.no"
+            DefaultEmailFromAddress = "noreply@altinn.no",
+            DefaultSmsSender = "TestSmsSenderHandle"
         });
         return new OrderRequestService(repository, guidMock.Object, dateTimeMock.Object, config);
     }
