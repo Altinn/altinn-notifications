@@ -112,6 +112,52 @@ public class OrderRequestServiceTests
         repoMock.VerifyAll();
     }
 
+    [Fact]
+    public async Task RegisterNotificationOrder_ForSms_ExpectedInputToRepository()
+    {
+        // Arrange
+        DateTime sendTime = DateTime.UtcNow;
+        DateTime createdTime = DateTime.UtcNow.AddMinutes(-2);
+        Guid id = Guid.NewGuid();
+
+        NotificationOrder expected = new()
+        {
+            Id = id,
+            Created = createdTime,
+            Creator = new("ttd"),
+            NotificationChannel = NotificationChannel.Sms,
+            RequestedSendTime = sendTime,
+            Recipients = { },
+            SendersReference = "senders-reference",
+            Templates = { new SmsTemplate { Body = "sms-body", SenderHandle = "Skatteetaten" } }
+        };
+
+        NotificationOrderRequest input = new()
+        {
+            Creator = new Creator("ttd"),
+
+            NotificationChannel = NotificationChannel.Sms,
+            Recipients = { },
+            SendersReference = "senders-reference",
+            RequestedSendTime = sendTime,
+            Templates = { new SmsTemplate { Body = "sms-body", SenderHandle = "Skatteetaten" } }
+        };
+
+        Mock<IOrderRepository> repoMock = new();
+        repoMock
+            .Setup(r => r.Create(It.IsAny<NotificationOrder>()))
+            .ReturnsAsync((NotificationOrder order) => order);
+
+        var service = GetTestService(repoMock.Object, id, createdTime);
+
+        // Act
+        (NotificationOrder? actual, ServiceError? _) = await service.RegisterNotificationOrder(input);
+
+        // Assert
+        Assert.Equivalent(expected, actual, true);
+        repoMock.VerifyAll();
+    }
+
     public static OrderRequestService GetTestService(IOrderRepository? repository = null, Guid? guid = null, DateTime? dateTime = null)
     {
         if (repository == null)
