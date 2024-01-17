@@ -21,7 +21,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 public class OrderRequestServiceTests
 {
     [Fact]
-    public async Task RegisterNotificationOrder_Email_ExpectedInputToRepository()
+    public async Task RegisterNotificationOrder_ForEmail_ExpectedInputToRepository()
     {
         // Arrange
         DateTime sendTime = DateTime.UtcNow;
@@ -67,7 +67,7 @@ public class OrderRequestServiceTests
     }
 
     [Fact]
-    public async Task RegisterNotificationOrder_NoFromAddressDefaultInserted()
+    public async Task RegisterNotificationOrder_ForEmail_NoFromAddressDefaultInserted()
     {
         // Arrange
         DateTime sendTime = DateTime.UtcNow;
