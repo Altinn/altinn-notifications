@@ -29,15 +29,15 @@ namespace Altinn.Notifications.Controllers;
 public class EmailNotificationOrdersController : ControllerBase
 {
     private readonly IValidator<EmailNotificationOrderRequestExt> _validator;
-    private readonly IOrderRequestService _orderService;
+    private readonly IOrderRequestService _orderRequestService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotificationOrdersController"/> class.
     /// </summary>
-    public EmailNotificationOrdersController(IValidator<EmailNotificationOrderRequestExt> validator, IOrderRequestService orderService)
+    public EmailNotificationOrdersController(IValidator<EmailNotificationOrderRequestExt> validator, IOrderRequestService orderRequestService)
     {
         _validator = validator;
-        _orderService = orderService;
+        _orderRequestService = orderRequestService;
     }
 
     /// <summary>
@@ -71,7 +71,7 @@ public class EmailNotificationOrdersController : ControllerBase
         }
 
         var orderRequest = emailNotificationOrderRequest.MapToOrderRequest(creator);
-        (NotificationOrder? registeredOrder, ServiceError? error) = await _orderService.RegisterNotificationOrder(orderRequest);
+        (NotificationOrder? registeredOrder, ServiceError? error) = await _orderRequestService.RegisterNotificationOrder(orderRequest);
 
         if (error != null)
         {
