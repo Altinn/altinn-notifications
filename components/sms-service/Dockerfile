@@ -17,7 +17,7 @@ RUN dotnet publish -c Release -o out ./src/Altinn.Notifications.Sms/Altinn.Notif
 
 
 # Use the official .NET runtime image with Alpine Linux as a base image
-FROM mcr.microsoft.com/dotnet/aspnet:8.0.0-alpine3.18 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:8.0.1-alpine3.18 AS final
 EXPOSE 5092
 WORKDIR /app
 COPY --from=build /app/out ./
