@@ -129,7 +129,7 @@ public class OrderRequestServiceTests
             RequestedSendTime = sendTime,
             Recipients = { },
             SendersReference = "senders-reference",
-            Templates = { new SmsTemplate { Body = "sms-body", SenderHandle = "Skatteetaten" } }
+            Templates = { new SmsTemplate { Body = "sms-body", SenderNumber = "Skatteetaten" } }
         };
 
         NotificationOrderRequest input = new()
@@ -140,7 +140,7 @@ public class OrderRequestServiceTests
             Recipients = { },
             SendersReference = "senders-reference",
             RequestedSendTime = sendTime,
-            Templates = { new SmsTemplate { Body = "sms-body", SenderHandle = "Skatteetaten" } }
+            Templates = { new SmsTemplate { Body = "sms-body", SenderNumber = "Skatteetaten" } }
         };
 
         Mock<IOrderRepository> repoMock = new();
@@ -159,7 +159,7 @@ public class OrderRequestServiceTests
     }
 
     [Fact]
-    public async Task RegisterNotificationOrder_ForSms_NoSenderHandleDefaultInserted()
+    public async Task RegisterNotificationOrder_ForSms_NoSenderNumberDefaultInserted()
     {
         // Arrange
         DateTime sendTime = DateTime.UtcNow;
@@ -175,7 +175,7 @@ public class OrderRequestServiceTests
             RequestedSendTime = sendTime,
             Recipients = { },
             SendersReference = "senders-reference",
-            Templates = { new SmsTemplate { Body = "sms-body", SenderHandle = "TestDefaultSmsSenderHandle" } }
+            Templates = { new SmsTemplate { Body = "sms-body", SenderNumber = "TestDefaultSmsSenderNumber" } }
         };
 
         NotificationOrderRequest input = new()
@@ -223,7 +223,7 @@ public class OrderRequestServiceTests
         var config = Options.Create<NotificationOrderConfig>(new()
         {
             DefaultEmailFromAddress = "noreply@altinn.no",
-            DefaultSmsSender = "TestDefaultSmsSenderHandle"
+            DefaultSmsSender = "TestDefaultSmsSenderNumber"
         });
         return new OrderRequestService(repository, guidMock.Object, dateTimeMock.Object, config);
     }

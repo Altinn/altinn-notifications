@@ -13,7 +13,7 @@ public class SmsTemplate : INotificationTemplate
     /// <summary>
     /// Gets the number from which the SMS is created by the template    
     /// </summary>
-    public string SenderHandle { get; internal set; } = string.Empty;
+    public string SenderNumber { get; internal set; } = string.Empty;
 
     /// <summary>
     /// Gets the body of SMSs created by the template    
@@ -23,9 +23,9 @@ public class SmsTemplate : INotificationTemplate
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsTemplate"/> class.
     /// </summary>
-    public SmsTemplate(string? senderHandle, string body)
+    public SmsTemplate(string? senderNumber, string body)
     {
-        SenderHandle = senderHandle ?? string.Empty;
+        SenderNumber = senderNumber ?? string.Empty;
         Body = body;
         Type = NotificationTemplateType.Sms;
     }
