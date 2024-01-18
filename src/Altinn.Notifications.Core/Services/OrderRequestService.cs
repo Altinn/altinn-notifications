@@ -29,7 +29,7 @@ public class OrderRequestService : IOrderRequestService
         _guid = guid;
         _dateTime = dateTime;
         _defaultEmailFromAddress = config.Value.DefaultEmailFromAddress;
-        _defaultSmsSender = config.Value.DefaultSmsSender;
+        _defaultSmsSender = config.Value.DefaultSmsSenderNumber;
     }
 
     /// <inheritdoc/>

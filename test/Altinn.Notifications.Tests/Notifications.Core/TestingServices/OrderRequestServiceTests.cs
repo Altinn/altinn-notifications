@@ -175,7 +175,7 @@ public class OrderRequestServiceTests
             RequestedSendTime = sendTime,
             Recipients = { },
             SendersReference = "senders-reference",
-            Templates = { new SmsTemplate { Body = "sms-body", SenderNumber = "TestDefaultSmsSenderNumber" } }
+            Templates = { new SmsTemplate { Body = "sms-body", SenderNumber = "TestDefaultSmsSenderNumberNumber" } }
         };
 
         NotificationOrderRequest input = new()
@@ -223,7 +223,7 @@ public class OrderRequestServiceTests
         var config = Options.Create<NotificationOrderConfig>(new()
         {
             DefaultEmailFromAddress = "noreply@altinn.no",
-            DefaultSmsSender = "TestDefaultSmsSenderNumber"
+            DefaultSmsSenderNumber = "TestDefaultSmsSenderNumberNumber"
         });
         return new OrderRequestService(repository, guidMock.Object, dateTimeMock.Object, config);
     }
