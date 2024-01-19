@@ -10,33 +10,35 @@ using Microsoft.Extensions.Options;
 namespace Altinn.Notifications.Core.Services;
 
 /// <summary>
-/// Implementation of the <see cref="IEmailNotificationOrderService"/>. 
+/// Implementation of the <see cref="IOrderRequestService"/>. 
 /// </summary>
-public class EmailNotificationOrderService : IEmailNotificationOrderService
+public class OrderRequestService : IOrderRequestService
 {
     private readonly IOrderRepository _repository;
     private readonly IGuidService _guid;
     private readonly IDateTimeService _dateTime;
-    private readonly string _defaultFromAddress;
+    private readonly string _defaultEmailFromAddress;
+    private readonly string _defaultSmsSender;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="EmailNotificationOrderService"/> class.
+    /// Initializes a new instance of the <see cref="OrderRequestService"/> class.
     /// </summary>
-    public EmailNotificationOrderService(IOrderRepository repository, IGuidService guid, IDateTimeService dateTime, IOptions<NotificationOrderConfig> config)
+    public OrderRequestService(IOrderRepository repository, IGuidService guid, IDateTimeService dateTime, IOptions<NotificationOrderConfig> config)
     {
         _repository = repository;
         _guid = guid;
         _dateTime = dateTime;
-        _defaultFromAddress = config.Value.DefaultEmailFromAddress;
+        _defaultEmailFromAddress = config.Value.DefaultEmailFromAddress;
+        _defaultSmsSender = config.Value.DefaultSmsSenderNumber;
     }
 
     /// <inheritdoc/>
-    public async Task<(NotificationOrder? Order, ServiceError? Error)> RegisterEmailNotificationOrder(NotificationOrderRequest orderRequest)
+    public async Task<(NotificationOrder? Order, ServiceError? Error)> RegisterNotificationOrder(NotificationOrderRequest orderRequest)
     {
         Guid orderId = _guid.NewGuid();
         DateTime created = _dateTime.UtcNow();
 
-        var templates = SetFromAddressIfNotDefined(orderRequest.Templates);
+        var templates = SetSenderIfNotDefined(orderRequest.Templates);
 
         var order = new NotificationOrder(
             orderId,
@@ -53,11 +55,16 @@ public class EmailNotificationOrderService : IEmailNotificationOrderService
         return (savedOrder, null);
     }
 
-    private List<INotificationTemplate> SetFromAddressIfNotDefined(List<INotificationTemplate> templates)
+    private List<INotificationTemplate> SetSenderIfNotDefined(List<INotificationTemplate> templates)
     {
         foreach (var template in templates.OfType<EmailTemplate>().Where(template => string.IsNullOrEmpty(template.FromAddress)))
         {
-            template.FromAddress = _defaultFromAddress;
+            template.FromAddress = _defaultEmailFromAddress;
+        }
+
+        foreach (var template in templates.OfType<SmsTemplate>().Where(template => string.IsNullOrEmpty(template.SenderNumber)))
+        {
+            template.SenderNumber = _defaultSmsSender;
         }
 
         return templates;

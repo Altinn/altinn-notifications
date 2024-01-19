@@ -9,4 +9,9 @@ public class NotificationOrderConfig
     /// Default from address for email notifications
     /// </summary>
     public string DefaultEmailFromAddress { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Default sender number for sms notifications
+    /// </summary>
+    public string DefaultSmsSenderNumber { get; set; } = string.Empty;
 }
