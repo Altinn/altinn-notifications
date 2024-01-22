@@ -20,7 +20,7 @@ public class SmsAddressPoint : IAddressPoint
     /// </summary>
     public SmsAddressPoint(string mobileNumber)
     {
-        AddressType = AddressType.Email;
+        AddressType = AddressType.Sms;
         MobileNumber = mobileNumber;
     }
 
