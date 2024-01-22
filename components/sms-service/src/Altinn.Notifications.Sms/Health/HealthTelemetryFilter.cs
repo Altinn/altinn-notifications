@@ -13,9 +13,17 @@ namespace Altinn.Notifications.Sms.Health
     /// Initializes a new instance of the <see cref="HealthTelemetryFilter"/> class.
     /// </remarks>
     [ExcludeFromCodeCoverage]
-    public class HealthTelemetryFilter(ITelemetryProcessor next) : ITelemetryProcessor
+    public class HealthTelemetryFilter : ITelemetryProcessor
     {
-        private ITelemetryProcessor Next { get; set; } = next;
+        private ITelemetryProcessor Next { get; set; }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="HealthTelemetryFilter"/> class.
+        /// </summary>
+        public HealthTelemetryFilter(ITelemetryProcessor next)
+        {
+            Next = next;
+        }
 
         /// <inheritdoc/>
         public void Process(ITelemetry item)

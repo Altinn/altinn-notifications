@@ -11,6 +11,9 @@ namespace Altinn.Notifications.Sms.IntegrationTests
         [Fact]
         public void Test1()
         {
+            string actual = "test";
+
+            Assert.Equal("test", actual);
         }
     }
 }
