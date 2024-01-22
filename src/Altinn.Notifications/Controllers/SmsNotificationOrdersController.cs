@@ -94,7 +94,7 @@ public class SmsNotificationOrdersController : ControllerBase
         var recipients = new List<Recipient>();
 
         recipients.AddRange(
-            extRequest.Recipients.Select(r => new Recipient(string.Empty, new List<IAddressPoint>() { new SmsAddressPoint(r.PhoneNumber!) })));
+            extRequest.Recipients.Select(r => new Recipient(string.Empty, new List<IAddressPoint>() { new SmsAddressPoint(r.MobileNumber!) })));
 
         return new NotificationOrderRequest(
             extRequest.SendersReference,
