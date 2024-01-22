@@ -19,8 +19,8 @@ public class SmsNotificationOrderRequestValidator : AbstractValidator<SmsNotific
         RuleFor(order => order.Recipients)
             .NotEmpty()
             .WithMessage("One or more recipient is required.")
-            .Must(recipients => recipients.TrueForAll(a => IsValidPhoneNumber(a.PhoneNumber)))
-            .WithMessage("A valid phone number must be provided for all recipients.");
+            .Must(recipients => recipients.TrueForAll(a => IsValidMobileNumber(a.MobileNumber)))
+            .WithMessage("A valid mobile number must be provided for all recipients.");
 
         RuleFor(order => order.RequestedSendTime)
             .Must(sendTime => sendTime.Kind != DateTimeKind.Unspecified)
@@ -33,22 +33,22 @@ public class SmsNotificationOrderRequestValidator : AbstractValidator<SmsNotific
     }
 
     /// <summary>
-    /// Validated as phone number based on the Altinn 2 regex
+    /// Validated as mobile number based on the Altinn 2 regex
     /// </summary>
-    /// <param name="phoneNumber">The string to validate as an phone number</param>
-    /// <returns>A boolean indicating that the phone number is valid or not</returns>
-    internal static bool IsValidPhoneNumber(string? phoneNumber)
+    /// <param name="mobileNumber">The string to validate as an mobile number</param>
+    /// <returns>A boolean indicating that the mobile number is valid or not</returns>
+    internal static bool IsValidMobileNumber(string? mobileNumber)
     {
-        if (string.IsNullOrEmpty(phoneNumber))
+        if (string.IsNullOrEmpty(mobileNumber))
         {
             return false;
         }
 
-        string phoneNumberRegexPattern = @"^(([0-9]{5})|([0-9]{8})|(00[0-9]{3,})|(+[0-9]{3,}))$";
+        string mobileNumberRegexPattern = @"^(([0-9]{5})|([0-9]{8})|(00[0-9]{3,})|(+[0-9]{3,}))$";
 
-        Regex regex = new(phoneNumberRegexPattern, RegexOptions.None, TimeSpan.FromSeconds(1));
+        Regex regex = new(mobileNumberRegexPattern, RegexOptions.None, TimeSpan.FromSeconds(1));
 
-        Match match = regex.Match(phoneNumber);
+        Match match = regex.Match(mobileNumber);
 
         return match.Success;
     }
