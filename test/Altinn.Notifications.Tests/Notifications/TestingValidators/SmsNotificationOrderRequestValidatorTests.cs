@@ -33,4 +33,20 @@ public class SmsNotificationOrderRequestValidatorTests
         var actual = _validator.Validate(order);
         Assert.True(actual.IsValid);
     }
+
+    [Fact]
+    public void Validate_InvalidSmsFormatProvided_ReturnsFalse()
+    {
+        var order = new SmsNotificationOrderRequestExt()
+        {
+            SenderNumber = "+4740000000",
+            Recipients = new List<RecipientExt>() { new RecipientExt() { MobileNumber = "1111000000" } },
+            Body = "This is an SMS body"
+        };
+
+        var actual = _validator.Validate(order);
+
+        Assert.False(actual.IsValid);
+        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("A valid mobile number must be provided for all recipients."));
+    }
 }
