@@ -3,7 +3,7 @@ using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
 
-namespace Altinn.Notifications.Core.Repository.Interfaces;
+namespace Altinn.Notifications.Core.Persistence;
 
 /// <summary>
 /// Interface describing all repository operations related to an email notification

@@ -1,4 +1,4 @@
-﻿namespace Altinn.Notifications.Core.Integrations.Interfaces;
+﻿namespace Altinn.Notifications.Core.Integrations;
 
 /// <summary>
 /// Interface for handling all producer actions for Kafka

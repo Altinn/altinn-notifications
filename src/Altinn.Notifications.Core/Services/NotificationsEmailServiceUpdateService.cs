@@ -2,7 +2,7 @@
 
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.AltinnServiceUpdate;
-using Altinn.Notifications.Core.Repository.Interfaces;
+using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
 
 using Microsoft.Extensions.Logging;

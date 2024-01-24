@@ -1,4 +1,4 @@
-﻿namespace Altinn.Notifications.Core.Repository.Interfaces
+﻿namespace Altinn.Notifications.Core.Persistence
 {
     /// <summary>
     /// Interface for handling actions towards the resource limits table

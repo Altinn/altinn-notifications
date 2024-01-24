@@ -1,6 +1,6 @@
 ﻿using Altinn.Notifications.Core.Models.Notification;
 
-namespace Altinn.Notifications.Core.Repository.Interfaces;
+namespace Altinn.Notifications.Core.Persistence;
 
 /// <summary>
 /// Interface describing all repository operations related to notification summaries

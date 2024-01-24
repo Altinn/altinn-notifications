@@ -1,5 +1,4 @@
-﻿using Altinn.Notifications.Core.Repository.Interfaces;
-
+﻿using Altinn.Notifications.Core.Persistence;
 using Microsoft.ApplicationInsights;
 
 using Npgsql;

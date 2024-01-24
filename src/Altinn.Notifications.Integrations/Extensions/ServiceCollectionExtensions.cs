@@ -1,4 +1,4 @@
-﻿using Altinn.Notifications.Core.Integrations.Interfaces;
+﻿using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Health;
 using Altinn.Notifications.Integrations.Kafka.Consumers;

@@ -1,4 +1,4 @@
-﻿using Altinn.Notifications.Core.Integrations.Interfaces;
+﻿using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Integrations.Kafka.Producers;
 
 using Confluent.Kafka;
