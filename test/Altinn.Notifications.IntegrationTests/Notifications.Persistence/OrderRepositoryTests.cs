@@ -8,8 +8,26 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
 {
-    public class OrderRepositoryTests
+    public class OrderRepositoryTests : IAsyncLifetime
     {
+        private List<Guid> orderIdsToDelete;
+
+        public OrderRepositoryTests()
+        {
+            orderIdsToDelete = new List<Guid>();
+        }
+
+        public async Task InitializeAsync()
+        {
+            await Task.CompletedTask;
+        }
+
+        public async Task DisposeAsync()
+        {
+            string deleteSql = $@"DELETE from notifications.orders o where o.alternateid in ('{string.Join("','", orderIdsToDelete)}')";
+            await PostgreUtil.RunSql(deleteSql);
+        }
+
         [Fact]
         public async Task Create_OrderWithSmsTemplate_SmsTextsPersisted()
         {
@@ -28,6 +46,8 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                     new SmsTemplate("Altinn", "This is the body")
                 }
             };
+
+            orderIdsToDelete.Add(order.Id);
 
             // Act
             await repo.Create(order);
@@ -62,6 +82,8 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 }
             };
 
+            orderIdsToDelete.Add(order.Id);
+
             // Act
             await repo.Create(order);
 
@@ -95,6 +117,8 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                     new SmsTemplate("Altinn", "This is the body")
                 }
             };
+
+            orderIdsToDelete.Add(order.Id);
 
             // Act
             await repo.Create(order);
