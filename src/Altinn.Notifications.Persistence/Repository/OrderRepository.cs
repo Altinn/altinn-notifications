@@ -97,10 +97,10 @@ public class OrderRepository : IOrderRepository
         {
             long dbOrderId = await InsertOrder(order);
 
-            EmailTemplate? emailTemplate = order.Templates.FirstOrDefault(t => t.Type == NotificationTemplateType.Email) as EmailTemplate;
+            EmailTemplate? emailTemplate = order.Templates.Find(t => t.Type == NotificationTemplateType.Email) as EmailTemplate;
             var emailInsertTask = InsertEmailTextAsync(dbOrderId, emailTemplate);
 
-            SmsTemplate? smsTemplate = order.Templates.FirstOrDefault(t => t.Type == NotificationTemplateType.Sms) as SmsTemplate;
+            SmsTemplate? smsTemplate = order.Templates.Find(t => t.Type == NotificationTemplateType.Sms) as SmsTemplate;
             var smsInsertTask = InsertSmsTextAsync(dbOrderId, smsTemplate);
 
             await Task.WhenAll(emailInsertTask, smsInsertTask);
