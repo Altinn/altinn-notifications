@@ -138,7 +138,8 @@ public static class OrderMapper
         recipientExt.AddRange(
             recipients.Select(r => new RecipientExt
             {
-                EmailAddress = GetEmailFromAddressList(r.AddressInfo)
+                EmailAddress = GetEmailFromAddressList(r.AddressInfo),
+                MobileNumber = GetMobileNumberFromAddressList(r.AddressInfo) 
             }));
 
         return recipientExt;
@@ -163,5 +164,14 @@ public static class OrderMapper
             as EmailAddressPoint;
 
         return emailAddressPoint?.EmailAddress;
+    }
+
+    private static string? GetMobileNumberFromAddressList(List<IAddressPoint> addressPoints)
+    {
+        var smsAddressPoint = addressPoints
+            .Find(a => a.AddressType.Equals(AddressType.Sms))
+            as SmsAddressPoint;
+
+        return smsAddressPoint?.MobileNumber;
     }
 }
