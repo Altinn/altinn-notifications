@@ -92,7 +92,7 @@ public class SmsNotificationOrdersController : ControllerBase
     {
         INotificationTemplate smsTemplate = new SmsTemplate(extRequest.SenderNumber, extRequest.Body);
 
-        List<Recipient> recipients = new List<Recipient>();
+        List<Recipient> recipients = new();
 
         recipients.AddRange(
             extRequest.Recipients.Select(r => new Recipient(string.Empty, new List<IAddressPoint>() { new SmsAddressPoint(r.MobileNumber!) })));
