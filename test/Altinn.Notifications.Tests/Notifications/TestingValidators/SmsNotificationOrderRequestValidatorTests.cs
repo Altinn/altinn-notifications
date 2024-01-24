@@ -65,4 +65,20 @@ public class SmsNotificationOrderRequestValidatorTests
         Assert.False(actual.IsValid);
         Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("A valid mobile number must be provided for all recipients."));
     }
+
+    [Fact]
+    public void Validate_ForSmsSendTimeHasLocalZone_ReturnsTrue()
+    {
+        var order = new SmsNotificationOrderRequestExt()
+        {
+            SenderNumber = "+4740000001",
+            Recipients = new List<RecipientExt>() { new RecipientExt() { MobileNumber = "+4740000000" } },
+            Body = "This is an SMS body",
+            RequestedSendTime = DateTime.Now
+        };
+
+        var actual = _validator.Validate(order);
+
+        Assert.True(actual.IsValid);
+    }
 }
