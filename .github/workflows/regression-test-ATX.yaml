@@ -1,18 +1,26 @@
 name: Regression test - AT
 
+
 on:
-  workflow_dispatch:
-  schedule:
-  - cron: '0 12 * * 1-5'
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+    secrets:
+      TOKENGENERATOR_USERNAME:
+        required: true
+      TOKENGENERATOR_USERPASSWORD:
+        required: true
+      AUTOMATEDTEST_EMAILRECIPIENT:
+        required: true
+      SLACK_WEBHOOK_URL_TEST:
+        required: true
 
 jobs:
-  test:
-    strategy:
-      fail-fast: false
-      matrix:
-        environment: [AT21, AT22, AT23, AT24]
-    environment: ${{ matrix.environment }}
+  regression-tests:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
     steps:
     - uses: actions/checkout@v4
     - name: Run email notification order regression tests
@@ -23,7 +31,7 @@ jobs:
     - name: Build failure report
       if: failure()
       run: |
-          report=":warning: Notifications regression test failure in ${{ matrix.environment }} :warning: \n"
+          report=":warning: Notifications regression test failure in ${{ inputs.environment }} :warning: \n"
           report+="\n Workflow available here: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           echo "stepreport="$report >> $GITHUB_ENV
     - name: Report failure to Slack
