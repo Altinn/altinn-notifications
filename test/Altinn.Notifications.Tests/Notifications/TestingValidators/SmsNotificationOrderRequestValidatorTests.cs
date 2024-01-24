@@ -49,4 +49,20 @@ public class SmsNotificationOrderRequestValidatorTests
         Assert.False(actual.IsValid);
         Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("A valid mobile number must be provided for all recipients."));
     }
+
+    [Fact]
+    public void Validate_SmsNotDefinedForRecipient_ReturnFalse()
+    {
+        var order = new SmsNotificationOrderRequestExt()
+        {
+            SenderNumber = "+4740000000",
+            Recipients = new List<RecipientExt>() { new RecipientExt() },
+            Body = "This is an SMS body"
+        };
+
+        var actual = _validator.Validate(order);
+
+        Assert.False(actual.IsValid);
+        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("A valid mobile number must be provided for all recipients."));
+    }
 }
