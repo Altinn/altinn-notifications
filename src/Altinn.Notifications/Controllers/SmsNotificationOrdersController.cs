@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Configuration;
+﻿using System.Collections;
+using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
@@ -89,9 +90,9 @@ public class SmsNotificationOrdersController : ControllerBase
     /// </summary>
     public static NotificationOrderRequest MapToOrderRequest(SmsNotificationOrderRequestExt extRequest, string creator)
     {
-        var smsTemplate = new SmsTemplate(extRequest.SenderNumber, extRequest.Body);
+        INotificationTemplate smsTemplate = new SmsTemplate(extRequest.SenderNumber, extRequest.Body);
 
-        var recipients = new List<Recipient>();
+        List<Recipient> recipients = new List<Recipient>();
 
         recipients.AddRange(
             extRequest.Recipients.Select(r => new Recipient(string.Empty, new List<IAddressPoint>() { new SmsAddressPoint(r.MobileNumber!) })));
