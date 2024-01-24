@@ -97,4 +97,21 @@ public class SmsNotificationOrderRequestValidatorTests
 
         Assert.True(actual.IsValid);
     }
+    
+    [Fact]
+    public void Validate_ForSmsSendTimeHasNoZone_ReturnsFalse()
+    {
+        var order = new SmsNotificationOrderRequestExt()
+        {
+            SenderNumber = "+4740000001",
+            Recipients = new List<RecipientExt>() { new RecipientExt() { MobileNumber = "+4740000000" } },
+            Body = "This is an SMS body",
+            RequestedSendTime = new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Unspecified)
+        };
+
+        var actual = _validator.Validate(order);
+
+        Assert.False(actual.IsValid);
+        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("The requested send time value must have specified a time zone."));
+    }
 }
