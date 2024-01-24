@@ -29,7 +29,6 @@ public class SmsNotificationOrderRequestValidator : AbstractValidator<SmsNotific
             .WithMessage("Send time must be in the future. Leave blank to send immediately.");
 
         RuleFor(order => order.Body).NotEmpty();
-        RuleFor(order => order.SenderNumber).NotEmpty();
     }
 
     /// <summary>

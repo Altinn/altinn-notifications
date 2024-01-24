@@ -72,7 +72,7 @@ public class OrderMapperTests
     }
 
     [Fact]
-    public void MapToRecipientExt_AllPropertiesPresent_AreEquivalent()
+    public void MapToRecipientExt_ForEmailAllPropertiesPresent_AreEquivalent()
     {
         // Arrange 
         Recipient input = new()
@@ -87,6 +87,31 @@ public class OrderMapperTests
         RecipientExt expected = new()
         {
             EmailAddress = "input@domain.com"
+        };
+
+        // Act
+        var actual = new List<Recipient>() { input }.MapToRecipientExt();
+
+        // Assert
+        Assert.Equivalent(new List<RecipientExt>() { expected }, actual, true);
+    }
+
+    [Fact]
+    public void MapToRecipientExt_ForSmsAllPropertiesPresent_AreEquivalent()
+    {
+        // Arrange 
+        Recipient input = new()
+        {
+            RecipientId = "16069412345",
+            AddressInfo = new List<IAddressPoint>()
+            {
+               new SmsAddressPoint("+4740000001")
+            }
+        };
+
+        RecipientExt expected = new()
+        {
+            MobileNumber = "+4740000001"
         };
 
         // Act

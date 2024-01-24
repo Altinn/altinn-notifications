@@ -133,20 +133,6 @@ public class SmsNotificationOrderRequestValidatorTests
     }
 
     [Fact]
-    public void Validate_SenderNumberMissing_ReturnsFalse()
-    {
-        var order = new SmsNotificationOrderRequestExt()
-        {
-            Recipients = new List<RecipientExt>() { new RecipientExt() { MobileNumber = "+4740000000" } },
-            Body = "This is an SMS body"
-        };
-
-        var actual = _validator.Validate(order);
-        Assert.False(actual.IsValid);
-        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("'Sender Number' must not be empty."));
-    }
-
-    [Fact]
     public void Validate_BodyMissing_ReturnsFalse()
     {
         var order = new SmsNotificationOrderRequestExt()
