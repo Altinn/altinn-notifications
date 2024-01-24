@@ -1,5 +1,4 @@
 ﻿using System.Data;
-using System.Net.Mime;
 
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
