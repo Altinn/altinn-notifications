@@ -58,7 +58,7 @@ public class SmsNotificationOrdersController : ControllerBase
     [SwaggerResponseHeader(202, "Location", "string", "Link to access the newly created notification order.")]
     public async Task<ActionResult<OrderIdExt>> Post(SmsNotificationOrderRequestExt smsNotificationOrderRequest)
     {
-        var validationResult = _validator.Validate(smsNotificationOrderRequest);
+        FluentValidation.Results.ValidationResult validationResult = _validator.Validate(smsNotificationOrderRequest);
         if (!validationResult.IsValid)
         {
             validationResult.AddToModelState(this.ModelState);
