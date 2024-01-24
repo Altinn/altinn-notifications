@@ -114,4 +114,49 @@ public class SmsNotificationOrderRequestValidatorTests
         Assert.False(actual.IsValid);
         Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("The requested send time value must have specified a time zone."));
     }
+
+    [Fact]
+    public void Validate_SendTimePassed_ReturnsFalse()
+    {
+        var order = new SmsNotificationOrderRequestExt()
+        {
+            SenderNumber = "+4740000001",
+            Recipients = new List<RecipientExt>() { new RecipientExt() { MobileNumber = "+4740000000" } },
+            Body = "This is an SMS body",
+            RequestedSendTime = DateTime.UtcNow.AddDays(-1)
+        };
+
+        var actual = _validator.Validate(order);
+
+        Assert.False(actual.IsValid);
+        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("Send time must be in the future. Leave blank to send immediately."));
+    }
+
+    [Fact]
+    public void Validate_SenderNumberMissing_ReturnsFalse()
+    {
+        var order = new SmsNotificationOrderRequestExt()
+        {
+            Recipients = new List<RecipientExt>() { new RecipientExt() { MobileNumber = "+4740000000" } },
+            Body = "This is an SMS body"
+        };
+
+        var actual = _validator.Validate(order);
+        Assert.False(actual.IsValid);
+        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("'Sender Number' must not be empty."));
+    }
+
+    [Fact]
+    public void Validate_BodyMissing_ReturnsFalse()
+    {
+        var order = new SmsNotificationOrderRequestExt()
+        {
+            SenderNumber = "+4740000001",
+            Recipients = new List<RecipientExt>() { new RecipientExt() { MobileNumber = "+4740000000" } },
+        };
+
+        var actual = _validator.Validate(order);
+        Assert.False(actual.IsValid);
+        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("'Body' must not be empty."));
+    } 
 }
