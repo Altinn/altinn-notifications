@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Orders;
-using Altinn.Notifications.Core.Repository.Interfaces;
+using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 
 using Moq;

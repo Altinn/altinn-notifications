@@ -1,7 +1,7 @@
 ﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Orders;
 
-namespace Altinn.Notifications.Core.Repository.Interfaces;
+namespace Altinn.Notifications.Core.Persistence;
 
 /// <summary>
 /// Interface describing all repository actions for notification orders

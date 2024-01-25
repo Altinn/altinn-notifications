@@ -1,4 +1,4 @@
-﻿using Altinn.Notifications.Core.Repository.Interfaces;
+﻿using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Configuration;
 using Altinn.Notifications.Persistence.Health;
 using Altinn.Notifications.Persistence.Repository;

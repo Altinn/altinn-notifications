@@ -1,12 +1,16 @@
 ﻿using System.Data;
+
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
-using Altinn.Notifications.Core.Repository.Interfaces;
+using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Extensions;
+
 using Microsoft.ApplicationInsights;
+
 using Npgsql;
+
 using NpgsqlTypes;
 
 namespace Altinn.Notifications.Persistence.Repository;
@@ -23,6 +27,7 @@ public class OrderRepository : IOrderRepository
     private const string _getOrdersBySendersReferenceSql = "select notificationorder from notifications.orders where sendersreference=$1 and creatorname=$2";
     private const string _insertOrderSql = "select notifications.insertorder($1, $2, $3, $4, $5, $6)"; // (_alternateid, _creatorname, _sendersreference, _created, _requestedsendtime, _notificationorder)
     private const string _insertEmailTextSql = "call notifications.insertemailtext($1, $2, $3, $4, $5)"; // (__orderid, _fromaddress, _subject, _body, _contenttype)
+    private const string _insertSmsTextSql = "insert into notifications.smstexts(_orderid, sendernumber, body) VALUES ($1, $2, $3)"; // __orderid, _sendernumber, _body
     private const string _setProcessCompleted = "update notifications.orders set processedstatus =$1::orderprocessingstate where alternateid=$2";
     private const string _getOrdersPastSendTimeUpdateStatus = "select notifications.getorders_pastsendtime_updatestatus()";
     private const string _getOrderIncludeStatus = "select * from notifications.getorder_includestatus($1, $2)"; // _alternateid,  creator
@@ -92,12 +97,13 @@ public class OrderRepository : IOrderRepository
         {
             long dbOrderId = await InsertOrder(order);
 
-            EmailTemplate? emailTemplate = ExtractTemplates(order);
-            if (emailTemplate != null)
-            {
-                await InsertEmailText(dbOrderId, emailTemplate.FromAddress, emailTemplate.Subject, emailTemplate.Body, emailTemplate.ContentType.ToString());
-            }
+            EmailTemplate? emailTemplate = order.Templates.Find(t => t.Type == NotificationTemplateType.Email) as EmailTemplate;
+            Task emailInsertTask = InsertEmailTextAsync(dbOrderId, emailTemplate);
 
+            SmsTemplate? smsTemplate = order.Templates.Find(t => t.Type == NotificationTemplateType.Sms) as SmsTemplate;
+            Task smsInsertTask = InsertSmsTextAsync(dbOrderId, smsTemplate);
+
+            await Task.WhenAll(emailInsertTask, smsInsertTask);
             await transaction.CommitAsync();
         }
         catch (Exception)
@@ -179,26 +185,6 @@ public class OrderRepository : IOrderRepository
         return order;
     }
 
-    /// <summary>
-    /// Extracts relevant templates from a notification order
-    /// </summary>
-    internal static EmailTemplate? ExtractTemplates(NotificationOrder order)
-    {
-        EmailTemplate? emailTemplate = null;
-
-        foreach (INotificationTemplate template in order.Templates)
-        {
-            switch (template.Type)
-            {
-                case Core.Enums.NotificationTemplateType.Email:
-                    emailTemplate = template as EmailTemplate;
-                    break;
-            }
-        }
-
-        return emailTemplate;
-    }
-
     private async Task<long> InsertOrder(NotificationOrder order)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_insertOrderSql);
@@ -219,18 +205,37 @@ public class OrderRepository : IOrderRepository
         return orderId;
     }
 
-    private async Task InsertEmailText(long dbOrderId, string fromAddress, string subject, string body, string contentType)
+    private async Task InsertSmsTextAsync(long dbOrderId, SmsTemplate? smsTemplate)
     {
-        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_insertEmailTextSql);
-        using TelemetryTracker tracker = new(_telemetryClient, pgcom);
+        if (smsTemplate != null)
+        {
+            await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_insertSmsTextSql);
+            using TelemetryTracker tracker = new(_telemetryClient, pgcom);
 
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Bigint, dbOrderId);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, fromAddress);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, subject);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, body);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, contentType);
+            pgcom.Parameters.AddWithValue(NpgsqlDbType.Bigint, dbOrderId);
+            pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, smsTemplate.SenderNumber);
+            pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, smsTemplate.Body);
 
-        await pgcom.ExecuteNonQueryAsync();
-        tracker.Track();
+            await pgcom.ExecuteNonQueryAsync();
+            tracker.Track();
+        }
+    }
+
+    private async Task InsertEmailTextAsync(long dbOrderId, EmailTemplate? emailTemplate)
+    {
+        if (emailTemplate != null)
+        {
+            await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_insertEmailTextSql);
+            using TelemetryTracker tracker = new(_telemetryClient, pgcom);
+
+            pgcom.Parameters.AddWithValue(NpgsqlDbType.Bigint, dbOrderId);
+            pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, emailTemplate.FromAddress);
+            pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, emailTemplate.Subject);
+            pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, emailTemplate.Body);
+            pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, emailTemplate.ContentType.ToString());
+
+            await pgcom.ExecuteNonQueryAsync();
+            tracker.Track();
+        }
     }
 }
