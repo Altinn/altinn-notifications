@@ -26,7 +26,7 @@ jobs:
     - name: Run email notification order regression tests
       uses: grafana/k6-action@v0.3.1
       with:
-        filename: test/k6/src/tests/orders_email.js
+        filename: test/k6/src/tests/orders.js
         flags: -e runFullTestSet=true -e env=${{ vars.ENV }} -e tokenGeneratorUserName=${{ secrets.TOKENGENERATOR_USERNAME }} -e tokenGeneratorUserPwd=${{ secrets.TOKENGENERATOR_USERPASSWORD }} -e emailRecipient=${{ secrets.AUTOMATEDTEST_EMAILRECIPIENT }}
     - name: Build failure report
       if: failure()

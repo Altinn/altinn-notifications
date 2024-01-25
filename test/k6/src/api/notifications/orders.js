@@ -4,6 +4,26 @@ import * as config from "../../config.js";
 
 import * as apiHelpers from "../../apiHelpers.js";
 
+export function postEmailNotificationOrder(serializedOrder, token) {
+  var endpoint = config.notifications.orders_email;
+
+  var params = apiHelpers.buildHeaderWithBearerAndContentType(token);
+
+  var response = http.post(endpoint, serializedOrder, params);
+
+  return response;
+}
+
+export function postSmsNotificationOrder(serializedOrder, token) {
+  var endpoint = config.notifications.orders_sms;
+
+  var params = apiHelpers.buildHeaderWithBearerAndContentType(token);
+
+  var response = http.post(endpoint, serializedOrder, params);
+
+  return response;
+}
+
 export function getById(id, token) {
     var endpoint = config.notifications.orders_fromId(id);
     return getByUrl(endpoint, token);
