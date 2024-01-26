@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Altinn.Notifications.Sms.Core.Sending;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Altinn.Notifications.Sms.Core.Configuration;
@@ -16,6 +17,15 @@ public static class ServiceCollectionExtensions
     /// <returns>The given service collection.</returns>
     public static IServiceCollection AddCoreServices(this IServiceCollection services, IConfiguration config)
     {
+        TopicSettings topicSettings = config!.GetSection("KafkaSettings").Get<TopicSettings>()!;
+
+        if (topicSettings == null)
+        {
+            throw new ArgumentNullException(nameof(config), "Required Kafka settings is missing from application configuration");
+        }
+
+        services.AddSingleton<ISendingService, SendingService>();
+        services.AddSingleton(topicSettings);
         return services;
     }
 }

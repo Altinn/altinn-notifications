@@ -19,7 +19,7 @@ namespace Altinn.Notifications.Sms.Integrations.LinkMobility
         /// <summary>
         /// Initializes a new instance of the <see cref="SmsClient"/> class.
         /// </summary>
-        /// <param name="gatewayConfig">The configuration for the sms gateway</param>
+        /// <param name="client">Gateway Client</param>
         public SmsClient(IAltinnGatewayClient client)
         {
             _client = client;
@@ -28,7 +28,7 @@ namespace Altinn.Notifications.Sms.Integrations.LinkMobility
         /// <inheritdoc />
         public async Task<Result<string, SmsClientErrorResponse>> SendAsync(Core.Sending.Sms sms)
         {
-            MessageResult result = await _client.SendAsync(new LinkMobilityModel.Sms(sms.Recipient, sms.Message, sms.Sender));
+            MessageResult result = await _client.SendAsync(new LinkMobilityModel.Sms(sms.Sender, sms.Recipient, sms.Message));
 
             if (result.IsStatusOk)
             {

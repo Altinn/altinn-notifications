@@ -1,4 +1,5 @@
 ﻿using Altinn.Notifications.Sms.Core.Status;
+
 using Altinn.Notifications.Sms.Integrations.LinkMobility;
 
 using LinkMobility.PSWin.Client.Model;
@@ -25,7 +26,7 @@ namespace Altinn.Notifications.Sms.Tests.Sms.Integrations
             SmsClient smsClient = new(_clientMock.Object);
 
             // Act
-            var result = await smsClient.SendAsync(new Core.Sending.Sms());
+            var result = await smsClient.SendAsync(new Notifications.Sms.Core.Sending.Sms());
 
             // Assert
             Assert.True(result.IsError);
@@ -54,7 +55,7 @@ namespace Altinn.Notifications.Sms.Tests.Sms.Integrations
             SmsClient smsClient = new(_clientMock.Object);
 
             // Act
-            var result = await smsClient.SendAsync(new Core.Sending.Sms());
+            var result = await smsClient.SendAsync(new Notifications.Sms.Core.Sending.Sms());
 
             // Assert
             Assert.True(result.IsError);
@@ -86,7 +87,7 @@ namespace Altinn.Notifications.Sms.Tests.Sms.Integrations
             SmsClient smsClient = new(_clientMock.Object);
 
             // Act
-            var result = await smsClient.SendAsync(new Core.Sending.Sms());
+            var result = await smsClient.SendAsync(new Notifications.Sms.Core.Sending.Sms());
 
             // Assert
             Assert.True(result.IsSuccess);
