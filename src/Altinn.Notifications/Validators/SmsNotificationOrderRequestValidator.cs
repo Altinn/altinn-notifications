@@ -43,7 +43,7 @@ public class SmsNotificationOrderRequestValidator : AbstractValidator<SmsNotific
             return false;
         }
 
-        string mobileNumberRegexPattern = @"^(([0-9]{5})|([0-9]{8})|(00[0-9]{3,})|(\+[0-9]{3,}))$";
+        string mobileNumberRegexPattern = @"^(?:(\+47[49]\d{7})|(0047[49]\d{7})|(?!((\+47[0-9]*)|(0047[0-9]*)))(([0-9]{5})|([0-9]{8})|(00[0-9]{3,})|(\+[0-9]{3,})))$";
 
         Regex regex = new(mobileNumberRegexPattern, RegexOptions.None, TimeSpan.FromSeconds(1));
 
