@@ -99,7 +99,7 @@ public class OrderMapperTests
     }
 
     [Fact]
-    public void MapToOrderRequest_RecipientsProvided_AreEquivalent()
+    public void ForEmailMapToOrderRequest_RecipientsProvided_AreEquivalent()
     {
         DateTime sendTime = DateTime.UtcNow;
 
@@ -136,14 +136,14 @@ public class OrderMapperTests
         };
 
         // Act
-        var actual = orderRequestExt.MapToOrderRequest("ttd");
+        var actual = orderRequestExt.ForEmailMapToOrderRequest("ttd");
 
         // Assert
         Assert.Equivalent(expected, actual, true);
     }
 
     [Fact]
-    public void MapToOrderRequest_SendTimeLocalConvertedToUtc_AreEquivalent()
+    public void ForEmailMapToOrderRequest_SendTimeLocalConvertedToUtc_AreEquivalent()
     {
         DateTime sendTime = DateTime.Now; // Setting the time in Local time zone
 
@@ -172,7 +172,7 @@ public class OrderMapperTests
         };
 
         // Act
-        var actual = orderRequestExt.MapToOrderRequest("ttd");
+        var actual = orderRequestExt.ForEmailMapToOrderRequest("ttd");
 
         // Assert
         Assert.Equivalent(expected, actual, true);

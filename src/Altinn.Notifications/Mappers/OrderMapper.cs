@@ -16,7 +16,7 @@ public static class OrderMapper
     /// <summary>
     /// Maps a <see cref="EmailNotificationOrderRequestExt"/> to a <see cref="NotificationOrderRequest"/>
     /// </summary>
-    public static NotificationOrderRequest MapToOrderRequest(this EmailNotificationOrderRequestExt extRequest, string creator)
+    public static NotificationOrderRequest ForEmailMapToOrderRequest(this EmailNotificationOrderRequestExt extRequest, string creator)
     {
         var emailTemplate = new EmailTemplate(null, extRequest.Subject, extRequest.Body, (EmailContentType)extRequest.ContentType);
 
@@ -31,6 +31,27 @@ public static class OrderMapper
             new List<INotificationTemplate>() { emailTemplate },
             extRequest.RequestedSendTime.ToUniversalTime(),
             NotificationChannel.Email,
+            recipients);
+    }
+
+    /// <summary>
+    /// Maps a <see cref="SmsNotificationOrderRequestExt"/> to a <see cref="NotificationOrderRequest"/>
+    /// </summary>
+    public static NotificationOrderRequest ForSmsMapToOrderRequest(this SmsNotificationOrderRequestExt extRequest, string creator)
+    {
+        INotificationTemplate smsTemplate = new SmsTemplate(extRequest.SenderNumber, extRequest.Body);
+
+        List<Recipient> recipients = new();
+
+        recipients.AddRange(
+            extRequest.Recipients.Select(r => new Recipient(string.Empty, new List<IAddressPoint>() { new SmsAddressPoint(r.MobileNumber!) })));
+
+        return new NotificationOrderRequest(
+            extRequest.SendersReference,
+            creator,
+            new List<INotificationTemplate>() { smsTemplate },
+            extRequest.RequestedSendTime.ToUniversalTime(),
+            NotificationChannel.Sms,
             recipients);
     }
 

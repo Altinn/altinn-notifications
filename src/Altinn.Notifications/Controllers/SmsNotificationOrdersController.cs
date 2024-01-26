@@ -1,12 +1,10 @@
 ﻿using System.Collections;
 using Altinn.Notifications.Configuration;
-using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
-using Altinn.Notifications.Core.Models.Address;
-using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
+using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Validators;
 
@@ -73,7 +71,7 @@ public class SmsNotificationOrdersController : ControllerBase
             return Forbid();
         }
 
-        NotificationOrderRequest orderRequest = MapToOrderRequest(smsNotificationOrderRequest, creator);
+        NotificationOrderRequest orderRequest = smsNotificationOrderRequest.ForSmsMapToOrderRequest(creator);
         (NotificationOrder? registeredOrder, ServiceError? error) = await _orderRequestService.RegisterNotificationOrder(orderRequest);
 
         if (error != null)
@@ -83,26 +81,5 @@ public class SmsNotificationOrdersController : ControllerBase
 
         string selfLink = registeredOrder!.GetSelfLink();
         return Accepted(selfLink, new OrderIdExt(registeredOrder!.Id));
-    }
-
-    /// <summary>
-    /// Maps a <see cref="SmsNotificationOrderRequestExt"/> to a <see cref="NotificationOrderRequest"/>
-    /// </summary>
-    public static NotificationOrderRequest MapToOrderRequest(SmsNotificationOrderRequestExt extRequest, string creator)
-    {
-        INotificationTemplate smsTemplate = new SmsTemplate(extRequest.SenderNumber, extRequest.Body);
-
-        List<Recipient> recipients = new();
-
-        recipients.AddRange(
-            extRequest.Recipients.Select(r => new Recipient(string.Empty, new List<IAddressPoint>() { new SmsAddressPoint(r.MobileNumber!) })));
-
-        return new NotificationOrderRequest(
-            extRequest.SendersReference,
-            creator,
-            new List<INotificationTemplate>() { smsTemplate },
-            extRequest.RequestedSendTime.ToUniversalTime(),
-            NotificationChannel.Sms,
-            recipients);
     }
 }
