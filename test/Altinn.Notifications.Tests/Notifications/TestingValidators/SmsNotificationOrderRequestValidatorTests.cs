@@ -35,7 +35,7 @@ public class SmsNotificationOrderRequestValidatorTests
     }
 
     [Fact]
-    public void Validate_InvalidSmsFormatProvided_ReturnsFalse()
+    public void Validate_InvalidMobileNumberFormatProvided_ReturnsFalse()
     {
         var order = new SmsNotificationOrderRequestExt()
         {
