@@ -179,6 +179,78 @@ public class OrderMapperTests
     }
 
     [Fact]
+    public void ForSmsMapToOrderRequest_RecipientsProvided_AreEquivalent()
+    {
+        DateTime sendTime = DateTime.UtcNow;
+
+        // Arrange 
+        SmsNotificationOrderRequestExt orderRequestExt = new()
+        {
+            Body = "sms-body",
+            Recipients = new List<RecipientExt>() { new RecipientExt() { MobileNumber = "+4740000001" }, new RecipientExt() { MobileNumber = "+4740000002" } },
+            SendersReference = "senders-reference",
+            RequestedSendTime = sendTime,
+        };
+
+        NotificationOrderRequest expected = new()
+        {
+            SendersReference = "senders-reference",
+            Creator = new Creator("ttd"),
+            Templates = new List<INotificationTemplate>()
+            {
+                new SmsTemplate(
+                    string.Empty,
+                    "sms-body")
+            },
+            RequestedSendTime = sendTime,
+            NotificationChannel = NotificationChannel.Sms,
+            Recipients = new List<Recipient>()
+            {
+                        new Recipient() { AddressInfo = new List<IAddressPoint>() { new SmsAddressPoint("+4740000001") } },
+                        new Recipient() { AddressInfo = new List<IAddressPoint>() { new SmsAddressPoint("+4740000002") } }
+            }
+        };
+
+        // Act
+        var actual = orderRequestExt.ForSmsMapToOrderRequest("ttd");
+
+        // Assert
+        Assert.Equivalent(expected, actual, true);
+    }
+
+    [Fact]
+    public void ForSmsMapToOrderRequest_SendTimeLocalConvertedToUtc_AreEquivalent()
+    {
+        DateTime sendTime = DateTime.Now; // Setting the time in Local time zone
+
+        // Arrange
+        SmsNotificationOrderRequestExt orderRequestExt = new()
+        {
+            Body = "sms-body",
+            RequestedSendTime = sendTime // Local time zone
+        };
+
+        NotificationOrderRequest expected = new()
+        {
+            Creator = new Creator("ttd"),
+            Templates = new List<INotificationTemplate>()
+            {
+                new SmsTemplate(
+                    string.Empty,
+                    "sms-body")
+            },
+            RequestedSendTime = sendTime.ToUniversalTime(),  // Expecting the time in UTC time zone
+            NotificationChannel = NotificationChannel.Sms
+        };
+
+        // Act
+        var actual = orderRequestExt.ForSmsMapToOrderRequest("ttd");
+
+        // Assert
+        Assert.Equivalent(expected, actual, true);
+    }
+
+    [Fact]
     public void MapToNotificationOrderWithStatusExt_EmailStatusProvided_AreEquivalent()
     {
         // Arrange
