@@ -1,5 +1,5 @@
 {
 	"subject": "Automated SMS from Altinn",
 	"body": "This is an automated SMS generated during testing of Altinn Notifications",
-	"senderNumber": "+4740000001"
+	"senderNumber": "Altinn"
 }
