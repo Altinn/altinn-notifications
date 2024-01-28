@@ -31,6 +31,11 @@ export var notifications = {
   orders_status: function (orderId) {
     return `https://platform.${baseUrl}/notifications/api/v1/orders/${orderId}/status`;
   },
+  orders_sms:
+    "https://platform." + baseUrl + "/notifications/api/v1/orders/sms/",
+  orders_status: function (orderId) {
+    return `https://platform.${baseUrl}/notifications/api/v1/orders/${orderId}/status`;
+  },
   orders_fromId: function (orderId) {
     return `https://platform.${baseUrl}/notifications/api/v1/orders/${orderId}`;
   },
