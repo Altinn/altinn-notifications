@@ -3,6 +3,7 @@
 using Altinn.Notifications.Models;
 
 using FluentValidation;
+using PhoneNumbers;
 
 namespace Altinn.Notifications.Validators;
 
@@ -49,6 +50,20 @@ public class SmsNotificationOrderRequestValidator : AbstractValidator<SmsNotific
 
         Match match = regex.Match(mobileNumber);
 
-        return match.Success;
+        if (!match.Success)
+        {
+            return false;
+        }
+
+        PhoneNumberUtil phoneNumberUtil = PhoneNumberUtil.GetInstance();
+
+        mobileNumber = !mobileNumber.StartsWith("+")
+                    ? mobileNumber.StartsWith("00")
+                    ? "+" + mobileNumber.Remove(0, 2)
+                    : "+47" + mobileNumber
+                    : mobileNumber;
+
+        PhoneNumber phoneNumber = phoneNumberUtil.Parse(mobileNumber, null);
+        return phoneNumberUtil.IsValidNumber(phoneNumber);
     }
 }

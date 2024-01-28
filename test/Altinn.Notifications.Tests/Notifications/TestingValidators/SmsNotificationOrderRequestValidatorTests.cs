@@ -121,7 +121,7 @@ public class SmsNotificationOrderRequestValidatorTests
         var order = new SmsNotificationOrderRequestExt()
         {
             SenderNumber = "+4740000001",
-            Recipients = new List<RecipientExt>() { new RecipientExt() { MobileNumber = "+4740000000" } },
+            Recipients = new List<RecipientExt>() { new RecipientExt() { MobileNumber = "+4740085041" } },
             Body = "This is an SMS body",
             RequestedSendTime = DateTime.UtcNow.AddDays(-1)
         };
@@ -154,7 +154,7 @@ public class SmsNotificationOrderRequestValidatorTests
     [InlineData("+4790000000", true)]
     [InlineData("+4750000004", false)]
     [InlineData("+47900000001", false)]
-    [InlineData("+14790000000", true)]
+    [InlineData("+14790000000", false)]
     [InlineData("004790000002", true)]
     [InlineData("", false)]
     [InlineData("111100000", false)]

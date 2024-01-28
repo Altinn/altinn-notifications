@@ -16,7 +16,7 @@ public static class OrderMapper
     /// <summary>
     /// Maps a <see cref="EmailNotificationOrderRequestExt"/> to a <see cref="NotificationOrderRequest"/>
     /// </summary>
-    public static NotificationOrderRequest ForEmailMapToOrderRequest(this EmailNotificationOrderRequestExt extRequest, string creator)
+    public static NotificationOrderRequest MapToOrderRequest(this EmailNotificationOrderRequestExt extRequest, string creator)
     {
         var emailTemplate = new EmailTemplate(null, extRequest.Subject, extRequest.Body, (EmailContentType)extRequest.ContentType);
 
@@ -37,7 +37,7 @@ public static class OrderMapper
     /// <summary>
     /// Maps a <see cref="SmsNotificationOrderRequestExt"/> to a <see cref="NotificationOrderRequest"/>
     /// </summary>
-    public static NotificationOrderRequest ForSmsMapToOrderRequest(this SmsNotificationOrderRequestExt extRequest, string creator)
+    public static NotificationOrderRequest MapToOrderRequest(this SmsNotificationOrderRequestExt extRequest, string creator)
     {
         INotificationTemplate smsTemplate = new SmsTemplate(extRequest.SenderNumber, extRequest.Body);
 

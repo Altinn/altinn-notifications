@@ -70,7 +70,7 @@ public class EmailNotificationOrdersController : ControllerBase
             return Forbid();
         }
 
-        var orderRequest = emailNotificationOrderRequest.ForEmailMapToOrderRequest(creator);
+        var orderRequest = emailNotificationOrderRequest.MapToOrderRequest(creator);
         (NotificationOrder? registeredOrder, ServiceError? error) = await _orderRequestService.RegisterNotificationOrder(orderRequest);
 
         if (error != null)

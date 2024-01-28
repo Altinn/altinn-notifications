@@ -136,7 +136,7 @@ public class OrderMapperTests
         };
 
         // Act
-        var actual = orderRequestExt.ForEmailMapToOrderRequest("ttd");
+        var actual = orderRequestExt.MapToOrderRequest("ttd");
 
         // Assert
         Assert.Equivalent(expected, actual, true);
@@ -172,7 +172,7 @@ public class OrderMapperTests
         };
 
         // Act
-        var actual = orderRequestExt.ForEmailMapToOrderRequest("ttd");
+        var actual = orderRequestExt.MapToOrderRequest("ttd");
 
         // Assert
         Assert.Equivalent(expected, actual, true);
@@ -212,7 +212,7 @@ public class OrderMapperTests
         };
 
         // Act
-        var actual = orderRequestExt.ForSmsMapToOrderRequest("ttd");
+        var actual = orderRequestExt.MapToOrderRequest("ttd");
 
         // Assert
         Assert.Equivalent(expected, actual, true);
@@ -244,7 +244,7 @@ public class OrderMapperTests
         };
 
         // Act
-        var actual = orderRequestExt.ForSmsMapToOrderRequest("ttd");
+        var actual = orderRequestExt.MapToOrderRequest("ttd");
 
         // Assert
         Assert.Equivalent(expected, actual, true);

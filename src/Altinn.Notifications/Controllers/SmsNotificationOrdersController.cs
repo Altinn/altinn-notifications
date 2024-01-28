@@ -71,7 +71,7 @@ public class SmsNotificationOrdersController : ControllerBase
             return Forbid();
         }
 
-        NotificationOrderRequest orderRequest = smsNotificationOrderRequest.ForSmsMapToOrderRequest(creator);
+        NotificationOrderRequest orderRequest = smsNotificationOrderRequest.MapToOrderRequest(creator);
         (NotificationOrder? registeredOrder, ServiceError? error) = await _orderRequestService.RegisterNotificationOrder(orderRequest);
 
         if (error != null)
