@@ -23,7 +23,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.SmsNotificationsOr
 
 public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<SmsNotificationOrdersController>>, IDisposable
 {
-    private const string _basePath = "/notifications/api/v1/orders/email";
+    private const string _basePath = "/notifications/api/v1/orders/sms";
 
     private readonly IntegrationTestWebApplicationFactory<SmsNotificationOrdersController> _factory;
 
