@@ -7,7 +7,7 @@
 	mobilenumber TEXT NOT NULL,
 	result smsnotificationresulttype NOT NULL,
 	gatewayreference TEXT,
-	segments INT,
+	smscount INT,
 	resulttime TIMESTAMPTZ NOT NULL,
 	expirytime TIMESTAMPTZ NOT NULL	
 );
