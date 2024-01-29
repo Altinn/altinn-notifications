@@ -39,9 +39,14 @@ public class SmsNotificationOrderRequestValidator : AbstractValidator<SmsNotific
     /// <returns>A boolean indicating that the mobile number is valid or not</returns>
     internal static bool IsValidMobileNumber(string? mobileNumber)
     {
-        if (string.IsNullOrEmpty(mobileNumber))
+        if (string.IsNullOrEmpty(mobileNumber) || (!mobileNumber.StartsWith('+') && !mobileNumber.StartsWith("00")))
         {
             return false;
+        }
+
+        if (mobileNumber.StartsWith("00"))
+        {
+            mobileNumber = "+" + mobileNumber.Remove(0, 2);
         }
 
         string mobileNumberRegexPattern = @"^(?:(\+47[49]\d{7})|(0047[49]\d{7})|(?!((\+47[0-9]*)|(0047[0-9]*)))(([0-9]{8})|(00[0-9]{3,})|(\+[0-9]{3,})))$";
@@ -56,19 +61,6 @@ public class SmsNotificationOrderRequestValidator : AbstractValidator<SmsNotific
         }
 
         PhoneNumberUtil phoneNumberUtil = PhoneNumberUtil.GetInstance();
-
-        if (!mobileNumber.StartsWith('+'))
-        {
-            if (mobileNumber.StartsWith("00"))
-            {
-                mobileNumber = "+" + mobileNumber.Remove(0, 2);
-            }
-            else
-            {
-                mobileNumber = "+47" + mobileNumber;
-            }
-        }
-
         PhoneNumber phoneNumber = phoneNumberUtil.Parse(mobileNumber, null);
         return phoneNumberUtil.IsValidNumber(phoneNumber);
     }
