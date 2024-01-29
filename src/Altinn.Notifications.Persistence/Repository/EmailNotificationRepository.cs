@@ -11,7 +11,7 @@ using NpgsqlTypes;
 namespace Altinn.Notifications.Persistence.Repository;
 
 /// <summary>
-/// Implementation of order repository logic
+/// Implementation of email notification repository logic
 /// </summary>
 public class EmailNotificationRepository : IEmailNotificationRepository
 {

@@ -31,7 +31,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
         [Fact]
         public async Task Create_OrderWithSmsTemplate_SmsTextsPersisted()
         {
-            // Arrange
+            // Arrange  
             OrderRepository repo = (OrderRepository)ServiceUtil
                 .GetServices(new List<Type>() { typeof(IOrderRepository) })
                 .First(i => i.GetType() == typeof(OrderRepository));
@@ -44,7 +44,8 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 Templates = new List<INotificationTemplate>()
                 {
                     new SmsTemplate("Altinn", "This is the body")
-                }
+                },
+                RequestedSendTime = DateTime.UtcNow
             };
 
             orderIdsToDelete.Add(order.Id);
