@@ -57,11 +57,17 @@ public class SmsNotificationOrderRequestValidator : AbstractValidator<SmsNotific
 
         PhoneNumberUtil phoneNumberUtil = PhoneNumberUtil.GetInstance();
 
-        mobileNumber = !mobileNumber.StartsWith("+")
-                    ? mobileNumber.StartsWith("00")
-                    ? "+" + mobileNumber.Remove(0, 2)
-                    : "+47" + mobileNumber
-                    : mobileNumber;
+        if (!mobileNumber.StartsWith('+'))
+        {
+            if (mobileNumber.StartsWith("00"))
+            {
+                mobileNumber = "+" + mobileNumber.Remove(0, 2);
+            }
+            else
+            {
+                mobileNumber = "+47" + mobileNumber;
+            }
+        }
 
         PhoneNumber phoneNumber = phoneNumberUtil.Parse(mobileNumber, null);
         return phoneNumberUtil.IsValidNumber(phoneNumber);
