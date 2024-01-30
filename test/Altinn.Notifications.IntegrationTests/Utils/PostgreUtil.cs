@@ -106,7 +106,6 @@ public static class PostgreUtil
         await reader.ReadAsync();
 
         T result = reader.GetValue<T>(0);
-        await reader.CloseAsync();
         return result;
     }
 
