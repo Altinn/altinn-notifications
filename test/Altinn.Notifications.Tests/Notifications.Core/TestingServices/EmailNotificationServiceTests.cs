@@ -106,7 +106,7 @@ public class EmailNotificationServiceTests
     }
 
     [Fact]
-    public async Task CreateEmailNotification_ToAddressDefined_ResultFailedRecipientNotDefined()
+    public async Task CreateEmailNotification_ToAddressMissing_ResultFailedRecipientNotDefined()
     {
         // Arrange
         Guid id = Guid.NewGuid();
