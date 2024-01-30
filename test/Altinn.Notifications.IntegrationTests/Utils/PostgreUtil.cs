@@ -106,7 +106,7 @@ public static class PostgreUtil
         await reader.ReadAsync();
 
         T result = reader.GetValue<T>(0);
-
+        await reader.CloseAsync();
         return result;
     }
 
@@ -115,6 +115,6 @@ public static class PostgreUtil
         NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
 
         await using NpgsqlCommand pgcom = dataSource.CreateCommand(query);
-        pgcom.ExecuteNonQuery();
+        pgcom.ExecuteNonQuery();        
     }
 }
