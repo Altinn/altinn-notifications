@@ -27,7 +27,7 @@ public class SmsNotification : INotification<SmsNotificationResultType>
     /// <summary>
     /// Get or sets the mobilenumber of the sms notification
     /// </summary>
-    public string MobileNumber { get; internal set; } = string.Empty;
+    public string RecipientNumber { get; internal set; } = string.Empty;
 
     /// <inheritdoc/>
     public NotificationResult<SmsNotificationResultType> SendResult { get; internal set; } = new(SmsNotificationResultType.New, DateTime.UtcNow);

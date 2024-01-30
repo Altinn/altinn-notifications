@@ -47,7 +47,7 @@ public class SmsRepositoryTests : IAsyncLifetime
             OrderId = orderId,
             RequestedSendTime = DateTime.UtcNow,
             RecipientId = "12345678",
-            MobileNumber = "999999999",
+            RecipientNumber = "999999999",
         };
 
         await repo.AddNotification(smsNotification, DateTime.UtcNow);
