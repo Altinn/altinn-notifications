@@ -1,11 +1,12 @@
-﻿using Altinn.Notifications.Core.Enums;
-using Altinn.Notifications.Core.Models;
+﻿using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Extensions;
 
 using Microsoft.ApplicationInsights;
+
 using Npgsql;
+
 using NpgsqlTypes;
 
 namespace Altinn.Notifications.Persistence.Repository;
@@ -61,8 +62,6 @@ public class SmsNotificationRepository : ISmsNotificationRepository
         {
             while (await reader.ReadAsync())
             {
-                EmailContentType emailContentType = (EmailContentType)Enum.Parse(typeof(EmailContentType), reader.GetValue<string>("contenttype"));
-
                 var sms = new Sms(
                     reader.GetValue<Guid>("alternateid"),
                     reader.GetValue<string>("sendernumber"),
