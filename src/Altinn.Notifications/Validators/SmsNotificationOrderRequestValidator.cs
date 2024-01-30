@@ -21,7 +21,7 @@ public class SmsNotificationOrderRequestValidator : AbstractValidator<SmsNotific
             .NotEmpty()
             .WithMessage("One or more recipient is required.")
             .Must(recipients => recipients.TrueForAll(a => IsValidMobileNumber(a.MobileNumber)))
-            .WithMessage("A valid mobile number must be provided for all recipients.");
+            .WithMessage("A valid mobile number starting with country code must be provided for all recipients.");
 
         RuleFor(order => order.RequestedSendTime)
             .Must(sendTime => sendTime.Kind != DateTimeKind.Unspecified)
