@@ -31,6 +31,7 @@ public static class ServiceCollectionExtensions
         return services
         .AddSingleton<IOrderRepository, OrderRepository>()
         .AddSingleton<IEmailNotificationRepository, EmailNotificationRepository>()
+        .AddSingleton<ISmsNotificationRepository, SmsNotificationRepository>()
         .AddSingleton<INotificationSummaryRepository, NotificationSummaryRepository>()
         .AddSingleton<IResourceLimitRepository, ResourceLimitRepository>()
         .AddNpgsqlDataSource(connectionString, builder =>
