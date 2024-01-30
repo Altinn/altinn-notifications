@@ -34,11 +34,17 @@ public class SmsNotificationService : ISmsNotificationService
     {
         SmsAddressPoint? addressPoint = recipient.AddressInfo.Find(a => a.AddressType == AddressType.Sms) as SmsAddressPoint;
 
-        await CreateNotificationForRecipient(orderId, requestedSendTime, recipient.RecipientId, addressPoint!.MobileNumber);
-
+        if (!string.IsNullOrEmpty(addressPoint?.MobileNumber))
+        {
+            await CreateNotificationForRecipient(orderId, requestedSendTime, recipient.RecipientId, addressPoint!.MobileNumber, SmsNotificationResultType.New);
+        }
+        else
+        {
+            await CreateNotificationForRecipient(orderId, requestedSendTime, recipient.RecipientId, string.Empty, SmsNotificationResultType.Failed_RecipientNotIdentified);
+        }
     }
 
-    private async Task CreateNotificationForRecipient(Guid orderId, DateTime requestedSendTime, string recipientId, string recipientNumber)
+    private async Task CreateNotificationForRecipient(Guid orderId, DateTime requestedSendTime, string recipientId, string recipientNumber, SmsNotificationResultType type)
     {
         var smsNotification = new SmsNotification()
         {
@@ -47,7 +53,7 @@ public class SmsNotificationService : ISmsNotificationService
             RequestedSendTime = requestedSendTime,
             RecipientNumber = recipientNumber,
             RecipientId = string.IsNullOrEmpty(recipientId) ? null : recipientId,
-            SendResult = new(SmsNotificationResultType.New, _dateTime.UtcNow())
+            SendResult = new(type, _dateTime.UtcNow())
         };
 
         await _repository.AddNotification(smsNotification, requestedSendTime.AddHours(1));
