@@ -1,60 +1,79 @@
 ﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Extensions;
 
 using Microsoft.ApplicationInsights;
-
 using Npgsql;
+using NpgsqlTypes;
 
-namespace Altinn.Notifications.Persistence.Repository
+namespace Altinn.Notifications.Persistence.Repository;
+
+/// <summary>
+/// Implementation of sms repository logic
+/// </summary>
+public class SmsNotificationRepository : ISmsNotificationRepository
 {
+    private readonly NpgsqlDataSource _dataSource;
+    private readonly TelemetryClient? _telemetryClient;
+
+    private const string _insertSmsNotificationSql = "call notifications.insertsmsnotification($1, $2, $3, $4, $5, $6, $7)"; // (__orderid, _alternateid, _recipientid, _mobilenumber, _result, _resulttime, _expirytime)
+    private const string _getSmsNotificationsSql = "select * from notifications.getsms_statusnew_updatestatus()";
+
     /// <summary>
-    /// Implementation of sms notification repository logic
+    /// Initializes a new instance of the <see cref="SmsNotificationRepository"/> class.
     /// </summary>
-    public class SmsNotificationRepository : ISmsNotificationRepository
+    /// <param name="dataSource">The npgsql data source.</param>
+    /// <param name="telemetryClient">Telemetry client</param>
+    public SmsNotificationRepository(NpgsqlDataSource dataSource, TelemetryClient? telemetryClient = null)
     {
-        private readonly NpgsqlDataSource _dataSource;
-        private readonly TelemetryClient? _telemetryClient;
+        _dataSource = dataSource;
+        _telemetryClient = telemetryClient;
+    }
 
-        private const string _getSmsNotificationsSql = "select * from notifications.getsms_statusnew_updatestatus()";
+    /// <inheritdoc/>
+    public async Task AddNotification(SmsNotification notification, DateTime expiry)
+    {
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_insertSmsNotificationSql);
+        using TelemetryTracker tracker = new(_telemetryClient, pgcom);
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="SmsNotificationRepository"/> class.
-        /// </summary>
-        /// <param name="dataSource">The npgsql data source.</param>
-        /// <param name="telemetryClient">Telemetry client</param>
-        public SmsNotificationRepository(NpgsqlDataSource dataSource, TelemetryClient? telemetryClient = null)
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notification.OrderId);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notification.Id);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.RecipientId ?? (object)DBNull.Value);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.RecipientNumber);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.SendResult.Result.ToString());
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, notification.SendResult.ResultTime);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, expiry);
+
+        await pgcom.ExecuteNonQueryAsync();
+        tracker.Track();
+    }
+
+    /// <inheritdoc/>
+    public async Task<List<Sms>> GetNewNotifications()
+    {
+        List<Sms> searchResult = new();
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getSmsNotificationsSql);
+        using TelemetryTracker tracker = new(_telemetryClient, pgcom);
+
+        await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync())
         {
-            _dataSource = dataSource;
-            _telemetryClient = telemetryClient;
-        }
-
-        /// <inheritdoc/>
-        public async Task<List<Sms>> GetNewNotifications()
-        {
-            List<Sms> searchResult = new();
-            await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getSmsNotificationsSql);
-            using TelemetryTracker tracker = new(_telemetryClient, pgcom);
-
-            await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync())
+            while (await reader.ReadAsync())
             {
-                while (await reader.ReadAsync())
-                {
-                    EmailContentType emailContentType = (EmailContentType)Enum.Parse(typeof(EmailContentType), reader.GetValue<string>("contenttype"));
+                EmailContentType emailContentType = (EmailContentType)Enum.Parse(typeof(EmailContentType), reader.GetValue<string>("contenttype"));
 
-                    var sms = new Sms(
-                        reader.GetValue<Guid>("alternateid"),
-                        reader.GetValue<string>("sendernumber"),
-                        reader.GetValue<string>("mobilenumber"),
-                        reader.GetValue<string>("body"));
+                var sms = new Sms(
+                    reader.GetValue<Guid>("alternateid"),
+                    reader.GetValue<string>("sendernumber"),
+                    reader.GetValue<string>("mobilenumber"),
+                    reader.GetValue<string>("body"));
 
-                    searchResult.Add(sms);
-                }
+                searchResult.Add(sms);
             }
-
-            tracker.Track();
-            return searchResult;
         }
+
+        tracker.Track();
+        return searchResult;
     }
 }
