@@ -10,7 +10,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
 public class SmsRepositoryTests : IAsyncLifetime
 {
-    private List<Guid> orderIdsToDelete;
+    private readonly List<Guid> orderIdsToDelete;
 
     public SmsRepositoryTests()
     {
