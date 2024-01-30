@@ -55,7 +55,7 @@ public class SmsRepositoryTests : IAsyncLifetime
         // Assert
         string sql = $@"SELECT count(1) 
               FROM notifications.smsnotifications o
-              WHERE o.alternateid = '{alternateId}'";
+              WHERE o.alternateid = '{notificationId}'";
 
         int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
 
