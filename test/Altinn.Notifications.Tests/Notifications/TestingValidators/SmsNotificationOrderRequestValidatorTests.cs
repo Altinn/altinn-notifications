@@ -159,9 +159,9 @@ public class SmsNotificationOrderRequestValidatorTests
     [InlineData("", false)]
     [InlineData("111100000", false)]
     [InlineData("dasdsadSASA", false)]
-    public void IsValidMobileNumber(string email, bool expectedResult)
+    public void IsValidMobileNumber(string mobileNumber, bool expectedResult)
     {
-        bool actual = SmsNotificationOrderRequestValidator.IsValidMobileNumber(email);
+        bool actual = SmsNotificationOrderRequestValidator.IsValidMobileNumber(mobileNumber);
         Assert.Equal(expectedResult, actual);
     } 
 }
