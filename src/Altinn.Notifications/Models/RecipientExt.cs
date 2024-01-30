@@ -15,4 +15,10 @@ public class RecipientExt
     /// </summary>
     [JsonPropertyName("emailAddress")]
     public string? EmailAddress { get; set; }
+
+    /// <summary>
+    /// Gets or sets the mobile number of the recipient
+    /// </summary>
+    [JsonPropertyName("mobileNumber")]
+    public string? MobileNumber { get; set; }
 }
