@@ -49,17 +49,6 @@ public class SmsNotificationOrderRequestValidator : AbstractValidator<SmsNotific
             mobileNumber = "+" + mobileNumber.Remove(0, 2);
         }
 
-        string mobileNumberRegexPattern = @"^(?:(\+47[49]\d{7})|(0047[49]\d{7})|(?!((\+47[0-9]*)|(0047[0-9]*)))(([0-9]{8})|(00[0-9]{3,})|(\+[0-9]{3,})))$";
-
-        Regex regex = new(mobileNumberRegexPattern, RegexOptions.None, TimeSpan.FromSeconds(1));
-
-        Match match = regex.Match(mobileNumber);
-
-        if (!match.Success)
-        {
-            return false;
-        }
-
         PhoneNumberUtil phoneNumberUtil = PhoneNumberUtil.GetInstance();
         PhoneNumber phoneNumber = phoneNumberUtil.Parse(mobileNumber, null);
         return phoneNumberUtil.IsValidNumber(phoneNumber);
