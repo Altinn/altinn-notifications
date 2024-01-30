@@ -40,10 +40,10 @@ public class SmsRepositoryTests : IAsyncLifetime
             .GetServices(new List<Type>() { typeof(ISmsNotificationRepository) })
             .First(i => i.GetType() == typeof(SmsNotificationRepository));
 
-        Guid alternateId = Guid.NewGuid();
+        Guid notificationId = Guid.NewGuid();
         SmsNotification smsNotification = new()
         {
-            Id = alternateId,
+            Id = notificationId,
             OrderId = orderId,
             RequestedSendTime = DateTime.UtcNow,
             RecipientId = "12345678",
@@ -55,7 +55,7 @@ public class SmsRepositoryTests : IAsyncLifetime
         // Assert
         string sql = $@"SELECT count(1) 
               FROM notifications.smsnotifications o
-              WHERE o.alternateid = '{alternateId}'";
+              WHERE o.alternateid = '{notificationId}'";
 
         int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
 
