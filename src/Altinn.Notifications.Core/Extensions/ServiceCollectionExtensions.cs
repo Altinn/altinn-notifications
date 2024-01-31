@@ -31,6 +31,8 @@ public static class ServiceCollectionExtensions
             .AddSingleton<IGuidService, GuidService>()
             .AddSingleton<IDateTimeService, DateTimeService>()
             .AddSingleton<IOrderProcessingService, OrderProcessingService>()
+            .AddSingleton<IEmailOrderProcessingService, EmailOrderProcessingService>()
+            .AddSingleton<ISmsOrderProcessingService, SmsOrderProcessingService>()
             .AddSingleton<IGetOrderService, GetOrderService>()
             .AddSingleton<IOrderRequestService, OrderRequestService>()
             .AddSingleton<INotificationSummaryService, NotificationSummaryService>()
