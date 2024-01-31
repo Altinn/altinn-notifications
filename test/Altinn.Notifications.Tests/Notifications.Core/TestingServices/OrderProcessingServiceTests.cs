@@ -123,6 +123,58 @@ public class OrderProcessingServiceTests
                 Times.Never);
     }
 
+    [Fact]
+    public async Task ProcessOrderRetry_SmsOrder_SmsServiceCalled()
+    {
+        // Arrange 
+        NotificationOrder order = new()
+        {
+            NotificationChannel = NotificationChannel.Sms,
+        };
+
+        var smsMockService = new Mock<ISmsOrderProcessingService>();
+        smsMockService.Setup(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>()));
+
+        var emailMockService = new Mock<IEmailOrderProcessingService>();
+        emailMockService.Setup(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>()));
+
+        var orderProcessingService = GetTestService(emailMock: emailMockService.Object, smsMock: smsMockService.Object);
+
+        // Act
+        await orderProcessingService.ProcessOrderRetry(order);
+
+        // Assert
+        smsMockService.Verify(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Once);
+        emailMockService.Verify(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ProcessOrderRetry_SerivceThrowsException_ProcessingStatusIsNotSet()
+    {
+        // Arrange 
+        NotificationOrder order = new()
+        {
+            NotificationChannel = NotificationChannel.Sms,
+        };
+
+        var smsMockService = new Mock<ISmsOrderProcessingService>();
+        smsMockService.Setup(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>())).Throws(new Exception());
+
+        var repoMock = new Mock<IOrderRepository>();
+        repoMock.Setup(r => r.SetProcessingStatus(It.IsAny<Guid>(), It.Is<OrderProcessingStatus>(s => s.Equals(OrderProcessingStatus.Completed))));
+
+        var orderProcessingService = GetTestService(repo: repoMock.Object, smsMock: smsMockService.Object);
+
+        // Act      
+        await Assert.ThrowsAsync<Exception>(async () => await orderProcessingService.ProcessOrderRetry(order));
+
+        // Assert
+        smsMockService.Verify(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Once);
+        repoMock.Verify(
+                r => r.SetProcessingStatus(It.IsAny<Guid>(), It.Is<OrderProcessingStatus>(s => s.Equals(OrderProcessingStatus.Completed))),
+                Times.Never);
+    }
+
     private static OrderProcessingService GetTestService(
         IOrderRepository? repo = null,
         IEmailOrderProcessingService? emailMock = null,
