@@ -136,7 +136,7 @@ public class OrderProcessingService : IOrderProcessingService
                 sr.RecipientId == (string.IsNullOrEmpty(recipient.RecipientId) ? null : recipient.RecipientId)
                 && sr.MobileNumber.Equals(addressPoint?.MobileNumber)))
             {
-                await _emailService.CreateNotification(order.Id, order.RequestedSendTime, recipient);
+                await _smsService.CreateNotification(order.Id, order.RequestedSendTime, recipient);
             }
         }
     }
