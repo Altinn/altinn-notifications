@@ -9,6 +9,26 @@ namespace Altinn.Notifications.IntegrationTests.Utils;
 
 public static class TestdataUtil
 {
+    public static (NotificationOrder Order, SmsNotification Notification) GetOrderAndSmsNotification()
+    {
+        NotificationOrder order = NotificationOrder_SmsTemplate_OneRecipient();
+        order.Id = Guid.NewGuid();
+        var recipient = order.Recipients[0];
+        SmsAddressPoint? addressPoint = recipient.AddressInfo.Find(a => a.AddressType == AddressType.Sms) as SmsAddressPoint;
+
+        var smsNotification = new SmsNotification()
+        {
+            Id = Guid.NewGuid(),
+            OrderId = order.Id,
+            RequestedSendTime = order.RequestedSendTime,
+            RecipientNumber = addressPoint!.MobileNumber,
+            RecipientId = recipient.RecipientId,
+            SendResult = new(SmsNotificationResultType.New, DateTime.UtcNow)
+        };
+
+        return (order, smsNotification);
+    }
+
     public static (NotificationOrder Order, EmailNotification Notification) GetOrderAndEmailNotification()
     {
         NotificationOrder order = NotificationOrder_EmailTemplate_OneRecipient();
@@ -63,6 +83,45 @@ public static class TestdataUtil
                         {
                             AddressType = AddressType.Email,
                             EmailAddress = "recipient1@domain.com"
+                        }
+                    }
+                }
+            }
+        };
+    }
+
+    /// <summary>
+    /// NOTE! Overwrite id with a new GUID to ensure it is unique in the test scope.
+    /// </summary>
+    public static NotificationOrder NotificationOrder_SmsTemplate_OneRecipient()
+    {
+        return new NotificationOrder()
+        {
+            SendersReference = "local-testing",
+            Templates = new List<INotificationTemplate>()
+            {
+                new SmsTemplate()
+                {
+                    Type = NotificationTemplateType.Sms,
+                    Body = "email-body",
+                    SenderNumber = "Altinn local test"
+                }
+            },
+            RequestedSendTime = new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc),
+            NotificationChannel = NotificationChannel.Sms,
+            Creator = new("ttd"),
+            Created = new DateTime(2023, 06, 16, 08, 45, 00, DateTimeKind.Utc),
+            Recipients = new List<Recipient>()
+            {
+                new Recipient()
+                {
+                    RecipientId = "recipient1",
+                    AddressInfo = new()
+                    {
+                        new SmsAddressPoint()
+                        {
+                            AddressType = AddressType.Sms,
+                            MobileNumber = "+4799999999"
                         }
                     }
                 }

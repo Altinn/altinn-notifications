@@ -1,18 +1,19 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
+
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
-public class SmsRepositoryTests : IAsyncLifetime
+public class SmsNotificationRepositoryTests : IAsyncLifetime
 {
-    private List<Guid> orderIdsToDelete;
+    private readonly List<Guid> orderIdsToDelete;
 
-    public SmsRepositoryTests()
+    public SmsNotificationRepositoryTests()
     {
         orderIdsToDelete = [];
     }
@@ -29,7 +30,7 @@ public class SmsRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Create_SmsNotification()
+    public async Task AddNotification()
     {
         // Arrange
         Guid orderId = await PostgreUtil.PopulateDBWithOrderAndReturnId();
@@ -60,5 +61,23 @@ public class SmsRepositoryTests : IAsyncLifetime
         int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
 
         Assert.Equal(1, actualCount);
-    }   
+    }
+
+    [Fact]
+    public async Task GetNewNotifications()
+    {
+        // Arrange
+        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
+        orderIdsToDelete.Add(order.Id);
+
+        SmsNotificationRepository repo = (SmsNotificationRepository)ServiceUtil
+          .GetServices(new List<Type>() { typeof(ISmsNotificationRepository) })
+          .First(i => i.GetType() == typeof(SmsNotificationRepository));
+
+        // Act
+        List<Sms> smsToBeSent = await repo.GetNewNotifications();
+
+        // Assert
+        Assert.NotEmpty(smsToBeSent.Where(s => s.NotificationId == smsNotification.Id));
+    }
 }

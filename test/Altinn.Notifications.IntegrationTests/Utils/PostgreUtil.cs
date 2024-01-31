@@ -71,6 +71,25 @@ public static class PostgreUtil
         return o;
     }
 
+    public static async Task<(NotificationOrder Order, SmsNotification SmsNotification)> PopulateDBWithOrderAndSmsNotification(string? sendersReference = null)
+    {
+        (NotificationOrder order, SmsNotification smsNotification) = TestdataUtil.GetOrderAndSmsNotification();
+        var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IOrderRepository), typeof(ISmsNotificationRepository) });
+
+        OrderRepository orderRepo = (OrderRepository)serviceList.First(i => i.GetType() == typeof(OrderRepository));
+        SmsNotificationRepository notificationRepo = (SmsNotificationRepository)serviceList.First(i => i.GetType() == typeof(SmsNotificationRepository));
+
+        if (sendersReference != null)
+        {
+            order.SendersReference = sendersReference;
+        }
+
+        await orderRepo.Create(order);
+        await notificationRepo.AddNotification(smsNotification, DateTime.UtcNow.AddDays(1));
+
+        return (order, smsNotification);
+    }
+
     public static async Task DeleteOrderFromDb(string sendersRef)
     {
         string sql = $"delete from notifications.orders where sendersreference = '{sendersRef}'";
@@ -87,7 +106,6 @@ public static class PostgreUtil
         await reader.ReadAsync();
 
         T result = reader.GetValue<T>(0);
-
         return result;
     }
 

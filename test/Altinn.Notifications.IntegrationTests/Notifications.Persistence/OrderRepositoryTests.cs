@@ -10,7 +10,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
 {
     public class OrderRepositoryTests : IAsyncLifetime
     {
-        private List<Guid> orderIdsToDelete;
+        private readonly List<Guid> orderIdsToDelete;
 
         public OrderRepositoryTests()
         {
@@ -44,7 +44,8 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 Templates = new List<INotificationTemplate>()
                 {
                     new SmsTemplate("Altinn", "This is the body")
-                }
+                },
+                RequestedSendTime = DateTime.UtcNow
             };
 
             orderIdsToDelete.Add(order.Id);
