@@ -4,33 +4,27 @@ using System.Text.Json.Serialization;
 namespace Altinn.Notifications.Models;
 
 /// <summary>
-/// Class representing an email notiication order request
+/// Class representing an SMS notiication order request
 /// </summary>
 /// <remarks>
 /// External representation to be used in the API.
 /// </remarks>
-public class EmailNotificationOrderRequestExt
+public class SmsNotificationOrderRequestExt
 {
     /// <summary>
-    /// Gets or sets the subject of the email 
+    /// Gets or sets the sender number of the SMS 
     /// </summary>
-    [JsonPropertyName("subject")]
-    public string Subject { get; set; } = string.Empty;
+    [JsonPropertyName("senderNumber")]
+    public string SenderNumber { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the body of the email
+    /// Gets or sets the body of the SMS
     /// </summary>
     [JsonPropertyName("body")]
     public string Body { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the content type of the email
-    /// </summary>
-    [JsonPropertyName("contentType")]
-    public EmailContentTypeExt ContentType { get; set; } = EmailContentTypeExt.Plain;
-
-    /// <summary>
-    /// Gets or sets the send time of the email. Defaults to UtcNow.
+    /// Gets or sets the send time of the SMS. Defaults to UtcNow.
     /// </summary>
     [JsonPropertyName("requestedSendTime")]
     public DateTime RequestedSendTime { get; set; } = DateTime.UtcNow;
@@ -48,7 +42,7 @@ public class EmailNotificationOrderRequestExt
     public List<RecipientExt> Recipients { get; set; } = new List<RecipientExt>();
 
     /// <summary>
-    /// Json serialized the <see cref="EmailNotificationOrderRequestExt"/>
+    /// Json serialized the <see cref="SmsNotificationOrderRequestExt"/>
     /// </summary>
     public string Serialize()
     {

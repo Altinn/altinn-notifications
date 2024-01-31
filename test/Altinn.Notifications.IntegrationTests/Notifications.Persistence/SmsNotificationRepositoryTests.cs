@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Models.Notification;
+﻿using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
@@ -9,11 +10,11 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
-public class SmsRepositoryTests : IAsyncLifetime
+public class SmsNotificationRepositoryTests : IAsyncLifetime
 {
     private readonly List<Guid> orderIdsToDelete;
 
-    public SmsRepositoryTests()
+    public SmsNotificationRepositoryTests()
     {
         orderIdsToDelete = [];
     }
@@ -61,6 +62,24 @@ public class SmsRepositoryTests : IAsyncLifetime
         int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
 
         Assert.Equal(1, actualCount);
+    }
+
+    [Fact]
+    public async Task GetNewNotifications()
+    {
+        // Arrange
+        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
+        orderIdsToDelete.Add(order.Id);
+
+        SmsNotificationRepository repo = (SmsNotificationRepository)ServiceUtil
+          .GetServices(new List<Type>() { typeof(ISmsNotificationRepository) })
+          .First(i => i.GetType() == typeof(SmsNotificationRepository));
+
+        // Act
+        List<Sms> smsToBeSent = await repo.GetNewNotifications();
+
+        // Assert
+        Assert.NotEmpty(smsToBeSent.Where(s => s.NotificationId == smsNotification.Id));
     }
 
     [Fact]

@@ -1,10 +1,13 @@
-﻿using Altinn.Notifications.Core.Models.Notification;
+﻿using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Extensions;
 
 using Microsoft.ApplicationInsights;
+
 using Npgsql;
+
 using NpgsqlTypes;
 
 namespace Altinn.Notifications.Persistence.Repository;
@@ -18,6 +21,7 @@ public class SmsNotificationRepository : ISmsNotificationRepository
     private readonly TelemetryClient? _telemetryClient;
 
     private const string _insertSmsNotificationSql = "call notifications.insertsmsnotification($1, $2, $3, $4, $5, $6, $7)"; // (__orderid, _alternateid, _recipientid, _mobilenumber, _result, _resulttime, _expirytime)
+    private const string _getSmsNotificationsSql = "select * from notifications.getsms_statusnew_updatestatus()";
     private const string _getSmsRecipients = "select * from notifications.getsmsrecipients($1)"; // (_orderid)
 
     /// <summary>
@@ -66,6 +70,31 @@ public class SmsNotificationRepository : ISmsNotificationRepository
                     RecipientId = reader.GetValue<string>("recipientid"),
                     MobileNumber = reader.GetValue<string>("mobilenumber")
                 });
+            }
+        }
+
+        tracker.Track();
+        return searchResult;
+    }
+
+    /// <inheritdoc/>
+    public async Task<List<Sms>> GetNewNotifications()
+    {
+        List<Sms> searchResult = new();
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getSmsNotificationsSql);
+        using TelemetryTracker tracker = new(_telemetryClient, pgcom);
+
+        await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync())
+        {
+            while (await reader.ReadAsync())
+            {
+                var sms = new Sms(
+                    reader.GetValue<Guid>("alternateid"),
+                    reader.GetValue<string>("sendernumber"),
+                    reader.GetValue<string>("mobilenumber"),
+                    reader.GetValue<string>("body"));
+
+                searchResult.Add(sms);
             }
         }
 

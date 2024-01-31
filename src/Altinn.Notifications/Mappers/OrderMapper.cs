@@ -35,6 +35,27 @@ public static class OrderMapper
     }
 
     /// <summary>
+    /// Maps a <see cref="SmsNotificationOrderRequestExt"/> to a <see cref="NotificationOrderRequest"/>
+    /// </summary>
+    public static NotificationOrderRequest MapToOrderRequest(this SmsNotificationOrderRequestExt extRequest, string creator)
+    {
+        INotificationTemplate smsTemplate = new SmsTemplate(extRequest.SenderNumber, extRequest.Body);
+
+        List<Recipient> recipients = new();
+
+        recipients.AddRange(
+            extRequest.Recipients.Select(r => new Recipient(string.Empty, new List<IAddressPoint>() { new SmsAddressPoint(r.MobileNumber!) })));
+
+        return new NotificationOrderRequest(
+            extRequest.SendersReference,
+            creator,
+            new List<INotificationTemplate>() { smsTemplate },
+            extRequest.RequestedSendTime.ToUniversalTime(),
+            NotificationChannel.Sms,
+            recipients);
+    }
+
+    /// <summary>
     /// Maps a <see cref="NotificationOrder"/> to a <see cref="NotificationOrderExt"/>
     /// </summary>
     public static NotificationOrderExt MapToNotificationOrderExt(this NotificationOrder order)
@@ -138,7 +159,8 @@ public static class OrderMapper
         recipientExt.AddRange(
             recipients.Select(r => new RecipientExt
             {
-                EmailAddress = GetEmailFromAddressList(r.AddressInfo)
+                EmailAddress = GetEmailFromAddressList(r.AddressInfo),
+                MobileNumber = GetMobileNumberFromAddressList(r.AddressInfo) 
             }));
 
         return recipientExt;
@@ -163,5 +185,14 @@ public static class OrderMapper
             as EmailAddressPoint;
 
         return emailAddressPoint?.EmailAddress;
+    }
+
+    private static string? GetMobileNumberFromAddressList(List<IAddressPoint> addressPoints)
+    {
+        var smsAddressPoint = addressPoints
+            .Find(a => a.AddressType.Equals(AddressType.Sms))
+            as SmsAddressPoint;
+
+        return smsAddressPoint?.MobileNumber;
     }
 }
