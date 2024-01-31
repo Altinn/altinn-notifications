@@ -1,16 +1,17 @@
-﻿using Altinn.Notifications.Core.Enums;
-using Altinn.Notifications.Core.Models.Notification;
+﻿using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
+
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
 public class SmsRepositoryTests : IAsyncLifetime
 {
-    private List<Guid> orderIdsToDelete;
+    private readonly List<Guid> orderIdsToDelete;
 
     public SmsRepositoryTests()
     {
@@ -29,7 +30,7 @@ public class SmsRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Create_SmsNotification()
+    public async Task AddNotification()
     {
         // Arrange
         Guid orderId = await PostgreUtil.PopulateDBWithOrderAndReturnId();
@@ -60,5 +61,29 @@ public class SmsRepositoryTests : IAsyncLifetime
         int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
 
         Assert.Equal(1, actualCount);
-    }   
+    }
+
+    [Fact]
+    public async Task GetRecipients()
+    {
+        // Arrange
+        SmsNotificationRepository repo = (SmsNotificationRepository)ServiceUtil
+           .GetServices(new List<Type>() { typeof(ISmsNotificationRepository) })
+           .First(i => i.GetType() == typeof(SmsNotificationRepository));
+
+        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
+        orderIdsToDelete.Add(order.Id);
+        string expectedNumber = smsNotification.RecipientNumber;
+        string? expectedRecipientId = smsNotification.RecipientId;
+
+        // Act
+        List<SmsRecipient> actual = await repo.GetRecipients(order.Id);
+
+        SmsRecipient actualRecipient = actual[0];
+
+        // Assert
+        Assert.Single(actual);
+        Assert.Equal(expectedNumber, actualRecipient.MobileNumber);
+        Assert.Equal(expectedRecipientId, actualRecipient.RecipientId);
+    }
 }

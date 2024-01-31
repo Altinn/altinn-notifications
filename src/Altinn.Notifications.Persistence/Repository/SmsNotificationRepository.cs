@@ -18,7 +18,7 @@ public class SmsNotificationRepository : ISmsNotificationRepository
     private readonly TelemetryClient? _telemetryClient;
 
     private const string _insertSmsNotificationSql = "call notifications.insertsmsnotification($1, $2, $3, $4, $5, $6, $7)"; // (__orderid, _alternateid, _recipientid, _mobilenumber, _result, _resulttime, _expirytime)
-    private const string _getSmsRecipients = "select * from notifications.getemailrecipients($1)"; // (_orderid)
+    private const string _getSmsRecipients = "select * from notifications.getsmsrecipients($1)"; // (_orderid)
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsNotificationRepository"/> class.

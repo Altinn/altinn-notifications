@@ -128,7 +128,8 @@ public class OrderProcessingServiceTests_Email
             Recipients = new List<Recipient>()
             {
                 new Recipient(),
-                new Recipient("skd", new List<IAddressPoint>() { new EmailAddressPoint("test@test.com") })
+                new Recipient("skd", new List<IAddressPoint>() { new EmailAddressPoint("test@test.com") }),
+                new Recipient(new List<IAddressPoint>() { new EmailAddressPoint("test@domain.com") })
             }
         };
 
@@ -144,7 +145,7 @@ public class OrderProcessingServiceTests_Email
         await service.ProcessOrderRetry(order);
 
         // Assert
-        serviceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>()), Times.Once);
+        serviceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>()), Times.Exactly(2));
         emailRepoMock.Verify(e => e.GetRecipients(It.IsAny<Guid>()), Times.Once);
     }
 

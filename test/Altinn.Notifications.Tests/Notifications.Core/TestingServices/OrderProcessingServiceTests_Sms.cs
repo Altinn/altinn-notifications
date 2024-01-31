@@ -127,7 +127,8 @@ public class OrderProcessingServiceTests_Sms
             Recipients = new List<Recipient>()
             {
                 new Recipient(),
-                new Recipient("end-user", new List<IAddressPoint>() { new SmsAddressPoint("+4799999999") })
+                new Recipient("end-user", new List<IAddressPoint>() { new SmsAddressPoint("+4799999999") }),
+                new Recipient(new List<IAddressPoint>() { new SmsAddressPoint("+4749999999") })
             }
         };
 
@@ -144,7 +145,7 @@ public class OrderProcessingServiceTests_Sms
 
         // Assert
         smsRepoMock.Verify(e => e.GetRecipients(It.IsAny<Guid>()), Times.Once);
-        serviceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>()), Times.Once);
+        serviceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>()), Times.Exactly(2));
     }
 
     private static OrderProcessingService GetTestService(
