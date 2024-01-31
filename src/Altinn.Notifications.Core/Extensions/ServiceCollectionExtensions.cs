@@ -35,6 +35,7 @@ public static class ServiceCollectionExtensions
             .AddSingleton<IOrderRequestService, OrderRequestService>()
             .AddSingleton<INotificationSummaryService, NotificationSummaryService>()
             .AddSingleton<IEmailNotificationService, EmailNotificationService>()
+            .AddSingleton<ISmsNotificationService, SmsNotificationService>()
             .AddSingleton<IAltinnServiceUpdateService, AltinnServiceUpdateService>()
             .AddSingleton<INotificationsEmailServiceUpdateService, NotificationsEmailServiceUpdateService>()
             .Configure<KafkaSettings>(config.GetSection("KafkaSettings"))

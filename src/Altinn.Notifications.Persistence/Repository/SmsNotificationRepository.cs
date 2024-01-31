@@ -1,5 +1,8 @@
 ﻿using Altinn.Notifications.Core.Models.Notification;
+using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
+using Altinn.Notifications.Persistence.Extensions;
+
 using Microsoft.ApplicationInsights;
 using Npgsql;
 using NpgsqlTypes;
@@ -15,6 +18,7 @@ public class SmsNotificationRepository : ISmsNotificationRepository
     private readonly TelemetryClient? _telemetryClient;
 
     private const string _insertSmsNotificationSql = "call notifications.insertsmsnotification($1, $2, $3, $4, $5, $6, $7)"; // (__orderid, _alternateid, _recipientid, _mobilenumber, _result, _resulttime, _expirytime)
+    private const string _getSmsRecipients = "select * from notifications.getemailrecipients($1)"; // (_orderid)
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsNotificationRepository"/> class.
@@ -43,5 +47,29 @@ public class SmsNotificationRepository : ISmsNotificationRepository
 
         await pgcom.ExecuteNonQueryAsync();
         tracker.Track();
+    }
+
+    /// <inheritdoc/>
+    public async Task<List<SmsRecipient>> GetRecipients(Guid orderId)
+    {
+        List<SmsRecipient> searchResult = new();
+
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getSmsRecipients);
+        using TelemetryTracker tracker = new(_telemetryClient, pgcom);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, orderId);
+        await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync())
+        {
+            while (await reader.ReadAsync())
+            {
+                searchResult.Add(new SmsRecipient()
+                {
+                    RecipientId = reader.GetValue<string>("recipientid"),
+                    MobileNumber = reader.GetValue<string>("mobilenumber")
+                });
+            }
+        }
+
+        tracker.Track();
+        return searchResult;
     }
 }

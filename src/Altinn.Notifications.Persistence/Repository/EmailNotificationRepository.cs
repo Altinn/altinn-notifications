@@ -94,13 +94,13 @@ public class EmailNotificationRepository : IEmailNotificationRepository
     }
 
     /// <inheritdoc/>
-    public async Task<List<EmailRecipient>> GetRecipients(Guid notificationId)
+    public async Task<List<EmailRecipient>> GetRecipients(Guid orderId)
     {
         List<EmailRecipient> searchResult = new();
 
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getEmailRecipients);
         using TelemetryTracker tracker = new(_telemetryClient, pgcom);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, orderId);
         await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync())
         {
             while (await reader.ReadAsync())

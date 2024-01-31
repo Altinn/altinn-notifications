@@ -59,8 +59,8 @@ public class OrderProcessingServiceTests
             NotificationChannel = NotificationChannel.Email,
             Recipients = new List<Recipient>()
             {
-                new Recipient(),
-                new Recipient()
+                new(),
+                new()
             }
         };
 
@@ -207,7 +207,13 @@ public class OrderProcessingServiceTests
         emailRepoMock.Verify(e => e.GetRecipients(It.IsAny<Guid>()), Times.Once);
     }
 
-    private static OrderProcessingService GetTestService(IOrderRepository? repo = null, IEmailNotificationRepository? emailRepo = null, IEmailNotificationService? emailService = null, IKafkaProducer? producer = null)
+    private static OrderProcessingService GetTestService(
+        IOrderRepository? repo = null,
+        IEmailNotificationRepository? emailRepo = null,
+        IEmailNotificationService? emailService = null,
+        ISmsNotificationRepository? smsRepo = null,
+        ISmsNotificationService? smsService = null,
+        IKafkaProducer? producer = null)
     {
         if (repo == null)
         {
@@ -227,6 +233,18 @@ public class OrderProcessingServiceTests
             emailService = emailServiceMock.Object;
         }
 
+        if (smsRepo == null)
+        {
+            var smsRepoMock = new Mock<ISmsNotificationRepository>();
+            smsRepo = smsRepoMock.Object;
+        }
+
+        if (smsService == null)
+        {
+            var smsServiceMock = new Mock<ISmsNotificationService>();
+            smsService = smsServiceMock.Object;
+        }
+
         if (producer == null)
         {
             var producerMock = new Mock<IKafkaProducer>();
@@ -235,6 +253,6 @@ public class OrderProcessingServiceTests
 
         var kafkaSettings = new Altinn.Notifications.Core.Configuration.KafkaSettings() { PastDueOrdersTopicName = _pastDueTopicName };
 
-        return new OrderProcessingService(repo, emailRepo, emailService, producer, Options.Create(kafkaSettings));
+        return new OrderProcessingService(repo, emailRepo, emailService, smsRepo, smsService, producer, Options.Create(kafkaSettings));
     }
 }
