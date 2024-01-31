@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Models;
+﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Extensions;
@@ -21,6 +22,11 @@ public class SmsNotificationRepository : ISmsNotificationRepository
 
     private const string _insertSmsNotificationSql = "call notifications.insertsmsnotification($1, $2, $3, $4, $5, $6, $7)"; // (__orderid, _alternateid, _recipientid, _mobilenumber, _result, _resulttime, _expirytime)
     private const string _getSmsNotificationsSql = "select * from notifications.getsms_statusnew_updatestatus()";
+
+    private const string _updateSmsNotificationStatus = 
+        @"UPDATE notifications.smsnotifications 
+	    SET result = $1::smsnotificationresulttype, resulttime = now(), gatewayreference = $2
+	    WHERE alternateid = $3;"; // (_result, _gatewayreference, _alternateid, )
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsNotificationRepository"/> class.
@@ -74,5 +80,18 @@ public class SmsNotificationRepository : ISmsNotificationRepository
 
         tracker.Track();
         return searchResult;
+    }
+
+    /// <inheritdoc/>
+    public async Task UpdateSendStatus(Guid notificationId, SmsNotificationResultType result, string? gatewayReference = null)
+    {
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_updateSmsNotificationStatus);
+        using TelemetryTracker tracker = new(_telemetryClient, pgcom);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, result.ToString());
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, gatewayReference ?? (object)DBNull.Value);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId);
+
+        await pgcom.ExecuteNonQueryAsync();
+        tracker.Track();
     }
 }
