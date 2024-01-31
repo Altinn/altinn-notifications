@@ -18,17 +18,17 @@ public class Sms
     /// <remarks>
     /// Can be a literal string or a phone number
     /// </remarks>
-    public string Sender { get; set; } = string.Empty;
+    public string Sender { get; set; }
 
     /// <summary>
     /// Gets or sets the recipient of the sms message
     /// </summary>
-    public string Recipient { get; set; } = string.Empty;
+    public string Recipient { get; set; }
 
     /// <summary>
     /// Gets or sets the contents of the sms message
     /// </summary>
-    public string Message { get; set; } = string.Empty;
+    public string Message { get; set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Sms"/> class.
