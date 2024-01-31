@@ -114,6 +114,6 @@ public static class PostgreUtil
         NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
 
         await using NpgsqlCommand pgcom = dataSource.CreateCommand(query);
-        pgcom.ExecuteNonQuery();        
+        pgcom.ExecuteNonQuery();
     }
 }
