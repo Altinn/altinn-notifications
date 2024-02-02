@@ -1,8 +1,8 @@
 ﻿using Altinn.Notifications.Core.Enums;
-using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Shared;
 
 namespace Altinn.Notifications.Core.Services
 {
@@ -40,13 +40,13 @@ namespace Altinn.Notifications.Core.Services
         }
 
         /// <inheritdoc/>
-        public async Task<(EmailNotificationSummary? Summary, ServiceError? Error)> GetEmailSummary(Guid orderId, string creator)
+        public async Task<Result<EmailNotificationSummary, ServiceError>> GetEmailSummary(Guid orderId, string creator)
         {
             EmailNotificationSummary? summary = await _summaryRepository.GetEmailSummary(orderId, creator);
 
             if (summary == null)
             {
-                return (null, new ServiceError(404));
+                return  new ServiceError(404);
             }
 
             if (summary.Notifications.Count != 0)
@@ -54,7 +54,7 @@ namespace Altinn.Notifications.Core.Services
                 ProcessNotificationResults(summary);
             }
 
-            return (summary, null);
+            return summary;
         }
 
         /// <summary>

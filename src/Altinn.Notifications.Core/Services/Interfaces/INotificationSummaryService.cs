@@ -1,5 +1,5 @@
-﻿using Altinn.Notifications.Core.Models;
-using Altinn.Notifications.Core.Models.Notification;
+﻿using Altinn.Notifications.Core.Models.Notification;
+using Altinn.Notifications.Core.Shared;
 
 namespace Altinn.Notifications.Core.Services.Interfaces
 {
@@ -13,6 +13,6 @@ namespace Altinn.Notifications.Core.Services.Interfaces
         /// </summary>
         /// <param name="orderId">The order id to find notifications for</param>
         /// <param name="creator">The creator of the order</param>
-        public Task<(EmailNotificationSummary? Summary, ServiceError? Error)> GetEmailSummary(Guid orderId, string creator);
+        public Task<Result<EmailNotificationSummary, ServiceError>> GetEmailSummary(Guid orderId, string creator);
     }
 }

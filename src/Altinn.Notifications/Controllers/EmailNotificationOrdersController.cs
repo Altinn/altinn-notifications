@@ -1,7 +1,7 @@
 ﻿using Altinn.Notifications.Configuration;
-using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
@@ -71,14 +71,14 @@ public class EmailNotificationOrdersController : ControllerBase
         }
 
         var orderRequest = emailNotificationOrderRequest.MapToOrderRequest(creator);
-        (NotificationOrder? registeredOrder, ServiceError? error) = await _orderRequestService.RegisterNotificationOrder(orderRequest);
+        Result<NotificationOrder, ServiceError> result = await _orderRequestService.RegisterNotificationOrder(orderRequest);
 
-        if (error != null)
-        {
-            return StatusCode(error.ErrorCode, error.ErrorMessage);
-        }
-
-        string selfLink = registeredOrder!.GetSelfLink();
-        return Accepted(selfLink, new OrderIdExt(registeredOrder!.Id));
+        return result.Match(
+            order =>
+            {
+                string selfLink = order.GetSelfLink();
+                return Accepted(selfLink, new OrderIdExt(order.Id));
+            },
+            error => StatusCode(error.ErrorCode, error.ErrorMessage));
     }
 }

@@ -10,6 +10,7 @@ using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using Altinn.Notifications.Tests.Notifications.Utils;
@@ -172,7 +173,7 @@ public class SmsNotificationOrdersControllerTests : IClassFixture<IntegrationTes
         // Arrange
         Mock<IOrderRequestService> serviceMock = new();
         serviceMock.Setup(s => s.RegisterNotificationOrder(It.IsAny<NotificationOrderRequest>()))
-            .ReturnsAsync((null, new ServiceError(500)));
+            .ReturnsAsync(new ServiceError(500));
 
         HttpClient client = GetTestClient(orderService: serviceMock.Object);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
@@ -205,7 +206,7 @@ public class SmsNotificationOrdersControllerTests : IClassFixture<IntegrationTes
                   Assert.NotNull(smsTemplate);
                   Assert.Equal(string.Empty, smsTemplate.SenderNumber);
               })
-            .ReturnsAsync((_order, null));
+            .ReturnsAsync(_order);
 
         HttpClient client = GetTestClient(orderService: serviceMock.Object);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
@@ -244,7 +245,7 @@ public class SmsNotificationOrdersControllerTests : IClassFixture<IntegrationTes
                   Assert.NotNull(smsTemplate);
                   Assert.Empty(smsTemplate.SenderNumber);
               })
-            .ReturnsAsync((_order, null));
+            .ReturnsAsync(_order);
 
         HttpClient client = GetTestClient(orderService: serviceMock.Object);
 
@@ -284,7 +285,7 @@ public class SmsNotificationOrdersControllerTests : IClassFixture<IntegrationTes
                 Assert.NotNull(smsTemplate);
                 Assert.Empty(smsTemplate.SenderNumber);
             })
-            .ReturnsAsync((_order, null));
+            .ReturnsAsync(_order);
 
         HttpClient client = GetTestClient(orderService: serviceMock.Object);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));

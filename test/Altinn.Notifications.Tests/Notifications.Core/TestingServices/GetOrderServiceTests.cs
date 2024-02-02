@@ -6,6 +6,7 @@ using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
+using Altinn.Notifications.Core.Shared;
 
 using Moq;
 
@@ -31,12 +32,18 @@ public class GetOrderServiceTests
         var service = GetTestService(repoMock.Object);
 
         // Act
-        var (actualOrder, actuallError) = await service.GetOrderById(_id, _creator);
+        Result<NotificationOrder, ServiceError> result = await service.GetOrderById(_id, _creator);
 
         // Assert
-        Assert.Null(actualOrder);
-        Assert.NotNull(actuallError);
-        Assert.Equal(404, actuallError.ErrorCode);
+        Assert.True(result.IsError);
+        await result.Match<Task>(
+           async actualOrder => await Task.CompletedTask,
+           async actuallError =>
+           {
+            await Task.CompletedTask;
+            Assert.NotNull(actuallError);
+            Assert.Equal(404, actuallError.ErrorCode);
+        });
     }
 
     [Fact]
@@ -66,13 +73,19 @@ public class GetOrderServiceTests
         var service = GetTestService(repoMock.Object);
 
         // Act
-        var (actualOrder, actuallError) = await service.GetOrderById(_id, _creator);
+        Result<NotificationOrder, ServiceError> result = await service.GetOrderById(_id, _creator);
 
         // Assert
-        repoMock.Verify(r => r.GetOrderById(It.Is<Guid>(g => g == _id), It.Is<string>(s => s.Equals("ttd"))), Times.Once);
-        Assert.NotNull(actualOrder);
-        Assert.Null(actuallError);
-        Assert.Equal(_id, actualOrder.Id);
+        Assert.True(result.IsSuccess);
+        await result.Match<Task>(
+           async actualOrder =>
+           {
+               await Task.CompletedTask;
+               repoMock.Verify(r => r.GetOrderById(It.Is<Guid>(g => g == _id), It.Is<string>(s => s.Equals("ttd"))), Times.Once);
+               Assert.NotNull(actualOrder);
+               Assert.Equal(_id, actualOrder.Id);
+           },
+           async actuallError => await Task.CompletedTask);
     }
 
     [Fact]
@@ -102,13 +115,20 @@ public class GetOrderServiceTests
         var service = GetTestService(repoMock.Object);
 
         // Act
-        var (actualOrders, actuallError) = await service.GetOrdersBySendersReference(_sendersRef, _creator);
+        Result<List<NotificationOrder>, ServiceError> result = await service.GetOrdersBySendersReference(_sendersRef, _creator);
 
         // Assert
-        repoMock.Verify(r => r.GetOrdersBySendersReference(It.Is<string>(s => s.Equals("sendersRef")), It.Is<string>(s => s.Equals("ttd"))), Times.Once);
-        Assert.NotNull(actualOrders);
-        Assert.Equal(3, actualOrders.Count);
-        Assert.Null(actuallError);
+        Assert.True(result.IsSuccess);
+        await result.Match<Task>(
+           async actualOrders =>
+           {
+               await Task.CompletedTask;
+
+               repoMock.Verify(r => r.GetOrdersBySendersReference(It.Is<string>(s => s.Equals("sendersRef")), It.Is<string>(s => s.Equals("ttd"))), Times.Once);
+               Assert.NotNull(actualOrders);
+               Assert.Equal(3, actualOrders.Count);
+           },
+           async actuallError => await Task.CompletedTask);
     }
 
     [Theory]
