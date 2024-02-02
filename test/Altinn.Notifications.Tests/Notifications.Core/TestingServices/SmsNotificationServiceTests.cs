@@ -13,15 +13,18 @@ using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 
 using Microsoft.Extensions.Options;
-using Moq;
-using Xunit;
 
-using static Confluent.Kafka.ConfigPropertyNames;
+using Moq;
+
+using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 
 public class SmsNotificationServiceTests
 {
+    private const string _smsQueueTopicName = "test.sms.queue";
+    private readonly Sms _sms = new(Guid.NewGuid(), "Altinn Test", "Recipient", "Text message");
+
     [Fact]
     public async Task CreateNotifications_NewSmsNotification_RepositoryCalledOnce()
     {
@@ -105,6 +108,54 @@ public class SmsNotificationServiceTests
 
         // Assert
         repoMock.Verify();
+    }
+
+    [Fact]
+    public async Task SendNotifications_ProducerCalledOnceForEachRetrievedSms()
+    {
+        // Arrange 
+        var repoMock = new Mock<ISmsNotificationRepository>();
+        repoMock.Setup(r => r.GetNewNotifications())
+            .ReturnsAsync(new List<Sms>() { _sms, _sms, _sms });
+
+        var producerMock = new Mock<IKafkaProducer>();
+        producerMock.Setup(p => p.ProduceAsync(It.Is<string>(s => s.Equals(_smsQueueTopicName)), It.IsAny<string>()))
+            .ReturnsAsync(true);
+
+        var service = GetTestService(repo: repoMock.Object, producer: producerMock.Object);
+
+        // Act
+        await service.SendNotifications();
+
+        // Assert
+        repoMock.Verify();
+        producerMock.Verify(p => p.ProduceAsync(It.Is<string>(s => s.Equals(_smsQueueTopicName)), It.IsAny<string>()), Times.Exactly(3));
+    }
+
+    [Fact]
+    public async Task SendNotifications_ProducerReturnsFalse_RepositoryCalledToUpdateDB()
+    {
+        // Arrange 
+        var repoMock = new Mock<ISmsNotificationRepository>();
+        repoMock.Setup(r => r.GetNewNotifications())
+            .ReturnsAsync(new List<Sms>() { _sms });
+
+        repoMock
+            .Setup(r => r.UpdateSendStatus(It.IsAny<Guid>(), It.Is<SmsNotificationResultType>(t => t == SmsNotificationResultType.New), It.IsAny<string?>()));
+
+        var producerMock = new Mock<IKafkaProducer>();
+        producerMock.Setup(p => p.ProduceAsync(It.Is<string>(s => s.Equals(_smsQueueTopicName)), It.IsAny<string>()))
+            .ReturnsAsync(false);
+
+        var service = GetTestService(repo: repoMock.Object, producer: producerMock.Object);
+
+        // Act
+        await service.SendNotifications();
+
+        // Assert
+        repoMock.Verify();
+        producerMock.VerifyAll();
+        repoMock.VerifyAll();
     }
 
     private static SmsNotificationService GetTestService(ISmsNotificationRepository? repo = null, IKafkaProducer? producer = null, Guid? guidOutput = null, DateTime? dateTimeOutput = null)
