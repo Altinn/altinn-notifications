@@ -28,7 +28,7 @@ public interface ISmsNotificationRepository
     public Task<List<SmsRecipient>> GetRecipients(Guid orderId);
 
     /// <summary>
-    /// Sets result status of an email notification and update operation id
+    /// Sets result status of an sms notification and update operation id
     /// </summary>
     public Task UpdateSendStatus(Guid notificationId, SmsNotificationResultType result, string? gatewayReference = null);
 }
