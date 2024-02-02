@@ -85,13 +85,14 @@ public class OrderProcessingService : IOrderProcessingService
     {
         NotificationChannel ch = order.NotificationChannel;
 
-        if (ch == NotificationChannel.Email)
+        switch (ch)
         {
-            await _emailProcessingService.ProcessOrderRetry(order);
-        }
-        else if (ch == NotificationChannel.Sms)
-        {
-            await _smsProcessingService.ProcessOrderRetry(order);
+            case NotificationChannel.Email:
+                await _emailProcessingService.ProcessOrderRetry(order);
+                break;
+            case NotificationChannel.Sms:
+                await _smsProcessingService.ProcessOrderRetry(order);
+                break;
         }
 
         await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.Completed);
