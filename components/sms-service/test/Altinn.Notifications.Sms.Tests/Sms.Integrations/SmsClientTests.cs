@@ -1,8 +1,11 @@
-﻿using Altinn.Notifications.Sms.Core.Status;
+﻿using Altinn.Notifications.Sms.Core.Dependencies;
+using Altinn.Notifications.Sms.Core.Status;
 
 using Altinn.Notifications.Sms.Integrations.LinkMobility;
 
 using LinkMobility.PSWin.Client.Model;
+
+using Microsoft.Extensions.Logging;
 
 using Moq;
 
@@ -13,6 +16,7 @@ namespace Altinn.Notifications.Sms.Tests.Sms.Integrations
     public class SmsClientTests
     {
         private readonly Mock<IAltinnGatewayClient> _clientMock = new();
+        private readonly Mock<ILogger<ISmsClient>> _loggerMock = new();
 
         [Fact]
         public async Task SendAsync_GatewayReturnsNonSuccess_UnknownError()
@@ -23,7 +27,7 @@ namespace Altinn.Notifications.Sms.Tests.Sms.Integrations
             _clientMock.Setup(cm => cm.SendAsync(It.IsAny<LinkMobilityModel.Sms>()))
                 .ReturnsAsync(gatewayResult);
 
-            SmsClient smsClient = new(_clientMock.Object);
+            SmsClient smsClient = new(_clientMock.Object, _loggerMock.Object);
 
             // Act
             var result = await smsClient.SendAsync(new Notifications.Sms.Core.Sending.Sms());
@@ -52,7 +56,7 @@ namespace Altinn.Notifications.Sms.Tests.Sms.Integrations
             _clientMock.Setup(cm => cm.SendAsync(It.IsAny<LinkMobilityModel.Sms>()))
                 .ReturnsAsync(gatewayResult);
 
-            SmsClient smsClient = new(_clientMock.Object);
+            SmsClient smsClient = new(_clientMock.Object, _loggerMock.Object);
 
             // Act
             var result = await smsClient.SendAsync(new Notifications.Sms.Core.Sending.Sms());
@@ -84,7 +88,7 @@ namespace Altinn.Notifications.Sms.Tests.Sms.Integrations
             _clientMock.Setup(cm => cm.SendAsync(It.IsAny<LinkMobilityModel.Sms>()))
                 .ReturnsAsync(gatewayResult);
 
-            SmsClient smsClient = new(_clientMock.Object);
+            SmsClient smsClient = new(_clientMock.Object, _loggerMock.Object);
 
             // Act
             var result = await smsClient.SendAsync(new Notifications.Sms.Core.Sending.Sms());

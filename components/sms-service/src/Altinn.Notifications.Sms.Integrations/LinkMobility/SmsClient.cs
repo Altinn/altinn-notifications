@@ -2,7 +2,10 @@
 using Altinn.Notifications.Sms.Core.Sending;
 using Altinn.Notifications.Sms.Core.Shared;
 using Altinn.Notifications.Sms.Core.Status;
+
 using LinkMobility.PSWin.Client.Model;
+
+using Microsoft.Extensions.Logging;
 
 using LinkMobilityModel = global::LinkMobility.PSWin.Client.Model;
 
@@ -15,14 +18,17 @@ namespace Altinn.Notifications.Sms.Integrations.LinkMobility
     public class SmsClient : ISmsClient
     {
         private readonly IAltinnGatewayClient _client;
+        private readonly ILogger<ISmsClient> _logger;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SmsClient"/> class.
         /// </summary>
         /// <param name="client">Gateway Client</param>
-        public SmsClient(IAltinnGatewayClient client)
+        /// <param name="logger">Logger</param>
+        public SmsClient(IAltinnGatewayClient client, ILogger<ISmsClient> logger)
         {
             _client = client;
+            _logger = logger;
         }
 
         /// <inheritdoc />
@@ -40,6 +46,7 @@ namespace Altinn.Notifications.Sms.Integrations.LinkMobility
                 return new SmsClientErrorResponse { SendResult = SmsSendResult.Failed_InvalidReceiver, ErrorMessage = result.StatusText };
             }
 
+            _logger.LogInformation("// SmsClient // SendAsync // Failed to send SMS. Status: {StatusText}", result.StatusText);
             return new SmsClientErrorResponse { SendResult = SmsSendResult.Failed };
         }
     }

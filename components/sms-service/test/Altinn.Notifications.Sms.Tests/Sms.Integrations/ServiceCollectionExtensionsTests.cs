@@ -30,7 +30,7 @@ public class ServiceCollectionExtensionsTests
     {
         // Arrange
         Environment.SetEnvironmentVariable("KafkaSettings__BrokerAddress", null, EnvironmentVariableTarget.Process);
-        Environment.SetEnvironmentVariable("SmsGatewayConfiguration__Endpoint", "https://vg.no", EnvironmentVariableTarget.Process);
+        Environment.SetEnvironmentVariable("SmsGatewaySettings__Endpoint", "https://vg.no", EnvironmentVariableTarget.Process);
         string expectedExceptionMessage = "Required Kafka settings is missing from application configuration (Parameter 'config')";
 
         var config = new ConfigurationBuilder().AddEnvironmentVariables().Build();
@@ -48,7 +48,7 @@ public class ServiceCollectionExtensionsTests
     public void AddIntegrationServices_SmsGatewayConfigIncluded_NoException()
     {
         // Arrange
-        Environment.SetEnvironmentVariable("SmsGatewayConfiguration__Endpoint", "https://vg.no", EnvironmentVariableTarget.Process);
+        Environment.SetEnvironmentVariable("SmsGatewaySettings__Endpoint", "https://vg.no", EnvironmentVariableTarget.Process);
         Environment.SetEnvironmentVariable("KafkaSettings__BrokerAddress", "localhost:9092", EnvironmentVariableTarget.Process);
         var config = new ConfigurationBuilder().AddEnvironmentVariables().Build();
 

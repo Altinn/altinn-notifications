@@ -3,7 +3,7 @@
     /// <summary>
     /// Configuration for the LinkMobility SMS gateway
     /// </summary>
-    public class SmsGatewayConfiguration
+    public class SmsGatewaySettings
     {
         /// <summary>
         /// Username to use for authentication towards the SMS gateway
