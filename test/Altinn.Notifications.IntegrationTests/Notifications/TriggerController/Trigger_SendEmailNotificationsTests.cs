@@ -28,6 +28,7 @@ public class Trigger_SendEmailNotificationsTests : IClassFixture<IntegrationTest
     {
         _factory = factory;
     }
+
     public Task InitializeAsync()
     {
         return Task.CompletedTask;
