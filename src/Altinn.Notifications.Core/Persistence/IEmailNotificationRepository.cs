@@ -27,8 +27,8 @@ public interface IEmailNotificationRepository
     public Task UpdateSendStatus(Guid notificationId, EmailNotificationResultType status, string? operationId = null);
 
     /// <summary>
-    /// Retrieves all email recipients for an order
+    /// Retrieves all processed email recipients for an order
     /// </summary>
-    /// <returns>A list of emails</returns>
-    public Task<List<EmailRecipient>> GetRecipients(Guid notificationId);
+    /// <returns>A list of email recipients</returns>
+    public Task<List<EmailRecipient>> GetRecipients(Guid orderId);
 }

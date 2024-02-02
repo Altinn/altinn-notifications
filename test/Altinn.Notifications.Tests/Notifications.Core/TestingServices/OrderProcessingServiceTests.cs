@@ -2,23 +2,20 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
-using Altinn.Notifications.Core.Models;
-using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Orders;
-using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
-using Altinn.Notifications.Integrations.Configuration;
 
 using Microsoft.Extensions.Options;
 
 using Moq;
 
 using Xunit;
+
+using static Altinn.Authorization.ABAC.Constants.XacmlConstants;
 
 namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 
@@ -50,164 +47,139 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessOrder_EmailNotificationChannel_ServiceCalledOnceForEachRecipient()
+    public async Task ProcessOrder_EmailOrder_EmailServiceCalled()
     {
-        // Arrange
-        var order = new NotificationOrder()
+        // Arrange 
+        NotificationOrder order = new()
         {
-            Id = Guid.NewGuid(),
             NotificationChannel = NotificationChannel.Email,
-            Recipients = new List<Recipient>()
-            {
-                new Recipient(),
-                new Recipient()
-            }
         };
 
-        var serviceMock = new Mock<IEmailNotificationService>();
-        serviceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>()));
+        var emailMockService = new Mock<IEmailOrderProcessingService>();
+        emailMockService.Setup(e => e.ProcessOrder(It.IsAny<NotificationOrder>()));
 
-        var service = GetTestService(emailService: serviceMock.Object);
+        var smsMockService = new Mock<ISmsOrderProcessingService>();
+        smsMockService.Setup(s => s.ProcessOrder(It.IsAny<NotificationOrder>()));
+
+        var orderProcessingService = GetTestService(emailMock: emailMockService.Object, smsMock: smsMockService.Object);
 
         // Act
-        await service.ProcessOrder(order);
+        await orderProcessingService.ProcessOrder(order);
 
         // Assert
-        serviceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>()), Times.Exactly(2));
+        emailMockService.Verify(e => e.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Once);
+        smsMockService.Verify(s => s.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Never);
     }
 
     [Fact]
-    public async Task ProcessOrder_EmailNotificationChannel_ExpectedInputToService()
+    public async Task ProcessOrder_SmsOrder_SmsServiceCalled()
     {
-        // Arrange
-        DateTime requested = DateTime.UtcNow;
-        Guid orderId = Guid.NewGuid();
-
-        var order = new NotificationOrder()
+        // Arrange 
+        NotificationOrder order = new()
         {
-            Id = orderId,
-            NotificationChannel = NotificationChannel.Email,
-            RequestedSendTime = requested,
-            Recipients = new List<Recipient>()
-            {
-                new Recipient("skd", new List<IAddressPoint>() { new EmailAddressPoint("test@test.com") })
-            }
+            NotificationChannel = NotificationChannel.Sms,
         };
 
-        Recipient expectedRecipient = new("skd", new List<IAddressPoint>() { new EmailAddressPoint("test@test.com") });
+        var smsMockService = new Mock<ISmsOrderProcessingService>();
+        smsMockService.Setup(s => s.ProcessOrder(It.IsAny<NotificationOrder>()));
 
-        var serviceMock = new Mock<IEmailNotificationService>();
-        serviceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.Is<DateTime>(d => d.Equals(requested)), It.Is<Recipient>(r => AssertUtils.AreEquivalent(expectedRecipient, r))));
+        var emailMockService = new Mock<IEmailOrderProcessingService>();
+        emailMockService.Setup(e => e.ProcessOrder(It.IsAny<NotificationOrder>()));
+
+        var orderProcessingService = GetTestService(emailMock: emailMockService.Object, smsMock: smsMockService.Object);
+
+        // Act
+        await orderProcessingService.ProcessOrder(order);
+
+        // Assert
+        smsMockService.Verify(s => s.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Once);
+        emailMockService.Verify(e => e.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ProcessOrder_SerivceThrowsException_ProcessingStatusIsNotSet()
+    {
+        // Arrange 
+        NotificationOrder order = new()
+        {
+            NotificationChannel = NotificationChannel.Sms,
+        };
+
+        var smsMockService = new Mock<ISmsOrderProcessingService>();
+        smsMockService.Setup(s => s.ProcessOrder(It.IsAny<NotificationOrder>())).Throws(new Exception());
 
         var repoMock = new Mock<IOrderRepository>();
-        repoMock.Setup(r => r.SetProcessingStatus(It.Is<Guid>(s => s.Equals(orderId)), It.Is<OrderProcessingStatus>(s => s == OrderProcessingStatus.Completed)));
+        repoMock.Setup(r => r.SetProcessingStatus(It.IsAny<Guid>(), It.Is<OrderProcessingStatus>(s => s.Equals(OrderProcessingStatus.Completed))));
 
-        var service = GetTestService(repo: repoMock.Object, emailService: serviceMock.Object);
+        var orderProcessingService = GetTestService(repo: repoMock.Object, smsMock: smsMockService.Object);
 
-        // Act
-        await service.ProcessOrder(order);
+        // Act      
+        await Assert.ThrowsAsync<Exception>(async () => await orderProcessingService.ProcessOrder(order));
 
         // Assert
-        serviceMock.VerifyAll();
-        repoMock.VerifyAll();
+        smsMockService.Verify(s => s.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Once);
+        repoMock.Verify(
+                r => r.SetProcessingStatus(It.IsAny<Guid>(), It.Is<OrderProcessingStatus>(s => s.Equals(OrderProcessingStatus.Completed))),
+                Times.Never);
     }
 
     [Fact]
-    public async Task ProcessOrder_EmailNotificationChannel_ServiceThrowsException_RepositoryNotCalled()
+    public async Task ProcessOrderRetry_SmsOrder_SmsServiceCalled()
     {
-        // Arrange
-        var order = new NotificationOrder()
+        // Arrange 
+        NotificationOrder order = new()
         {
-            NotificationChannel = NotificationChannel.Email,
-            Recipients = new List<Recipient>()
-            {
-                new Recipient()
-            }
+            NotificationChannel = NotificationChannel.Sms,
         };
 
-        var serviceMock = new Mock<IEmailNotificationService>();
-        serviceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>()))
-            .ThrowsAsync(new Exception());
+        var smsMockService = new Mock<ISmsOrderProcessingService>();
+        smsMockService.Setup(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>()));
+
+        var emailMockService = new Mock<IEmailOrderProcessingService>();
+        emailMockService.Setup(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>()));
+
+        var orderProcessingService = GetTestService(emailMock: emailMockService.Object, smsMock: smsMockService.Object);
+
+        // Act
+        await orderProcessingService.ProcessOrderRetry(order);
+
+        // Assert
+        smsMockService.Verify(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Once);
+        emailMockService.Verify(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ProcessOrderRetry_SerivceThrowsException_ProcessingStatusIsNotSet()
+    {
+        // Arrange 
+        NotificationOrder order = new()
+        {
+            NotificationChannel = NotificationChannel.Sms,
+        };
+
+        var smsMockService = new Mock<ISmsOrderProcessingService>();
+        smsMockService.Setup(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>())).Throws(new Exception());
 
         var repoMock = new Mock<IOrderRepository>();
-        repoMock.Setup(r => r.SetProcessingStatus(It.IsAny<Guid>(), It.IsAny<OrderProcessingStatus>()));
+        repoMock.Setup(r => r.SetProcessingStatus(It.IsAny<Guid>(), It.Is<OrderProcessingStatus>(s => s.Equals(OrderProcessingStatus.Completed))));
 
-        var service = GetTestService(repo: repoMock.Object, emailService: serviceMock.Object);
+        var orderProcessingService = GetTestService(repo: repoMock.Object, smsMock: smsMockService.Object);
 
-        // Act
-        await Assert.ThrowsAsync<Exception>(async () => await service.ProcessOrder(order));
-
-        // Assert
-        serviceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>()), Times.Once);
-        repoMock.Verify(r => r.SetProcessingStatus(It.IsAny<Guid>(), It.IsAny<OrderProcessingStatus>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task ProcessOrderRetry_EmailNotificationChannel_ServiceCalledIfEmailNotificationNotCreated()
-    {
-        // Arrange
-        var order = new NotificationOrder()
-        {
-            Id = Guid.NewGuid(),
-            NotificationChannel = NotificationChannel.Email,
-            Recipients = new List<Recipient>()
-            {
-                new Recipient(),
-                new Recipient("skd", new List<IAddressPoint>() { new EmailAddressPoint("test@test.com") })
-            }
-        };
-
-        var serviceMock = new Mock<IEmailNotificationService>();
-        serviceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>()));
-
-        var emailRepoMock = new Mock<IEmailNotificationRepository>();
-        emailRepoMock.Setup(e => e.GetRecipients(It.IsAny<Guid>())).ReturnsAsync(new List<EmailRecipient>() { new EmailRecipient() { RecipientId = "skd", ToAddress = "test@test.com" } });
-
-        var service = GetTestService(emailRepo: emailRepoMock.Object, emailService: serviceMock.Object);
-
-        // Act
-        await service.ProcessOrderRetry(order);
+        // Act      
+        await Assert.ThrowsAsync<Exception>(async () => await orderProcessingService.ProcessOrderRetry(order));
 
         // Assert
-        serviceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>()), Times.Once);
-        emailRepoMock.Verify(e => e.GetRecipients(It.IsAny<Guid>()), Times.Once);
+        smsMockService.Verify(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Once);
+        repoMock.Verify(
+                r => r.SetProcessingStatus(It.IsAny<Guid>(), It.Is<OrderProcessingStatus>(s => s.Equals(OrderProcessingStatus.Completed))),
+                Times.Never);
     }
 
-    [Fact]
-    public async Task ProcessOrderRetry_EmailNotificationChannel_ServiceThrowsException_OrderRepositoryNotCalled()
-    {
-        // Arrange
-        var order = new NotificationOrder()
-        {
-            NotificationChannel = NotificationChannel.Email,
-            Recipients = new List<Recipient>()
-            {
-                new Recipient()
-            }
-        };
-
-        var serviceMock = new Mock<IEmailNotificationService>();
-        serviceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>()))
-            .ThrowsAsync(new Exception());
-
-        var repoMock = new Mock<IOrderRepository>();
-        repoMock.Setup(r => r.SetProcessingStatus(It.IsAny<Guid>(), It.IsAny<OrderProcessingStatus>()));
-
-        var emailRepoMock = new Mock<IEmailNotificationRepository>();
-        emailRepoMock.Setup(e => e.GetRecipients(It.IsAny<Guid>())).ReturnsAsync(new List<EmailRecipient>() { new EmailRecipient() { RecipientId = "skd", ToAddress = "test@test.com" } });
-
-        var service = GetTestService(repo: repoMock.Object, emailRepo: emailRepoMock.Object, emailService: serviceMock.Object);
-
-        // Act
-        await Assert.ThrowsAsync<Exception>(async () => await service.ProcessOrderRetry(order));
-
-        // Assert
-        serviceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>()), Times.Once);
-        repoMock.Verify(r => r.SetProcessingStatus(It.IsAny<Guid>(), It.IsAny<OrderProcessingStatus>()), Times.Never);
-        emailRepoMock.Verify(e => e.GetRecipients(It.IsAny<Guid>()), Times.Once);
-    }
-
-    private static OrderProcessingService GetTestService(IOrderRepository? repo = null, IEmailNotificationRepository? emailRepo = null, IEmailNotificationService? emailService = null, IKafkaProducer? producer = null)
+    private static OrderProcessingService GetTestService(
+        IOrderRepository? repo = null,
+        IEmailOrderProcessingService? emailMock = null,
+        ISmsOrderProcessingService? smsMock = null,
+        IKafkaProducer? producer = null)
     {
         if (repo == null)
         {
@@ -215,16 +187,16 @@ public class OrderProcessingServiceTests
             repo = repoMock.Object;
         }
 
-        if (emailRepo == null)
+        if (emailMock == null)
         {
-            var emailRepoMock = new Mock<IEmailNotificationRepository>();
-            emailRepo = emailRepoMock.Object;
+            var emailMockService = new Mock<IEmailOrderProcessingService>();
+            emailMock = emailMockService.Object;
         }
 
-        if (emailService == null)
+        if (smsMock == null)
         {
-            var emailServiceMock = new Mock<IEmailNotificationService>();
-            emailService = emailServiceMock.Object;
+            var smsMockService = new Mock<ISmsOrderProcessingService>();
+            smsMock = smsMockService.Object;
         }
 
         if (producer == null)
@@ -235,6 +207,6 @@ public class OrderProcessingServiceTests
 
         var kafkaSettings = new Altinn.Notifications.Core.Configuration.KafkaSettings() { PastDueOrdersTopicName = _pastDueTopicName };
 
-        return new OrderProcessingService(repo, emailRepo, emailService, producer, Options.Create(kafkaSettings));
+        return new OrderProcessingService(repo, emailMock, smsMock, producer, Options.Create(kafkaSettings));
     }
 }
