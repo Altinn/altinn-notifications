@@ -1,6 +1,4 @@
-﻿using System.Runtime.CompilerServices;
-
-using Altinn.Notifications.Core.Services.Interfaces;
+﻿using Altinn.Notifications.Core.Services.Interfaces;
 
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,14 +14,19 @@ public class TriggerController : ControllerBase
 {
     private readonly IOrderProcessingService _orderProcessingService;
     private readonly IEmailNotificationService _emailNotificationService;
+    private readonly ISmsNotificationService _smsNotificationService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TriggerController"/> class.
     /// </summary>
-    public TriggerController(IOrderProcessingService orderProcessingService, IEmailNotificationService emailNotificationService)
+    public TriggerController(
+        IOrderProcessingService orderProcessingService,
+        IEmailNotificationService emailNotificationService,
+        ISmsNotificationService smsNotificationService)
     {
         _orderProcessingService = orderProcessingService;
         _emailNotificationService = emailNotificationService;
+        _smsNotificationService = smsNotificationService;
     }
 
     /// <summary>
@@ -47,6 +50,18 @@ public class TriggerController : ControllerBase
     public async Task<ActionResult> Trigger_SendEmailNotifications()
     {
         await _emailNotificationService.SendNotifications();
+        return Ok();
+    }
+
+    /// <summary>
+    /// Endpoint for starting the processing of sms that are ready to be sent
+    /// </summary>
+    [HttpPost]
+    [Consumes("application/json")]
+    [Route("sendsms")]
+    public async Task<ActionResult> Trigger_SendSmsNotifications()
+    {
+        await _smsNotificationService.SendNotifications();
         return Ok();
     }
 }
