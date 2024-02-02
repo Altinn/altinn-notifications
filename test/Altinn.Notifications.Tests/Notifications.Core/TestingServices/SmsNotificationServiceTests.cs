@@ -181,6 +181,6 @@ public class SmsNotificationServiceTests
             producer = producerMock.Object;
         }
 
-        return new SmsNotificationService(guidService.Object, dateTimeService.Object, repo, producer, Options.Create(new KafkaSettings { SmsQueTopicName = _smsQueueTopicName }));
+        return new SmsNotificationService(guidService.Object, dateTimeService.Object, repo, producer, Options.Create(new KafkaSettings { SmsQueueTopicName = _smsQueueTopicName }));
     }
 }

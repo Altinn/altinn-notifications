@@ -80,7 +80,7 @@ public class Trigger_SendSmsNotificationsTests : IClassFixture<IntegrationTestWe
                 });
                 services.Configure<Core.Configuration.KafkaSettings>(opts =>
                 {
-                    opts.SmsQueTopicName = _topicName;
+                    opts.SmsQueueTopicName = _topicName;
                 });
 
                 // Set up mock authentication and authorization               
