@@ -28,5 +28,10 @@ public enum SmsNotificationResultType
     /// <summary>
     /// Failed, invalid mobilenumber
     /// </summary>
-    Failed_InvalidRecipient
+    Failed_InvalidRecipient,
+
+    /// <summary>
+    /// Recipient mobile number was not identified
+    /// </summary>
+    Failed_RecipientNotIdentified
 }

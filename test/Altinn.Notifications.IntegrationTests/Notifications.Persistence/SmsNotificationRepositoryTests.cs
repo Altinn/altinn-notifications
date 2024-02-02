@@ -1,6 +1,7 @@
 ﻿using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
@@ -79,5 +80,29 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
 
         // Assert
         Assert.NotEmpty(smsToBeSent.Where(s => s.NotificationId == smsNotification.Id));
+    }
+
+    [Fact]
+    public async Task GetRecipients()
+    {
+        // Arrange
+        SmsNotificationRepository repo = (SmsNotificationRepository)ServiceUtil
+           .GetServices(new List<Type>() { typeof(ISmsNotificationRepository) })
+           .First(i => i.GetType() == typeof(SmsNotificationRepository));
+
+        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
+        orderIdsToDelete.Add(order.Id);
+        string expectedNumber = smsNotification.RecipientNumber;
+        string? expectedRecipientId = smsNotification.RecipientId;
+
+        // Act
+        List<SmsRecipient> actual = await repo.GetRecipients(order.Id);
+
+        SmsRecipient actualRecipient = actual[0];
+
+        // Assert
+        Assert.Single(actual);
+        Assert.Equal(expectedNumber, actualRecipient.MobileNumber);
+        Assert.Equal(expectedRecipientId, actualRecipient.RecipientId);
     }
 }
