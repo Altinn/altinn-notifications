@@ -16,7 +16,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.TriggerController;
 
-public class Trigger_SendSmsNotificationsTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.TriggerController>>, IDisposable
+public class Trigger_SendSmsNotificationsTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.TriggerController>>, IAsyncLifetime
 {
     private const string _basePath = "/notifications/api/v1/trigger/sendsms";
 
@@ -27,6 +27,17 @@ public class Trigger_SendSmsNotificationsTests : IClassFixture<IntegrationTestWe
     public Trigger_SendSmsNotificationsTests(IntegrationTestWebApplicationFactory<Controllers.TriggerController> factory)
     {
         _factory = factory;
+    }
+
+    public Task InitializeAsync()
+    {
+        return Task.CompletedTask;
+    }
+
+    public async Task DisposeAsync()
+    {
+        await PostgreUtil.DeleteOrderFromDb(_sendersRef);
+        await KafkaUtil.DeleteTopicAsync(_topicName);
     }
 
     /// <summary>
@@ -52,19 +63,6 @@ public class Trigger_SendSmsNotificationsTests : IClassFixture<IntegrationTestWe
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(1, actual);
-    }
-
-    public async void Dispose()
-    {
-        await Dispose(true);
-
-        GC.SuppressFinalize(this);
-    }
-
-    protected virtual async Task Dispose(bool disposing)
-    {
-        await PostgreUtil.DeleteOrderFromDb(_sendersRef);
-        await KafkaUtil.DeleteTopicAsync(_topicName);
     }
 
     private HttpClient GetTestClient()
