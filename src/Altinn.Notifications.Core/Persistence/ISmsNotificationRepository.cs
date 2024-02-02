@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Models;
+﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
 
@@ -25,4 +26,9 @@ public interface ISmsNotificationRepository
     /// </summary>
     /// <returns>A list of sms recipients</returns>
     public Task<List<SmsRecipient>> GetRecipients(Guid orderId);
+
+    /// <summary>
+    /// Sets result status of an sms notification and update operation id
+    /// </summary>
+    public Task UpdateSendStatus(Guid notificationId, SmsNotificationResultType result, string? gatewayReference = null);
 }

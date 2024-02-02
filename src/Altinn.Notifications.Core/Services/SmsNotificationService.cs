@@ -1,9 +1,13 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using Altinn.Notifications.Core.Configuration;
+using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
+
+using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Core.Services;
 
@@ -15,6 +19,8 @@ public class SmsNotificationService : ISmsNotificationService
     private readonly IGuidService _guid;
     private readonly IDateTimeService _dateTime;
     private readonly ISmsNotificationRepository _repository;
+    private readonly IKafkaProducer _producer;
+    private readonly string _smsQueueTopicName;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsNotificationService"/> class.
@@ -22,11 +28,15 @@ public class SmsNotificationService : ISmsNotificationService
     public SmsNotificationService(
         IGuidService guid,
         IDateTimeService dateTime,
-        ISmsNotificationRepository repository)
+        ISmsNotificationRepository repository,
+        IKafkaProducer producer,
+        IOptions<KafkaSettings> kafkaSettings)
     {
         _guid = guid;
         _dateTime = dateTime;
         _repository = repository;
+        _producer = producer;
+        _smsQueueTopicName = kafkaSettings.Value.SmsQueTopicName;
     }
 
     /// <inheritdoc/>
@@ -41,6 +51,21 @@ public class SmsNotificationService : ISmsNotificationService
         else
         {
             await CreateNotificationForRecipient(orderId, requestedSendTime, recipient.RecipientId, string.Empty, SmsNotificationResultType.Failed_RecipientNotIdentified);
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task SendNotifications()
+    {
+        List<Sms> smsList = await _repository.GetNewNotifications();
+
+        foreach (Sms sms in smsList)
+        {
+            bool success = await _producer.ProduceAsync(_smsQueueTopicName, sms.Serialize());
+            if (!success)
+            {
+                await _repository.UpdateSendStatus(sms.NotificationId, SmsNotificationResultType.New);
+            }
         }
     }
 
