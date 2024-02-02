@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Notification;
@@ -10,9 +12,11 @@ using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 
+using Microsoft.Extensions.Options;
 using Moq;
-
 using Xunit;
+
+using static Confluent.Kafka.ConfigPropertyNames;
 
 namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 
@@ -103,7 +107,7 @@ public class SmsNotificationServiceTests
         repoMock.Verify();
     }
 
-    private static SmsNotificationService GetTestService(ISmsNotificationRepository? repo = null, Guid? guidOutput = null, DateTime? dateTimeOutput = null)
+    private static SmsNotificationService GetTestService(ISmsNotificationRepository? repo = null, IKafkaProducer? producer = null, Guid? guidOutput = null, DateTime? dateTimeOutput = null)
     {
         var guidService = new Mock<IGuidService>();
         guidService
@@ -120,6 +124,12 @@ public class SmsNotificationServiceTests
             repo = repoMock.Object;
         }
 
-        return new SmsNotificationService(guidService.Object, dateTimeService.Object, repo);
+        if (producer == null)
+        {
+            var producerMock = new Mock<IKafkaProducer>();
+            producer = producerMock.Object;
+        }
+
+        return new SmsNotificationService(guidService.Object, dateTimeService.Object, repo, producer, Options.Create(new KafkaSettings()));
     }
 }
