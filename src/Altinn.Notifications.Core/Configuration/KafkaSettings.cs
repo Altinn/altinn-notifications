@@ -18,5 +18,5 @@ public class KafkaSettings
     /// <summary>
     /// THe name of the general sms queue topic
     /// </summary>
-    public string SmsQueTopicName { get; set; } = string.Empty;
+    public string SmsQueueTopicName { get; set; } = string.Empty;
 }

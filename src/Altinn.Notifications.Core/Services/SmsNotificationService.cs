@@ -36,7 +36,7 @@ public class SmsNotificationService : ISmsNotificationService
         _dateTime = dateTime;
         _repository = repository;
         _producer = producer;
-        _smsQueueTopicName = kafkaSettings.Value.SmsQueTopicName;
+        _smsQueueTopicName = kafkaSettings.Value.SmsQueueTopicName;
     }
 
     /// <inheritdoc/>

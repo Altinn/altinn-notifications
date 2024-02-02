@@ -61,6 +61,11 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             _logger.LogError(ex, "// KafkaProducer // ProduceAsync // Permanent error: {Message} for message (value: '{DeliveryResult}')", ex.Message, ex.DeliveryResult.Value);
             return false;
         }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "// KafkaProducer // ProduceAsync // An exception occurred.");
+            return false;
+        }
 
         return true;
     }
