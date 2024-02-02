@@ -16,28 +16,28 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.TriggerController;
 
-public class Trigger_SendEmailNotificationsTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.TriggerController>>, IDisposable
+public class Trigger_SendSmsNotificationsTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.TriggerController>>, IDisposable
 {
-    private const string _basePath = "/notifications/api/v1/trigger/sendemail";
+    private const string _basePath = "/notifications/api/v1/trigger/sendsms";
 
     private readonly IntegrationTestWebApplicationFactory<Controllers.TriggerController> _factory;
     private readonly string _topicName = Guid.NewGuid().ToString();
     private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
 
-    public Trigger_SendEmailNotificationsTests(IntegrationTestWebApplicationFactory<Controllers.TriggerController> factory)
+    public Trigger_SendSmsNotificationsTests(IntegrationTestWebApplicationFactory<Controllers.TriggerController> factory)
     {
         _factory = factory;
     }
 
     /// <summary>
-    /// When the send email endpoint is triggered, we expect all email notifications with status 'New' to be pushed to the
-    /// send email kafka topic and that each notification gets the result status 'Sending' in the database.
+    /// When the send sms endpoint is triggered, we expect all sms notifications with status 'New' to be pushed to the
+    /// send sms kafka topic and that each notification gets the result status 'Sending' in the database.
     /// </summary>
     [Fact]
     public async Task Post_Ok()
     {
         // Arrange
-        (_, EmailNotification notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(sendersReference: _sendersRef);
+        (_, SmsNotification notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendersReference: _sendersRef);
 
         HttpClient client = GetTestClient();
 
@@ -47,7 +47,7 @@ public class Trigger_SendEmailNotificationsTests : IClassFixture<IntegrationTest
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
 
         // Assert
-        string sql = $"select count(1) from notifications.emailnotifications where result = 'Sending' and alternateid='{notification.Id}'";
+        string sql = $"select count(1) from notifications.smsnotifications where result = 'Sending' and alternateid='{notification.Id}'";
         long actual = await PostgreUtil.RunSqlReturnOutput<long>(sql);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -82,7 +82,7 @@ public class Trigger_SendEmailNotificationsTests : IClassFixture<IntegrationTest
                 });
                 services.Configure<Core.Configuration.KafkaSettings>(opts =>
                 {
-                    opts.EmailQueueTopicName = _topicName;
+                    opts.SmsQueTopicName = _topicName;
                 });
 
                 // Set up mock authentication and authorization               
