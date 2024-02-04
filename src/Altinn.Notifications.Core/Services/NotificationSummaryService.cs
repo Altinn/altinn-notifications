@@ -46,7 +46,7 @@ namespace Altinn.Notifications.Core.Services
 
             if (summary == null)
             {
-                return  new ServiceError(404);
+                return new ServiceError(404);
             }
 
             if (summary.Notifications.Count != 0)
