@@ -128,6 +128,13 @@ public static class OrderMapper
                             Succeeded = status.Succeeded
                         };
                         break;
+                    case NotificationTemplateType.Sms:
+                        orderExt.NotificationsStatusSummary.Sms = new()
+                        {
+                            Generated = status.Generated,
+                            Succeeded = status.Succeeded
+                        };
+                        break;
                 }
             }
 

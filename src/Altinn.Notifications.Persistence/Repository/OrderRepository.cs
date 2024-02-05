@@ -30,7 +30,7 @@ public class OrderRepository : IOrderRepository
     private const string _insertSmsTextSql = "insert into notifications.smstexts(_orderid, sendernumber, body) VALUES ($1, $2, $3)"; // __orderid, _sendernumber, _body
     private const string _setProcessCompleted = "update notifications.orders set processedstatus =$1::orderprocessingstate where alternateid=$2";
     private const string _getOrdersPastSendTimeUpdateStatus = "select notifications.getorders_pastsendtime_updatestatus()";
-    private const string _getOrderIncludeStatus = "select * from notifications.getorder_includestatus($1, $2)"; // _alternateid,  creator
+    private const string _getOrderIncludeStatus = "select * from notifications.getorder_includestatus_v2($1, $2)"; // _alternateid,  creator
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderRepository"/> class.
@@ -166,7 +166,7 @@ public class OrderRepository : IOrderRepository
                     reader.GetValue<DateTime>("requestedsendtime"), // all decimals are not included
                     new Creator(reader.GetValue<string>("creatorname")),
                     reader.GetValue<DateTime>("created"),
-                    NotificationChannel.Email,
+                    reader.GetValue<NotificationChannel>("notificationchannel"),
                     new ProcessingStatus(
                         reader.GetValue<OrderProcessingStatus>("processedstatus"),
                         reader.GetValue<DateTime>("processed")));
@@ -174,9 +174,17 @@ public class OrderRepository : IOrderRepository
                 int generatedEmail = (int)reader.GetValue<long>("generatedEmailCount");
                 int succeededEmail = (int)reader.GetValue<long>("succeededEmailCount");
 
+                int generatedSms = (int)reader.GetValue<long>("generatedSmsCount");
+                int succeededSms = (int)reader.GetValue<long>("succeededSmsCount");
+
                 if (generatedEmail > 0)
                 {
                     order.SetNotificationStatuses(NotificationTemplateType.Email, generatedEmail, succeededEmail);
+                }
+
+                if (generatedSms > 0)
+                {
+                    order.SetNotificationStatuses(NotificationTemplateType.Sms, generatedSms, succeededSms);
                 }
             }
         }
