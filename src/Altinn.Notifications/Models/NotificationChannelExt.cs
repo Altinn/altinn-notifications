@@ -12,6 +12,6 @@ public enum NotificationChannelExt
 
     /// <summary>
     /// The selected channel for the notification is sms.
-    /// </summary>  
+    /// </summary>
     Sms
 }
