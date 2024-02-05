@@ -62,7 +62,7 @@ public class GetBySendersRefTests : IClassFixture<IntegrationTestWebApplicationF
     {
         // Arrange
         string sendersReference = $"{_sendersRefBase}-{Guid.NewGuid()}";
-        NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithOrder(sendersReference: sendersReference);
+        NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithEmailOrder(sendersReference: sendersReference);
 
         HttpClient client = GetTestClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
@@ -88,8 +88,8 @@ public class GetBySendersRefTests : IClassFixture<IntegrationTestWebApplicationF
     {
         // Arrange
         string sendersReference = $"{_sendersRefBase}-{Guid.NewGuid()}";
-        await PostgreUtil.PopulateDBWithOrder(sendersReference: sendersReference);
-        await PostgreUtil.PopulateDBWithOrder(sendersReference: sendersReference);
+        await PostgreUtil.PopulateDBWithEmailOrder(sendersReference: sendersReference);
+        await PostgreUtil.PopulateDBWithEmailOrder(sendersReference: sendersReference);
 
         HttpClient client = GetTestClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));

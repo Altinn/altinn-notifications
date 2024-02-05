@@ -67,7 +67,6 @@ public class OrderMapperTests
             Links = new OrderResourceLinksExt()
             {
                 Self = $"https://platform.at22.altinn.cloud/notifications/api/v1/orders/{order.Id}",
-                Notifications = $"https://platform.at22.altinn.cloud/notifications/api/v1/orders/{order.Id}/notifications",
                 Status = $"https://platform.at22.altinn.cloud/notifications/api/v1/orders/{order.Id}/status"
             }
         };

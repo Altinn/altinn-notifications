@@ -11,12 +11,12 @@ namespace Altinn.Notifications.Models
         /// Gets the number from which the SMS is created by the template    
         /// </summary>
         [JsonPropertyName("senderNumber")]
-        public string SenderNumber { get; internal set; } = string.Empty;
+        public string SenderNumber { get; set; } = string.Empty;
 
         /// <summary>
         /// Gets the body of SMSs created by the template    
         /// </summary>
         [JsonPropertyName("body")]
-        public string Body { get; internal set; } = string.Empty;
+        public string Body { get; set; } = string.Empty;
     }
 }

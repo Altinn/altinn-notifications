@@ -21,10 +21,4 @@ public class OrderResourceLinksExt
     /// </summary>
     [JsonPropertyName("status")]
     public string Status { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the notifications link 
-    /// </summary>
-    [JsonPropertyName("notifications")]
-    public string Notifications { get; set; } = string.Empty;
 }
