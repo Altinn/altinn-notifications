@@ -1,5 +1,5 @@
-﻿using Altinn.Notifications.Core.Models;
-using Altinn.Notifications.Core.Models.Orders;
+﻿using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Shared;
 
 namespace Altinn.Notifications.Core.Services.Interfaces;
 
@@ -13,5 +13,5 @@ public interface IOrderRequestService
     /// </summary>
     /// <param name="orderRequest">The notification order request</param>
     /// <returns>The registered notification order</returns>
-    public Task<(NotificationOrder? Order, ServiceError? Error)> RegisterNotificationOrder(NotificationOrderRequest orderRequest);
+    public Task<NotificationOrder> RegisterNotificationOrder(NotificationOrderRequest orderRequest);
 }

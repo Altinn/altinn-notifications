@@ -1,5 +1,7 @@
 ﻿using Altinn.Notifications.Configuration;
+using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
@@ -51,14 +53,14 @@ public class OrdersController : ControllerBase
             return Forbid();
         }
 
-        var (order, error) = await _getOrderService.GetOrderById(id, expectedCreator);
+        Result<NotificationOrder, ServiceError> result = await _getOrderService.GetOrderById(id, expectedCreator);
 
-        if (error != null)
-        {
-            return StatusCode(error.ErrorCode, error.ErrorMessage);
-        }
-
-        return order!.MapToNotificationOrderExt();
+        return result.Match<ActionResult<NotificationOrderExt>>(
+             order =>
+             {
+                 return order.MapToNotificationOrderExt();
+             },
+             error => StatusCode(error.ErrorCode, error.ErrorMessage));
     }
 
     /// <summary>
@@ -77,14 +79,14 @@ public class OrdersController : ControllerBase
             return Forbid();
         }
 
-        var (orders, error) = await _getOrderService.GetOrdersBySendersReference(sendersReference, expectedCreator);
+        Result<List<NotificationOrder>, ServiceError> result = await _getOrderService.GetOrdersBySendersReference(sendersReference, expectedCreator);
 
-        if (error != null)
-        {
-            return StatusCode(error.ErrorCode, error.ErrorMessage);
-        }
-
-        return orders!.MapToNotificationOrderListExt();
+        return result.Match<ActionResult<NotificationOrderListExt>>(
+             orders =>
+             {
+                 return orders.MapToNotificationOrderListExt();
+             },
+             error => StatusCode(error.ErrorCode, error.ErrorMessage));
     }
 
     /// <summary>
@@ -105,13 +107,13 @@ public class OrdersController : ControllerBase
             return Forbid();
         }
 
-        var (order, error) = await _getOrderService.GetOrderWithStatuById(id, expectedCreator);
+        Result<NotificationOrderWithStatus, ServiceError> result = await _getOrderService.GetOrderWithStatuById(id, expectedCreator);
 
-        if (error != null)
-        {
-            return StatusCode(error.ErrorCode, error.ErrorMessage);
-        }
-
-        return order!.MapToNotificationOrderWithStatusExt();
+        return result.Match<ActionResult<NotificationOrderWithStatusExt>>(
+         order =>
+         {
+             return order.MapToNotificationOrderWithStatusExt();
+         },
+         error => StatusCode(error.ErrorCode, error.ErrorMessage));
     }
 }

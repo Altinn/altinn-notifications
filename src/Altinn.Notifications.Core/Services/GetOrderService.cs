@@ -1,8 +1,8 @@
 ﻿using Altinn.Notifications.Core.Enums;
-using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Shared;
 
 namespace Altinn.Notifications.Core.Services;
 
@@ -28,38 +28,38 @@ public class GetOrderService : IGetOrderService
     }
 
     /// <inheritdoc/>
-    public async Task<(NotificationOrder? Order, ServiceError? Error)> GetOrderById(Guid id, string creator)
+    public async Task<Result<NotificationOrder, ServiceError>> GetOrderById(Guid id, string creator)
     {
         NotificationOrder? order = await _repo.GetOrderById(id, creator);
 
         if (order == null)
         {
-            return (null, new ServiceError(404));
+            return new ServiceError(404);
         }
 
-        return (order, null);
+        return order;
     }
 
     /// <inheritdoc/>
-    public async Task<(List<NotificationOrder>? Orders, ServiceError? Error)> GetOrdersBySendersReference(string senderRef, string creator)
+    public async Task<Result<List<NotificationOrder>, ServiceError>> GetOrdersBySendersReference(string senderRef, string creator)
     {
         List<NotificationOrder> orders = await _repo.GetOrdersBySendersReference(senderRef, creator);
 
-        return (orders, null);
+        return orders;
     }
 
     /// <inheritdoc/>
-    public async Task<(NotificationOrderWithStatus? Order, ServiceError? Error)> GetOrderWithStatuById(Guid id, string creator)
+    public async Task<Result<NotificationOrderWithStatus, ServiceError>> GetOrderWithStatuById(Guid id, string creator)
     {
         NotificationOrderWithStatus? order = await _repo.GetOrderWithStatusById(id, creator);
 
         if (order == null)
         {
-            return (null, new ServiceError(404));
+            return new ServiceError(404);
         }
 
         order.ProcessingStatus.StatusDescription = GetStatusDescription(order.ProcessingStatus.Status);
-        return (order, null);
+        return order;
     }
 
     /// <summary>

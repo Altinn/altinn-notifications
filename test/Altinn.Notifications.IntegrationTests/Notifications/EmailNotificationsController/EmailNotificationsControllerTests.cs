@@ -8,6 +8,7 @@ using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using Altinn.Notifications.Tests.Notifications.Utils;
 
@@ -101,7 +102,7 @@ public class EmailNotificationsControllerTests : IClassFixture<IntegrationTestWe
         // Arrange
         Mock<INotificationSummaryService> serviceMock = new();
         serviceMock.Setup(s => s.GetEmailSummary(It.IsAny<Guid>(), It.IsAny<string>()))
-            .ReturnsAsync((null, new ServiceError(500)));
+            .ReturnsAsync(new ServiceError(500));
 
         HttpClient client = GetTestClient(summaryService: serviceMock.Object);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
@@ -131,7 +132,7 @@ public class EmailNotificationsControllerTests : IClassFixture<IntegrationTestWe
 
         Mock<INotificationSummaryService> serviceMock = new();
         serviceMock.Setup(s => s.GetEmailSummary(It.IsAny<Guid>(), It.Is<string>(s => s.Equals("ttd"))))
-            .ReturnsAsync((output, null));
+            .ReturnsAsync(output);
 
         HttpClient client = GetTestClient(summaryService: serviceMock.Object);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
@@ -167,7 +168,7 @@ public class EmailNotificationsControllerTests : IClassFixture<IntegrationTestWe
 
         Mock<INotificationSummaryService> serviceMock = new();
         serviceMock.Setup(s => s.GetEmailSummary(It.IsAny<Guid>(), It.Is<string>(s => s.Equals("ttd"))))
-            .ReturnsAsync((output, null));
+            .ReturnsAsync(output);
 
         HttpClient client = GetTestClient(summaryService: serviceMock.Object);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));

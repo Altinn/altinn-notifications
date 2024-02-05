@@ -1,6 +1,7 @@
 ﻿using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
 
@@ -50,14 +51,11 @@ namespace Altinn.Notifications.Controllers
                 return Forbid();
             }
 
-            var (emailSummary, error) = await _summaryService.GetEmailSummary(id, expectedCreator);
+            Result<EmailNotificationSummary, ServiceError> result = await _summaryService.GetEmailSummary(id, expectedCreator);
 
-            if (error != null)
-            {
-                return StatusCode(error.ErrorCode, error.ErrorMessage);
-            }
-
-            return Ok(emailSummary?.MapToEmailNotificationSummaryExt());
+            return result.Match(
+                summary => Ok(summary.MapToEmailNotificationSummaryExt()),
+                error => StatusCode(error.ErrorCode, error.ErrorMessage));
         }
     }
 }
