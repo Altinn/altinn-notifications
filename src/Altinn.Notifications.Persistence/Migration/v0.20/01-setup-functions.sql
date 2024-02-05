@@ -51,8 +51,8 @@ BEGIN
 	orders.notificationorder->>'NotificationChannel',
         _generatedEmailCount,
         _succeededEmailCount,
-		_generatedSmsCount, 
-		_succeededSmsCount
+	_generatedSmsCount, 
+	_succeededSmsCount
     FROM
         notifications.orders AS orders
     WHERE 
