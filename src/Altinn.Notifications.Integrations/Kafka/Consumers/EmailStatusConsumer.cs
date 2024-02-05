@@ -42,7 +42,7 @@ public class EmailStatusConsumer : KafkaConsumerBase<EmailStatusConsumer>
 
     private async Task ProcessStatus(string message)
     {
-        bool succeeded = SendOperationResult.TryParse(message, out SendOperationResult result);
+        bool succeeded = EmailSendOperationResult.TryParse(message, out EmailSendOperationResult result);
 
         if (!succeeded)
         {

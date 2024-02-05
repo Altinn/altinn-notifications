@@ -21,5 +21,5 @@ public interface IEmailNotificationService
     /// <summary>
     /// Update send status for a notification
     /// </summary>
-    public Task UpdateSendStatus(SendOperationResult sendOperationResult);
+    public Task UpdateSendStatus(EmailSendOperationResult sendOperationResult);
 }

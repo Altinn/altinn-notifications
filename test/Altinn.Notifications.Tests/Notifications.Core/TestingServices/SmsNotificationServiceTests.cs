@@ -158,6 +158,35 @@ public class SmsNotificationServiceTests
         repoMock.VerifyAll();
     }
 
+    [Fact]
+    public async Task UpdateSendStatus_SendResultDefined_Succeded()
+    {
+        // Arrange
+        Guid notificationid = Guid.NewGuid();
+        string gatewayReference = Guid.NewGuid().ToString();
+
+        SmsSendOperationResult sendOperationResult = new()
+        {
+            NotificationId = notificationid,
+            SendResult = SmsNotificationResultType.Accepted,
+            GatewayReference = gatewayReference
+        };
+
+        var repoMock = new Mock<ISmsNotificationRepository>();
+        repoMock.Setup(r => r.UpdateSendStatus(
+            It.Is<Guid>(n => n == notificationid),
+            It.Is<SmsNotificationResultType>(e => e == SmsNotificationResultType.Accepted),
+            It.Is<string>(s => s.Equals(gatewayReference))));
+
+        var service = GetTestService(repo: repoMock.Object);
+
+        // Act
+        await service.UpdateSendStatus(sendOperationResult);
+
+        // Assert
+        repoMock.Verify();
+    }
+
     private static SmsNotificationService GetTestService(ISmsNotificationRepository? repo = null, IKafkaProducer? producer = null, Guid? guidOutput = null, DateTime? dateTimeOutput = null)
     {
         var guidService = new Mock<IGuidService>();
