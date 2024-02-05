@@ -32,12 +32,15 @@ public class OrderMapperTests
         {
             Id = Guid.NewGuid(),
             SendersReference = "ref1337",
-            Templates = new List<INotificationTemplate>() { new EmailTemplate("from@domain.com", "email-subject", "email-body", EmailContentType.Plain) },
+            Templates = [
+                new EmailTemplate("from@domain.com", "email-subject", "email-body", EmailContentType.Plain),
+                new SmsTemplate("Altinn-test", "This is a text message")
+            ],
             RequestedSendTime = sendTime,
             NotificationChannel = NotificationChannel.Email,
             Creator = new Creator("ttd"),
             Created = created,
-            Recipients = new List<Recipient>()
+            Recipients = []
         };
 
         NotificationOrderExt expected = new()
@@ -55,6 +58,11 @@ public class OrderMapperTests
                 ContentType = EmailContentTypeExt.Plain,
                 FromAddress = "from@domain.com",
                 Subject = "email-subject"
+            },
+            SmsTemplate = new SmsTemplateExt
+            {
+                Body = "This is a text message",
+                SenderNumber = "Altinn-test"
             },
             Links = new OrderResourceLinksExt()
             {
