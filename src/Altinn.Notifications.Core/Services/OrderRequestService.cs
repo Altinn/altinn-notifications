@@ -1,9 +1,9 @@
 ﻿using Altinn.Notifications.Core.Configuration;
-using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Shared;
 
 using Microsoft.Extensions.Options;
 
@@ -33,7 +33,7 @@ public class OrderRequestService : IOrderRequestService
     }
 
     /// <inheritdoc/>
-    public async Task<(NotificationOrder? Order, ServiceError? Error)> RegisterNotificationOrder(NotificationOrderRequest orderRequest)
+    public async Task<NotificationOrder> RegisterNotificationOrder(NotificationOrderRequest orderRequest)
     {
         Guid orderId = _guid.NewGuid();
         DateTime created = _dateTime.UtcNow();
@@ -52,7 +52,7 @@ public class OrderRequestService : IOrderRequestService
 
         NotificationOrder savedOrder = await _repository.Create(order);
 
-        return (savedOrder, null);
+        return savedOrder;
     }
 
     private List<INotificationTemplate> SetSenderIfNotDefined(List<INotificationTemplate> templates)

@@ -7,6 +7,7 @@ using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using Altinn.Notifications.Tests.Notifications.Utils;
 
@@ -112,7 +113,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         var orderService = new Mock<IGetOrderService>();
         orderService
              .Setup(o => o.GetOrdersBySendersReference(It.Is<string>(s => s.Equals("internal-ref")), It.Is<string>(s => s.Equals("ttd"))))
-             .ReturnsAsync((new List<NotificationOrder>() { _order }, null));
+             .ReturnsAsync(new List<NotificationOrder>() { _order });
 
         HttpClient client = GetTestClient(orderService.Object);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
@@ -135,7 +136,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         var orderService = new Mock<IGetOrderService>();
         orderService
              .Setup(o => o.GetOrdersBySendersReference(It.Is<string>(s => s.Equals("internal-ref")), It.Is<string>(s => s.Equals("ttd"))))
-             .ReturnsAsync((new List<NotificationOrder>() { _order }, null));
+             .ReturnsAsync(new List<NotificationOrder>() { _order });
 
         HttpClient client = GetTestClient(orderService.Object);
 
@@ -209,7 +210,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         var orderService = new Mock<IGetOrderService>();
         orderService
              .Setup(o => o.GetOrderById(It.Is<Guid>(g => g.Equals(orderId)), It.Is<string>(s => s.Equals("ttd"))))
-             .ReturnsAsync((_order, null));
+             .ReturnsAsync(_order);
 
         HttpClient client = GetTestClient(orderService.Object);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
@@ -234,7 +235,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         var orderService = new Mock<IGetOrderService>();
         orderService
              .Setup(o => o.GetOrderById(It.Is<Guid>(g => g.Equals(orderId)), It.Is<string>(s => s.Equals("ttd"))))
-             .ReturnsAsync((_order, null));
+             .ReturnsAsync(_order);
 
         HttpClient client = GetTestClient(orderService.Object);
 
@@ -259,7 +260,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         var orderService = new Mock<IGetOrderService>();
         orderService
              .Setup(o => o.GetOrderById(It.Is<Guid>(g => g.Equals(orderId)), It.Is<string>(s => s.Equals("ttd"))))
-             .ReturnsAsync((null, new ServiceError(404)));
+             .ReturnsAsync(new ServiceError(404));
 
         HttpClient client = GetTestClient(orderService.Object);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
@@ -333,7 +334,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         var orderService = new Mock<IGetOrderService>();
         orderService
              .Setup(o => o.GetOrderWithStatuById(It.Is<Guid>(g => g.Equals(orderId)), It.Is<string>(s => s.Equals("ttd"))))
-             .ReturnsAsync((_orderWithStatus, null));
+             .ReturnsAsync(_orderWithStatus);
 
         HttpClient client = GetTestClient(orderService.Object);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
@@ -358,7 +359,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         var orderService = new Mock<IGetOrderService>();
         orderService
              .Setup(o => o.GetOrderWithStatuById(It.Is<Guid>(g => g.Equals(orderId)), It.Is<string>(s => s.Equals("ttd"))))
-             .ReturnsAsync((_orderWithStatus, null));
+             .ReturnsAsync(_orderWithStatus);
 
         HttpClient client = GetTestClient(orderService.Object);
 
@@ -384,7 +385,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         var orderService = new Mock<IGetOrderService>();
         orderService
              .Setup(o => o.GetOrderWithStatuById(It.Is<Guid>(g => g.Equals(orderId)), It.Is<string>(s => s.Equals("ttd"))))
-             .ReturnsAsync((null, new ServiceError(404)));
+             .ReturnsAsync(new ServiceError(404));
 
         HttpClient client = GetTestClient(orderService.Object);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
@@ -407,11 +408,11 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
             var orderServiceMock = new Mock<IGetOrderService>();
             orderServiceMock
                 .Setup(o => o.GetOrderById(It.IsAny<Guid>(), It.IsAny<string>()))
-                .ReturnsAsync((_order, null));
+                .ReturnsAsync(_order);
 
             orderServiceMock
                  .Setup(o => o.GetOrdersBySendersReference(It.IsAny<string>(), It.IsAny<string>()))
-                 .ReturnsAsync((new List<NotificationOrder>() { _order }, null));
+                 .ReturnsAsync(new List<NotificationOrder>() { _order });
 
             orderService = orderServiceMock.Object;
         }
