@@ -21,7 +21,7 @@ DECLARE
     _target_orderid INTEGER;
     _succeededEmailCount BIGINT;
     _generatedEmailCount BIGINT;
-	_succeededSmsCount BIGINT;
+    _succeededSmsCount BIGINT;
     _generatedSmsCount BIGINT;
 BEGIN
     SELECT _id INTO _target_orderid FROM notifications.orders
