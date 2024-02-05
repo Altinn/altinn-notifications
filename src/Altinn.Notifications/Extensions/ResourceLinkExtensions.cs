@@ -55,11 +55,21 @@ public static class ResourceLinkExtensions
 
         string baseUri = $"{_baseUri}/notifications/api/v1/orders/{order!.Id}/notifications/";
 
-        if (order.NotificationsStatusSummary?.Email != null)
+        NotificationsStatusSummaryExt? summary = order.NotificationsStatusSummary;
+
+        if (summary?.Email != null)
         {
-            order.NotificationsStatusSummary.Email.Links = new()
+            summary.Email.Links = new()
             {
                 Self = baseUri + "email"
+            };
+        }
+
+        if (summary?.Sms != null)
+        {
+            summary.Sms.Links = new()
+            {
+                Self = baseUri + "sms"
             };
         }
     }

@@ -106,6 +106,60 @@ public class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFact
     }
 
     [Fact]
+    public async Task GetWithStatusById_SingleMatchInDbAndOneSms_ReturnsOk()
+    {
+        // Arrange
+        (NotificationOrder persistedOrder, _) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendersReference: _sendersRef);
+
+        string refLinkBase = "http://localhost:5090/notifications/api/v1/orders";
+
+        NotificationOrderWithStatusExt expected = new()
+        {
+            Id = persistedOrder.Id.ToString(),
+            SendersReference = persistedOrder.SendersReference,
+            Creator = "ttd",
+            Created = persistedOrder.Created,
+            NotificationChannel = (NotificationChannelExt)persistedOrder.NotificationChannel,
+            RequestedSendTime = persistedOrder.RequestedSendTime,
+            ProcessingStatus = new()
+            {
+                LastUpdate = persistedOrder.Created,
+                Status = "Registered",
+                StatusDescription = "Order has been registered and is awaiting requested send time before processing."
+            },
+            NotificationsStatusSummary = new NotificationsStatusSummaryExt()
+            {
+                Sms = new()
+                {
+                    Generated = 1,
+                    Succeeded = 0,
+                    Links = new()
+                    {
+                        Self = $"{refLinkBase}/{persistedOrder.Id}/notifications/sms"
+                    }
+                },
+                Email = null
+            }
+        };
+
+        string uri = $"{_basePath}/{persistedOrder.Id}/status";
+
+        HttpClient client = GetTestClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
+
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, uri);
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        string resString = await response.Content.ReadAsStringAsync();
+        NotificationOrderWithStatusExt? actual = JsonSerializer.Deserialize<NotificationOrderWithStatusExt>(resString, JsonSerializerOptionsProvider.Options);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equivalent(expected, actual);
+    }
+
+    [Fact]
     public async Task GetWithStatusById_SingleMatchInDb_ReturnsOk()
     {
         // Arrange
