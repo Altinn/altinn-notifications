@@ -64,13 +64,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
 
         (_, SmsNotification notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(_sendersRef);
 
-        SmsSendOperationResult sendOperationResultInvalid = new()
-        {
-            SendResult = SmsNotificationResultType.Accepted,
-            GatewayReference = Guid.NewGuid().ToString()
-        };
-
-        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResultInvalid.Serialize());
+        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, string.Empty);
 
         // Act
         await consumerService.StartAsync(CancellationToken.None);
