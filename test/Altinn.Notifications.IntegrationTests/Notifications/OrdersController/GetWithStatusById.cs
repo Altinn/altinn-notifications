@@ -109,7 +109,7 @@ public class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFact
     public async Task GetWithStatusById_SingleMatchInDb_ReturnsOk()
     {
         // Arrange
-        NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithOrder(sendersReference: _sendersRef);
+        NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithEmailOrder(sendersReference: _sendersRef);
 
         NotificationOrderWithStatusExt expected = new()
         {

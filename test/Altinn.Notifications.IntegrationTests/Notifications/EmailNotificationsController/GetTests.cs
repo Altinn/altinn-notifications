@@ -69,7 +69,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.EmailNotifications
         public async Task Get_OrderIdForAnotherCreator_NotFound()
         {
             // Arrange
-            NotificationOrder order = await PostgreUtil.PopulateDBWithOrder();
+            NotificationOrder order = await PostgreUtil.PopulateDBWithEmailOrder();
             orderIdsToDelete.Add(order.Id);
 
             string uri = $"{_basePath}/{order.Id}/notifications/email";

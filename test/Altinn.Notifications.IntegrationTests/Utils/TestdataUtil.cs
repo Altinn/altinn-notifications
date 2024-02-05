@@ -103,7 +103,7 @@ public static class TestdataUtil
                 new SmsTemplate()
                 {
                     Type = NotificationTemplateType.Sms,
-                    Body = "email-body",
+                    Body = "sms-body",
                     SenderNumber = "Altinn local test"
                 }
             },
