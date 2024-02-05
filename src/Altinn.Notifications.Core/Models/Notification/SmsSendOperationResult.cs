@@ -22,7 +22,7 @@ public class SmsSendOperationResult
     /// <summary>
     /// The sms send result
     /// </summary>
-    public SmsNotificationResultType? SendResult { get; set; }
+    public SmsNotificationResultType SendResult { get; set; }
 
     /// <summary>
     /// Json serializes the <see cref="SmsSendOperationResult"/>
