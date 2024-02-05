@@ -28,7 +28,7 @@ public static class OrderMapper
         return new NotificationOrderRequest(
             extRequest.SendersReference,
             creator,
-            new List<INotificationTemplate>() { emailTemplate },
+            [emailTemplate],
             extRequest.RequestedSendTime.ToUniversalTime(),
             NotificationChannel.Email,
             recipients);
@@ -49,7 +49,7 @@ public static class OrderMapper
         return new NotificationOrderRequest(
             extRequest.SendersReference,
             creator,
-            new List<INotificationTemplate>() { smsTemplate },
+            [smsTemplate],
             extRequest.RequestedSendTime.ToUniversalTime(),
             NotificationChannel.Sms,
             recipients);
@@ -81,7 +81,13 @@ public static class OrderMapper
                     };
 
                     break;
-                default:
+                case NotificationTemplateType.Sms:
+                    var smsTemplate = template! as SmsTemplate;
+                    orderExt.SmsTemplate = new()
+                    {
+                        Body = smsTemplate!.Body,
+                        SenderNumber = smsTemplate.SenderNumber
+                    };
                     break;
             }
         }
@@ -160,7 +166,7 @@ public static class OrderMapper
             recipients.Select(r => new RecipientExt
             {
                 EmailAddress = GetEmailFromAddressList(r.AddressInfo),
-                MobileNumber = GetMobileNumberFromAddressList(r.AddressInfo) 
+                MobileNumber = GetMobileNumberFromAddressList(r.AddressInfo)
             }));
 
         return recipientExt;
