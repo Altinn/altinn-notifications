@@ -40,7 +40,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.EmailNotifications
 
         async Task IAsyncLifetime.DisposeAsync()
         {
-            if (orderIdsToDelete.Count == 0)
+            if (orderIdsToDelete.Count != 0)
             {
                 string deleteSql = $@"DELETE from notifications.orders o where o.alternateid in ('{string.Join("','", orderIdsToDelete)}')";
                 await PostgreUtil.RunSql(deleteSql);
