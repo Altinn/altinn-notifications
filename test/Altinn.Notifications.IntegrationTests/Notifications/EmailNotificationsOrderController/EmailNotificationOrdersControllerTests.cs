@@ -168,31 +168,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
-
-    [Fact]
-    public async Task Post_ServiceReturnsError_ServerError()
-    {
-        // Arrange
-        Mock<IOrderRequestService> serviceMock = new();
-        serviceMock.Setup(s => s.RegisterNotificationOrder(It.IsAny<NotificationOrderRequest>()))
-            .ReturnsAsync(new ServiceError(500));
-
-        HttpClient client = GetTestClient(orderService: serviceMock.Object);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
-
-        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
-        {
-            Content = new StringContent(_orderRequestExt.Serialize(), Encoding.UTF8, "application/json")
-        };
-
-        // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
-        serviceMock.VerifyAll();
-    }
-
+   
     [Fact]
     public async Task Post_ValidScope_ServiceReturnsOrder_Accepted()
     {

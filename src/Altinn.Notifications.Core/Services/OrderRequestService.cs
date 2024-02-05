@@ -33,7 +33,7 @@ public class OrderRequestService : IOrderRequestService
     }
 
     /// <inheritdoc/>
-    public async Task<Result<NotificationOrder, ServiceError>> RegisterNotificationOrder(NotificationOrderRequest orderRequest)
+    public async Task<NotificationOrder> RegisterNotificationOrder(NotificationOrderRequest orderRequest)
     {
         Guid orderId = _guid.NewGuid();
         DateTime created = _dateTime.UtcNow();
