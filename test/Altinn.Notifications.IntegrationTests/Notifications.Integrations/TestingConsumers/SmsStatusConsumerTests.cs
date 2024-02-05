@@ -46,7 +46,6 @@ public class SmsStatusConsumerTests : IAsyncLifetime
         // Assert
         string smsNotificationStatus = await SelectSmsNotificationStatus(notification.Id);
         Assert.Equal(SmsNotificationResultType.Accepted.ToString(), smsNotificationStatus);
-
     }
 
     public Task InitializeAsync()
