@@ -48,7 +48,7 @@ BEGIN
         orders.requestedsendtime,
         orders.processed,
         orders.processedstatus,
-		orders.notificationorder->>'NotificationChannel',
+	orders.notificationorder->>'NotificationChannel',
         _generatedEmailCount,
         _succeededEmailCount,
 		_generatedSmsCount, 
