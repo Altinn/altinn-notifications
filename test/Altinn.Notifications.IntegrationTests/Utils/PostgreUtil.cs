@@ -10,17 +10,33 @@ namespace Altinn.Notifications.IntegrationTests.Utils;
 
 public static class PostgreUtil
 {
-    public static async Task<Guid> PopulateDBWithOrderAndReturnId(string? sendersReference = null)
+    public static async Task<Guid> PopulateDBWithEmailOrderAndReturnId(string? sendersReference = null)
     {
-        var order = await PopulateDBWithOrder(sendersReference);
+        var order = await PopulateDBWithEmailOrder(sendersReference);
         return order.Id;
     }
 
-    public static async Task<NotificationOrder> PopulateDBWithOrder(string? sendersReference = null)
+    public static async Task<NotificationOrder> PopulateDBWithEmailOrder(string? sendersReference = null)
     {
         var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IOrderRepository) });
         OrderRepository repository = (OrderRepository)serviceList.First(i => i.GetType() == typeof(OrderRepository));
         var order = TestdataUtil.NotificationOrder_EmailTemplate_OneRecipient();
+        order.Id = Guid.NewGuid();
+
+        if (sendersReference != null)
+        {
+            order.SendersReference = sendersReference;
+        }
+
+        var persistedOrder = await repository.Create(order);
+        return persistedOrder;
+    }
+
+    public static async Task<NotificationOrder> PopulateDBWithSmsOrder(string? sendersReference = null)
+    {
+        var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IOrderRepository) });
+        OrderRepository repository = (OrderRepository)serviceList.First(i => i.GetType() == typeof(OrderRepository));
+        var order = TestdataUtil.NotificationOrder_SmsTemplate_OneRecipient();
         order.Id = Guid.NewGuid();
 
         if (sendersReference != null)

@@ -34,7 +34,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
     public async Task AddNotification()
     {
         // Arrange
-        Guid orderId = await PostgreUtil.PopulateDBWithOrderAndReturnId();
+        Guid orderId = await PostgreUtil.PopulateDBWithEmailOrderAndReturnId();
         orderIdsToDelete.Add(orderId);
 
         // Arrange

@@ -32,7 +32,7 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
                                                     .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
                                                     .First(s => s.GetType() == typeof(PastDueOrdersRetryConsumer))!;
 
-        NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithOrder(sendersReference: _sendersRef);
+        NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithEmailOrder(sendersReference: _sendersRef);
         await KafkaUtil.PublishMessageOnTopic(_retryTopicName, persistedOrder.Serialize());
 
         Guid orderId = persistedOrder.Id;
