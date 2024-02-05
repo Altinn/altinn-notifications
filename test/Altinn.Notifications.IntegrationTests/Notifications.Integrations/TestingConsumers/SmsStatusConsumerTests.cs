@@ -2,14 +2,13 @@
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.IntegrationTests.Utils;
-
 using Microsoft.Extensions.Hosting;
 
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.TestingConsumers;
 
-public class EmailStatusConsumerTests : IAsyncLifetime
+public class SmsStatusConsumerTests : IAsyncLifetime
 {
     private readonly string _statusUpdatedTopicName = Guid.NewGuid().ToString();
     private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
@@ -20,22 +19,23 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         // Arrange
         Dictionary<string, string> vars = new()
         {
-            { "KafkaSettings__EmailStatusUpdatedTopicName", _statusUpdatedTopicName },
+            { "KafkaSettings__SmsStatusUpdatedTopicName", _statusUpdatedTopicName },
             { "KafkaSettings__Admin__TopicList", $"[\"{_statusUpdatedTopicName}\"]" }
         };
 
-        using EmailStatusConsumer consumerService = (EmailStatusConsumer)ServiceUtil
-                                                    .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
-                                                    .First(s => s.GetType() == typeof(EmailStatusConsumer))!;
+        using SmsStatusConsumer consumerService = (SmsStatusConsumer)ServiceUtil
+                                            .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
+                                            .First(s => s.GetType() == typeof(SmsStatusConsumer))!;
 
-        (_, EmailNotification notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(_sendersRef);
+        (_, SmsNotification notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(_sendersRef);
 
-        EmailSendOperationResult sendOperationResult = new()
+        SmsSendOperationResult sendOperationResult = new()
         {
             NotificationId = notification.Id,
-            OperationId = Guid.NewGuid().ToString(),
-            SendResult = EmailNotificationResultType.Succeeded
+            SendResult = SmsNotificationResultType.Accepted,
+            GatewayReference = Guid.NewGuid().ToString()
         };
+
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
 
         // Act
@@ -44,8 +44,9 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         await consumerService.StopAsync(CancellationToken.None);
 
         // Assert
-        string emailNotificationStatus = await SelectEmailNotificationStatus(notification.Id);
-        Assert.Equal(EmailNotificationResultType.Succeeded.ToString(), emailNotificationStatus);
+        string smsNotificationStatus = await SelectSmsNotificationStatus(notification.Id);
+        Assert.Equal(SmsNotificationResultType.Accepted.ToString(), smsNotificationStatus);
+
     }
 
     public Task InitializeAsync()
@@ -64,9 +65,9 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         await KafkaUtil.DeleteTopicAsync(_statusUpdatedTopicName);
     }
 
-    private static async Task<string> SelectEmailNotificationStatus(Guid notificationId)
+    private static async Task<string> SelectSmsNotificationStatus(Guid notificationId)
     {
-        string sql = $"select result from notifications.emailnotifications where alternateid = '{notificationId}'";
+        string sql = $"select result from notifications.smsnotifications where alternateid = '{notificationId}'";
         return await PostgreUtil.RunSqlReturnOutput<string>(sql);
     }
 }

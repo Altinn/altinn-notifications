@@ -5,9 +5,9 @@ using Altinn.Notifications.Core.Enums;
 namespace Altinn.Notifications.Core.Models.Notification;
 
 /// <summary>
-/// A class representing a send operation update object
+/// A class representing a email send operation update object
 /// </summary>                              
-public class SendOperationResult
+public class EmailSendOperationResult
 {
     /// <summary>
     /// The notification id
@@ -25,7 +25,7 @@ public class SendOperationResult
     public EmailNotificationResultType? SendResult { get; set; }
 
     /// <summary>
-    /// Json serializes the <see cref="SendOperationResult"/>
+    /// Json serializes the <see cref="EmailSendOperationResult"/>
     /// </summary>
     public string Serialize()
     {
@@ -33,21 +33,21 @@ public class SendOperationResult
     }
 
     /// <summary>
-    /// Deserialize a json string into the <see cref="SendOperationResult"/>
+    /// Deserialize a json string into the <see cref="EmailSendOperationResult"/>
     /// </summary>
-    public static SendOperationResult? Deserialize(string serializedString)
+    public static EmailSendOperationResult? Deserialize(string serializedString)
     {
-        return JsonSerializer.Deserialize<SendOperationResult>(
+        return JsonSerializer.Deserialize<EmailSendOperationResult>(
             serializedString, JsonSerializerOptionsProvider.Options);
     }
 
     /// <summary>
-    /// Try to parse a json string into a<see cref="SendOperationResult"/>
+    /// Try to parse a json string into a<see cref="EmailSendOperationResult"/>
     /// </summary>
-    public static bool TryParse(string input, out SendOperationResult value)
+    public static bool TryParse(string input, out EmailSendOperationResult value)
     {
-        SendOperationResult? parsedOutput;
-        value = new SendOperationResult();
+        EmailSendOperationResult? parsedOutput;
+        value = new EmailSendOperationResult();
 
         if (string.IsNullOrEmpty(input))
         {
