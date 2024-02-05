@@ -3,17 +3,17 @@ CREATE OR REPLACE FUNCTION notifications.getorder_includestatus_v2(
 	_alternateid uuid,
 	_creatorname text)
     RETURNS TABLE(alternateid uuid,
-				  creatorname text,
-				  sendersreference text,
-				  created timestamp with time zone,				  
-				  requestedsendtime timestamp with time zone,
-				  processed timestamp with time zone,
-				  processedstatus orderprocessingstate,
-				  notificationchannel text,
-				  generatedemailcount bigint,
-				  succeededemailcount bigint,
-				  generatedsmscount bigint, 
-				  succeededsmscount bigint) 
+	creatorname text,
+	sendersreference text,
+	created timestamp with time zone,				  
+	requestedsendtime timestamp with time zone,
+	processed timestamp with time zone,
+	processedstatus orderprocessingstate,
+	notificationchannel text,
+	generatedemailcount bigint,
+	succeededemailcount bigint,
+	generatedsmscount bigint, 
+	succeededsmscount bigint) 
     LANGUAGE 'plpgsql'
 AS $BODY$
 
