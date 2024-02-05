@@ -73,7 +73,6 @@ public class GetByIdTests : IClassFixture<IntegrationTestWebApplicationFactory<C
             Created = persistedOrder.Created,
             Links = new()
             {
-                Notifications = $"{refLinkBase}/{id}/notifications",
                 Self = $"{refLinkBase}/{id}",
                 Status = $"{refLinkBase}/{id}/status"
             },

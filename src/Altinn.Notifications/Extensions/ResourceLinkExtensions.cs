@@ -38,7 +38,6 @@ public static class ResourceLinkExtensions
         {
             Self = self,
             Status = self + "/status",
-            Notifications = self + "/notifications"
         };
     }
 
