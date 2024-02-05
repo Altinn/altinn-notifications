@@ -24,29 +24,27 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.EmailNotifications
     {
         private readonly string _basePath;
         private readonly IntegrationTestWebApplicationFactory<Controllers.EmailNotificationsController> _factory;
-        private readonly Task _initializeTask;
-        private Guid _orderId;
-        private Guid _notificationId;
+        private readonly List<Guid> orderIdsToDelete;
 
         public GetTests(IntegrationTestWebApplicationFactory<Controllers.EmailNotificationsController> factory)
         {
             _basePath = $"/notifications/api/v1/orders";
             _factory = factory;
-            _initializeTask = InitializeAsync();
+            orderIdsToDelete = new List<Guid>();
         }
 
         public async Task InitializeAsync()
         {
-            (NotificationOrder persistedOrder, EmailNotification persistedNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
-            _orderId = persistedOrder.Id;
-            _notificationId = persistedNotification.Id;
+            await Task.CompletedTask;
         }
 
         async Task IAsyncLifetime.DisposeAsync()
         {
-            string sql = $"delete from notifications.orders where alternateid= '{_orderId}'";
-
-            await PostgreUtil.RunSql(sql);
+            if (orderIdsToDelete.Count != 0)
+            {
+                string deleteSql = $@"DELETE from notifications.orders o where o.alternateid in ('{string.Join("','", orderIdsToDelete)}')";
+                await PostgreUtil.RunSql(deleteSql);
+            }
         }
 
         [Fact]
@@ -71,9 +69,10 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.EmailNotifications
         public async Task Get_OrderIdForAnotherCreator_NotFound()
         {
             // Arrange
-            await _initializeTask;
+            NotificationOrder order = await PostgreUtil.PopulateDBWithOrder();
+            orderIdsToDelete.Add(order.Id);
 
-            string uri = $"{_basePath}/{_orderId}/notifications/email";
+            string uri = $"{_basePath}/{order.Id}/notifications/email";
 
             HttpClient client = GetTestClient();
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("nav", scope: "altinn:serviceowner/notifications.create"));
@@ -91,9 +90,9 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.EmailNotifications
         public async Task Get_ValidOrderId_Ok()
         {
             // Arrange
-            await _initializeTask;
-
-            string uri = $"{_basePath}/{_orderId}/notifications/email";
+            (NotificationOrder order, EmailNotification notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
+            string uri = $"{_basePath}/{order.Id}/notifications/email";
+            orderIdsToDelete.Add(order.Id);
 
             HttpClient client = GetTestClient();
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
@@ -108,8 +107,8 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.EmailNotifications
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             EmailNotificationSummaryExt? summary = JsonSerializer.Deserialize<EmailNotificationSummaryExt>(responseString);
             Assert.True(summary?.Notifications.Count > 0);
-            Assert.Equal(_orderId, summary?.OrderId);
-            Assert.Equal(_notificationId, summary?.Notifications[0].Id);
+            Assert.Equal(order.Id, summary?.OrderId);
+            Assert.Equal(notification.Id, summary?.Notifications[0].Id);
             Assert.Equal(1, summary?.Generated);
             Assert.Equal(0, summary?.Succeeded);
         }

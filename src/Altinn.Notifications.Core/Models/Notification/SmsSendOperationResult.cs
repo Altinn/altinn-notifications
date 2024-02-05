@@ -5,9 +5,9 @@ using Altinn.Notifications.Core.Enums;
 namespace Altinn.Notifications.Core.Models.Notification;
 
 /// <summary>
-/// A class representing a send operation update object
-/// </summary>                              
-public class SendOperationResult
+/// A class representing a sms send operation update object
+/// </summary>    
+public class SmsSendOperationResult
 {
     /// <summary>
     /// The notification id
@@ -15,17 +15,17 @@ public class SendOperationResult
     public Guid NotificationId { get; set; }
 
     /// <summary>
-    /// The send operation id
+    /// The reference to the delivery in sms gateway
     /// </summary>
-    public string OperationId { get; set; } = string.Empty;
+    public string GatewayReference { get; set; } = string.Empty;
 
     /// <summary>
-    /// The email send result
+    /// The sms send result
     /// </summary>
-    public EmailNotificationResultType? SendResult { get; set; }
+    public SmsNotificationResultType SendResult { get; set; }
 
     /// <summary>
-    /// Json serializes the <see cref="SendOperationResult"/>
+    /// Json serializes the <see cref="SmsSendOperationResult"/>
     /// </summary>
     public string Serialize()
     {
@@ -33,21 +33,21 @@ public class SendOperationResult
     }
 
     /// <summary>
-    /// Deserialize a json string into the <see cref="SendOperationResult"/>
+    /// Deserialize a json string into the <see cref="SmsSendOperationResult"/>
     /// </summary>
-    public static SendOperationResult? Deserialize(string serializedString)
+    public static SmsSendOperationResult? Deserialize(string serializedString)
     {
-        return JsonSerializer.Deserialize<SendOperationResult>(
+        return JsonSerializer.Deserialize<SmsSendOperationResult>(
             serializedString, JsonSerializerOptionsProvider.Options);
     }
 
     /// <summary>
-    /// Try to parse a json string into a<see cref="SendOperationResult"/>
+    /// Try to parse a json string into a<see cref="SmsSendOperationResult"/>
     /// </summary>
-    public static bool TryParse(string input, out SendOperationResult value)
+    public static bool TryParse(string input, out SmsSendOperationResult value)
     {
-        SendOperationResult? parsedOutput;
-        value = new SendOperationResult();
+        SmsSendOperationResult? parsedOutput;
+        value = new SmsSendOperationResult();
 
         if (string.IsNullOrEmpty(input))
         {

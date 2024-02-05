@@ -30,7 +30,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
 
         (_, EmailNotification notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(_sendersRef);
 
-        SendOperationResult sendOperationResult = new()
+        EmailSendOperationResult sendOperationResult = new()
         {
             NotificationId = notification.Id,
             OperationId = Guid.NewGuid().ToString(),

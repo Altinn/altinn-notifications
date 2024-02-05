@@ -143,7 +143,7 @@ public class EmailNotificationServiceTests
         Guid notificationid = Guid.NewGuid();
         string operationId = Guid.NewGuid().ToString();
 
-        SendOperationResult sendOperationResult = new()
+        EmailSendOperationResult sendOperationResult = new()
         { 
             NotificationId = notificationid,
             OperationId = operationId,
@@ -169,7 +169,7 @@ public class EmailNotificationServiceTests
         Guid notificationid = Guid.NewGuid();
         string operationId = Guid.NewGuid().ToString();
 
-        SendOperationResult sendOperationResult = new()
+        EmailSendOperationResult sendOperationResult = new()
         {
             NotificationId = notificationid,
             OperationId = operationId,
