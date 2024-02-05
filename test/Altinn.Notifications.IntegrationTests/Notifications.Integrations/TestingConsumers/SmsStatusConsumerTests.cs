@@ -48,6 +48,40 @@ public class SmsStatusConsumerTests : IAsyncLifetime
         Assert.Equal(SmsNotificationResultType.Accepted.ToString(), smsNotificationStatus);
     }
 
+    [Fact]
+    public async Task RunTask_ParseSmsSendOperationResult_StatusNotUpdated()
+    {
+        // Arrange
+        Dictionary<string, string> vars = new()
+        {
+            { "KafkaSettings__SmsStatusUpdatedTopicName", _statusUpdatedTopicName },
+            { "KafkaSettings__Admin__TopicList", $"[\"{_statusUpdatedTopicName}\"]" }
+        };
+
+        using SmsStatusConsumer consumerService = (SmsStatusConsumer)ServiceUtil
+                                            .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
+                                            .First(s => s.GetType() == typeof(SmsStatusConsumer))!;
+
+        (_, SmsNotification notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(_sendersRef);
+
+        SmsSendOperationResult sendOperationResultInvalid = new()
+        {
+            SendResult = SmsNotificationResultType.Accepted,
+            GatewayReference = Guid.NewGuid().ToString()
+        };
+
+        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResultInvalid.Serialize());
+
+        // Act
+        await consumerService.StartAsync(CancellationToken.None);
+        await Task.Delay(10000);
+        await consumerService.StopAsync(CancellationToken.None);
+
+        // Assert
+        string smsNotificationStatus = await SelectSmsNotificationStatus(notification.Id);
+        Assert.Equal(SmsNotificationResultType.New.ToString(), smsNotificationStatus);
+    }
+
     public Task InitializeAsync()
     {
         return Task.CompletedTask;
