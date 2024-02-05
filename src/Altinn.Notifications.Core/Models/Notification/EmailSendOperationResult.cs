@@ -5,7 +5,7 @@ using Altinn.Notifications.Core.Enums;
 namespace Altinn.Notifications.Core.Models.Notification;
 
 /// <summary>
-/// A class representing a email send operation update object
+/// A class representing an email send operation result object
 /// </summary>                              
 public class EmailSendOperationResult
 {
