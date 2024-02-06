@@ -24,13 +24,13 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.EmailNotifications
     {
         private readonly string _basePath;
         private readonly IntegrationTestWebApplicationFactory<Controllers.EmailNotificationsController> _factory;
-        private readonly List<Guid> orderIdsToDelete;
+        private readonly List<Guid> _orderIdsToDelete;
 
         public GetTests(IntegrationTestWebApplicationFactory<Controllers.EmailNotificationsController> factory)
         {
             _basePath = $"/notifications/api/v1/orders";
             _factory = factory;
-            orderIdsToDelete = new List<Guid>();
+            _orderIdsToDelete = new List<Guid>();
         }
 
         public async Task InitializeAsync()
@@ -40,9 +40,9 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.EmailNotifications
 
         async Task IAsyncLifetime.DisposeAsync()
         {
-            if (orderIdsToDelete.Count != 0)
+            if (_orderIdsToDelete.Count != 0)
             {
-                string deleteSql = $@"DELETE from notifications.orders o where o.alternateid in ('{string.Join("','", orderIdsToDelete)}')";
+                string deleteSql = $@"DELETE from notifications.orders o where o.alternateid in ('{string.Join("','", _orderIdsToDelete)}')";
                 await PostgreUtil.RunSql(deleteSql);
             }
         }
@@ -70,7 +70,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.EmailNotifications
         {
             // Arrange
             NotificationOrder order = await PostgreUtil.PopulateDBWithEmailOrder();
-            orderIdsToDelete.Add(order.Id);
+            _orderIdsToDelete.Add(order.Id);
 
             string uri = $"{_basePath}/{order.Id}/notifications/email";
 
@@ -92,7 +92,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.EmailNotifications
             // Arrange
             (NotificationOrder order, EmailNotification notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
             string uri = $"{_basePath}/{order.Id}/notifications/email";
-            orderIdsToDelete.Add(order.Id);
+            _orderIdsToDelete.Add(order.Id);
 
             HttpClient client = GetTestClient();
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));

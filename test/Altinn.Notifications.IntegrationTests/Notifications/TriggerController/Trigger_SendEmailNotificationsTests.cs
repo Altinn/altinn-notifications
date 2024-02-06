@@ -78,7 +78,7 @@ public class Trigger_SendEmailNotificationsTests : IClassFixture<IntegrationTest
                 {
                     opts.Admin.TopicList = new List<string> { _topicName };
                 });
-                services.Configure<Core.Configuration.KafkaSettings>(opts =>
+                services.Configure<Altinn.Notifications.Core.Configuration.KafkaSettings>(opts =>
                 {
                     opts.EmailQueueTopicName = _topicName;
                 });

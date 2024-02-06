@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Models.NotificationTemplate;
+﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.IntegrationTests.Utils;
@@ -10,11 +11,11 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
 {
     public class OrderRepositoryTests : IAsyncLifetime
     {
-        private readonly List<Guid> orderIdsToDelete;
+        private readonly List<Guid> _orderIdsToDelete;
 
         public OrderRepositoryTests()
         {
-            orderIdsToDelete = new List<Guid>();
+            _orderIdsToDelete = new List<Guid>();
         }
 
         public async Task InitializeAsync()
@@ -24,7 +25,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
 
         public async Task DisposeAsync()
         {
-            string deleteSql = $@"DELETE from notifications.orders o where o.alternateid in ('{string.Join("','", orderIdsToDelete)}')";
+            string deleteSql = $@"DELETE from notifications.orders o where o.alternateid in ('{string.Join("','", _orderIdsToDelete)}')";
             await PostgreUtil.RunSql(deleteSql);
         }
 
@@ -48,7 +49,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 RequestedSendTime = DateTime.UtcNow
             };
 
-            orderIdsToDelete.Add(order.Id);
+            _orderIdsToDelete.Add(order.Id);
 
             // Act
             await repo.Create(order);
@@ -79,11 +80,11 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 Creator = new("test"),
                 Templates = new List<INotificationTemplate>()
                 {
-                    new EmailTemplate("noreply@altinn.no", "Subject", "Body", Core.Enums.EmailContentType.Plain)
+                    new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)
                 }
             };
 
-            orderIdsToDelete.Add(order.Id);
+            _orderIdsToDelete.Add(order.Id);
 
             // Act
             await repo.Create(order);
@@ -114,12 +115,12 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 Creator = new("test"),
                 Templates = new List<INotificationTemplate>()
                 {
-                    new EmailTemplate("noreply@altinn.no", "Subject", "Body", Core.Enums.EmailContentType.Plain),
+                    new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain),
                     new SmsTemplate("Altinn", "This is the body")
                 }
             };
 
-            orderIdsToDelete.Add(order.Id);
+            _orderIdsToDelete.Add(order.Id);
 
             // Act
             await repo.Create(order);

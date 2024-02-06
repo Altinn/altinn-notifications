@@ -156,9 +156,6 @@ public class EmailOrderProcessingServiceTests
             emailService = emailServiceMock.Object;
         }
 
-        var smsRepoMock = new Mock<ISmsNotificationRepository>();
-        var smsServiceMock = new Mock<ISmsNotificationService>();
-
         return new EmailOrderProcessingService(emailRepo, emailService);
     }
 }

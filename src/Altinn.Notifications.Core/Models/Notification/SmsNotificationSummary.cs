@@ -1,7 +1,7 @@
 ﻿namespace Altinn.Notifications.Core.Models.Notification
 {
     /// <summary>
-    /// An implementation of <see cref="INotificationSummary{TClass}"/> for email notifications"/>
+    /// An implementation of <see cref="INotificationSummary{TClass}"/> for sms notifications"/>
     /// </summary>
     public class SmsNotificationSummary : INotificationSummary<SmsNotificationWithResult>
     {

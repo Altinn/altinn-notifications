@@ -4,7 +4,7 @@ using Altinn.Notifications.Core.Shared;
 namespace Altinn.Notifications.Core.Services.Interfaces
 {
     /// <summary>
-    /// Interface describing the notification summary service
+    /// Interface describing the sms notification summary service
     /// </summary>
     public interface ISmsNotificationSummaryService
     {

@@ -78,7 +78,7 @@ public class Trigger_SendSmsNotificationsTests : IClassFixture<IntegrationTestWe
                 {
                     opts.Admin.TopicList = new List<string> { _topicName };
                 });
-                services.Configure<Core.Configuration.KafkaSettings>(opts =>
+                services.Configure<Altinn.Notifications.Core.Configuration.KafkaSettings>(opts =>
                 {
                     opts.SmsQueueTopicName = _topicName;
                 });

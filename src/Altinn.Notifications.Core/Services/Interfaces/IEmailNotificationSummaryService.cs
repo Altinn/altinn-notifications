@@ -4,7 +4,7 @@ using Altinn.Notifications.Core.Shared;
 namespace Altinn.Notifications.Core.Services.Interfaces
 {
     /// <summary>
-    /// Interface describing the notification summary service
+    /// Interface describing the email notification summary service
     /// </summary>
     public interface IEmailNotificationSummaryService
     {
