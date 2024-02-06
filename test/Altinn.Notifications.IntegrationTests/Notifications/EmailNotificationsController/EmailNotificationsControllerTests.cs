@@ -100,7 +100,7 @@ public class EmailNotificationsControllerTests : IClassFixture<IntegrationTestWe
     public async Task Get_ServiceReturnsError_ServerError()
     {
         // Arrange
-        Mock<INotificationSummaryService> serviceMock = new();
+        Mock<IEmailNotificationSummaryService> serviceMock = new();
         serviceMock.Setup(s => s.GetEmailSummary(It.IsAny<Guid>(), It.IsAny<string>()))
             .ReturnsAsync(new ServiceError(500));
 
@@ -130,7 +130,7 @@ public class EmailNotificationsControllerTests : IClassFixture<IntegrationTestWe
             Notifications = new List<EmailNotificationWithResult>()
         };
 
-        Mock<INotificationSummaryService> serviceMock = new();
+        Mock<IEmailNotificationSummaryService> serviceMock = new();
         serviceMock.Setup(s => s.GetEmailSummary(It.IsAny<Guid>(), It.Is<string>(s => s.Equals("ttd"))))
             .ReturnsAsync(output);
 
@@ -166,7 +166,7 @@ public class EmailNotificationsControllerTests : IClassFixture<IntegrationTestWe
             Notifications = new List<EmailNotificationWithResult>()
         };
 
-        Mock<INotificationSummaryService> serviceMock = new();
+        Mock<IEmailNotificationSummaryService> serviceMock = new();
         serviceMock.Setup(s => s.GetEmailSummary(It.IsAny<Guid>(), It.Is<string>(s => s.Equals("ttd"))))
             .ReturnsAsync(output);
 
@@ -190,11 +190,11 @@ public class EmailNotificationsControllerTests : IClassFixture<IntegrationTestWe
         serviceMock.VerifyAll();
     }
 
-    private HttpClient GetTestClient(INotificationSummaryService? summaryService = null)
+    private HttpClient GetTestClient(IEmailNotificationSummaryService? summaryService = null)
     {
         if (summaryService == null)
         {
-            var summaryServiceMock = new Mock<INotificationSummaryService>();
+            var summaryServiceMock = new Mock<IEmailNotificationSummaryService>();
             summaryService = summaryServiceMock.Object;
         }
 
