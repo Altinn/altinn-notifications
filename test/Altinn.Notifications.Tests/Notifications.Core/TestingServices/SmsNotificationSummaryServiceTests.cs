@@ -1,8 +1,13 @@
 ﻿using System;
+using System.Threading.Tasks;
 
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Notification;
+using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
+using Altinn.Notifications.Core.Shared;
+
+using Moq;
 
 using Xunit;
 
@@ -90,6 +95,30 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             // Assert
             Assert.Equal(1, summary.Generated);
             Assert.Equal(0, summary.Succeeded);
+        }
+
+        [Fact]
+        public async Task GetSmsSummary_NoMatchInDBForOrder()
+        {
+            // Arrange
+            Mock<INotificationSummaryRepository> repoMock = new();
+            repoMock.Setup(r => r.GetSmsSummary(It.IsAny<Guid>(), It.IsAny<string>()))
+                .ReturnsAsync((SmsNotificationSummary?)null);
+
+            var service = new SmsNotificationSummaryService(repoMock.Object);
+
+            // Act
+            var result = await service.GetSmsSummary(Guid.NewGuid(), "ttd");
+
+            // Assert
+            result.Match(
+                success => throw new Exception("No success value should be returned if db returns null"),
+                actuallError =>
+                {
+                    Assert.IsType<ServiceError>(actuallError);
+                    Assert.Equal(404, actuallError.ErrorCode);
+                    return true;
+                });
         }
     }
 }
