@@ -1,20 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-using Altinn.Notifications.Core.Enums;
+﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Orders;
-using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.IntegrationTests.Utils;
-using Altinn.Notifications.Persistence.Repository;
-
-using Microsoft.AspNetCore.Http.HttpResults;
 
 using Xunit;
 
@@ -44,7 +34,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Core
         public async Task GetSmsSummary_SingleNeweNotification_ReturnsSummary()
         {
             // Arrange
-            (NotificationOrder order, _) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
+            (NotificationOrder order, SmsNotification notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
             _orderIdsToDelete.Add(order.Id);
 
             SmsNotificationSummaryService service = (SmsNotificationSummaryService)ServiceUtil
@@ -59,8 +49,11 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Core
                actualSummary =>
                {
                    Assert.Single(actualSummary.Notifications);
-                   var notification = actualSummary.Notifications[0];
-                   Assert.Equal(SmsNotificationResultType.New, notification.ResultStatus.Result);
+                   var actualNotification = actualSummary.Notifications[0];
+                   Assert.Equal(SmsNotificationResultType.New, actualNotification.ResultStatus.Result);
+                   Assert.NotEmpty(actualNotification.Recipient.MobileNumber);
+                   Assert.Equal(notification.Id, actualNotification.Id);
+                   Assert.Equivalent(notification.RecipientNumber, actualNotification.Recipient.MobileNumber);
                    return true;
                },
                error =>
