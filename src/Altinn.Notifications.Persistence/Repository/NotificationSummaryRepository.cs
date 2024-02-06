@@ -37,70 +37,70 @@ public class NotificationSummaryRepository : INotificationSummaryRepository
     /// <inheritdoc/>
     public async Task<EmailNotificationSummary?> GetEmailSummary(Guid orderId, string creator)
     {
-        bool matchFound = false;
-
-        List<EmailNotificationWithResult> notificationList = new();
-        string sendersReference = string.Empty;
-
-        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getEmailNotificationsByOrderIdSql);
-        using TelemetryTracker tracker = new(_telemetryClient, pgcom);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, orderId);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, creator);
-
-        await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync())
-        {
-            while (await reader.ReadAsync())
-            {
-                if (!matchFound)
+        var (matchFound, sendersReference, notificationList) = await GetSummary(
+            orderId,
+            creator,
+            _getEmailNotificationsByOrderIdSql,
+            reader => new EmailNotificationWithResult(
+                reader.GetValue<Guid>("alternateid"),
+                new EmailRecipient()
                 {
-                    matchFound = true;
-                    sendersReference = reader.GetValue<string>("sendersreference");
-                }
-
-                Guid notificationId = reader.GetValue<Guid>("alternateid");
-
-                if (notificationId != Guid.Empty)
-                {
-                    notificationList.Add(
-                    new EmailNotificationWithResult(
-                         reader.GetValue<Guid>("alternateid"),
-                         new EmailRecipient()
-                         {
-                             RecipientId = reader.GetValue<string>("recipientid"),
-                             ToAddress = reader.GetValue<string>("toaddress")
-                         },
-                         new NotificationResult<EmailNotificationResultType>(
-                            reader.GetValue<EmailNotificationResultType>("result"),
-                            reader.GetValue<DateTime>("resulttime"))));
-                }
-            }
-        }
-
-        tracker.Track();
+                    RecipientId = reader.GetValue<string>("recipientid"),
+                    ToAddress = reader.GetValue<string>("toaddress")
+                },
+                new NotificationResult<EmailNotificationResultType>(
+                    reader.GetValue<EmailNotificationResultType>("result"),
+                    reader.GetValue<DateTime>("resulttime"))));
 
         if (!matchFound)
         {
             return null;
         }
 
-        EmailNotificationSummary emailSummary = new(orderId)
+        return new EmailNotificationSummary(orderId)
         {
             SendersReference = sendersReference,
-            Notifications = notificationList
+            Notifications = notificationList.Cast<EmailNotificationWithResult>().ToList()
         };
-
-        return emailSummary;
     }
 
     /// <inheritdoc/>
     public async Task<SmsNotificationSummary?> GetSmsSummary(Guid orderId, string creator)
     {
-        bool matchFound = false;
+        var (matchFound, sendersReference, notificationList) = await GetSummary(
+            orderId,
+            creator,
+            _getSmsNotificationsByOrderIdSql,
+            reader => new SmsNotificationWithResult(
+                reader.GetValue<Guid>("alternateid"),
+                new SmsRecipient()
+                {
+                    RecipientId = reader.GetValue<string>("recipientid"),
+                    MobileNumber = reader.GetValue<string>("mobilenumber")
+                },
+                new NotificationResult<SmsNotificationResultType>(
+                    reader.GetValue<SmsNotificationResultType>("result"),
+                    reader.GetValue<DateTime>("resulttime"))));
 
-        List<SmsNotificationWithResult> notificationList = new();
+        if (!matchFound)
+        {
+            return null;
+        }
+
+        return new SmsNotificationSummary(orderId)
+        {
+            SendersReference = sendersReference,
+            Notifications = notificationList.Cast<SmsNotificationWithResult>().ToList()
+        };
+    }
+
+    private async Task<(bool MatchFound, string SendersReference, List<T> NotificationList)> GetSummary<T>(Guid orderId, string creator, string sqlCommand, Func<NpgsqlDataReader, T> createNotification)
+    {
+        bool matchFound = false;
+        List<T> notificationList = new();
         string sendersReference = string.Empty;
 
-        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getSmsNotificationsByOrderIdSql);
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(sqlCommand);
         using TelemetryTracker tracker = new(_telemetryClient, pgcom);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, orderId);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, creator);
@@ -119,34 +119,13 @@ public class NotificationSummaryRepository : INotificationSummaryRepository
 
                 if (notificationId != Guid.Empty)
                 {
-                    notificationList.Add(
-                    new SmsNotificationWithResult(
-                         reader.GetValue<Guid>("alternateid"),
-                         new SmsRecipient()
-                         {
-                             RecipientId = reader.GetValue<string>("recipientid"),
-                             MobileNumber = reader.GetValue<string>("mobilenumber")
-                         },
-                         new NotificationResult<SmsNotificationResultType>(
-                            reader.GetValue<SmsNotificationResultType>("result"),
-                            reader.GetValue<DateTime>("resulttime"))));
+                    notificationList.Add(createNotification(reader));
                 }
             }
         }
 
         tracker.Track();
 
-        if (!matchFound)
-        {
-            return null;
-        }
-
-        SmsNotificationSummary smsSummary = new(orderId)
-        {
-            SendersReference = sendersReference,
-            Notifications = notificationList
-        };
-
-        return smsSummary;
+        return (matchFound, sendersReference, notificationList);
     }
 }
