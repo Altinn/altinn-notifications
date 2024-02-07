@@ -1,14 +1,13 @@
 /*
     Test script of platform notifications api with org token
     Command:
-    docker-compose run k6 run /src/tests/orders_email.js `
+    docker-compose run k6 run /src/tests/orders_sms.js `
     -e tokenGeneratorUserName=autotest `
     -e tokenGeneratorUserPwd=*** `
     -e mpClientId=*** `
     -e mpKid=altinn-usecase-events `
     -e encodedJwk=*** `
     -e env=*** `
-    -e emailRecipient=*** `
     -e smsRecipient=*** `
     -e runFullTestSet=true
 
@@ -20,16 +19,12 @@ import * as setupToken from "../setup.js";
 import * as notificationsApi from "../api/notifications/notifications.js";
 import * as ordersApi from "../api/notifications/orders.js";
 import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
-const emailOrderRequestJson = JSON.parse(
-  open("../data/orders/01-email-request.json")
-);
 const smsOrderRequestJson = JSON.parse(
   open("../data/orders/02-sms-request.json")
 );
 import { generateJUnitXML, reportPath } from "../report.js";
 import { addErrorCount, stopIterationOnFail } from "../errorhandler.js";
 const scopes = "altinn:serviceowner/notifications.create";
-const emailRecipient = __ENV.emailRecipient.toLowerCase();
 const smsRecipient = __ENV.smsRecipient.toLowerCase();
 export const options = {
   thresholds: {
@@ -40,14 +35,6 @@ export const options = {
 export function setup() {
   var token = setupToken.getAltinnTokenForOrg(scopes);
   var sendersReference = uuidv4();
-
-  var emailOrderRequest = emailOrderRequestJson;
-  emailOrderRequest.recipients = [
-    {
-      emailAddress: emailRecipient,
-    },
-  ];
-  emailOrderRequest.sendersReference = sendersReference;
 
   var smsOrderRequest = smsOrderRequestJson;
   smsOrderRequest.recipients = [
@@ -64,7 +51,6 @@ export function setup() {
   var data = {
     runFullTestSet: runFullTestSet,
     token: token,
-    emailOrderRequest: emailOrderRequest,
     smsOrderRequest: smsOrderRequest,
     sendersReference: sendersReference,
   };
@@ -72,22 +58,22 @@ export function setup() {
   return data;
 }
 
-// 01 - POST email notification order request
-function TC01_PostEmailNotificationOrderRequest(data) {
+// 01 - POST sms notification order request
+function TC01_PostSmsNotificationOrderRequest(data) {
   var response, success;
 
-  response = ordersApi.postEmailNotificationOrder(
-    JSON.stringify(data.emailOrderRequest),
+  response = ordersApi.postSmsNotificationOrder(
+    JSON.stringify(data.smsOrderRequest),
     data.token
   );
   var selfLink = response.headers["Location"];
 
   success = check(response, {
-    "POST email notification order request. Status is 202 Accepted": (r) =>
+    "POST sms notification order request. Status is 202 Accepted": (r) =>
       r.status === 202,
-    "POST email notification order request. Location header providedStatus is 202 Accepted":
+    "POST sms notification order request. Location header providedStatus is 202 Accepted":
       (r) => selfLink,
-    "POST email notification order request. Response body is not an empty string":
+    "POST sms notification order request. Response body is not an empty string":
       (r) => r.body,
   });
 
@@ -145,7 +131,7 @@ function TC03_GetNotificationOrderBySendersReference(data) {
     "GET notification order by senders reference. Count is equal to 1": (
       orderList
     ) => orderList.count === 1,
-    "GET notification order by senders reference. Orderlist contains one element":
+    "GET notification order by senders reference. Order list contains one element":
       (orderList) =>
         Array.isArray(orderList.orders) && orderList.orders.length == 1,
   });
@@ -170,9 +156,8 @@ function TC04_GetNotificationOrderWithStatus(data, orderId) {
   success = check(JSON.parse(response.body), {
     "GET notification order with status. Id property is a match": (order) =>
       order.id === orderId,
-    "GET notification order with status. NotificationChannel is email": (
-      order
-    ) => order.notificationChannel === "Email",
+    "GET notification order with status. NotificationChannel is sms": (order) =>
+      order.notificationChannel === "Sms",
     "GET notification order with status. ProcessingStatus is defined": (
       order
     ) => order.processingStatus,
@@ -180,13 +165,13 @@ function TC04_GetNotificationOrderWithStatus(data, orderId) {
   addErrorCount(success);
 }
 
-// 05 - GET email notification summary
-function TC05_GetEmailNotificationSummary(data, orderId) {
+// 05 - GET sms notification summary
+function TC05_GetSmsNotificationSummary(data, orderId) {
   var response, success;
 
-  response = notificationsApi.getEmailNotifications(orderId, data.token);
+  response = notificationsApi.getSmsNotifications(orderId, data.token);
   success = check(response, {
-    "GET email notifications. Status is 200 OK": (r) => r.status === 200,
+    "GET sms notifications. Status is 200 OK": (r) => r.status === 200,
   });
 
   addErrorCount(success);
@@ -196,63 +181,33 @@ function TC05_GetEmailNotificationSummary(data, orderId) {
   }
 
   success = check(JSON.parse(response.body), {
-    "GET email notifications. OrderId property is a match": (
+    "GET sms notifications. OrderId property is a match": (
       notificationSummary
     ) => notificationSummary.orderId === orderId,
   });
 }
 
-// 06 - POST sms notification order request
-function TC06_PostSmsNotificationOrderRequest(data) {
-  var response, success;
-
-  response = ordersApi.postSmsNotificationOrder(
-    JSON.stringify(data.smsOrderRequest),
-    data.token
-  );
-  var selfLink = response.headers["Location"];
-
-  success = check(response, {
-    "POST sms notification order request. Status is 202 Accepted": (r) =>
-      r.status === 202,
-    "POST sms notification order request. Location header providedStatus is 202 Accepted":
-      (r) => selfLink,
-    "POST sms notification order request. Response body is not an empty string":
-      (r) => r.body,
-  });
-
-  addErrorCount(success);
-
-  if (!success) {
-    stopIterationOnFail(success);
-  }
-
-  return selfLink;
-}
-
 /*
- * 01 - POST email notification order request
+ * 01 - POST sms notification order request
  * 02 - GET notification order by id
  * 03 - GET notification order by senders reference
  * 04 - GET notification order with status
- * 05 - GET email notification summary
- * 06 - POST sms notification order request
+ * 05 - GET sms notification summary
  */
 export default function (data) {
   try {
     if (data.runFullTestSet) {
-      var selfLink = TC01_PostEmailNotificationOrderRequest(data);
+      var selfLink = TC01_PostSmsNotificationOrderRequest(data);
       let id = selfLink.split("/").pop();
       TC02_GetNotificationOrderById(data, selfLink, id);
       TC03_GetNotificationOrderBySendersReference(data);
       TC04_GetNotificationOrderWithStatus(data, id);
-      TC05_GetEmailNotificationSummary(data, id);
-      TC06_PostSmsNotificationOrderRequest(data);
+      TC05_GetSmsNotificationSummary(data, id);
     } else {
       // Limited test set for use case tests
-      var selfLink = TC01_PostEmailNotificationOrderRequest(data);
+      var selfLink = TC01_PostSmsNotificationOrderRequest(data);
       let id = selfLink.split("/").pop();
-      TC05_GetEmailNotificationSummary(data, id);
+      TC05_GetSmsNotificationSummary(data, id);
     }
   } catch (error) {
     addErrorCount(false);

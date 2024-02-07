@@ -41,6 +41,9 @@ export var notifications = {
   },
   notifications_email: function (orderId) {
     return `https://platform.${baseUrl}/notifications/api/v1/orders/${orderId}/notifications/email/`;
+  },
+  notifications_sms: function (orderId) {
+    return `https://platform.${baseUrl}/notifications/api/v1/orders/${orderId}/notifications/sms/`;
   }
 };
 
