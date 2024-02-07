@@ -85,6 +85,5 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Core
                     return true;
                 });
         }
-
     }
 }
