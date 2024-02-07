@@ -40,7 +40,7 @@ namespace Altinn.Notifications.Core.Services
         }
 
         /// <inheritdoc/>
-        public async Task<Result<EmailNotificationSummary, ServiceError>> GetEmailSummary(Guid orderId, string creator)
+        public async Task<Result<EmailNotificationSummary, ServiceError>> GetSummary(Guid orderId, string creator)
         {
             EmailNotificationSummary? summary = await _summaryRepository.GetEmailSummary(orderId, creator);
 
