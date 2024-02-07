@@ -36,7 +36,7 @@ namespace Altinn.Notifications.Core.Services
         }
 
         /// <inheritdoc/>
-        public async Task<Result<SmsNotificationSummary, ServiceError>> GetSmsSummary(Guid orderId, string creator)
+        public async Task<Result<SmsNotificationSummary, ServiceError>> GetSummary(Guid orderId, string creator)
         {
             SmsNotificationSummary? summary = await _summaryRepository.GetSmsSummary(orderId, creator);
 

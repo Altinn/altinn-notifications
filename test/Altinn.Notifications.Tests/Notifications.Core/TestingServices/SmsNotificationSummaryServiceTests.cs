@@ -108,7 +108,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             var service = new SmsNotificationSummaryService(repoMock.Object);
 
             // Act
-            var result = await service.GetSmsSummary(Guid.NewGuid(), "ttd");
+            var result = await service.GetSummary(Guid.NewGuid(), "ttd");
 
             // Assert
             result.Match(

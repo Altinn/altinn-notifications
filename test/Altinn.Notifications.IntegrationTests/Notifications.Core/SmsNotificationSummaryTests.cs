@@ -45,7 +45,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Core
              .First(i => i.GetType() == typeof(SmsNotificationSummaryService));
 
             // Act
-            Result<SmsNotificationSummary, ServiceError> result = await service.GetSmsSummary(order.Id, "ttd");
+            Result<SmsNotificationSummary, ServiceError> result = await service.GetSummary(order.Id, "ttd");
 
             // Assert
             result.Match(
@@ -73,7 +73,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Core
             .First(i => i.GetType() == typeof(SmsNotificationSummaryService));
 
             // Act
-            Result<SmsNotificationSummary, ServiceError> result = await service.GetSmsSummary(Guid.NewGuid(), "ttd");
+            Result<SmsNotificationSummary, ServiceError> result = await service.GetSummary(Guid.NewGuid(), "ttd");
 
             // Assert
             result.Match(
