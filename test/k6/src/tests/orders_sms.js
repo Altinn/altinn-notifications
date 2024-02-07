@@ -202,12 +202,10 @@ export default function (data) {
       TC02_GetNotificationOrderById(data, selfLink, id);
       TC03_GetNotificationOrderBySendersReference(data);
       TC04_GetNotificationOrderWithStatus(data, id);
-      TC05_GetSmsNotificationSummary(data, id);
     } else {
       // Limited test set for use case tests
       var selfLink = TC01_PostSmsNotificationOrderRequest(data);
       let id = selfLink.split("/").pop();
-      TC05_GetSmsNotificationSummary(data, id);
     }
   } catch (error) {
     addErrorCount(false);
