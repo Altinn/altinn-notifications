@@ -16,7 +16,7 @@ namespace Altinn.Notifications.Core.Services
         {
             { SmsNotificationResultType.New, "The sms has been created, but has not been picked up for processing yet." },
             { SmsNotificationResultType.Sending, "The sms is being processed and will be attempted sent shortly." },
-            { SmsNotificationResultType.Accepted, "The sms has been accepted by the gateway service." },
+            { SmsNotificationResultType.Accepted, "The sms has been accepted by the gateway service and will be sent shortly." },
             { SmsNotificationResultType.Failed, "The sms was not sent due to an unspecified failure." },
             { SmsNotificationResultType.Failed_RecipientNotIdentified, "The sms was not sent because the recipient's sms address was not found." },
             { SmsNotificationResultType.Failed_InvalidRecipient, "The sms was not sent because the recipient number was invalid." }
