@@ -51,7 +51,7 @@ namespace Altinn.Notifications.Controllers
                 return Forbid();
             }
 
-            Result<EmailNotificationSummary, ServiceError> result = await _summaryService.GetEmailSummary(id, expectedCreator);
+            Result<EmailNotificationSummary, ServiceError> result = await _summaryService.GetSummary(id, expectedCreator);
 
             return result.Match(
                 summary => Ok(summary.MapToEmailNotificationSummaryExt()),

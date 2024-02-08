@@ -23,6 +23,8 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.SmsNotificationsCo
     public class GetTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.SmsNotificationsController>>, IAsyncLifetime
     {
         private readonly string _basePath;
+        private readonly IntegrationTestWebApplicationFactory<Controllers.EmailNotificationsController> _factory;
+        private readonly List<Guid> _orderIdsToDelete;
         private readonly IntegrationTestWebApplicationFactory<Controllers.SmsNotificationsController> _factory;
         private readonly List<Guid> _orderIdsToDelete;
 

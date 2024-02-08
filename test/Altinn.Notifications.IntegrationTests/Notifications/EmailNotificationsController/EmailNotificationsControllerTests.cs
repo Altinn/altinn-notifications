@@ -101,7 +101,7 @@ public class EmailNotificationsControllerTests : IClassFixture<IntegrationTestWe
     {
         // Arrange
         Mock<IEmailNotificationSummaryService> serviceMock = new();
-        serviceMock.Setup(s => s.GetEmailSummary(It.IsAny<Guid>(), It.IsAny<string>()))
+        serviceMock.Setup(s => s.GetSummary(It.IsAny<Guid>(), It.IsAny<string>()))
             .ReturnsAsync(new ServiceError(500));
 
         HttpClient client = GetTestClient(summaryService: serviceMock.Object);
@@ -131,7 +131,7 @@ public class EmailNotificationsControllerTests : IClassFixture<IntegrationTestWe
         };
 
         Mock<IEmailNotificationSummaryService> serviceMock = new();
-        serviceMock.Setup(s => s.GetEmailSummary(It.IsAny<Guid>(), It.Is<string>(s => s.Equals("ttd"))))
+        serviceMock.Setup(s => s.GetSummary(It.IsAny<Guid>(), It.Is<string>(s => s.Equals("ttd"))))
             .ReturnsAsync(output);
 
         HttpClient client = GetTestClient(summaryService: serviceMock.Object);
@@ -167,7 +167,7 @@ public class EmailNotificationsControllerTests : IClassFixture<IntegrationTestWe
         };
 
         Mock<IEmailNotificationSummaryService> serviceMock = new();
-        serviceMock.Setup(s => s.GetEmailSummary(It.IsAny<Guid>(), It.Is<string>(s => s.Equals("ttd"))))
+        serviceMock.Setup(s => s.GetSummary(It.IsAny<Guid>(), It.Is<string>(s => s.Equals("ttd"))))
             .ReturnsAsync(output);
 
         HttpClient client = GetTestClient(summaryService: serviceMock.Object);
