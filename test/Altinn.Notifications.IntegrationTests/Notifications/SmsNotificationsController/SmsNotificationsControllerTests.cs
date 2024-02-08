@@ -73,6 +73,21 @@ public class SmsNotificationsControllerTests : IClassFixture<IntegrationTestWebA
     }
 
     [Fact]
+    public async Task Get_EndUserTokenWithCalidScope_Forbidden()
+    {
+        // Arrange
+        HttpClient client = GetTestClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetUserToken(12345, scope: "altinn:serviceowner/notifications.create"));
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, _basePath);
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Get_InvalidGuid_BadRequest()
     {
         HttpClient client = GetTestClient();
