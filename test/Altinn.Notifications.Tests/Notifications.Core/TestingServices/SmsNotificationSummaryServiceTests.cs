@@ -38,7 +38,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         [InlineData(SmsNotificationResultType.Accepted, "The SMS has been accepted by the gateway service and will be sent shortly.")]
         [InlineData(SmsNotificationResultType.Failed, "The SMS was not sent due to an unspecified failure.")]
         [InlineData(SmsNotificationResultType.Failed_RecipientNotIdentified, "The SMS was not sent because the recipient's SMS address was not found.")]
-        [InlineData(SmsNotificationResultType.Failed_InvalidRecipient, "The sms SMS not sent because the recipient number was invalid.")]
+        [InlineData(SmsNotificationResultType.Failed_InvalidRecipient, "The SMS SMS not sent because the recipient number was invalid.")]
         public void GetResultDescription_ExpectedDescription(SmsNotificationResultType result, string expected)
         {
             string actual = SmsNotificationSummaryService.GetResultDescription(result);
