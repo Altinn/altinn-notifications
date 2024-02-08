@@ -33,12 +33,12 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         }
 
         [Theory]
-        [InlineData(SmsNotificationResultType.New, "The sms has been created, but has not been picked up for processing yet.")]
-        [InlineData(SmsNotificationResultType.Sending, "The sms is being processed and will be attempted sent shortly.")]
-        [InlineData(SmsNotificationResultType.Accepted, "The sms has been accepted by the gateway service and will be sent shortly.")]
-        [InlineData(SmsNotificationResultType.Failed, "The sms was not sent due to an unspecified failure.")]
-        [InlineData(SmsNotificationResultType.Failed_RecipientNotIdentified, "The sms was not sent because the recipient's sms address was not found.")]
-        [InlineData(SmsNotificationResultType.Failed_InvalidRecipient, "The sms was not sent because the recipient number was invalid.")]
+        [InlineData(SmsNotificationResultType.New, "The SMS has been created, but has not been picked up for processing yet.")]
+        [InlineData(SmsNotificationResultType.Sending, "The SMS is being processed and will be attempted sent shortly.")]
+        [InlineData(SmsNotificationResultType.Accepted, "The SMS has been accepted by the gateway service and will be sent shortly.")]
+        [InlineData(SmsNotificationResultType.Failed, "The SMS was not sent due to an unspecified failure.")]
+        [InlineData(SmsNotificationResultType.Failed_RecipientNotIdentified, "The SMS was not sent because the recipient's SMS address was not found.")]
+        [InlineData(SmsNotificationResultType.Failed_InvalidRecipient, "The sms SMS not sent because the recipient number was invalid.")]
         public void GetResultDescription_ExpectedDescription(SmsNotificationResultType result, string expected)
         {
             string actual = SmsNotificationSummaryService.GetResultDescription(result);
