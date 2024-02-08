@@ -37,37 +37,26 @@ public class NotificationSummaryRepository : INotificationSummaryRepository
     /// <inheritdoc/>
     public async Task<EmailNotificationSummary?> GetEmailSummary(Guid orderId, string creator)
     {
-        var (matchFound, sendersReference, notificationList) = await GetSummary(
-            orderId,
-            creator,
-            _getEmailNotificationsByOrderIdSql,
-            reader => new EmailNotificationWithResult(
-                reader.GetValue<Guid>("alternateid"),
-                new EmailRecipient()
-                {
-                    RecipientId = reader.GetValue<string>("recipientid"),
-                    ToAddress = reader.GetValue<string>("toaddress")
-                },
-                new NotificationResult<EmailNotificationResultType>(
-                    reader.GetValue<EmailNotificationResultType>("result"),
-                    reader.GetValue<DateTime>("resulttime"))));
-
-        if (!matchFound)
-        {
-            return null;
-        }
-
-        return new EmailNotificationSummary(orderId)
-        {
-            SendersReference = sendersReference,
-            Notifications = notificationList.ToList()
-        };
+        return (EmailNotificationSummary?)await GetSummary(
+              orderId,
+              creator,
+              _getEmailNotificationsByOrderIdSql,
+              reader => new EmailNotificationWithResult(
+                  reader.GetValue<Guid>("alternateid"),
+                  new EmailRecipient()
+                  {
+                      RecipientId = reader.GetValue<string>("recipientid"),
+                      ToAddress = reader.GetValue<string>("toaddress")
+                  },
+                  new NotificationResult<EmailNotificationResultType>(
+                      reader.GetValue<EmailNotificationResultType>("result"),
+                      reader.GetValue<DateTime>("resulttime"))));
     }
 
     /// <inheritdoc/>
     public async Task<SmsNotificationSummary?> GetSmsSummary(Guid orderId, string creator)
     {
-        var (matchFound, sendersReference, notificationList) = await GetSummary(
+        return (SmsNotificationSummary?)await GetSummary(
             orderId,
             creator,
             _getSmsNotificationsByOrderIdSql,
@@ -81,20 +70,14 @@ public class NotificationSummaryRepository : INotificationSummaryRepository
                 new NotificationResult<SmsNotificationResultType>(
                     reader.GetValue<SmsNotificationResultType>("result"),
                     reader.GetValue<DateTime>("resulttime"))));
-
-        if (!matchFound)
-        {
-            return null;
-        }
-
-        return new SmsNotificationSummary(orderId)
-        {
-            SendersReference = sendersReference,
-            Notifications = notificationList.ToList()
-        };
     }
 
-    private async Task<(bool MatchFound, string SendersReference, List<T> NotificationList)> GetSummary<T>(Guid orderId, string creator, string sqlCommand, Func<NpgsqlDataReader, T> createNotification)
+    private async Task<NotificationSummaryBase<T>?> GetSummary<T>(
+        Guid orderId,
+        string creator,
+        string sqlCommand,
+        Func<NpgsqlDataReader, T> createNotification)
+        where T : class
     {
         bool matchFound = false;
         List<T> notificationList = new();
@@ -126,6 +109,15 @@ public class NotificationSummaryRepository : INotificationSummaryRepository
 
         tracker.Track();
 
-        return (matchFound, sendersReference, notificationList);
+        if (!matchFound)
+        {
+            return null;
+        }
+
+        return new NotificationSummaryBase<T>(orderId)
+        {
+            SendersReference = sendersReference,
+            Notifications = notificationList
+        };
     }
 }
