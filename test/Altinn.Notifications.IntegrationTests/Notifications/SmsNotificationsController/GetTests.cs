@@ -18,15 +18,15 @@ using Microsoft.IdentityModel.Logging;
 
 using Xunit;
 
-namespace Altinn.Notifications.IntegrationTests.Notifications.EmailNotificationsController
+namespace Altinn.Notifications.IntegrationTests.Notifications.SmsNotificationsController
 {
-    public class GetTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.EmailNotificationsController>>, IAsyncLifetime
+    public class GetTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.SmsNotificationsController>>, IAsyncLifetime
     {
         private readonly string _basePath;
-        private readonly IntegrationTestWebApplicationFactory<Controllers.EmailNotificationsController> _factory;
+        private readonly IntegrationTestWebApplicationFactory<Controllers.SmsNotificationsController> _factory;
         private readonly List<Guid> _orderIdsToDelete;
 
-        public GetTests(IntegrationTestWebApplicationFactory<Controllers.EmailNotificationsController> factory)
+        public GetTests(IntegrationTestWebApplicationFactory<Controllers.SmsNotificationsController> factory)
         {
             _basePath = $"/notifications/api/v1/orders";
             _factory = factory;
@@ -51,7 +51,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.EmailNotifications
         public async Task Get_NonExistingOrder_NotFound()
         {
             // Arrange
-            string uri = $"{_basePath}/{Guid.NewGuid()}/notifications/email";
+            string uri = $"{_basePath}/{Guid.NewGuid()}/notifications/sms";
 
             HttpClient client = GetTestClient();
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
@@ -69,10 +69,10 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.EmailNotifications
         public async Task Get_OrderIdForAnotherCreator_NotFound()
         {
             // Arrange
-            NotificationOrder order = await PostgreUtil.PopulateDBWithEmailOrder();
+            NotificationOrder order = await PostgreUtil.PopulateDBWithSmsOrder();
             _orderIdsToDelete.Add(order.Id);
 
-            string uri = $"{_basePath}/{order.Id}/notifications/email";
+            string uri = $"{_basePath}/{order.Id}/notifications/sms";
 
             HttpClient client = GetTestClient();
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("nav", scope: "altinn:serviceowner/notifications.create"));
@@ -90,8 +90,8 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.EmailNotifications
         public async Task Get_ValidOrderId_Ok()
         {
             // Arrange
-            (NotificationOrder order, EmailNotification notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
-            string uri = $"{_basePath}/{order.Id}/notifications/email";
+            (NotificationOrder order, SmsNotification notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
+            string uri = $"{_basePath}/{order.Id}/notifications/sms";
             _orderIdsToDelete.Add(order.Id);
 
             HttpClient client = GetTestClient();
@@ -105,7 +105,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.EmailNotifications
 
             // Assert
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            EmailNotificationSummaryExt? summary = JsonSerializer.Deserialize<EmailNotificationSummaryExt>(responseString);
+            SmsNotificationSummaryExt? summary = JsonSerializer.Deserialize<SmsNotificationSummaryExt>(responseString);
             Assert.True(summary?.Notifications.Count > 0);
             Assert.Equal(order.Id, summary?.OrderId);
             Assert.Equal(notification.Id, summary?.Notifications[0].Id);
