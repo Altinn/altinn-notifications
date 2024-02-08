@@ -99,7 +99,7 @@ public class SmsNotificationsControllerTests : IClassFixture<IntegrationTestWebA
     {
         // Arrange
         Mock<ISmsNotificationSummaryService> serviceMock = new();
-        serviceMock.Setup(s => s.GetSmsSummary(It.IsAny<Guid>(), It.IsAny<string>()))
+        serviceMock.Setup(s => s.GetSummary(It.IsAny<Guid>(), It.IsAny<string>()))
             .ReturnsAsync(new ServiceError(500));
 
         HttpClient client = GetTestClient(summaryService: serviceMock.Object);
@@ -129,7 +129,7 @@ public class SmsNotificationsControllerTests : IClassFixture<IntegrationTestWebA
         };
 
         Mock<ISmsNotificationSummaryService> serviceMock = new();
-        serviceMock.Setup(s => s.GetSmsSummary(It.IsAny<Guid>(), It.Is<string>(s => s.Equals("ttd"))))
+        serviceMock.Setup(s => s.GetSummary(It.IsAny<Guid>(), It.Is<string>(s => s.Equals("ttd"))))
             .ReturnsAsync(output);
 
         HttpClient client = GetTestClient(summaryService: serviceMock.Object);
@@ -165,7 +165,7 @@ public class SmsNotificationsControllerTests : IClassFixture<IntegrationTestWebA
         };
 
         Mock<ISmsNotificationSummaryService> serviceMock = new();
-        serviceMock.Setup(s => s.GetSmsSummary(It.IsAny<Guid>(), It.Is<string>(s => s.Equals("ttd"))))
+        serviceMock.Setup(s => s.GetSummary(It.IsAny<Guid>(), It.Is<string>(s => s.Equals("ttd"))))
             .ReturnsAsync(output);
 
         HttpClient client = GetTestClient(summaryService: serviceMock.Object);
