@@ -22,13 +22,13 @@ namespace Altinn.Notifications.Controllers
     [SwaggerResponse(403, "Caller is not authorized to access the requested resource")]
     public class EmailNotificationsController : ControllerBase
     {
-        private readonly INotificationSummaryService _summaryService;
+        private readonly IEmailNotificationSummaryService _summaryService;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="EmailNotificationsController"/> class.
         /// </summary>
         /// <param name="summaryService">The notifications summary service</param>
-        public EmailNotificationsController(INotificationSummaryService summaryService)
+        public EmailNotificationsController(IEmailNotificationSummaryService summaryService)
         {
             _summaryService = summaryService;
         }
@@ -51,7 +51,7 @@ namespace Altinn.Notifications.Controllers
                 return Forbid();
             }
 
-            Result<EmailNotificationSummary, ServiceError> result = await _summaryService.GetEmailSummary(id, expectedCreator);
+            Result<EmailNotificationSummary, ServiceError> result = await _summaryService.GetSummary(id, expectedCreator);
 
             return result.Match(
                 summary => Ok(summary.MapToEmailNotificationSummaryExt()),

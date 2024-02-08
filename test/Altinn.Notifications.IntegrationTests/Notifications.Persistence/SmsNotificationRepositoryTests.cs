@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Models;
+﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
@@ -12,11 +13,11 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
 public class SmsNotificationRepositoryTests : IAsyncLifetime
 {
-    private readonly List<Guid> orderIdsToDelete;
+    private readonly List<Guid> _orderIdsToDelete;
 
     public SmsNotificationRepositoryTests()
     {
-        orderIdsToDelete = [];
+        _orderIdsToDelete = [];
     }
 
     public async Task InitializeAsync()
@@ -26,7 +27,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
 
     public async Task DisposeAsync()
     {
-        string deleteSql = $@"DELETE from notifications.orders o where o.alternateid in ('{string.Join("','", orderIdsToDelete)}')";
+        string deleteSql = $@"DELETE from notifications.orders o where o.alternateid in ('{string.Join("','", _orderIdsToDelete)}')";
         await PostgreUtil.RunSql(deleteSql);
     }
 
@@ -35,7 +36,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
     {
         // Arrange
         Guid orderId = await PostgreUtil.PopulateDBWithEmailOrderAndReturnId();
-        orderIdsToDelete.Add(orderId);
+        _orderIdsToDelete.Add(orderId);
 
         // Arrange
         SmsNotificationRepository repo = (SmsNotificationRepository)ServiceUtil
@@ -69,7 +70,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
     {
         // Arrange
         (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
-        orderIdsToDelete.Add(order.Id);
+        _orderIdsToDelete.Add(order.Id);
 
         SmsNotificationRepository repo = (SmsNotificationRepository)ServiceUtil
           .GetServices(new List<Type>() { typeof(ISmsNotificationRepository) })
@@ -91,7 +92,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
            .First(i => i.GetType() == typeof(SmsNotificationRepository));
 
         (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
-        orderIdsToDelete.Add(order.Id);
+        _orderIdsToDelete.Add(order.Id);
         string expectedNumber = smsNotification.RecipientNumber;
         string? expectedRecipientId = smsNotification.RecipientId;
 
@@ -111,7 +112,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
     {
         // Arrange
         (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
-        orderIdsToDelete.Add(order.Id);
+        _orderIdsToDelete.Add(order.Id);
 
         SmsNotificationRepository repo = (SmsNotificationRepository)ServiceUtil
           .GetServices(new List<Type>() { typeof(ISmsNotificationRepository) })
@@ -120,13 +121,13 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
         string gatewayReference = Guid.NewGuid().ToString();
 
         // Act
-        await repo.UpdateSendStatus(smsNotification.Id, Core.Enums.SmsNotificationResultType.Accepted, gatewayReference);
+        await repo.UpdateSendStatus(smsNotification.Id, SmsNotificationResultType.Accepted, gatewayReference);
 
         // Assert
         string sql = $@"SELECT count(1) 
               FROM notifications.smsnotifications sms
               WHERE sms.alternateid = '{smsNotification.Id}' 
-              AND sms.result  = '{Core.Enums.SmsNotificationResultType.Accepted}' 
+              AND sms.result  = '{SmsNotificationResultType.Accepted}' 
               AND sms.gatewayreference = '{gatewayReference}'";
 
         int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
@@ -139,20 +140,20 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
     {
         // Arrange
         (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
-        orderIdsToDelete.Add(order.Id);
+        _orderIdsToDelete.Add(order.Id);
 
         SmsNotificationRepository repo = (SmsNotificationRepository)ServiceUtil
           .GetServices(new List<Type>() { typeof(ISmsNotificationRepository) })
           .First(i => i.GetType() == typeof(SmsNotificationRepository));
 
         // Act
-        await repo.UpdateSendStatus(smsNotification.Id, Core.Enums.SmsNotificationResultType.Accepted);
+        await repo.UpdateSendStatus(smsNotification.Id, SmsNotificationResultType.Accepted);
 
         // Assert
         string sql = $@"SELECT count(1) 
               FROM notifications.smsnotifications sms
               WHERE sms.alternateid = '{smsNotification.Id}' 
-              AND sms.result  = '{Core.Enums.SmsNotificationResultType.Accepted}'";
+              AND sms.result  = '{SmsNotificationResultType.Accepted}'";
 
         int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
 

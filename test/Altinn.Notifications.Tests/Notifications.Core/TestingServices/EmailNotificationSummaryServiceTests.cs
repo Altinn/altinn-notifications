@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 {
-    public class NotificationSummaryServiceTests
+    public class EmailNotificationSummaryServiceTests
     {
         [Theory]
         [InlineData(EmailNotificationResultType.New, false)]
@@ -19,7 +19,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         [InlineData(EmailNotificationResultType.Failed_InvalidEmailFormat, false)]
         public void IsSuccessResult_CheckResultForAllEnums(EmailNotificationResultType result, bool expectedIsSuccess)
         {
-            bool actualIsSuccess = NotificationSummaryService.IsSuccessResult(result);
+            bool actualIsSuccess = EmailNotificationSummaryService.IsSuccessResult(result);
             Assert.Equal(expectedIsSuccess, actualIsSuccess);
         }
 
@@ -33,7 +33,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         [InlineData(EmailNotificationResultType.Failed_InvalidEmailFormat, "The email was not sent because the recipient’s email address is in an invalid format.")]
         public void GetResultDescription_ExpectedDescription(EmailNotificationResultType result, string expected)
         {
-            string actual = NotificationSummaryService.GetResultDescription(result);
+            string actual = EmailNotificationSummaryService.GetResultDescription(result);
             Assert.Equal(expected, actual);
         }
 
@@ -42,7 +42,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         {
             foreach (EmailNotificationResultType resultType in Enum.GetValues(typeof(EmailNotificationResultType)))
             {
-                string resultDescrption = NotificationSummaryService.GetResultDescription(resultType);
+                string resultDescrption = EmailNotificationSummaryService.GetResultDescription(resultType);
                 Assert.NotEmpty(resultDescrption);
             }
         }
@@ -63,7 +63,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             };
 
             // Act 
-            NotificationSummaryService.ProcessNotificationResults(summary);
+            EmailNotificationSummaryService.ProcessNotificationResults(summary);
             
             // Assert
             Assert.Equal(1, summary.Generated);
@@ -86,7 +86,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             };
 
             // Act 
-            NotificationSummaryService.ProcessNotificationResults(summary);
+            EmailNotificationSummaryService.ProcessNotificationResults(summary);
 
             // Assert
             Assert.Equal(1, summary.Generated);

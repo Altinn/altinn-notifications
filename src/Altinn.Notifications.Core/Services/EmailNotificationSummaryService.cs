@@ -7,9 +7,9 @@ using Altinn.Notifications.Core.Shared;
 namespace Altinn.Notifications.Core.Services
 {
     /// <summary>
-    /// Implementation of <see cref="INotificationSummaryService"/>
+    /// Implementation of <see cref="IEmailNotificationSummaryService"/>
     /// </summary>
-    public class NotificationSummaryService : INotificationSummaryService
+    public class EmailNotificationSummaryService : IEmailNotificationSummaryService
     {
         private readonly INotificationSummaryRepository _summaryRepository;
         private readonly static Dictionary<EmailNotificationResultType, string> _emailResultDescriptions = new()
@@ -22,7 +22,7 @@ namespace Altinn.Notifications.Core.Services
                 { EmailNotificationResultType.Failed_RecipientNotIdentified, "The email was not sent because the recipient's email address was not found." },
                 { EmailNotificationResultType.Failed_InvalidEmailFormat, "The email was not sent because the recipient’s email address is in an invalid format." },
                 { EmailNotificationResultType.Failed_SupressedRecipient, "The email was not sent because the recipient’s email address is suppressed by the third party email service." },
-                { EmailNotificationResultType.Failed_TransientError, "The email was not sent due to a transient error. We will retry sending the email." }                
+                { EmailNotificationResultType.Failed_TransientError, "The email was not sent due to a transient error. We will retry sending the email." }
             };
 
         private readonly static List<EmailNotificationResultType> _successResults = new()
@@ -32,15 +32,15 @@ namespace Altinn.Notifications.Core.Services
         };
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="NotificationSummaryService"/> class.
+        /// Initializes a new instance of the <see cref="EmailNotificationSummaryService"/> class.
         /// </summary>
-        public NotificationSummaryService(INotificationSummaryRepository summaryRepository)
+        public EmailNotificationSummaryService(INotificationSummaryRepository summaryRepository)
         {
             _summaryRepository = summaryRepository;
         }
 
         /// <inheritdoc/>
-        public async Task<Result<EmailNotificationSummary, ServiceError>> GetEmailSummary(Guid orderId, string creator)
+        public async Task<Result<EmailNotificationSummary, ServiceError>> GetSummary(Guid orderId, string creator)
         {
             EmailNotificationSummary? summary = await _summaryRepository.GetEmailSummary(orderId, creator);
 

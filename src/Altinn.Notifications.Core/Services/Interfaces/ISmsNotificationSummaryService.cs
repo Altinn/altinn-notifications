@@ -4,15 +4,15 @@ using Altinn.Notifications.Core.Shared;
 namespace Altinn.Notifications.Core.Services.Interfaces
 {
     /// <summary>
-    /// Interface describing the notification summary service
+    /// Interface describing the sms notification summary service
     /// </summary>
-    public interface INotificationSummaryService
+    public interface ISmsNotificationSummaryService
     {
         /// <summary>
-        /// Gets a summary of all the generated email notifications for the provided order id
+        /// Gets a summary of all the generated sms notifications for the provided order id
         /// </summary>
         /// <param name="orderId">The order id to find notifications for</param>
         /// <param name="creator">The creator of the order</param>
-        public Task<Result<EmailNotificationSummary, ServiceError>> GetEmailSummary(Guid orderId, string creator);
+        public Task<Result<SmsNotificationSummary, ServiceError>> GetSummary(Guid orderId, string creator);
     }
 }
