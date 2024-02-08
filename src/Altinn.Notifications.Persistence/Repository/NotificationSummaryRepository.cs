@@ -60,7 +60,7 @@ public class NotificationSummaryRepository : INotificationSummaryRepository
         return new EmailNotificationSummary(orderId)
         {
             SendersReference = sendersReference,
-            Notifications = notificationList.Cast<EmailNotificationWithResult>().ToList()
+            Notifications = notificationList.ToList()
         };
     }
 
@@ -90,7 +90,7 @@ public class NotificationSummaryRepository : INotificationSummaryRepository
         return new SmsNotificationSummary(orderId)
         {
             SendersReference = sendersReference,
-            Notifications = notificationList.Cast<SmsNotificationWithResult>().ToList()
+            Notifications = notificationList.ToList()
         };
     }
 
