@@ -10,3 +10,10 @@ export function getEmailNotifications(orderId, token) {
   var response = http.get(endpoint, params);
   return response;
   }
+
+  export function getSmsNotifications(orderId, token) {
+    var endpoint = config.notifications.notifications_sms(orderId);
+    var params = apiHelpers.buildHeaderWithBearer(token);
+    var response = http.get(endpoint, params);
+    return response;
+    }

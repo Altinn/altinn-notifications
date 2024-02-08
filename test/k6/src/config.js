@@ -28,6 +28,8 @@ export var tokenGenerator = {
 export var notifications = {
   orders_email:
     "https://platform." + baseUrl + "/notifications/api/v1/orders/email/",
+  orders_sms:
+    "https://platform." + baseUrl + "/notifications/api/v1/orders/sms/",
   orders_status: function (orderId) {
     return `https://platform.${baseUrl}/notifications/api/v1/orders/${orderId}/status`;
   },
@@ -39,6 +41,9 @@ export var notifications = {
   },
   notifications_email: function (orderId) {
     return `https://platform.${baseUrl}/notifications/api/v1/orders/${orderId}/notifications/email/`;
+  },
+  notifications_sms: function (orderId) {
+    return `https://platform.${baseUrl}/notifications/api/v1/orders/${orderId}/notifications/sms/`;
   }
 };
 
