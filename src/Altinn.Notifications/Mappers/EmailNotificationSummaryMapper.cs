@@ -5,7 +5,7 @@ namespace Altinn.Notifications.Mappers
     /// <summary>
     /// Mapper for <see cref="EmailNotificationSummaryExt"/>
     /// </summary>
-    public static class NotificationSummaryMapper
+    public static class EmailNotificationSummaryMapper
     {
         /// <summary>
         /// Maps a <see cref="EmailNotificationSummary"/> to a <see cref="EmailNotificationSummaryExt"/>

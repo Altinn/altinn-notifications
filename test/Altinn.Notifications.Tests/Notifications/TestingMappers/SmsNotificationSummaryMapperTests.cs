@@ -10,34 +10,34 @@ using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.TestingMappers
 {
-    public class NotificationSummaryMapperTests
+    public class SmsNotificationSummaryMapperTests
     {
         [Fact]
-        public void MapToEmailNotificationWithResultExt_EmptyList_AreEquivalent()
+        public void MapToSmsNotificationWithResultExt_EmptyList_AreEquivalent()
         {
             // Arrange
-            List<EmailNotificationWithResult> input = new();
+            List<SmsNotificationWithResult> input = new();
 
             // Act
-            var actual = input.MapToEmailNotificationWithResultExt();
+            var actual = input.MapToSmsNotificationWithResultExt();
 
             // Assert
             Assert.Empty(actual);
         }
 
         [Fact]
-        public void MapToEmailNotificationWithResultExt_NotificationWithFailedResult_AreEquivalent()
+        public void MapToSmsNotificationWithResultExt_NotificationWithFailedResult_AreEquivalent()
         {
             // Arrange
             Guid id = Guid.NewGuid();
             DateTime timestamp = DateTime.UtcNow;
-            EmailNotificationWithResultExt expected = new()
+            SmsNotificationWithResultExt expected = new()
             {
                 Id = id,
                 Succeeded = false,
                 Recipient = new()
                 {
-                    EmailAddress = "recipient@domain.com"
+                    MobileNumber = "+4799999999"
                 },
                 SendStatus = new()
                 {
@@ -47,65 +47,65 @@ namespace Altinn.Notifications.Tests.Notifications.TestingMappers
                 }
             };
 
-            EmailNotificationWithResult input = new(
+            SmsNotificationWithResult input = new(
                 id,
                 false,
-                new EmailRecipient()
+                new SmsRecipient()
                 {
                     RecipientId = "12345678910",
-                    ToAddress = "recipient@domain.com"
+                    MobileNumber = "+4799999999"
                 },
-                new NotificationResult<EmailNotificationResultType>(
-                EmailNotificationResultType.Failed_RecipientNotIdentified,
+                new NotificationResult<SmsNotificationResultType>(
+                SmsNotificationResultType.Failed_RecipientNotIdentified,
                 timestamp));
 
             input.ResultStatus.SetResultDescription("Failed to send. Could not identify recipient.");
 
             // Act
-            var actual = input.MapToEmailNotificationWithResultExt();
+            var actual = input.MapToSmsNotificationWithResultExt();
 
             // Assert
             Assert.Equivalent(expected, actual, false);
         }
 
         [Fact]
-        public void MapToEmailNotificationWithResultExt_NotificationWithSuccessResult_AreEquivalent()
+        public void MapToSmsNotificationWithResultExt_NotificationWithSuccessResult_AreEquivalent()
         {
             // Arrange
             Guid id = Guid.NewGuid();
             DateTime timestamp = DateTime.UtcNow;
-            EmailNotificationWithResultExt expected = new()
+            SmsNotificationWithResultExt expected = new()
             {
                 Id = id,
                 Succeeded = true,
                 Recipient = new()
                 {
-                    EmailAddress = "recipient@domain.com"
+                    MobileNumber = "+4799999999"
                 },
                 SendStatus = new()
                 {
                     LastUpdate = timestamp,
-                    Status = "Delivered",
-                    StatusDescription = "The email was delivered to the recipient. No errors reported, making it likely it was received by the recipient."
+                    Status = "Accepted",
+                    StatusDescription = "This is the description"
                 }
             };
 
-            EmailNotificationWithResult input = new(
+            SmsNotificationWithResult input = new(
                 id,
                 true,
-                new EmailRecipient()
+                new SmsRecipient()
                 {
                     RecipientId = "12345678910",
-                    ToAddress = "recipient@domain.com"
+                    MobileNumber = "+4799999999"
                 },
-                new NotificationResult<EmailNotificationResultType>(
-                EmailNotificationResultType.Delivered,
+                new NotificationResult<SmsNotificationResultType>(
+                SmsNotificationResultType.Accepted,
                 timestamp));
 
-            input.ResultStatus.SetResultDescription("The email was delivered to the recipient. No errors reported, making it likely it was received by the recipient.");
+            input.ResultStatus.SetResultDescription("This is the description");
 
             // Act
-            var actual = input.MapToEmailNotificationWithResultExt();
+            var actual = input.MapToSmsNotificationWithResultExt();
 
             // Assert
             Assert.Equivalent(expected, actual, false);
