@@ -15,13 +15,11 @@
 */
 
 import { check } from "k6";
+import { randomString } from "https://jslib.k6.io/k6-utils/1.2.0/index.js";
 import * as setupToken from "../setup.js";
 import * as notificationsApi from "../api/notifications/notifications.js";
 import * as ordersApi from "../api/notifications/orders.js";
 import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
-const smsOrderRequestJson = JSON.parse(
-  open("../data/orders/02-sms-request.json")
-);
 import { generateJUnitXML, reportPath } from "../report.js";
 import { addErrorCount, stopIterationOnFail } from "../errorhandler.js";
 const scopes = "altinn:serviceowner/notifications.create";
@@ -36,13 +34,16 @@ export function setup() {
   var token = setupToken.getAltinnTokenForOrg(scopes);
   var sendersReference = uuidv4();
 
-  var smsOrderRequest = smsOrderRequestJson;
-  smsOrderRequest.recipients = [
-    {
-      mobileNumber: smsRecipient,
-    },
-  ];
-  smsOrderRequest.sendersReference = sendersReference;
+  var smsOrderRequest = {
+    senderNumber: "Altinn (test)",
+    body: "This is an automated test: " + randomString(30) + " " + randomString(30),
+    recipients: [
+      {
+        mobileNumber: smsRecipient,
+      },
+    ],
+    sendersReference: sendersReference,
+  };
 
   const runFullTestSet = __ENV.runFullTestSet
     ? __ENV.runFullTestSet.toLowerCase().includes("true")
