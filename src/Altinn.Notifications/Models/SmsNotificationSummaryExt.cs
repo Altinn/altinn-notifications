@@ -23,13 +23,13 @@ namespace Altinn.Notifications.Core.Models.Notification
         public string? SendersReference { get; set; }
 
         /// <summary>
-        /// The number of generated email notifications
+        /// The number of generated sms notifications
         /// </summary>
         [JsonPropertyName("generated")]
         public int Generated { get; set; }
 
         /// <summary>
-        /// The number of email notifications that were sent successfully
+        /// The number of sms notifications that were sent successfully
         /// </summary>
         [JsonPropertyName("succeeded")]
         public int Succeeded { get; set; }
