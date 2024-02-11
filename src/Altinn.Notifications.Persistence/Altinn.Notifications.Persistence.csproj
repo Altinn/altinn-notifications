@@ -40,8 +40,4 @@
     </AssemblyAttribute>
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Migration\v0.23\" />
-  </ItemGroup>
-
 </Project>

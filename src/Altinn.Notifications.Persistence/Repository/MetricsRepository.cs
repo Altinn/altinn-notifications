@@ -18,7 +18,7 @@ namespace Altinn.Notifications.Persistence.Repository
         private readonly NpgsqlDataSource _dataSource;
         private readonly TelemetryClient? _telemetryClient;
 
-        private const string _getMonthlytMetric = "SELECT * FROM notifications.get_notification_metrics($1, $2);";  // month, year
+        private const string _getMonthlytMetric = "SELECT * FROM notifications.getmetrics($1, $2);";  // month, year
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MetricsRepository"/> class.
