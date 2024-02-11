@@ -64,7 +64,7 @@
             </tbody>
         </table>
     }
-    <br/>
+    <br />
     <br />
     <button id="exportCsvButton" onclick="exportTableToCsv()">Export metrics to CSV</button>
     <button id="exportExcelButton" onclick="exportTableToExcel()">Export metrics to Excel</button>
@@ -77,52 +77,56 @@
 
     <script>
         function exportTableToCsv() {
-            var csv = [];
-            var rows = document.querySelectorAll("table tr");
+            if (@Model != null) {
+                var csv = [];
+                var rows = document.querySelectorAll("table tr");
 
-            for (var i = 0; i < rows.length; i++) {
-                var row = [], cols = rows[i].querySelectorAll("td, th");
+                for (var i = 0; i < rows.length; i++) {
+                    var row = [], cols = rows[i].querySelectorAll("td, th");
 
-                for (var j = 0; j < cols.length; j++)
-                    row.push(cols[j].innerText);
+                    for (var j = 0; j < cols.length; j++)
+                        row.push(cols[j].innerText);
 
-                csv.push(row.join(","));
+                    csv.push(row.join(","));
+                }
+
+                // Get the month and year from the model
+                var month = @Model.Month;
+                var year = @Model.Year;
+
+                // Generate the file name
+                var fileName = "notifications_statistics_" + month + "_" + year + ".csv";
+
+                // Download the CSV file
+                var csvContent = "data:text/csv;charset=utf-8," + csv.join("\n");
+                var encodedUri = encodeURI(csvContent);
+                var link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", fileName);
+                document.body.appendChild(link);
+                link.click();
             }
-
-            // Get the month and year from the model
-            var month = @Model.Month; 
-            var year = @Model.Year;  
-
-            // Generate the file name
-            var fileName = "notifications_statistics_" + month + "_" + year + ".csv";
-
-            // Download the CSV file
-            var csvContent = "data:text/csv;charset=utf-8," + csv.join("\n");
-            var encodedUri = encodeURI(csvContent);
-            var link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", fileName);
-            document.body.appendChild(link);
-            link.click();
         }
     </script>
 
 
     <script>
         function exportTableToExcel() {
-            var ws = XLSX.utils.table_to_sheet(document.querySelector('table'));
-            var wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+            if (@Model != null) {
+                var ws = XLSX.utils.table_to_sheet(document.querySelector('table'));
+                var wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
 
-            // Get the month and year from the model
-            var month = @Model.Month; // Assuming Model.Month is an integer
-            var year = @Model.Year;   // Assuming Model.Year is an integer
+                // Get the month and year from the model
+                var month = @Model.Month; // Assuming Model.Month is an integer
+                var year = @Model.Year;   // Assuming Model.Year is an integer
 
-            // Generate the file name
-            var fileName = "notifications_statistics_" + month + "_" + year + ".xlsx";
+                // Generate the file name
+                var fileName = "notifications_statistics_" + month + "_" + year + ".xlsx";
 
-            // Save the Excel file
-            XLSX.writeFile(wb, fileName);
+                // Save the Excel file
+                XLSX.writeFile(wb, fileName);
+            }
         }
     </script>
 
