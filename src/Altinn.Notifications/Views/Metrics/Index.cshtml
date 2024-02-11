@@ -37,7 +37,10 @@
     </form>
     @if (Model != null)
     {
-        <h2>Metrics for @MonthDict[Model.Month] @Model.Year</h2>
+        <h2>
+            Metrics for @MonthDict[Model.Month]
+            @Model.Year
+        </h2>
         <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
             <thead style="background-color: #f2f2f2;">
                 <tr>
@@ -63,12 +66,13 @@
                 }
             </tbody>
         </table>
-    }
-    <br />
-    <br />
-    <button id="exportCsvButton" onclick="exportTableToCsv()">Export metrics to CSV</button>
-    <button id="exportExcelButton" onclick="exportTableToExcel()">Export metrics to Excel</button>
 
+        <br />
+        <br />
+
+        <button id="exportCsvButton" onclick="exportTableToCsv()">Export metrics to CSV</button>
+        <button id="exportExcelButton" onclick="exportTableToExcel()">Export metrics to Excel</button>
+    }
 
     <!-- Add the script for browser refresh -->
     <script src="/_framework/aspnetcore-browser-refresh.js"></script>
@@ -77,56 +81,54 @@
 
     <script>
         function exportTableToCsv() {
-            if (@Model != null) {
-                var csv = [];
-                var rows = document.querySelectorAll("table tr");
 
-                for (var i = 0; i < rows.length; i++) {
-                    var row = [], cols = rows[i].querySelectorAll("td, th");
+            var csv = [];
+            var rows = document.querySelectorAll("table tr");
 
-                    for (var j = 0; j < cols.length; j++)
-                        row.push(cols[j].innerText);
+            for (var i = 0; i < rows.length; i++) {
+                var row = [], cols = rows[i].querySelectorAll("td, th");
 
-                    csv.push(row.join(","));
-                }
+                for (var j = 0; j < cols.length; j++)
+                    row.push(cols[j].innerText);
 
-                // Get the month and year from the model
-                var month = @Model.Month;
-                var year = @Model.Year;
-
-                // Generate the file name
-                var fileName = "notifications_statistics_" + month + "_" + year + ".csv";
-
-                // Download the CSV file
-                var csvContent = "data:text/csv;charset=utf-8," + csv.join("\n");
-                var encodedUri = encodeURI(csvContent);
-                var link = document.createElement("a");
-                link.setAttribute("href", encodedUri);
-                link.setAttribute("download", fileName);
-                document.body.appendChild(link);
-                link.click();
+                csv.push(row.join(","));
             }
+
+            // Get the month and year from the model
+            var month = @Model?.Month;
+            var year = @Model?.Year;
+
+            // Generate the file name
+            var fileName = "notifications_statistics_" + month + "_" + year + ".csv";
+
+            // Download the CSV file
+            var csvContent = "data:text/csv;charset=utf-8," + csv.join("\n");
+            var encodedUri = encodeURI(csvContent);
+            var link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", fileName);
+            document.body.appendChild(link);
+            link.click();
+
         }
     </script>
 
 
     <script>
         function exportTableToExcel() {
-            if (@Model != null) {
-                var ws = XLSX.utils.table_to_sheet(document.querySelector('table'));
-                var wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+            var ws = XLSX.utils.table_to_sheet(document.querySelector('table'));
+            var wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
 
-                // Get the month and year from the model
-                var month = @Model.Month; // Assuming Model.Month is an integer
-                var year = @Model.Year;   // Assuming Model.Year is an integer
+            // Get the month and year from the model
+            var month = @Model?.Month; // Assuming Model.Month is an integer
+            var year = @Model?.Year;   // Assuming Model.Year is an integer
 
-                // Generate the file name
-                var fileName = "notifications_statistics_" + month + "_" + year + ".xlsx";
+            // Generate the file name
+            var fileName = "notifications_statistics_" + month + "_" + year + ".xlsx";
 
-                // Save the Excel file
-                XLSX.writeFile(wb, fileName);
-            }
+            // Save the Excel file
+            XLSX.writeFile(wb, fileName);
         }
     </script>
 
