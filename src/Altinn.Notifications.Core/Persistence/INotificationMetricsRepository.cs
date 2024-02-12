@@ -8,7 +8,7 @@ namespace Altinn.Notifications.Core.Persistence
     public interface INotificationMetricsRepository
     {
         /// <summary>
-        /// Retrieved the monthly notification metrics for a given year and month
+        /// Retrieved the monthly notification metrics for a given month and year
         /// </summary>
         public Task<MonthlyNotificationMetrics> GetMontlyNotificationMetrics(int month, int year);
     }
