@@ -6,26 +6,64 @@
     <!-- Your head content goes here -->
 </head>
 <body>
-    <h2>Altinn Notification Metrics</h2>
+    <h2>Altinn Notifications Metrics</h2>
     <style>
         h3, form {
             display: inline-block;
             vertical-align: middle;
             margin-right: 10px;
         }
+
+        .metrics-form,
+        .metrics-table {
+            width: 50%;
+            margin-top: 20px;
+        }
+
+            .metrics-form select,
+            .metrics-form button,
+            .metrics-table th,
+            .metrics-table td {
+                padding: 10px;
+                border: 1px solid #ddd;
+            }
+
+            .metrics-form select {
+                height: 40px;
+            }
+
+            .metrics-form button,
+            .export-button {
+                margin-top: 10px;
+                padding: 10px;
+                background-color: #4CAF50;
+                color: #fff;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+            }
+
+            .metrics-table th,
+            .metrics-table tbody tr:nth-child(even) {
+                background-color: #e6e6e6;
+            }
+
+        .export-button:hover {
+            background-color: #45a049;
+        }
     </style>
 
     <h3>Select month and year to see metrics:</h3>
-    <form asp-controller="Metrics" asp-action="GetMetrics" method="post">
-        <select id="month" name="month" required>
+    <form asp-controller="Metrics" asp-action="GetMetrics" method="post" class="metrics-form">
+        <select id="month" name="month" required style="height: 40px; padding: 5px;">
             <option value="">Month</option>
-            @foreach (var month in GetMonths())
+            @foreach (var monthEntry in MonthDict)
             {
-                <option value="@month.Value">@month.Text</option>
+                <option value="@monthEntry.Key">@monthEntry.Value</option>
             }
         </select>
 
-        <select id="year" name="year" required>
+        <select id="year" name="year" required style="height: 40px; padding: 5px;">
             <option value="">Year</option>
             @foreach (var year in GetYears())
             {
@@ -33,86 +71,54 @@
             }
         </select>
 
-        <button type="submit">Submit</button>
+        <button type="submit" class="export-button">Get metrics</button>
     </form>
+
     @if (Model != null)
     {
-        <h2>
-            Metrics for @MonthDict[Model.Month]
-            @Model.Year
-        </h2>
-        <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-            <thead style="background-color: #f2f2f2;">
-                <tr>
-                    <th style="padding: 10px; border: 1px solid #ddd;">Organization</th>
-                    <th style="padding: 10px; border: 1px solid #ddd;">Total orders</th>
-                    <th style="padding: 10px; border: 1px solid #ddd;">Total email notifications</th>
-                    <th style="padding: 10px; border: 1px solid #ddd;">Successful email notifications</th>
-                    <th style="padding: 10px; border: 1px solid #ddd;">Total SMS notifications</th>
-                    <th style="padding: 10px; border: 1px solid #ddd;">Successful SMS notifications</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var metricForOrg in Model.Metrics)
-                {
+        @if (Model != null)
+        {
+            <br />
+            <h3>
+                Metrics for @MonthDict[Model.Month] @Model.Year
+            </h3>
+
+            <table class="metrics-table">
+                <thead style="background-color: #f2f2f2;">
                     <tr>
-                        <td style="padding: 10px; border: 1px solid #ddd;">@metricForOrg.Org</td>
-                        <td style="padding: 10px; border: 1px solid #ddd;">@metricForOrg.OrdersCreated</td>
-                        <td style="padding: 10px; border: 1px solid #ddd;">@metricForOrg.EmailNotificationsCreated</td>
-                        <td style="padding: 10px; border: 1px solid #ddd;">@metricForOrg.SuccessfulEmailNotifications</td>
-                        <td style="padding: 10px; border: 1px solid #ddd;">@metricForOrg.SmsNotificationsCreated</td>
-                        <td style="padding: 10px; border: 1px solid #ddd;">@metricForOrg.SuccessfulSmsNotifications</td>
+                        <th style="padding: 10px; border: 1px solid #ddd; background-color: #e6e6e6;">Organization</th>
+                        <th style="padding: 10px; border: 1px solid #ddd; background-color: #e6e6e6;">Total orders</th>
+                        <th style="padding: 10px; border: 1px solid #ddd; background-color: #e6e6e6;">Total email notifications</th>
+                        <th style="padding: 10px; border: 1px solid #ddd; background-color: #e6e6e6;">Successful email notifications</th>
+                        <th style="padding: 10px; border: 1px solid #ddd; background-color: #e6e6e6;">Total SMS notifications</th>
+                        <th style="padding: 10px; border: 1px solid #ddd; background-color: #e6e6e6;">Successful SMS notifications</th>
                     </tr>
-                }
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @foreach (var metricForOrg in Model.Metrics)
+                    {
+                        <tr style="background-color: @(metricForOrg.OrdersCreated % 2 == 0 ? "#ffffff" : "#f9f9f9");">
+                            <td style="padding: 10px; border: 1px solid #ddd;">@metricForOrg.Org</td>
+                            <td style="padding: 10px; border: 1px solid #ddd;">@metricForOrg.OrdersCreated</td>
+                            <td style="padding: 10px; border: 1px solid #ddd;">@metricForOrg.EmailNotificationsCreated</td>
+                            <td style="padding: 10px; border: 1px solid #ddd;">@metricForOrg.SuccessfulEmailNotifications</td>
+                            <td style="padding: 10px; border: 1px solid #ddd;">@metricForOrg.SmsNotificationsCreated</td>
+                            <td style="padding: 10px; border: 1px solid #ddd;">@metricForOrg.SuccessfulSmsNotifications</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
 
-        <br />
-        <br />
+            <br />
+            <br />
 
-        <button id="exportCsvButton" onclick="exportTableToCsv()">Export metrics to CSV</button>
-        <button id="exportExcelButton" onclick="exportTableToExcel()">Export metrics to Excel</button>
+            <button id="exportExcelButton" onclick="exportTableToExcel()" class="export-button">Export metrics to Excel</button>
+        }
     }
 
     <!-- Add the script for browser refresh -->
     <script src="/_framework/aspnetcore-browser-refresh.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"></script>
-
-
-    <script>
-        function exportTableToCsv() {
-
-            var csv = [];
-            var rows = document.querySelectorAll("table tr");
-
-            for (var i = 0; i < rows.length; i++) {
-                var row = [], cols = rows[i].querySelectorAll("td, th");
-
-                for (var j = 0; j < cols.length; j++)
-                    row.push(cols[j].innerText);
-
-                csv.push(row.join(","));
-            }
-
-            // Get the month and year from the model
-            var month = @Model?.Month;
-            var year = @Model?.Year;
-
-            // Generate the file name
-            var fileName = "notifications_statistics_" + month + "_" + year + ".csv";
-
-            // Download the CSV file
-            var csvContent = "data:text/csv;charset=utf-8," + csv.join("\n");
-            var encodedUri = encodeURI(csvContent);
-            var link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", fileName);
-            document.body.appendChild(link);
-            link.click();
-
-        }
-    </script>
-
 
     <script>
         function exportTableToExcel() {
@@ -120,43 +126,15 @@
             var wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
 
-            // Get the month and year from the model
-            var month = @Model?.Month; // Assuming Model.Month is an integer
-            var year = @Model?.Year;   // Assuming Model.Year is an integer
+            var fileName = "notifications_metrics_" + @Model?.Month + "_" + @Model?.Year + ".xlsx";
 
-            // Generate the file name
-            var fileName = "notifications_statistics_" + month + "_" + year + ".xlsx";
-
-            // Save the Excel file
             XLSX.writeFile(wb, fileName);
         }
     </script>
-
 </body>
 </html>
 
 @functions {
-    public List<SelectListItem> GetMonths()
-    {
-        var months = new List<SelectListItem>
-        {
-            new SelectListItem { Value = "1", Text = "January" },
-            new SelectListItem { Value = "2", Text = "February" },
-            new SelectListItem { Value = "3", Text = "March" },
-            new SelectListItem { Value = "4", Text = "April" },
-            new SelectListItem { Value = "5", Text = "May" },
-            new SelectListItem { Value = "6", Text = "June" },
-            new SelectListItem { Value = "7", Text = "July" },
-            new SelectListItem { Value = "8", Text = "August" },
-            new SelectListItem { Value = "9", Text = "September" },
-            new SelectListItem { Value = "10", Text = "October" },
-            new SelectListItem { Value = "11", Text = "November" },
-            new SelectListItem { Value = "12", Text = "December" },
-        };
-
-        return months;
-    }
-
     public static Dictionary<int, string> MonthDict = new()
     {
         { 1, "January" },
