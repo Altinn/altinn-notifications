@@ -8,7 +8,7 @@
         /// <summary>
         /// The organization the metrics apply for
         /// </summary>
-        public string Org { get; set; }
+        public string Org { get; set; } = string.Empty;
 
         /// <summary>
         /// Total number of orders created

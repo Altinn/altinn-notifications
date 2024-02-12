@@ -3,6 +3,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <title>Altinn Notifications Metrics</title>
     <!-- Your head content goes here -->
 </head>
 <body>
@@ -76,44 +77,41 @@
 
     @if (Model != null)
     {
-        @if (Model != null)
-        {
-            <br />
-            <h3>
-                Metrics for @MonthDict[Model.Month] @Model.Year
-            </h3>
+        <br />
+        <h3>
+            Metrics for @MonthDict[Model.Month] @Model.Year
+        </h3>
 
-            <table class="metrics-table">
-                <thead style="background-color: #f2f2f2;">
-                    <tr>
-                        <th style="padding: 10px; border: 1px solid #ddd; background-color: #e6e6e6;">Organization</th>
-                        <th style="padding: 10px; border: 1px solid #ddd; background-color: #e6e6e6;">Total orders</th>
-                        <th style="padding: 10px; border: 1px solid #ddd; background-color: #e6e6e6;">Total email notifications</th>
-                        <th style="padding: 10px; border: 1px solid #ddd; background-color: #e6e6e6;">Successful email notifications</th>
-                        <th style="padding: 10px; border: 1px solid #ddd; background-color: #e6e6e6;">Total SMS notifications</th>
-                        <th style="padding: 10px; border: 1px solid #ddd; background-color: #e6e6e6;">Successful SMS notifications</th>
+        <table class="metrics-table">
+            <thead style="background-color: #f2f2f2;">
+                <tr>
+                    <th style="padding: 10px; border: 1px solid #ddd; background-color: #e6e6e6;">Organization</th>
+                    <th style="padding: 10px; border: 1px solid #ddd; background-color: #e6e6e6;">Total orders</th>
+                    <th style="padding: 10px; border: 1px solid #ddd; background-color: #e6e6e6;">Total email notifications</th>
+                    <th style="padding: 10px; border: 1px solid #ddd; background-color: #e6e6e6;">Successful email notifications</th>
+                    <th style="padding: 10px; border: 1px solid #ddd; background-color: #e6e6e6;">Total SMS notifications</th>
+                    <th style="padding: 10px; border: 1px solid #ddd; background-color: #e6e6e6;">Successful SMS notifications</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var metricForOrg in Model.Metrics)
+                {
+                    <tr style="background-color: @(metricForOrg.OrdersCreated % 2 == 0 ? "#ffffff" : "#f9f9f9");">
+                        <td style="padding: 10px; border: 1px solid #ddd;">@metricForOrg.Org</td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">@metricForOrg.OrdersCreated</td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">@metricForOrg.EmailNotificationsCreated</td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">@metricForOrg.SuccessfulEmailNotifications</td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">@metricForOrg.SmsNotificationsCreated</td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">@metricForOrg.SuccessfulSmsNotifications</td>
                     </tr>
-                </thead>
-                <tbody>
-                    @foreach (var metricForOrg in Model.Metrics)
-                    {
-                        <tr style="background-color: @(metricForOrg.OrdersCreated % 2 == 0 ? "#ffffff" : "#f9f9f9");">
-                            <td style="padding: 10px; border: 1px solid #ddd;">@metricForOrg.Org</td>
-                            <td style="padding: 10px; border: 1px solid #ddd;">@metricForOrg.OrdersCreated</td>
-                            <td style="padding: 10px; border: 1px solid #ddd;">@metricForOrg.EmailNotificationsCreated</td>
-                            <td style="padding: 10px; border: 1px solid #ddd;">@metricForOrg.SuccessfulEmailNotifications</td>
-                            <td style="padding: 10px; border: 1px solid #ddd;">@metricForOrg.SmsNotificationsCreated</td>
-                            <td style="padding: 10px; border: 1px solid #ddd;">@metricForOrg.SuccessfulSmsNotifications</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+                }
+            </tbody>
+        </table>
 
-            <br />
-            <br />
+        <br />
+        <br />
 
-            <button id="exportExcelButton" onclick="exportTableToExcel()" class="export-button">Export metrics to Excel</button>
-        }
+        <button id="exportExcelButton" onclick="exportTableToExcel()" class="export-button">Export metrics to Excel</button>
     }
 
     <!-- Add the script for browser refresh -->
@@ -135,7 +133,7 @@
 </html>
 
 @functions {
-    public static Dictionary<int, string> MonthDict = new()
+    public readonly static Dictionary<int, string> MonthDict = new()
     {
         { 1, "January" },
         { 2, "February" },
