@@ -9,12 +9,12 @@ namespace Altinn.Notifications.Core.Services
     /// </summary>
     public class MetricsService : IMetricsService
     {
-        private readonly INotificationMetricsRepository _metricsRepository;
+        private readonly IMetricsRepository _metricsRepository;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MetricsService"/> class.
         /// </summary>
-        public MetricsService(INotificationMetricsRepository metricsRepository)
+        public MetricsService(IMetricsRepository metricsRepository)
         {
             _metricsRepository = metricsRepository;
         }
@@ -22,7 +22,7 @@ namespace Altinn.Notifications.Core.Services
         /// <inheritdoc/>
         public async Task<MonthlyNotificationMetrics> GetMonthlyMetrics(int month, int year)
         {
-            return await _metricsRepository.GetMontlyNotificationMetrics(month, year);
+            return await _metricsRepository.GetMonthlyMetrics(month, year);
         }
     }
 }

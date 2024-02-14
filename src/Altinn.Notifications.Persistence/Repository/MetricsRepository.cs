@@ -11,9 +11,9 @@ using NpgsqlTypes;
 namespace Altinn.Notifications.Persistence.Repository
 {
     /// <summary>
-    /// An implementation of the <see cref="INotificationMetricsRepository"/> for handling metrics for notifications
+    /// An implementation of the <see cref="IMetricsRepository"/> for handling metrics for notifications
     /// </summary>
-    public class MetricsRepository : INotificationMetricsRepository
+    public class MetricsRepository : IMetricsRepository
     {
         private readonly NpgsqlDataSource _dataSource;
         private readonly TelemetryClient? _telemetryClient;
@@ -32,7 +32,7 @@ namespace Altinn.Notifications.Persistence.Repository
         }
 
         /// <inheritdoc/>
-        public async Task<MonthlyNotificationMetrics> GetMontlyNotificationMetrics(int month, int year)
+        public async Task<MonthlyNotificationMetrics> GetMonthlyMetrics(int month, int year)
         {
             MonthlyNotificationMetrics metrics = new()
             {

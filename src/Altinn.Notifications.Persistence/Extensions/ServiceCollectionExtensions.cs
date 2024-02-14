@@ -34,7 +34,7 @@ public static class ServiceCollectionExtensions
         .AddSingleton<ISmsNotificationRepository, SmsNotificationRepository>()
         .AddSingleton<INotificationSummaryRepository, NotificationSummaryRepository>()
         .AddSingleton<IResourceLimitRepository, ResourceLimitRepository>()
-        .AddSingleton<INotificationMetricsRepository, MetricsRepository>()
+        .AddSingleton<IMetricsRepository, MetricsRepository>()
         .AddNpgsqlDataSource(connectionString, builder =>
             builder.EnableParameterLogging(settings.LogParameters)
                    .EnableDynamicJson());
