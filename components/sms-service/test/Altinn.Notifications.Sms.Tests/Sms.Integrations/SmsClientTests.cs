@@ -72,7 +72,7 @@ namespace Altinn.Notifications.Sms.Tests.Sms.Integrations
               async actualErrorResponse =>
               {
                   await Task.CompletedTask;
-                  Assert.Equal(SmsSendResult.Failed_InvalidReceiver, actualErrorResponse.SendResult);
+                  Assert.Equal(SmsSendResult.Failed_InvalidRecipient, actualErrorResponse.SendResult);
                   Assert.NotNull(actualErrorResponse.ErrorMessage);
               });
         }

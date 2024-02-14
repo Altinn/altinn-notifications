@@ -43,7 +43,7 @@ namespace Altinn.Notifications.Sms.Integrations.LinkMobility
 
             if (result.StatusText.StartsWith("Invalid RCV"))
             {
-                return new SmsClientErrorResponse { SendResult = SmsSendResult.Failed_InvalidReceiver, ErrorMessage = result.StatusText };
+                return new SmsClientErrorResponse { SendResult = SmsSendResult.Failed_InvalidRecipient, ErrorMessage = result.StatusText };
             }
 
             _logger.LogInformation("// SmsClient // SendAsync // Failed to send SMS. Status: {StatusText}", result.StatusText);
