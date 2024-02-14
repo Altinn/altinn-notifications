@@ -17,9 +17,15 @@ namespace Altinn.Notifications.Core.Services
             { SmsNotificationResultType.New, "The SMS has been created, but has not been picked up for processing yet." },
             { SmsNotificationResultType.Sending, "The SMS is being processed and will be attempted sent shortly." },
             { SmsNotificationResultType.Accepted, "The SMS has been accepted by the gateway service and will be sent shortly." },
-            { SmsNotificationResultType.Failed, "The SMS was not sent due to an unspecified failure." },
-            { SmsNotificationResultType.Failed_RecipientNotIdentified, "The SMS was not sent because the recipient's SMS address was not found." },
-            { SmsNotificationResultType.Failed_InvalidRecipient, "The SMS was not sent because the recipient number was invalid." }
+            { SmsNotificationResultType.Delivered, "The SMS was successfully delivered to its destination." },
+            { SmsNotificationResultType.Failed, "The SMS was not delivered due to an unspecified failure." },
+            { SmsNotificationResultType.Failed_BarredReceiver, "The SMS was not delivered because the recipient's number is barred, blocked or not in use." },
+            { SmsNotificationResultType.Failed_Deleted, "The SMS was not delivered because the message has been deleted." },           
+            { SmsNotificationResultType.Failed_Expired, "The SMS was not delivered because it has expired." },
+            { SmsNotificationResultType.Failed_InvalidRecipient, "The SMS was not delivered because the recipient's mobile number was invalid." },
+            { SmsNotificationResultType.Failed_Undelivered, "The SMS was not delivered due to invalid number or no available route to destination." },
+            { SmsNotificationResultType.Failed_RecipientNotIdentified, "The SMS was not delivered because the recipient's mobile number was not found." },
+            { SmsNotificationResultType.Failed_Rejected, "The SMS was not delivered because it was rejected." },
         };
 
         private readonly static List<SmsNotificationResultType> _successResults = new()

@@ -32,9 +32,15 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         [InlineData(SmsNotificationResultType.New, "The SMS has been created, but has not been picked up for processing yet.")]
         [InlineData(SmsNotificationResultType.Sending, "The SMS is being processed and will be attempted sent shortly.")]
         [InlineData(SmsNotificationResultType.Accepted, "The SMS has been accepted by the gateway service and will be sent shortly.")]
-        [InlineData(SmsNotificationResultType.Failed, "The SMS was not sent due to an unspecified failure.")]
-        [InlineData(SmsNotificationResultType.Failed_RecipientNotIdentified, "The SMS was not sent because the recipient's SMS address was not found.")]
-        [InlineData(SmsNotificationResultType.Failed_InvalidRecipient, "The SMS was not sent because the recipient number was invalid.")]
+        [InlineData(SmsNotificationResultType.Delivered, "The SMS was successfully delivered to its destination.")]
+        [InlineData(SmsNotificationResultType.Failed, "The SMS was not delivered due to an unspecified failure.")]
+        [InlineData(SmsNotificationResultType.Failed_BarredReceiver, "The SMS was not delivered because the recipient's number is barred, blocked or not in use.")]
+        [InlineData(SmsNotificationResultType.Failed_Deleted, "The SMS was not delivered because the message has been deleted.")]
+        [InlineData(SmsNotificationResultType.Failed_Expired, "The SMS was not delivered because it has expired.")]
+        [InlineData(SmsNotificationResultType.Failed_InvalidRecipient, "The SMS was not delivered because the recipient's mobile number was invalid.")]
+        [InlineData(SmsNotificationResultType.Failed_Undelivered, "The SMS was not delivered due to invalid number or no available route to destination.")]
+        [InlineData(SmsNotificationResultType.Failed_RecipientNotIdentified, "The SMS was not delivered because the recipient's mobile number was not found.")]
+        [InlineData(SmsNotificationResultType.Failed_Rejected, "The SMS was not delivered because it was rejected.")]
         public void GetResultDescription_ExpectedDescription(SmsNotificationResultType result, string expected)
         {
             string actual = SmsNotificationSummaryService.GetResultDescription(result);
