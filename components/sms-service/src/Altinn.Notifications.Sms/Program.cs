@@ -1,3 +1,5 @@
+using System.Reflection;
+
 using Altinn.Notifications.Sms.Configuration;
 using Altinn.Notifications.Sms.Core.Configuration;
 using Altinn.Notifications.Sms.Health;
@@ -10,7 +12,10 @@ using Azure.Security.KeyVault.Secrets;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.FileProviders;
+using Swashbuckle.AspNetCore.Filters;
+using Swashbuckle.AspNetCore.SwaggerGen;
 
 ILogger logger;
 const string AppInsightsKeyName = "ApplicationInsights--InstrumentationKey";
@@ -26,7 +31,22 @@ appBuilder.Logging.ConfigureApplicationLogging(applicationInsightsConnectionStri
 
 ConfigureServices(appBuilder.Services, appBuilder.Configuration);
 
+appBuilder.Services.AddEndpointsApiExplorer();
+appBuilder.Services.AddSwaggerGen(c =>
+{
+    IncludeXmlComments(c);
+    c.EnableAnnotations();
+    c.OperationFilter<AddResponseHeadersFilter>();
+});
+
 var app = appBuilder.Build();
+
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 Configure();
 
@@ -87,12 +107,20 @@ async Task ConnectToKeyVaultAndSetApplicationInsights(ConfigurationManager confi
 
 void ConfigureServices(IServiceCollection services, ConfigurationManager configuration)
 {
+    DeliveryReportSettings deliveryReportSettings = configuration!.GetSection(nameof(DeliveryReportSettings)).Get<DeliveryReportSettings>()!;
+
+    if (deliveryReportSettings == null)
+    {
+        throw new ArgumentNullException(nameof(configuration), "Required delivery report settings is missing from application configuration");
+    }
+
+    services.AddSingleton(deliveryReportSettings);
     services.AddControllers();
     services.AddHealthChecks().AddCheck<HealthCheck>("notifications_sms_health_check");
 
     services.AddCoreServices(configuration);
     services.AddIntegrationServices(configuration);
-        
+
     if (!string.IsNullOrEmpty(applicationInsightsConnectionString))
     {
         services.AddSingleton(typeof(ITelemetryChannel), new ServerTelemetryChannel { StorageFolder = "/tmp/logtelemetry" });
@@ -104,11 +132,26 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
         services.AddApplicationInsightsTelemetryProcessor<HealthTelemetryFilter>();
         services.AddSingleton<ITelemetryInitializer, CustomTelemetryInitializer>();
     }
+
+    services.AddAuthentication("BasicAuthentication").AddScheme<AuthenticationSchemeOptions, BasicAuthenticationHandler>("BasicAuthentication", null);
 }
 
 void Configure()
 {
-    app.UseAuthorization();
     app.MapControllers();
     app.MapHealthChecks("/health");
+}
+
+void IncludeXmlComments(SwaggerGenOptions swaggerGenOptions)
+{
+    try
+    {
+        string xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+        string xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+        swaggerGenOptions.IncludeXmlComments(xmlPath);
+    }
+    catch (Exception e)
+    {
+        logger.LogWarning(e, "Program // Exception when attempting to include the XML comments file(s).");
+    }
 }

@@ -1,4 +1,5 @@
 ﻿using Altinn.Notifications.Sms.Core.Sending;
+using Altinn.Notifications.Sms.Core.Status;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -25,6 +26,7 @@ public static class ServiceCollectionExtensions
         }
 
         services.AddSingleton<ISendingService, SendingService>();
+        services.AddSingleton<IStatusService, StatusService>();
         services.AddSingleton(topicSettings);
         return services;
     }
