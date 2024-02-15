@@ -52,6 +52,13 @@
         .export-button:hover {
             background-color: #45a049;
         }
+
+        caption {
+            caption-side: top;
+            text-align: center;
+            font-size: 26px;
+            padding: 10px;
+        }
     </style>
 
     <h3>Select month and year to see metrics:</h3>
@@ -75,16 +82,14 @@
         <button type="submit" class="export-button">Get metrics</button>
     </form>
 
-    @if (Model != null)
+    @if (Model.Metrics.Any())
     {
         <br />
-        <h3>
-            Metrics for @MonthDict[Model.Month] @Model.Year
-        </h3>
-
+        <br />
+        <br />
         <table class="metrics-table">
             <caption>
-                Overview of metrics for @MonthDict[Model.Month] @Model.Year
+                Metrics - @MonthDict[Model.Month] @Model.Year
             </caption>
             <thead style="background-color: #f2f2f2;">
                 <tr>
@@ -108,20 +113,31 @@
                         <td style="padding: 10px; border: 1px solid #ddd;">@metricForOrg.SuccessfulSmsNotifications</td>
                     </tr>
                 }
-                
+
             </tbody>
         </table>
 
         <br />
         <br />
         <button id="exportExcelButton" onclick="exportTableToExcel()" class="export-button">Export metrics to Excel</button>
-
+    }
+    else
+    {
+        <br />
+        <br />
+        <br />
+        <h3>No notification orders with requested send time in @MonthDict[Model.Month] @Model.Year</h3>
     }
 
     <!-- Add the script for browser refresh -->
     <script src="/_framework/aspnetcore-browser-refresh.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"></script>
 
+    <!-- Add the script for the XLSX library. Update subresource integrity if version is ever patched -->
+    <script
+        src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"
+        integrity="sha384-nWRilyQ8eGfJl24rqfBPSjkOmJ1hO4Bhl6GHM2d9IRC49h3YEFmgDHPmhmQWYh8K"
+        crossorigin="anonymous">
+    </script>
     <script>
         function exportTableToExcel() {
             var ws = XLSX.utils.table_to_sheet(document.querySelector('table'));
