@@ -3,7 +3,7 @@
 /// <summary>
 /// Configuration object used to hold settings for the delivery report endpoint.
 /// </summary>
-public class DeliveryReportSettings
+public class SmsDeliveryReportSettings
 {
     /// <summary>
     /// The user settings

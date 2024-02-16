@@ -107,14 +107,14 @@ async Task ConnectToKeyVaultAndSetApplicationInsights(ConfigurationManager confi
 
 void ConfigureServices(IServiceCollection services, ConfigurationManager configuration)
 {
-    DeliveryReportSettings deliveryReportSettings = configuration!.GetSection(nameof(DeliveryReportSettings)).Get<DeliveryReportSettings>()!;
+    SmsDeliveryReportSettings smsDeliveryReportSettings = configuration!.GetSection(nameof(SmsDeliveryReportSettings)).Get<SmsDeliveryReportSettings>()!;
 
-    if (deliveryReportSettings == null)
+    if (smsDeliveryReportSettings == null)
     {
         throw new ArgumentNullException(nameof(configuration), "Required delivery report settings is missing from application configuration");
     }
 
-    services.AddSingleton(deliveryReportSettings);
+    services.AddSingleton(smsDeliveryReportSettings);
     services.AddControllers();
     services.AddHealthChecks().AddCheck<HealthCheck>("notifications_sms_health_check");
 

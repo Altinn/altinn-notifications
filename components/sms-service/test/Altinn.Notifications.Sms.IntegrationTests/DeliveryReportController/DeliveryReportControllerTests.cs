@@ -117,7 +117,7 @@ public class DeliveryReportControllerTests : IClassFixture<IntegrationTestWebApp
 
             builder.ConfigureTestServices(services =>
             {
-                services.Configure<DeliveryReportSettings>(opts =>
+                services.Configure<SmsDeliveryReportSettings>(opts =>
                 {
                     opts.UserSettings.Username = _username;
                     opts.UserSettings.Password = _password;
