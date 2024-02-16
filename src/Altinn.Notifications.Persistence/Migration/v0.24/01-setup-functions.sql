@@ -1,7 +1,6 @@
 CREATE OR REPLACE FUNCTION notifications.getmetrics(
     month_input int,
-    year_input int,
-    org_name text DEFAULT NULL
+    year_input int
 )
 RETURNS TABLE (
     org text,
@@ -26,7 +25,6 @@ BEGIN
     LEFT JOIN notifications.smsnotifications s ON o._id = s._orderid
     WHERE EXTRACT(MONTH FROM o.requestedsendtime) = month_input
         AND EXTRACT(YEAR FROM o.requestedsendtime) = year_input
-        AND (org_name IS NULL OR o.creatorname = org_name)
     GROUP BY o.creatorname;
 END;
 $$ LANGUAGE plpgsql;
