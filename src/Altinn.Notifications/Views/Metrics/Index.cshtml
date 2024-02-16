@@ -82,7 +82,7 @@
         <button type="submit" class="export-button">Get metrics</button>
     </form>
 
-    @if (Model.Metrics.Any())
+    @if (Model?.Metrics != null && Model.Metrics.Any())
     {
         <br />
         <br />
@@ -121,7 +121,7 @@
         <br />
         <button id="exportExcelButton" onclick="exportTableToExcel()" class="export-button">Export metrics to Excel</button>
     }
-    else
+    else if (Model != null)
     {
         <br />
         <br />
@@ -133,10 +133,9 @@
     <script src="/_framework/aspnetcore-browser-refresh.js"></script>
 
     <!-- Add the script for the XLSX library. Update subresource integrity if version is ever patched -->
-    <script
-        src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"
-        integrity="sha384-nWRilyQ8eGfJl24rqfBPSjkOmJ1hO4Bhl6GHM2d9IRC49h3YEFmgDHPmhmQWYh8K"
-        crossorigin="anonymous">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"
+            integrity="sha384-nWRilyQ8eGfJl24rqfBPSjkOmJ1hO4Bhl6GHM2d9IRC49h3YEFmgDHPmhmQWYh8K"
+            crossorigin="anonymous">
     </script>
     <script>
         function exportTableToExcel() {
