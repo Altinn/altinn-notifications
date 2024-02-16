@@ -134,6 +134,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
         options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
         options.JsonSerializerOptions.Converters.Insert(0, new JsonStringEnumConverter());
     });
+    services.AddControllersWithViews();
 
     services.AddHealthChecks().AddCheck<HealthCheck>("notifications_health_check");
 

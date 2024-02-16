@@ -1,0 +1,183 @@
+﻿@model Altinn.Notifications.Core.Models.Metrics.MonthlyNotificationMetrics
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Altinn Notifications Metrics</title>
+    <!-- Your head content goes here -->
+</head>
+<body>
+    <h2>Altinn Notifications Metrics</h2>
+    <style>
+        h3, form {
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 10px;
+        }
+
+        .metrics-form,
+        .metrics-table {
+            width: 50%;
+            margin-top: 20px;
+        }
+
+            .metrics-form select,
+            .metrics-form button,
+            .metrics-table th,
+            .metrics-table td {
+                padding: 10px;
+                border: 1px solid #ddd;
+            }
+
+            .metrics-form select {
+                height: 40px;
+            }
+
+            .metrics-form button,
+            .export-button {
+                margin-top: 10px;
+                padding: 10px;
+                background-color: #4CAF50;
+                color: #fff;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+            }
+
+            .metrics-table th,
+            .metrics-table tbody tr:nth-child(even) {
+                background-color: #e6e6e6;
+            }
+
+        .export-button:hover {
+            background-color: #45a049;
+        }
+
+        caption {
+            caption-side: top;
+            text-align: center;
+            font-size: 26px;
+            padding: 10px;
+        }
+    </style>
+
+    <h3>Select month and year to see metrics:</h3>
+    <form asp-controller="Metrics" asp-action="GetMetrics" method="post" class="metrics-form">
+        <select id="month" name="month" required style="height: 40px; padding: 5px;">
+            <option value="">Month</option>
+            @foreach (var monthEntry in MonthDict)
+            {
+                <option value="@monthEntry.Key">@monthEntry.Value</option>
+            }
+        </select>
+
+        <select id="year" name="year" required style="height: 40px; padding: 5px;">
+            <option value="">Year</option>
+            @foreach (var year in GetYears())
+            {
+                <option value="@year.Value">@year.Text</option>
+            }
+        </select>
+
+        <button type="submit" class="export-button">Get metrics</button>
+    </form>
+
+    @if (Model.Metrics.Any())
+    {
+        <br />
+        <br />
+        <br />
+        <table class="metrics-table">
+            <caption>
+                Metrics - @MonthDict[Model.Month] @Model.Year
+            </caption>
+            <thead style="background-color: #f2f2f2;">
+                <tr>
+                    <th style="padding: 10px; border: 1px solid #ddd; background-color: #e6e6e6;">Organization</th>
+                    <th style="padding: 10px; border: 1px solid #ddd; background-color: #e6e6e6;">Total orders</th>
+                    <th style="padding: 10px; border: 1px solid #ddd; background-color: #e6e6e6;">Total email notifications</th>
+                    <th style="padding: 10px; border: 1px solid #ddd; background-color: #e6e6e6;">Successful email notifications</th>
+                    <th style="padding: 10px; border: 1px solid #ddd; background-color: #e6e6e6;">Total SMS notifications</th>
+                    <th style="padding: 10px; border: 1px solid #ddd; background-color: #e6e6e6;">Successful SMS notifications</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var metricForOrg in Model.Metrics)
+                {
+                    <tr style="background-color: @(metricForOrg.OrdersCreated % 2 == 0 ? "#ffffff" : "#f9f9f9");">
+                        <td style="padding: 10px; border: 1px solid #ddd;">@metricForOrg.Org</td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">@metricForOrg.OrdersCreated</td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">@metricForOrg.EmailNotificationsCreated</td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">@metricForOrg.SuccessfulEmailNotifications</td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">@metricForOrg.SmsNotificationsCreated</td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">@metricForOrg.SuccessfulSmsNotifications</td>
+                    </tr>
+                }
+
+            </tbody>
+        </table>
+
+        <br />
+        <br />
+        <button id="exportExcelButton" onclick="exportTableToExcel()" class="export-button">Export metrics to Excel</button>
+    }
+    else
+    {
+        <br />
+        <br />
+        <br />
+        <h3>No notification orders with requested send time in @MonthDict[Model.Month] @Model.Year</h3>
+    }
+
+    <!-- Add the script for browser refresh -->
+    <script src="/_framework/aspnetcore-browser-refresh.js"></script>
+
+    <!-- Add the script for the XLSX library. Update subresource integrity if version is ever patched -->
+    <script
+        src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"
+        integrity="sha384-nWRilyQ8eGfJl24rqfBPSjkOmJ1hO4Bhl6GHM2d9IRC49h3YEFmgDHPmhmQWYh8K"
+        crossorigin="anonymous">
+    </script>
+    <script>
+        function exportTableToExcel() {
+            var ws = XLSX.utils.table_to_sheet(document.querySelector('table'));
+            var wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+
+            var fileName = "notifications_metrics_" + @Model?.Month + "_" + @Model?.Year + ".xlsx";
+
+            XLSX.writeFile(wb, fileName);
+        }
+    </script>
+</body>
+</html>
+
+@functions {
+    public readonly static Dictionary<int, string> MonthDict = new()
+    {
+        { 1, "January" },
+        { 2, "February" },
+        { 3, "March" },
+        { 4, "April" },
+        { 5, "May" },
+        { 6, "June" },
+        { 7, "July" },
+        { 8, "August" },
+        { 9, "September" },
+        { 10, "October" },
+        { 11, "November" },
+        { 12, "December" },
+    };
+
+    public List<SelectListItem> GetYears()
+    {
+        // Generate a list of the current year and the five years before it
+        var currentYear = DateTime.Now.Year;
+        var years = Enumerable.Range(currentYear - 5, 6)
+                             .OrderByDescending(year => year)
+                             .Select(year => new SelectListItem { Value = year.ToString(), Text = year.ToString() })
+                             .ToList();
+
+        return years;
+    }
+}
