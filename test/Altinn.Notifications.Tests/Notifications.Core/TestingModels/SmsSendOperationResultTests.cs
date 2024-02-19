@@ -13,7 +13,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingModels
             string input = "{\"notificationId\":\"d3b3f3e3-3e3b-3b3b-3b3b-3b3b3b3b3b3b\",\"gatewayReference\":\"123456789\",\"sendResult\":1}";
 
             // Act
-            bool result = SmsSendOperationResult.TryParse(input, out SmsSendOperationResult value);
+            bool result = SmsSendOperationResult.TryParse(input, out _);
 
             // Assert
             Assert.True(result);
@@ -26,7 +26,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingModels
             string input = "{\"gatewayReference\":\"123456789\",\"sendResult\":1}";
 
             // Act
-            bool result = SmsSendOperationResult.TryParse(input, out SmsSendOperationResult value);
+            bool result = SmsSendOperationResult.TryParse(input, out _);
 
             // Assert
             Assert.True(result);
