@@ -25,10 +25,12 @@ public class SmsNotificationRepository : ISmsNotificationRepository
     private const string _getSmsNotificationsSql = "select * from notifications.getsms_statusnew_updatestatus()";
     private const string _getSmsRecipients = "select * from notifications.getsmsrecipients($1)"; // (_orderid)
 
-    private const string _updateSmsNotificationStatus = 
+    private const string _updateSmsNotificationStatus =
         @"UPDATE notifications.smsnotifications 
-	    SET result = $1::smsnotificationresulttype, resulttime = now(), gatewayreference = $2
-	    WHERE alternateid = $3;"; // (_result, _gatewayreference, _alternateid, )
+        SET result = $1::smsnotificationresulttype, 
+            resulttime = now(), 
+            gatewayreference = $2
+        WHERE alternateid = $3 OR gatewayreference = $2;"; // (_result, _gatewayreference, _alternateid)
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsNotificationRepository"/> class.
@@ -109,13 +111,13 @@ public class SmsNotificationRepository : ISmsNotificationRepository
     }
 
     /// <inheritdoc/>
-    public async Task UpdateSendStatus(Guid notificationId, SmsNotificationResultType result, string? gatewayReference = null)
+    public async Task UpdateSendStatus(Guid? notificationId, SmsNotificationResultType result, string? gatewayReference = null)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_updateSmsNotificationStatus);
         using TelemetryTracker tracker = new(_telemetryClient, pgcom);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, result.ToString());
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, gatewayReference ?? (object)DBNull.Value);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId ?? (object)DBNull.Value);
 
         await pgcom.ExecuteNonQueryAsync();
         tracker.Track();
