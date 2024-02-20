@@ -30,5 +30,5 @@ public interface ISmsNotificationRepository
     /// <summary>
     /// Sets result status of an sms notification and update operation id
     /// </summary>
-    public Task UpdateSendStatus(Guid notificationId, SmsNotificationResultType result, string? gatewayReference = null);
+    public Task UpdateSendStatus(Guid? notificationId, SmsNotificationResultType result, string? gatewayReference = null);
 }
