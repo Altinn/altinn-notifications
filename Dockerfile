@@ -23,4 +23,6 @@ COPY src/Altinn.Notifications/Views ./Views
 
 RUN addgroup -g 3000 dotnet && adduser -u 1000 -G dotnet -D -s /bin/false dotnet
 USER dotnet
+RUN mkdir /tmp/logtelemetry
+
 ENTRYPOINT [ "dotnet", "Altinn.Notifications.dll" ]
