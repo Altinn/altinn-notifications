@@ -16,6 +16,11 @@ jobs:
       with:
         filename: test/k6/src/tests/orders_email.js
         flags: -e env=${{ vars.ENV }} -e emailRecipient=${{ secrets.AUTOMATEDTEST_EMAILRECIPIENT }} -e mpClientId=${{ secrets.MP_CLIENT_ID }} -e mpKid=${{ secrets.MP_KID }} -e encodedJwk=${{ secrets.MP_ENCODEDJWK }}
+    - name: Run sms notification order use case tests
+      uses: grafana/k6-action@v0.3.1
+      with:
+        filename: test/k6/src/tests/orders_sms.js
+        flags: -e env=${{ vars.ENV }} -e smsRecipient=${{ secrets.AUTOMATEDTEST_SMSRECIPIENT }} -e mpClientId=${{ secrets.MP_CLIENT_ID }} -e mpKid=${{ secrets.MP_KID }} -e encodedJwk=${{ secrets.MP_ENCODEDJWK }}
     - name: Build failure report
       if: failure()
       run: |
