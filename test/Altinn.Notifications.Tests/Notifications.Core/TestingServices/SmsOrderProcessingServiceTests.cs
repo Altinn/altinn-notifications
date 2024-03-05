@@ -41,7 +41,7 @@ public class SmsOrderProcessingServiceTests
 
         var serviceMock = new Mock<ISmsNotificationService>();
         serviceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.Is<DateTime>(d => d.Equals(requested)), It.Is<Recipient>(r => AssertUtils.AreEquivalent(expectedRecipient, r))));
-               
+
         var service = GetTestService(smsService: serviceMock.Object);
 
         // Act
@@ -90,6 +90,7 @@ public class SmsOrderProcessingServiceTests
             {
                 new Recipient(),
                 new Recipient(new List<IAddressPoint>() { new SmsAddressPoint("+4799999999") },  nationalIdentityNumber: "enduser-nin"),
+                new Recipient(new List<IAddressPoint>() { new SmsAddressPoint("+4799999999") },  organisationNumber: "skd-orgNo"),
                 new Recipient(new List<IAddressPoint>() { new SmsAddressPoint("+4749999999") })
             }
         };
@@ -98,7 +99,12 @@ public class SmsOrderProcessingServiceTests
         serviceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>()));
 
         var smsRepoMock = new Mock<ISmsNotificationRepository>();
-        smsRepoMock.Setup(e => e.GetRecipients(It.IsAny<Guid>())).ReturnsAsync(new List<SmsRecipient>() { new SmsRecipient() { NationalIdentityNumber = "enduser-nin", MobileNumber = "+4799999999" } });
+        smsRepoMock.Setup(e => e.GetRecipients(It.IsAny<Guid>())).ReturnsAsync(
+            new List<SmsRecipient>()
+            {
+                new SmsRecipient() { NationalIdentityNumber = "enduser-nin", MobileNumber = "+4799999999" },
+                new SmsRecipient() { OrganisationNumber = "skd-orgNo", MobileNumber = "+4799999999" }
+            });
 
         var service = GetTestService(smsRepo: smsRepoMock.Object, smsService: serviceMock.Object);
 
