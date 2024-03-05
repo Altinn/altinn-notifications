@@ -37,6 +37,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingMappers
                 Succeeded = false,
                 Recipient = new()
                 {
+                    NationalIdentityNumber = "16069412345",
                     EmailAddress = "recipient@domain.com"
                 },
                 SendStatus = new()
@@ -80,6 +81,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingMappers
                 Succeeded = true,
                 Recipient = new()
                 {
+                    OrganisationNumber = "12345678910",
                     EmailAddress = "recipient@domain.com"
                 },
                 SendStatus = new()

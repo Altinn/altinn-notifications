@@ -119,8 +119,8 @@ public class EmailOrderProcessingServiceTests
             Recipients = new List<Recipient>()
             {
                 new(),
-                new(new List<IAddressPoint>() { new EmailAddressPoint("test2@test.com") }, nationalIdentityNumber: "enduser-nin"),
-                new(new List<IAddressPoint>() { new EmailAddressPoint("test@test.com") }, organisationNumber : "skd-orgno"),
+                new(new List<IAddressPoint>() { new EmailAddressPoint("test@test.com") }, nationalIdentityNumber: "enduser-nin"),
+                new(new List<IAddressPoint>() { new EmailAddressPoint("test@test.com") }, organisationNumber : "skd-orgNo"),
                 new(new List<IAddressPoint>() { new EmailAddressPoint("test@domain.com") })
             }
         };
@@ -131,8 +131,8 @@ public class EmailOrderProcessingServiceTests
         var emailRepoMock = new Mock<IEmailNotificationRepository>();
         emailRepoMock.Setup(e => e.GetRecipients(It.IsAny<Guid>())).ReturnsAsync(new List<EmailRecipient>()
         {
-            new() { OrganisationNumber = "skd-orgno", ToAddress = "test@test.com" },
-            new() { NationalIdentityNumber = "enduser-nin", ToAddress = "test2@test.com" }
+            new() { OrganisationNumber = "skd-orgNo", ToAddress = "test@test.com" },
+            new() { NationalIdentityNumber = "enduser-nin", ToAddress = "test@test.com" }
         });
 
         var service = GetTestService(emailRepo: emailRepoMock.Object, emailService: serviceMock.Object);
@@ -141,8 +141,8 @@ public class EmailOrderProcessingServiceTests
         await service.ProcessOrderRetry(order);
 
         // Assert
-        serviceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>()), Times.Exactly(2));
         emailRepoMock.Verify(e => e.GetRecipients(It.IsAny<Guid>()), Times.Once);
+        serviceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>()), Times.Exactly(2));
     }
 
     private static EmailOrderProcessingService GetTestService(

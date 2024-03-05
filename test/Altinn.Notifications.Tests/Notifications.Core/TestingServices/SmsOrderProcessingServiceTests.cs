@@ -89,8 +89,8 @@ public class SmsOrderProcessingServiceTests
             Recipients = new List<Recipient>()
             {
                 new Recipient(),
-                new Recipient(new List<IAddressPoint>() { new SmsAddressPoint("+4799999999") },  nationalIdentityNumber: "enduser-nin"),
-                new Recipient(new List<IAddressPoint>() { new SmsAddressPoint("+4799999999") },  organisationNumber: "skd-orgNo"),
+                new Recipient(new List<IAddressPoint>() { new SmsAddressPoint("+4799999999") }, nationalIdentityNumber: "enduser-nin"),
+                new Recipient(new List<IAddressPoint>() { new SmsAddressPoint("+4799999999") }, organisationNumber: "skd-orgNo"),
                 new Recipient(new List<IAddressPoint>() { new SmsAddressPoint("+4749999999") })
             }
         };
