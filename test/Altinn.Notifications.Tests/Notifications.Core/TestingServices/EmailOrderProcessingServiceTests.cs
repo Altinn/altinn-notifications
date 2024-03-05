@@ -60,11 +60,11 @@ public class EmailOrderProcessingServiceTests
             RequestedSendTime = requested,
             Recipients = new List<Recipient>()
             {
-                new Recipient("skd", new List<IAddressPoint>() { new EmailAddressPoint("test@test.com") })
+                new Recipient(new List<IAddressPoint>() { new EmailAddressPoint("test@test.com") }, organisationNumber: "skd-orgno")
             }
         };
 
-        Recipient expectedRecipient = new("skd", new List<IAddressPoint>() { new EmailAddressPoint("test@test.com") });
+        Recipient expectedRecipient = new(new List<IAddressPoint>() { new EmailAddressPoint("test@test.com") }, organisationNumber: "skd-orgno");
 
         var serviceMock = new Mock<IEmailNotificationService>();
         serviceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.Is<DateTime>(d => d.Equals(requested)), It.Is<Recipient>(r => AssertUtils.AreEquivalent(expectedRecipient, r))));
@@ -119,7 +119,7 @@ public class EmailOrderProcessingServiceTests
             Recipients = new List<Recipient>()
             {
                 new Recipient(),
-                new Recipient("skd", new List<IAddressPoint>() { new EmailAddressPoint("test@test.com") }),
+                new Recipient(new List<IAddressPoint>() { new EmailAddressPoint("test@test.com") }, organisationNumber : "skd-orgno"),
                 new Recipient(new List<IAddressPoint>() { new EmailAddressPoint("test@domain.com") })
             }
         };
@@ -128,7 +128,7 @@ public class EmailOrderProcessingServiceTests
         serviceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>()));
 
         var emailRepoMock = new Mock<IEmailNotificationRepository>();
-        emailRepoMock.Setup(e => e.GetRecipients(It.IsAny<Guid>())).ReturnsAsync(new List<EmailRecipient>() { new EmailRecipient() { RecipientId = "skd", ToAddress = "test@test.com" } });
+        emailRepoMock.Setup(e => e.GetRecipients(It.IsAny<Guid>())).ReturnsAsync(new List<EmailRecipient>() { new EmailRecipient() { OrganisationNumber = "skd-orgno", ToAddress = "test@test.com" } });
 
         var service = GetTestService(emailRepo: emailRepoMock.Object, emailService: serviceMock.Object);
 

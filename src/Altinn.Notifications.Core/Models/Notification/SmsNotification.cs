@@ -1,4 +1,5 @@
 ﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models.Recipients;
 
 namespace Altinn.Notifications.Core.Models.Notification;
 
@@ -20,14 +21,9 @@ public class SmsNotification : INotification<SmsNotificationResultType>
     public NotificationChannel NotificationChannel { get; } = NotificationChannel.Sms;
 
     /// <summary>
-    /// Get the id of the recipient of the sms notification
+    /// Get the recipient of the notification
     /// </summary>
-    public string? RecipientId { get; internal set; }
-
-    /// <summary>
-    /// Get or sets the mobilenumber of the sms notification
-    /// </summary>
-    public string RecipientNumber { get; internal set; } = string.Empty;
+    public SmsRecipient Recipient { get; internal set; } = new();
 
     /// <inheritdoc/>
     public NotificationResult<SmsNotificationResultType> SendResult { get; internal set; } = new(SmsNotificationResultType.New, DateTime.UtcNow);

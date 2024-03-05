@@ -52,7 +52,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingMappers
                 false,
                 new EmailRecipient()
                 {
-                    RecipientId = "12345678910",
+                    NationalIdentityNumber = "16069412345",
                     ToAddress = "recipient@domain.com"
                 },
                 new NotificationResult<EmailNotificationResultType>(
@@ -95,7 +95,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingMappers
                 true,
                 new EmailRecipient()
                 {
-                    RecipientId = "12345678910",
+                    OrganisationNumber = "12345678910",
                     ToAddress = "recipient@domain.com"
                 },
                 new NotificationResult<EmailNotificationResultType>(

@@ -84,7 +84,7 @@ public class OrderMapperTests
         // Arrange 
         Recipient input = new()
         {
-            RecipientId = "16069412345",
+            NationalIdentityNumber = "nationalidentitynumber",
             AddressInfo = new List<IAddressPoint>()
             {
                 new EmailAddressPoint("input@domain.com"),
