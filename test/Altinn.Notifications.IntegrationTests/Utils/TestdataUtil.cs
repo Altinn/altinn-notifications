@@ -22,7 +22,6 @@ public static class TestdataUtil
             OrderId = order.Id,
             RequestedSendTime = order.RequestedSendTime,
             RecipientNumber = addressPoint!.MobileNumber,
-            RecipientId = recipient.RecipientId,
             SendResult = new(SmsNotificationResultType.New, DateTime.UtcNow)
         };
 
@@ -42,7 +41,6 @@ public static class TestdataUtil
             OrderId = order.Id,
             RequestedSendTime = order.RequestedSendTime,
             ToAddress = addressPoint!.EmailAddress,
-            RecipientId = recipient.RecipientId,
             SendResult = new(EmailNotificationResultType.New, DateTime.UtcNow)
         };
 
@@ -76,7 +74,6 @@ public static class TestdataUtil
             {
                 new Recipient()
                 {
-                    RecipientId = "recipient1",
                     AddressInfo = new()
                     {
                         new EmailAddressPoint()
@@ -115,7 +112,6 @@ public static class TestdataUtil
             {
                 new Recipient()
                 {
-                    RecipientId = "recipient1",
                     AddressInfo = new()
                     {
                         new SmsAddressPoint()
