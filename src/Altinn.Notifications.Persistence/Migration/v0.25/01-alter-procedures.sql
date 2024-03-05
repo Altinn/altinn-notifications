@@ -15,7 +15,7 @@ BEGIN
 INSERT INTO notifications.emailnotifications(_orderid, alternateid,  toaddress, result, resulttime, expirytime)
 	VALUES (__orderid, _alternateid, _toaddress, _result::emailnotificationresulttype, _resulttime, _expirytime);
 END;
-$BODY$
+$BODY$;
 
 
 CREATE OR REPLACE PROCEDURE notifications.insertsmsnotification(_orderid uuid, 
