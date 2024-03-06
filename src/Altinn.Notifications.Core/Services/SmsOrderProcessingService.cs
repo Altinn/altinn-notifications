@@ -93,5 +93,4 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
         SmsTemplate? smsTemplate = order.Templates.Find(t => t.Type == NotificationTemplateType.Sms) as SmsTemplate;
         return CalculateNumberOfMessages(smsTemplate!.Body);
     }
-
 }
