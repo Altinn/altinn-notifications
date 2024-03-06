@@ -4,6 +4,7 @@ using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Notification;
+using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
 
@@ -44,13 +45,20 @@ public class EmailNotificationService : IEmailNotificationService
     {
         EmailAddressPoint? addressPoint = recipient.AddressInfo.Find(a => a.AddressType == AddressType.Email) as EmailAddressPoint;
 
+        EmailRecipient emailRecipient = new()
+        {
+            OrganisationNumber = recipient.OrganisationNumber,
+            NationalIdentityNumber = recipient.NationalIdentityNumber,
+            ToAddress = addressPoint?.EmailAddress ?? string.Empty
+        };
+
         if (!string.IsNullOrEmpty(addressPoint?.EmailAddress))
         {
-            await CreateNotificationForRecipient(orderId, requestedSendTime, recipient.RecipientId, addressPoint.EmailAddress, EmailNotificationResultType.New);
+            await CreateNotificationForRecipient(orderId, requestedSendTime, emailRecipient, EmailNotificationResultType.New);
         }
         else
         {
-            await CreateNotificationForRecipient(orderId, requestedSendTime, recipient.RecipientId, string.Empty, EmailNotificationResultType.Failed_RecipientNotIdentified);
+            await CreateNotificationForRecipient(orderId, requestedSendTime, emailRecipient, EmailNotificationResultType.Failed_RecipientNotIdentified);
         }
     }
 
@@ -81,15 +89,14 @@ public class EmailNotificationService : IEmailNotificationService
         await _repository.UpdateSendStatus(sendOperationResult.NotificationId, (EmailNotificationResultType)sendOperationResult.SendResult!, sendOperationResult.OperationId);
     }
 
-    private async Task CreateNotificationForRecipient(Guid orderId, DateTime requestedSendTime, string recipientId, string toAddress, EmailNotificationResultType result)
+    private async Task CreateNotificationForRecipient(Guid orderId, DateTime requestedSendTime, EmailRecipient recipient, EmailNotificationResultType result)
     {
         var emailNotification = new EmailNotification()
         {
             Id = _guid.NewGuid(),
             OrderId = orderId,
             RequestedSendTime = requestedSendTime,
-            ToAddress = toAddress,
-            RecipientId = string.IsNullOrEmpty(recipientId) ? null : recipientId,
+            Recipient = recipient,
             SendResult = new(result, _dateTime.UtcNow())
         };
 

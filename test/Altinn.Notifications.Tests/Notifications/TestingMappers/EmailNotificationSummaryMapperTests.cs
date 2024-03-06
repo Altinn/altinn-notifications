@@ -37,6 +37,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingMappers
                 Succeeded = false,
                 Recipient = new()
                 {
+                    NationalIdentityNumber = "16069412345",
                     EmailAddress = "recipient@domain.com"
                 },
                 SendStatus = new()
@@ -52,7 +53,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingMappers
                 false,
                 new EmailRecipient()
                 {
-                    RecipientId = "12345678910",
+                    NationalIdentityNumber = "16069412345",
                     ToAddress = "recipient@domain.com"
                 },
                 new NotificationResult<EmailNotificationResultType>(
@@ -80,6 +81,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingMappers
                 Succeeded = true,
                 Recipient = new()
                 {
+                    OrganisationNumber = "12345678910",
                     EmailAddress = "recipient@domain.com"
                 },
                 SendStatus = new()
@@ -95,7 +97,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingMappers
                 true,
                 new EmailRecipient()
                 {
-                    RecipientId = "12345678910",
+                    OrganisationNumber = "12345678910",
                     ToAddress = "recipient@domain.com"
                 },
                 new NotificationResult<EmailNotificationResultType>(

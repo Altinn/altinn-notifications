@@ -45,8 +45,9 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
             EmailAddressPoint? addressPoint = recipient.AddressInfo.Find(a => a.AddressType == AddressType.Email) as EmailAddressPoint;
 
             if (!emailRecipients.Exists(er =>
-                er.RecipientId == (string.IsNullOrEmpty(recipient.RecipientId) ? null : recipient.RecipientId)
-                && er.ToAddress.Equals(addressPoint?.EmailAddress)))
+             er.NationalIdentityNumber == recipient.NationalIdentityNumber
+             && er.OrganisationNumber == recipient.OrganisationNumber
+             && er.ToAddress == addressPoint?.EmailAddress))
             {
                 await _emailService.CreateNotification(order.Id, order.RequestedSendTime, recipient);
             }

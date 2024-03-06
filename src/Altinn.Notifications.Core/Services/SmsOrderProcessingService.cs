@@ -43,8 +43,9 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
             SmsAddressPoint? addressPoint = recipient.AddressInfo.Find(a => a.AddressType == AddressType.Sms) as SmsAddressPoint;
 
             if (!smsRecipients.Exists(sr =>
-                sr.RecipientId == (string.IsNullOrEmpty(recipient.RecipientId) ? null : recipient.RecipientId)
-                && sr.MobileNumber.Equals(addressPoint?.MobileNumber)))
+                sr.NationalIdentityNumber == recipient.NationalIdentityNumber
+                && sr.OrganisationNumber == recipient.OrganisationNumber
+                && sr.MobileNumber == addressPoint?.MobileNumber))
             {
                 await _smsService.CreateNotification(order.Id, order.RequestedSendTime, recipient);
             }

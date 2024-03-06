@@ -20,8 +20,8 @@ public class NotificationSummaryRepository : INotificationSummaryRepository
     private readonly NpgsqlDataSource _dataSource;
     private readonly TelemetryClient? _telemetryClient;
 
-    private const string _getEmailNotificationsByOrderIdSql = "select * from notifications.getemailsummary($1, $2)"; // (_alternateorderid, creatorname)
-    private const string _getSmsNotificationsByOrderIdSql = "select * from notifications.getsmssummary($1, $2)"; // (_alternateorderid, creatorname)
+    private const string _getEmailNotificationsByOrderIdSql = "select * from notifications.getemailsummary_v2($1, $2)"; // (_alternateorderid, creatorname)
+    private const string _getSmsNotificationsByOrderIdSql = "select * from notifications.getsmssummary_v2($1, $2)"; // (_alternateorderid, creatorname)
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotificationRepository"/> class.
@@ -45,7 +45,8 @@ public class NotificationSummaryRepository : INotificationSummaryRepository
                 reader.GetValue<Guid>("alternateid"),
                 new EmailRecipient()
                 {
-                    RecipientId = reader.GetValue<string>("recipientid"),
+                    OrganisationNumber = reader.GetValue<string?>("recipientorgno"),
+                    NationalIdentityNumber = reader.GetValue<string?>("recipientnin"),
                     ToAddress = reader.GetValue<string>("toaddress")
                 },
                 new NotificationResult<EmailNotificationResultType>(
@@ -75,7 +76,8 @@ public class NotificationSummaryRepository : INotificationSummaryRepository
                 reader.GetValue<Guid>("alternateid"),
                 new SmsRecipient()
                 {
-                    RecipientId = reader.GetValue<string>("recipientid"),
+                    OrganisationNumber = reader.GetValue<string?>("recipientorgno"),
+                    NationalIdentityNumber = reader.GetValue<string>("recipientnin"),
                     MobileNumber = reader.GetValue<string>("mobilenumber")
                 },
                 new NotificationResult<SmsNotificationResultType>(

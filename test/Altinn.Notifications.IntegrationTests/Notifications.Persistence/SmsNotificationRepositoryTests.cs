@@ -49,8 +49,11 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
             Id = notificationId,
             OrderId = orderId,
             RequestedSendTime = DateTime.UtcNow,
-            RecipientId = "12345678",
-            RecipientNumber = "999999999",
+            Recipient = new()
+            {
+                NationalIdentityNumber = "16069412345",
+                MobileNumber = "999999999"
+            }
         };
 
         await repo.AddNotification(smsNotification, DateTime.UtcNow);
@@ -93,8 +96,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
 
         (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
         _orderIdsToDelete.Add(order.Id);
-        string expectedNumber = smsNotification.RecipientNumber;
-        string? expectedRecipientId = smsNotification.RecipientId;
+        SmsRecipient expectedRecipient = smsNotification.Recipient;
 
         // Act
         List<SmsRecipient> actual = await repo.GetRecipients(order.Id);
@@ -103,8 +105,9 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
 
         // Assert
         Assert.Single(actual);
-        Assert.Equal(expectedNumber, actualRecipient.MobileNumber);
-        Assert.Equal(expectedRecipientId, actualRecipient.RecipientId);
+        Assert.Equal(expectedRecipient.MobileNumber, actualRecipient.MobileNumber);
+        Assert.Equal(expectedRecipient.NationalIdentityNumber, actualRecipient.NationalIdentityNumber);
+        Assert.Equal(expectedRecipient.OrganisationNumber, actualRecipient.OrganisationNumber);
     }
 
     [Fact]

@@ -87,10 +87,13 @@ public class EmailNotificationServiceTests
         {
             Id = id,
             OrderId = orderId,
-            RecipientId = "skd",
+            Recipient = new()
+            {
+                OrganisationNumber = "skd-orgno",
+                ToAddress = "skd@norge.no"
+            },
             RequestedSendTime = requestedSendTime,
-            SendResult = new(EmailNotificationResultType.New, dateTimeOutput),
-            ToAddress = "skd@norge.no"
+            SendResult = new(EmailNotificationResultType.New, dateTimeOutput)           
         };
 
         var repoMock = new Mock<IEmailNotificationRepository>();
@@ -99,7 +102,7 @@ public class EmailNotificationServiceTests
         var service = GetTestService(repo: repoMock.Object, guidOutput: id, dateTimeOutput: dateTimeOutput);
 
         // Act
-        await service.CreateNotification(orderId, requestedSendTime, new Recipient("skd", new List<IAddressPoint>() { new EmailAddressPoint("skd@norge.no") }));
+        await service.CreateNotification(orderId, requestedSendTime, new Recipient(new List<IAddressPoint>() { new EmailAddressPoint("skd@norge.no") }, organisationNumber: "skd-orgno"));
 
         // Assert
         repoMock.Verify(r => r.AddNotification(It.Is<EmailNotification>(e => AssertUtils.AreEquivalent(expected, e)), It.Is<DateTime>(d => d == expectedExpiry)), Times.Once);
@@ -119,7 +122,10 @@ public class EmailNotificationServiceTests
         {
             Id = id,
             OrderId = orderId,
-            RecipientId = "skd",
+            Recipient = new()
+            {
+                OrganisationNumber = "skd-orgno"
+            },
             RequestedSendTime = requestedSendTime,
             SendResult = new(EmailNotificationResultType.Failed_RecipientNotIdentified, dateTimeOutput),
         };
@@ -130,7 +136,7 @@ public class EmailNotificationServiceTests
         var service = GetTestService(repo: repoMock.Object, guidOutput: id, dateTimeOutput: dateTimeOutput);
 
         // Act
-        await service.CreateNotification(orderId, requestedSendTime, new Recipient("skd", new List<IAddressPoint>()));
+        await service.CreateNotification(orderId, requestedSendTime, new Recipient(new List<IAddressPoint>(), organisationNumber: "skd-orgno"));
 
         // Assert
         repoMock.Verify();

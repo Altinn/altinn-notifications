@@ -43,6 +43,8 @@ namespace Altinn.Notifications.Mappers
                 Succeeded = notification.Succeeded,
                 Recipient = new()
                 {
+                    OrganisationNumber = notification.Recipient.OrganisationNumber,
+                    NationalIdentityNumber = notification.Recipient.NationalIdentityNumber,
                     EmailAddress = notification.Recipient.ToAddress
                 },
                 SendStatus = new()
