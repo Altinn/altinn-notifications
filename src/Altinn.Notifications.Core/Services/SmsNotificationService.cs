@@ -40,13 +40,13 @@ public class SmsNotificationService : ISmsNotificationService
     }
 
     /// <inheritdoc/>
-    public async Task CreateNotification(Guid orderId, DateTime requestedSendTime, Recipient recipient)
+    public async Task CreateNotification(Guid orderId, DateTime requestedSendTime, Recipient recipient, int smsCount)
     {
         SmsAddressPoint? addressPoint = recipient.AddressInfo.Find(a => a.AddressType == AddressType.Sms) as SmsAddressPoint;
 
         if (!string.IsNullOrEmpty(addressPoint?.MobileNumber))
         {
-            await CreateNotificationForRecipient(orderId, requestedSendTime, recipient.RecipientId, addressPoint!.MobileNumber, SmsNotificationResultType.New);
+            await CreateNotificationForRecipient(orderId, requestedSendTime, recipient.RecipientId, addressPoint!.MobileNumber, SmsNotificationResultType.New, smsCount);
         }
         else
         {
@@ -75,7 +75,7 @@ public class SmsNotificationService : ISmsNotificationService
         await _repository.UpdateSendStatus(sendOperationResult.NotificationId, sendOperationResult.SendResult, sendOperationResult.GatewayReference);
     }
 
-    private async Task CreateNotificationForRecipient(Guid orderId, DateTime requestedSendTime, string recipientId, string recipientNumber, SmsNotificationResultType type)
+    private async Task CreateNotificationForRecipient(Guid orderId, DateTime requestedSendTime, string recipientId, string recipientNumber, SmsNotificationResultType type, int smsCount = 0)
     {
         var smsNotification = new SmsNotification()
         {
@@ -87,6 +87,6 @@ public class SmsNotificationService : ISmsNotificationService
             SendResult = new(type, _dateTime.UtcNow())
         };
 
-        await _repository.AddNotification(smsNotification, requestedSendTime.AddHours(1));
+        await _repository.AddNotification(smsNotification, requestedSendTime.AddHours(1), smsCount);
     }
 }

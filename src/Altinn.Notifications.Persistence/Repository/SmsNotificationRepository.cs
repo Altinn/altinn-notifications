@@ -44,7 +44,7 @@ public class SmsNotificationRepository : ISmsNotificationRepository
     }
 
     /// <inheritdoc/>
-    public async Task AddNotification(SmsNotification notification, DateTime expiry)
+    public async Task AddNotification(SmsNotification notification, DateTime expiry, int smsCount)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_insertSmsNotificationSql);
         using TelemetryTracker tracker = new(_telemetryClient, pgcom);

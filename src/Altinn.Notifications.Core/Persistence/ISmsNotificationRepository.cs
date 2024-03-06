@@ -13,7 +13,7 @@ public interface ISmsNotificationRepository
     /// <summary>
     /// Adds a new sms notification to the database
     /// </summary>
-    public Task AddNotification(SmsNotification notification, DateTime expiry);
+    public Task AddNotification(SmsNotification notification, DateTime expiry, int smsCount);
 
     /// <summary>
     /// Retrieves all sms notifications with status 'New'

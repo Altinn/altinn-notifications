@@ -11,7 +11,7 @@ public interface ISmsNotificationService
     /// <summary>
     /// Creates a new sms notification based on the provided orderId and recipient
     /// </summary>
-    public Task CreateNotification(Guid orderId, DateTime requestedSendTime, Recipient recipient);
+    public Task CreateNotification(Guid orderId, DateTime requestedSendTime, Recipient recipient, int smsCount);
 
     /// <summary>
     /// Starts the process of sending all ready sms notifications
