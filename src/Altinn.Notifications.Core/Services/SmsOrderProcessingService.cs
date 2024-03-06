@@ -87,6 +87,7 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
 
         return numberOfMessages;
     }
+
     private static int GetSmsCountForOrder(NotificationOrder order)
     {
         SmsTemplate? smsTemplate = order.Templates.Find(t => t.Type == NotificationTemplateType.Sms) as SmsTemplate;

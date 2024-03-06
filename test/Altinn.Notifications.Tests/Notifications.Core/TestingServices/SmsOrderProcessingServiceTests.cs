@@ -123,15 +123,20 @@ public class SmsOrderProcessingServiceTests
     }
 
     [Theory]
-    [InlineData(160, false, 1)]
-    [InlineData(160, true, 2)]
-    [InlineData(161, false, 2)]
-    [InlineData(18685, false, 16)]
-    public void CalculateNumberOfMessages(int messageLength, bool includeSymbols, int expectedSmsCount)
+    [InlineData(160, 1)]
+    [InlineData(161, 2)]
+    [InlineData(18685, 16)]
+    public void CalculateNumberOfMessages_LongMessagesAreSplitInMultiple(int messageLength, int expectedSmsCount)
     {
-        Types types = includeSymbols ? Types.ALPHABET_UPPERCASE_WITH_SYMBOLS : Types.ALPHABET_UPPERCASE;
-        int actualSmsCount = SmsOrderProcessingService.CalculateNumberOfMessages(RandomString.GetString(types, messageLength));
+        int actualSmsCount = SmsOrderProcessingService.CalculateNumberOfMessages(RandomString.GetString(Types.ALPHABET_UPPERCASE, messageLength));
         Assert.Equal(expectedSmsCount, actualSmsCount);
+    }
+
+    [Fact]
+    public void CalculateNumberOfMessages_MessageWithSymbolsAreEncodedBeforeCalculation()
+    {
+        int actualSmsCount = SmsOrderProcessingService.CalculateNumberOfMessages(RandomString.GetString(Types.ALPHABET_UPPERCASE_WITH_SYMBOLS, 160, forceOccuranceOfEachType: true));
+        Assert.True(actualSmsCount > 1);
     }
 
     private static SmsOrderProcessingService GetTestService(
