@@ -56,7 +56,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
             }
         };
 
-        await repo.AddNotification(smsNotification, DateTime.UtcNow);
+        await repo.AddNotification(smsNotification, DateTime.UtcNow, 1);
 
         // Assert
         string sql = $@"SELECT count(1) 
