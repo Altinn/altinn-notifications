@@ -14,6 +14,8 @@ using Altinn.Notifications.Core.Services.Interfaces;
 
 using Moq;
 
+using RandomString4Net;
+
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
@@ -118,6 +120,18 @@ public class SmsOrderProcessingServiceTests
         // Assert
         smsRepoMock.Verify(e => e.GetRecipients(It.IsAny<Guid>()), Times.Once);
         serviceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>(), It.IsAny<int>()), Times.Exactly(2));
+    }
+
+    [Theory]
+    [InlineData(160, false, 1)]
+    [InlineData(160, true, 2)]
+    [InlineData(161, false, 2)]
+    [InlineData(18685, false, 16)]
+    public void CalculateNumberOfMessages(int messageLength, bool includeSymbols, int expectedSmsCount)
+    {
+        Types types = includeSymbols ? Types.ALPHABET_UPPERCASE_WITH_SYMBOLS : Types.ALPHABET_UPPERCASE;
+        int actualSmsCount = SmsOrderProcessingService.CalculateNumberOfMessages(RandomString.GetString(types, messageLength));
+        Assert.Equal(expectedSmsCount, actualSmsCount);
     }
 
     private static SmsOrderProcessingService GetTestService(

@@ -59,13 +59,10 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
         }
     }
 
-    private static int GetSmsCountForOrder(NotificationOrder order)
-    {
-        SmsTemplate? smsTemplate = order.Templates.Find(t => t.Type == NotificationTemplateType.Sms) as SmsTemplate;
-        return CalculateNumberOfMessages(smsTemplate!.Body);
-    }
-
-    private static int CalculateNumberOfMessages(string message)
+    /// <summary>
+    /// Calculates the number of messages based on the rules for concatenation of SMS messages in the SMS gateway.
+    /// </summary>
+    internal static int CalculateNumberOfMessages(string message)
     {
         const int maxCharactersPerMessage = 160;
         const int maxMessagesPerConcatenation = 16;
@@ -90,4 +87,10 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
 
         return numberOfMessages;
     }
+    private static int GetSmsCountForOrder(NotificationOrder order)
+    {
+        SmsTemplate? smsTemplate = order.Templates.Find(t => t.Type == NotificationTemplateType.Sms) as SmsTemplate;
+        return CalculateNumberOfMessages(smsTemplate!.Body);
+    }
+
 }
