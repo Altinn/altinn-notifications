@@ -43,7 +43,7 @@ public class SmsNotificationServiceTests
         var service = GetTestService(repo: repoMock.Object);
 
         // Act
-        await service.CreateNotification(Guid.NewGuid(), DateTime.UtcNow, new Recipient("recipientId", new List<IAddressPoint>() { new SmsAddressPoint("999999999") }));
+        await service.CreateNotification(Guid.NewGuid(), DateTime.UtcNow, new Recipient(new List<IAddressPoint>() { new SmsAddressPoint("999999999") }, nationalIdentityNumber: "enduser-nin"));
 
         // Assert
         repoMock.Verify(r => r.AddNotification(It.IsAny<SmsNotification>(), It.IsAny<DateTime>()), Times.Once);
@@ -64,7 +64,10 @@ public class SmsNotificationServiceTests
             Id = id,
             OrderId = orderId,
             RequestedSendTime = requestedSendTime,
-            RecipientNumber = "+4799999999",
+            Recipient = new()
+            {
+                MobileNumber = "+4799999999"
+            },
             SendResult = new(SmsNotificationResultType.New, dateTimeOutput),
         };
 

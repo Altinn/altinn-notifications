@@ -37,6 +37,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingMappers
                 Succeeded = false,
                 Recipient = new()
                 {
+                    OrganisationNumber = "12345678910",
                     MobileNumber = "+4799999999"
                 },
                 SendStatus = new()
@@ -52,7 +53,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingMappers
                 false,
                 new SmsRecipient()
                 {
-                    RecipientId = "12345678910",
+                    OrganisationNumber = "12345678910",
                     MobileNumber = "+4799999999"
                 },
                 new NotificationResult<SmsNotificationResultType>(
@@ -80,6 +81,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingMappers
                 Succeeded = true,
                 Recipient = new()
                 {
+                    NationalIdentityNumber = "16069412345",
                     MobileNumber = "+4799999999"
                 },
                 SendStatus = new()
@@ -95,7 +97,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingMappers
                 true,
                 new SmsRecipient()
                 {
-                    RecipientId = "12345678910",
+                    NationalIdentityNumber = "16069412345",
                     MobileNumber = "+4799999999"
                 },
                 new NotificationResult<SmsNotificationResultType>(

@@ -1,4 +1,5 @@
 ﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models.Recipients;
 
 namespace Altinn.Notifications.Core.Models.Notification;
 
@@ -20,14 +21,9 @@ public class EmailNotification : INotification<EmailNotificationResultType>
     public NotificationChannel NotificationChannel { get; } = NotificationChannel.Email;
 
     /// <summary>
-    /// Get the id of the recipient of the email notification
+    /// Gets the recipient of the notification
     /// </summary>
-    public string? RecipientId { get; internal set; }
-
-    /// <summary>
-    /// Get or sets the to address of the email notification
-    /// </summary>
-    public string ToAddress { get; internal set; } = string.Empty;
+    public EmailRecipient Recipient { get; internal set; } = new();
 
     /// <summary>
     /// Get or sets the send result of the notification

@@ -21,9 +21,9 @@ public class SmsNotificationRepository : ISmsNotificationRepository
     private readonly NpgsqlDataSource _dataSource;
     private readonly TelemetryClient? _telemetryClient;
 
-    private const string _insertSmsNotificationSql = "call notifications.insertsmsnotification($1, $2, $3, $4, $5, $6)"; // (__orderid, _alternateid, _mobilenumber, _result, _resulttime, _expirytime)
+    private const string _insertSmsNotificationSql = "call notifications.insertsmsnotification($1, $2, $3, $4, $5, $6, $7, $8)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _result, _resulttime, _expirytime)
     private const string _getSmsNotificationsSql = "select * from notifications.getsms_statusnew_updatestatus()";
-    private const string _getSmsRecipients = "select * from notifications.getsmsrecipients($1)"; // (_orderid)
+    private const string _getSmsRecipients = "select * from notifications.getsmsrecipients_v2($1)"; // (_orderid)
 
     private const string _updateSmsNotificationStatus =
         @"UPDATE notifications.smsnotifications 
@@ -51,7 +51,9 @@ public class SmsNotificationRepository : ISmsNotificationRepository
 
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notification.OrderId);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notification.Id);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.RecipientNumber);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, (object)DBNull.Value); // recipientorgno
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, (object)DBNull.Value); // recipientnin
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.MobileNumber);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.SendResult.Result.ToString());
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, notification.SendResult.ResultTime);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, expiry);
@@ -74,7 +76,8 @@ public class SmsNotificationRepository : ISmsNotificationRepository
             {
                 searchResult.Add(new SmsRecipient()
                 {
-                    RecipientId = reader.GetValue<string>("recipientid"),
+                    OrganisationNumber = reader.GetValue<string?>("recipientorgno"),
+                    NationalIdentityNumber = reader.GetValue<string?>("recipientnin"),
                     MobileNumber = reader.GetValue<string>("mobilenumber")
                 });
             }

@@ -1,6 +1,7 @@
 ﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
+using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Extensions;
@@ -23,7 +24,7 @@ public static class OrderMapper
         var recipients = new List<Recipient>();
 
         recipients.AddRange(
-            extRequest.Recipients.Select(r => new Recipient(string.Empty, new List<IAddressPoint>() { new EmailAddressPoint(r.EmailAddress!) })));
+            extRequest.Recipients.Select(r => new Recipient(new List<IAddressPoint>() { new EmailAddressPoint(r.EmailAddress!) })));
 
         return new NotificationOrderRequest(
             extRequest.SendersReference,
@@ -44,7 +45,7 @@ public static class OrderMapper
         List<Recipient> recipients = new();
 
         recipients.AddRange(
-            extRequest.Recipients.Select(r => new Recipient(string.Empty, new List<IAddressPoint>() { new SmsAddressPoint(r.MobileNumber!) })));
+            extRequest.Recipients.Select(r => new Recipient(new List<IAddressPoint>() { new SmsAddressPoint(r.MobileNumber!) })));
 
         return new NotificationOrderRequest(
             extRequest.SendersReference,
@@ -172,6 +173,8 @@ public static class OrderMapper
         recipientExt.AddRange(
             recipients.Select(r => new RecipientExt
             {
+                OrganisationNumber = r.OrganisationNumber,
+                NationalIdentityNumber = r.NationalIdentityNumber,
                 EmailAddress = GetEmailFromAddressList(r.AddressInfo),
                 MobileNumber = GetMobileNumberFromAddressList(r.AddressInfo)
             }));

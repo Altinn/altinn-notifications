@@ -46,7 +46,7 @@ public class NotificationOrderTests
             {
                 new Recipient()
                 {
-                    RecipientId = "recipient1",
+                    NationalIdentityNumber = "nationalidentitynumber",
                     AddressInfo = new()
                     {
                         new EmailAddressPoint()
@@ -92,7 +92,7 @@ public class NotificationOrderTests
                     new JsonObject()
                     {
                         {
-                            "recipientId", "recipient1"
+                            "nationalIdentityNumber", "nationalidentitynumber"
                         },
                         {
                             "addressInfo",  new JsonArray()

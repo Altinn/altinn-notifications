@@ -21,7 +21,10 @@ public static class TestdataUtil
             Id = Guid.NewGuid(),
             OrderId = order.Id,
             RequestedSendTime = order.RequestedSendTime,
-            RecipientNumber = addressPoint!.MobileNumber,
+            Recipient = new()
+            {
+                MobileNumber = addressPoint!.MobileNumber,
+            },
             SendResult = new(SmsNotificationResultType.New, DateTime.UtcNow)
         };
 
@@ -40,7 +43,10 @@ public static class TestdataUtil
             Id = Guid.NewGuid(),
             OrderId = order.Id,
             RequestedSendTime = order.RequestedSendTime,
-            ToAddress = addressPoint!.EmailAddress,
+            Recipient = new()
+            {
+                ToAddress = addressPoint!.EmailAddress
+            },
             SendResult = new(EmailNotificationResultType.New, DateTime.UtcNow)
         };
 

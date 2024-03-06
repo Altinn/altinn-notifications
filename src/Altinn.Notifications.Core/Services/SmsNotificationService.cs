@@ -4,6 +4,7 @@ using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Notification;
+using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
 
@@ -44,13 +45,20 @@ public class SmsNotificationService : ISmsNotificationService
     {
         SmsAddressPoint? addressPoint = recipient.AddressInfo.Find(a => a.AddressType == AddressType.Sms) as SmsAddressPoint;
 
+        SmsRecipient smsRecipient = new()
+        {
+            OrganisationNumber = recipient.OrganisationNumber,
+            NationalIdentityNumber = recipient.NationalIdentityNumber,
+            MobileNumber = addressPoint?.MobileNumber ?? string.Empty
+        };
+
         if (!string.IsNullOrEmpty(addressPoint?.MobileNumber))
         {
-            await CreateNotificationForRecipient(orderId, requestedSendTime, recipient.RecipientId, addressPoint!.MobileNumber, SmsNotificationResultType.New, smsCount);
+            await CreateNotificationForRecipient(orderId, requestedSendTime, smsRecipient, SmsNotificationResultType.New, smsCount);
         }
         else
         {
-            await CreateNotificationForRecipient(orderId, requestedSendTime, recipient.RecipientId, string.Empty, SmsNotificationResultType.Failed_RecipientNotIdentified);
+            await CreateNotificationForRecipient(orderId, requestedSendTime, smsRecipient, SmsNotificationResultType.Failed_RecipientNotIdentified);
         }
     }
 
@@ -75,15 +83,14 @@ public class SmsNotificationService : ISmsNotificationService
         await _repository.UpdateSendStatus(sendOperationResult.NotificationId, sendOperationResult.SendResult, sendOperationResult.GatewayReference);
     }
 
-    private async Task CreateNotificationForRecipient(Guid orderId, DateTime requestedSendTime, string recipientId, string recipientNumber, SmsNotificationResultType type, int smsCount = 0)
+    private async Task CreateNotificationForRecipient(Guid orderId, DateTime requestedSendTime, SmsRecipient recipient, SmsNotificationResultType type, int smsCount = 0)
     {
         var smsNotification = new SmsNotification()
         {
             Id = _guid.NewGuid(),
             OrderId = orderId,
             RequestedSendTime = requestedSendTime,
-            RecipientNumber = recipientNumber,
-            RecipientId = string.IsNullOrEmpty(recipientId) ? null : recipientId,
+            Recipient = recipient,
             SendResult = new(type, _dateTime.UtcNow())
         };
 
