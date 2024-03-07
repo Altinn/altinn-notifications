@@ -4,7 +4,6 @@ using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Status;
 
 using Moq;
-
 using Xunit;
 
 namespace Altinn.Notifications.Email.Tests.Email.Core.Sending;
@@ -96,5 +95,33 @@ public class StatusServiceTests
         Assert.Contains("\"operationId\":\"operation-id\"", actualProducerInput);
         Assert.Contains($"\"notificationId\":\"{id}\"", actualProducerInput);
         Assert.Contains("\"lastStatusCheck\":\"2023-06-16T08:00:00Z\"", actualProducerInput);
+    }
+
+    [Fact]
+    public async Task UpdateSendStatus_PublishedToExpectedKafkaTopic()
+    {
+        SendOperationResult result = new()
+        {
+            OperationId = "00000000-0000-0000-0000-000000000000",
+            SendResult = EmailSendResult.Delivered
+        };
+
+        Mock<IEmailServiceClient> clientMock = new();
+
+        Mock<ICommonProducer> producerMock = new();
+        producerMock.Setup(p => p.ProduceAsync(
+            It.Is<string>(s => s.Equals(nameof(_topicSettings.EmailStatusUpdatedTopicName))),
+            It.Is<string>(s =>
+                s.Contains("\"operationId\":\"00000000-0000-0000-0000-000000000000\"") &&
+                s.Contains("\"sendResult\":\"Delivered\""))));
+        
+        Mock<IDateTimeService> dateTimeMock = new();
+
+        StatusService statusService = new(clientMock.Object, producerMock.Object, dateTimeMock.Object, _topicSettings);
+
+        await statusService.UpdateSendStatus(result);
+
+        producerMock.VerifyAll();
+        Assert.NotNull(result);
     }
 }

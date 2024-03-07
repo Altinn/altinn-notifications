@@ -1,3 +1,5 @@
+using System.Reflection;
+
 using Altinn.Notifications.Email.Configuration;
 using Altinn.Notifications.Email.Core.Configuration;
 using Altinn.Notifications.Email.Health;
@@ -11,6 +13,8 @@ using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel;
 using Microsoft.Extensions.FileProviders;
+using Swashbuckle.AspNetCore.Filters;
+using Swashbuckle.AspNetCore.SwaggerGen;
 
 ILogger logger;
 const string AppInsightsKeyName = "ApplicationInsights--InstrumentationKey";
@@ -26,7 +30,21 @@ appBuilder.Logging.ConfigureApplicationLogging(applicationInsightsConnectionStri
 
 ConfigureServices(appBuilder.Services, appBuilder.Configuration);
 
+appBuilder.Services.AddEndpointsApiExplorer();
+appBuilder.Services.AddSwaggerGen(c =>
+{
+    IncludeXmlComments(c);
+    c.EnableAnnotations();
+    c.OperationFilter<AddResponseHeadersFilter>();
+});
+
 var app = appBuilder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 Configure();
 
@@ -111,4 +129,18 @@ void Configure()
     app.UseAuthorization();
     app.MapControllers();
     app.MapHealthChecks("/health");
+}
+
+void IncludeXmlComments(SwaggerGenOptions swaggerGenOptions)
+{
+    try
+    {
+        string xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+        string xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+        swaggerGenOptions.IncludeXmlComments(xmlPath);
+    }
+    catch (Exception e)
+    {
+        logger.LogWarning(e, "Program // Exception when attempting to include the XML comments file(s).");
+    }
 }

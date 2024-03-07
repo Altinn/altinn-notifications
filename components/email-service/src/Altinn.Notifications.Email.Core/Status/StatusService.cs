@@ -55,4 +55,10 @@ public class StatusService : IStatusService
             await _producer.ProduceAsync(_settings.EmailSendingAcceptedTopicName, operationIdentifier.Serialize());
         }
     }
+
+    /// <inheritdoc/>
+    public async Task UpdateSendStatus(SendOperationResult sendOperationResult)
+    {
+        await _producer.ProduceAsync(_settings.EmailStatusUpdatedTopicName, sendOperationResult.Serialize());
+    }
 }

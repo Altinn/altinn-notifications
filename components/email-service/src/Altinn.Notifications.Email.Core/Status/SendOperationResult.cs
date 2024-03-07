@@ -11,7 +11,7 @@ namespace Altinn.Notifications.Email.Core.Status
         /// <summary>
         /// The notification id
         /// </summary>
-        public Guid NotificationId { get; set; }
+        public Guid? NotificationId { get; set; }
 
         /// <summary>
         /// The send operation id
