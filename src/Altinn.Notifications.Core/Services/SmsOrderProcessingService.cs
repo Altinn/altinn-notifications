@@ -1,6 +1,10 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using System.Runtime.CompilerServices;
+using System.Web;
+
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
+using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
@@ -28,15 +32,18 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
     /// <inheritdoc/>
     public async Task ProcessOrder(NotificationOrder order)
     {
+        int smsCount = GetSmsCountForOrder(order);
+
         foreach (Recipient recipient in order.Recipients)
         {
-            await _smsService.CreateNotification(order.Id, order.RequestedSendTime, recipient);
+            await _smsService.CreateNotification(order.Id, order.RequestedSendTime, recipient, smsCount);
         }
     }
 
     /// <inheritdoc/>
     public async Task ProcessOrderRetry(NotificationOrder order)
     {
+        int smsCount = GetSmsCountForOrder(order);
         List<SmsRecipient> smsRecipients = await _smsNotificationRepository.GetRecipients(order.Id);
         foreach (Recipient recipient in order.Recipients)
         {
@@ -47,8 +54,43 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
                 && sr.OrganisationNumber == recipient.OrganisationNumber
                 && sr.MobileNumber == addressPoint?.MobileNumber))
             {
-                await _smsService.CreateNotification(order.Id, order.RequestedSendTime, recipient);
+                await _smsService.CreateNotification(order.Id, order.RequestedSendTime, recipient, smsCount);
             }
         }
+    }
+
+    /// <summary>
+    /// Calculates the number of messages based on the rules for concatenation of SMS messages in the SMS gateway.
+    /// </summary>
+    internal static int CalculateNumberOfMessages(string message)
+    {
+        const int maxCharactersPerMessage = 160;
+        const int maxMessagesPerConcatenation = 16;
+        const int charactersPerConcatenatedMessage = 134;
+
+        string urlEncodedMessage = HttpUtility.UrlEncode(message);
+        int messageLength = urlEncodedMessage.Length;
+
+        if (messageLength <= maxCharactersPerMessage)
+        {
+            return 1;
+        }
+
+        // Calculate the number of messages for messages exceeding 160 characters
+        int numberOfMessages = (int)Math.Ceiling((double)messageLength / charactersPerConcatenatedMessage);
+
+        // Check if the total number of messages exceeds the limit
+        if (numberOfMessages > maxMessagesPerConcatenation)
+        {
+            numberOfMessages = maxMessagesPerConcatenation;
+        }
+
+        return numberOfMessages;
+    }
+
+    private static int GetSmsCountForOrder(NotificationOrder order)
+    {
+        SmsTemplate? smsTemplate = order.Templates.Find(t => t.Type == NotificationTemplateType.Sms) as SmsTemplate;
+        return CalculateNumberOfMessages(smsTemplate!.Body);
     }
 }

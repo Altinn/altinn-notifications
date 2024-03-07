@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
+using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
@@ -12,6 +13,8 @@ using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 
 using Moq;
+
+using RandomString4Net;
 
 using Xunit;
 
@@ -34,13 +37,14 @@ public class SmsOrderProcessingServiceTests
             Recipients = new List<Recipient>()
             {
                 new Recipient(new List<IAddressPoint>() { new SmsAddressPoint("+4799999999") }, nationalIdentityNumber: "enduser-nin")
-            }
+            },
+            Templates = [new SmsTemplate("Altinn", "this is the body")]
         };
 
         Recipient expectedRecipient = new(new List<IAddressPoint>() { new SmsAddressPoint("+4799999999") }, nationalIdentityNumber: "enduser-nin");
 
         var serviceMock = new Mock<ISmsNotificationService>();
-        serviceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.Is<DateTime>(d => d.Equals(requested)), It.Is<Recipient>(r => AssertUtils.AreEquivalent(expectedRecipient, r))));
+        serviceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.Is<DateTime>(d => d.Equals(requested)), It.Is<Recipient>(r => AssertUtils.AreEquivalent(expectedRecipient, r)), It.IsAny<int>()));
 
         var service = GetTestService(smsService: serviceMock.Object);
 
@@ -63,11 +67,12 @@ public class SmsOrderProcessingServiceTests
             {
                 new(),
                 new()
-            }
+            },
+            Templates = [new SmsTemplate("Altinn", "this is the body")]
         };
 
         var serviceMock = new Mock<ISmsNotificationService>();
-        serviceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>()));
+        serviceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>(), It.IsAny<int>()));
 
         var service = GetTestService(smsService: serviceMock.Object);
 
@@ -75,7 +80,7 @@ public class SmsOrderProcessingServiceTests
         await service.ProcessOrder(order);
 
         // Assert
-        serviceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>()), Times.Exactly(2));
+        serviceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>(), It.IsAny<int>()), Times.Exactly(2));
     }
 
     [Fact]
@@ -92,11 +97,12 @@ public class SmsOrderProcessingServiceTests
                 new Recipient(new List<IAddressPoint>() { new SmsAddressPoint("+4799999999") }, nationalIdentityNumber: "enduser-nin"),
                 new Recipient(new List<IAddressPoint>() { new SmsAddressPoint("+4799999999") }, organisationNumber: "skd-orgNo"),
                 new Recipient(new List<IAddressPoint>() { new SmsAddressPoint("+4749999999") })
-            }
+            },
+            Templates = [new SmsTemplate("Altinn", "this is the body")]
         };
 
         var serviceMock = new Mock<ISmsNotificationService>();
-        serviceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>()));
+        serviceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>(), It.IsAny<int>()));
 
         var smsRepoMock = new Mock<ISmsNotificationRepository>();
         smsRepoMock.Setup(e => e.GetRecipients(It.IsAny<Guid>())).ReturnsAsync(
@@ -113,7 +119,24 @@ public class SmsOrderProcessingServiceTests
 
         // Assert
         smsRepoMock.Verify(e => e.GetRecipients(It.IsAny<Guid>()), Times.Once);
-        serviceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>()), Times.Exactly(2));
+        serviceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>(), It.IsAny<int>()), Times.Exactly(2));
+    }
+
+    [Theory]
+    [InlineData(160, 1)]
+    [InlineData(161, 2)]
+    [InlineData(18685, 16)]
+    public void CalculateNumberOfMessages_LongMessagesAreSplitInMultiple(int messageLength, int expectedSmsCount)
+    {
+        int actualSmsCount = SmsOrderProcessingService.CalculateNumberOfMessages(RandomString.GetString(Types.ALPHABET_UPPERCASE, messageLength));
+        Assert.Equal(expectedSmsCount, actualSmsCount);
+    }
+
+    [Fact]
+    public void CalculateNumberOfMessages_MessageWithSymbolsAreEncodedBeforeCalculation()
+    {
+        int actualSmsCount = SmsOrderProcessingService.CalculateNumberOfMessages(RandomString.GetString(Types.ALPHABET_UPPERCASE_WITH_SYMBOLS, 160, forceOccuranceOfEachType: true));
+        Assert.True(actualSmsCount > 1);
     }
 
     private static SmsOrderProcessingService GetTestService(

@@ -101,7 +101,7 @@ public static class PostgreUtil
         }
 
         await orderRepo.Create(order);
-        await notificationRepo.AddNotification(smsNotification, DateTime.UtcNow.AddDays(1));
+        await notificationRepo.AddNotification(smsNotification, DateTime.UtcNow.AddDays(1), 1);
 
         return (order, smsNotification);
     }
