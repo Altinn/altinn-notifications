@@ -51,5 +51,20 @@ public enum EmailNotificationResultType
     /// <remarks>
     /// Should not be used externally or persisted in db.
     /// Only used for processing and logic in service layer.</remarks>
-    Failed_TransientError
+    Failed_TransientError,
+
+    /// <summary>
+    /// Failed, bounced
+    /// </summary>
+    Failed_Bounced,
+
+    /// <summary>
+    /// Failed, filtered spam
+    /// </summary>
+    Failed_FilteredSpam,
+
+    /// <summary>
+    /// Failed, quarantined
+    /// </summary>
+    Failed_Quarantined
 }

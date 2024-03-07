@@ -23,9 +23,14 @@ public class EmailNotificationRepository : IEmailNotificationRepository
 
     private const string _insertEmailNotificationSql = "call notifications.insertemailnotification($1, $2, $3, $4, $5, $6, $7, $8)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _toaddress, _result, _resulttime, _expirytime)
     private const string _getEmailNotificationsSql = "select * from notifications.getemails_statusnew_updatestatus()";
-    private const string _updateEmailStatus = "call notifications.updateemailstatus($1, $2, $3)"; // (_alternateid, _result, _operationid)
     private const string _getEmailRecipients = "select * from notifications.getemailrecipients_v2($1)"; // (_orderid)
-
+    private const string _updateEmailStatus =
+        @"UPDATE notifications.emailnotifications 
+        SET result = $1::emailnotificationresulttype, 
+            resulttime = now(), 
+            operationid = $2
+        WHERE alternateid = $3 OR operationid = $2;";    // (_result, _operationid, _alternateid)
+   
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotificationRepository"/> class.
     /// </summary>
@@ -86,13 +91,13 @@ public class EmailNotificationRepository : IEmailNotificationRepository
     }
 
     /// <inheritdoc/>
-    public async Task UpdateSendStatus(Guid notificationId, EmailNotificationResultType status, string? operationId = null)
+    public async Task UpdateSendStatus(Guid? notificationId, EmailNotificationResultType status, string? operationId = null)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_updateEmailStatus);
         using TelemetryTracker tracker = new(_telemetryClient, pgcom);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, operationId ?? (object)DBNull.Value);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId ?? (object)DBNull.Value);
         await pgcom.ExecuteNonQueryAsync();
         tracker.Track();
     }

@@ -35,7 +35,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
     public async Task AddNotification()
     {
         // Arrange
-        Guid orderId = await PostgreUtil.PopulateDBWithEmailOrderAndReturnId();
+        Guid orderId = await PostgreUtil.PopulateDBWithSmsOrderAndReturnId();
         _orderIdsToDelete.Add(orderId);
 
         // Arrange
@@ -195,5 +195,31 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
         int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
 
         Assert.Equal(1, actualCount);
+    }
+
+    [Fact]
+    public async Task SetSmsResult_AllEnumValuesExistInDb()
+    {
+        // Arrange
+        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
+        _orderIdsToDelete.Add(order.Id);
+
+        // Act & Assert
+        foreach (SmsNotificationResultType resultType in Enum.GetValues(typeof(SmsNotificationResultType)))
+        {
+            try
+            {
+                string sql = $@"
+                UPDATE notifications.smsnotifications 
+                SET result = '{resultType}'
+                WHERE alternateid = '{smsNotification.Id}';";
+
+                await PostgreUtil.RunSql(sql);
+            }
+            catch (Exception ex)
+            {
+                Assert.Fail($"Exception thrown for SmsNotificationResultType: {resultType}. Exception: {ex.Message}");
+            }
+        }
     }
 }
