@@ -110,7 +110,7 @@ public class DeliveryReportControllerTests : IClassFixture<IntegrationTestWebApp
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("\\\"validationResponse\\\":\\\"512d38b6-c7b8-40c8-89fe-f46f9e9622b6\\\"", responseBody);
+        Assert.Contains("\"validationResponse\":\"512d38b6-c7b8-40c8-89fe-f46f9e9622b6\"", responseBody);
     }
 
     private HttpClient GetTestClient()

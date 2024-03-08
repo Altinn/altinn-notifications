@@ -39,7 +39,7 @@ public class DeliveryReportController : ControllerBase
     [Produces("application/json")]
     [SwaggerResponse(200, "The delivery report is received")]
     [SwaggerResponse(400, "The delivery report is invalid")]
-    public async Task<ActionResult<string>> Post([FromBody] EventGridEvent[] eventList)
+    public async Task<ActionResult> Post([FromBody] EventGridEvent[] eventList)
     {
         foreach (EventGridEvent eventgridevent in eventList)
         {
@@ -54,7 +54,7 @@ public class DeliveryReportController : ControllerBase
                         {
                             ValidationResponse = subscriptionValidated.ValidationCode
                         };
-                        return JsonSerializer.Serialize(responseData);
+                        return Ok(responseData);
                     case AcsEmailDeliveryReportReceivedEventData deliveryReport:
                         try 
                         { 
@@ -80,6 +80,6 @@ public class DeliveryReportController : ControllerBase
             }
         }
 
-        return string.Empty;
+        return Ok();
     }
 }
