@@ -31,6 +31,9 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         [InlineData(EmailNotificationResultType.Failed, "The email was not sent due to an unspecified failure.")]
         [InlineData(EmailNotificationResultType.Failed_RecipientNotIdentified, "The email was not sent because the recipient's email address was not found.")]
         [InlineData(EmailNotificationResultType.Failed_InvalidEmailFormat, "The email was not sent because the recipient’s email address is in an invalid format.")]
+        [InlineData(EmailNotificationResultType.Failed_Bounced, "The email hard bounced, which may have happened because the email address does not exist or the domain is invalid.")]
+        [InlineData(EmailNotificationResultType.Failed_FilteredSpam, "The email was was identified as spam, and was rejected or blocked (not quarantined).")]
+        [InlineData(EmailNotificationResultType.Failed_Quarantined, "The email was quarantined (as spam, bulk mail, or phising).")]
         public void GetResultDescription_ExpectedDescription(EmailNotificationResultType result, string expected)
         {
             string actual = EmailNotificationSummaryService.GetResultDescription(result);
@@ -64,7 +67,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             // Act 
             EmailNotificationSummaryService.ProcessNotificationResults(summary);
-            
+
             // Assert
             Assert.Equal(1, summary.Generated);
             Assert.Equal(1, summary.Succeeded);

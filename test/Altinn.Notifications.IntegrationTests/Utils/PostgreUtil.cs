@@ -16,6 +16,12 @@ public static class PostgreUtil
         return order.Id;
     }
 
+    public static async Task<Guid> PopulateDBWithSmsOrderAndReturnId(string? sendersReference = null)
+    {
+        var order = await PopulateDBWithSmsOrder(sendersReference);
+        return order.Id;
+    }
+
     public static async Task<NotificationOrder> PopulateDBWithEmailOrder(string? sendersReference = null)
     {
         var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IOrderRepository) });
