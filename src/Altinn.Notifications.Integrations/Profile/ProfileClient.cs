@@ -43,7 +43,29 @@ namespace Altinn.Notifications.Integrations.Clients
             }
 
             string responseContent = await response.Content.ReadAsStringAsync();
-            List<UserContactPoints>? contactPoints = JsonSerializer.Deserialize<List<UserContactPoints>>(responseContent);
+            List<UserContactPoints>? contactPoints = JsonSerializer.Deserialize<UserContactPointsList>(responseContent)!.ContactPointList;
+            return contactPoints!;
+        }
+
+        /// <inheritdoc/>
+        public async Task<List<UserContactPointAvailability>> GetUserContactPointAvailabilities(List<string> nationalIdentityNumbers)
+        {
+            var lookupObject = new UserContactPointLookup
+            {
+                NationalIdentityNumbers = nationalIdentityNumbers
+            };
+
+            HttpContent content = new StringContent(JsonSerializer.Serialize(lookupObject), Encoding.UTF8, "application/json");
+
+            var response = await _client.PostAsync("contactpoint/availability", content);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new PlatformHttpException(response, $"ProfileClient.GetUserContactPointAvailabilities failed with status code {response.StatusCode}");
+            }
+
+            string responseContent = await response.Content.ReadAsStringAsync();
+            List<UserContactPointAvailability>? contactPoints = JsonSerializer.Deserialize<UserContactPointAvailabilityList>(responseContent)!.AvailabilityList;
             return contactPoints!;
         }
     }
