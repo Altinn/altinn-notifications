@@ -183,6 +183,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     services.AddCoreServices(config);
 
     services.AddKafkaServices(config);
+    services.AddAltinnClients(config);
     services.AddPostgresRepositories(config);
 }
 

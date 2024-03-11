@@ -1,4 +1,5 @@
 ﻿using Altinn.Notifications.Core.Integrations;
+using Altinn.Notifications.Integrations.Clients;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Health;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
@@ -33,6 +34,22 @@ public static class ServiceCollectionExtensions
         .AddHostedService<SmsStatusConsumer>()
         .AddHostedService<AltinnServiceUpdateConsumer>()
         .Configure<KafkaSettings>(config.GetSection(nameof(KafkaSettings)));
+    }
+
+    /// <summary>
+    /// Adds Altinn clients and configurations to DI container.
+    /// </summary>
+    /// <param name="services">service collection.</param>
+    /// <param name="config">the configuration collection</param>
+    public static void AddAltinnClients(this IServiceCollection services, IConfiguration config)
+    {
+        _ = config.GetSection(nameof(AltinnServiceSettings))
+            .Get<AltinnServiceSettings>()
+            ?? throw new ArgumentNullException(nameof(config), "Required AltinnServiceSettings is missing from application configuration");
+
+        services
+            .Configure<AltinnServiceSettings>(config.GetSection(nameof(AltinnServiceSettings)))
+            .AddHttpClient<IProfileClient, ProfileClient>();
     }
 
     /// <summary>
