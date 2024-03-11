@@ -7,66 +7,65 @@ using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Profile;
 
-namespace Altinn.Notifications.Integrations.Clients
+namespace Altinn.Notifications.Integrations.Clients;
+
+/// <summary>
+/// Implementation of the <see cref="IProfileClient"/>
+/// </summary>
+public class ProfileClient : IProfileClient
 {
+    private readonly HttpClient _client;
+
     /// <summary>
-    /// Implementation of the <see cref="IProfileClient"/>
+    /// Initializes a new instance of the <see cref="ProfileClient"/> class.
     /// </summary>
-    public class ProfileClient : IProfileClient
+    public ProfileClient(HttpClient client, AltinnServiceSettings settings)
     {
-        private readonly HttpClient _client;
+        _client = client;
+        _client.BaseAddress = new Uri(settings.ApiProfileEndpoint);
+    }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ProfileClient"/> class.
-        /// </summary>
-        public ProfileClient(HttpClient client, AltinnServiceSettings settings)
+    /// <inheritdoc/>
+    public async Task<List<UserContactPoints>> GetUserContactPoints(List<string> nationalIdentityNumbers)
+    {
+        var lookupObject = new UserContactPointLookup
         {
-            _client = client;
-            _client.BaseAddress = new Uri(settings.ApiProfileEndpoint);
+            NationalIdentityNumbers = nationalIdentityNumbers
+        };
+
+        HttpContent content = new StringContent(JsonSerializer.Serialize(lookupObject), Encoding.UTF8, "application/json");
+
+        var response = await _client.PostAsync("users/contactpoint/lookup", content);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new PlatformHttpException(response, $"ProfileClient.GetUserContactPoints failed with status code {response.StatusCode}");  
         }
 
-        /// <inheritdoc/>
-        public async Task<List<UserContactPoints>> GetUserContactPoints(List<string> nationalIdentityNumbers)
+        string responseContent = await response.Content.ReadAsStringAsync();
+        List<UserContactPoints>? contactPoints = JsonSerializer.Deserialize<UserContactPointsList>(responseContent)!.ContactPointList;
+        return contactPoints!;
+    }
+
+    /// <inheritdoc/>
+    public async Task<List<UserContactPointAvailability>> GetUserContactPointAvailabilities(List<string> nationalIdentityNumbers)
+    {
+        var lookupObject = new UserContactPointLookup
         {
-            var lookupObject = new UserContactPointLookup
-            {
-                NationalIdentityNumbers = nationalIdentityNumbers
-            };
+            NationalIdentityNumbers = nationalIdentityNumbers
+        };
 
-            HttpContent content = new StringContent(JsonSerializer.Serialize(lookupObject), Encoding.UTF8, "application/json");
+        HttpContent content = new StringContent(JsonSerializer.Serialize(lookupObject), Encoding.UTF8, "application/json");
 
-            var response = await _client.PostAsync("contactpoint/lookup", content);
+        var response = await _client.PostAsync("users/contactpoint/availability", content);
 
-            if (!response.IsSuccessStatusCode)
-            {
-                throw new PlatformHttpException(response, $"ProfileClient.GetUserContactPoints failed with status code {response.StatusCode}");  
-            }
-
-            string responseContent = await response.Content.ReadAsStringAsync();
-            List<UserContactPoints>? contactPoints = JsonSerializer.Deserialize<UserContactPointsList>(responseContent)!.ContactPointList;
-            return contactPoints!;
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new PlatformHttpException(response, $"ProfileClient.GetUserContactPointAvailabilities failed with status code {response.StatusCode}");
         }
 
-        /// <inheritdoc/>
-        public async Task<List<UserContactPointAvailability>> GetUserContactPointAvailabilities(List<string> nationalIdentityNumbers)
-        {
-            var lookupObject = new UserContactPointLookup
-            {
-                NationalIdentityNumbers = nationalIdentityNumbers
-            };
-
-            HttpContent content = new StringContent(JsonSerializer.Serialize(lookupObject), Encoding.UTF8, "application/json");
-
-            var response = await _client.PostAsync("contactpoint/availability", content);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                throw new PlatformHttpException(response, $"ProfileClient.GetUserContactPointAvailabilities failed with status code {response.StatusCode}");
-            }
-
-            string responseContent = await response.Content.ReadAsStringAsync();
-            List<UserContactPointAvailability>? contactPoints = JsonSerializer.Deserialize<UserContactPointAvailabilityList>(responseContent)!.AvailabilityList;
-            return contactPoints!;
-        }
+        string responseContent = await response.Content.ReadAsStringAsync();
+        List<UserContactPointAvailability>? contactPoints = JsonSerializer.Deserialize<UserContactPointAvailabilityList>(responseContent)!.AvailabilityList;
+        return contactPoints!;
     }
 }
