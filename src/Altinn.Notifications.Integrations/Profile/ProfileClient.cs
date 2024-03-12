@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using System.Text.Json;
 
+using Altinn.Notifications.Core;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.ContactPoints;
 using Altinn.Notifications.Core.Shared;
@@ -33,17 +34,17 @@ public class ProfileClient : IProfileClient
             NationalIdentityNumbers = nationalIdentityNumbers
         };
 
-        HttpContent content = new StringContent(JsonSerializer.Serialize(lookupObject), Encoding.UTF8, "application/json");
+        HttpContent content = new StringContent(JsonSerializer.Serialize(lookupObject, JsonSerializerOptionsProvider.Options), Encoding.UTF8, "application/json");
 
         var response = await _client.PostAsync("users/contactpoint/lookup", content);
 
         if (!response.IsSuccessStatusCode)
         {
-            throw new PlatformHttpException(response, $"ProfileClient.GetUserContactPoints failed with status code {response.StatusCode}");  
+            throw new PlatformHttpException(response, $"ProfileClient.GetUserContactPoints failed with status code {response.StatusCode}");
         }
 
         string responseContent = await response.Content.ReadAsStringAsync();
-        List<UserContactPoints>? contactPoints = JsonSerializer.Deserialize<UserContactPointsList>(responseContent)!.ContactPointList;
+        List<UserContactPoints>? contactPoints = JsonSerializer.Deserialize<UserContactPointsList>(responseContent, JsonSerializerOptionsProvider.Options)!.ContactPointList;
         return contactPoints!;
     }
 
@@ -55,7 +56,7 @@ public class ProfileClient : IProfileClient
             NationalIdentityNumbers = nationalIdentityNumbers
         };
 
-        HttpContent content = new StringContent(JsonSerializer.Serialize(lookupObject), Encoding.UTF8, "application/json");
+        HttpContent content = new StringContent(JsonSerializer.Serialize(lookupObject, JsonSerializerOptionsProvider.Options), Encoding.UTF8, "application/json");
 
         var response = await _client.PostAsync("users/contactpoint/availability", content);
 
@@ -65,7 +66,7 @@ public class ProfileClient : IProfileClient
         }
 
         string responseContent = await response.Content.ReadAsStringAsync();
-        List<UserContactPointAvailability>? contactPoints = JsonSerializer.Deserialize<UserContactPointAvailabilityList>(responseContent)!.AvailabilityList;
+        List<UserContactPointAvailability>? contactPoints = JsonSerializer.Deserialize<UserContactPointAvailabilityList>(responseContent, JsonSerializerOptionsProvider.Options)!.AvailabilityList;
         return contactPoints!;
     }
 }
