@@ -84,7 +84,7 @@ public class SmsNotificationServiceTests
     }
 
     [Fact]
-    public async Task CreateNotification_RecipientNumberMissing_ResultFailedRecipientNotDefined()
+    public async Task CreateNotification_RecipientNumberMissing_LookupFails_ResultFailedRecipientNotDefined()
     {
         // Arrange
         Guid id = Guid.NewGuid();

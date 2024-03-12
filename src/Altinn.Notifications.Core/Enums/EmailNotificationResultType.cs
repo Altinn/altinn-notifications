@@ -31,6 +31,11 @@ public enum EmailNotificationResultType
     Failed,
 
     /// <summary>
+    /// Failed, recipient is reserved in KRR
+    /// </summary>
+    Failed_RecipientReserved,
+
+    /// <summary>
     /// Recipient to address was not identified
     /// </summary>
     Failed_RecipientNotIdentified,

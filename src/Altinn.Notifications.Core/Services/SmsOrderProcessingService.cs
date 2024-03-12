@@ -19,24 +19,37 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
 {
     private readonly ISmsNotificationRepository _smsNotificationRepository;
     private readonly ISmsNotificationService _smsService;
+    private readonly IContactPointService _contactPointService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderProcessingService"/> class.
     /// </summary>
-    public SmsOrderProcessingService(ISmsNotificationRepository smsNotificationRepository, ISmsNotificationService smsService)
+    public SmsOrderProcessingService(ISmsNotificationRepository smsNotificationRepository, ISmsNotificationService smsService, IContactPointService contactPointService)
     {
         _smsNotificationRepository = smsNotificationRepository;
         _smsService = smsService;
+        _contactPointService = contactPointService;
     }
 
     /// <inheritdoc/>
     public async Task ProcessOrder(NotificationOrder order)
     {
+        var recipients = order.Recipients;
+        var recipientsWithoutMobileNumber = recipients.Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Sms)).ToList();
+
+        List<Recipient> agumentedRecipients = await _contactPointService.GetSmsContactPoints(recipientsWithoutMobileNumber);
+
+        var augmentedRecipientDictionary = agumentedRecipients.ToDictionary(ar => $"{ar.NationalIdentityNumber}-{ar.OrganisationNumber}");
         int smsCount = GetSmsCountForOrder(order);
 
-        foreach (Recipient recipient in order.Recipients)
+        foreach (Recipient originalRecipient in recipients)
         {
-            await _smsService.CreateNotification(order.Id, order.RequestedSendTime, recipient, smsCount);
+            if (augmentedRecipientDictionary.TryGetValue($"{originalRecipient.NationalIdentityNumber}-{originalRecipient.OrganisationNumber}", out Recipient? augmentedRecipient))
+            {
+                originalRecipient.AddressInfo.AddRange(augmentedRecipient!.AddressInfo);
+            }
+
+            await _smsService.CreateNotification(order.Id, order.RequestedSendTime, originalRecipient, smsCount, order.IgnoreReservation);
         }
     }
 

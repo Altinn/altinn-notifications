@@ -41,7 +41,7 @@ public class SmsNotificationService : ISmsNotificationService
     }
 
     /// <inheritdoc/>
-    public async Task CreateNotification(Guid orderId, DateTime requestedSendTime, Recipient recipient, int smsCount)
+    public async Task CreateNotification(Guid orderId, DateTime requestedSendTime, Recipient recipient, int smsCount, bool ignoreReservation = false)
     {
         SmsAddressPoint? addressPoint = recipient.AddressInfo.Find(a => a.AddressType == AddressType.Sms) as SmsAddressPoint;
 
@@ -52,14 +52,19 @@ public class SmsNotificationService : ISmsNotificationService
             MobileNumber = addressPoint?.MobileNumber ?? string.Empty
         };
 
-        if (!string.IsNullOrEmpty(addressPoint?.MobileNumber))
+        if (recipient.IsReserved && !ignoreReservation)
         {
-            await CreateNotificationForRecipient(orderId, requestedSendTime, smsRecipient, SmsNotificationResultType.New, smsCount);
+            smsRecipient.MobileNumber = string.Empty; // not persisting mobile number for reserved recipient
+            await CreateNotificationForRecipient(orderId, requestedSendTime, smsRecipient, SmsNotificationResultType.Failed_RecipientReserved);
+            return;
         }
-        else
+        else if (string.IsNullOrEmpty(addressPoint?.MobileNumber))
         {
             await CreateNotificationForRecipient(orderId, requestedSendTime, smsRecipient, SmsNotificationResultType.Failed_RecipientNotIdentified);
+            return;
         }
+
+        await CreateNotificationForRecipient(orderId, requestedSendTime, smsRecipient, SmsNotificationResultType.New, smsCount);
     }
 
     /// <inheritdoc/>

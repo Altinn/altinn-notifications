@@ -19,6 +19,7 @@ namespace Altinn.Notifications.Core.Services
                 { EmailNotificationResultType.Succeeded, "The email has been accepted by the third party email service and will be sent shortly." },
                 { EmailNotificationResultType.Delivered, "The email was delivered to the recipient. No errors reported, making it likely it was received by the recipient." },
                 { EmailNotificationResultType.Failed, "The email was not sent due to an unspecified failure." },
+                { EmailNotificationResultType.Failed_RecipientReserved, "The email was not sent because the recipient has reserved themselves from electronic communication." },
                 { EmailNotificationResultType.Failed_RecipientNotIdentified, "The email was not sent because the recipient's email address was not found." },
                 { EmailNotificationResultType.Failed_InvalidEmailFormat, "The email was not sent because the recipient’s email address is in an invalid format." },
                 { EmailNotificationResultType.Failed_SupressedRecipient, "The email was not sent because the recipient’s email address is suppressed by the third party email service." },

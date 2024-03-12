@@ -39,6 +39,7 @@ public static class ServiceCollectionExtensions
             .AddSingleton<IEmailNotificationService, EmailNotificationService>()
             .AddSingleton<ISmsNotificationService, SmsNotificationService>()
             .AddSingleton<ISmsNotificationSummaryService, SmsNotificationSummaryService>()
+            .AddSingleton<IContactPointService, ContactPointService>()
             .AddSingleton<IAltinnServiceUpdateService, AltinnServiceUpdateService>()
             .AddSingleton<INotificationsEmailServiceUpdateService, NotificationsEmailServiceUpdateService>()
             .AddSingleton<IMetricsService, MetricsService>()

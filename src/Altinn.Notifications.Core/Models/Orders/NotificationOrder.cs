@@ -39,9 +39,14 @@ public class NotificationOrder : IBaseNotificationOrder
     public List<Recipient> Recipients { get; internal set; } = new List<Recipient>();
 
     /// <summary>
+    /// Gets the boolean indicating if the KRR reservation should be ignored
+    /// </summary>
+    public bool IgnoreReservation { get; internal set; }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="NotificationOrder"/> class.
     /// </summary>
-    public NotificationOrder(Guid id, string? sendersReference, List<INotificationTemplate> templates, DateTime requestedSendTime, NotificationChannel notificationChannel, Creator creator, DateTime created, List<Recipient> recipients)
+    public NotificationOrder(Guid id, string? sendersReference, List<INotificationTemplate> templates, DateTime requestedSendTime, NotificationChannel notificationChannel, Creator creator, DateTime created, List<Recipient> recipients, bool ignoreReservation = false)
     {
         Id = id;
         SendersReference = sendersReference;
@@ -51,6 +56,7 @@ public class NotificationOrder : IBaseNotificationOrder
         Creator = creator;
         Created = created;
         Recipients = recipients;
+        IgnoreReservation = ignoreReservation;
     }
 
     /// <summary>
