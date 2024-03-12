@@ -85,6 +85,7 @@ public class ProfileClientTests
         var exception = await Assert.ThrowsAsync<PlatformHttpException>(async () => await _profileClient.GetUserContactPoints(["unavailable"]));
 
         Assert.StartsWith("ProfileClient.GetUserContactPoints failed with status code", exception.Message);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, exception.Response?.StatusCode);
     }
 
     [Fact]
@@ -116,6 +117,7 @@ public class ProfileClientTests
 
         // Assert
         Assert.StartsWith("ProfileClient.GetUserContactPointAvailabilities failed with status code", exception.Message);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, exception.Response?.StatusCode);
     }
 
     private Task<HttpResponseMessage> GetResponse<T>(UserContactPointLookup lookup)
