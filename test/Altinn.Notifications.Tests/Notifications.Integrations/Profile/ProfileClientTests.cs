@@ -14,6 +14,8 @@ using Altinn.Notifications.Integrations.Clients;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Profile;
 
+using Microsoft.Extensions.Options;
+
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Profile;
@@ -52,7 +54,7 @@ public class ProfileClientTests
 
         _profileClient = new ProfileClient(
                       new HttpClient(sblBridgeHttpMessageHandler),
-                      settings);
+                      Options.Create(settings));
     }
 
     [Fact]
@@ -144,7 +146,7 @@ public class ProfileClientTests
             });
     }
 
-    private static  object? GetEmptyListContent<T>()
+    private static object? GetEmptyListContent<T>()
     {
         if (typeof(T) == typeof(UserContactPointAvailabilityList))
         {

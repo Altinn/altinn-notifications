@@ -8,6 +8,8 @@ using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Profile;
 
+using Microsoft.Extensions.Options;
+
 namespace Altinn.Notifications.Integrations.Clients;
 
 /// <summary>
@@ -20,10 +22,10 @@ public class ProfileClient : IProfileClient
     /// <summary>
     /// Initializes a new instance of the <see cref="ProfileClient"/> class.
     /// </summary>
-    public ProfileClient(HttpClient client, AltinnServiceSettings settings)
+    public ProfileClient(HttpClient client, IOptions<AltinnServiceSettings> settings)
     {
         _client = client;
-        _client.BaseAddress = new Uri(settings.ApiProfileEndpoint);
+        _client.BaseAddress = new Uri(settings.Value.ApiProfileEndpoint);
     }
 
     /// <inheritdoc/>
