@@ -14,6 +14,7 @@ namespace Altinn.Notifications.Sms.Configuration;
 public class BasicAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
 {
     private readonly SmsDeliveryReportSettings _smsDeliveryReportSettings;
+    private readonly ILogger<BasicAuthenticationHandler> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BasicAuthenticationHandler"/> class.
@@ -30,6 +31,7 @@ public class BasicAuthenticationHandler : AuthenticationHandler<AuthenticationSc
         : base(options, logger, encoder)
     {
         _smsDeliveryReportSettings = smsDeliveryReportSettings;
+        _logger = logger.CreateLogger<BasicAuthenticationHandler>();
     }
  
     /// <summary>
@@ -42,6 +44,8 @@ public class BasicAuthenticationHandler : AuthenticationHandler<AuthenticationSc
 
         if (!Request.Headers.TryGetValue("Authorization", out var authorizationHeader))
         {
+            _logger.LogError("// BasicAuthenticationHandler // HandleAuthenticateAsync // Missing Authorization Header");
+
             return Task.FromResult(AuthenticateResult.Fail("Missing Authorization Header"));
         }
 
@@ -60,6 +64,7 @@ public class BasicAuthenticationHandler : AuthenticationHandler<AuthenticationSc
 
         if (username != _smsDeliveryReportSettings.UserSettings.Username || password != _smsDeliveryReportSettings.UserSettings.Password)
         {
+            _logger.LogError("// BasicAuthenticationHandler // HandleAuthenticateAsync // Invalid Username {Username} or Password: {Password}", username, password[^5..]);
             return Task.FromResult(AuthenticateResult.Fail("Invalid Username or Password"));
         }
 
