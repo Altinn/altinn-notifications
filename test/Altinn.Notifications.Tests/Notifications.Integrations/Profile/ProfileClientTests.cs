@@ -25,7 +25,7 @@ public class ProfileClientTests
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    private readonly IProfileClient _profileClient;
+    private readonly ProfileClient _profileClient;
 
     public ProfileClientTests()
     {
@@ -53,7 +53,6 @@ public class ProfileClientTests
         _profileClient = new ProfileClient(
                       new HttpClient(sblBridgeHttpMessageHandler),
                       settings);
-
     }
 
     [Fact]
@@ -73,7 +72,7 @@ public class ProfileClientTests
         List<UserContactPoints> actual = await _profileClient.GetUserContactPoints(["populated-list"]);
 
         // Assert
-        Assert.True(actual.Count == 2);
+        Assert.Equal(2, actual.Count);
         Assert.Contains("01025101038", actual.Select(cp => cp.NationalIdentityNumber));
     }
 
@@ -103,7 +102,7 @@ public class ProfileClientTests
         List<UserContactPointAvailability> actual = await _profileClient.GetUserContactPointAvailabilities(["populated-list"]);
 
         // Assert
-        Assert.True(actual.Count == 2);
+        Assert.Equal(2, actual.Count);
         Assert.Contains("01025101038", actual.Select(cp => cp.NationalIdentityNumber));
     }
 
@@ -145,7 +144,7 @@ public class ProfileClientTests
             });
     }
 
-    private object? GetEmptyListContent<T>()
+    private static  object? GetEmptyListContent<T>()
     {
         if (typeof(T) == typeof(UserContactPointAvailabilityList))
         {
@@ -159,7 +158,7 @@ public class ProfileClientTests
         return null;
     }
 
-    private object? GetPopulatedListContent<T>()
+    private static object? GetPopulatedListContent<T>()
     {
         if (typeof(T) == typeof(UserContactPointAvailabilityList))
         {
