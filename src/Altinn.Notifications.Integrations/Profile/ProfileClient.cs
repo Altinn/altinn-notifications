@@ -22,7 +22,7 @@ public class ProfileClient : IProfileClient
     /// <summary>
     /// Initializes a new instance of the <see cref="ProfileClient"/> class.
     /// </summary>
-    public ProfileClient(HttpClient client, IOptions<AltinnServiceSettings> settings)
+    public ProfileClient(HttpClient client, IOptions<PlatformSettings> settings)
     {
         _client = client;
         _client.BaseAddress = new Uri(settings.Value.ApiProfileEndpoint);

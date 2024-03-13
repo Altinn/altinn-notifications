@@ -7,7 +7,6 @@ using System.Text.Json;
 using System.Threading.Tasks;
 
 using Altinn.Notifications.Core;
-using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.ContactPoints;
 using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Integrations.Clients;
@@ -47,7 +46,7 @@ public class ProfileClientTests
                return new HttpResponseMessage(HttpStatusCode.NotFound);
            });
 
-        AltinnServiceSettings settings = new()
+        PlatformSettings settings = new()
         {
             ApiProfileEndpoint = "https://platform.at22.altinn.cloud/profile/api/v1/"
         };
@@ -167,19 +166,19 @@ public class ProfileClientTests
         if (typeof(T) == typeof(UserContactPointAvailabilityList))
         {
             var availabilityList = new List<UserContactPointAvailability>
-        {
-            new UserContactPointAvailability() { NationalIdentityNumber = "01025101038", EmailRegistered = true },
-            new UserContactPointAvailability() { NationalIdentityNumber = "01025101037", EmailRegistered = false }
-        };
+            {
+                new UserContactPointAvailability() { NationalIdentityNumber = "01025101038", EmailRegistered = true },
+                new UserContactPointAvailability() { NationalIdentityNumber = "01025101037", EmailRegistered = false }
+            };
             return new UserContactPointAvailabilityList() { AvailabilityList = availabilityList };
         }
         else if (typeof(T) == typeof(UserContactPointsList))
         {
             var contactPointsList = new List<UserContactPoints>
-        {
-            new UserContactPoints() { NationalIdentityNumber = "01025101038", Email = string.Empty },
-            new UserContactPoints() { NationalIdentityNumber = "01025101037", Email = string.Empty }
-        };
+            {
+                new UserContactPoints() { NationalIdentityNumber = "01025101038", Email = string.Empty },
+                new UserContactPoints() { NationalIdentityNumber = "01025101037", Email = string.Empty }
+            };
             return new UserContactPointsList() { ContactPointList = contactPointsList };
         }
 
