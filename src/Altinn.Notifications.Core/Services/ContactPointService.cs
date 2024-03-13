@@ -80,7 +80,7 @@ namespace Altinn.Notifications.Core.Services
         {
             List<string> nins = recipients
                     .Where(r => !string.IsNullOrEmpty(r.NationalIdentityNumber))
-                    .Select(r => r.NationalIdentityNumber!)
+                    .Select(r => r.NationalIdentityNumber!) 
                     .ToList();
 
             Task<List<UserContactPoints>> ninLookupTask = nins.Count > 0
