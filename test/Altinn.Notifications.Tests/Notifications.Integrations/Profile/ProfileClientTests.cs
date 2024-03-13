@@ -167,19 +167,19 @@ public class ProfileClientTests
         if (typeof(T) == typeof(UserContactPointAvailabilityList))
         {
             var availabilityList = new List<UserContactPointAvailability>
-        {
-            new UserContactPointAvailability() { NationalIdentityNumber = "01025101038", EmailRegistered = true },
-            new UserContactPointAvailability() { NationalIdentityNumber = "01025101037", EmailRegistered = false }
-        };
+            {
+                new UserContactPointAvailability() { NationalIdentityNumber = "01025101038", EmailRegistered = true },
+                new UserContactPointAvailability() { NationalIdentityNumber = "01025101037", EmailRegistered = false }
+            };
             return new UserContactPointAvailabilityList() { AvailabilityList = availabilityList };
         }
         else if (typeof(T) == typeof(UserContactPointsList))
         {
             var contactPointsList = new List<UserContactPoints>
-        {
-            new UserContactPoints() { NationalIdentityNumber = "01025101038", Email = string.Empty },
-            new UserContactPoints() { NationalIdentityNumber = "01025101037", Email = string.Empty }
-        };
+            {
+                new UserContactPoints() { NationalIdentityNumber = "01025101038", Email = string.Empty },
+                new UserContactPoints() { NationalIdentityNumber = "01025101037", Email = string.Empty }
+            };
             return new UserContactPointsList() { ContactPointList = contactPointsList };
         }
 
