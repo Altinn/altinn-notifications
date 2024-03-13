@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-using Altinn.Notifications.Core.Models;
+﻿using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Core.Models.ContactPoints;
 
 namespace Altinn.Notifications.Core.Services.Interfaces
 {
@@ -26,5 +21,12 @@ namespace Altinn.Notifications.Core.Services.Interfaces
         /// <param name="recipients">List of recipients to retrieve contact points for</param>
         /// <returns>The list of recipients augumented with SMS address points where available</returns>
         public Task<List<Recipient>> GetSmsContactPoints(List<Recipient> recipients);
+
+        /// <summary>
+        /// Retrieves the availabililty of contact points for the provided recipient based on their national identity number or organisation number
+        /// </summary>
+        /// <param name="recipients">List of recipients to check contact point availability for</param>
+        /// <returns>The list of recipients with contact point availability details</returns>
+        public Task<List<UserContactPointAvailability>> GetContactPointAvailability(List<Recipient> recipients);
     }
 }

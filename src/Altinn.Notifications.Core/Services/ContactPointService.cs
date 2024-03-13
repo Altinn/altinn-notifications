@@ -57,6 +57,12 @@ namespace Altinn.Notifications.Core.Services
                 });
         }
 
+        /// <inheritdoc/>
+        public async Task<List<UserContactPointAvailability>> GetContactPointAvailability(List<Recipient> recipients)
+        {
+            return await LookupContactPointAvailability(recipients);
+        }
+
         private async Task<List<Recipient>> AugmentRecipients(List<Recipient> recipients, Func<Recipient, UserContactPoints, Recipient> createContactPoint)
         {
             List<Recipient> augmentedRecipients = [];
@@ -80,7 +86,7 @@ namespace Altinn.Notifications.Core.Services
         {
             List<string> nins = recipients
                     .Where(r => !string.IsNullOrEmpty(r.NationalIdentityNumber))
-                    .Select(r => r.NationalIdentityNumber!) 
+                    .Select(r => r.NationalIdentityNumber!)
                     .ToList();
 
             Task<List<UserContactPoints>> ninLookupTask = nins.Count > 0
@@ -92,6 +98,24 @@ namespace Altinn.Notifications.Core.Services
             List<UserContactPoints> userContactPoints = ninLookupTask.Result;
 
             return userContactPoints;
+        }
+
+        private async Task<List<UserContactPointAvailability>> LookupContactPointAvailability(List<Recipient> recipients)
+        {
+            List<string> nins = recipients
+                    .Where(r => !string.IsNullOrEmpty(r.NationalIdentityNumber))
+                    .Select(r => r.NationalIdentityNumber!)
+                    .ToList();
+
+            Task<List<UserContactPointAvailability>> ninLookupTask = nins.Count > 0
+             ? _profileClient.GetUserContactPointAvailabilities(nins)
+             : Task.FromResult(new List<UserContactPointAvailability>());
+
+            await Task.WhenAll(ninLookupTask);
+
+            List<UserContactPointAvailability> contactPointAvailabilityList = ninLookupTask.Result;
+
+            return contactPointAvailabilityList;
         }
     }
 }
