@@ -3,8 +3,6 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Encodings.Web;
 
-using Azure.Core;
-
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
@@ -42,18 +40,18 @@ public class BasicAuthenticationHandler : AuthenticationHandler<AuthenticationSc
     /// </summary>
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
+        if (!Request.Path.StartsWithSegments("/notifications/sms/api/v1/reports"))
+        {
+            // Bypass authentication for all endspoint not reports related
+            return Task.FromResult(AuthenticateResult.NoResult());
+        }
+
         string username = string.Empty;
         string password = string.Empty;
 
         if (!Request.Headers.TryGetValue("Authorization", out var authorizationHeader))
         {
-            #pragma warning disable SA1305
-            StringValues ipAddres;
-
-            Request.Headers.TryGetValue("X-Forwarded-For", out ipAddres);
-           
-            _logger.LogError("// BasicAuthenticationHandler // HandleAuthenticateAsync // Missing Authorization Header. IP: {0}", System.Text.Json.JsonSerializer.Serialize(ipAddres));
-            #pragma warning restore SA1305
+            _logger.LogError("// BasicAuthenticationHandler // HandleAuthenticateAsync // Missing Authorization Header.");
 
             return Task.FromResult(AuthenticateResult.Fail("Missing Authorization Header"));
         }
