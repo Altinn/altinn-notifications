@@ -69,10 +69,7 @@ namespace Altinn.Notifications.Core.Services
                     UserContactPoints? userContactPoints = userContactPointsList!
                         .Find(u => u.NationalIdentityNumber == recipient.NationalIdentityNumber);
 
-                    if (userContactPointsList != null)
-                    {
-                        augmentedRecipients.Add(createContactPoint(recipient, userContactPoints!));
-                    }
+                    augmentedRecipients.Add(createContactPoint(recipient, userContactPoints!));
                 }
             }
 
