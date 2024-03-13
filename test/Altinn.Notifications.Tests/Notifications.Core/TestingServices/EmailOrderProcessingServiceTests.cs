@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
+using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
@@ -20,7 +21,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 public class EmailOrderProcessingServiceTests
 {
     [Fact]
-    public async Task ProcessOrder_ServiceCalledOnceForEachRecipient()
+    public async Task ProcessOrder_NotificationServiceCalledOnceForEachRecipient()
     {
         // Arrange
         var order = new NotificationOrder()
@@ -55,7 +56,7 @@ public class EmailOrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessOrder_ExpectedInputToService()
+    public async Task ProcessOrder_ExpectedInputToNotificationService()
     {
         // Arrange
         DateTime requested = DateTime.UtcNow;
@@ -87,7 +88,7 @@ public class EmailOrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessOrder_ServiceThrowsException_RepositoryNotCalled()
+    public async Task ProcessOrder_NotificationServiceThrowsException_RepositoryNotCalled()
     {
         // Arrange
         var order = new NotificationOrder()
@@ -114,6 +115,50 @@ public class EmailOrderProcessingServiceTests
         // Assert
         serviceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>(), It.IsAny<bool>()), Times.Once);
         repoMock.Verify(r => r.SetProcessingStatus(It.IsAny<Guid>(), It.IsAny<OrderProcessingStatus>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ProcessOrder_RecipientMissingEmail_ContactPointServiceCalled()
+    {
+        // Arrange
+        var order = new NotificationOrder()
+        {
+            Id = Guid.NewGuid(),
+            NotificationChannel = NotificationChannel.Sms,
+            Recipients = new List<Recipient>()
+            {
+                new()
+                {
+                NationalIdentityNumber = "123456",
+                }
+            },
+            Templates = [new EmailTemplate(null, "subject", "body", EmailContentType.Plain)]
+        };
+
+        var notificationServiceMock = new Mock<IEmailNotificationService>();
+        notificationServiceMock.Setup(
+            s => s.CreateNotification(
+                It.IsAny<Guid>(),
+                It.IsAny<DateTime>(),
+                It.Is<Recipient>(r => (r.NationalIdentityNumber == "123456" && r.AddressInfo.Count == 1)),
+                It.IsAny<bool>()));
+
+        var contactPointServiceMock = new Mock<IContactPointService>();
+        contactPointServiceMock.Setup(c => c.GetEmailContactPoints(It.Is<List<Recipient>>(r => r.Count == 1)))
+            .ReturnsAsync((List<Recipient> r) =>
+            {
+                Recipient augumentedRecipient = new() { AddressInfo = [new EmailAddressPoint("test@test.com")], NationalIdentityNumber = r[0].NationalIdentityNumber };
+                return new List<Recipient>() { augumentedRecipient };
+            });
+
+        var service = GetTestService(emailService: notificationServiceMock.Object, contactPointService: contactPointServiceMock.Object);
+
+        // Act
+        await service.ProcessOrder(order);
+
+        // Assert
+        contactPointServiceMock.Verify(c => c.GetEmailContactPoints(It.Is<List<Recipient>>(r => r.Count == 1)), Times.Once);
+        notificationServiceMock.VerifyAll();
     }
 
     [Fact]
