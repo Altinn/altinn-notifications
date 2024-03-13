@@ -1,9 +1,9 @@
 ﻿namespace Altinn.Notifications.Integrations.Configuration;
 
 /// <summary>
-/// Configuration object used to hold settings for all Altinn integrations.
+/// Configuration object used to hold settings for all Altinn Platform integrations.
 /// </summary>
-public class AltinnServiceSettings
+public class PlatformSettings
 {
     /// <summary>
     /// Gets or sets the url for the API profile endpoint

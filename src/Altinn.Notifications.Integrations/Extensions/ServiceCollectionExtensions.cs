@@ -43,12 +43,12 @@ public static class ServiceCollectionExtensions
     /// <param name="config">the configuration collection</param>
     public static void AddAltinnClients(this IServiceCollection services, IConfiguration config)
     {
-        _ = config.GetSection(nameof(AltinnServiceSettings))
-            .Get<AltinnServiceSettings>()
+        _ = config.GetSection(nameof(PlatformSettings))
+            .Get<PlatformSettings>()
             ?? throw new ArgumentNullException(nameof(config), "Required AltinnServiceSettings is missing from application configuration");
 
         services
-            .Configure<AltinnServiceSettings>(config.GetSection(nameof(AltinnServiceSettings)))
+            .Configure<PlatformSettings>(config.GetSection(nameof(PlatformSettings)))
             .AddHttpClient<IProfileClient, ProfileClient>();
     }
 

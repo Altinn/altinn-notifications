@@ -46,7 +46,7 @@ public class ProfileClientTests
                return new HttpResponseMessage(HttpStatusCode.NotFound);
            });
 
-        AltinnServiceSettings settings = new()
+        PlatformSettings settings = new()
         {
             ApiProfileEndpoint = "https://platform.at22.altinn.cloud/profile/api/v1/"
         };
