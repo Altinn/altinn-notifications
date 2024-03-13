@@ -84,6 +84,7 @@ namespace Altinn.Notifications.Core.Services
 
         private async Task<List<UserContactPoints>> LookupContactPoints(List<Recipient> recipients)
         {
+            List<UserContactPoints> userContactPoints = new();
             List<string> nins = recipients
                     .Where(r => !string.IsNullOrEmpty(r.NationalIdentityNumber))
                     .Select(r => r.NationalIdentityNumber!)
@@ -95,13 +96,15 @@ namespace Altinn.Notifications.Core.Services
 
             await Task.WhenAll(ninLookupTask);
 
-            List<UserContactPoints> userContactPoints = ninLookupTask.Result;
+            userContactPoints.AddRange(ninLookupTask.Result);
 
             return userContactPoints;
         }
 
         private async Task<List<UserContactPointAvailability>> LookupContactPointAvailability(List<Recipient> recipients)
         {
+            List<UserContactPointAvailability> contactPointAvailabilityList = new();
+
             List<string> nins = recipients
                     .Where(r => !string.IsNullOrEmpty(r.NationalIdentityNumber))
                     .Select(r => r.NationalIdentityNumber!)
@@ -113,7 +116,7 @@ namespace Altinn.Notifications.Core.Services
 
             await Task.WhenAll(ninLookupTask);
 
-            List<UserContactPointAvailability> contactPointAvailabilityList = ninLookupTask.Result;
+            contactPointAvailabilityList.AddRange(ninLookupTask.Result);
 
             return contactPointAvailabilityList;
         }
