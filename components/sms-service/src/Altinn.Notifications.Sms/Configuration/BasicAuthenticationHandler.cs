@@ -51,8 +51,8 @@ public class BasicAuthenticationHandler : AuthenticationHandler<AuthenticationSc
             StringValues ipAddres;
 
             Request.Headers.TryGetValue("X-Forwarded-For", out ipAddres);
-
-            _logger.LogError("// BasicAuthenticationHandler // HandleAuthenticateAsync // Missing Authorization Header. From Ip {ip}", ipAddres!);
+           
+            _logger.LogError("// BasicAuthenticationHandler // HandleAuthenticateAsync // Missing Authorization Header. IP: {0}", System.Text.Json.JsonSerializer.Serialize(ipAddres));
             #pragma warning restore SA1305
 
             return Task.FromResult(AuthenticateResult.Fail("Missing Authorization Header"));
