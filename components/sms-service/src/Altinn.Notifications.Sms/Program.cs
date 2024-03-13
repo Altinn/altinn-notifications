@@ -130,6 +130,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
         });
 
         services.AddApplicationInsightsTelemetryProcessor<HealthTelemetryFilter>();
+        services.AddApplicationInsightsTelemetryProcessor<IdentityTelemetryFilter>();
         services.AddSingleton<ITelemetryInitializer, CustomTelemetryInitializer>();
     }
 
