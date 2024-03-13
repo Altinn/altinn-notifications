@@ -7,7 +7,6 @@ using System.Text.Json;
 using System.Threading.Tasks;
 
 using Altinn.Notifications.Core;
-using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.ContactPoints;
 using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Integrations.Clients;
