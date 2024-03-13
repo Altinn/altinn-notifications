@@ -19,4 +19,9 @@ public class EmailRecipient
     /// Gets or sets the toaddress
     /// </summary>
     public string ToAddress { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the recipient is reserved from digital communication
+    /// </summary>
+    public bool IsReserved { get; set; }
 }

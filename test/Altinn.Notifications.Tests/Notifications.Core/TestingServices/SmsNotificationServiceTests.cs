@@ -84,6 +84,75 @@ public class SmsNotificationServiceTests
     }
 
     [Fact]
+    public async Task CreateNotification_RecipientIsReserved_IgnoreReservationsFalse_ResultFailedRecipientReserved()
+    {
+        // Arrange
+        Guid id = Guid.NewGuid();
+        Guid orderId = Guid.NewGuid();
+        DateTime requestedSendTime = DateTime.UtcNow;
+        DateTime dateTimeOutput = DateTime.UtcNow;
+        DateTime expectedExpiry = requestedSendTime.AddHours(1);
+
+        SmsNotification expected = new()
+        {
+            Id = id,
+            OrderId = orderId,
+            RequestedSendTime = requestedSendTime,
+            Recipient = new()
+            {
+                IsReserved = true
+            },
+            SendResult = new(SmsNotificationResultType.Failed_RecipientReserved, dateTimeOutput),
+        };
+
+        var repoMock = new Mock<ISmsNotificationRepository>();
+        repoMock.Setup(r => r.AddNotification(It.Is<SmsNotification>(e => AssertUtils.AreEquivalent(expected, e)), It.Is<DateTime>(d => d == expectedExpiry), It.IsAny<int>()));
+
+        var service = GetTestService(repo: repoMock.Object, guidOutput: id, dateTimeOutput: dateTimeOutput);
+
+        // Act
+        await service.CreateNotification(orderId, requestedSendTime, new Recipient() { IsReserved = true }, 1);
+
+        // Assert
+        repoMock.Verify(r => r.AddNotification(It.Is<SmsNotification>(e => AssertUtils.AreEquivalent(expected, e)), It.Is<DateTime>(d => d == expectedExpiry), It.IsAny<int>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateNotification_RecipientIsReserved_IgnoreReservationsTrue_ResultNew()
+    {
+        // Arrange
+        Guid id = Guid.NewGuid();
+        Guid orderId = Guid.NewGuid();
+        DateTime requestedSendTime = DateTime.UtcNow;
+        DateTime dateTimeOutput = DateTime.UtcNow;
+        DateTime expectedExpiry = requestedSendTime.AddHours(1);
+
+        SmsNotification expected = new()
+        {
+            Id = id,
+            OrderId = orderId,
+            RequestedSendTime = requestedSendTime,
+            Recipient = new()
+            {
+                IsReserved = true,
+                MobileNumber = "+4799999999"
+            },
+            SendResult = new(SmsNotificationResultType.New, dateTimeOutput),
+        };
+
+        var repoMock = new Mock<ISmsNotificationRepository>();
+        repoMock.Setup(r => r.AddNotification(It.Is<SmsNotification>(e => AssertUtils.AreEquivalent(expected, e)), It.Is<DateTime>(d => d == expectedExpiry), It.IsAny<int>()));
+
+        var service = GetTestService(repo: repoMock.Object, guidOutput: id, dateTimeOutput: dateTimeOutput);
+
+        // Act
+        await service.CreateNotification(orderId, requestedSendTime, new Recipient() { IsReserved = true, AddressInfo = [new SmsAddressPoint("+4799999999")] }, 1, true);
+
+        // Assert
+        repoMock.Verify(r => r.AddNotification(It.Is<SmsNotification>(e => AssertUtils.AreEquivalent(expected, e)), It.Is<DateTime>(d => d == expectedExpiry), It.IsAny<int>()), Times.Once);
+    }
+
+    [Fact]
     public async Task CreateNotification_RecipientNumberMissing_LookupFails_ResultFailedRecipientNotDefined()
     {
         // Arrange

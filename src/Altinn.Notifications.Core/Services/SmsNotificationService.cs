@@ -49,7 +49,8 @@ public class SmsNotificationService : ISmsNotificationService
         {
             OrganisationNumber = recipient.OrganisationNumber,
             NationalIdentityNumber = recipient.NationalIdentityNumber,
-            MobileNumber = addressPoint?.MobileNumber ?? string.Empty
+            MobileNumber = addressPoint?.MobileNumber ?? string.Empty,
+            IsReserved = recipient.IsReserved
         };
 
         if (recipient.IsReserved && !ignoreReservation)

@@ -49,7 +49,8 @@ public class EmailNotificationService : IEmailNotificationService
         {
             OrganisationNumber = recipient.OrganisationNumber,
             NationalIdentityNumber = recipient.NationalIdentityNumber,
-            ToAddress = addressPoint?.EmailAddress ?? string.Empty
+            ToAddress = addressPoint?.EmailAddress ?? string.Empty,
+            IsReserved = recipient.IsReserved
         };
 
         if (recipient.IsReserved && !ignoreReservation)

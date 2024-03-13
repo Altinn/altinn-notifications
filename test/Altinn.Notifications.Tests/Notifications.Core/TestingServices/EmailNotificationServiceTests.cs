@@ -74,7 +74,7 @@ public class EmailNotificationServiceTests
     }
 
     [Fact]
-    public async Task CreateEmailNotification_ToAddressDefined_ResultNew()
+    public async Task CreateNotification_ToAddressDefined_ResultNew()
     {
         // Arrange
         Guid id = Guid.NewGuid();
@@ -93,7 +93,7 @@ public class EmailNotificationServiceTests
                 ToAddress = "skd@norge.no"
             },
             RequestedSendTime = requestedSendTime,
-            SendResult = new(EmailNotificationResultType.New, dateTimeOutput)           
+            SendResult = new(EmailNotificationResultType.New, dateTimeOutput)
         };
 
         var repoMock = new Mock<IEmailNotificationRepository>();
@@ -109,7 +109,76 @@ public class EmailNotificationServiceTests
     }
 
     [Fact]
-    public async Task CreateEmailNotification_ToAddressMissing_LookupFails_ResultFailedRecipientNotDefined()
+    public async Task CreateNotification_RecipientIsReserved_IgnoreReservationsFalse_ResultFailedRecipientReserved()
+    {
+        // Arrange
+        Guid id = Guid.NewGuid();
+        Guid orderId = Guid.NewGuid();
+        DateTime requestedSendTime = DateTime.UtcNow;
+        DateTime dateTimeOutput = DateTime.UtcNow;
+        DateTime expectedExpiry = requestedSendTime.AddHours(1);
+
+        EmailNotification expected = new()
+        {
+            Id = id,
+            OrderId = orderId,
+            Recipient = new()
+            {
+                IsReserved = true
+            },
+            RequestedSendTime = requestedSendTime,
+            SendResult = new(EmailNotificationResultType.Failed_RecipientReserved, dateTimeOutput)
+        };
+
+        var repoMock = new Mock<IEmailNotificationRepository>();
+        repoMock.Setup(r => r.AddNotification(It.Is<EmailNotification>(e => AssertUtils.AreEquivalent(expected, e)), It.Is<DateTime>(d => d == expectedExpiry)));
+
+        var service = GetTestService(repo: repoMock.Object, guidOutput: id, dateTimeOutput: dateTimeOutput);
+
+        // Act
+        await service.CreateNotification(orderId, requestedSendTime, new Recipient() { IsReserved = true });
+
+        // Assert
+        repoMock.Verify(r => r.AddNotification(It.Is<EmailNotification>(e => AssertUtils.AreEquivalent(expected, e)), It.Is<DateTime>(d => d == expectedExpiry)), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateNotification_RecipientIsReserved_IgnoreReservationsTrue_ResultNew()
+    {
+        // Arrange
+        Guid id = Guid.NewGuid();
+        Guid orderId = Guid.NewGuid();
+        DateTime requestedSendTime = DateTime.UtcNow;
+        DateTime dateTimeOutput = DateTime.UtcNow;
+        DateTime expectedExpiry = requestedSendTime.AddHours(1);
+
+        EmailNotification expected = new()
+        {
+            Id = id,
+            OrderId = orderId,
+            Recipient = new()
+            {
+                IsReserved = true,
+                ToAddress = "email@domain.com"
+            },
+            RequestedSendTime = requestedSendTime,
+            SendResult = new(EmailNotificationResultType.New, dateTimeOutput)
+        };
+
+        var repoMock = new Mock<IEmailNotificationRepository>();
+        repoMock.Setup(r => r.AddNotification(It.Is<EmailNotification>(e => AssertUtils.AreEquivalent(expected, e)), It.Is<DateTime>(d => d == expectedExpiry)));
+
+        var service = GetTestService(repo: repoMock.Object, guidOutput: id, dateTimeOutput: dateTimeOutput);
+
+        // Act
+        await service.CreateNotification(orderId, requestedSendTime, new Recipient() { IsReserved = true, AddressInfo = [new EmailAddressPoint("email@domain.com")] }, true);
+
+        // Assert
+        repoMock.Verify(r => r.AddNotification(It.Is<EmailNotification>(e => AssertUtils.AreEquivalent(expected, e)), It.Is<DateTime>(d => d == expectedExpiry)), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateNotification_ToAddressMissing_LookupFails_ResultFailedRecipientNotDefined()
     {
         // Arrange
         Guid id = Guid.NewGuid();
@@ -150,7 +219,7 @@ public class EmailNotificationServiceTests
         string operationId = Guid.NewGuid().ToString();
 
         EmailSendOperationResult sendOperationResult = new()
-        { 
+        {
             NotificationId = notificationid,
             OperationId = operationId,
             SendResult = EmailNotificationResultType.Succeeded
@@ -184,8 +253,8 @@ public class EmailNotificationServiceTests
 
         var repoMock = new Mock<IEmailNotificationRepository>();
         repoMock.Setup(r => r.UpdateSendStatus(
-            It.Is<Guid>(n => n == notificationid), 
-            It.Is<EmailNotificationResultType>(e => e == EmailNotificationResultType.New), 
+            It.Is<Guid>(n => n == notificationid),
+            It.Is<EmailNotificationResultType>(e => e == EmailNotificationResultType.New),
             It.Is<string>(s => s.Equals(operationId))));
 
         var service = GetTestService(repo: repoMock.Object);
