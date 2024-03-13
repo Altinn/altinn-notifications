@@ -3,8 +3,11 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Encodings.Web;
 
+using Azure.Core;
+
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Primitives;
 
 namespace Altinn.Notifications.Sms.Configuration;
 
@@ -33,7 +36,7 @@ public class BasicAuthenticationHandler : AuthenticationHandler<AuthenticationSc
         _smsDeliveryReportSettings = smsDeliveryReportSettings;
         _logger = logger.CreateLogger<BasicAuthenticationHandler>();
     }
- 
+
     /// <summary>
     /// Authenticate the user
     /// </summary>
@@ -44,7 +47,13 @@ public class BasicAuthenticationHandler : AuthenticationHandler<AuthenticationSc
 
         if (!Request.Headers.TryGetValue("Authorization", out var authorizationHeader))
         {
-            _logger.LogError("// BasicAuthenticationHandler // HandleAuthenticateAsync // Missing Authorization Header");
+            #pragma warning disable SA1305
+            StringValues ipAddres;
+
+            Request.Headers.TryGetValue("X-Forwarded-For", out ipAddres);
+
+            _logger.LogError("// BasicAuthenticationHandler // HandleAuthenticateAsync // Missing Authorization Header. From Ip {ip}", ipAddres!);
+            #pragma warning restore SA1305
 
             return Task.FromResult(AuthenticateResult.Fail("Missing Authorization Header"));
         }
