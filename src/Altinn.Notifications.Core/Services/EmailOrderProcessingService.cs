@@ -54,10 +54,21 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
     /// <inheritdoc/>   
     public async Task ProcessOrderRetry(NotificationOrder order)
     {
+        var recipients = order.Recipients;
+        var recipientsWithoutEmail = recipients.Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email)).ToList();
+
+        List<Recipient> agumentedRecipients = await _contactPointService.GetEmailContactPoints(recipientsWithoutEmail);
+        var augmentedRecipientDictionary = agumentedRecipients.ToDictionary(ar => $"{ar.NationalIdentityNumber}-{ar.OrganisationNumber}");
+
         List<EmailRecipient> emailRecipients = await _emailNotificationRepository.GetRecipients(order.Id);
 
         foreach (Recipient recipient in order.Recipients)
         {
+            if (augmentedRecipientDictionary.TryGetValue($"{recipient.NationalIdentityNumber}-{recipient.OrganisationNumber}", out Recipient? augmentedRecipient))
+            {
+                recipient.AddressInfo.AddRange(augmentedRecipient!.AddressInfo);
+            }
+
             EmailAddressPoint? addressPoint = recipient.AddressInfo.Find(a => a.AddressType == AddressType.Email) as EmailAddressPoint;
 
             if (!emailRecipients.Exists(er =>

@@ -56,10 +56,22 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
     /// <inheritdoc/>
     public async Task ProcessOrderRetry(NotificationOrder order)
     {
+        var recipients = order.Recipients;
+        var recipientsWithoutMobileNumber = recipients.Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Sms)).ToList();
+
+        List<Recipient> agumentedRecipients = await _contactPointService.GetSmsContactPoints(recipientsWithoutMobileNumber);
+        var augmentedRecipientDictionary = agumentedRecipients.ToDictionary(ar => $"{ar.NationalIdentityNumber}-{ar.OrganisationNumber}");
+
         int smsCount = GetSmsCountForOrder(order);
         List<SmsRecipient> smsRecipients = await _smsNotificationRepository.GetRecipients(order.Id);
+        
         foreach (Recipient recipient in order.Recipients)
         {
+            if (augmentedRecipientDictionary.TryGetValue($"{recipient.NationalIdentityNumber}-{recipient.OrganisationNumber}", out Recipient? augmentedRecipient))
+            {
+                recipient.AddressInfo.AddRange(augmentedRecipient!.AddressInfo);
+            }
+
             SmsAddressPoint? addressPoint = recipient.AddressInfo.Find(a => a.AddressType == AddressType.Sms) as SmsAddressPoint;
 
             if (!smsRecipients.Exists(sr =>
