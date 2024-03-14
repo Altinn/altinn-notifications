@@ -8,7 +8,7 @@ WORKDIR /app
 COPY /src/Altinn.Notifications.Sms/*.csproj ./src/Altinn.Notifications.Sms/
 COPY /src/Altinn.Notifications.Sms.Core/*.csproj ./src/Altinn.Notifications.Sms.Core/
 COPY /src/Altinn.Notifications.Sms.Integrations/*.csproj ./src/Altinn.Notifications.Sms.Integrations/
-
+COPY /src/Altinn.PSWin.Receiver/*.csproj ./src/Altinn.PSWin.Receiver/
 RUN dotnet restore ./src/Altinn.Notifications.Sms/Altinn.Notifications.Sms.csproj
 
 # Copy the remaining source code and build the application
