@@ -1,12 +1,7 @@
-﻿using System.Text;
-
-using Altinn.Notifications.Sms.Core.Status;
-
+﻿using Altinn.Notifications.Sms.Core.Status;
 using LinkMobility.GatewayReceiver;
-
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Altinn.Notifications.Sms.Controllers;
@@ -37,9 +32,8 @@ public class DeliveryReportController : ControllerBase
     [Consumes("application/xml", "text/plain")]
     [SwaggerResponse(200, "The delivery report is received")]
     [SwaggerResponse(400, "The delivery report is invalid")]
-    public async Task<ActionResult<string>> Post()
+    public async Task Post()
     {
-        var res = await _receiver.ReceiveDeliveryReportAsync(HttpContext);
-        return StatusCode((int)res.status, res.responseBody);
+        await _receiver.ReceiveDeliveryReportAsync(HttpContext);
     }
 }
