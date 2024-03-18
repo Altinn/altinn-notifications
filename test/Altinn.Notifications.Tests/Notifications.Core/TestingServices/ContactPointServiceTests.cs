@@ -16,7 +16,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
     public class ContactPointServiceTests
     {
         [Fact]
-        public async Task GetSmsContactPoints_NationalIdentityNumberAvailable_ProfileServiceCalled()
+        public async Task AddSmsContactPoints_NationalIdentityNumberAvailable_ProfileServiceCalled()
         {
             // Arrange
             List<Recipient> input = [
@@ -50,7 +50,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         }
 
         [Fact]
-        public async Task GetEmailContactPoints_NationalIdentityNumberAvailable_ProfileServiceCalled()
+        public async Task AddEmailContactPoints_NationalIdentityNumberAvailable_ProfileServiceCalled()
         {
             // Arrange
             List<Recipient> input = [
@@ -84,7 +84,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         }
 
         [Fact]
-        public async Task GetContactPointAvailability_NationalIdentityNUmberAvailable_ProfileServiceCalled()
+        public async Task AddContactPointAvailability_NationalIdentityNUmberAvailable_ProfileServiceCalled()
         {
             // Arrange
             List<Recipient> input = [
