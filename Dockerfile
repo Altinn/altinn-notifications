@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:8.0.201-alpine3.18 AS build
+FROM mcr.microsoft.com/dotnet/sdk:8.0.203-alpine3.18 AS build
 WORKDIR /app
 
 # Copy csproj and restore as distinct layers
@@ -13,7 +13,7 @@ COPY src ./src
 RUN dotnet publish -c Release -o out ./src/Altinn.Notifications/Altinn.Notifications.csproj
 
 # Build runtime image
-FROM mcr.microsoft.com/dotnet/aspnet:8.0.2-alpine3.18 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:8.0.3-alpine3.18 AS final
 WORKDIR /app
 EXPOSE 5090
 
