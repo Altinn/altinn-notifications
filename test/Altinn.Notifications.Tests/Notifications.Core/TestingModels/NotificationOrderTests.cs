@@ -47,6 +47,7 @@ public class NotificationOrderTests
                 new Recipient()
                 {
                     NationalIdentityNumber = "nationalidentitynumber",
+                    IsReserved = false,
                     AddressInfo = new()
                     {
                         new EmailAddressPoint()
@@ -95,6 +96,9 @@ public class NotificationOrderTests
                             "nationalIdentityNumber", "nationalidentitynumber"
                         },
                         {
+                            "isReserved", false
+                        },
+                        {
                             "addressInfo",  new JsonArray()
                             {
                              new JsonObject()
@@ -105,8 +109,11 @@ public class NotificationOrderTests
                              }
                             }
                         }
-                    },
+                    }
                 }
+            },
+            {
+                "ignoreReservation", false
             }
         }.ToJsonString();
     }

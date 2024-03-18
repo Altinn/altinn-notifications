@@ -19,4 +19,9 @@ public class SmsRecipient
     /// Gets or sets the mobile number
     /// </summary>
     public string MobileNumber { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the recipient is reserved from digital communication
+    /// </summary>
+    public bool IsReserved { get; set; }
 }

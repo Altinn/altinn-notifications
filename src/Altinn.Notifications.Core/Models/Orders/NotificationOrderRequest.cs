@@ -39,9 +39,14 @@ public class NotificationOrderRequest
     public Creator Creator { get; internal set; }
 
     /// <summary>
+    /// Gets the boolean indicating if the KRR reservation should be ignored
+    /// </summary>
+    public bool IgnoreReservation { get; internal set; }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="NotificationOrderRequest"/> class.
     /// </summary>
-    public NotificationOrderRequest(string? sendersReference, string creatorShortName, List<INotificationTemplate> templates, DateTime requestedSendTime, NotificationChannel notificationChannel, List<Recipient> recipients)
+    public NotificationOrderRequest(string? sendersReference, string creatorShortName, List<INotificationTemplate> templates, DateTime requestedSendTime, NotificationChannel notificationChannel, List<Recipient> recipients, bool ignoreReservation = false)
     {
         SendersReference = sendersReference;
         Creator = new(creatorShortName);
@@ -49,6 +54,7 @@ public class NotificationOrderRequest
         RequestedSendTime = requestedSendTime;
         NotificationChannel = notificationChannel;
         Recipients = recipients;
+        IgnoreReservation = ignoreReservation;
     }
 
     /// <summary>
