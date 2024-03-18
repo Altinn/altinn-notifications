@@ -47,14 +47,14 @@ public class SmsNotificationOrdersController : ControllerBase
     /// The API will accept the request after som basic validation of the request.
     /// The system will also attempt to verify that it will be possible to fulfill the order.
     /// </remarks>
-    /// <returns>The id of the registered notification order</returns>
+    /// <returns>The notification order request response</returns>
     [HttpPost]
     [Consumes("application/json")]
     [Produces("application/json")]
-    [SwaggerResponse(202, "The notification order was accepted", typeof(OrderIdExt))]
+    [SwaggerResponse(202, "The notification order was accepted", typeof(NotificationOrderRequestResponseExt))]
     [SwaggerResponse(400, "The notification order is invalid", typeof(ValidationProblemDetails))]
     [SwaggerResponseHeader(202, "Location", "string", "Link to access the newly created notification order.")]
-    public async Task<ActionResult<OrderIdExt>> Post(SmsNotificationOrderRequestExt smsNotificationOrderRequest)
+    public async Task<ActionResult<NotificationOrderRequestResponseExt>> Post(SmsNotificationOrderRequestExt smsNotificationOrderRequest)
     {
         FluentValidation.Results.ValidationResult validationResult = _validator.Validate(smsNotificationOrderRequest);
         if (!validationResult.IsValid)
@@ -77,7 +77,7 @@ public class SmsNotificationOrdersController : ControllerBase
              registeredOrder =>
              {
                  string selfLink = registeredOrder!.GetSelfLink();
-                 return Accepted(selfLink, new OrderIdExt(registeredOrder!.Id));
+                 return Accepted(selfLink, new NotificationOrderRequestResponseExt(registeredOrder!.Id));
              },
              error => StatusCode(error.ErrorCode, error.ErrorMessage));
     }

@@ -200,7 +200,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-        OrderIdExt? orderIdObjectExt = JsonSerializer.Deserialize<OrderIdExt>(respoonseString);
+        NotificationOrderRequestResponseExt? orderIdObjectExt = JsonSerializer.Deserialize<NotificationOrderRequestResponseExt>(respoonseString);
         Assert.NotNull(orderIdObjectExt);
         Assert.Equal(_order.Id, orderIdObjectExt.OrderId);
         Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + _order.Id, response.Headers?.Location?.ToString());
@@ -239,7 +239,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-        OrderIdExt? orderIdObjectExt = JsonSerializer.Deserialize<OrderIdExt>(respoonseString);
+        NotificationOrderRequestResponseExt? orderIdObjectExt = JsonSerializer.Deserialize<NotificationOrderRequestResponseExt>(respoonseString);
         Assert.NotNull(orderIdObjectExt);
         Assert.Equal(_order.Id, orderIdObjectExt.OrderId);
         Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + _order.Id, response.Headers?.Location?.ToString());
@@ -286,7 +286,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
         // Act
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
         string respoonseString = await response.Content.ReadAsStringAsync();
-        OrderIdExt? orderIdObjectExt = JsonSerializer.Deserialize<OrderIdExt>(respoonseString);
+        NotificationOrderRequestResponseExt? orderIdObjectExt = JsonSerializer.Deserialize<NotificationOrderRequestResponseExt>(respoonseString);
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);

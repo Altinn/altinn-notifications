@@ -22,6 +22,9 @@ public class NotificationOrder : IBaseNotificationOrder
     /// <inheritdoc/>>
     public NotificationChannel NotificationChannel { get; internal set; }
 
+    /// <inheritdoc/>>    
+    public bool IgnoreReservation { get; set; }
+
     /// <inheritdoc/>>
     public Creator Creator { get; internal set; }
 
@@ -41,7 +44,16 @@ public class NotificationOrder : IBaseNotificationOrder
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationOrder"/> class.
     /// </summary>
-    public NotificationOrder(Guid id, string? sendersReference, List<INotificationTemplate> templates, DateTime requestedSendTime, NotificationChannel notificationChannel, Creator creator, DateTime created, List<Recipient> recipients)
+    public NotificationOrder(
+        Guid id,
+        string? sendersReference,
+        List<INotificationTemplate> templates,
+        DateTime requestedSendTime,
+        NotificationChannel notificationChannel,
+        Creator creator,
+        DateTime created,
+        List<Recipient> recipients,
+        bool ignoreReservation = false)
     {
         Id = id;
         SendersReference = sendersReference;
@@ -51,6 +63,7 @@ public class NotificationOrder : IBaseNotificationOrder
         Creator = creator;
         Created = created;
         Recipients = recipients;
+        IgnoreReservation = ignoreReservation;
     }
 
     /// <summary>
