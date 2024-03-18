@@ -28,10 +28,7 @@ namespace Altinn.Notifications.Core.Services
                 recipients,
                 (recipient, userContactPoints) =>
                 {
-                    if (userContactPoints.IsReserved)
-                    {
-                        recipient.IsReserved = userContactPoints.IsReserved;
-                    }
+                    recipient.IsReserved = userContactPoints.IsReserved;
 
                     recipient.AddressInfo.Add(new EmailAddressPoint(userContactPoints.Email));
 
