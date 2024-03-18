@@ -36,18 +36,11 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
         var recipients = order.Recipients;
         var recipientsWithoutEmail = recipients.Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email)).ToList();
 
-        List<Recipient> agumentedRecipients = await _contactPointService.GetEmailContactPoints(recipientsWithoutEmail);
+        await _contactPointService.AddEmailContactPoints(recipientsWithoutEmail);
 
-        var augmentedRecipientDictionary = agumentedRecipients.ToDictionary(ar => $"{ar.NationalIdentityNumber}-{ar.OrganisationNumber}");
-
-        foreach (Recipient originalRecipient in recipients)
+        foreach (Recipient recipient in recipients)
         {
-            if (augmentedRecipientDictionary.TryGetValue($"{originalRecipient.NationalIdentityNumber}-{originalRecipient.OrganisationNumber}", out Recipient? augmentedRecipient))
-            {
-                originalRecipient.AddressInfo.AddRange(augmentedRecipient!.AddressInfo);
-            }
-
-            await _emailService.CreateNotification(order.Id, order.RequestedSendTime, originalRecipient, order.IgnoreReservation);
+            await _emailService.CreateNotification(order.Id, order.RequestedSendTime, recipient, order.IgnoreReservation);
         }
     }
 
@@ -57,18 +50,12 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
         var recipients = order.Recipients;
         var recipientsWithoutEmail = recipients.Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email)).ToList();
 
-        List<Recipient> agumentedRecipients = await _contactPointService.GetEmailContactPoints(recipientsWithoutEmail);
-        var augmentedRecipientDictionary = agumentedRecipients.ToDictionary(ar => $"{ar.NationalIdentityNumber}-{ar.OrganisationNumber}");
+        await _contactPointService.AddEmailContactPoints(recipientsWithoutEmail);
 
         List<EmailRecipient> emailRecipients = await _emailNotificationRepository.GetRecipients(order.Id);
 
         foreach (Recipient recipient in order.Recipients)
         {
-            if (augmentedRecipientDictionary.TryGetValue($"{recipient.NationalIdentityNumber}-{recipient.OrganisationNumber}", out Recipient? augmentedRecipient))
-            {
-                recipient.AddressInfo.AddRange(augmentedRecipient!.AddressInfo);
-            }
-
             EmailAddressPoint? addressPoint = recipient.AddressInfo.Find(a => a.AddressType == AddressType.Email) as EmailAddressPoint;
 
             if (!emailRecipients.Exists(er =>

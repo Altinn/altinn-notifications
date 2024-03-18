@@ -43,10 +43,10 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             var service = GetTestService(profileClient: profileClientMock.Object);
 
             // Act
-            List<Recipient> actual = await service.GetSmsContactPoints(input);
+            await service.AddSmsContactPoints(input);
 
             // Assert 
-            Assert.Equivalent(expectedOutput, actual);
+            Assert.Equivalent(expectedOutput, input);
         }
 
         [Fact]
@@ -77,10 +77,10 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             var service = GetTestService(profileClient: profileClientMock.Object);
 
             // Act
-            List<Recipient> actual = await service.GetEmailContactPoints(input);
+            await service.AddEmailContactPoints(input);
 
             // Assert 
-            Assert.Equivalent(expectedOutput, actual);
+            Assert.Equivalent(expectedOutput, input);
         }
 
         [Fact]

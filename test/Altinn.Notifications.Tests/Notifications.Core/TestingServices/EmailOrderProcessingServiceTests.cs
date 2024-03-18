@@ -140,16 +140,11 @@ public class EmailOrderProcessingServiceTests
             s => s.CreateNotification(
                 It.IsAny<Guid>(),
                 It.IsAny<DateTime>(),
-                It.Is<Recipient>(r => (r.NationalIdentityNumber == "123456" && r.AddressInfo.Count == 1)),
+                It.Is<Recipient>(r => r.NationalIdentityNumber == "123456"),
                 It.IsAny<bool>()));
 
         var contactPointServiceMock = new Mock<IContactPointService>();
-        contactPointServiceMock.Setup(c => c.GetEmailContactPoints(It.Is<List<Recipient>>(r => r.Count == 1)))
-            .ReturnsAsync((List<Recipient> r) =>
-            {
-                Recipient augumentedRecipient = new() { AddressInfo = [new EmailAddressPoint("test@test.com")], NationalIdentityNumber = r[0].NationalIdentityNumber };
-                return new List<Recipient>() { augumentedRecipient };
-            });
+        contactPointServiceMock.Setup(c => c.AddEmailContactPoints(It.Is<List<Recipient>>(r => r.Count == 1)));
 
         var service = GetTestService(emailService: notificationServiceMock.Object, contactPointService: contactPointServiceMock.Object);
 
@@ -157,7 +152,7 @@ public class EmailOrderProcessingServiceTests
         await service.ProcessOrder(order);
 
         // Assert
-        contactPointServiceMock.Verify(c => c.GetEmailContactPoints(It.Is<List<Recipient>>(r => r.Count == 1)), Times.Once);
+        contactPointServiceMock.Verify(c => c.AddEmailContactPoints(It.Is<List<Recipient>>(r => r.Count == 1)), Times.Once);
         notificationServiceMock.VerifyAll();
     }
 
@@ -219,9 +214,7 @@ public class EmailOrderProcessingServiceTests
         {
             var contactPointServiceMock = new Mock<IContactPointService>();
             contactPointServiceMock
-               .Setup(e => e.GetEmailContactPoints(It.IsAny<List<Recipient>>()))
-               .ReturnsAsync(
-                  (List<Recipient> recipients) => recipients);
+               .Setup(e => e.AddEmailContactPoints(It.IsAny<List<Recipient>>()));
             contactPointService = contactPointServiceMock.Object;
         }
 

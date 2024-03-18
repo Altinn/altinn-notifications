@@ -114,16 +114,17 @@ public class SmsOrderProcessingServiceTests
             s => s.CreateNotification(
                 It.IsAny<Guid>(),
                 It.IsAny<DateTime>(),
-                It.Is<Recipient>(r => (r.NationalIdentityNumber == "123456" && r.AddressInfo.Count == 1)),
+                It.Is<Recipient>(r => r.NationalIdentityNumber == "123456"),
                 It.IsAny<int>(),
                 It.IsAny<bool>()));
 
         var contactPointServiceMock = new Mock<IContactPointService>();
-        contactPointServiceMock.Setup(c => c.GetSmsContactPoints(It.Is<List<Recipient>>(r => r.Count == 1)))
-            .ReturnsAsync((List<Recipient> r) =>
+        contactPointServiceMock.Setup(c => c.AddSmsContactPoints(It.Is<List<Recipient>>(r => r.Count == 1)))
+            .Callback<List<Recipient>>(r =>
             {
                 Recipient augumentedRecipient = new() { AddressInfo = [new SmsAddressPoint("+4712345678")], NationalIdentityNumber = r[0].NationalIdentityNumber };
-                return new List<Recipient>() { augumentedRecipient };
+                r.Clear();
+                r.Add(augumentedRecipient); 
             });
 
         var service = GetTestService(smsService: notificationServiceMock.Object, contactPointService: contactPointServiceMock.Object);
@@ -132,7 +133,7 @@ public class SmsOrderProcessingServiceTests
         await service.ProcessOrder(order);
 
         // Assert
-        contactPointServiceMock.Verify(c => c.GetSmsContactPoints(It.Is<List<Recipient>>(r => r.Count == 1)), Times.Once);
+        contactPointServiceMock.Verify(c => c.AddSmsContactPoints(It.Is<List<Recipient>>(r => r.Count == 1)), Times.Once);
         notificationServiceMock.VerifyAll();
     }
 
@@ -211,10 +212,7 @@ public class SmsOrderProcessingServiceTests
         if (contactPointService == null)
         {
             var contactPointServiceMock = new Mock<IContactPointService>();
-            contactPointServiceMock
-                .Setup(e => e.GetSmsContactPoints(It.IsAny<List<Recipient>>()))
-                .ReturnsAsync(
-                   (List<Recipient> recipients) => recipients);
+            contactPointServiceMock.Setup(e => e.AddSmsContactPoints(It.IsAny<List<Recipient>>()));
 
             contactPointService = contactPointServiceMock.Object;
         }

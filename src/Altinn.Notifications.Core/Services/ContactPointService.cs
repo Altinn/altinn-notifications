@@ -22,34 +22,25 @@ namespace Altinn.Notifications.Core.Services
         }
 
         /// <inheritdoc/>
-        public async Task<List<Recipient>> GetEmailContactPoints(List<Recipient> recipients)
+        public async Task AddEmailContactPoints(List<Recipient> recipients)
         {
-            return await AugmentRecipients(
+            await AugmentRecipients(
                 recipients,
                 (recipient, userContactPoints) =>
                 {
-                    recipient.IsReserved = userContactPoints.IsReserved;
-
                     recipient.AddressInfo.Add(new EmailAddressPoint(userContactPoints.Email));
-
                     return recipient;
                 });
         }
 
         /// <inheritdoc/>
-        public async Task<List<Recipient>> GetSmsContactPoints(List<Recipient> recipients)
+        public async Task AddSmsContactPoints(List<Recipient> recipients)
         {
-            return await AugmentRecipients(
+            await AugmentRecipients(
                 recipients,
                 (recipient, userContactPoints) =>
                 {
-                    if (userContactPoints.IsReserved)
-                    {
-                        recipient.IsReserved = userContactPoints.IsReserved;
-                    }
-
                     recipient.AddressInfo.Add(new SmsAddressPoint(userContactPoints.MobileNumber));
-
                     return recipient;
                 });
         }
@@ -72,7 +63,11 @@ namespace Altinn.Notifications.Core.Services
                     UserContactPoints? userContactPoints = userContactPointsList!
                         .Find(u => u.NationalIdentityNumber == recipient.NationalIdentityNumber);
 
-                    augmentedRecipients.Add(createContactPoint(recipient, userContactPoints!));
+                    if (userContactPoints != null)
+                    {
+                        recipient.IsReserved = userContactPoints.IsReserved;
+                        augmentedRecipients.Add(createContactPoint(recipient, userContactPoints));
+                    }
                 }
             }
 
