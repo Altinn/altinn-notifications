@@ -42,6 +42,11 @@ public class NotificationOrder : IBaseNotificationOrder
     public List<Recipient> Recipients { get; internal set; } = new List<Recipient>();
 
     /// <summary>
+    /// Gets the boolean indicating if the KRR reservation should be ignored
+    /// </summary>
+    public bool IgnoreReservation { get; internal set; }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="NotificationOrder"/> class.
     /// </summary>
     public NotificationOrder(

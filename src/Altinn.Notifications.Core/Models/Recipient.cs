@@ -18,6 +18,11 @@ public class Recipient
     public string? NationalIdentityNumber { get; set; } = null;
 
     /// <summary>
+    /// Gets or sets a value indicating whether the recipient is reserved from digital communication
+    /// </summary>
+    public bool IsReserved { get; set; }
+
+    /// <summary>
     /// Gets a list of address points for the recipient
     /// </summary>
     public List<IAddressPoint> AddressInfo { get; set; } = new List<IAddressPoint>();

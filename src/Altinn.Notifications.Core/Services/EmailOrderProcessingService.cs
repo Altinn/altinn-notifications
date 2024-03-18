@@ -15,31 +15,45 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
 {
     private readonly IEmailNotificationRepository _emailNotificationRepository;
     private readonly IEmailNotificationService _emailService;
+    private readonly IContactPointService _contactPointService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderProcessingService"/> class.
     /// </summary>
     public EmailOrderProcessingService(
         IEmailNotificationRepository emailNotificationRepository,
-        IEmailNotificationService emailService)
+        IEmailNotificationService emailService,
+        IContactPointService contactPointService)
     {
         _emailNotificationRepository = emailNotificationRepository;
         _emailService = emailService;
+        _contactPointService = contactPointService;
     }
 
     /// <inheritdoc/>
     public async Task ProcessOrder(NotificationOrder order)
     {
-        foreach (Recipient recipient in order.Recipients)
+        var recipients = order.Recipients;
+        var recipientsWithoutEmail = recipients.Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email)).ToList();
+
+        await _contactPointService.AddEmailContactPoints(recipientsWithoutEmail);
+
+        foreach (Recipient recipient in recipients)
         {
-            await _emailService.CreateNotification(order.Id, order.RequestedSendTime, recipient);
+            await _emailService.CreateNotification(order.Id, order.RequestedSendTime, recipient, order.IgnoreReservation);
         }
     }
 
     /// <inheritdoc/>   
     public async Task ProcessOrderRetry(NotificationOrder order)
     {
+        var recipients = order.Recipients;
+        var recipientsWithoutEmail = recipients.Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email)).ToList();
+
+        await _contactPointService.AddEmailContactPoints(recipientsWithoutEmail);
+
         List<EmailRecipient> emailRecipients = await _emailNotificationRepository.GetRecipients(order.Id);
+
         foreach (Recipient recipient in order.Recipients)
         {
             EmailAddressPoint? addressPoint = recipient.AddressInfo.Find(a => a.AddressType == AddressType.Email) as EmailAddressPoint;
@@ -49,7 +63,7 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
              && er.OrganisationNumber == recipient.OrganisationNumber
              && er.ToAddress == addressPoint?.EmailAddress))
             {
-                await _emailService.CreateNotification(order.Id, order.RequestedSendTime, recipient);
+                await _emailService.CreateNotification(order.Id, order.RequestedSendTime, recipient, order.IgnoreReservation);
             }
         }
     }

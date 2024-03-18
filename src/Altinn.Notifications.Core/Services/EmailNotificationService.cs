@@ -41,7 +41,7 @@ public class EmailNotificationService : IEmailNotificationService
     }
 
     /// <inheritdoc/>
-    public async Task CreateNotification(Guid orderId, DateTime requestedSendTime, Recipient recipient)
+    public async Task CreateNotification(Guid orderId, DateTime requestedSendTime, Recipient recipient, bool ignoreReservation = false)
     {
         EmailAddressPoint? addressPoint = recipient.AddressInfo.Find(a => a.AddressType == AddressType.Email) as EmailAddressPoint;
 
@@ -49,17 +49,23 @@ public class EmailNotificationService : IEmailNotificationService
         {
             OrganisationNumber = recipient.OrganisationNumber,
             NationalIdentityNumber = recipient.NationalIdentityNumber,
-            ToAddress = addressPoint?.EmailAddress ?? string.Empty
+            ToAddress = addressPoint?.EmailAddress ?? string.Empty,
+            IsReserved = recipient.IsReserved
         };
 
-        if (!string.IsNullOrEmpty(addressPoint?.EmailAddress))
+        if (recipient.IsReserved && !ignoreReservation)
         {
-            await CreateNotificationForRecipient(orderId, requestedSendTime, emailRecipient, EmailNotificationResultType.New);
+            emailRecipient.ToAddress = string.Empty; // not persisting email address for reserved recipients
+            await CreateNotificationForRecipient(orderId, requestedSendTime, emailRecipient, EmailNotificationResultType.Failed_RecipientReserved);
+            return;
         }
-        else
+        else if (string.IsNullOrEmpty(addressPoint?.EmailAddress))
         {
             await CreateNotificationForRecipient(orderId, requestedSendTime, emailRecipient, EmailNotificationResultType.Failed_RecipientNotIdentified);
+            return;
         }
+
+        await CreateNotificationForRecipient(orderId, requestedSendTime, emailRecipient, EmailNotificationResultType.New);
     }
 
     /// <inheritdoc/>

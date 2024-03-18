@@ -1,7 +1,6 @@
 ﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
-using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Extensions;
@@ -21,7 +20,10 @@ public static class OrderMapper
     {
         var emailTemplate = new EmailTemplate(null, extRequest.Subject, extRequest.Body, (EmailContentType)extRequest.ContentType);
 
-        var recipients = new List<Recipient>();
+        var recipients =
+            extRequest.Recipients
+            .Select(r => new Recipient([new EmailAddressPoint(r.EmailAddress!)]))
+            .ToList();
 
         recipients.AddRange(
             extRequest.Recipients.Select(r => new Recipient(new List<IAddressPoint>() { new EmailAddressPoint(r.EmailAddress!) })));
@@ -32,7 +34,8 @@ public static class OrderMapper
             [emailTemplate],
             extRequest.RequestedSendTime.ToUniversalTime(),
             NotificationChannel.Email,
-            recipients);
+            recipients,
+            extRequest.IgnoreReservation);
     }
 
     /// <summary>
@@ -42,7 +45,10 @@ public static class OrderMapper
     {
         INotificationTemplate smsTemplate = new SmsTemplate(extRequest.SenderNumber, extRequest.Body);
 
-        List<Recipient> recipients = new();
+        List<Recipient> recipients =
+            extRequest.Recipients
+            .Select(r => new Recipient([new SmsAddressPoint(r.MobileNumber!)]))
+            .ToList();
 
         recipients.AddRange(
             extRequest.Recipients.Select(r => new Recipient(new List<IAddressPoint>() { new SmsAddressPoint(r.MobileNumber!) })));
@@ -53,7 +59,8 @@ public static class OrderMapper
             [smsTemplate],
             extRequest.RequestedSendTime.ToUniversalTime(),
             NotificationChannel.Sms,
-            recipients);
+            recipients,
+            extRequest.IgnoreReservation);
     }
 
     /// <summary>
@@ -173,8 +180,6 @@ public static class OrderMapper
         recipientExt.AddRange(
             recipients.Select(r => new RecipientExt
             {
-                OrganisationNumber = r.OrganisationNumber,
-                NationalIdentityNumber = r.NationalIdentityNumber,
                 EmailAddress = GetEmailFromAddressList(r.AddressInfo),
                 MobileNumber = GetMobileNumberFromAddressList(r.AddressInfo)
             }));
@@ -190,7 +195,7 @@ public static class OrderMapper
         orderExt.Creator = order.Creator.ShortName;
         orderExt.NotificationChannel = (NotificationChannelExt)order.NotificationChannel;
         orderExt.RequestedSendTime = order.RequestedSendTime;
-
+        
         return orderExt;
     }
 

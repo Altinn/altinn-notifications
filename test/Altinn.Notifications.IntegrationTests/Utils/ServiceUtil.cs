@@ -37,6 +37,7 @@ public static class ServiceUtil
         services.AddPostgresRepositories(config);
         services.AddCoreServices(config);
         services.AddKafkaServices(config);
+        services.AddAltinnClients(config);
 
         var serviceProvider = services.BuildServiceProvider();
         List<object> outputServices = new();

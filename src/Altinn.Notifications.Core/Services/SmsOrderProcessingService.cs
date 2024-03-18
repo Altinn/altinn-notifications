@@ -19,32 +19,44 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
 {
     private readonly ISmsNotificationRepository _smsNotificationRepository;
     private readonly ISmsNotificationService _smsService;
+    private readonly IContactPointService _contactPointService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderProcessingService"/> class.
     /// </summary>
-    public SmsOrderProcessingService(ISmsNotificationRepository smsNotificationRepository, ISmsNotificationService smsService)
+    public SmsOrderProcessingService(ISmsNotificationRepository smsNotificationRepository, ISmsNotificationService smsService, IContactPointService contactPointService)
     {
         _smsNotificationRepository = smsNotificationRepository;
         _smsService = smsService;
+        _contactPointService = contactPointService;
     }
 
     /// <inheritdoc/>
     public async Task ProcessOrder(NotificationOrder order)
     {
+        var recipients = order.Recipients;
+        var recipientsWithoutMobileNumber = recipients.Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Sms)).ToList();
+        await _contactPointService.AddSmsContactPoints(recipientsWithoutMobileNumber);
+
         int smsCount = GetSmsCountForOrder(order);
 
-        foreach (Recipient recipient in order.Recipients)
+        foreach (Recipient recipient in recipients)
         {
-            await _smsService.CreateNotification(order.Id, order.RequestedSendTime, recipient, smsCount);
+            await _smsService.CreateNotification(order.Id, order.RequestedSendTime, recipient, smsCount, order.IgnoreReservation);
         }
     }
 
     /// <inheritdoc/>
     public async Task ProcessOrderRetry(NotificationOrder order)
     {
+        var recipients = order.Recipients;
+        var recipientsWithoutMobileNumber = recipients.Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Sms)).ToList();
+
+        await _contactPointService.AddSmsContactPoints(recipientsWithoutMobileNumber);
+
         int smsCount = GetSmsCountForOrder(order);
         List<SmsRecipient> smsRecipients = await _smsNotificationRepository.GetRecipients(order.Id);
+
         foreach (Recipient recipient in order.Recipients)
         {
             SmsAddressPoint? addressPoint = recipient.AddressInfo.Find(a => a.AddressType == AddressType.Sms) as SmsAddressPoint;
