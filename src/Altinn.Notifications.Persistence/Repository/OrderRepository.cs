@@ -95,15 +95,14 @@ public class OrderRepository : IOrderRepository
         await using var transaction = await connection.BeginTransactionAsync();
         try
         {
-            long dbOrderId = await InsertOrder(order);
+            long dbOrderId = await InsertOrder(order, connection, transaction);
 
             EmailTemplate? emailTemplate = order.Templates.Find(t => t.Type == NotificationTemplateType.Email) as EmailTemplate;
-            Task emailInsertTask = InsertEmailTextAsync(dbOrderId, emailTemplate);
+            await InsertEmailTextAsync(dbOrderId, emailTemplate, connection, transaction);
 
             SmsTemplate? smsTemplate = order.Templates.Find(t => t.Type == NotificationTemplateType.Sms) as SmsTemplate;
-            Task smsInsertTask = InsertSmsTextAsync(dbOrderId, smsTemplate);
+            await InsertSmsTextAsync(dbOrderId, smsTemplate, connection, transaction);
 
-            await Task.WhenAll(emailInsertTask, smsInsertTask);
             await transaction.CommitAsync();
         }
         catch (Exception)
@@ -193,9 +192,9 @@ public class OrderRepository : IOrderRepository
         return order;
     }
 
-    private async Task<long> InsertOrder(NotificationOrder order)
+    private async Task<long> InsertOrder(NotificationOrder order, NpgsqlConnection connection, NpgsqlTransaction transaction)
     {
-        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_insertOrderSql);
+        await using NpgsqlCommand pgcom = new NpgsqlCommand(_insertOrderSql, connection, transaction);
         using TelemetryTracker tracker = new(_telemetryClient, pgcom);
 
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, order.Id);
@@ -213,11 +212,11 @@ public class OrderRepository : IOrderRepository
         return orderId;
     }
 
-    private async Task InsertSmsTextAsync(long dbOrderId, SmsTemplate? smsTemplate)
+    private async Task InsertSmsTextAsync(long dbOrderId, SmsTemplate? smsTemplate, NpgsqlConnection connection, NpgsqlTransaction transaction)
     {
         if (smsTemplate != null)
         {
-            await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_insertSmsTextSql);
+            await using NpgsqlCommand pgcom = new NpgsqlCommand(_insertSmsTextSql, connection, transaction);
             using TelemetryTracker tracker = new(_telemetryClient, pgcom);
 
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Bigint, dbOrderId);
@@ -229,11 +228,11 @@ public class OrderRepository : IOrderRepository
         }
     }
 
-    private async Task InsertEmailTextAsync(long dbOrderId, EmailTemplate? emailTemplate)
+    private async Task InsertEmailTextAsync(long dbOrderId, EmailTemplate? emailTemplate, NpgsqlConnection connection, NpgsqlTransaction transaction)
     {
         if (emailTemplate != null)
         {
-            await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_insertEmailTextSql);
+            await using NpgsqlCommand pgcom = new NpgsqlCommand(_insertEmailTextSql, connection, transaction);
             using TelemetryTracker tracker = new(_telemetryClient, pgcom);
 
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Bigint, dbOrderId);
