@@ -29,7 +29,40 @@ public class SmsNotificationOrderRequestValidator : AbstractValidator<SmsNotific
             .Must(sendTime => sendTime >= DateTime.UtcNow.AddMinutes(-5))
             .WithMessage("Send time must be in the future. Leave blank to send immediately.");
 
-        RuleFor(order => order.Body).NotEmpty();
+        // LinkMobility which is used for SMS has size limits, see extract from their xml doc:
+        // ------------------------------------------------------------------------------------------------
+        // Summary:
+        //     The message text. For plain text messages, the message length should not exceed
+        //     160 characters unless you would like to use concatenated SMS messages. Text messages
+        //     exceeding 160 characters will be split up into a maximum of 16 SMS messages,
+        //     each of 134 characters. Thus, the maximum length is 16*134=2144 characters. This
+        //     is done automatically by the SMS Gateway. Text messages of more than 2144 characters
+        //     will be truncated
+        // ------------------------------------------------------------------------------------------------
+        RuleFor(order => order.Body)
+            .NotEmpty()
+            .MaximumLength(2144)
+            .WithMessage("The SMS body is too large. Maximum size is 2144 characters.");
+
+        RuleFor(order => order.SenderNumber)
+            .Must(IsValidSenderNumber)
+            .WithMessage("The sender number is invalid.");
+    }
+
+    /// <summary>
+    /// Validates the sender number based on description of rules from LinkMobility
+    /// </summary>
+    /// <param name="senderNumber">Sender number</param>
+    /// <returns></returns>
+    internal static bool IsValidSenderNumber(string? senderNumber) 
+    {
+        return senderNumber switch 
+        {
+            string n when n.Length is >= 4 and <= 5 && n.All(char.IsDigit) => true,
+            string n when IsValidMobileNumber(n) => true,
+            string n when n.Length is >= 2 and <= 11 && Regex.IsMatch(n, "^[A-Za-z0-9 ]+$") && char.IsAsciiLetter(n[0]) => true,
+            _ => false,
+        };
     }
 
     /// <summary>

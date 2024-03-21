@@ -157,11 +157,40 @@ public class SmsNotificationOrderRequestValidatorTests
     [InlineData("+14790000000", false)]
     [InlineData("004790000002", true)]
     [InlineData("", false)]
+    [InlineData(" ", false)]
+    [InlineData(null, false)]
     [InlineData("111100000", false)]
     [InlineData("dasdsadSASA", false)]
-    public void IsValidMobileNumber(string mobileNumber, bool expectedResult)
+    public void IsValidMobileNumber(string? mobileNumber, bool expectedResult)
     {
         bool actual = SmsNotificationOrderRequestValidator.IsValidMobileNumber(mobileNumber);
         Assert.Equal(expectedResult, actual);
     } 
+
+    [Theory]
+    [InlineData("+4740000001", true)]
+    [InlineData("004740000000", true)]
+    [InlineData("+4790000000", true)]
+    [InlineData("004790000002", true)]
+    [InlineData("1234", true)]
+    [InlineData("12345", true)]
+    [InlineData("", false)]
+    [InlineData("a", false)]
+    [InlineData("1", false)]
+    [InlineData("aa", true)]
+    [InlineData("11", false)]
+    [InlineData("^", false)]
+    [InlineData(" ", false)]
+    [InlineData(" 12345", false)]
+    [InlineData(" Altinn", false)]
+    [InlineData("Altinn", true)]
+    [InlineData("1Altinn", false)]
+    [InlineData("abc*", false)]
+    [InlineData("abc'", false)]
+    [InlineData(null, false)]
+    public void IsValidSenderNumber(string? mobileNumber, bool expectedResult)
+    {
+        bool actual = SmsNotificationOrderRequestValidator.IsValidSenderNumber(mobileNumber);
+        Assert.Equal(expectedResult, actual);
+    }
 }
