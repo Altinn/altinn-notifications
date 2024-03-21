@@ -1,5 +1,5 @@
 #Use the official .NET SDK image with Alpine Linux as a base image
-FROM mcr.microsoft.com/dotnet/sdk:8.0.202-alpine3.18 AS build
+FROM mcr.microsoft.com/dotnet/sdk:8.0.203-alpine3.18 AS build
 
 # Set the working directory in the container
 WORKDIR /app
