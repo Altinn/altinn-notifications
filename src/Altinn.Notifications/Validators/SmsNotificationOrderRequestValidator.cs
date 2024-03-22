@@ -20,8 +20,13 @@ public class SmsNotificationOrderRequestValidator : AbstractValidator<SmsNotific
         RuleFor(order => order.Recipients)
             .NotEmpty()
             .WithMessage("One or more recipient is required.")
-            .Must(recipients => recipients.TrueForAll(a => IsValidMobileNumber(a.MobileNumber)))
-            .WithMessage("A valid mobile number starting with country code must be provided for all recipients.");
+            .Must(recipients => recipients.All(a =>
+             {
+                 return
+                     (!string.IsNullOrWhiteSpace(a.MobileNumber) && IsValidMobileNumber(a.MobileNumber)) ||
+                     (!string.IsNullOrWhiteSpace(a.OrganisationNumber) ^ !string.IsNullOrWhiteSpace(a.NationalIdentityNumber));
+             }))
+            .WithMessage("Either a valid mobile number starting with country code, organisation number, or national identity number must be provided for each recipient.");
 
         RuleFor(order => order.RequestedSendTime)
             .Must(sendTime => sendTime.Kind != DateTimeKind.Unspecified)

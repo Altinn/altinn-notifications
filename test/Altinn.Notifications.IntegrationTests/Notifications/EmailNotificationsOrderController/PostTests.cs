@@ -79,7 +79,7 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-        OrderIdExt? orderIdObjectExt = JsonSerializer.Deserialize<OrderIdExt>(respoonseString);
+        NotificationOrderRequestResponseExt? orderIdObjectExt = JsonSerializer.Deserialize<NotificationOrderRequestResponseExt>(respoonseString);
         Assert.NotNull(orderIdObjectExt);
         Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + orderIdObjectExt.OrderId, response.Headers?.Location?.ToString());
     }
@@ -102,7 +102,7 @@ public class PostTests : IClassFixture<IntegrationTestWebApplicationFactory<Emai
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-        OrderIdExt? orderIdObjectExt = JsonSerializer.Deserialize<OrderIdExt>(respoonseString);
+        NotificationOrderRequestResponseExt? orderIdObjectExt = JsonSerializer.Deserialize<NotificationOrderRequestResponseExt>(respoonseString);
         Assert.NotNull(orderIdObjectExt);
         Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + orderIdObjectExt.OrderId, response.Headers?.Location?.ToString());
     }

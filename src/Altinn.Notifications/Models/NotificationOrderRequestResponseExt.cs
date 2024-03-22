@@ -8,7 +8,7 @@ namespace Altinn.Notifications.Models;
 /// <remarks>
 /// External representaion to be used in the API.
 /// </remarks>
-public class OrderIdExt
+public class NotificationOrderRequestResponseExt
 {
     /// <summary>
     /// The order id
@@ -17,10 +17,8 @@ public class OrderIdExt
     public Guid OrderId { get; set; }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="OrderIdExt"/> class.
+    /// The recipient lookup summary
     /// </summary>
-    public OrderIdExt(Guid orderId)
-    {
-        OrderId = orderId;
-    }
+    [JsonPropertyName("recipientLookup")]
+    public RecipientLookupResultExt? RecipientLookup { get; set; }
 }

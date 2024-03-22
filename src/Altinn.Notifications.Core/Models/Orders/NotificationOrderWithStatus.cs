@@ -27,6 +27,9 @@ public class NotificationOrderWithStatus : IBaseNotificationOrder
     /// <inheritdoc/>>
     public NotificationChannel NotificationChannel { get; internal set; }
 
+    /// <inheritdoc/>>
+    public bool IgnoreReservation { get; internal set; }
+
     /// <summary>
     /// Gets the processing status of the notication order
     /// </summary>

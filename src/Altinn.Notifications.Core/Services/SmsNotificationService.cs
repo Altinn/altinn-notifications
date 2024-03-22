@@ -53,7 +53,7 @@ public class SmsNotificationService : ISmsNotificationService
             IsReserved = recipient.IsReserved
         };
 
-        if (recipient.IsReserved && !ignoreReservation)
+        if (recipient.IsReserved.HasValue && recipient.IsReserved.Value && !ignoreReservation)
         {
             smsRecipient.MobileNumber = string.Empty; // not persisting mobile number for reserved recipient
             await CreateNotificationForRecipient(orderId, requestedSendTime, smsRecipient, SmsNotificationResultType.Failed_RecipientReserved);
