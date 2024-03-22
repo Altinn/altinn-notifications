@@ -1,7 +1,5 @@
 ﻿using Altinn.Notifications.Configuration;
-using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
-using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
@@ -70,15 +68,14 @@ public class SmsNotificationOrdersController : ControllerBase
             return Forbid();
         }
 
-        NotificationOrderRequest orderRequest = smsNotificationOrderRequest.MapToOrderRequest(creator);
-        Result<NotificationOrder, ServiceError> result = await _orderRequestService.RegisterNotificationOrder(orderRequest);
+        var orderRequest = smsNotificationOrderRequest.MapToOrderRequest(creator);
+        NotificationOrderRequestResponse result = await _orderRequestService.RegisterNotificationOrder(orderRequest);
 
-        return result.Match(
-             registeredOrder =>
-             {
-                 string selfLink = registeredOrder!.GetSelfLink();
-                 return Accepted(selfLink, new NotificationOrderRequestResponseExt(registeredOrder!.Id));
-             },
-             error => StatusCode(error.ErrorCode, error.ErrorMessage));
+        if (result.RecipientLookup?.Status == RecipientLookupStatus.Failed)
+        {
+            return BadRequest(result);
+        }
+
+        return Accepted(result.OrderId.GetSelfLinkFromOrderId(), result);
     }
 }
