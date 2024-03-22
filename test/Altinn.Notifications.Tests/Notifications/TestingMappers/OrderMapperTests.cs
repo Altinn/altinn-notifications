@@ -195,9 +195,13 @@ public class OrderMapperTests
         SmsNotificationOrderRequestExt orderRequestExt = new()
         {
             Body = "sms-body",
-            Recipients = new List<RecipientExt>() { new RecipientExt() { MobileNumber = "+4740000001" }, new RecipientExt() { MobileNumber = "+4740000002" } },
+            Recipients = new List<RecipientExt>()
+            {
+                new RecipientExt() { MobileNumber = "+4740000001" },
+                new RecipientExt() { MobileNumber = "+4740000002" }
+            },
             SendersReference = "senders-reference",
-            RequestedSendTime = sendTime,
+            RequestedSendTime = sendTime
         };
 
         NotificationOrderRequest expected = new()

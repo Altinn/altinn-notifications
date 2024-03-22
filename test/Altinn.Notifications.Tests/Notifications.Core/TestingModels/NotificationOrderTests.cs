@@ -40,6 +40,7 @@ public class NotificationOrderTests
             },
             RequestedSendTime = _requestedSendTime,
             NotificationChannel = NotificationChannel.Email,
+            IgnoreReservation = false,
             Creator = new("ttd"),
             Created = _createdTime,
             Recipients = new List<Recipient>()
@@ -66,6 +67,7 @@ public class NotificationOrderTests
             { "sendersReference", "senders-reference" },
             { "requestedSendTime", "2023-02-14T08:15:00Z" },
             { "notificationChannel", "Email" },
+            { "ignoreReservation", false },
             {
                 "creator", new JsonObject()
                 {
@@ -111,10 +113,7 @@ public class NotificationOrderTests
                         }
                     }
                 }
-            },
-            {
-                "ignoreReservation", false
-            }
+            }           
         }.ToJsonString();
     }
 

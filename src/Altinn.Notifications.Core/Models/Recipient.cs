@@ -20,7 +20,7 @@ public class Recipient
     /// <summary>
     /// Gets or sets a value indicating whether the recipient is reserved from digital communication
     /// </summary>
-    public bool IsReserved { get; set; }
+    public bool? IsReserved { get; set; }
 
     /// <summary>
     /// Gets a list of address points for the recipient

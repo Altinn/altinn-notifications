@@ -44,11 +44,6 @@ public class NotificationOrderRequest
     public Creator Creator { get; internal set; }
 
     /// <summary>
-    /// Gets the boolean indicating if the KRR reservation should be ignored
-    /// </summary>
-    public bool IgnoreReservation { get; internal set; }
-
-    /// <summary>
     /// Initializes a new instance of the <see cref="NotificationOrderRequest"/> class.
     /// </summary>
     public NotificationOrderRequest(

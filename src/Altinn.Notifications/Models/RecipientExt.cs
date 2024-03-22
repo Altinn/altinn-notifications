@@ -33,4 +33,10 @@ public class RecipientExt
     /// </summary>
     [JsonPropertyName("nationalIdentityNumber")]
     public string? NationalIdentityNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the recipient is reserved from digital communication
+    /// </summary>
+    [JsonPropertyName("isReserved")]
+    public bool? IsReserved { get; set; }
 }
