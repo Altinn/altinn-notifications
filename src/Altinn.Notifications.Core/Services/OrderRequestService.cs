@@ -49,7 +49,7 @@ public class OrderRequestService : IOrderRequestService
 
         var lookupResult = await GetRecipientLookupResult(orderRequest.Recipients, orderRequest.NotificationChannel);
 
-        if (lookupResult.Status == RecipientLookupStatus.Failed)
+        if (lookupResult?.Status == RecipientLookupStatus.Failed)
         {
             return new NotificationOrderRequestResponse()
             {
@@ -78,7 +78,7 @@ public class OrderRequestService : IOrderRequestService
         };
     }
 
-    private async Task<RecipientLookupResult> GetRecipientLookupResult(List<Recipient> recipients, NotificationChannel channel)
+    private async Task<RecipientLookupResult?> GetRecipientLookupResult(List<Recipient> recipients, NotificationChannel channel)
     {
         List<Recipient> recipientsWithoutContactPoint = new();
 
@@ -94,24 +94,26 @@ public class OrderRequestService : IOrderRequestService
             }
         }
 
-        if (recipientsWithoutContactPoint.Count > 0)
+        if (recipientsWithoutContactPoint.Count == 0)
         {
-            if (channel == NotificationChannel.Email)
-            {
-                await _contactPointService.AddEmailContactPoints(recipientsWithoutContactPoint);
-            }
-            else if (channel == NotificationChannel.Sms)
-            {
-                await _contactPointService.AddSmsContactPoints(recipientsWithoutContactPoint);
-            }
+            return null;
+        }
+
+        if (channel == NotificationChannel.Email)
+        {
+            await _contactPointService.AddEmailContactPoints(recipientsWithoutContactPoint);
+        }
+        else if (channel == NotificationChannel.Sms)
+        {
+            await _contactPointService.AddSmsContactPoints(recipientsWithoutContactPoint);
         }
 
         RecipientLookupResult lookupResult = new()
         {
             IsReserved = recipients.Where(r => r.IsReserved.HasValue && r.IsReserved.Value).Select(r => r.NationalIdentityNumber!).ToList(),
             MissingContact = recipients
-            .Where(r => channel == NotificationChannel.Email ? 
-                !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email) : 
+            .Where(r => channel == NotificationChannel.Email ?
+                !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email) :
                 !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Sms))
             .Select(r => r.OrganisationNumber ?? r.NationalIdentityNumber!).ToList()
         };

@@ -9,7 +9,7 @@ using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
-using Altinn.Notifications.Core.Shared;
+using Altinn.Notifications.Models;
 
 using Microsoft.Extensions.Options;
 
@@ -29,7 +29,7 @@ public class OrderRequestServiceTests
         DateTime createdTime = DateTime.UtcNow.AddMinutes(-2);
         Guid id = Guid.NewGuid();
 
-        NotificationOrder expected = new()
+        NotificationOrder expectedRepoInput = new()
         {
             Id = id,
             Created = createdTime,
@@ -40,7 +40,7 @@ public class OrderRequestServiceTests
             SendersReference = "senders-reference",
             Templates = { new EmailTemplate { Body = "email-body", FromAddress = "dontreply@skatteetaten.no" } }
         };
-
+      
         NotificationOrderRequest input = new()
         {
             Creator = new Creator("ttd"),
@@ -55,23 +55,17 @@ public class OrderRequestServiceTests
         Mock<IOrderRepository> repoMock = new();
         repoMock
             .Setup(r => r.Create(It.IsAny<NotificationOrder>()))
+            .Callback<NotificationOrder>(o => Assert.Equivalent(expectedRepoInput, o))
             .ReturnsAsync((NotificationOrder order) => order);
 
-        var service = GetTestService(repoMock.Object, id, createdTime);
+        var service = GetTestService(repoMock.Object, null, id, createdTime);
 
-        // Act
-        Result<NotificationOrder, ServiceError> result = await service.RegisterNotificationOrder(input);
+        // Act                    
+        NotificationOrderRequestResponse actual = await service.RegisterNotificationOrder(input);
 
         // Assert
-        Assert.True(result.IsSuccess);
-        await result.Match<Task>(
-           async actual =>
-           {
-               await Task.CompletedTask;
-               Assert.Equivalent(expected, actual, true);
-               repoMock.VerifyAll();
-           },
-           async actuallError => await Task.CompletedTask);
+        Assert.Equal(expectedRepoInput.Id, actual.OrderId);
+        repoMock.VerifyAll();
     }
 
     [Fact]
@@ -82,7 +76,7 @@ public class OrderRequestServiceTests
         DateTime createdTime = DateTime.UtcNow.AddMinutes(-2);
         Guid id = Guid.NewGuid();
 
-        NotificationOrder expected = new()
+        NotificationOrder expectedRepoInput = new()
         {
             Id = id,
             Created = createdTime,
@@ -108,23 +102,17 @@ public class OrderRequestServiceTests
         Mock<IOrderRepository> repoMock = new();
         repoMock
             .Setup(r => r.Create(It.IsAny<NotificationOrder>()))
+            .Callback<NotificationOrder>(o => Assert.Equivalent(expectedRepoInput, o))
             .ReturnsAsync((NotificationOrder order) => order);
 
-        var service = GetTestService(repoMock.Object, id, createdTime);
+        var service = GetTestService(repoMock.Object, null, id, createdTime);
 
         // Act
-        Result<NotificationOrder, ServiceError> result = await service.RegisterNotificationOrder(input);
+        NotificationOrderRequestResponse actual = await service.RegisterNotificationOrder(input);
 
-        // Assert
-        Assert.True(result.IsSuccess);
-        await result.Match<Task>(
-           async actual =>
-           {
-               await Task.CompletedTask;
-               Assert.Equivalent(expected, actual, true);
-               repoMock.VerifyAll();
-           },
-           async actuallError => await Task.CompletedTask);
+        // Assert        
+        Assert.Equal(expectedRepoInput.Id, actual.OrderId);
+        repoMock.VerifyAll();
     }
 
     [Fact]
@@ -135,7 +123,7 @@ public class OrderRequestServiceTests
         DateTime createdTime = DateTime.UtcNow.AddMinutes(-2);
         Guid id = Guid.NewGuid();
 
-        NotificationOrder expected = new()
+        NotificationOrder expectedRepoInput = new()
         {
             Id = id,
             Created = createdTime,
@@ -161,23 +149,17 @@ public class OrderRequestServiceTests
         Mock<IOrderRepository> repoMock = new();
         repoMock
             .Setup(r => r.Create(It.IsAny<NotificationOrder>()))
+            .Callback<NotificationOrder>(o => Assert.Equivalent(expectedRepoInput, o))
             .ReturnsAsync((NotificationOrder order) => order);
 
-        var service = GetTestService(repoMock.Object, id, createdTime);
+        var service = GetTestService(repoMock.Object, null, id, createdTime);
 
         // Act
-        Result<NotificationOrder, ServiceError> result = await service.RegisterNotificationOrder(input);
+        NotificationOrderRequestResponse actual = await service.RegisterNotificationOrder(input);
 
-        // Assert
-        Assert.True(result.IsSuccess);
-        await result.Match<Task>(
-           async actual =>
-           {
-               await Task.CompletedTask;
-               Assert.Equivalent(expected, actual, true);
-               repoMock.VerifyAll();
-           },
-           async actuallError => await Task.CompletedTask);
+        // Assert        
+        Assert.Equal(expectedRepoInput.Id, actual.OrderId);
+        repoMock.VerifyAll();
     }
 
     [Fact]
@@ -188,7 +170,7 @@ public class OrderRequestServiceTests
         DateTime createdTime = DateTime.UtcNow.AddMinutes(-2);
         Guid id = Guid.NewGuid();
 
-        NotificationOrder expected = new()
+        NotificationOrder expectedRepoInput = new()
         {
             Id = id,
             Created = createdTime,
@@ -214,26 +196,20 @@ public class OrderRequestServiceTests
         Mock<IOrderRepository> repoMock = new();
         repoMock
             .Setup(r => r.Create(It.IsAny<NotificationOrder>()))
+            .Callback<NotificationOrder>(o => Assert.Equivalent(expectedRepoInput, o))
             .ReturnsAsync((NotificationOrder order) => order);
 
-        var service = GetTestService(repoMock.Object, id, createdTime);
+        var service = GetTestService(repoMock.Object, null, id, createdTime);
 
         // Act
-        Result<NotificationOrder, ServiceError> result = await service.RegisterNotificationOrder(input);
+        NotificationOrderRequestResponse actual = await service.RegisterNotificationOrder(input);
 
-        // Assert
-        Assert.True(result.IsSuccess);
-        await result.Match<Task>(
-           async actual =>
-           {
-               await Task.CompletedTask;
-               Assert.Equivalent(expected, actual, true);
-               repoMock.VerifyAll();
-           },
-           async actuallError => await Task.CompletedTask);
+        // Assert        
+        Assert.Equal(expectedRepoInput.Id, actual.OrderId);
+        repoMock.VerifyAll();
     }
 
-    public static OrderRequestService GetTestService(IOrderRepository? repository = null, Guid? guid = null, DateTime? dateTime = null)
+    public static OrderRequestService GetTestService(IOrderRepository? repository = null, IContactPointService? contactPointService = null, Guid? guid = null, DateTime? dateTime = null)
     {
         if (repository == null)
         {
@@ -249,11 +225,17 @@ public class OrderRequestServiceTests
         dateTimeMock.Setup(g => g.UtcNow())
             .Returns(dateTime ?? DateTime.UtcNow);
 
+        if (contactPointService == null)
+        {
+            var contactService = new Mock<IContactPointService>();
+            contactPointService = contactService.Object;
+        }
+
         var config = Options.Create<NotificationOrderConfig>(new()
         {
             DefaultEmailFromAddress = "noreply@altinn.no",
             DefaultSmsSenderNumber = "TestDefaultSmsSenderNumberNumber"
         });
-        return new OrderRequestService(repository, guidMock.Object, dateTimeMock.Object, config);
+        return new OrderRequestService(repository, contactPointService, guidMock.Object, dateTimeMock.Object, config);
     }
 }
