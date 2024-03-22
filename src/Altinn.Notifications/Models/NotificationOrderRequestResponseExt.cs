@@ -21,12 +21,4 @@ public class NotificationOrderRequestResponseExt
     /// </summary>
     [JsonPropertyName("recipientLookup")]
     public RecipientLookupResultExt? RecipientLookup { get; set; }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="NotificationOrderRequestResponseExt"/> class.
-    /// </summary>
-    public NotificationOrderRequestResponseExt(Guid orderId)
-    {
-        OrderId = orderId;
-    }
 }

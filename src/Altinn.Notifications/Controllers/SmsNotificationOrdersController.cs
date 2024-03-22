@@ -77,6 +77,6 @@ public class SmsNotificationOrdersController : ControllerBase
             return BadRequest(result);
         }
 
-        return Accepted(result.OrderId.GetSelfLinkFromOrderId(), result);
+        return Accepted(result.OrderId.GetSelfLinkFromOrderId(), result.MapToExternal());
     }
 }

@@ -79,6 +79,6 @@ public class EmailNotificationOrdersController : ControllerBase
             return BadRequest(result);
         }
 
-        return Accepted(result.OrderId.GetSelfLinkFromOrderId(), result);
+        return Accepted(result.OrderId.GetSelfLinkFromOrderId(), result.MapToExternal());
     }
 }
