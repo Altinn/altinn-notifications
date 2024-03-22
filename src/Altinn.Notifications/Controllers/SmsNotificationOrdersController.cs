@@ -70,7 +70,8 @@ public class SmsNotificationOrdersController : ControllerBase
 
         var orderRequest = smsNotificationOrderRequest.MapToOrderRequest(creator);
         NotificationOrderRequestResponse result = await _orderRequestService.RegisterNotificationOrder(orderRequest);
-
+        
+        // todo: map to external model
         if (result.RecipientLookup?.Status == RecipientLookupStatus.Failed)
         {
             return BadRequest(result);

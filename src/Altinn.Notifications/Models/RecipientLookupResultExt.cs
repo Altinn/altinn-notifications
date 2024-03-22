@@ -14,10 +14,16 @@ public class RecipientLookupResultExt
     public RecipientLookupStatusExt Status { get; set; }
 
     /// <summary>
-    /// The lookup result
+    /// List of id numbers for the recipients that are reserved 
     /// </summary>
-    [JsonPropertyName("lookupResult")]
-    public RecipientLookupExt LookupResult { get; set; } = new();
+    [JsonPropertyName("isReserved")]
+    public List<string>? IsReserved { get; set; }
+
+    /// <summary>
+    /// List of id numbers for the recipients where no contact points were identified
+    /// </summary>
+    [JsonPropertyName("missingContact")]
+    public List<string>? MissingContact { get; set; }
 }
 
 /// <summary>
@@ -39,20 +45,4 @@ public enum RecipientLookupStatusExt
     /// The recipient lookup failed for all recipients
     /// </summary>
     Failed
-}
-
-/// <summary>
-/// Class describing the lookup result for a set of recipients
-/// </summary>
-public class RecipientLookupExt
-{
-    /// <summary>
-    /// List of id numbers for the recipients that are reserved 
-    /// </summary>
-    public List<string>? IsReserved { get; set; }
-
-    /// <summary>
-    /// List of id numbers for the recipients where no contact points were identified
-    /// </summary>
-    public List<string>? MissingContact { get; set; }
 }
