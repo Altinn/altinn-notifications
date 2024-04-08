@@ -108,14 +108,18 @@ public class OrderRequestService : IOrderRequestService
             await _contactPointService.AddSmsContactPoints(recipientsWithoutContactPoint);
         }
 
+        var isReserved = recipients.Where(r => r.IsReserved.HasValue && r.IsReserved.Value).Select(r => r.NationalIdentityNumber!).ToList();
+            
         RecipientLookupResult lookupResult = new()
         {
-            IsReserved = recipients.Where(r => r.IsReserved.HasValue && r.IsReserved.Value).Select(r => r.NationalIdentityNumber!).ToList(),
+            IsReserved = isReserved,
             MissingContact = recipients
             .Where(r => channel == NotificationChannel.Email ?
                 !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email) :
                 !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Sms))
-            .Select(r => r.OrganisationNumber ?? r.NationalIdentityNumber!).ToList()
+            .Select(r => r.OrganisationNumber ?? r.NationalIdentityNumber!)
+            .Except(isReserved)
+            .ToList()
         };
 
         int recipientsWeCannotReach = lookupResult.MissingContact.Union(lookupResult.IsReserved).ToList().Count;
