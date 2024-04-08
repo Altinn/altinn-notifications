@@ -19,7 +19,7 @@ public class EmailNotificationOrderRequestValidator : AbstractValidator<EmailNot
         RuleFor(order => order.Recipients)
             .NotEmpty()
             .WithMessage("One or more recipient is required.")
-            .Must(recipients => recipients.All(a =>
+            .Must(recipients => recipients.TrueForAll(a =>
             {
                 return
                     (!string.IsNullOrWhiteSpace(a.EmailAddress) && IsValidEmail(a.EmailAddress)) ||
