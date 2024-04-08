@@ -2,6 +2,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Configuration;
@@ -48,7 +49,8 @@ public class SmsNotificationOrdersControllerTests : IClassFixture<IntegrationTes
         _factory = factory;
         _options = new JsonSerializerOptions
         {
-            PropertyNameCaseInsensitive = true
+            PropertyNameCaseInsensitive = true,
+            Converters = { new JsonStringEnumConverter() }
         };
 
         _orderRequestExt = new()
@@ -61,8 +63,9 @@ public class SmsNotificationOrdersControllerTests : IClassFixture<IntegrationTes
 
         _orderId = Guid.NewGuid();
         _successRequestResponse = new NotificationOrderRequestResponse()
-        { 
-            OrderId = _orderId, RecipientLookup = new() { Status = RecipientLookupStatus.Success } 
+        {
+            OrderId = _orderId,
+            RecipientLookup = new() { Status = RecipientLookupStatus.Success }
         };
     }
 
@@ -192,7 +195,7 @@ public class SmsNotificationOrdersControllerTests : IClassFixture<IntegrationTes
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-        NotificationOrderRequestResponseExt? responseObject = JsonSerializer.Deserialize<NotificationOrderRequestResponseExt>(respoonseString);
+        NotificationOrderRequestResponseExt? responseObject = JsonSerializer.Deserialize<NotificationOrderRequestResponseExt>(respoonseString, _options);
         Assert.NotNull(responseObject);
         Assert.Equal(_orderId, responseObject.OrderId);
         Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + _orderId, response.Headers?.Location?.ToString());
@@ -231,7 +234,7 @@ public class SmsNotificationOrdersControllerTests : IClassFixture<IntegrationTes
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-        NotificationOrderRequestResponseExt? responseObject = JsonSerializer.Deserialize<NotificationOrderRequestResponseExt>(respoonseString);
+        NotificationOrderRequestResponseExt? responseObject = JsonSerializer.Deserialize<NotificationOrderRequestResponseExt>(respoonseString, _options);
         Assert.NotNull(responseObject);
         Assert.Equal(_orderId, responseObject.OrderId);
         Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + _orderId, response.Headers?.Location?.ToString());
@@ -245,15 +248,15 @@ public class SmsNotificationOrdersControllerTests : IClassFixture<IntegrationTes
         // Arrange
         Mock<IOrderRequestService> serviceMock = new();
         serviceMock.Setup(s => s.RegisterNotificationOrder(It.IsAny<NotificationOrderRequest>()))
-              .Callback<NotificationOrderRequest>(orderRequest =>
-              {
-                  var emailTemplate = orderRequest.Templates
-                      .OfType<EmailTemplate>()
-                      .FirstOrDefault();
+            .Callback<NotificationOrderRequest>(orderRequest =>
+            {
+                var smsTemplate = orderRequest.Templates
+                    .OfType<SmsTemplate>()
+                    .FirstOrDefault();
 
-                  Assert.NotNull(emailTemplate);
-                  Assert.Empty(emailTemplate.FromAddress);
-              })
+                Assert.NotNull(smsTemplate);
+                Assert.Empty(smsTemplate.SenderNumber);
+            })
             .ReturnsAsync(new NotificationOrderRequestResponse() { RecipientLookup = new() { Status = RecipientLookupStatus.Failed } });
 
         HttpClient client = GetTestClient(orderService: serviceMock.Object);
@@ -270,7 +273,7 @@ public class SmsNotificationOrdersControllerTests : IClassFixture<IntegrationTes
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        NotificationOrderRequestResponseExt? responseObject = JsonSerializer.Deserialize<NotificationOrderRequestResponseExt>(respoonseString);
+        NotificationOrderRequestResponseExt? responseObject = JsonSerializer.Deserialize<NotificationOrderRequestResponseExt>(respoonseString, _options);
         Assert.Null(responseObject?.OrderId);
         Assert.Equal(RecipientLookupStatusExt.Failed, responseObject!.RecipientLookup!.Status);
 
@@ -285,12 +288,12 @@ public class SmsNotificationOrdersControllerTests : IClassFixture<IntegrationTes
         serviceMock.Setup(s => s.RegisterNotificationOrder(It.IsAny<NotificationOrderRequest>()))
               .Callback<NotificationOrderRequest>(orderRequest =>
               {
-                  var emailTemplate = orderRequest.Templates
-                      .OfType<EmailTemplate>()
+                  var smsTemplate = orderRequest.Templates
+                      .OfType<SmsTemplate>()
                       .FirstOrDefault();
 
-                  Assert.NotNull(emailTemplate);
-                  Assert.Empty(emailTemplate.FromAddress);
+                  Assert.NotNull(smsTemplate);
+                  Assert.Empty(smsTemplate.SenderNumber);
               })
             .ReturnsAsync(new NotificationOrderRequestResponse() { OrderId = _orderId, RecipientLookup = new() { Status = RecipientLookupStatus.PartialSuccess } });
 
@@ -308,7 +311,7 @@ public class SmsNotificationOrdersControllerTests : IClassFixture<IntegrationTes
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-        NotificationOrderRequestResponseExt? responseObject = JsonSerializer.Deserialize<NotificationOrderRequestResponseExt>(respoonseString);
+        NotificationOrderRequestResponseExt? responseObject = JsonSerializer.Deserialize<NotificationOrderRequestResponseExt>(respoonseString, _options);
         Assert.NotNull(responseObject?.OrderId);
         Assert.Equal(RecipientLookupStatusExt.PartialSuccess, responseObject!.RecipientLookup!.Status);
 
@@ -352,7 +355,7 @@ public class SmsNotificationOrdersControllerTests : IClassFixture<IntegrationTes
         // Act
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
         string respoonseString = await response.Content.ReadAsStringAsync();
-        NotificationOrderRequestResponseExt? responseObject = JsonSerializer.Deserialize<NotificationOrderRequestResponseExt>(respoonseString);
+        NotificationOrderRequestResponseExt? responseObject = JsonSerializer.Deserialize<NotificationOrderRequestResponseExt>(respoonseString, _options);
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);

@@ -77,11 +77,16 @@ public static class ResourceLinkExtensions
     /// Gets the self link for the provided notification order
     /// </summary>
     /// <exception cref="InvalidOperationException">Exception if class has not been initialized in Program.cs</exception>
-    public static string GetSelfLinkFromOrderId(this Guid orderId)
+    public static string GetSelfLinkFromOrderId(this Guid? orderId)
     {
         if (_baseUri == null)
         {
             throw new InvalidOperationException("ResourceLinkExtensions has not been initialized with the base URI.");
+        }
+
+        if (orderId == null)
+        {
+            return string.Empty;
         }
 
         return _baseUri + "/notifications/api/v1/orders/" + orderId.ToString();

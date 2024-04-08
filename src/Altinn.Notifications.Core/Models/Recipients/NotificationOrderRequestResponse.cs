@@ -10,7 +10,7 @@ public class NotificationOrderRequestResponse
     /// <summary>
     /// The order id
     /// </summary>
-    public Guid OrderId { get; set; }
+    public Guid? OrderId { get; set; }
 
     /// <summary>
     /// The recipient lookup summary

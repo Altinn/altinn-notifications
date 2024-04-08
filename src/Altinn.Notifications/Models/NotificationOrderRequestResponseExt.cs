@@ -14,7 +14,7 @@ public class NotificationOrderRequestResponseExt
     /// The order id
     /// </summary>
     [JsonPropertyName("orderId")]
-    public Guid OrderId { get; set; }
+    public Guid? OrderId { get; set; }
 
     /// <summary>
     /// The recipient lookup summary

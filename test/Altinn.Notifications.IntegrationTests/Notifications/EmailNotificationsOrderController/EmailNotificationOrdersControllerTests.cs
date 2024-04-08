@@ -2,6 +2,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Configuration;
@@ -48,7 +49,8 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
         _factory = factory;
         _options = new JsonSerializerOptions
         {
-            PropertyNameCaseInsensitive = true
+            PropertyNameCaseInsensitive = true,
+            Converters = { new JsonStringEnumConverter() }
         };
 
         _orderRequestExt = new()
@@ -198,7 +200,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-        NotificationOrderRequestResponseExt? orderIdObjectExt = JsonSerializer.Deserialize<NotificationOrderRequestResponseExt>(respoonseString);
+        NotificationOrderRequestResponseExt? orderIdObjectExt = JsonSerializer.Deserialize<NotificationOrderRequestResponseExt>(respoonseString, _options);
         Assert.Equal(_orderId, orderIdObjectExt!.OrderId);
         Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + _orderId, response.Headers?.Location?.ToString());
 
@@ -236,7 +238,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-        NotificationOrderRequestResponseExt? orderIdObjectExt = JsonSerializer.Deserialize<NotificationOrderRequestResponseExt>(respoonseString);
+        NotificationOrderRequestResponseExt? orderIdObjectExt = JsonSerializer.Deserialize<NotificationOrderRequestResponseExt>(respoonseString, _options);
         Assert.NotNull(orderIdObjectExt);
         Assert.Equal(_orderId, orderIdObjectExt.OrderId);
         Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + _orderId, response.Headers?.Location?.ToString());
@@ -275,7 +277,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        NotificationOrderRequestResponseExt? responseObject = JsonSerializer.Deserialize<NotificationOrderRequestResponseExt>(respoonseString);
+        NotificationOrderRequestResponseExt? responseObject = JsonSerializer.Deserialize<NotificationOrderRequestResponseExt>(respoonseString, _options);
         Assert.Null(responseObject?.OrderId);
         Assert.Equal(RecipientLookupStatusExt.Failed, responseObject!.RecipientLookup!.Status);
 
@@ -313,7 +315,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-        NotificationOrderRequestResponseExt? responseObject = JsonSerializer.Deserialize<NotificationOrderRequestResponseExt>(respoonseString);
+        NotificationOrderRequestResponseExt? responseObject = JsonSerializer.Deserialize<NotificationOrderRequestResponseExt>(respoonseString, _options);
         Assert.NotNull(responseObject?.OrderId);
         Assert.Equal(RecipientLookupStatusExt.PartialSuccess, responseObject!.RecipientLookup!.Status);
 
@@ -359,7 +361,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
         // Act
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
         string respoonseString = await response.Content.ReadAsStringAsync();
-        NotificationOrderRequestResponseExt? responseObject = JsonSerializer.Deserialize<NotificationOrderRequestResponseExt>(respoonseString);
+        NotificationOrderRequestResponseExt? responseObject = JsonSerializer.Deserialize<NotificationOrderRequestResponseExt>(respoonseString, _options);
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
