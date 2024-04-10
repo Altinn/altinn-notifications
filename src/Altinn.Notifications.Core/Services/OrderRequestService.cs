@@ -80,7 +80,7 @@ public class OrderRequestService : IOrderRequestService
 
     private async Task<RecipientLookupResult?> GetRecipientLookupResult(List<Recipient> recipients, NotificationChannel channel)
     {
-        List<Recipient> recipientsWithoutContactPoint = new();
+        List<Recipient> recipientsWithoutContactPoint = [];
 
         foreach (var recipient in recipients)
         {

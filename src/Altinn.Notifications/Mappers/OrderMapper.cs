@@ -24,7 +24,7 @@ public static class OrderMapper
             extRequest.Recipients
             .Select(r =>
             {
-                List<IAddressPoint> addresses = new();
+                List<IAddressPoint> addresses = [];
 
                 if (!string.IsNullOrEmpty(r.EmailAddress))
                 {
@@ -56,7 +56,7 @@ public static class OrderMapper
           extRequest.Recipients
           .Select(r =>
           {
-              List<IAddressPoint> addresses = new();
+              List<IAddressPoint> addresses = [];
 
               if (!string.IsNullOrEmpty(r.MobileNumber))
               {
