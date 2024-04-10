@@ -14,6 +14,7 @@ using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Models;
 
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 
 using Moq;
 
@@ -378,8 +379,8 @@ public class OrderRequestServiceTests
 
         // Assert        
         Assert.Equal(RecipientLookupStatus.Success, actual.RecipientLookup?.Status);
-        Assert.Empty(actual.RecipientLookup?.IsReserved);
-        Assert.Empty(actual.RecipientLookup?.MissingContact);
+        Assert.True(actual.RecipientLookup!.IsReserved.IsNullOrEmpty());
+        Assert.True(actual.RecipientLookup!.MissingContact.IsNullOrEmpty());
         repoMock.VerifyAll();
         contactPointMock.VerifyAll();
     }
