@@ -47,7 +47,9 @@ public class OrderRequestService : IOrderRequestService
         Guid orderId = _guid.NewGuid();
         DateTime created = _dateTime.UtcNow();
 
-        var lookupResult = await GetRecipientLookupResult(orderRequest.Recipients, orderRequest.NotificationChannel);
+        // copying recipients by value to not alter the orderRequest that will be persisted
+        var copiedRecipents = orderRequest.Recipients.Select(r => r.DeepCopy()).ToList();
+        var lookupResult = await GetRecipientLookupResult(copiedRecipents, orderRequest.NotificationChannel);
 
         if (lookupResult?.Status == RecipientLookupStatus.Failed)
         {

@@ -1,4 +1,7 @@
-﻿using Altinn.Notifications.Core.Models.Address;
+﻿using System.Runtime.Serialization.Formatters.Binary;
+using System.Text.Json;
+
+using Altinn.Notifications.Core.Models.Address;
 
 namespace Altinn.Notifications.Core.Models;
 
@@ -35,6 +38,15 @@ public class Recipient
         OrganisationNumber = organisationNumber;
         NationalIdentityNumber = nationalIdentityNumber;
         AddressInfo = addressInfo;
+    }
+
+    /// <summary>
+    /// Creates a deep copy of the recipient object
+    /// </summary>
+    internal Recipient DeepCopy()
+    {
+        string json = JsonSerializer.Serialize(this);
+        return JsonSerializer.Deserialize<Recipient>(json);
     }
 
     /// <summary>
