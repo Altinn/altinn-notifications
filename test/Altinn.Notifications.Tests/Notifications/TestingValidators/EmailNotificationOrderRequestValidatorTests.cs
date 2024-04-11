@@ -47,11 +47,11 @@ public class EmailNotificationOrderRequestValidatorTests
         var actual = _validator.Validate(order);
 
         Assert.False(actual.IsValid);
-        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("A valid email address must be provided for all recipients."));
+        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("Either a valid email address, organisation number, or national identity number must be provided for each recipient."));
     }
 
     [Fact]
-    public void Validate_EmailNotDefinedForRecipient_ReturnFalse()
+    public void Validate_NoDetailsDefinedForRecipient_ReturnFalse()
     {
         var order = new EmailNotificationOrderRequestExt()
         {
@@ -63,7 +63,7 @@ public class EmailNotificationOrderRequestValidatorTests
         var actual = _validator.Validate(order);
 
         Assert.False(actual.IsValid);
-        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("A valid email address must be provided for all recipients."));
+        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("Either a valid email address, organisation number, or national identity number must be provided for each recipient."));
     }
 
     [Fact]

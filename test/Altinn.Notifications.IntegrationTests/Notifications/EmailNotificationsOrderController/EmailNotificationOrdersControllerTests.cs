@@ -2,15 +2,13 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Configuration;
-using Altinn.Notifications.Core.Enums;
-using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
-using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using Altinn.Notifications.Tests.Notifications.Utils;
@@ -43,14 +41,16 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
     private readonly JsonSerializerOptions _options;
 
     private readonly EmailNotificationOrderRequestExt _orderRequestExt;
-    private readonly NotificationOrder _order;
+    private readonly Guid _orderId;
+    private readonly NotificationOrderRequestResponse _successRequestResponse;
 
     public EmailNotificationOrdersControllerTests(IntegrationTestWebApplicationFactory<Controllers.EmailNotificationOrdersController> factory)
     {
         _factory = factory;
         _options = new JsonSerializerOptions
         {
-            PropertyNameCaseInsensitive = true
+            PropertyNameCaseInsensitive = true,
+            Converters = { new JsonStringEnumConverter() }
         };
 
         _orderRequestExt = new()
@@ -63,15 +63,15 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
             Subject = "email-subject",
         };
 
-        _order = new(
-            Guid.NewGuid(),
-            "senders-reference",
-            new List<INotificationTemplate>(),
-            DateTime.UtcNow,
-            NotificationChannel.Email,
-            new Creator("ttd"),
-            DateTime.UtcNow,
-            new List<Recipient>());
+        _orderId = Guid.NewGuid();
+        _successRequestResponse = new NotificationOrderRequestResponse()
+        {
+            OrderId = _orderId,
+            RecipientLookup = new()
+            {
+                Status = RecipientLookupStatus.Success
+            }
+        };
     }
 
     [Fact]
@@ -168,9 +168,9 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
-   
+
     [Fact]
-    public async Task Post_ValidScope_ServiceReturnsOrder_Accepted()
+    public async Task Post_ValidScope_ServiceReturnsSuccessRequestResult_Accepted()
     {
         // Arrange
         Mock<IOrderRequestService> serviceMock = new();
@@ -184,7 +184,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
                   Assert.NotNull(emailTemplate);
                   Assert.Equal(string.Empty, emailTemplate.FromAddress);
               })
-            .ReturnsAsync(_order);
+            .ReturnsAsync(_successRequestResponse);
 
         HttpClient client = GetTestClient(orderService: serviceMock.Object);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
@@ -200,16 +200,15 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-        OrderIdExt? orderIdObjectExt = JsonSerializer.Deserialize<OrderIdExt>(respoonseString);
-        Assert.NotNull(orderIdObjectExt);
-        Assert.Equal(_order.Id, orderIdObjectExt.OrderId);
-        Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + _order.Id, response.Headers?.Location?.ToString());
+        NotificationOrderRequestResponseExt? orderIdObjectExt = JsonSerializer.Deserialize<NotificationOrderRequestResponseExt>(respoonseString, _options);
+        Assert.Equal(_orderId, orderIdObjectExt!.OrderId);
+        Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + _orderId, response.Headers?.Location?.ToString());
 
         serviceMock.VerifyAll();
     }
 
     [Fact]
-    public async Task Post_ValidAccessToken_ServiceReturnsOrder_Accepted()
+    public async Task Post_ValidAccessToken_ServiceReturnsSuccessRequestResult_Accepted()
     {
         // Arrange
         Mock<IOrderRequestService> serviceMock = new();
@@ -223,7 +222,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
                   Assert.NotNull(emailTemplate);
                   Assert.Empty(emailTemplate.FromAddress);
               })
-            .ReturnsAsync(_order);
+            .ReturnsAsync(_successRequestResponse);
 
         HttpClient client = GetTestClient(orderService: serviceMock.Object);
 
@@ -239,10 +238,86 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-        OrderIdExt? orderIdObjectExt = JsonSerializer.Deserialize<OrderIdExt>(respoonseString);
+        NotificationOrderRequestResponseExt? orderIdObjectExt = JsonSerializer.Deserialize<NotificationOrderRequestResponseExt>(respoonseString, _options);
         Assert.NotNull(orderIdObjectExt);
-        Assert.Equal(_order.Id, orderIdObjectExt.OrderId);
-        Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + _order.Id, response.Headers?.Location?.ToString());
+        Assert.Equal(_orderId, orderIdObjectExt.OrderId);
+        Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + _orderId, response.Headers?.Location?.ToString());
+
+        serviceMock.VerifyAll();
+    }
+
+    [Fact]
+    public async Task Post_ServiceReturnsFailedLookupStatus_BadRequest()
+    {
+        // Arrange
+        Mock<IOrderRequestService> serviceMock = new();
+        serviceMock.Setup(s => s.RegisterNotificationOrder(It.IsAny<NotificationOrderRequest>()))
+              .Callback<NotificationOrderRequest>(orderRequest =>
+              {
+                  var emailTemplate = orderRequest.Templates
+                      .OfType<EmailTemplate>()
+                      .FirstOrDefault();
+
+                  Assert.NotNull(emailTemplate);
+                  Assert.Empty(emailTemplate.FromAddress);
+              })
+            .ReturnsAsync(new NotificationOrderRequestResponse() { RecipientLookup = new() { Status = RecipientLookupStatus.Failed } });
+
+        HttpClient client = GetTestClient(orderService: serviceMock.Object);
+
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
+        {
+            Content = new StringContent(_orderRequestExt.Serialize(), Encoding.UTF8, "application/json")
+        };
+        httpRequestMessage.Headers.Add("PlatformAccessToken", PrincipalUtil.GetAccessToken("ttd", "apps-test"));
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        string respoonseString = await response.Content.ReadAsStringAsync();
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        NotificationOrderRequestResponseExt? responseObject = JsonSerializer.Deserialize<NotificationOrderRequestResponseExt>(respoonseString, _options);
+        Assert.Null(responseObject?.OrderId);
+        Assert.Equal(RecipientLookupStatusExt.Failed, responseObject!.RecipientLookup!.Status);
+
+        serviceMock.VerifyAll();
+    }
+
+    [Fact]
+    public async Task Post_ServiceReturnsPartialSuccessLookupStatus_Accepted()
+    {
+        // Arrange
+        Mock<IOrderRequestService> serviceMock = new();
+        serviceMock.Setup(s => s.RegisterNotificationOrder(It.IsAny<NotificationOrderRequest>()))
+              .Callback<NotificationOrderRequest>(orderRequest =>
+              {
+                  var emailTemplate = orderRequest.Templates
+                      .OfType<EmailTemplate>()
+                      .FirstOrDefault();
+
+                  Assert.NotNull(emailTemplate);
+                  Assert.Empty(emailTemplate.FromAddress);
+              })
+            .ReturnsAsync(new NotificationOrderRequestResponse() { OrderId = _orderId, RecipientLookup = new() { Status = RecipientLookupStatus.PartialSuccess } });
+
+        HttpClient client = GetTestClient(orderService: serviceMock.Object);
+
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
+        {
+            Content = new StringContent(_orderRequestExt.Serialize(), Encoding.UTF8, "application/json")
+        };
+        httpRequestMessage.Headers.Add("PlatformAccessToken", PrincipalUtil.GetAccessToken("ttd", "apps-test"));
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        string respoonseString = await response.Content.ReadAsStringAsync();
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        NotificationOrderRequestResponseExt? responseObject = JsonSerializer.Deserialize<NotificationOrderRequestResponseExt>(respoonseString, _options);
+        Assert.NotNull(responseObject?.OrderId);
+        Assert.Equal(RecipientLookupStatusExt.PartialSuccess, responseObject!.RecipientLookup!.Status);
 
         serviceMock.VerifyAll();
     }
@@ -263,7 +338,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
                 Assert.NotNull(emailTemplate);
                 Assert.Empty(emailTemplate.FromAddress);
             })
-            .ReturnsAsync(_order);
+            .ReturnsAsync(new NotificationOrderRequestResponse() { OrderId = _orderId, RecipientLookup = new() { Status = RecipientLookupStatus.Success } });
 
         HttpClient client = GetTestClient(orderService: serviceMock.Object);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
@@ -286,14 +361,14 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
         // Act
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
         string respoonseString = await response.Content.ReadAsStringAsync();
-        OrderIdExt? orderIdObjectExt = JsonSerializer.Deserialize<OrderIdExt>(respoonseString);
+        NotificationOrderRequestResponseExt? responseObject = JsonSerializer.Deserialize<NotificationOrderRequestResponseExt>(respoonseString, _options);
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-        Assert.NotNull(orderIdObjectExt);
-        Assert.Equal(_order.Id, orderIdObjectExt.OrderId);
+        Assert.NotNull(responseObject);
+        Assert.Equal(_orderId, responseObject.OrderId);
 
-        Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + _order.Id, response.Headers?.Location?.ToString());
+        Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + _orderId, response.Headers?.Location?.ToString());
 
         serviceMock.VerifyAll();
     }

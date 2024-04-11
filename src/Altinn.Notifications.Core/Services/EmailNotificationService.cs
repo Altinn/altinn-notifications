@@ -53,7 +53,7 @@ public class EmailNotificationService : IEmailNotificationService
             IsReserved = recipient.IsReserved
         };
 
-        if (recipient.IsReserved && !ignoreReservation)
+        if (recipient.IsReserved.HasValue && recipient.IsReserved.Value && !ignoreReservation)
         {
             emailRecipient.ToAddress = string.Empty; // not persisting email address for reserved recipients
             await CreateNotificationForRecipient(orderId, requestedSendTime, emailRecipient, EmailNotificationResultType.Failed_RecipientReserved);

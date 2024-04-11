@@ -1,7 +1,5 @@
 ﻿using Altinn.Notifications.Configuration;
-using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
-using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
@@ -47,14 +45,14 @@ public class SmsNotificationOrdersController : ControllerBase
     /// The API will accept the request after som basic validation of the request.
     /// The system will also attempt to verify that it will be possible to fulfill the order.
     /// </remarks>
-    /// <returns>The id of the registered notification order</returns>
+    /// <returns>The notification order request response</returns>
     [HttpPost]
     [Consumes("application/json")]
     [Produces("application/json")]
-    [SwaggerResponse(202, "The notification order was accepted", typeof(OrderIdExt))]
+    [SwaggerResponse(202, "The notification order was accepted", typeof(NotificationOrderRequestResponseExt))]
     [SwaggerResponse(400, "The notification order is invalid", typeof(ValidationProblemDetails))]
     [SwaggerResponseHeader(202, "Location", "string", "Link to access the newly created notification order.")]
-    public async Task<ActionResult<OrderIdExt>> Post(SmsNotificationOrderRequestExt smsNotificationOrderRequest)
+    public async Task<ActionResult<NotificationOrderRequestResponseExt>> Post(SmsNotificationOrderRequestExt smsNotificationOrderRequest)
     {
         FluentValidation.Results.ValidationResult validationResult = _validator.Validate(smsNotificationOrderRequest);
         if (!validationResult.IsValid)
@@ -70,15 +68,14 @@ public class SmsNotificationOrdersController : ControllerBase
             return Forbid();
         }
 
-        NotificationOrderRequest orderRequest = smsNotificationOrderRequest.MapToOrderRequest(creator);
-        Result<NotificationOrder, ServiceError> result = await _orderRequestService.RegisterNotificationOrder(orderRequest);
+        var orderRequest = smsNotificationOrderRequest.MapToOrderRequest(creator);
+        NotificationOrderRequestResponse result = await _orderRequestService.RegisterNotificationOrder(orderRequest);
+        
+        if (result.RecipientLookup?.Status == RecipientLookupStatus.Failed)
+        {
+            return BadRequest(result);
+        }
 
-        return result.Match(
-             registeredOrder =>
-             {
-                 string selfLink = registeredOrder!.GetSelfLink();
-                 return Accepted(selfLink, new OrderIdExt(registeredOrder!.Id));
-             },
-             error => StatusCode(error.ErrorCode, error.ErrorMessage));
+        return Accepted(result.OrderId.GetSelfLinkFromOrderId(), result.MapToExternal());
     }
 }

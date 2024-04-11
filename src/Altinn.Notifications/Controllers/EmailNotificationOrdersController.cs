@@ -47,14 +47,14 @@ public class EmailNotificationOrdersController : ControllerBase
     /// The API will accept the request after som basic validation of the request.
     /// The system will also attempt to verify that it will be possible to fulfill the order.
     /// </remarks>
-    /// <returns>The id of the registered notification order</returns>
+    /// <returns>The notification order request response</returns>
     [HttpPost]
     [Consumes("application/json")]
     [Produces("application/json")]
-    [SwaggerResponse(202, "The notification order was accepted", typeof(OrderIdExt))]
+    [SwaggerResponse(202, "The notification order was accepted", typeof(NotificationOrderRequestResponseExt))]
     [SwaggerResponse(400, "The notification order is invalid", typeof(ValidationProblemDetails))]
     [SwaggerResponseHeader(202, "Location", "string", "Link to access the newly created notification order.")]
-    public async Task<ActionResult<OrderIdExt>> Post(EmailNotificationOrderRequestExt emailNotificationOrderRequest)
+    public async Task<ActionResult<NotificationOrderRequestResponseExt>> Post(EmailNotificationOrderRequestExt emailNotificationOrderRequest)
     {
         var validationResult = _validator.Validate(emailNotificationOrderRequest);
         if (!validationResult.IsValid)
@@ -71,14 +71,13 @@ public class EmailNotificationOrdersController : ControllerBase
         }
 
         var orderRequest = emailNotificationOrderRequest.MapToOrderRequest(creator);
-        Result<NotificationOrder, ServiceError> result = await _orderRequestService.RegisterNotificationOrder(orderRequest);
+        NotificationOrderRequestResponse result = await _orderRequestService.RegisterNotificationOrder(orderRequest);
 
-        return result.Match(
-            order =>
-            {
-                string selfLink = order.GetSelfLink();
-                return Accepted(selfLink, new OrderIdExt(order.Id));
-            },
-            error => StatusCode(error.ErrorCode, error.ErrorMessage));
+        if (result.RecipientLookup?.Status == RecipientLookupStatus.Failed)
+        {
+            return BadRequest(result);
+        }
+
+        return Accepted(result.OrderId!.GetSelfLinkFromOrderId(), result.MapToExternal());
     }
 }
