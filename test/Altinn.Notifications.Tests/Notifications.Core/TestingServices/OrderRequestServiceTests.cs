@@ -262,8 +262,8 @@ public class OrderRequestServiceTests
             NotificationChannel = NotificationChannel.Sms,
             RequestedSendTime = sendTime,
             Recipients = [
-                new Recipient() { NationalIdentityNumber = "16069412345", IsReserved = false, AddressInfo = [new SmsAddressPoint("+4799999999")] },
-                new Recipient() { NationalIdentityNumber = "14029112345", IsReserved = true }
+                new Recipient() { NationalIdentityNumber = "16069412345" },
+                new Recipient() { NationalIdentityNumber = "14029112345" }
                 ],
             Templates = { new SmsTemplate { Body = "sms-body", SenderNumber = "TestDefaultSmsSenderNumberNumber" } }
         };
@@ -334,7 +334,7 @@ public class OrderRequestServiceTests
             NotificationChannel = NotificationChannel.Sms,
             RequestedSendTime = sendTime,
             Recipients = [
-                new Recipient() { NationalIdentityNumber = "16069412345", IsReserved = false, AddressInfo = [new SmsAddressPoint("+4799999999")] },
+                new Recipient() { NationalIdentityNumber = "16069412345" },
                 ],
             Templates = { new SmsTemplate { Body = "sms-body", SenderNumber = "TestDefaultSmsSenderNumberNumber" } }
         };
