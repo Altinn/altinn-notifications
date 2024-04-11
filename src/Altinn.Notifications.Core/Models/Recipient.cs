@@ -41,18 +41,18 @@ public class Recipient
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="Recipient"/> class.
+    /// </summary>
+    public Recipient()
+    {
+    }
+
+    /// <summary>
     /// Creates a deep copy of the recipient object
     /// </summary>
     internal Recipient DeepCopy()
     {
         string json = JsonSerializer.Serialize(this);
-        return JsonSerializer.Deserialize<Recipient>(json);
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Recipient"/> class.
-    /// </summary>
-    public Recipient()
-    {
+        return JsonSerializer.Deserialize<Recipient>(json)!;
     }
 }
