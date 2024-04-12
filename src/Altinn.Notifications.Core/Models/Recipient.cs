@@ -1,4 +1,6 @@
-﻿using Altinn.Notifications.Core.Models.Address;
+﻿using System.Text.Json;
+
+using Altinn.Notifications.Core.Models.Address;
 
 namespace Altinn.Notifications.Core.Models;
 
@@ -42,5 +44,14 @@ public class Recipient
     /// </summary>
     public Recipient()
     {
+    }
+
+    /// <summary>
+    /// Creates a deep copy of the recipient object
+    /// </summary>
+    internal Recipient DeepCopy()
+    {
+        string json = JsonSerializer.Serialize(this);
+        return JsonSerializer.Deserialize<Recipient>(json)!;
     }
 }
