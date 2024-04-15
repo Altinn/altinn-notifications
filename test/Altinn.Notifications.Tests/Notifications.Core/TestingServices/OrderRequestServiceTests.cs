@@ -213,7 +213,7 @@ public class OrderRequestServiceTests
     }
 
     [Fact]
-    public async Task RegisterNotificationOrder_LookupFails_NoOrderCreated()
+    public async Task RegisterNotificationOrder_LookupFails_OrderCreated()
     {
         // Arrange
         DateTime sendTime = DateTime.UtcNow;
@@ -243,7 +243,7 @@ public class OrderRequestServiceTests
 
         // Assert        
         Assert.Equal(RecipientLookupStatus.Failed, actual.RecipientLookup?.Status);
-        repoMock.Verify(r => r.Create(It.IsAny<NotificationOrder>()), Times.Never);
+        repoMock.Verify(r => r.Create(It.IsAny<NotificationOrder>()), Times.Once);
     }
 
     [Fact]

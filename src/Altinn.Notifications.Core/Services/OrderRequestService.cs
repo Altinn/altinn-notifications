@@ -51,14 +51,6 @@ public class OrderRequestService : IOrderRequestService
         var copiedRecipents = orderRequest.Recipients.Select(r => r.DeepCopy()).ToList();
         var lookupResult = await GetRecipientLookupResult(copiedRecipents, orderRequest.NotificationChannel);
 
-        if (lookupResult?.Status == RecipientLookupStatus.Failed)
-        {
-            return new NotificationOrderRequestResponse()
-            {
-                RecipientLookup = lookupResult
-            };
-        }
-
         var templates = SetSenderIfNotDefined(orderRequest.Templates);
 
         var order = new NotificationOrder(

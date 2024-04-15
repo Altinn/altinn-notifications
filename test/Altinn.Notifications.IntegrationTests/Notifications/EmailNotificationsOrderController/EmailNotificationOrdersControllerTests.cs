@@ -247,7 +247,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
     }
 
     [Fact]
-    public async Task Post_ServiceReturnsFailedLookupStatus_BadRequest()
+    public async Task Post_ServiceReturnsFailedLookupStatus_Accepted()
     {
         // Arrange
         Mock<IOrderRequestService> serviceMock = new();
@@ -276,7 +276,7 @@ public class EmailNotificationOrdersControllerTests : IClassFixture<IntegrationT
         string respoonseString = await response.Content.ReadAsStringAsync();
 
         // Assert
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
         NotificationOrderRequestResponseExt? responseObject = JsonSerializer.Deserialize<NotificationOrderRequestResponseExt>(respoonseString, _options);
         Assert.Null(responseObject?.OrderId);
         Assert.Equal(RecipientLookupStatusExt.Failed, responseObject!.RecipientLookup!.Status);

@@ -73,11 +73,6 @@ public class EmailNotificationOrdersController : ControllerBase
         var orderRequest = emailNotificationOrderRequest.MapToOrderRequest(creator);
         NotificationOrderRequestResponse result = await _orderRequestService.RegisterNotificationOrder(orderRequest);
 
-        if (result.RecipientLookup?.Status == RecipientLookupStatus.Failed)
-        {
-            return BadRequest(result);
-        }
-
         return Accepted(result.OrderId!.GetSelfLinkFromOrderId(), result.MapToExternal());
     }
 }
