@@ -40,7 +40,8 @@ public class OrderMapperTests
             NotificationChannel = NotificationChannel.Email,
             Creator = new Creator("ttd"),
             Created = created,
-            Recipients = []
+            Recipients = [],
+            IgnoreReservation = true
         };
 
         NotificationOrderExt expected = new()
@@ -68,7 +69,8 @@ public class OrderMapperTests
             {
                 Self = $"https://platform.at22.altinn.cloud/notifications/api/v1/orders/{order.Id}",
                 Status = $"https://platform.at22.altinn.cloud/notifications/api/v1/orders/{order.Id}/status"
-            }
+            },
+            IgnoreReservation = true
         };
 
         // Act
