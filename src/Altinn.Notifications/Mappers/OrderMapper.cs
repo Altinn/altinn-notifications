@@ -86,6 +86,7 @@ public static class OrderMapper
 
         orderExt.MapBaseNotificationOrder(order);
         orderExt.Recipients = order.Recipients.MapToRecipientExt();
+        orderExt.IgnoreReservation = order.IgnoreReservation;
 
         foreach (var template in order.Templates)
         {
@@ -212,7 +213,6 @@ public static class OrderMapper
         orderExt.Creator = order.Creator.ShortName;
         orderExt.NotificationChannel = (NotificationChannelExt)order.NotificationChannel;
         orderExt.RequestedSendTime = order.RequestedSendTime;
-
         return orderExt;
     }
 
