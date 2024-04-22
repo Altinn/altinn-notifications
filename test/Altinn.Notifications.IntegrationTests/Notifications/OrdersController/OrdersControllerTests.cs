@@ -45,7 +45,8 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
             NotificationChannel.Email,
             new Creator("ttd"),
             DateTime.UtcNow,
-            new List<Recipient>());
+            new List<Recipient>(),
+            false);
 
         _orderWithStatus = new(
             Guid.NewGuid(),

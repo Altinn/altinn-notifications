@@ -45,7 +45,7 @@ public static class ServiceCollectionExtensions
     {
         _ = config.GetSection(nameof(PlatformSettings))
             .Get<PlatformSettings>()
-            ?? throw new ArgumentNullException(nameof(config), "Required AltinnServiceSettings is missing from application configuration");
+            ?? throw new ArgumentNullException(nameof(config), "Required PlatformSettings is missing from application configuration");
 
         services
             .Configure<PlatformSettings>(config.GetSection(nameof(PlatformSettings)))

@@ -61,7 +61,8 @@ public class OrderRequestService : IOrderRequestService
             orderRequest.NotificationChannel,
             orderRequest.Creator,
             created,
-            orderRequest.Recipients);
+            orderRequest.Recipients, 
+            orderRequest.IgnoreReservation);
 
         NotificationOrder savedOrder = await _repository.Create(order);
 
