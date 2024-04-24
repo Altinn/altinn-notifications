@@ -155,7 +155,7 @@ public class ProfileClientTests
         }
         else if (typeof(T) == typeof(UserContactPointsList))
         {
-            return new UserContactPointsList() { ContactPointList = new List<UserContactPoints>() };
+            return new UserContactPointsList() { ContactPointsList = new List<UserContactPoints>() };
         }
 
         return null;
@@ -179,7 +179,7 @@ public class ProfileClientTests
                 new UserContactPoints() { NationalIdentityNumber = "01025101038", Email = string.Empty },
                 new UserContactPoints() { NationalIdentityNumber = "01025101037", Email = string.Empty }
             };
-            return new UserContactPointsList() { ContactPointList = contactPointsList };
+            return new UserContactPointsList() { ContactPointsList = contactPointsList };
         }
 
         return null;

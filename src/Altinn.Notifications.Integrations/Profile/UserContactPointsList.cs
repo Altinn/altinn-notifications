@@ -10,5 +10,5 @@ public class UserContactPointsList
     /// <summary>
     /// A list containing contact points for users
     /// </summary>
-    public List<UserContactPoints> ContactPointList { get; set; } = [];
+    public List<UserContactPoints> ContactPointsList { get; set; } = [];
 }
