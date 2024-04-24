@@ -8,7 +8,7 @@ namespace DbTools
 
         static void Main(string[] args)
         {
-            string migrationPath = args.Length != 0 ? args[0] : @"../../../../Storage/Migration";
+            string migrationPath = args.Length != 0 ? args[0] : @"../../../../Altinn.Notifications.Persistence/Migration";
             string funcAndProcDirectory = $@"{migrationPath}/FunctionsAndProcedures";
             if (!Directory.Exists(migrationPath))
             {
