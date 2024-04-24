@@ -1,8 +1,12 @@
-﻿using Altinn.Notifications.Core.Integrations;
+﻿using System.Text.RegularExpressions;
+
+using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.ContactPoints;
 using Altinn.Notifications.Core.Services.Interfaces;
+
+using PhoneNumbers;
 
 namespace Altinn.Notifications.Core.Services
 {
@@ -13,6 +17,7 @@ namespace Altinn.Notifications.Core.Services
     {
         private readonly IProfileClient _profileClient;
         private readonly IRegisterClient _registerClient;
+        private readonly PhoneNumberUtil _phoneNumberUtil;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ContactPointService"/> class.
@@ -21,6 +26,7 @@ namespace Altinn.Notifications.Core.Services
         {
             _profileClient = profile;
             _registerClient = register;
+            _phoneNumberUtil = PhoneNumberUtil.GetInstance();
         }
 
         /// <inheritdoc/>
@@ -106,7 +112,6 @@ namespace Altinn.Notifications.Core.Services
                     .Select(r => r.NationalIdentityNumber!)
                     .ToList();
 
-            // TODO: ensure all mobile numbers have country code before returning
             return nins.Count > 0
               ? await _profileClient.GetUserContactPoints(nins)
               : new List<UserContactPoints>();
@@ -121,10 +126,36 @@ namespace Altinn.Notifications.Core.Services
              .Select(r => r.OrganizationNumber!)
              .ToList();
 
-            // TODO: ensure all mobile numbers have country code before returning
-            return orgNos.Count > 0
-             ? await _registerClient.GetOrganizationContactPoints(orgNos)
-             : new List<OrganizationContactPoints>();
+            if (orgNos.Count == 0)
+            {
+                return [];
+            }
+
+            List<OrganizationContactPoints> contactPoints = await _registerClient.GetOrganizationContactPoints(orgNos);
+
+            contactPoints.ForEach(contactPoint =>
+            {
+                contactPoint.MobileNumberList = contactPoint.MobileNumberList
+                    .Select(mobileNumber =>
+                    {
+                        return EnsureCountryCode(mobileNumber);
+                    })
+                    .ToList();
+            });
+
+            return contactPoints;
+        }
+
+        /// <summary>
+        /// Checks if number contains country code, if not it adds the country code for Norway if number starts with 4 or 9
+        /// </summary>
+        internal string EnsureCountryCode(string mobileNumber)
+        {
+            PhoneNumber phoneNumber = _phoneNumberUtil.Parse(mobileNumber, null);
+            _phoneNumberUtil.IsValidNumber(phoneNumber);
+
+            // todo: wwrite tests and complete logic
+            return mobileNumber;
         }
     }
 }
