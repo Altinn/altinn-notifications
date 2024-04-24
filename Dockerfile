@@ -19,7 +19,7 @@ WORKDIR /app
 EXPOSE 5090
 
 COPY --from=build /app/out .
-COPY --from=build /Altinn.Notifications.Persistence/Migration ./Migration
+COPY --from=build /app/src/Altinn.Notifications.Persistence/Migration ./Migration
 COPY src/Altinn.Notifications/Views ./Views
 
 RUN addgroup -g 3000 dotnet && adduser -u 1000 -G dotnet -D -s /bin/false dotnet
