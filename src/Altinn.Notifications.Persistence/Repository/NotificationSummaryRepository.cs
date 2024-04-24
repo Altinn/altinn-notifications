@@ -45,7 +45,7 @@ public class NotificationSummaryRepository : INotificationSummaryRepository
                 reader.GetValue<Guid>("alternateid"),
                 new EmailRecipient()
                 {
-                    OrganisationNumber = reader.GetValue<string?>("recipientorgno"),
+                    OrganizationNumber = reader.GetValue<string?>("recipientorgno"),
                     NationalIdentityNumber = reader.GetValue<string?>("recipientnin"),
                     ToAddress = reader.GetValue<string>("toaddress")
                 },
@@ -76,7 +76,7 @@ public class NotificationSummaryRepository : INotificationSummaryRepository
                 reader.GetValue<Guid>("alternateid"),
                 new SmsRecipient()
                 {
-                    OrganisationNumber = reader.GetValue<string?>("recipientorgno"),
+                    OrganizationNumber = reader.GetValue<string?>("recipientorgno"),
                     NationalIdentityNumber = reader.GetValue<string>("recipientnin"),
                     MobileNumber = reader.GetValue<string>("mobilenumber")
                 },

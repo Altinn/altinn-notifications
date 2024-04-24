@@ -10,9 +10,9 @@ namespace Altinn.Notifications.Core.Models;
 public class Recipient
 {
     /// <summary>
-    /// Gets the recipient's organisation number
+    /// Gets the recipient's organization number
     /// </summary>
-    public string? OrganisationNumber { get; set; } = null;
+    public string? OrganizationNumber { get; set; } = null;
 
     /// <summary>
     /// Gets the recipient's national identity number
@@ -32,9 +32,9 @@ public class Recipient
     /// <summary>
     /// Initializes a new instance of the <see cref="Recipient"/> class.
     /// </summary>
-    public Recipient(List<IAddressPoint> addressInfo, string? organisationNumber = null, string? nationalIdentityNumber = null)
+    public Recipient(List<IAddressPoint> addressInfo, string? organizationNumber = null, string? nationalIdentityNumber = null)
     {
-        OrganisationNumber = organisationNumber;
+        OrganizationNumber = organizationNumber;
         NationalIdentityNumber = nationalIdentityNumber;
         AddressInfo = addressInfo;
     }

@@ -32,12 +32,12 @@ public class EmailOrderProcessingServiceTests
             {
                 new()
                 {
-                OrganisationNumber = "123456",
+                OrganizationNumber = "123456",
                 AddressInfo = [new EmailAddressPoint("email@test.com")]
                 },
                 new()
                 {
-                OrganisationNumber = "654321",
+                OrganizationNumber = "654321",
                 AddressInfo = [new EmailAddressPoint("email@test.com")]
                 }
             }
@@ -69,11 +69,11 @@ public class EmailOrderProcessingServiceTests
             RequestedSendTime = requested,
             Recipients = new List<Recipient>()
             {
-                new(new List<IAddressPoint>() { new EmailAddressPoint("test@test.com") }, organisationNumber: "skd-orgno")
+                new(new List<IAddressPoint>() { new EmailAddressPoint("test@test.com") }, organizationNumber: "skd-orgno")
             }
         };
 
-        Recipient expectedRecipient = new(new List<IAddressPoint>() { new EmailAddressPoint("test@test.com") }, organisationNumber: "skd-orgno");
+        Recipient expectedRecipient = new(new List<IAddressPoint>() { new EmailAddressPoint("test@test.com") }, organizationNumber: "skd-orgno");
 
         var serviceMock = new Mock<IEmailNotificationService>();
         serviceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.Is<DateTime>(d => d.Equals(requested)), It.Is<Recipient>(r => AssertUtils.AreEquivalent(expectedRecipient, r)), It.IsAny<bool>()));
@@ -168,7 +168,7 @@ public class EmailOrderProcessingServiceTests
             {
                 new(),
                 new(new List<IAddressPoint>() { new EmailAddressPoint("test@test.com") }, nationalIdentityNumber: "enduser-nin"),
-                new(new List<IAddressPoint>() { new EmailAddressPoint("test@test.com") }, organisationNumber : "skd-orgNo"),
+                new(new List<IAddressPoint>() { new EmailAddressPoint("test@test.com") }, organizationNumber : "skd-orgNo"),
                 new(new List<IAddressPoint>() { new EmailAddressPoint("test@domain.com") })
             }
         };
@@ -179,7 +179,7 @@ public class EmailOrderProcessingServiceTests
         var emailRepoMock = new Mock<IEmailNotificationRepository>();
         emailRepoMock.Setup(e => e.GetRecipients(It.IsAny<Guid>())).ReturnsAsync(new List<EmailRecipient>()
         {
-            new() { OrganisationNumber = "skd-orgNo", ToAddress = "test@test.com" },
+            new() { OrganizationNumber = "skd-orgNo", ToAddress = "test@test.com" },
             new() { NationalIdentityNumber = "enduser-nin", ToAddress = "test@test.com" }
         });
 

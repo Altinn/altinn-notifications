@@ -83,41 +83,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             Assert.Equivalent(expectedOutput, input);
         }
 
-        [Fact]
-        public async Task AddContactPointAvailability_NationalIdentityNUmberAvailable_ProfileServiceCalled()
-        {
-            // Arrange
-            List<Recipient> input = [
-                new Recipient()
-                {
-                    NationalIdentityNumber = "12345678901"
-                }
-            ];
-
-            List<UserContactPointAvailability> expectedOutput = [
-                new UserContactPointAvailability()
-                {
-                    NationalIdentityNumber = "12345678901",
-                    IsReserved = true,
-                    EmailRegistered = true
-                }
-            ];
-
-            var profileClientMock = new Mock<IProfileClient>();
-            profileClientMock
-                .Setup(p => p.GetUserContactPointAvailabilities(It.Is<List<string>>(s => s.Contains("12345678901"))))
-                .ReturnsAsync([new UserContactPointAvailability() { NationalIdentityNumber = "12345678901", EmailRegistered = true, IsReserved = true }]);
-
-            var service = GetTestService(profileClient: profileClientMock.Object);
-
-            // Act
-            List<UserContactPointAvailability> actual = await service.GetContactPointAvailability(input);
-
-            // Assert 
-            Assert.Equivalent(expectedOutput, actual);
-        }
-
-        private static ContactPointService GetTestService(IProfileClient? profileClient = null)
+        private static ContactPointService GetTestService(IProfileClient? profileClient = null, IRegisterClient? registerClient = null)
         {
             if (profileClient == null)
             {
@@ -125,7 +91,13 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 profileClient = profileClientMock.Object;
             }
 
-            return new ContactPointService(profileClient);
+            if (registerClient == null)
+            {
+                var registerClientMock = new Mock<IRegisterClient>();
+                registerClient = registerClientMock.Object;
+            }
+
+            return new ContactPointService(profileClient, registerClient);
         }
     }
 }

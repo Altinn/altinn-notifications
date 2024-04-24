@@ -63,7 +63,7 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
 
             if (!smsRecipients.Exists(sr =>
                 sr.NationalIdentityNumber == recipient.NationalIdentityNumber
-                && sr.OrganisationNumber == recipient.OrganisationNumber
+                && sr.OrganizationNumber == recipient.OrganizationNumber
                 && sr.MobileNumber == addressPoint?.MobileNumber))
             {
                 await _smsService.CreateNotification(order.Id, order.RequestedSendTime, recipient, smsCount);

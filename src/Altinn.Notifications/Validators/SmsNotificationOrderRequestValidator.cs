@@ -24,9 +24,9 @@ public class SmsNotificationOrderRequestValidator : AbstractValidator<SmsNotific
              {
                  return
                      (!string.IsNullOrWhiteSpace(a.MobileNumber) && IsValidMobileNumber(a.MobileNumber)) ||
-                     (!string.IsNullOrWhiteSpace(a.OrganisationNumber) ^ !string.IsNullOrWhiteSpace(a.NationalIdentityNumber));
+                     (!string.IsNullOrWhiteSpace(a.OrganizationNumber) ^ !string.IsNullOrWhiteSpace(a.NationalIdentityNumber));
              }))
-            .WithMessage("Either a valid mobile number starting with country code, organisation number, or national identity number must be provided for each recipient.");
+            .WithMessage("Either a valid mobile number starting with country code, organization number, or national identity number must be provided for each recipient.");
 
         RuleFor(order => order.RequestedSendTime)
             .Must(sendTime => sendTime.Kind != DateTimeKind.Unspecified)

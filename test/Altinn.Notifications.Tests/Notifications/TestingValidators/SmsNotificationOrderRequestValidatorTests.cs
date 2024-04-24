@@ -47,7 +47,7 @@ public class SmsNotificationOrderRequestValidatorTests
         var actual = _validator.Validate(order);
 
         Assert.False(actual.IsValid);
-        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("Either a valid mobile number starting with country code, organisation number, or national identity number must be provided for each recipient."));
+        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("Either a valid mobile number starting with country code, organization number, or national identity number must be provided for each recipient."));
     }
 
     [Fact]
@@ -63,7 +63,7 @@ public class SmsNotificationOrderRequestValidatorTests
         var actual = _validator.Validate(order);
 
         Assert.False(actual.IsValid);
-        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("Either a valid mobile number starting with country code, organisation number, or national identity number must be provided for each recipient."));
+        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("Either a valid mobile number starting with country code, organization number, or national identity number must be provided for each recipient."));
     }
 
     [Fact]

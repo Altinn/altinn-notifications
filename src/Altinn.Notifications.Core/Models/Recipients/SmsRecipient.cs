@@ -6,9 +6,9 @@ namespace Altinn.Notifications.Core.Models.Recipients;
 public class SmsRecipient
 {
     /// <summary>
-    /// Gets or sets the recipient's organisation number
+    /// Gets or sets the recipient's organization number
     /// </summary>
-    public string? OrganisationNumber { get; set; } = null;
+    public string? OrganizationNumber { get; set; } = null;
 
     /// <summary>
     /// Gets or sets the recipient's national identity number

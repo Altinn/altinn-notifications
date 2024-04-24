@@ -4,6 +4,7 @@ using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Health;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.Integrations.Kafka.Producers;
+using Altinn.Notifications.Integrations.Register;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -47,9 +48,9 @@ public static class ServiceCollectionExtensions
             .Get<PlatformSettings>()
             ?? throw new ArgumentNullException(nameof(config), "Required PlatformSettings is missing from application configuration");
 
-        services
-            .Configure<PlatformSettings>(config.GetSection(nameof(PlatformSettings)))
-            .AddHttpClient<IProfileClient, ProfileClient>();
+        services.Configure<PlatformSettings>(config.GetSection(nameof(PlatformSettings)));
+        services.AddHttpClient<IProfileClient, ProfileClient>();
+        services.AddHttpClient<IRegisterClient, RegisterClient>();
     }
 
     /// <summary>

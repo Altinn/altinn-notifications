@@ -47,7 +47,7 @@ public class EmailNotificationService : IEmailNotificationService
 
         EmailRecipient emailRecipient = new()
         {
-            OrganisationNumber = recipient.OrganisationNumber,
+            OrganizationNumber = recipient.OrganizationNumber,
             NationalIdentityNumber = recipient.NationalIdentityNumber,
             ToAddress = addressPoint?.EmailAddress ?? string.Empty,
             IsReserved = recipient.IsReserved

@@ -116,7 +116,7 @@ public class EmailNotificationRepository : IEmailNotificationRepository
             {
                 searchResult.Add(new EmailRecipient() 
                 {
-                    OrganisationNumber = reader.GetValue<string?>("recipientorgno"),
+                    OrganizationNumber = reader.GetValue<string?>("recipientorgno"),
                     NationalIdentityNumber = reader.GetValue<string?>("recipientnin"),
                     ToAddress = reader.GetValue<string>("toaddress")
                 });

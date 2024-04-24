@@ -108,7 +108,7 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
         Assert.Single(actual);
         Assert.Equal(expectedRecipient.ToAddress, actualRecipient.ToAddress);
         Assert.Equal(expectedRecipient.NationalIdentityNumber, actualRecipient.NationalIdentityNumber);
-        Assert.Equal(expectedRecipient.OrganisationNumber, actualRecipient.OrganisationNumber);
+        Assert.Equal(expectedRecipient.OrganizationNumber, actualRecipient.OrganizationNumber);
     }
 
     [Fact]

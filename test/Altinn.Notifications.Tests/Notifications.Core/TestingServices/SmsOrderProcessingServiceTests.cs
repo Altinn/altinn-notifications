@@ -67,12 +67,12 @@ public class SmsOrderProcessingServiceTests
             {
                 new()
                 {
-                OrganisationNumber = "123456",
+                OrganizationNumber = "123456",
                 AddressInfo = [new SmsAddressPoint("+4799999999")]
                 },
                 new()
                 {
-                OrganisationNumber = "654321",
+                OrganizationNumber = "654321",
                 AddressInfo = [new SmsAddressPoint("+4799999999")]
                 }
             },
@@ -149,7 +149,7 @@ public class SmsOrderProcessingServiceTests
             {
                 new Recipient(),
                 new Recipient(new List<IAddressPoint>() { new SmsAddressPoint("+4799999999") }, nationalIdentityNumber: "enduser-nin"),
-                new Recipient(new List<IAddressPoint>() { new SmsAddressPoint("+4799999999") }, organisationNumber: "skd-orgNo"),
+                new Recipient(new List<IAddressPoint>() { new SmsAddressPoint("+4799999999") }, organizationNumber: "skd-orgNo"),
                 new Recipient(new List<IAddressPoint>() { new SmsAddressPoint("+4749999999") })
             },
             Templates = [new SmsTemplate("Altinn", "this is the body")]
@@ -162,7 +162,7 @@ public class SmsOrderProcessingServiceTests
         smsRepoMock.Setup(e => e.GetRecipients(It.IsAny<Guid>())).ReturnsAsync(
             [
                 new SmsRecipient() { NationalIdentityNumber = "enduser-nin", MobileNumber = "+4799999999" },
-                new SmsRecipient() { OrganisationNumber = "skd-orgNo", MobileNumber = "+4799999999" }
+                new SmsRecipient() { OrganizationNumber = "skd-orgNo", MobileNumber = "+4799999999" }
             ]);
 
         var service = GetTestService(smsRepo: smsRepoMock.Object, smsService: notificationServiceMock.Object);
