@@ -50,6 +50,39 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         }
 
         [Fact]
+        public async Task AddSmsContactPoints_OrganizationNumberAvailable_RegisterServiceCalled()
+        {
+            // Arrange
+            List<Recipient> input = [
+                new Recipient()
+                {
+                    OrganizationNumber = "12345678901"
+                }
+            ];
+
+            List<Recipient> expectedOutput = [
+                new Recipient()
+                {
+                    OrganizationNumber = "12345678901",
+                    AddressInfo = [new SmsAddressPoint("+4799999999")]
+                }
+            ];
+
+            var registerClientMock = new Mock<IRegisterClient>();
+            registerClientMock
+                .Setup(p => p.GetOrganizationContactPoints(It.Is<List<string>>(s => s.Contains("12345678901"))))
+                .ReturnsAsync([new OrganizationContactPoints() { OrganizationNumber = "12345678901", MobileNumberList = ["+4799999999"] }]);
+
+            var service = GetTestService(registerClient: registerClientMock.Object);
+
+            // Act
+            await service.AddSmsContactPoints(input);
+
+            // Assert 
+            Assert.Equivalent(expectedOutput, input);
+        }
+
+        [Fact]
         public async Task AddEmailContactPoints_NationalIdentityNumberAvailable_ProfileServiceCalled()
         {
             // Arrange
@@ -75,6 +108,39 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 .ReturnsAsync([new UserContactPoints() { NationalIdentityNumber = "12345678901", Email = "email@domain.com", IsReserved = true }]);
 
             var service = GetTestService(profileClient: profileClientMock.Object);
+
+            // Act
+            await service.AddEmailContactPoints(input);
+
+            // Assert 
+            Assert.Equivalent(expectedOutput, input);
+        }
+
+        [Fact]
+        public async Task AddEmailContactPoints_OrganizationNumberAvailable_RegisterServiceCalled()
+        {
+            // Arrange
+            List<Recipient> input = [
+                new Recipient()
+                {
+                    OrganizationNumber = "12345678901"
+                }
+            ];
+
+            List<Recipient> expectedOutput = [
+                new Recipient()
+                {
+                    OrganizationNumber = "12345678901",
+                    AddressInfo = [new EmailAddressPoint("email@domain.com")]
+                }
+            ];
+
+            var registerClientMock = new Mock<IRegisterClient>();
+            registerClientMock
+                .Setup(p => p.GetOrganizationContactPoints(It.Is<List<string>>(s => s.Contains("12345678901"))))
+                .ReturnsAsync([new OrganizationContactPoints() { OrganizationNumber = "12345678901", EmailList = ["email@domain.com"] }]);
+
+            var service = GetTestService(registerClient: registerClientMock.Object);
 
             // Act
             await service.AddEmailContactPoints(input);
