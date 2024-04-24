@@ -123,7 +123,7 @@ namespace Altinn.Notifications.Core.Services
 
             // TODO: ensure all mobile numbers have country code before returning
             return orgNos.Count > 0
-             ? await _registerClient.GeOrganizationContactPoints(orgNos)
+             ? await _registerClient.GetOrganizationContactPoints(orgNos)
              : new List<OrganizationContactPoints>();
         }
     }

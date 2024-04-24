@@ -12,6 +12,6 @@ namespace Altinn.Notifications.Core.Integrations
         /// </summary>
         /// <param name="organizationNumbers">A list of organization numbers to look up contact points for</param>
         /// <returns>A list of <see cref="OrganizationContactPoints"/> for the provided organizations</returns>
-        public Task<List<OrganizationContactPoints>> GeOrganizationContactPoints(List<string> organizationNumbers);
+        public Task<List<OrganizationContactPoints>> GetOrganizationContactPoints(List<string> organizationNumbers);
     }
 }

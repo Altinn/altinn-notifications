@@ -49,26 +49,4 @@ public class ProfileClient : IProfileClient
         List<UserContactPoints>? contactPoints = JsonSerializer.Deserialize<UserContactPointsList>(responseContent, JsonSerializerOptionsProvider.Options)!.ContactPointList;
         return contactPoints!;
     }
-
-    /// <inheritdoc/>
-    public async Task<List<UserContactPointAvailability>> GetUserContactPointAvailabilities(List<string> nationalIdentityNumbers)
-    {
-        var lookupObject = new UserContactPointLookup
-        {
-            NationalIdentityNumbers = nationalIdentityNumbers
-        };
-
-        HttpContent content = new StringContent(JsonSerializer.Serialize(lookupObject, JsonSerializerOptionsProvider.Options), Encoding.UTF8, "application/json");
-
-        var response = await _client.PostAsync("users/contactpoint/availability", content);
-
-        if (!response.IsSuccessStatusCode)
-        {
-            throw new PlatformHttpException(response, $"ProfileClient.GetUserContactPointAvailabilities failed with status code {response.StatusCode}");
-        }
-
-        string responseContent = await response.Content.ReadAsStringAsync();
-        List<UserContactPointAvailability>? contactPoints = JsonSerializer.Deserialize<UserContactPointAvailabilityList>(responseContent, JsonSerializerOptionsProvider.Options)!.AvailabilityList;
-        return contactPoints!;
-    }
 }

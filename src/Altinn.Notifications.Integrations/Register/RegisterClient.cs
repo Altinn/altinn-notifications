@@ -28,7 +28,7 @@ namespace Altinn.Notifications.Integrations.Register
         }
 
         /// <inheritdoc/>
-        public async Task<List<OrganizationContactPoints>> GeOrganizationContactPoints(List<string> organizationNumbers)
+        public async Task<List<OrganizationContactPoints>> GetOrganizationContactPoints(List<string> organizationNumbers)
         {
             var lookupObject = new OrgContactPointLookup
             {
@@ -41,7 +41,7 @@ namespace Altinn.Notifications.Integrations.Register
 
             if (!response.IsSuccessStatusCode)
             {
-                throw new PlatformHttpException(response, $"RegisterClient.GetUnitContactPoints failed with status code {response.StatusCode}");
+                throw new PlatformHttpException(response, $"RegisterClient.GetOrganizationContactPoints failed with status code {response.StatusCode}");
             }
 
             string responseContent = await response.Content.ReadAsStringAsync();
