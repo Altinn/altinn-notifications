@@ -92,7 +92,11 @@ public class RegisterClientTests
                 contentData = new OrgContactPointsList() { ContactPointsList = new List<OrganizationContactPoints>() };
                 break;
             case "populated-list":
-                contentData = GetPopulatedListContent();
+                contentData = new List<OrganizationContactPoints>
+                    {
+                        new OrganizationContactPoints() { OrganizationNumber = "910011154", EmailList = [] },
+                        new OrganizationContactPoints() { OrganizationNumber = "910011155", EmailList = [] }
+                    };
                 break;
             case "unavailable":
                 statusCode = HttpStatusCode.ServiceUnavailable;
@@ -107,15 +111,5 @@ public class RegisterClientTests
                 StatusCode = statusCode,
                 Content = content
             });
-    }
-
-    private static object? GetPopulatedListContent()
-    {
-        var contactPointsList = new List<OrganizationContactPoints>
-            {
-                new OrganizationContactPoints() { OrganizationNumber = "910011154", EmailList = [] },
-                new OrganizationContactPoints() { OrganizationNumber = "910011155", EmailList = [] }
-            };
-        return new OrgContactPointsList() { ContactPointsList = contactPointsList };
     }
 }

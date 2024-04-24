@@ -93,7 +93,11 @@ public class ProfileClientTests
                 contentData = new UserContactPointsList() { ContactPointsList = new List<UserContactPoints>() };
                 break;
             case "populated-list":
-                contentData = GetPopulatedListContent();
+                contentData = new List<UserContactPoints>
+                    {
+                        new UserContactPoints() { NationalIdentityNumber = "01025101038", Email = string.Empty },
+                        new UserContactPoints() { NationalIdentityNumber = "01025101037", Email = string.Empty }
+                    };
                 break;
             case "unavailable":
                 statusCode = HttpStatusCode.ServiceUnavailable;
@@ -108,15 +112,5 @@ public class ProfileClientTests
                 StatusCode = statusCode,
                 Content = content
             });
-    }
-
-    private static object? GetPopulatedListContent()
-    {
-        var contactPointsList = new List<UserContactPoints>
-            {
-                new UserContactPoints() { NationalIdentityNumber = "01025101038", Email = string.Empty },
-                new UserContactPoints() { NationalIdentityNumber = "01025101037", Email = string.Empty }
-            };
-        return new UserContactPointsList() { ContactPointsList = contactPointsList };
     }
 }
