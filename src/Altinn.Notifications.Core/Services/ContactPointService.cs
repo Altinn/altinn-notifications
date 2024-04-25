@@ -36,7 +36,11 @@ namespace Altinn.Notifications.Core.Services
                 recipients,
                 (recipient, userContactPoints) =>
                 {
-                    recipient.AddressInfo.Add(new EmailAddressPoint(userContactPoints.Email));
+                    if (!string.IsNullOrEmpty(userContactPoints.Email))
+                    {
+                        recipient.AddressInfo.Add(new EmailAddressPoint(userContactPoints.Email));
+                    }
+
                     return recipient;
                 },
                 (recipient, orgContactPoints) =>
@@ -53,7 +57,11 @@ namespace Altinn.Notifications.Core.Services
                 recipients,
                 (recipient, userContactPoints) =>
                 {
-                    recipient.AddressInfo.Add(new SmsAddressPoint(userContactPoints.MobileNumber));
+                    if (!string.IsNullOrEmpty(userContactPoints.MobileNumber))
+                    {
+                        recipient.AddressInfo.Add(new SmsAddressPoint(userContactPoints.MobileNumber));
+                    }
+
                     return recipient;
                 },
                 (recipient, orgContactPoints) =>
