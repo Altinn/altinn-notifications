@@ -10,6 +10,7 @@ RUN dotnet restore ./src/Altinn.Notifications/Altinn.Notifications.csproj
 
 # Copy everything else and build
 COPY src ./src
+RUN dotnet build ./src/DbTools/DbTools.csproj -c Release -o /app_tools
 RUN dotnet publish -c Release -o out ./src/Altinn.Notifications/Altinn.Notifications.csproj
 
 # Build runtime image
@@ -18,7 +19,7 @@ WORKDIR /app
 EXPOSE 5090
 
 COPY --from=build /app/out .
-COPY src/Altinn.Notifications.Persistence/Migration ./Migration
+COPY --from=build /app/src/Altinn.Notifications.Persistence/Migration ./Migration
 COPY src/Altinn.Notifications/Views ./Views
 
 RUN addgroup -g 3000 dotnet && adduser -u 1000 -G dotnet -D -s /bin/false dotnet
