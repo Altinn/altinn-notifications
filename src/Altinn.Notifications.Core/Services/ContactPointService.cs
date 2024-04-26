@@ -16,7 +16,6 @@ namespace Altinn.Notifications.Core.Services
     {
         private readonly IProfileClient _profileClient;
         private readonly IRegisterClient _registerClient;
-        private readonly PhoneNumberUtil _phoneNumberUtil;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ContactPointService"/> class.
@@ -25,7 +24,6 @@ namespace Altinn.Notifications.Core.Services
         {
             _profileClient = profile;
             _registerClient = register;
-            _phoneNumberUtil = PhoneNumberUtil.GetInstance();
         }
 
         /// <inheritdoc/>
