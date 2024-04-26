@@ -1,5 +1,4 @@
-﻿using System.Text.RegularExpressions;
-
+﻿using Altinn.Notifications.Core.Helpers;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
@@ -146,24 +145,12 @@ namespace Altinn.Notifications.Core.Services
                 contactPoint.MobileNumberList = contactPoint.MobileNumberList
                     .Select(mobileNumber =>
                     {
-                        return EnsureCountryCode(mobileNumber);
+                        return MobileNumberHelper.EnsureCountryCodeIfValidNumber(mobileNumber);
                     })
                     .ToList();
             });
 
             return contactPoints;
-        }
-
-        /// <summary>
-        /// Checks if number contains country code, if not it adds the country code for Norway if number starts with 4 or 9
-        /// </summary>
-        internal string EnsureCountryCode(string mobileNumber)
-        {
-            PhoneNumber phoneNumber = _phoneNumberUtil.Parse(mobileNumber, null);
-            _phoneNumberUtil.IsValidNumber(phoneNumber);
-
-            // todo: wwrite tests and complete logic
-            return mobileNumber;
-        }
+        }    
     }
 }

@@ -93,11 +93,14 @@ public class ProfileClientTests
                 contentData = new UserContactPointsList() { ContactPointsList = new List<UserContactPoints>() };
                 break;
             case "populated-list":
-                contentData = new List<UserContactPoints>
-                    {
+                contentData = new UserContactPointsList()
+                {
+                    ContactPointsList =
+                    [
                         new UserContactPoints() { NationalIdentityNumber = "01025101038", Email = string.Empty },
                         new UserContactPoints() { NationalIdentityNumber = "01025101037", Email = string.Empty }
-                    };
+                    ]
+                };
                 break;
             case "unavailable":
                 statusCode = HttpStatusCode.ServiceUnavailable;

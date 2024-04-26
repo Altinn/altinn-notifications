@@ -92,11 +92,14 @@ public class RegisterClientTests
                 contentData = new OrgContactPointsList() { ContactPointsList = new List<OrganizationContactPoints>() };
                 break;
             case "populated-list":
-                contentData = new List<OrganizationContactPoints>
-                    {
+                contentData = new OrgContactPointsList
+                {
+                    ContactPointsList =
+                    [
                         new OrganizationContactPoints() { OrganizationNumber = "910011154", EmailList = [] },
                         new OrganizationContactPoints() { OrganizationNumber = "910011155", EmailList = [] }
-                    };
+                    ]
+                };
                 break;
             case "unavailable":
                 statusCode = HttpStatusCode.ServiceUnavailable;
