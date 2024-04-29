@@ -5,8 +5,6 @@ using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.ContactPoints;
 using Altinn.Notifications.Core.Services.Interfaces;
 
-using PhoneNumbers;
-
 namespace Altinn.Notifications.Core.Services
 {
     /// <summary>
@@ -75,7 +73,7 @@ namespace Altinn.Notifications.Core.Services
         {
             List<Recipient> augmentedRecipients = [];
 
-            var userLookupTask = LookupUserContactPoints(recipients);
+            var userLookupTask = LookupPersonContactPoints(recipients);
             var orgLookupTask = LookupOrganizationContactPoints(recipients);
             await Task.WhenAll(userLookupTask, orgLookupTask);
 
@@ -110,16 +108,26 @@ namespace Altinn.Notifications.Core.Services
             return augmentedRecipients;
         }
 
-        private async Task<List<UserContactPoints>> LookupUserContactPoints(List<Recipient> recipients)
+        private async Task<List<UserContactPoints>> LookupPersonContactPoints(List<Recipient> recipients)
         {
             List<string> nins = recipients
                     .Where(r => !string.IsNullOrEmpty(r.NationalIdentityNumber))
                     .Select(r => r.NationalIdentityNumber!)
                     .ToList();
 
-            return nins.Count > 0
-              ? await _profileClient.GetUserContactPoints(nins)
-              : new List<UserContactPoints>();
+            if (nins.Count == 0)
+            {
+                return new List<UserContactPoints>();
+            }
+
+            List<UserContactPoints> contactPoints = await _profileClient.GetUserContactPoints(nins);
+
+            contactPoints.ForEach(contactPoint =>
+            {
+                contactPoint.MobileNumber = MobileNumberHelper.EnsureCountryCodeIfValidNumber(contactPoint.MobileNumber);
+            });
+
+            return contactPoints;
         }
 
         private async Task<List<OrganizationContactPoints>> LookupOrganizationContactPoints(List<Recipient> recipients)
@@ -149,6 +157,6 @@ namespace Altinn.Notifications.Core.Services
             });
 
             return contactPoints;
-        }    
+        }
     }
 }
