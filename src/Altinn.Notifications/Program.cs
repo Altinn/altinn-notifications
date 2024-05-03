@@ -6,6 +6,9 @@ using System.Text.Json.Serialization;
 using Altinn.Common.AccessToken;
 using Altinn.Common.AccessToken.Services;
 using Altinn.Common.PEP.Authorization;
+using Altinn.Common.PEP.Clients;
+using Altinn.Common.PEP.Implementation;
+using Altinn.Common.PEP.Interfaces;
 using Altinn.Notifications.Authorization;
 using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core.Extensions;
@@ -181,6 +184,11 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     ResourceLinkExtensions.Initialize(generalSettings.BaseUri);
     AddInputModelValidators(services);
     services.AddCoreServices(config);
+
+    services.Configure<Altinn.Common.PEP.Configuration.PlatformSettings>(config.GetSection("PlatformSettings"));
+    services.AddHttpClient<AuthorizationApiClient>();
+    services.AddSingleton<IPDP, PDPAppSI>();
+    services.AddSingleton<Altinn.Notifications.Authorization.IAuthorizationService, AuthorizationService>();
 
     services.AddKafkaServices(config);
     services.AddAltinnClients(config);
