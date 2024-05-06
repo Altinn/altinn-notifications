@@ -34,6 +34,7 @@ public class MobileNumberHelperTests
     [InlineData("", false)]
     [InlineData("111100000", false)]
     [InlineData("dasdsadSASA", false)]
+    [InlineData("+233242426224", true)]
     public void IsValidMobileNumber(string mobileNumber, bool expectedResult)
     {
         bool actual = MobileNumberHelper.IsValidMobileNumber(mobileNumber);

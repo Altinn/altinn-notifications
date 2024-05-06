@@ -41,7 +41,7 @@ namespace Altinn.Notifications.Integrations.Register
 
             if (!response.IsSuccessStatusCode)
             {
-                throw new PlatformHttpException(response, $"RegisterClient.GetOrganizationContactPoints failed with status code {response.StatusCode}");
+                throw await PlatformHttpException.CreateAsync(response);
             }
 
             string responseContent = await response.Content.ReadAsStringAsync();

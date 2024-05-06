@@ -117,7 +117,7 @@ namespace Altinn.Notifications.Core.Services
 
             if (nins.Count == 0)
             {
-                return new List<UserContactPoints>();
+                return [];
             }
 
             List<UserContactPoints> contactPoints = await _profileClient.GetUserContactPoints(nins);
