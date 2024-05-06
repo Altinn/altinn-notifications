@@ -38,7 +38,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             var profileClientMock = new Mock<IProfileClient>();
             profileClientMock
                 .Setup(p => p.GetUserContactPoints(It.Is<List<string>>(s => s.Contains("12345678901"))))
-                .ReturnsAsync([new UserContactPoints() { NationalIdentityNumber = "12345678901", MobileNumber = "99999999", IsReserved = true }]);
+                .ReturnsAsync([new UserContactPoints() { NationalIdentityNumber = "12345678901", MobileNumber = new("99999999"), IsReserved = true }]);
 
             var service = GetTestService(profileClient: profileClientMock.Object);
 
@@ -73,7 +73,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             var registerClientMock = new Mock<IRegisterClient>();
             registerClientMock
                 .Setup(p => p.GetOrganizationContactPoints(It.Is<List<string>>(s => s.Contains("12345678901"))))
-                .ReturnsAsync([new OrganizationContactPoints() { OrganizationNumber = "12345678901", MobileNumberList = ["+4799999999"] }]);
+                .ReturnsAsync([new OrganizationContactPoints() { OrganizationNumber = "12345678901", MobileNumberList = [new MobileNumber("+4799999999")] }]);
 
             var service = GetTestService(registerClient: registerClientMock.Object);
 

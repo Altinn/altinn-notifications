@@ -1,11 +1,10 @@
-﻿using Altinn.Notifications.Core.Helpers;
-using Altinn.Notifications.Validators;
+﻿using Altinn.Notifications.Core.Models;
 
 using Xunit;
 
-namespace Altinn.Notifications.Tests.Notifications.Core.TestingHelpers;
+namespace Altinn.Notifications.Tests.Notifications.Core.TestingModels;
 
-public class MobileNumberHelperTests
+public class MobileNumberTests
 {
     [Theory]
     [InlineData("99315000", "+4799315000")]
@@ -15,9 +14,10 @@ public class MobileNumberHelperTests
     [InlineData("00233517846", "+233517846")]
     [InlineData("81549300", "81549300")]
 
-    public void EnsureCountryCodeIfValidNumber(string input, string expectedOutput)
+    public void EnsureCountryCodeIfValid(string input, string expectedOutput)
     {
-        string actual = MobileNumberHelper.EnsureCountryCodeIfValidNumber(input);
+        MobileNumber mobileNumber = new MobileNumber(input);
+        string actual = mobileNumber.EnsureCountryCodeIfApplicable();
         Assert.Equal(expectedOutput, actual);
     }
 
@@ -34,9 +34,9 @@ public class MobileNumberHelperTests
     [InlineData("", false)]
     [InlineData("111100000", false)]
     [InlineData("dasdsadSASA", false)]
-    public void IsValidMobileNumber(string mobileNumber, bool expectedResult)
+    public void IsValidMobileNumber(string input, bool expectedResult)
     {
-        bool actual = MobileNumberHelper.IsValidMobileNumber(mobileNumber);
-        Assert.Equal(expectedResult, actual);
+        MobileNumber mobileNumber = new(input);
+        Assert.Equal(expectedResult, mobileNumber.IsValid);
     }
 }

@@ -1,5 +1,4 @@
-﻿using Altinn.Notifications.Core.Helpers;
-using Altinn.Notifications.Core.Integrations;
+﻿using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.ContactPoints;
@@ -52,16 +51,16 @@ namespace Altinn.Notifications.Core.Services
                 recipients,
                 (recipient, userContactPoints) =>
                 {
-                    if (!string.IsNullOrEmpty(userContactPoints.MobileNumber))
+                    if (!string.IsNullOrEmpty(userContactPoints.MobileNumber.ToString()))
                     {
-                        recipient.AddressInfo.Add(new SmsAddressPoint(userContactPoints.MobileNumber));
+                        recipient.AddressInfo.Add(new SmsAddressPoint(userContactPoints.MobileNumber.ToString()));
                     }
 
                     return recipient;
                 },
                 (recipient, orgContactPoints) =>
                 {
-                    recipient.AddressInfo.AddRange(orgContactPoints.MobileNumberList.Select(m => new SmsAddressPoint(m)).ToList());
+                    recipient.AddressInfo.AddRange(orgContactPoints.MobileNumberList.Select(m => new SmsAddressPoint(m.ToString())).ToList());
                     return recipient;
                 });
         }
@@ -124,7 +123,7 @@ namespace Altinn.Notifications.Core.Services
 
             contactPoints.ForEach(contactPoint =>
             {
-                contactPoint.MobileNumber = MobileNumberHelper.EnsureCountryCodeIfValidNumber(contactPoint.MobileNumber);
+                contactPoint.MobileNumber.EnsureCountryCodeIfApplicable();
             });
 
             return contactPoints;
@@ -148,12 +147,11 @@ namespace Altinn.Notifications.Core.Services
 
             contactPoints.ForEach(contactPoint =>
             {
-                contactPoint.MobileNumberList = contactPoint.MobileNumberList
-                    .Select(mobileNumber =>
+                contactPoint.MobileNumberList
+                    .ForEach(mobileNumber =>
                     {
-                        return MobileNumberHelper.EnsureCountryCodeIfValidNumber(mobileNumber);
-                    })
-                    .ToList();
+                        mobileNumber.EnsureCountryCodeIfApplicable();
+                    });
             });
 
             return contactPoints;

@@ -23,7 +23,7 @@ public class UserContactPoints
     /// <summary>
     /// Gets or sets the mobile number
     /// </summary>
-    public string MobileNumber { get; set; } = string.Empty;
+    public MobileNumber MobileNumber { get; set; } = new(string.Empty);
 
     /// <summary>
     /// Gets or sets the email address

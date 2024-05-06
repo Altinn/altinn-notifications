@@ -1,4 +1,4 @@
-﻿using Altinn.Notifications.Core.Helpers;
+﻿using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Models;
 
 using FluentValidation;
@@ -21,7 +21,7 @@ public class SmsNotificationOrderRequestValidator : AbstractValidator<SmsNotific
             .Must(recipients => recipients.TrueForAll(a =>
              {
                  return
-                     (!string.IsNullOrWhiteSpace(a.MobileNumber) && MobileNumberHelper.IsValidMobileNumber(a.MobileNumber)) ||
+                     new MobileNumber(a.MobileNumber).IsValid ||
                      (!string.IsNullOrWhiteSpace(a.OrganizationNumber) ^ !string.IsNullOrWhiteSpace(a.NationalIdentityNumber));
              }))
             .WithMessage("Either a valid mobile number starting with country code, organization number, or national identity number must be provided for each recipient.");
