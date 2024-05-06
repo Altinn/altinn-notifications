@@ -49,17 +49,17 @@ public class SmsNotificationService : ISmsNotificationService
         {
             OrganizationNumber = recipient.OrganizationNumber,
             NationalIdentityNumber = recipient.NationalIdentityNumber,
-            MobileNumber = addressPoint?.MobileNumber ?? string.Empty,
+            MobileNumber = addressPoint?.MobileNumber ?? new(string.Empty),
             IsReserved = recipient.IsReserved
         };
 
         if (recipient.IsReserved.HasValue && recipient.IsReserved.Value && !ignoreReservation)
         {
-            smsRecipient.MobileNumber = string.Empty; // not persisting mobile number for reserved recipient
+            smsRecipient.MobileNumber = new(string.Empty); // not persisting mobile number for reserved recipient
             await CreateNotificationForRecipient(orderId, requestedSendTime, smsRecipient, SmsNotificationResultType.Failed_RecipientReserved);
             return;
         }
-        else if (string.IsNullOrEmpty(addressPoint?.MobileNumber))
+        else if (string.IsNullOrEmpty(addressPoint?.MobileNumber.ToString()))
         {
             await CreateNotificationForRecipient(orderId, requestedSendTime, smsRecipient, SmsNotificationResultType.Failed_RecipientNotIdentified);
             return;

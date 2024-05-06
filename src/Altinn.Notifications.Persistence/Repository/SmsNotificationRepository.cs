@@ -79,7 +79,7 @@ public class SmsNotificationRepository : ISmsNotificationRepository
                 {
                     OrganizationNumber = reader.GetValue<string?>("recipientorgno"),
                     NationalIdentityNumber = reader.GetValue<string?>("recipientnin"),
-                    MobileNumber = reader.GetValue<string>("mobilenumber")
+                    MobileNumber = reader.GetValue<MobileNumber>("mobilenumber")
                 });
             }
         }

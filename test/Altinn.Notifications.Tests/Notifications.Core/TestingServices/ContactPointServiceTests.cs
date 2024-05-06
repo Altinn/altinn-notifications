@@ -47,8 +47,8 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             // Assert 
             Assert.Equivalent(expectedOutput, input);
-            string actualMobileNumber = ((SmsAddressPoint)input[0].AddressInfo[0]).MobileNumber;
-            Assert.Equal("+4799999999", actualMobileNumber);
+            MobileNumber actualMobileNumber = ((SmsAddressPoint)input[0].AddressInfo[0]).MobileNumber;
+            Assert.Equal("+4799999999", actualMobileNumber.ToString());
         }
 
         [Fact]

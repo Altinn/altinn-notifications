@@ -54,7 +54,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Core
                    Assert.Single(actualSummary.Notifications);
                    var actualNotification = actualSummary.Notifications[0];
                    Assert.Equal(SmsNotificationResultType.New, actualNotification.ResultStatus.Result);
-                   Assert.NotEmpty(actualNotification.Recipient.MobileNumber);
+                   Assert.NotEmpty(actualNotification.Recipient.MobileNumber.ToString());
                    Assert.Equal(notification.Id, actualNotification.Id);
                    Assert.Equivalent(notification.Recipient, actualNotification.Recipient);
                    return true;

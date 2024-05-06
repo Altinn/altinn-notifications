@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Mappers;
@@ -38,7 +39,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingMappers
                 Recipient = new()
                 {
                     OrganizationNumber = "12345678910",
-                    MobileNumber = "+4799999999"
+                    MobileNumber = new("+4799999999")
                 },
                 SendStatus = new()
                 {
@@ -54,7 +55,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingMappers
                 new SmsRecipient()
                 {
                     OrganizationNumber = "12345678910",
-                    MobileNumber = "+4799999999"
+                    MobileNumber = new MobileNumber("+4799999999")
                 },
                 new NotificationResult<SmsNotificationResultType>(
                 SmsNotificationResultType.Failed_RecipientNotIdentified,
@@ -82,7 +83,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingMappers
                 Recipient = new()
                 {
                     NationalIdentityNumber = "16069412345",
-                    MobileNumber = "+4799999999"
+                    MobileNumber = new("+4799999999")
                 },
                 SendStatus = new()
                 {
@@ -98,7 +99,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingMappers
                 new SmsRecipient()
                 {
                     NationalIdentityNumber = "16069412345",
-                    MobileNumber = "+4799999999"
+                    MobileNumber = new MobileNumber("+4799999999")
                 },
                 new NotificationResult<SmsNotificationResultType>(
                 SmsNotificationResultType.Accepted,

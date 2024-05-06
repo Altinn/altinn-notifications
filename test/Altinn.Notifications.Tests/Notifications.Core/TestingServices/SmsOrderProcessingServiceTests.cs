@@ -124,7 +124,7 @@ public class SmsOrderProcessingServiceTests
             {
                 Recipient augumentedRecipient = new() { AddressInfo = [new SmsAddressPoint("+4712345678")], NationalIdentityNumber = r[0].NationalIdentityNumber };
                 r.Clear();
-                r.Add(augumentedRecipient); 
+                r.Add(augumentedRecipient);
             });
 
         var service = GetTestService(smsService: notificationServiceMock.Object, contactPointService: contactPointServiceMock.Object);
@@ -161,8 +161,8 @@ public class SmsOrderProcessingServiceTests
         var smsRepoMock = new Mock<ISmsNotificationRepository>();
         smsRepoMock.Setup(e => e.GetRecipients(It.IsAny<Guid>())).ReturnsAsync(
             [
-                new SmsRecipient() { NationalIdentityNumber = "enduser-nin", MobileNumber = "+4799999999" },
-                new SmsRecipient() { OrganizationNumber = "skd-orgNo", MobileNumber = "+4799999999" }
+                new SmsRecipient() { NationalIdentityNumber = "enduser-nin", MobileNumber = new("+4799999999") },
+                new SmsRecipient() { OrganizationNumber = "skd-orgNo", MobileNumber = new("+4799999999") }
             ]);
 
         var service = GetTestService(smsRepo: smsRepoMock.Object, smsService: notificationServiceMock.Object);

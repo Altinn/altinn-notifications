@@ -1,4 +1,5 @@
 ﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
@@ -78,7 +79,7 @@ public class NotificationSummaryRepository : INotificationSummaryRepository
                 {
                     OrganizationNumber = reader.GetValue<string?>("recipientorgno"),
                     NationalIdentityNumber = reader.GetValue<string>("recipientnin"),
-                    MobileNumber = reader.GetValue<string>("mobilenumber")
+                    MobileNumber = reader.GetValue<MobileNumber>("mobilenumber")
                 },
                 new NotificationResult<SmsNotificationResultType>(
                     reader.GetValue<SmsNotificationResultType>("result"),

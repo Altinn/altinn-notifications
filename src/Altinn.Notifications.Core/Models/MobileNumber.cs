@@ -5,7 +5,7 @@ namespace Altinn.Notifications.Core.Models
     /// <summary>
     /// A class describing a mobile number and its properties
     /// </summary>
-    public sealed class MobileNumber : IEquatable<MobileNumber>
+    public sealed class MobileNumber : IEquatable<MobileNumber>, IEquatable<string>
     {
         private string _value;
 
@@ -17,15 +17,59 @@ namespace Altinn.Notifications.Core.Models
             _value = value;
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MobileNumber"/> class.
+        /// </summary>
+        public MobileNumber()
+        {
+            _value = string.Empty;
+        }
+
         /// <inheritdoc/>
         public bool Equals(MobileNumber? other)
         {
-            if (other == null)
+            if (string.IsNullOrEmpty(_value) && string.IsNullOrEmpty(other?._value))
+            {
+                return true;
+            }
+            else if (string.IsNullOrEmpty(_value) || string.IsNullOrEmpty(other?._value))
             {
                 return false;
             }
 
             return _value == other._value;
+        }
+
+        /// <summary>
+        /// Checks for equality
+        /// </summary>
+        public static bool operator ==(MobileNumber? obj1, MobileNumber? obj2)
+        {
+            if (string.IsNullOrEmpty(obj1?._value) && string.IsNullOrEmpty(obj2?._value))
+            {
+                return true;
+            }
+            else if (string.IsNullOrEmpty(obj1?._value) || string.IsNullOrEmpty(obj2?._value))
+            {
+                return false;
+            }
+
+            return obj1._value == obj2!._value;
+
+        }
+
+        /// <summary>
+        /// Checks for inequality
+        /// </summary>
+        public static bool operator !=(MobileNumber? obj1, MobileNumber? obj2)
+        {
+            return !(obj1 == obj2);
+        }
+
+        /// <inheritdoc/>
+        public bool Equals(string? other)
+        {
+            return _value.Equals(other);
         }
 
         /// <summary>
@@ -73,6 +117,15 @@ namespace Altinn.Notifications.Core.Models
                 _value = "+47" + _value;
             }
 
+            return _value;
+        }
+
+        /// <summary>
+        /// Converts to string value
+        /// </summary>
+        /// <returns></returns>
+        public override string ToString()
+        {
             return _value;
         }
     }

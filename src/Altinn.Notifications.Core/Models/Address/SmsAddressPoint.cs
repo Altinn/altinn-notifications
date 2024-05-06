@@ -1,4 +1,6 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using System.Text.Json.Serialization;
+
+using Altinn.Notifications.Core.Enums;
 
 namespace Altinn.Notifications.Core.Models.Address;
 
@@ -13,12 +15,16 @@ public class SmsAddressPoint : IAddressPoint
     /// <summary>
     /// Gets the email address
     /// </summary>
-    public string MobileNumber { get; internal set; }
+    [JsonIgnore]
+    public MobileNumber MobileNumber { get; internal set; }
+
+    [JsonPropertyName("MobileNumber")]
+    private string MobileNumberValue => MobileNumber.ToString();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsAddressPoint"/> class.
     /// </summary>
-    public SmsAddressPoint(string mobileNumber)
+    public SmsAddressPoint(MobileNumber mobileNumber)
     {
         AddressType = AddressType.Sms;
         MobileNumber = mobileNumber;
@@ -27,8 +33,18 @@ public class SmsAddressPoint : IAddressPoint
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsAddressPoint"/> class.
     /// </summary>
+    [JsonConstructor]
+    public SmsAddressPoint(string mobileNumber)
+    {
+        AddressType = AddressType.Sms;
+        MobileNumber = new MobileNumber(mobileNumber);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SmsAddressPoint"/> class.
+    /// </summary>
     internal SmsAddressPoint()
     {
-        MobileNumber = string.Empty;
+        MobileNumber = new(string.Empty);
     }
 }

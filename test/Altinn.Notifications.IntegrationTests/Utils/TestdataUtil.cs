@@ -120,11 +120,7 @@ public static class TestdataUtil
                 {
                     AddressInfo = new()
                     {
-                        new SmsAddressPoint()
-                        {
-                            AddressType = AddressType.Sms,
-                            MobileNumber = "+4799999999"
-                        }
+                        new SmsAddressPoint("+4799999999")
                     }
                 }
             }

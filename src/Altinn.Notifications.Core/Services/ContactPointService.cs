@@ -53,14 +53,14 @@ namespace Altinn.Notifications.Core.Services
                 {
                     if (!string.IsNullOrEmpty(userContactPoints.MobileNumber.ToString()))
                     {
-                        recipient.AddressInfo.Add(new SmsAddressPoint(userContactPoints.MobileNumber.ToString()));
+                        recipient.AddressInfo.Add(new SmsAddressPoint(userContactPoints.MobileNumber));
                     }
 
                     return recipient;
                 },
                 (recipient, orgContactPoints) =>
                 {
-                    recipient.AddressInfo.AddRange(orgContactPoints.MobileNumberList.Select(m => new SmsAddressPoint(m.ToString())).ToList());
+                    recipient.AddressInfo.AddRange(orgContactPoints.MobileNumberList.Select(m => new SmsAddressPoint(m)).ToList());
                     return recipient;
                 });
         }

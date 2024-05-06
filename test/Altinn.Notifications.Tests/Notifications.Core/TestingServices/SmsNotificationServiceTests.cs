@@ -66,7 +66,7 @@ public class SmsNotificationServiceTests
             RequestedSendTime = requestedSendTime,
             Recipient = new()
             {
-                MobileNumber = "+4799999999"
+                MobileNumber = new("+4799999999")
             },
             SendResult = new(SmsNotificationResultType.New, dateTimeOutput),
         };
@@ -135,7 +135,7 @@ public class SmsNotificationServiceTests
             Recipient = new()
             {
                 IsReserved = true,
-                MobileNumber = "+4799999999"
+                MobileNumber = new("+4799999999")
             },
             SendResult = new(SmsNotificationResultType.New, dateTimeOutput),
         };

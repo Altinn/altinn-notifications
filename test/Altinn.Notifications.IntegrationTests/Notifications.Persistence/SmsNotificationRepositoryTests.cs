@@ -52,7 +52,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
             Recipient = new()
             {
                 NationalIdentityNumber = "16069412345",
-                MobileNumber = "999999999"
+                MobileNumber = new MobileNumber("99999999")
             }
         };
 

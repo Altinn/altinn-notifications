@@ -231,6 +231,6 @@ public static class OrderMapper
             .Find(a => a.AddressType.Equals(AddressType.Sms))
             as SmsAddressPoint;
 
-        return smsAddressPoint?.MobileNumber;
+        return smsAddressPoint?.MobileNumber.ToString();
     }
 }

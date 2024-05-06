@@ -45,7 +45,7 @@ namespace Altinn.Notifications.Mappers
                 {
                     OrganizationNumber = notification.Recipient.OrganizationNumber,
                     NationalIdentityNumber = notification.Recipient.NationalIdentityNumber,
-                    MobileNumber = notification.Recipient.MobileNumber
+                    MobileNumber = notification.Recipient.MobileNumber.ToString()
                 },
                 SendStatus = new()
                 {
