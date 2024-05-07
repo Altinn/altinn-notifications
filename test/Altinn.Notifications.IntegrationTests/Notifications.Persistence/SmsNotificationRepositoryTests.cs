@@ -107,7 +107,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
         Assert.Single(actual);
         Assert.Equal(expectedRecipient.MobileNumber, actualRecipient.MobileNumber);
         Assert.Equal(expectedRecipient.NationalIdentityNumber, actualRecipient.NationalIdentityNumber);
-        Assert.Equal(expectedRecipient.OrganisationNumber, actualRecipient.OrganisationNumber);
+        Assert.Equal(expectedRecipient.OrganizationNumber, actualRecipient.OrganizationNumber);
     }
 
     [Fact]

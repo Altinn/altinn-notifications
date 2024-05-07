@@ -47,7 +47,7 @@ public class SmsNotificationOrderRequestValidatorTests
         var actual = _validator.Validate(order);
 
         Assert.False(actual.IsValid);
-        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("Either a valid mobile number starting with country code, organisation number, or national identity number must be provided for each recipient."));
+        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("Either a valid mobile number starting with country code, organization number, or national identity number must be provided for each recipient."));
     }
 
     [Fact]
@@ -63,7 +63,7 @@ public class SmsNotificationOrderRequestValidatorTests
         var actual = _validator.Validate(order);
 
         Assert.False(actual.IsValid);
-        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("Either a valid mobile number starting with country code, organisation number, or national identity number must be provided for each recipient."));
+        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("Either a valid mobile number starting with country code, organization number, or national identity number must be provided for each recipient."));
     }
 
     [Fact]
@@ -144,24 +144,5 @@ public class SmsNotificationOrderRequestValidatorTests
         var actual = _validator.Validate(order);
         Assert.False(actual.IsValid);
         Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("'Body' must not be empty."));
-    }
-
-    [Theory]
-    [InlineData("+4740000001", true)]
-    [InlineData("004740000000", true)]
-    [InlineData("40000001", false)]
-    [InlineData("90000000", false)]
-    [InlineData("+4790000000", true)]
-    [InlineData("+4750000004", false)]
-    [InlineData("+47900000001", false)]
-    [InlineData("+14790000000", false)]
-    [InlineData("004790000002", true)]
-    [InlineData("", false)]
-    [InlineData("111100000", false)]
-    [InlineData("dasdsadSASA", false)]
-    public void IsValidMobileNumber(string mobileNumber, bool expectedResult)
-    {
-        bool actual = SmsNotificationOrderRequestValidator.IsValidMobileNumber(mobileNumber);
-        Assert.Equal(expectedResult, actual);
     } 
 }

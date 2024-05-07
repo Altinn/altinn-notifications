@@ -13,11 +13,4 @@ public interface IProfileClient
     /// <param name="nationalIdentityNumbers">A list of national identity numbers to look up contact points for</param>
     /// <returns>A list of contact points for the provided national identity numbers </returns>
     public Task<List<UserContactPoints>> GetUserContactPoints(List<string> nationalIdentityNumbers);
-
-    /// <summary>
-    /// Retrieves contact point availability for a list of users corresponding to a list of national identity numbers
-    /// </summary>
-    /// <param name="nationalIdentityNumbers">A list of national identity numbers to look up contact point availability for</param>
-    /// <returns>A list of <see cref="UserContactPointAvailability"/> for the provided national identity numbers </returns>
-    public Task<List<UserContactPointAvailability>> GetUserContactPointAvailabilities(List<string> nationalIdentityNumbers);
 }

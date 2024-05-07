@@ -38,9 +38,44 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             var profileClientMock = new Mock<IProfileClient>();
             profileClientMock
                 .Setup(p => p.GetUserContactPoints(It.Is<List<string>>(s => s.Contains("12345678901"))))
-                .ReturnsAsync([new UserContactPoints() { NationalIdentityNumber = "12345678901", MobileNumber = "+4799999999", IsReserved = true }]);
+                .ReturnsAsync([new UserContactPoints() { NationalIdentityNumber = "12345678901", MobileNumber = "99999999", IsReserved = true }]);
 
             var service = GetTestService(profileClient: profileClientMock.Object);
+
+            // Act
+            await service.AddSmsContactPoints(input);
+
+            // Assert 
+            Assert.Equivalent(expectedOutput, input);
+            string actualMobileNumber = ((SmsAddressPoint)input[0].AddressInfo[0]).MobileNumber;
+            Assert.Equal("+4799999999", actualMobileNumber);
+        }
+
+        [Fact]
+        public async Task AddSmsContactPoints_OrganizationNumberAvailable_RegisterServiceCalled()
+        {
+            // Arrange
+            List<Recipient> input = [
+                new Recipient()
+                {
+                    OrganizationNumber = "12345678901"
+                }
+            ];
+
+            List<Recipient> expectedOutput = [
+                new Recipient()
+                {
+                    OrganizationNumber = "12345678901",
+                    AddressInfo = [new SmsAddressPoint("+4799999999")]
+                }
+            ];
+
+            var registerClientMock = new Mock<IRegisterClient>();
+            registerClientMock
+                .Setup(p => p.GetOrganizationContactPoints(It.Is<List<string>>(s => s.Contains("12345678901"))))
+                .ReturnsAsync([new OrganizationContactPoints() { OrganizationNumber = "12345678901", MobileNumberList = ["+4799999999"] }]);
+
+            var service = GetTestService(registerClient: registerClientMock.Object);
 
             // Act
             await service.AddSmsContactPoints(input);
@@ -84,40 +119,39 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         }
 
         [Fact]
-        public async Task AddContactPointAvailability_NationalIdentityNUmberAvailable_ProfileServiceCalled()
+        public async Task AddEmailContactPoints_OrganizationNumberAvailable_RegisterServiceCalled()
         {
             // Arrange
             List<Recipient> input = [
                 new Recipient()
                 {
-                    NationalIdentityNumber = "12345678901"
+                    OrganizationNumber = "12345678901"
                 }
             ];
 
-            List<UserContactPointAvailability> expectedOutput = [
-                new UserContactPointAvailability()
+            List<Recipient> expectedOutput = [
+                new Recipient()
                 {
-                    NationalIdentityNumber = "12345678901",
-                    IsReserved = true,
-                    EmailRegistered = true
+                    OrganizationNumber = "12345678901",
+                    AddressInfo = [new EmailAddressPoint("email@domain.com")]
                 }
             ];
 
-            var profileClientMock = new Mock<IProfileClient>();
-            profileClientMock
-                .Setup(p => p.GetUserContactPointAvailabilities(It.Is<List<string>>(s => s.Contains("12345678901"))))
-                .ReturnsAsync([new UserContactPointAvailability() { NationalIdentityNumber = "12345678901", EmailRegistered = true, IsReserved = true }]);
+            var registerClientMock = new Mock<IRegisterClient>();
+            registerClientMock
+                .Setup(p => p.GetOrganizationContactPoints(It.Is<List<string>>(s => s.Contains("12345678901"))))
+                .ReturnsAsync([new OrganizationContactPoints() { OrganizationNumber = "12345678901", EmailList = ["email@domain.com"] }]);
 
-            var service = GetTestService(profileClient: profileClientMock.Object);
+            var service = GetTestService(registerClient: registerClientMock.Object);
 
             // Act
-            List<UserContactPointAvailability> actual = await service.GetContactPointAvailability(input);
+            await service.AddEmailContactPoints(input);
 
             // Assert 
-            Assert.Equivalent(expectedOutput, actual);
+            Assert.Equivalent(expectedOutput, input);
         }
 
-        private static ContactPointService GetTestService(IProfileClient? profileClient = null)
+        private static ContactPointService GetTestService(IProfileClient? profileClient = null, IRegisterClient? registerClient = null)
         {
             if (profileClient == null)
             {
@@ -125,7 +159,13 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 profileClient = profileClientMock.Object;
             }
 
-            return new ContactPointService(profileClient);
+            if (registerClient == null)
+            {
+                var registerClientMock = new Mock<IRegisterClient>();
+                registerClient = registerClientMock.Object;
+            }
+
+            return new ContactPointService(profileClient, registerClient);
         }
     }
 }

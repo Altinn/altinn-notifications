@@ -47,7 +47,7 @@ public class SmsNotificationService : ISmsNotificationService
 
         SmsRecipient smsRecipient = new()
         {
-            OrganisationNumber = recipient.OrganisationNumber,
+            OrganizationNumber = recipient.OrganizationNumber,
             NationalIdentityNumber = recipient.NationalIdentityNumber,
             MobileNumber = addressPoint?.MobileNumber ?? string.Empty,
             IsReserved = recipient.IsReserved

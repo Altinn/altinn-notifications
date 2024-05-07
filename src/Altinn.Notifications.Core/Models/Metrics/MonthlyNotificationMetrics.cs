@@ -16,7 +16,7 @@ public class MonthlyNotificationMetrics
     public int Year { get; set; }
 
     /// <summary>
-    /// A list of metrics per organisation
+    /// A list of metrics per organization
     /// </summary>
     public List<MetricsForOrg> Metrics { get; set; } = [];
 }
