@@ -77,7 +77,7 @@ public class RegisterClientTests
         // Act
         var exception = await Assert.ThrowsAsync<PlatformHttpException>(async () => await _registerClient.GetOrganizationContactPoints(["unavailable"]));
 
-        Assert.StartsWith("RegisterClient.GetOrganizationContactPoints failed with status code", exception.Message);
+        Assert.StartsWith("503 - Service Unavailable", exception.Message);
         Assert.Equal(HttpStatusCode.ServiceUnavailable, exception.Response?.StatusCode);
     }
 
