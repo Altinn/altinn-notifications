@@ -289,7 +289,7 @@ public class OrderRequestServiceTests
 
         Mock<IContactPointService> contactPointMock = new();
         contactPointMock
-            .Setup(cp => cp.AddSmsContactPoints(It.IsAny<List<Recipient>>()))
+            .Setup(cp => cp.AddSmsContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>()))
             .Callback<List<Recipient>>(recipients =>
             {
                 foreach (var recipient in recipients)
@@ -359,7 +359,7 @@ public class OrderRequestServiceTests
 
         Mock<IContactPointService> contactPointMock = new();
         contactPointMock
-            .Setup(cp => cp.AddSmsContactPoints(It.IsAny<List<Recipient>>()))
+            .Setup(cp => cp.AddSmsContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>()))
             .Callback<List<Recipient>>(recipients =>
             {
                 foreach (var recipient in recipients)

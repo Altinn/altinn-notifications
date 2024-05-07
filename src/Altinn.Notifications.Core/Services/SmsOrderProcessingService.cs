@@ -36,7 +36,7 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
     {
         var recipients = order.Recipients;
         var recipientsWithoutMobileNumber = recipients.Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Sms)).ToList();
-        await _contactPointService.AddSmsContactPoints(recipientsWithoutMobileNumber);
+        await _contactPointService.AddSmsContactPoints(recipientsWithoutMobileNumber, order.ResourceId);
 
         int smsCount = GetSmsCountForOrder(order);
 
@@ -52,7 +52,7 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
         var recipients = order.Recipients;
         var recipientsWithoutMobileNumber = recipients.Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Sms)).ToList();
 
-        await _contactPointService.AddSmsContactPoints(recipientsWithoutMobileNumber);
+        await _contactPointService.AddSmsContactPoints(recipientsWithoutMobileNumber, order.ResourceId);
 
         int smsCount = GetSmsCountForOrder(order);
         List<SmsRecipient> smsRecipients = await _smsNotificationRepository.GetRecipients(order.Id);

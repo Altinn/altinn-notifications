@@ -48,6 +48,12 @@ public class SmsNotificationOrderRequestExt
     public bool IgnoreReservation { get; set; }
 
     /// <summary>
+    /// Gets or sets the id of the resource that the notification is related to
+    /// </summary>
+    [JsonPropertyName("resourceId")]
+    public string? ResourceId { get; set; }
+
+    /// <summary>
     /// Json serialized the <see cref="SmsNotificationOrderRequestExt"/>
     /// </summary>
     public string Serialize()

@@ -42,7 +42,8 @@ public static class OrderMapper
             extRequest.RequestedSendTime.ToUniversalTime(),
             NotificationChannel.Email,
             recipients,
-            extRequest.IgnoreReservation);
+            extRequest.IgnoreReservation,
+            extRequest.ResourceId);
     }
 
     /// <summary>
@@ -74,7 +75,8 @@ public static class OrderMapper
             extRequest.RequestedSendTime.ToUniversalTime(),
             NotificationChannel.Sms,
             recipients,
-            extRequest.IgnoreReservation);
+            extRequest.IgnoreReservation,
+            extRequest.ResourceId);
     }
 
     /// <summary>
@@ -213,6 +215,9 @@ public static class OrderMapper
         orderExt.Creator = order.Creator.ShortName;
         orderExt.NotificationChannel = (NotificationChannelExt)order.NotificationChannel;
         orderExt.RequestedSendTime = order.RequestedSendTime;
+        orderExt.IgnoreReservation = order.IgnoreReservation;
+        orderExt.ResourceId = order.ResourceId;
+        
         return orderExt;
     }
 

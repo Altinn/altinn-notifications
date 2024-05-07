@@ -35,6 +35,14 @@ public class NotificationOrderWithStatusExt : IBaseNotificationOrderExt
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public NotificationChannelExt NotificationChannel { get; set; }
 
+    /// <inheritdoc/>>
+    [JsonPropertyName("ignoreReservation")]
+    public bool IgnoreReservation { get; set; }
+
+    /// <inheritdoc/>>
+    [JsonPropertyName("resourceId")]
+    public string? ResourceId { get; set; }
+
     /// <summary>
     /// Gets or sets the processing status of the notication order
     /// </summary>

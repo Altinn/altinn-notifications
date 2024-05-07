@@ -49,4 +49,28 @@ public class ProfileClient : IProfileClient
         List<UserContactPoints>? contactPoints = JsonSerializer.Deserialize<UserContactPointsList>(responseContent, JsonSerializerOptionsProvider.Options)!.ContactPointsList;
         return contactPoints!;
     }
+
+    /// <inheritdoc/>
+    public async Task<List<OrganizationContactPoints>> GetUserRegisteredOrganizationContactPoints(string resourceId, List<string> organizationNumbers)
+    {
+        var lookupObject = new UnitContactPointLookup()
+        {
+            ResourceId = resourceId,
+            OrganizationNumbers = organizationNumbers
+        };
+
+        HttpContent content = new StringContent(JsonSerializer.Serialize(lookupObject, JsonSerializerOptionsProvider.Options), Encoding.UTF8, "application/json");
+
+        var response = await _client.PostAsync("units/contactpoint/lookup", content);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new PlatformHttpException(response, $"ProfileClient.GetUserRegisteredOrganizationContactPoints failed with status code {response.StatusCode}");
+        }
+
+        string responseContent = await response.Content.ReadAsStringAsync();
+        List<OrganizationContactPoints>? contactPoints = JsonSerializer.Deserialize<OrganizationContactPointsList>(responseContent, JsonSerializerOptionsProvider.Options)!.ContactPointsList;
+        
+        return contactPoints!;
+    }
 }
