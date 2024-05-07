@@ -15,7 +15,11 @@ namespace Altinn.Notifications.Core.Helpers
         /// </remarks>
         public static string EnsureCountryCodeIfValidNumber(string mobileNumber)
         {
-            if (mobileNumber.StartsWith("00"))
+            if (string.IsNullOrEmpty(mobileNumber)) 
+            {
+                return mobileNumber;
+            }
+            else if (mobileNumber.StartsWith("00"))
             {
                 mobileNumber = "+" + mobileNumber.Remove(0, 2);
             }
