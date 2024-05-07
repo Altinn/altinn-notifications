@@ -9,6 +9,7 @@
     -e encodedJwk=*** `
     -e env=*** `
     -e emailRecipient=*** `
+    -e ninRecipient=*** `
     -e runFullTestSet=true
 
     For use case tests omit environment variable runFullTestSet or set value to false
@@ -27,6 +28,7 @@ import { generateJUnitXML, reportPath } from "../report.js";
 import { addErrorCount, stopIterationOnFail } from "../errorhandler.js";
 const scopes = "altinn:serviceowner/notifications.create";
 const emailRecipient = __ENV.emailRecipient.toLowerCase();
+const ninRecipient = __ENV.ninRecipient.toLowerCase();
 export const options = {
   thresholds: {
     errors: ["count<1"],
@@ -42,6 +44,9 @@ export function setup() {
     {
       emailAddress: emailRecipient,
     },
+    {
+      nationalIdentityNumber: ninRecipient
+    }
   ];
   emailOrderRequest.sendersReference = sendersReference;
 
@@ -74,8 +79,8 @@ function TC01_PostEmailNotificationOrderRequest(data) {
       r.status === 202,
     "POST email notification order request. Location header providedStatus is 202 Accepted":
       (r) => selfLink,
-    "POST email notification order request. Response body is not an empty string":
-      (r) => r.body,
+    "POST email notification order request. Recipient lookup was successful":
+      (r) => JSON.parse(r.body).recipientLookup.status == 'Success'
   });
 
   addErrorCount(success);
