@@ -179,7 +179,7 @@ namespace Altinn.Notifications.Core.Services
                         userContactPoint.MobileNumber = MobileNumberHelper.EnsureCountryCodeIfValidNumber(userContactPoint.MobileNumber);
                     });
 
-                    var existingContactPoint = contactPoints.FirstOrDefault(cp => cp.OrganizationNumber == userContactPoint.OrganizationNumber);
+                    var existingContactPoint = contactPoints.Find(cp => cp.OrganizationNumber == userContactPoint.OrganizationNumber);
 
                     if (existingContactPoint != null)
                     {
