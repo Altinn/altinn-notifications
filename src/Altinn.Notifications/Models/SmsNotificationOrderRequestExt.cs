@@ -22,4 +22,12 @@ public class SmsNotificationOrderRequestExt : NotificationOrderRequestBaseExt
     /// </summary>
     [JsonPropertyName("body")]
     public string Body { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Json serialized the <see cref="SmsNotificationOrderRequestExt"/>
+    /// </summary>
+    public string Serialize()
+    {
+        return JsonSerializer.Serialize(this);
+    }
 }

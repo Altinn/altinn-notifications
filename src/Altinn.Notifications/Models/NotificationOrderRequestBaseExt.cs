@@ -37,12 +37,4 @@ public class NotificationOrderRequestBaseExt
     /// </summary>
     [JsonPropertyName("resourceId")]
     public string? ResourceId { get; set; }
-
-    /// <summary>
-    /// Json serialized the <see cref="EmailNotificationOrderRequestExt"/>
-    /// </summary>
-    public string Serialize()
-    {
-        return JsonSerializer.Serialize(this);
-    }
 }
