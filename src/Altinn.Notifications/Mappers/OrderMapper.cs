@@ -207,7 +207,7 @@ public static class OrderMapper
         return recipientExt;
     }
 
-    private static IBaseNotificationOrderExt MapBaseNotificationOrder(this IBaseNotificationOrderExt orderExt, IBaseNotificationOrder order)
+    private static BaseNotificationOrderExt MapBaseNotificationOrder(this BaseNotificationOrderExt orderExt, IBaseNotificationOrder order)
     {
         orderExt.Id = order.Id.ToString();
         orderExt.SendersReference = order.SendersReference;

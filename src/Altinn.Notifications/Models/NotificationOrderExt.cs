@@ -8,41 +8,8 @@ namespace Altinn.Notifications.Models;
 /// <remarks>
 /// External representaion to be used in the API.
 /// </remarks>
-public class NotificationOrderExt : IBaseNotificationOrderExt
+public class NotificationOrderExt : BaseNotificationOrderExt
 {
-    /// <inheritdoc/>>
-    [JsonPropertyName("id")]
-    public string Id { get; set; } = string.Empty;
-
-    /// <inheritdoc/>>
-    [JsonPropertyName("creator")]
-    public string Creator { get; set; } = string.Empty;
-
-    /// <inheritdoc/>>
-    [JsonPropertyName("sendersReference")]
-    public string? SendersReference { get; set; }
-
-    /// <inheritdoc/>>
-    [JsonPropertyName("requestedSendTime")]
-    public DateTime RequestedSendTime { get; set; }
-
-    /// <inheritdoc/>>
-    [JsonPropertyName("created")]
-    public DateTime Created { get; set; }
-
-    /// <inheritdoc/>>
-    [JsonPropertyName("notificationChannel")]
-    [JsonConverter(typeof(JsonStringEnumConverter))]
-    public NotificationChannelExt NotificationChannel { get; set; }
-
-    /// <inheritdoc/>>
-    [JsonPropertyName("ignoreReservation")]
-    public bool IgnoreReservation { get; set; }
-
-    /// <inheritdoc/>>
-    [JsonPropertyName("resourceId")]
-    public string? ResourceId { get; set; }
-
     /// <summary>
     /// Gets or sets the list of recipients
     /// </summary>

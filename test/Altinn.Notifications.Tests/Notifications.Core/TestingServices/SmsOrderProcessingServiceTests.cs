@@ -120,7 +120,7 @@ public class SmsOrderProcessingServiceTests
 
         var contactPointServiceMock = new Mock<IContactPointService>();
         contactPointServiceMock.Setup(c => c.AddSmsContactPoints(It.Is<List<Recipient>>(r => r.Count == 1), It.IsAny<string?>()))
-            .Callback<List<Recipient>>(r =>
+            .Callback<List<Recipient>, string?>((r, _) =>
             {
                 Recipient augumentedRecipient = new() { AddressInfo = [new SmsAddressPoint("+4712345678")], NationalIdentityNumber = r[0].NationalIdentityNumber };
                 r.Clear();
