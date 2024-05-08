@@ -19,8 +19,7 @@ namespace Altinn.Notifications.Core.Helpers
             {
                 return mobileNumber;
             }
-            else if
-                (mobileNumber.StartsWith("00"))
+            else if (mobileNumber.StartsWith("00"))
             {
                 mobileNumber = "+" + mobileNumber.Remove(0, 2);
             }
