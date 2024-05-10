@@ -20,9 +20,15 @@ namespace Altinn.Notifications.Controllers
         /// Test method for authorization.
         /// </summary>
         [HttpPost]
-        public async Task<Dictionary<string, bool>> Authorize([FromBody]AuthZ authz)
+        public async Task<Dictionary<string, Dictionary<string, bool>>> Authorize([FromBody]AuthZ authz)
         {
-            return await _authorizationService.AuthorizeUsersForResource(authz.UserIds, authz.ResourceId, authz.ResourceOwnerId);
+            Dictionary<int, List<int>> orgRightHolders = new();
+            foreach (var item in authz.OrgRightHolders)
+            {
+                orgRightHolders.Add(item.ResourceOwnerId, item.UserIds);
+            }
+
+            return await _authorizationService.AuthorizeUsersForResource(orgRightHolders, authz.ResourceId);
         }
     }
 
@@ -32,11 +38,6 @@ namespace Altinn.Notifications.Controllers
     public class AuthZ
     {
         /// <summary>
-        /// List of users
-        /// </summary>
-        public List<int> UserIds { get; set; } = [];
-
-        /// <summary>
         /// Resource
         /// </summary>
         public string ResourceId { get; set; } = string.Empty;
@@ -44,6 +45,22 @@ namespace Altinn.Notifications.Controllers
         /// <summary>
         /// Resource
         /// </summary>
+        public List<OrgRightHolders> OrgRightHolders { get; set; } = [];
+    }
+
+    /// <summary>
+    /// Represent a single resource owner and a list of potential notification recipients.
+    /// </summary>
+    public class OrgRightHolders
+    {
+        /// <summary>
+        /// The owner of a given resource. 
+        /// </summary>
         public int ResourceOwnerId { get; set; }
+
+        /// <summary>
+        /// List of users
+        /// </summary>
+        public List<int> UserIds { get; set; } = [];
     }
 }

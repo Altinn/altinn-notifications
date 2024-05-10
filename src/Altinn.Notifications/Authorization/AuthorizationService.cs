@@ -1,11 +1,11 @@
-﻿using System.Security.Claims;
-using System.Text.Json;
+﻿using System.Collections.Generic;
+using System.Security.Claims;
 
 using Altinn.Authorization.ABAC.Xacml.JsonProfile;
 using Altinn.Common.PEP.Constants;
 using Altinn.Common.PEP.Helpers;
 using Altinn.Common.PEP.Interfaces;
-
+using Altinn.Notifications.Core.Enums;
 using static Altinn.Authorization.ABAC.Constants.XacmlConstants;
 
 namespace Altinn.Notifications.Authorization;
@@ -20,7 +20,7 @@ public class AuthorizationService : IAuthorizationService
 
     private const string DefaultIssuer = "Altinn";
     private const string ActionCategoryId = "action";
-    private const string ResourceCategoryId = "resource";
+    private const string ResourceCategoryIdPrefix = "resource";
     private const string AccessSubjectCategoryIdPrefix = "subject";
 
     private readonly IPDP _pdp;
@@ -37,49 +37,88 @@ public class AuthorizationService : IAuthorizationService
     /// An implementation of <see cref="IAuthorizationService.AuthorizeUsersForResource"/> that
     /// will generate an authorization call to Altinn Authorization to check that the given users have read access.
     /// </summary>
-    /// <param name="userIds">The list of user ids.</param>
+    /// <param name="orgRightHolders">The list organizations with associated right holders.</param>
     /// <param name="resourceId">The id of the resource.</param>
-    /// <param name="resourceOwnerId">The party id of the resource owner.</param>
     /// <returns>A task</returns>
-    public async Task<Dictionary<string, bool>> AuthorizeUsersForResource(List<int> userIds, string resourceId, int resourceOwnerId)
+    public async Task<Dictionary<string, Dictionary<string, bool>>> AuthorizeUsersForResource(Dictionary<int, List<int>> orgRightHolders, string resourceId)
     {
         XacmlJsonRequest request = new()
         {
             AccessSubject = [],
             Action = [CreateActionCategory()],
-            Resource = [CreateResourceCategory(resourceId, resourceOwnerId)],
+            Resource = [],
             MultiRequests = new XacmlJsonMultiRequests { RequestReference = [] }
         };
 
-        foreach (int userId in userIds.Distinct())
+        foreach (var organization in orgRightHolders)
         {
-            XacmlJsonCategory subjectCategory = CreateAccessSubjectCategory(userId);
-            request.AccessSubject.Add(subjectCategory);
-            request.MultiRequests.RequestReference.Add(CreateRequestReference(subjectCategory.Id));
+            XacmlJsonCategory resourceCategory = CreateResourceCategory(organization.Key, resourceId);
+
+            if (request.Resource.All(rc => rc.Id != resourceCategory.Id))
+            {
+                request.Resource.Add(resourceCategory);
+            }
+
+            foreach (int userId in organization.Value.Distinct())
+            {
+                XacmlJsonCategory subjectCategory = CreateAccessSubjectCategory(userId);
+
+                if (request.AccessSubject.All(sc => sc.Id != subjectCategory.Id))
+                {
+                    request.AccessSubject.Add(subjectCategory);
+                }
+
+                request.MultiRequests.RequestReference.Add(CreateRequestReference(resourceCategory.Id, subjectCategory.Id));
+            }
         }
 
         XacmlJsonRequestRoot jsonRequest = new() { Request = request };
 
         XacmlJsonResponse xacmlJsonResponse = await _pdp.GetDecisionForRequest(jsonRequest);
 
-        Dictionary<string, bool> keyValuePairs = [];
+        Dictionary<string, Dictionary<string, bool>> permit = [];
 
-        foreach (var response in xacmlJsonResponse.Response)
+        foreach (var response in xacmlJsonResponse.Response.Where(r => r.Decision == "Permit"))
         {
-            XacmlJsonCategory? xacmlJsonCategory = response.Category.Find(c => c.CategoryId == MatchAttributeCategory.Subject);
+            XacmlJsonCategory? resourceCategory = 
+                response.Category.Find(c => c.CategoryId == MatchAttributeCategory.Resource);
 
-            if (xacmlJsonCategory is not null)
+            string? partyId = null;
+
+            if (resourceCategory is not null)
             {
-                XacmlJsonAttribute? xacmlJsonAttribute = xacmlJsonCategory.Attribute.Find(a => a.AttributeId == UserIdUrn);
+                XacmlJsonAttribute? partyAttribute = 
+                    resourceCategory.Attribute.Find(a => a.AttributeId == AltinnXacmlUrns.PartyId);
 
-                if (xacmlJsonAttribute is not null)
+                if (partyAttribute is not null)
                 {
-                    keyValuePairs.Add(xacmlJsonAttribute.Value, true);
+                    partyId = partyAttribute.Value;
+                }
+            }
+
+            XacmlJsonCategory? subjectCategory = 
+                response.Category.Find(c => c.CategoryId == MatchAttributeCategory.Subject);
+
+            if (subjectCategory is not null)
+            {
+                XacmlJsonAttribute? userAttribute 
+                    = subjectCategory.Attribute.Find(a => a.AttributeId == UserIdUrn);
+
+                if (userAttribute is not null && partyId is not null)
+                {
+                    if (permit.ContainsKey(partyId))
+                    {
+                        permit[partyId].Add(userAttribute.Value, true);
+                    }
+                    else
+                    {
+                        permit.Add(partyId, new Dictionary<string, bool> { { userAttribute.Value, true } });
+                    }
                 }
             }
         }
 
-        return keyValuePairs;
+        return permit;
     }
 
     private XacmlJsonCategory CreateActionCategory()
@@ -95,11 +134,13 @@ public class AuthorizationService : IAuthorizationService
         };
     }
 
-    private static XacmlJsonCategory CreateResourceCategory(string resourceId, int resourceOwnerId)
+    private static XacmlJsonCategory CreateResourceCategory(int resourceOwnerId, string resourceId)
     {
         XacmlJsonAttribute subjectAttribute =
             DecisionHelper.CreateXacmlJsonAttribute(
-                AltinnXacmlUrns.PartyId, resourceOwnerId.ToString(), ClaimValueTypes.String, DefaultIssuer);
+                AltinnXacmlUrns.PartyId, resourceOwnerId.ToString(), ClaimValueTypes.String, DefaultIssuer, true);
+
+        string resourceCategoryId = ResourceCategoryIdPrefix + resourceOwnerId;
 
         if (resourceId.StartsWith("app_"))
         {
@@ -115,7 +156,7 @@ public class AuthorizationService : IAuthorizationService
 
             return new XacmlJsonCategory()
             {
-                Id = ResourceCategoryId,
+                Id = resourceCategoryId,
                 Attribute = [orgAttribute, appAttribute, subjectAttribute]
             };
         }
@@ -126,7 +167,7 @@ public class AuthorizationService : IAuthorizationService
 
         return new XacmlJsonCategory()
         {
-            Id = ResourceCategoryId,
+            Id = resourceCategoryId,
             Attribute = [resourceAttribute, subjectAttribute]
         };
     }
@@ -144,15 +185,15 @@ public class AuthorizationService : IAuthorizationService
         };
     }
 
-    private static XacmlJsonRequestReference CreateRequestReference(string subjectCategoryId)
+    private static XacmlJsonRequestReference CreateRequestReference(string resourceCategoryId, string subjectCategoryId)
     {
         return new XacmlJsonRequestReference
         { 
             ReferenceId = new List<string> 
             { 
                 subjectCategoryId, 
-                ActionCategoryId, 
-                ResourceCategoryId 
+                ActionCategoryId,
+                resourceCategoryId
             } 
         };
     }
