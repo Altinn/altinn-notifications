@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
@@ -8,68 +9,44 @@ namespace Altinn.Notifications.Core.Models.Orders;
 /// <summary>
 /// Class representing a notification order
 /// </summary>
-public class NotificationOrder : IBaseNotificationOrder
+public partial class NotificationOrder : IBaseNotificationOrder
 {
     /// <inheritdoc/>>
-    public Guid Id { get; internal set; } = Guid.Empty;
+    public Guid Id { get; init; } = Guid.Empty;
 
     /// <inheritdoc/>>
-    public string? SendersReference { get; internal set; }
+    public string? SendersReference { get; init; }
 
     /// <inheritdoc/>>
-    public DateTime RequestedSendTime { get; internal set; }
+    public DateTime RequestedSendTime { get; init; }
 
     /// <inheritdoc/>>
-    public NotificationChannel NotificationChannel { get; internal set; }
-
-    /// <inheritdoc/>>    
-    public bool IgnoreReservation { get; internal set; }
+    public NotificationChannel NotificationChannel { get; init; }
 
     /// <inheritdoc/>>
-    public Creator Creator { get; internal set; }
+    public bool IgnoreReservation { get; init; }
 
     /// <inheritdoc/>>
-    public DateTime Created { get; internal set; }
+    public Creator Creator { get; init; }
+
+    /// <inheritdoc/>>
+    public DateTime Created { get; init; }
 
     /// <summary>
     /// Gets the templates to create notifications based of
     /// </summary>
-    public List<INotificationTemplate> Templates { get; internal set; } = new List<INotificationTemplate>();
+    public List<INotificationTemplate> Templates { get; init; } = new List<INotificationTemplate>();
 
     /// <summary>
     /// Gets a list of recipients
     /// </summary>
-    public List<Recipient> Recipients { get; internal set; } = new List<Recipient>();
+    public List<Recipient> Recipients { get; init; } = new List<Recipient>();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationOrder"/> class.
     /// </summary>
-    public NotificationOrder(
-        Guid id,
-        string? sendersReference,
-        List<INotificationTemplate> templates,
-        DateTime requestedSendTime,
-        NotificationChannel notificationChannel,
-        Creator creator,
-        DateTime created,
-        List<Recipient> recipients,
-        bool ignoreReservation)
-    {
-        Id = id;
-        SendersReference = sendersReference;
-        Templates = templates;
-        RequestedSendTime = requestedSendTime;
-        NotificationChannel = notificationChannel;
-        Creator = creator;
-        Created = created;
-        Recipients = recipients;
-        IgnoreReservation = ignoreReservation;
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="NotificationOrder"/> class.
-    /// </summary>
-    internal NotificationOrder()
+    [JsonConstructor]
+    private NotificationOrder()
     {
         Creator = new Creator(string.Empty);
     }
@@ -116,5 +93,13 @@ public class NotificationOrder : IBaseNotificationOrder
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Static method to get the builder
+    /// </summary>
+    public static NotificationOrderBuilder GetBuilder()
+    {
+        return new NotificationOrderBuilder();
     }
 }

@@ -28,21 +28,20 @@ public class OrderMapperTests
         DateTime sendTime = DateTime.UtcNow;
         DateTime created = DateTime.UtcNow;
 
-        NotificationOrder order = new()
-        {
-            Id = Guid.NewGuid(),
-            SendersReference = "ref1337",
-            Templates = [
+        NotificationOrder order = NotificationOrder
+            .GetBuilder()
+            .SetId(Guid.NewGuid())
+            .SetSendersReference("ref1337")
+            .SetRequestedSendTime(sendTime)
+            .SetNotificationChannel(NotificationChannel.Email)
+            .SetIgnoreReservation(true)
+            .SetCreator(new Creator("ttd"))
+            .SetCreated(created)
+            .SetTemplates([
                 new EmailTemplate("from@domain.com", "email-subject", "email-body", EmailContentType.Plain),
-                new SmsTemplate("Altinn-test", "This is a text message")
-            ],
-            RequestedSendTime = sendTime,
-            NotificationChannel = NotificationChannel.Email,
-            Creator = new Creator("ttd"),
-            Created = created,
-            Recipients = [],
-            IgnoreReservation = true
-        };
+                new SmsTemplate("Altinn-test", "This is a text message")])
+            .SetRecipients([])
+            .Build();
 
         NotificationOrderExt expected = new()
         {

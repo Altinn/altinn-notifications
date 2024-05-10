@@ -53,16 +53,18 @@ public class OrderRequestService : IOrderRequestService
 
         var templates = SetSenderIfNotDefined(orderRequest.Templates);
 
-        var order = new NotificationOrder(
-            orderId,
-            orderRequest.SendersReference,
-            templates,
-            orderRequest.RequestedSendTime,
-            orderRequest.NotificationChannel,
-            orderRequest.Creator,
-            created,
-            orderRequest.Recipients, 
-            orderRequest.IgnoreReservation);
+        var order = NotificationOrder
+            .GetBuilder()
+            .SetId(orderId)
+            .SetSendersReference(orderRequest.SendersReference)
+            .SetTemplates(templates)
+            .SetRequestedSendTime(orderRequest.RequestedSendTime)
+            .SetNotificationChannel(orderRequest.NotificationChannel)
+            .SetCreator(orderRequest.Creator)
+            .SetCreated(created)
+            .SetRecipients(orderRequest.Recipients)
+            .SetIgnoreReservation(orderRequest.IgnoreReservation)
+            .Build();
 
         NotificationOrder savedOrder = await _repository.Create(order);
 
@@ -104,7 +106,7 @@ public class OrderRequestService : IOrderRequestService
         }
 
         var isReserved = recipients.Where(r => r.IsReserved.HasValue && r.IsReserved.Value).Select(r => r.NationalIdentityNumber!).ToList();
-            
+
         RecipientLookupResult lookupResult = new()
         {
             IsReserved = isReserved,

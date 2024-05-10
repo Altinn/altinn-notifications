@@ -35,14 +35,16 @@ public static class OrderMapper
             })
             .ToList();
 
-        return new NotificationOrderRequest(
-            extRequest.SendersReference,
-            creator,
-            [emailTemplate],
-            extRequest.RequestedSendTime.ToUniversalTime(),
-            NotificationChannel.Email,
-            recipients,
-            extRequest.IgnoreReservation);
+        return NotificationOrderRequest
+            .GetBuilder()
+            .SetSendersReference(extRequest.SendersReference)
+            .SetCreator(creator)
+            .SetTemplates([emailTemplate])
+            .SetRequestedSendTime(extRequest.RequestedSendTime.ToUniversalTime())
+            .SetNotificationChannel(NotificationChannel.Email)
+            .SetRecipients(recipients)
+            .SetIgnoreReservation(extRequest.IgnoreReservation)
+            .Build();
     }
 
     /// <summary>
@@ -67,14 +69,16 @@ public static class OrderMapper
           })
           .ToList();
 
-        return new NotificationOrderRequest(
-            extRequest.SendersReference,
-            creator,
-            [smsTemplate],
-            extRequest.RequestedSendTime.ToUniversalTime(),
-            NotificationChannel.Sms,
-            recipients,
-            extRequest.IgnoreReservation);
+        return NotificationOrderRequest
+          .GetBuilder()
+          .SetSendersReference(extRequest.SendersReference)
+          .SetCreator(creator)
+          .SetTemplates([smsTemplate])
+          .SetRequestedSendTime(extRequest.RequestedSendTime.ToUniversalTime())
+          .SetNotificationChannel(NotificationChannel.Sms)
+          .SetRecipients(recipients)
+          .SetIgnoreReservation(extRequest.IgnoreReservation)
+          .Build();
     }
 
     /// <summary>

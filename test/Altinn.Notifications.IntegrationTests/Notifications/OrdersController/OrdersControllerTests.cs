@@ -36,25 +36,30 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
     {
         _factory = factory;
 
-        _order = new(
-            Guid.NewGuid(),
-            "senders-reference",
-            new List<INotificationTemplate>(),
-            DateTime.UtcNow,
-            NotificationChannel.Email,
-            new Creator("ttd"),
-            DateTime.UtcNow,
-            new List<Recipient>(),
-            false);
+        _order = NotificationOrder
+           .GetBuilder()
+           .SetId(Guid.NewGuid())
+           .SetSendersReference("senders-reference")
+           .SetRequestedSendTime(DateTime.UtcNow)
+           .SetNotificationChannel(NotificationChannel.Email)
+           .SetIgnoreReservation(false)
+           .SetCreator(new Creator("ttd"))
+           .SetCreated(DateTime.UtcNow)
+           .SetTemplates([])
+           .SetRecipients([])
+           .Build();
 
-        _orderWithStatus = new(
-            Guid.NewGuid(),
-            "senders-reference",
-            DateTime.UtcNow,
-            new Creator("ttd"),
-            DateTime.UtcNow,
-            NotificationChannel.Email,
-            new ProcessingStatus());
+        _orderWithStatus = NotificationOrderWithStatus
+                            .GetBuilder()
+                            .SetId(Guid.NewGuid())
+                            .SetSendersReference("senders-reference")
+                            .SetRequestedSendTime(DateTime.UtcNow)
+                            .SetCreator("ttd")
+                            .SetCreated(DateTime.UtcNow)
+                            .SetNotificationChannel(NotificationChannel.Email)
+                            .SetIgnoreReservation(false)
+                            .SetProcessingStatus(new ProcessingStatus())
+                            .Build();
     }
 
     [Fact]

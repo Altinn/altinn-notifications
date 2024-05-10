@@ -160,16 +160,19 @@ public class OrderRepository : IOrderRepository
         {
             while (await reader.ReadAsync())
             {
-                order = new(
-                    reader.GetValue<Guid>("alternateid"),
-                    reader.GetValue<string>("sendersreference"),
-                    reader.GetValue<DateTime>("requestedsendtime"), // all decimals are not included
-                    new Creator(reader.GetValue<string>("creatorname")),
-                    reader.GetValue<DateTime>("created"),
-                    reader.GetValue<NotificationChannel>("notificationchannel"),
-                    new ProcessingStatus(
-                        reader.GetValue<OrderProcessingStatus>("processedstatus"),
-                        reader.GetValue<DateTime>("processed")));
+                order = NotificationOrderWithStatus
+                    .GetBuilder()
+                    .SetId(reader.GetValue<Guid>("alternateid"))
+                    .SetSendersReference(reader.GetValue<string>("sendersreference"))
+                    .SetRequestedSendTime(reader.GetValue<DateTime>("requestedsendtime")) // all decimals are not included
+                    .SetCreator(reader.GetValue<string>("creatorname"))
+                    .SetCreated(reader.GetValue<DateTime>("created"))
+                    .SetNotificationChannel(reader.GetValue<NotificationChannel>("notificationchannel"))
+                    .SetProcessingStatus(
+                        new ProcessingStatus(
+                            reader.GetValue<OrderProcessingStatus>("processedstatus"),
+                            reader.GetValue<DateTime>("processed")))
+                    .Build();
 
                 int generatedEmail = (int)reader.GetValue<long>("generatedEmailCount");
                 int succeededEmail = (int)reader.GetValue<long>("succeededEmailCount");

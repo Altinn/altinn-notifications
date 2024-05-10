@@ -40,10 +40,10 @@ public class GetOrderServiceTests
            async actualOrder => await Task.CompletedTask,
            async actuallError =>
            {
-            await Task.CompletedTask;
-            Assert.NotNull(actuallError);
-            Assert.Equal(404, actuallError.ErrorCode);
-        });
+               await Task.CompletedTask;
+               Assert.NotNull(actuallError);
+               Assert.Equal(404, actuallError.ErrorCode);
+           });
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public class GetOrderServiceTests
         var repoMock = new Mock<IOrderRepository>();
         repoMock
             .Setup(r => r.GetOrderById(It.Is<Guid>(g => g == _id), It.Is<string>(s => s.Equals("ttd"))))
-            .ReturnsAsync(new NotificationOrder() { Id = Guid.Parse(_id.ToString()) });
+            .ReturnsAsync(TestdataUtil.GetOrderForTest(NotificationOrder.GetBuilder().SetId(_id)));
 
         var service = GetTestService(repoMock.Object);
 
@@ -110,7 +110,7 @@ public class GetOrderServiceTests
         var repoMock = new Mock<IOrderRepository>();
         repoMock
             .Setup(r => r.GetOrdersBySendersReference(It.Is<string>(s => s.Equals("sendersRef")), It.Is<string>(s => s.Equals("ttd"))))
-            .ReturnsAsync(new List<NotificationOrder>() { new NotificationOrder(), new NotificationOrder(), new NotificationOrder() });
+            .ReturnsAsync(new List<NotificationOrder>() { TestdataUtil.GetOrderForTest(), TestdataUtil.GetOrderForTest(), TestdataUtil.GetOrderForTest() });
 
         var service = GetTestService(repoMock.Object);
 

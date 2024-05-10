@@ -32,17 +32,16 @@ public class OrderRequestServiceTests
         DateTime createdTime = DateTime.UtcNow.AddMinutes(-2);
         Guid id = Guid.NewGuid();
 
-        NotificationOrder expectedRepoInput = new()
-        {
-            Id = id,
-            Created = createdTime,
-            Creator = new("ttd"),
-            NotificationChannel = NotificationChannel.Email,
-            RequestedSendTime = sendTime,
-            Recipients = { },
-            SendersReference = "senders-reference",
-            Templates = { new EmailTemplate { Body = "email-body", FromAddress = "dontreply@skatteetaten.no" } }
-        };
+        NotificationOrder expectedRepoInput = TestdataUtil.GetOrderForTest(
+            NotificationOrder
+                .GetBuilder()
+                .SetId(id)
+                .SetCreated(createdTime)
+                .SetCreator(new Creator("ttd"))
+                .SetNotificationChannel(NotificationChannel.Email)
+                .SetRequestedSendTime(sendTime)
+                .SetSendersReference("senders-reference")
+                .SetTemplates([new EmailTemplate { Body = "email-body", FromAddress = "dontreply@skatteetaten.no" }]));
 
         NotificationOrderRequest input = new()
         {
@@ -79,17 +78,17 @@ public class OrderRequestServiceTests
         DateTime createdTime = DateTime.UtcNow.AddMinutes(-2);
         Guid id = Guid.NewGuid();
 
-        NotificationOrder expectedRepoInput = new()
-        {
-            Id = id,
-            Created = createdTime,
-            Creator = new("ttd"),
-            NotificationChannel = NotificationChannel.Email,
-            RequestedSendTime = sendTime,
-            Recipients = { },
-            SendersReference = "senders-reference",
-            Templates = { new EmailTemplate { Body = "email-body", FromAddress = "noreply@altinn.no" } }
-        };
+        NotificationOrder expectedRepoInput = TestdataUtil.GetOrderForTest(
+            NotificationOrder
+                .GetBuilder()
+                .SetId(id)
+                .SetCreated(createdTime)
+                .SetCreator(new Creator("ttd"))
+                .SetNotificationChannel(NotificationChannel.Email)
+                .SetRequestedSendTime(sendTime)
+                .SetRecipients([])
+                .SetSendersReference("senders-reference")
+                .SetTemplates([new EmailTemplate { Body = "email-body", FromAddress = "noreply@altinn.no" }]));
 
         NotificationOrderRequest input = new()
         {
@@ -126,17 +125,17 @@ public class OrderRequestServiceTests
         DateTime createdTime = DateTime.UtcNow.AddMinutes(-2);
         Guid id = Guid.NewGuid();
 
-        NotificationOrder expectedRepoInput = new()
-        {
-            Id = id,
-            Created = createdTime,
-            Creator = new("ttd"),
-            NotificationChannel = NotificationChannel.Sms,
-            RequestedSendTime = sendTime,
-            Recipients = { },
-            SendersReference = "senders-reference",
-            Templates = { new SmsTemplate { Body = "sms-body", SenderNumber = "Skatteetaten" } }
-        };
+        NotificationOrder expectedRepoInput = TestdataUtil.GetOrderForTest(
+            NotificationOrder
+                .GetBuilder()
+                .SetId(id)
+                .SetCreated(createdTime)
+                .SetCreator(new Creator("ttd"))
+                .SetNotificationChannel(NotificationChannel.Sms)
+                .SetRequestedSendTime(sendTime)
+                .SetRecipients([])
+                .SetSendersReference("senders-reference")
+                .SetTemplates([new SmsTemplate { Body = "sms-body", SenderNumber = "Skatteetaten" }]));
 
         NotificationOrderRequest input = new()
         {
@@ -173,22 +172,20 @@ public class OrderRequestServiceTests
         DateTime createdTime = DateTime.UtcNow.AddMinutes(-2);
         Guid id = Guid.NewGuid();
 
-        NotificationOrder expectedRepoInput = new()
-        {
-            Id = id,
-            Created = createdTime,
-            Creator = new("ttd"),
-            NotificationChannel = NotificationChannel.Sms,
-            RequestedSendTime = sendTime,
-            Recipients = { },
-            SendersReference = "senders-reference",
-            Templates = { new SmsTemplate { Body = "sms-body", SenderNumber = "TestDefaultSmsSenderNumberNumber" } }
-        };
+        NotificationOrder expectedRepoInput = TestdataUtil.GetOrderForTest(
+            NotificationOrder
+             .GetBuilder()
+             .SetId(id)
+             .SetCreated(createdTime)
+             .SetCreator(new Creator("ttd"))
+             .SetNotificationChannel(NotificationChannel.Sms)
+             .SetRequestedSendTime(sendTime)
+             .SetSendersReference("senders-reference")
+             .SetTemplates([new SmsTemplate { Body = "sms-body", SenderNumber = "TestDefaultSmsSenderNumberNumber" }]));
 
         NotificationOrderRequest input = new()
         {
             Creator = new Creator("ttd"),
-
             NotificationChannel = NotificationChannel.Sms,
             Recipients = { },
             SendersReference = "senders-reference",
@@ -254,19 +251,20 @@ public class OrderRequestServiceTests
         DateTime createdTime = DateTime.UtcNow.AddMinutes(-2);
         Guid id = Guid.NewGuid();
 
-        NotificationOrder expectedRepoInput = new()
-        {
-            Id = id,
-            Created = createdTime,
-            Creator = new("ttd"),
-            NotificationChannel = NotificationChannel.Sms,
-            RequestedSendTime = sendTime,
-            Recipients = [
-                new Recipient() { NationalIdentityNumber = "16069412345" },
-                new Recipient() { NationalIdentityNumber = "14029112345" }
-                ],
-            Templates = { new SmsTemplate { Body = "sms-body", SenderNumber = "TestDefaultSmsSenderNumberNumber" } }
-        };
+        NotificationOrder expectedRepoInput = TestdataUtil.GetOrderForTest(
+            NotificationOrder
+                 .GetBuilder()
+                 .SetId(id)
+                 .SetCreated(createdTime)
+                 .SetCreator(new Creator("ttd"))
+                 .SetNotificationChannel(NotificationChannel.Sms)
+                 .SetRequestedSendTime(sendTime)
+                 .SetRecipients(
+                    [
+                        new Recipient() { NationalIdentityNumber = "16069412345" },
+                        new Recipient() { NationalIdentityNumber = "14029112345" }
+                    ])
+                 .SetTemplates([new SmsTemplate { Body = "sms-body", SenderNumber = "TestDefaultSmsSenderNumberNumber" }]));
 
         NotificationOrderRequest input = new()
         {
@@ -317,7 +315,7 @@ public class OrderRequestServiceTests
         repoMock.VerifyAll();
         contactPointMock.VerifyAll();
     }
-    
+
     [Fact]
     public async Task RegisterNotificationOrder_ForSms_LookupSuccess_OrderCreated()
     {
@@ -326,18 +324,16 @@ public class OrderRequestServiceTests
         DateTime createdTime = DateTime.UtcNow.AddMinutes(-2);
         Guid id = Guid.NewGuid();
 
-        NotificationOrder expectedRepoInput = new()
-        {
-            Id = id,
-            Created = createdTime,
-            Creator = new("ttd"),
-            NotificationChannel = NotificationChannel.Sms,
-            RequestedSendTime = sendTime,
-            Recipients = [
-                new Recipient() { NationalIdentityNumber = "16069412345" },
-                ],
-            Templates = { new SmsTemplate { Body = "sms-body", SenderNumber = "TestDefaultSmsSenderNumberNumber" } }
-        };
+        NotificationOrder expectedRepoInput = TestdataUtil.GetOrderForTest(
+            NotificationOrder
+                .GetBuilder()
+                .SetId(id)
+                .SetCreated(createdTime)
+                .SetCreator(new("ttd"))
+                .SetNotificationChannel(NotificationChannel.Sms)
+                .SetRequestedSendTime(sendTime)
+                .SetRecipients([new Recipient() { NationalIdentityNumber = "16069412345" }])
+                .SetTemplates([new SmsTemplate { Body = "sms-body", SenderNumber = "TestDefaultSmsSenderNumberNumber" }]));
 
         NotificationOrderRequest input = new()
         {
@@ -346,7 +342,7 @@ public class OrderRequestServiceTests
             NotificationChannel = NotificationChannel.Sms,
             Recipients = [
                 new Recipient() { NationalIdentityNumber = "16069412345" },
-                ],
+            ],
             RequestedSendTime = sendTime,
             Templates = { new SmsTemplate { Body = "sms-body" } }
         };
@@ -354,23 +350,23 @@ public class OrderRequestServiceTests
         Mock<IOrderRepository> repoMock = new();
         repoMock
             .Setup(r => r.Create(It.IsAny<NotificationOrder>()))
-            .Callback<NotificationOrder>(o => Assert.Equivalent(expectedRepoInput, o))
-            .ReturnsAsync((NotificationOrder order) => order);
+                .Callback<NotificationOrder>(o => Assert.Equivalent(expectedRepoInput, o))
+                .ReturnsAsync((NotificationOrder order) => order);
 
         Mock<IContactPointService> contactPointMock = new();
         contactPointMock
             .Setup(cp => cp.AddSmsContactPoints(It.IsAny<List<Recipient>>()))
-            .Callback<List<Recipient>>(recipients =>
-            {
-                foreach (var recipient in recipients)
+                .Callback<List<Recipient>>(recipients =>
                 {
-                    if (recipient.NationalIdentityNumber == "16069412345")
+                    foreach (var recipient in recipients)
                     {
-                        recipient.AddressInfo.Add(new SmsAddressPoint("+4799999999"));
-                        recipient.IsReserved = false;
+                        if (recipient.NationalIdentityNumber == "16069412345")
+                        {
+                            recipient.AddressInfo.Add(new SmsAddressPoint("+4799999999"));
+                            recipient.IsReserved = false;
+                        }
                     }
-                }
-            });
+                });
 
         var service = GetTestService(repoMock.Object, contactPointMock.Object, id, createdTime);
 

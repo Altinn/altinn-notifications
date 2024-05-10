@@ -15,8 +15,6 @@ using Moq;
 
 using Xunit;
 
-using static Altinn.Authorization.ABAC.Constants.XacmlConstants;
-
 namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 
 public class OrderProcessingServiceTests
@@ -27,7 +25,7 @@ public class OrderProcessingServiceTests
     public async Task StartProcessingPastDueOrders_ProducerCalledOnceForEachOrder()
     {
         // Arrange 
-        NotificationOrder order = new();
+        NotificationOrder order = TestdataUtil.GetOrderForTest();
 
         var repoMock = new Mock<IOrderRepository>();
         repoMock.Setup(r => r.GetPastDueOrdersAndSetProcessingState())
@@ -50,10 +48,10 @@ public class OrderProcessingServiceTests
     public async Task ProcessOrder_EmailOrder_EmailServiceCalled()
     {
         // Arrange 
-        NotificationOrder order = new()
-        {
-            NotificationChannel = NotificationChannel.Email,
-        };
+        NotificationOrder order = TestdataUtil.GetOrderForTest(
+            NotificationOrder
+             .GetBuilder()
+             .SetNotificationChannel(NotificationChannel.Email));
 
         var emailMockService = new Mock<IEmailOrderProcessingService>();
         emailMockService.Setup(e => e.ProcessOrder(It.IsAny<NotificationOrder>()));
@@ -75,10 +73,10 @@ public class OrderProcessingServiceTests
     public async Task ProcessOrder_SmsOrder_SmsServiceCalled()
     {
         // Arrange 
-        NotificationOrder order = new()
-        {
-            NotificationChannel = NotificationChannel.Sms,
-        };
+        NotificationOrder order = TestdataUtil.GetOrderForTest(
+            NotificationOrder
+              .GetBuilder()
+              .SetNotificationChannel(NotificationChannel.Sms));
 
         var smsMockService = new Mock<ISmsOrderProcessingService>();
         smsMockService.Setup(s => s.ProcessOrder(It.IsAny<NotificationOrder>()));
@@ -100,10 +98,10 @@ public class OrderProcessingServiceTests
     public async Task ProcessOrder_SerivceThrowsException_ProcessingStatusIsNotSet()
     {
         // Arrange 
-        NotificationOrder order = new()
-        {
-            NotificationChannel = NotificationChannel.Sms,
-        };
+        NotificationOrder order = TestdataUtil.GetOrderForTest(
+            NotificationOrder
+                  .GetBuilder()
+                  .SetNotificationChannel(NotificationChannel.Sms));
 
         var smsMockService = new Mock<ISmsOrderProcessingService>();
         smsMockService.Setup(s => s.ProcessOrder(It.IsAny<NotificationOrder>())).Throws(new Exception());
@@ -127,10 +125,10 @@ public class OrderProcessingServiceTests
     public async Task ProcessOrderRetry_SmsOrder_SmsServiceCalled()
     {
         // Arrange 
-        NotificationOrder order = new()
-        {
-            NotificationChannel = NotificationChannel.Sms,
-        };
+        NotificationOrder order = TestdataUtil.GetOrderForTest(
+            NotificationOrder
+                .GetBuilder()
+                .SetNotificationChannel(NotificationChannel.Sms));
 
         var smsMockService = new Mock<ISmsOrderProcessingService>();
         smsMockService.Setup(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>()));
@@ -152,10 +150,11 @@ public class OrderProcessingServiceTests
     public async Task ProcessOrderRetry_SerivceThrowsException_ProcessingStatusIsNotSet()
     {
         // Arrange 
-        NotificationOrder order = new()
-        {
-            NotificationChannel = NotificationChannel.Sms,
-        };
+        NotificationOrder order = TestdataUtil.GetOrderForTest(
+            NotificationOrder
+                .GetBuilder()
+                .SetId(Guid.NewGuid())
+                .SetNotificationChannel(NotificationChannel.Sms));
 
         var smsMockService = new Mock<ISmsOrderProcessingService>();
         smsMockService.Setup(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>())).Throws(new Exception());

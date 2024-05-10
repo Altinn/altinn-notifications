@@ -26,13 +26,7 @@ public static class PostgreUtil
     {
         var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IOrderRepository) });
         OrderRepository repository = (OrderRepository)serviceList.First(i => i.GetType() == typeof(OrderRepository));
-        var order = TestdataUtil.NotificationOrder_EmailTemplate_OneRecipient();
-        order.Id = Guid.NewGuid();
-
-        if (sendersReference != null)
-        {
-            order.SendersReference = sendersReference;
-        }
+        var order = TestdataUtil.NotificationOrder_EmailTemplate_OneRecipient(sendersReference);
 
         var persistedOrder = await repository.Create(order);
         return persistedOrder;
@@ -42,13 +36,7 @@ public static class PostgreUtil
     {
         var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IOrderRepository) });
         OrderRepository repository = (OrderRepository)serviceList.First(i => i.GetType() == typeof(OrderRepository));
-        var order = TestdataUtil.NotificationOrder_SmsTemplate_OneRecipient();
-        order.Id = Guid.NewGuid();
-
-        if (sendersReference != null)
-        {
-            order.SendersReference = sendersReference;
-        }
+        var order = TestdataUtil.NotificationOrder_SmsTemplate_OneRecipient(sendersReference);
 
         var persistedOrder = await repository.Create(order);
         return persistedOrder;
@@ -57,16 +45,11 @@ public static class PostgreUtil
     public static async Task<(NotificationOrder Order, EmailNotification EmailNotification)>
         PopulateDBWithOrderAndEmailNotification(string? sendersReference = null)
     {
-        (NotificationOrder o, EmailNotification e) = TestdataUtil.GetOrderAndEmailNotification();
+        (NotificationOrder o, EmailNotification e) = TestdataUtil.GetOrderAndEmailNotification(sendersReference);
         var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IOrderRepository), typeof(IEmailNotificationRepository) });
 
         OrderRepository orderRepo = (OrderRepository)serviceList.First(i => i.GetType() == typeof(OrderRepository));
         EmailNotificationRepository notificationRepo = (EmailNotificationRepository)serviceList.First(i => i.GetType() == typeof(EmailNotificationRepository));
-
-        if (sendersReference != null)
-        {
-            o.SendersReference = sendersReference;
-        }
 
         await orderRepo.Create(o);
         await notificationRepo.AddNotification(e, DateTime.UtcNow.AddDays(1));
@@ -76,16 +59,11 @@ public static class PostgreUtil
 
     public static async Task<NotificationOrder> PopulateDBWithOrderAndEmailNotificationReturnOrder(string? sendersReference = null)
     {
-        (NotificationOrder o, EmailNotification e) = TestdataUtil.GetOrderAndEmailNotification();
+        (NotificationOrder o, EmailNotification e) = TestdataUtil.GetOrderAndEmailNotification(sendersReference);
         var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IOrderRepository), typeof(IEmailNotificationRepository) });
 
         OrderRepository orderRepo = (OrderRepository)serviceList.First(i => i.GetType() == typeof(OrderRepository));
         EmailNotificationRepository notificationRepo = (EmailNotificationRepository)serviceList.First(i => i.GetType() == typeof(EmailNotificationRepository));
-
-        if (sendersReference != null)
-        {
-            o.SendersReference = sendersReference;
-        }
 
         await orderRepo.Create(o);
         await notificationRepo.AddNotification(e, DateTime.UtcNow.AddDays(1));
@@ -95,16 +73,11 @@ public static class PostgreUtil
 
     public static async Task<(NotificationOrder Order, SmsNotification SmsNotification)> PopulateDBWithOrderAndSmsNotification(string? sendersReference = null)
     {
-        (NotificationOrder order, SmsNotification smsNotification) = TestdataUtil.GetOrderAndSmsNotification();
+        (NotificationOrder order, SmsNotification smsNotification) = TestdataUtil.GetOrderAndSmsNotification(sendersReference);
         var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IOrderRepository), typeof(ISmsNotificationRepository) });
 
         OrderRepository orderRepo = (OrderRepository)serviceList.First(i => i.GetType() == typeof(OrderRepository));
         SmsNotificationRepository notificationRepo = (SmsNotificationRepository)serviceList.First(i => i.GetType() == typeof(SmsNotificationRepository));
-
-        if (sendersReference != null)
-        {
-            order.SendersReference = sendersReference;
-        }
 
         await orderRepo.Create(order);
         await notificationRepo.AddNotification(smsNotification, DateTime.UtcNow.AddDays(1), 1);

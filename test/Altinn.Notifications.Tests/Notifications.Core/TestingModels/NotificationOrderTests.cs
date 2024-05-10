@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Text.Json.Nodes;
 
 using Altinn.Notifications.Core.Enums;
@@ -23,43 +22,42 @@ public class NotificationOrderTests
     {
         Guid id = Guid.NewGuid();
 
-        _order = new()
-        {
-            Id = id,
-            SendersReference = "senders-reference",
-            Templates = new List<INotificationTemplate>()
-            {
-                 new EmailTemplate()
-                 {
-                     Type = NotificationTemplateType.Email,
-                     FromAddress = "sender@domain.com",
-                     Subject = "email-subject",
-                     Body = "email-body",
-                     ContentType = EmailContentType.Html
-                 }
-            },
-            RequestedSendTime = _requestedSendTime,
-            NotificationChannel = NotificationChannel.Email,
-            IgnoreReservation = false,
-            Creator = new("ttd"),
-            Created = _createdTime,
-            Recipients = new List<Recipient>()
-            {
+        _order = NotificationOrder
+            .GetBuilder()
+            .SetId(id)
+            .SetSendersReference("senders-reference")
+            .SetTemplates(
+            [
+                new EmailTemplate()
+                {
+                    Type = NotificationTemplateType.Email,
+                    FromAddress = "sender@domain.com",
+                    Subject = "email-subject",
+                    Body = "email-body",
+                    ContentType = EmailContentType.Html
+                }
+            ])
+            .SetRequestedSendTime(_requestedSendTime)
+            .SetNotificationChannel(NotificationChannel.Email)
+            .SetIgnoreReservation(false)
+            .SetCreator(new Creator("ttd"))
+            .SetCreated(_createdTime)
+            .SetRecipients([
                 new Recipient()
                 {
                     NationalIdentityNumber = "nationalidentitynumber",
                     IsReserved = false,
-                    AddressInfo = new()
-                    {
+                    AddressInfo =
+                    [
                         new EmailAddressPoint()
                         {
                             AddressType = AddressType.Email,
                             EmailAddress = "recipient1@domain.com"
                         }
-                    }
+                    ]
                 }
-            }
-        };
+            ])
+            .Build();
 
         _serializedOrder = new JsonObject()
         {
@@ -113,7 +111,7 @@ public class NotificationOrderTests
                         }
                     }
                 }
-            }           
+            }
         }.ToJsonString();
     }
 
@@ -141,16 +139,6 @@ public class NotificationOrderTests
 
         // Assert
         Assert.Equal(expected, actual);
-    }
-
-    [Theory]
-    [InlineData(1, "{ \"id\": \"4fec2be9-7f52-4d32-9554-467908c3c629\", \"created\": \"2023-07-14T07:39:19.088978Z\", \"creator\": { \"shortName\": \"ttd\" }, \"requestedSendTime\": \"2023-08-14T08:15:00Z\", \"templates\": [ { \"$\": \"email\", \"body\": \"email-body\", \"type\": \"Email\", \"subject\": \"email-subject\", \"contentType\": \"Html\", \"fromAddress\": \"sender@domain.com\" } ], \"recipients\": [ { \"addressInfo\": [ { \"$\": \"email\", \"addressType\": \"Email\", \"emailAddress\": \"recipient1@domain.com\" } ], \"recipientId\": \"\" }, { \"addressInfo\": [ { \"$\": \"email\", \"addressType\": \"Email\", \"emailAddress\": \"recipient2@domain.com\" } ], \"recipientId\": \"\" } ], \"sendersReference\": \"senders-reference\", \"notificationChannel\": \"Email\" }")]
-#pragma warning disable xUnit1026, IDE0060// Theory methods should use all of their parameters and Remove unused parameter
-    public void Deserialize(int exampleNo, string serializedOrder)
-#pragma warning restore xUnit1026, IDE0060
-    {
-        var actual = NotificationOrder.Deserialize(serializedOrder);
-        Assert.NotNull(actual);
     }
 
     [Fact]

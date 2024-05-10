@@ -1,4 +1,5 @@
 ﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Persistence;
@@ -37,17 +38,10 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 .GetServices(new List<Type>() { typeof(IOrderRepository) })
                 .First(i => i.GetType() == typeof(OrderRepository));
 
-            NotificationOrder order = new()
-            {
-                Id = Guid.NewGuid(),
-                Created = DateTime.UtcNow,
-                Creator = new("test"),
-                Templates = new List<INotificationTemplate>()
-                {
-                    new SmsTemplate("Altinn", "This is the body")
-                },
-                RequestedSendTime = DateTime.UtcNow
-            };
+            NotificationOrder order = TestdataUtil.GetOrderForTest(
+                NotificationOrder
+                   .GetBuilder()
+                   .SetTemplates([new SmsTemplate("Altinn", "This is the body")]));
 
             _orderIdsToDelete.Add(order.Id);
 
@@ -73,16 +67,10 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 .GetServices(new List<Type>() { typeof(IOrderRepository) })
                 .First(i => i.GetType() == typeof(OrderRepository));
 
-            NotificationOrder order = new()
-            {
-                Id = Guid.NewGuid(),
-                Created = DateTime.UtcNow,
-                Creator = new("test"),
-                Templates = new List<INotificationTemplate>()
-                {
-                    new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)
-                }
-            };
+            NotificationOrder order = TestdataUtil.GetOrderForTest(
+                NotificationOrder
+                 .GetBuilder()
+                 .SetTemplates([new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)]));
 
             _orderIdsToDelete.Add(order.Id);
 
@@ -108,17 +96,14 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 .GetServices(new List<Type>() { typeof(IOrderRepository) })
                 .First(i => i.GetType() == typeof(OrderRepository));
 
-            NotificationOrder order = new()
-            {
-                Id = Guid.NewGuid(),
-                Created = DateTime.UtcNow,
-                Creator = new("test"),
-                Templates = new List<INotificationTemplate>()
-                {
+            NotificationOrder order = TestdataUtil.GetOrderForTest(
+                NotificationOrder
+                 .GetBuilder()
+                 .SetTemplates(
+                 [
                     new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain),
-                    new SmsTemplate("Altinn", "This is the body")
-                }
-            };
+                     new SmsTemplate("Altinn", "This is the body")
+                 ]));
 
             _orderIdsToDelete.Add(order.Id);
 

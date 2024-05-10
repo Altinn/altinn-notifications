@@ -24,24 +24,24 @@ public class EmailOrderProcessingServiceTests
     public async Task ProcessOrder_NotificationServiceCalledOnceForEachRecipient()
     {
         // Arrange
-        var order = new NotificationOrder()
-        {
-            Id = Guid.NewGuid(),
-            NotificationChannel = NotificationChannel.Email,
-            Recipients = new List<Recipient>()
-            {
-                new()
+        NotificationOrder order = TestdataUtil.GetOrderForTest(
+            NotificationOrder
+                .GetBuilder()
+                .SetId(Guid.NewGuid())
+                .SetNotificationChannel(NotificationChannel.Email)
+                .SetRecipients(new List<Recipient>()
                 {
-                OrganizationNumber = "123456",
-                AddressInfo = [new EmailAddressPoint("email@test.com")]
-                },
-                new()
-                {
-                OrganizationNumber = "654321",
-                AddressInfo = [new EmailAddressPoint("email@test.com")]
-                }
-            }
-        };
+                        new()
+                        {
+                        OrganizationNumber = "123456",
+                        AddressInfo = [new EmailAddressPoint("email@test.com")]
+                        },
+                        new()
+                        {
+                        OrganizationNumber = "654321",
+                        AddressInfo = [new EmailAddressPoint("email@test.com")]
+                        }
+                }));
 
         var serviceMock = new Mock<IEmailNotificationService>();
         serviceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>(), It.IsAny<bool>()));
@@ -62,16 +62,21 @@ public class EmailOrderProcessingServiceTests
         DateTime requested = DateTime.UtcNow;
         Guid orderId = Guid.NewGuid();
 
-        var order = new NotificationOrder()
-        {
-            Id = orderId,
-            NotificationChannel = NotificationChannel.Email,
-            RequestedSendTime = requested,
-            Recipients = new List<Recipient>()
-            {
-                new(new List<IAddressPoint>() { new EmailAddressPoint("test@test.com") }, organizationNumber: "skd-orgno")
-            }
-        };
+        NotificationOrder order = TestdataUtil.GetOrderForTest(
+          NotificationOrder
+          .GetBuilder()
+          .SetId(orderId)
+          .SetNotificationChannel(NotificationChannel.Email)
+          .SetRequestedSendTime(requested)
+          .SetRecipients(new List<Recipient>()
+              {
+              new Recipient(
+                  new List<IAddressPoint>()
+                  {
+                      new EmailAddressPoint("test@test.com")
+                  },
+                  organizationNumber: "skd-orgno")
+              }));
 
         Recipient expectedRecipient = new(new List<IAddressPoint>() { new EmailAddressPoint("test@test.com") }, organizationNumber: "skd-orgno");
 
@@ -91,18 +96,15 @@ public class EmailOrderProcessingServiceTests
     public async Task ProcessOrder_NotificationServiceThrowsException_RepositoryNotCalled()
     {
         // Arrange
-        var order = new NotificationOrder()
-        {
-            NotificationChannel = NotificationChannel.Email,
-            Recipients = new List<Recipient>()
-            {
-                new()
-            }
-        };
+        NotificationOrder order = TestdataUtil.GetOrderForTest(
+            NotificationOrder
+                .GetBuilder()
+                .SetNotificationChannel(NotificationChannel.Email)
+                .SetRecipients([new()]));
 
         var serviceMock = new Mock<IEmailNotificationService>();
         serviceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>(), It.IsAny<bool>()))
-            .ThrowsAsync(new Exception());
+                .ThrowsAsync(new Exception());
 
         var repoMock = new Mock<IOrderRepository>();
         repoMock.Setup(r => r.SetProcessingStatus(It.IsAny<Guid>(), It.IsAny<OrderProcessingStatus>()));
@@ -121,19 +123,20 @@ public class EmailOrderProcessingServiceTests
     public async Task ProcessOrder_RecipientMissingEmail_ContactPointServiceCalled()
     {
         // Arrange
-        var order = new NotificationOrder()
-        {
-            Id = Guid.NewGuid(),
-            NotificationChannel = NotificationChannel.Sms,
-            Recipients = new List<Recipient>()
-            {
-                new()
-                {
-                NationalIdentityNumber = "123456",
-                }
-            },
-            Templates = [new EmailTemplate(null, "subject", "body", EmailContentType.Plain)]
-        };
+        NotificationOrder order = TestdataUtil.GetOrderForTest(
+            NotificationOrder
+             .GetBuilder()
+             .SetId(Guid.NewGuid())
+             .SetNotificationChannel(NotificationChannel.Sms)
+             .SetRequestedSendTime(DateTime.UtcNow)
+             .SetRecipients(new List<Recipient>()
+                 {
+                  new Recipient()
+                    {
+                    NationalIdentityNumber = "123456",
+                    }
+                 })
+             .SetTemplates([new EmailTemplate(null, "subject", "body", EmailContentType.Plain)]));
 
         var notificationServiceMock = new Mock<IEmailNotificationService>();
         notificationServiceMock.Setup(
@@ -160,18 +163,20 @@ public class EmailOrderProcessingServiceTests
     public async Task ProcessOrderRetry_ServiceCalledIfRecipientNotInDatabase()
     {
         // Arrange
-        var order = new NotificationOrder()
-        {
-            Id = Guid.NewGuid(),
-            NotificationChannel = NotificationChannel.Email,
-            Recipients = new List<Recipient>()
-            {
-                new(),
-                new(new List<IAddressPoint>() { new EmailAddressPoint("test@test.com") }, nationalIdentityNumber: "enduser-nin"),
-                new(new List<IAddressPoint>() { new EmailAddressPoint("test@test.com") }, organizationNumber : "skd-orgNo"),
-                new(new List<IAddressPoint>() { new EmailAddressPoint("test@domain.com") })
-            }
-        };
+        NotificationOrder order = TestdataUtil.GetOrderForTest(
+            NotificationOrder
+                .GetBuilder()
+                .SetId(Guid.NewGuid())
+                .SetNotificationChannel(NotificationChannel.Email)
+                .SetRequestedSendTime(DateTime.UtcNow)
+                .SetRecipients(new List<Recipient>()
+                    {
+                        new(),
+                        new(new List<IAddressPoint>() { new EmailAddressPoint("test@test.com") }, nationalIdentityNumber: "enduser-nin"),
+                        new(new List<IAddressPoint>() { new EmailAddressPoint("test@test.com") }, organizationNumber : "skd-orgNo"),
+                        new(new List<IAddressPoint>() { new EmailAddressPoint("test@domain.com") })
+                    })
+                .SetTemplates([new EmailTemplate(null, "subject", "body", EmailContentType.Plain)]));
 
         var serviceMock = new Mock<IEmailNotificationService>();
         serviceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>(), It.IsAny<bool>()));

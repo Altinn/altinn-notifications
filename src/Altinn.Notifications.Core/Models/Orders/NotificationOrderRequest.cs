@@ -1,4 +1,6 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using System.Text.Json.Serialization;
+
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 
 namespace Altinn.Notifications.Core.Models.Orders;
@@ -46,31 +48,19 @@ public class NotificationOrderRequest
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationOrderRequest"/> class.
     /// </summary>
-    public NotificationOrderRequest(
-        string? sendersReference, 
-        string creatorShortName, 
-        List<INotificationTemplate> templates, 
-        DateTime requestedSendTime, 
-        NotificationChannel notificationChannel,
-        List<Recipient> recipients,
-        bool ignoreReservation = false)
-    {
-        SendersReference = sendersReference;
-        Creator = new(creatorShortName);
-        Templates = templates;
-        RequestedSendTime = requestedSendTime;
-        NotificationChannel = notificationChannel;
-        Recipients = recipients;
-        IgnoreReservation = ignoreReservation;
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="NotificationOrderRequest"/> class.
-    /// </summary>
+    [JsonConstructor]
     internal NotificationOrderRequest()
     {
         Creator = new Creator(string.Empty);
         Templates = new List<INotificationTemplate>();
         Recipients = new List<Recipient>();
+    }
+
+    /// <summary>
+    /// Static method to get the builder
+    /// </summary>
+    public static NotificationOrderRequestBuilder GetBuilder()
+    {
+        return new NotificationOrderRequestBuilder();
     }
 }

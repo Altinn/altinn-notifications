@@ -43,20 +43,7 @@ public class NotificationOrderWithStatus : IBaseNotificationOrder
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationOrderWithStatus"/> class.
     /// </summary>
-    public NotificationOrderWithStatus(Guid id, string? sendersReference, DateTime requestedSendTime, Creator creator, DateTime created, NotificationChannel notificationChannel, ProcessingStatus processingStatus)
-    {
-        Id = id;
-        SendersReference = sendersReference;
-        RequestedSendTime = requestedSendTime;
-        Creator = creator;
-        Created = created;
-        NotificationChannel = notificationChannel;
-        ProcessingStatus = processingStatus;
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="NotificationOrderWithStatus"/> class.
-    /// </summary>
+    [JsonConstructor]
     internal NotificationOrderWithStatus()
     {
     }
@@ -67,6 +54,14 @@ public class NotificationOrderWithStatus : IBaseNotificationOrder
     public void SetNotificationStatuses(NotificationTemplateType type, int generated, int succeeded)
     {
         NotificationStatuses.Add(type, new NotificationStatus() { Generated = generated, Succeeded = succeeded });
+    }
+
+    /// <summary>
+    /// Static method to get the builder
+    /// </summary>
+    public static NotificationOrderWithStatusBuilder GetBuilder()
+    {
+        return new NotificationOrderWithStatusBuilder();
     }
 }
 

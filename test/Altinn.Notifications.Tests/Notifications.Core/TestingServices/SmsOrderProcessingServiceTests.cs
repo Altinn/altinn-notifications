@@ -29,17 +29,16 @@ public class SmsOrderProcessingServiceTests
         DateTime requested = DateTime.UtcNow;
         Guid orderId = Guid.NewGuid();
 
-        var order = new NotificationOrder()
-        {
-            Id = orderId,
-            NotificationChannel = NotificationChannel.Sms,
-            RequestedSendTime = requested,
-            Recipients = new List<Recipient>()
-            {
-                new Recipient(new List<IAddressPoint>() { new SmsAddressPoint("+4799999999") }, nationalIdentityNumber: "enduser-nin")
-            },
-            Templates = [new SmsTemplate("Altinn", "this is the body")]
-        };
+        var order = TestdataUtil.GetOrderForTest(
+            NotificationOrder
+                .GetBuilder()
+                .SetRequestedSendTime(requested)
+                .SetNotificationChannel(NotificationChannel.Sms)
+                .SetRecipients(new List<Recipient>()
+                    {
+                        new Recipient(new List<IAddressPoint>() { new SmsAddressPoint("+4799999999") }, nationalIdentityNumber: "enduser-nin")
+                    })
+                .SetTemplates([new SmsTemplate("Altinn", "this is the body")]));
 
         Recipient expectedRecipient = new(new List<IAddressPoint>() { new SmsAddressPoint("+4799999999") }, nationalIdentityNumber: "enduser-nin");
 
@@ -59,25 +58,25 @@ public class SmsOrderProcessingServiceTests
     public async Task ProcessOrder_NotificationServiceCalledOnceForEachRecipient()
     {
         // Arrange
-        var order = new NotificationOrder()
-        {
-            Id = Guid.NewGuid(),
-            NotificationChannel = NotificationChannel.Sms,
-            Recipients = new List<Recipient>()
-            {
-                new()
-                {
-                OrganizationNumber = "123456",
-                AddressInfo = [new SmsAddressPoint("+4799999999")]
-                },
-                new()
-                {
-                OrganizationNumber = "654321",
-                AddressInfo = [new SmsAddressPoint("+4799999999")]
-                }
-            },
-            Templates = [new SmsTemplate("Altinn", "this is the body")]
-        };
+        var order = TestdataUtil.GetOrderForTest(
+            NotificationOrder
+              .GetBuilder()
+              .SetId(Guid.NewGuid())
+              .SetNotificationChannel(NotificationChannel.Sms)
+              .SetRecipients(new List<Recipient>()
+              {
+                    new()
+                    {
+                    OrganizationNumber = "123456",
+                    AddressInfo = [new SmsAddressPoint("+4799999999")]
+                    },
+                    new()
+                    {
+                    OrganizationNumber = "654321",
+                    AddressInfo = [new SmsAddressPoint("+4799999999")]
+                    }
+              })
+              .SetTemplates([new SmsTemplate("Altinn", "this is the body")]));
 
         var notificationServiceMock = new Mock<ISmsNotificationService>();
         notificationServiceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>(), It.IsAny<int>(), It.IsAny<bool>()));
@@ -95,19 +94,19 @@ public class SmsOrderProcessingServiceTests
     public async Task ProcessOrder_RecipientMissingMobileNumber_ContactPointServiceCalled()
     {
         // Arrange
-        var order = new NotificationOrder()
-        {
-            Id = Guid.NewGuid(),
-            NotificationChannel = NotificationChannel.Sms,
-            Recipients = new List<Recipient>()
-            {
-                new()
+        var order = TestdataUtil.GetOrderForTest(
+            NotificationOrder
+                .GetBuilder()
+                .SetId(Guid.NewGuid())
+                .SetNotificationChannel(NotificationChannel.Sms)
+                .SetRecipients(new List<Recipient>()
                 {
-                NationalIdentityNumber = "123456",
-                }
-            },
-            Templates = [new SmsTemplate("Altinn", "this is the body")]
-        };
+                    new()
+                    {
+                    NationalIdentityNumber = "123456",
+                    }
+                })
+                .SetTemplates([new SmsTemplate("Altinn", "this is the body")]));
 
         var notificationServiceMock = new Mock<ISmsNotificationService>();
         notificationServiceMock.Setup(
@@ -124,7 +123,7 @@ public class SmsOrderProcessingServiceTests
             {
                 Recipient augumentedRecipient = new() { AddressInfo = [new SmsAddressPoint("+4712345678")], NationalIdentityNumber = r[0].NationalIdentityNumber };
                 r.Clear();
-                r.Add(augumentedRecipient); 
+                r.Add(augumentedRecipient);
             });
 
         var service = GetTestService(smsService: notificationServiceMock.Object, contactPointService: contactPointServiceMock.Object);
@@ -141,19 +140,19 @@ public class SmsOrderProcessingServiceTests
     public async Task ProcessOrderRetry_NotificationServiceCalledIfRecipientNotInDatabase()
     {
         // Arrange
-        var order = new NotificationOrder()
-        {
-            Id = Guid.NewGuid(),
-            NotificationChannel = NotificationChannel.Sms,
-            Recipients = new List<Recipient>()
-            {
-                new Recipient(),
-                new Recipient(new List<IAddressPoint>() { new SmsAddressPoint("+4799999999") }, nationalIdentityNumber: "enduser-nin"),
-                new Recipient(new List<IAddressPoint>() { new SmsAddressPoint("+4799999999") }, organizationNumber: "skd-orgNo"),
-                new Recipient(new List<IAddressPoint>() { new SmsAddressPoint("+4749999999") })
-            },
-            Templates = [new SmsTemplate("Altinn", "this is the body")]
-        };
+        var order = TestdataUtil.GetOrderForTest(
+            NotificationOrder
+                .GetBuilder()
+                .SetId(Guid.NewGuid())
+                .SetNotificationChannel(NotificationChannel.Sms)
+                .SetRecipients(new List<Recipient>()
+                    {
+                        new Recipient(),
+                        new Recipient(new List<IAddressPoint>() { new SmsAddressPoint("+4799999999") }, nationalIdentityNumber: "enduser-nin"),
+                        new Recipient(new List<IAddressPoint>() { new SmsAddressPoint("+4799999999") }, organizationNumber: "skd-orgNo"),
+                        new Recipient(new List<IAddressPoint>() { new SmsAddressPoint("+4749999999") })
+                    })
+                .SetTemplates([new SmsTemplate("Altinn", "this is the body")]));
 
         var notificationServiceMock = new Mock<ISmsNotificationService>();
         notificationServiceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>(), It.IsAny<int>(), It.IsAny<bool>()));
