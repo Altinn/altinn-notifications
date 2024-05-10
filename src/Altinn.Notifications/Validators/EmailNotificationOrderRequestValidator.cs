@@ -23,9 +23,9 @@ public class EmailNotificationOrderRequestValidator : AbstractValidator<EmailNot
             {
                 return
                     (!string.IsNullOrWhiteSpace(a.EmailAddress) && IsValidEmail(a.EmailAddress)) ||
-                    (!string.IsNullOrWhiteSpace(a.OrganisationNumber) ^ !string.IsNullOrWhiteSpace(a.NationalIdentityNumber));
+                    (!string.IsNullOrWhiteSpace(a.OrganizationNumber) ^ !string.IsNullOrWhiteSpace(a.NationalIdentityNumber));
             }))
-            .WithMessage("Either a valid email address, organisation number, or national identity number must be provided for each recipient.");
+            .WithMessage("Either a valid email address, organization number, or national identity number must be provided for each recipient.");
 
         RuleFor(order => order.RequestedSendTime)
                 .Must(sendTime => sendTime.Kind != DateTimeKind.Unspecified)

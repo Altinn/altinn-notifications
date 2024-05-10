@@ -60,7 +60,7 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
 
             if (!emailRecipients.Exists(er =>
              er.NationalIdentityNumber == recipient.NationalIdentityNumber
-             && er.OrganisationNumber == recipient.OrganisationNumber
+             && er.OrganizationNumber == recipient.OrganizationNumber
              && er.ToAddress == addressPoint?.EmailAddress))
             {
                 await _emailService.CreateNotification(order.Id, order.RequestedSendTime, recipient, order.IgnoreReservation);

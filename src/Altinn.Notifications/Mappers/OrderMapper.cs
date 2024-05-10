@@ -31,7 +31,7 @@ public static class OrderMapper
                     addresses.Add(new EmailAddressPoint(r.EmailAddress));
                 }
 
-                return new Recipient(addresses, r.OrganisationNumber, r.NationalIdentityNumber);
+                return new Recipient(addresses, r.OrganizationNumber, r.NationalIdentityNumber);
             })
             .ToList();
 
@@ -63,7 +63,7 @@ public static class OrderMapper
                   addresses.Add(new SmsAddressPoint(r.MobileNumber));
               }
 
-              return new Recipient(addresses, r.OrganisationNumber, r.NationalIdentityNumber);
+              return new Recipient(addresses, r.OrganizationNumber, r.NationalIdentityNumber);
           })
           .ToList();
 
@@ -198,7 +198,7 @@ public static class OrderMapper
                 EmailAddress = GetEmailFromAddressList(r.AddressInfo),
                 MobileNumber = GetMobileNumberFromAddressList(r.AddressInfo),
                 NationalIdentityNumber = r.NationalIdentityNumber,
-                OrganisationNumber = r.OrganisationNumber,
+                OrganizationNumber = r.OrganizationNumber,
                 IsReserved = r.IsReserved
             }));
 

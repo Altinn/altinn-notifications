@@ -77,7 +77,7 @@ public class SmsNotificationRepository : ISmsNotificationRepository
             {
                 searchResult.Add(new SmsRecipient()
                 {
-                    OrganisationNumber = reader.GetValue<string?>("recipientorgno"),
+                    OrganizationNumber = reader.GetValue<string?>("recipientorgno"),
                     NationalIdentityNumber = reader.GetValue<string?>("recipientnin"),
                     MobileNumber = reader.GetValue<string>("mobilenumber")
                 });

@@ -6,7 +6,12 @@
 public class PlatformSettings
 {
     /// <summary>
-    /// Gets or sets the url for the API profile endpoint
+    /// Gets or sets the url for the profile API
     /// </summary>
     public string ApiProfileEndpoint { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the url for the register API
+    /// </summary>
+    public string ApiRegisterEndpoint { get; set; } = string.Empty;
 }

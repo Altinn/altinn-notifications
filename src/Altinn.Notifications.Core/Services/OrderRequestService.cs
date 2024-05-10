@@ -112,7 +112,7 @@ public class OrderRequestService : IOrderRequestService
             .Where(r => channel == NotificationChannel.Email ?
                 !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email) :
                 !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Sms))
-            .Select(r => r.OrganisationNumber ?? r.NationalIdentityNumber!)
+            .Select(r => r.OrganizationNumber ?? r.NationalIdentityNumber!)
             .Except(isReserved)
             .ToList()
         };

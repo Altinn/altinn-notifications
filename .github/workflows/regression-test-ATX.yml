@@ -27,7 +27,7 @@ jobs:
       uses: grafana/k6-action@v0.3.1
       with:
         filename: test/k6/src/tests/orders_email.js
-        flags: -e runFullTestSet=true -e env=${{ vars.ENV }} -e tokenGeneratorUserName=${{ secrets.TOKENGENERATOR_USERNAME }} -e tokenGeneratorUserPwd=${{ secrets.TOKENGENERATOR_USERPASSWORD }} -e emailRecipient=${{ secrets.AUTOMATEDTEST_EMAILRECIPIENT }}
+        flags: -e runFullTestSet=true -e env=${{ vars.ENV }} -e tokenGeneratorUserName=${{ secrets.TOKENGENERATOR_USERNAME }} -e tokenGeneratorUserPwd=${{ secrets.TOKENGENERATOR_USERPASSWORD }} -e emailRecipient=${{ secrets.AUTOMATEDTEST_EMAILRECIPIENT }} -e ninRecipient=${{ secrets.AUTOMATEDTEST_NINRECIPIENT}}
 
     - name: Run sms notification order regression tests
       uses: grafana/k6-action@v0.3.1

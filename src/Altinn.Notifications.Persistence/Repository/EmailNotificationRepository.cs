@@ -50,7 +50,7 @@ public class EmailNotificationRepository : IEmailNotificationRepository
 
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notification.OrderId);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notification.Id);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, (object)DBNull.Value); // recipientorgno
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.OrganizationNumber ?? (object)DBNull.Value);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.NationalIdentityNumber ?? (object)DBNull.Value);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.ToAddress);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.SendResult.Result.ToString());
@@ -116,7 +116,7 @@ public class EmailNotificationRepository : IEmailNotificationRepository
             {
                 searchResult.Add(new EmailRecipient() 
                 {
-                    OrganisationNumber = reader.GetValue<string?>("recipientorgno"),
+                    OrganizationNumber = reader.GetValue<string?>("recipientorgno"),
                     NationalIdentityNumber = reader.GetValue<string?>("recipientnin"),
                     ToAddress = reader.GetValue<string>("toaddress")
                 });
