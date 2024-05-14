@@ -1,11 +1,10 @@
-﻿using System.Collections.Generic;
-using System.Security.Claims;
+﻿using System.Security.Claims;
 
 using Altinn.Authorization.ABAC.Xacml.JsonProfile;
 using Altinn.Common.PEP.Constants;
 using Altinn.Common.PEP.Helpers;
 using Altinn.Common.PEP.Interfaces;
-using Altinn.Notifications.Core.Enums;
+
 using static Altinn.Authorization.ABAC.Constants.XacmlConstants;
 
 namespace Altinn.Notifications.Authorization;
@@ -80,14 +79,14 @@ public class AuthorizationService : IAuthorizationService
 
         foreach (var response in xacmlJsonResponse.Response.Where(r => r.Decision == "Permit"))
         {
-            XacmlJsonCategory? resourceCategory = 
+            XacmlJsonCategory? resourceCategory =
                 response.Category.Find(c => c.CategoryId == MatchAttributeCategory.Resource);
 
             string? partyId = null;
 
             if (resourceCategory is not null)
             {
-                XacmlJsonAttribute? partyAttribute = 
+                XacmlJsonAttribute? partyAttribute =
                     resourceCategory.Attribute.Find(a => a.AttributeId == AltinnXacmlUrns.PartyId);
 
                 if (partyAttribute is not null)
@@ -96,12 +95,12 @@ public class AuthorizationService : IAuthorizationService
                 }
             }
 
-            XacmlJsonCategory? subjectCategory = 
+            XacmlJsonCategory? subjectCategory =
                 response.Category.Find(c => c.CategoryId == MatchAttributeCategory.Subject);
 
             if (subjectCategory is not null)
             {
-                XacmlJsonAttribute? userAttribute 
+                XacmlJsonAttribute? userAttribute
                     = subjectCategory.Attribute.Find(a => a.AttributeId == UserIdUrn);
 
                 if (userAttribute is not null && partyId is not null)

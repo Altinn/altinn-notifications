@@ -1,6 +1,4 @@
-﻿using Altinn.Authorization.ABAC.Xacml.JsonProfile;
-
-namespace Altinn.Notifications.Authorization;
+﻿namespace Altinn.Notifications.Authorization;
 
 /// <summary>
 /// Describes the necessary functions of an authorization service that can perform
