@@ -62,4 +62,17 @@ public static class TestdataUtil
     {
         return GetOrderForTest(GetBuilder());
     }
+
+    /// <summary>
+    /// Gets the default value of the provided type
+    /// </summary>  
+    public static object? GetDefaultValue(Type type)
+    {
+        if (type.IsValueType)
+        {
+            return Activator.CreateInstance(type);
+        }
+
+        return null;
+    }
 }

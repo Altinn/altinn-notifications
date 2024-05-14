@@ -10,41 +10,33 @@ using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Core.TestingModels
 {
-    public class NotificationOrderBuilderTests
+    public class NotificationOrderWithStatusBuilderTests
     {
-        [Fact]
-        public void Build_ThrowsExceptionWhenIdIsNotSet()
-        {
-            Assert.Throws<ArgumentException>(() => NotificationOrder.GetBuilder().Build());
-        }
-
         [Fact]
         public void Build_NoPropertiesHaveDefaultValues()
         {
-            var builder = new NotificationOrder.NotificationOrderBuilder();
+            var builder = new NotificationOrderWithStatusBuilder();
             var id = Guid.NewGuid();
-            var sendersReference = "reference";
             var requestedSendTime = DateTime.UtcNow;
-            var notificationChannel = NotificationChannel.Sms;
-            var ignoreReservation = true;
-            var creator = new Creator("ssb");
+            var creator = "ssb";
             var created = DateTime.UtcNow;
-            var templates = new List<INotificationTemplate>() { new SmsTemplate("Altinn", "SMS body") };
-            var recipients = new List<Recipient>();
+            var notificationChannel = NotificationChannel.Sms;
+            var processingStatus = new ProcessingStatus { Status = OrderProcessingStatus.Registered };
+            var sendersReference = "reference";
+            var ignoreReservation = true;
 
             builder.SetId(id);
-            builder.SetSendersReference(sendersReference);
             builder.SetRequestedSendTime(requestedSendTime);
-            builder.SetNotificationChannel(notificationChannel);
-            builder.SetIgnoreReservation(ignoreReservation);
             builder.SetCreator(creator);
             builder.SetCreated(created);
-            builder.SetTemplates(templates);
-            builder.SetRecipients(recipients);
+            builder.SetNotificationChannel(notificationChannel);
+            builder.SetProcessingStatus(processingStatus);
+            builder.SetSendersReference(sendersReference);
+            builder.SetIgnoreReservation(ignoreReservation);
 
             var order = builder.Build();
 
-            var properties = typeof(NotificationOrder).GetProperties();
+            var properties = typeof(NotificationOrderWithStatus).GetProperties();
 
             foreach (var property in properties)
             {
