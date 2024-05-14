@@ -177,7 +177,6 @@ namespace Altinn.Notifications.Core.Models.Orders
 
                 return order;
             }
-
         }
     }
 }

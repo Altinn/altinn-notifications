@@ -10,8 +10,6 @@ public class NotificationOrderWithStatusBuilder
     private Guid _id;
     private bool _idSet;
 
-    private string? _sendersReference;
-
     private DateTime _requestedSendTime;
     private bool _requestedSendTimeSet;
 
@@ -24,10 +22,12 @@ public class NotificationOrderWithStatusBuilder
     private NotificationChannel _notificationChannel;
     private bool _notificationChannelSet;
 
-    private bool _ignoreReservation;
-
     private ProcessingStatus? _processingStatus;
     private bool _processingStatusSet;
+
+    private string? _sendersReference;
+
+    private bool _ignoreReservation;
 
     /// <summary>
     /// Sets the id
