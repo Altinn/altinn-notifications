@@ -105,9 +105,9 @@ public class AuthorizationService : IAuthorizationService
 
                 if (userAttribute is not null && partyId is not null)
                 {
-                    if (permit.ContainsKey(partyId))
+                    if (permit.TryGetValue(partyId, out Dictionary<string, bool>? value))
                     {
-                        permit[partyId].Add(userAttribute.Value, true);
+                        value.Add(userAttribute.Value, true);
                     }
                     else
                     {
