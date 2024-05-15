@@ -1,9 +1,11 @@
 ﻿using System.Security.Claims;
+
 using Altinn.Authorization.ABAC.Xacml.JsonProfile;
 using Altinn.Common.PEP.Constants;
 using Altinn.Common.PEP.Helpers;
 using Altinn.Common.PEP.Interfaces;
 using Altinn.Notifications.Core.Integrations;
+
 using static Altinn.Authorization.ABAC.Constants.XacmlConstants;
 
 namespace Altinn.Notifications.Integrations.Authorization;
@@ -12,7 +14,7 @@ namespace Altinn.Notifications.Integrations.Authorization;
 /// An implementation of <see cref="IAuthorizationService"/> able to check that a potential
 /// recipient of a notification can access the resource that the notification is about.
 /// </summary>
-public class AuthorizationService : IAuthorizationService
+public class AuthorizationClient : IAuthorizationService
 {
     private const string UserIdUrn = "urn:altinn:userid";
 
@@ -24,9 +26,9 @@ public class AuthorizationService : IAuthorizationService
     private readonly IPDP _pdp;
 
     /// <summary>
-    /// Initialize a new instance the <see cref="AuthorizationService"/> class with the given dependenices.
+    /// Initialize a new instance the <see cref="AuthorizationClient"/> class with the given dependenices.
     /// </summary>
-    public AuthorizationService(IPDP pdp)
+    public AuthorizationClient(IPDP pdp)
     {
         _pdp = pdp;
     }

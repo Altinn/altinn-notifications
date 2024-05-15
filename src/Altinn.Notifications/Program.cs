@@ -189,7 +189,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     services.Configure<Altinn.Common.PEP.Configuration.PlatformSettings>(config.GetSection("PlatformSettings"));
     services.AddHttpClient<AuthorizationApiClient>();
     services.AddSingleton<IPDP, PDPAppSI>();
-    services.AddSingleton<Altinn.Notifications.Core.Integrations.IAuthorizationService, AuthorizationService>();
+    services.AddSingleton<Altinn.Notifications.Core.Integrations.IAuthorizationService, AuthorizationClient>();
 
     services.AddKafkaServices(config);
     services.AddAltinnClients(config);
