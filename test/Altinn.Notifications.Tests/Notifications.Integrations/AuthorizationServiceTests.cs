@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-
 using Altinn.Authorization.ABAC.Xacml.JsonProfile;
 using Altinn.Common.PEP.Interfaces;
 using Altinn.Notifications.Integrations.Authorization;
@@ -12,7 +11,7 @@ using Moq;
 
 using Xunit;
 
-namespace Altinn.Notifications.Tests.Notifications;
+namespace Altinn.Notifications.Tests.Notifications.Integrations;
 
 public class AuthorizationServiceTests
 {
@@ -22,7 +21,7 @@ public class AuthorizationServiceTests
 
     public AuthorizationServiceTests()
     {
-         _target = new AuthorizationService(_pdpMock.Object);
+        _target = new AuthorizationService(_pdpMock.Object);
     }
 
     [Fact]
