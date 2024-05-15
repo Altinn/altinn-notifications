@@ -1,4 +1,6 @@
-﻿namespace Altinn.Notifications.Core.Integrations;
+﻿using Altinn.Notifications.Core.Models.ContactPoints;
+
+namespace Altinn.Notifications.Core.Integrations;
 
 /// <summary>
 /// Describes the necessary functions of an authorization service that can perform
@@ -10,8 +12,9 @@ public interface IAuthorizationService
     /// Describes a method that can create an authorization request to authorize a set of
     /// users for access to a resource.
     /// </summary>
-    /// <param name="orgRightHolders">The list organizations with associated right holders.</param>
+    /// <param name="organizationContactPoints">The list organizations with associated right holders.</param>
     /// <param name="resourceId">The id of the resource.</param>
     /// <returns>A task</returns>
-    Task<Dictionary<string, Dictionary<string, bool>>> AuthorizeUsersForResource(Dictionary<int, List<int>> orgRightHolders, string resourceId);
+    Task<Dictionary<string, Dictionary<string, bool>>> AuthorizeUsersForResource(
+        List<OrganizationContactPoints> organizationContactPoints, string resourceId);
 }

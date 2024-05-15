@@ -5,7 +5,7 @@ using Altinn.Common.PEP.Constants;
 using Altinn.Common.PEP.Helpers;
 using Altinn.Common.PEP.Interfaces;
 using Altinn.Notifications.Core.Integrations;
-
+using Altinn.Notifications.Core.Models.ContactPoints;
 using static Altinn.Authorization.ABAC.Constants.XacmlConstants;
 
 namespace Altinn.Notifications.Integrations.Authorization;
@@ -37,10 +37,10 @@ public class AuthorizationClient : IAuthorizationService
     /// An implementation of <see cref="IAuthorizationService.AuthorizeUsersForResource"/> that
     /// will generate an authorization call to Altinn Authorization to check that the given users have read access.
     /// </summary>
-    /// <param name="orgRightHolders">The list organizations with associated right holders.</param>
+    /// <param name="organizationContactPoints">The list organizations with associated right holders.</param>
     /// <param name="resourceId">The id of the resource.</param>
     /// <returns>A task</returns>
-    public async Task<Dictionary<string, Dictionary<string, bool>>> AuthorizeUsersForResource(Dictionary<int, List<int>> orgRightHolders, string resourceId)
+    public async Task<Dictionary<string, Dictionary<string, bool>>> AuthorizeUsersForResource(List<OrganizationContactPoints> organizationContactPoints, string resourceId)
     {
         XacmlJsonRequest request = new()
         {
@@ -50,16 +50,16 @@ public class AuthorizationClient : IAuthorizationService
             MultiRequests = new XacmlJsonMultiRequests { RequestReference = [] }
         };
 
-        foreach (var organization in orgRightHolders)
+        foreach (var organization in organizationContactPoints)
         {
-            XacmlJsonCategory resourceCategory = CreateResourceCategory(organization.Key, resourceId);
+            XacmlJsonCategory resourceCategory = CreateResourceCategory(organization.PartyId, resourceId);
 
             if (request.Resource.All(rc => rc.Id != resourceCategory.Id))
             {
                 request.Resource.Add(resourceCategory);
             }
 
-            foreach (int userId in organization.Value.Distinct())
+            foreach (int userId in organization.UserContactPoints.Select(u => u.UserId).Distinct())
             {
                 XacmlJsonCategory subjectCategory = CreateAccessSubjectCategory(userId);
 

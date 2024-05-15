@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 
 using Altinn.Authorization.ABAC.Xacml.JsonProfile;
 using Altinn.Common.PEP.Interfaces;
+using Altinn.Notifications.Core.Models.ContactPoints;
 using Altinn.Notifications.Integrations.Authorization;
 using Altinn.Notifications.Tests.TestData;
 
@@ -29,11 +30,19 @@ public class AuthorizationClientTests
     public async Task AuthorizeUsersForResource_PermitAll()
     {
         // Arrange
-        Dictionary<int, List<int>> input = new()
-        {
-            { 51326783, new List<int> { 20020164 } },
-            { 51529389, new List<int> { 20020106, 20020164 } }
-        };
+        List<OrganizationContactPoints> organizationContactPoints =
+        [
+            new OrganizationContactPoints 
+            { 
+                PartyId = 51326783, 
+                UserContactPoints = [new() { UserId = 20020164 }]
+            },
+            new OrganizationContactPoints 
+            { 
+                PartyId = 51529389, 
+                UserContactPoints = [new() { UserId = 20020106 }, new() { UserId = 20020164 }]
+            }
+        ];
 
         XacmlJsonRequestRoot? actualRequest = null;
         _pdpMock.Setup(pdp => pdp.GetDecisionForRequest(It.IsAny<XacmlJsonRequestRoot>()))
@@ -42,7 +51,7 @@ public class AuthorizationClientTests
 
         // Act
         Dictionary<string, Dictionary<string, bool>> actualResult =
-            await _target.AuthorizeUsersForResource(input, "app_ttd_apps-test");
+            await _target.AuthorizeUsersForResource(organizationContactPoints, "app_ttd_apps-test");
 
         // Assert
         XacmlJsonRequestRoot expectedRequest = await TestDataLoader.Load<XacmlJsonRequestRoot>("PermitAll");
@@ -60,11 +69,19 @@ public class AuthorizationClientTests
     public async Task AuthorizeUsersForResource_DenyOne()
     {
         // Arrange
-        Dictionary<int, List<int>> input = new()
-        {
-            { 51326783, new List<int> { 20020164 } },
-            { 51529389, new List<int> { 20020168, 20020164 } }
-        };
+        List<OrganizationContactPoints> organizationContactPoints =
+        [
+            new OrganizationContactPoints
+            {
+                PartyId = 51326783,
+                UserContactPoints = [new() { UserId = 20020164 }]
+            },
+            new OrganizationContactPoints
+            {
+                PartyId = 51529389,
+                UserContactPoints = [new() { UserId = 20020168 }, new() { UserId = 20020164 }]
+            }
+        ];
 
         XacmlJsonRequestRoot? actualRequest = null;
         _pdpMock.Setup(pdp => pdp.GetDecisionForRequest(It.IsAny<XacmlJsonRequestRoot>()))
@@ -73,7 +90,7 @@ public class AuthorizationClientTests
 
         // Act
         Dictionary<string, Dictionary<string, bool>> actualResult =
-            await _target.AuthorizeUsersForResource(input, "app_ttd_apps-test");
+            await _target.AuthorizeUsersForResource(organizationContactPoints, "app_ttd_apps-test");
 
         // Assert
         XacmlJsonRequestRoot expectedRequest = await TestDataLoader.Load<XacmlJsonRequestRoot>("DenyOne");
@@ -91,11 +108,19 @@ public class AuthorizationClientTests
     public async Task AuthorizeUsersForResource_DenyAll()
     {
         // Arrange
-        Dictionary<int, List<int>> input = new()
-        {
-            { 51326783, new List<int> { 55555555 } },
-            { 51529389, new List<int> { 55555555, 66666666 } }
-        };
+        List<OrganizationContactPoints> organizationContactPoints =
+        [
+            new OrganizationContactPoints
+            {
+                PartyId = 51326783,
+                UserContactPoints = [new() { UserId = 55555555 }]
+            },
+            new OrganizationContactPoints
+            {
+                PartyId = 51529389,
+                UserContactPoints = [new() { UserId = 66666666 }, new() { UserId = 55555555 }]
+            }
+        ];
 
         XacmlJsonRequestRoot? actualRequest = null;
         _pdpMock.Setup(pdp => pdp.GetDecisionForRequest(It.IsAny<XacmlJsonRequestRoot>()))
@@ -104,7 +129,7 @@ public class AuthorizationClientTests
 
         // Act
         Dictionary<string, Dictionary<string, bool>> actualResult =
-            await _target.AuthorizeUsersForResource(input, "app_ttd_apps-test");
+            await _target.AuthorizeUsersForResource(organizationContactPoints, "app_ttd_apps-test");
 
         // Assert
         XacmlJsonRequestRoot expectedRequest = await TestDataLoader.Load<XacmlJsonRequestRoot>("DenyAll");
