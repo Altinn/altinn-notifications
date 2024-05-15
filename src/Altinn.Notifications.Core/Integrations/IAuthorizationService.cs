@@ -1,4 +1,4 @@
-﻿namespace Altinn.Notifications.Authorization;
+﻿namespace Altinn.Notifications.Core.Integrations;
 
 /// <summary>
 /// Describes the necessary functions of an authorization service that can perform

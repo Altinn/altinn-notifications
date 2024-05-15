@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 using Altinn.Authorization.ABAC.Xacml.JsonProfile;
 using Altinn.Common.PEP.Interfaces;
-using Altinn.Notifications.Authorization;
+using Altinn.Notifications.Integrations.Authorization;
 using Altinn.Notifications.Tests.TestData;
 
 using FluentAssertions;

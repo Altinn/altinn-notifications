@@ -1,13 +1,12 @@
 ﻿using System.Security.Claims;
-
 using Altinn.Authorization.ABAC.Xacml.JsonProfile;
 using Altinn.Common.PEP.Constants;
 using Altinn.Common.PEP.Helpers;
 using Altinn.Common.PEP.Interfaces;
-
+using Altinn.Notifications.Core.Integrations;
 using static Altinn.Authorization.ABAC.Constants.XacmlConstants;
 
-namespace Altinn.Notifications.Authorization;
+namespace Altinn.Notifications.Integrations.Authorization;
 
 /// <summary>
 /// An implementation of <see cref="IAuthorizationService"/> able to check that a potential
@@ -187,13 +186,13 @@ public class AuthorizationService : IAuthorizationService
     private static XacmlJsonRequestReference CreateRequestReference(string resourceCategoryId, string subjectCategoryId)
     {
         return new XacmlJsonRequestReference
-        { 
-            ReferenceId = new List<string> 
-            { 
-                subjectCategoryId, 
+        {
+            ReferenceId = new List<string>
+            {
+                subjectCategoryId,
                 ActionCategoryId,
                 resourceCategoryId
-            } 
+            }
         };
     }
 }

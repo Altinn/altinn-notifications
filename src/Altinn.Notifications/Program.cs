@@ -14,6 +14,7 @@ using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core.Extensions;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Health;
+using Altinn.Notifications.Integrations.Authorization;
 using Altinn.Notifications.Integrations.Extensions;
 using Altinn.Notifications.Middleware;
 using Altinn.Notifications.Models;
@@ -188,7 +189,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     services.Configure<Altinn.Common.PEP.Configuration.PlatformSettings>(config.GetSection("PlatformSettings"));
     services.AddHttpClient<AuthorizationApiClient>();
     services.AddSingleton<IPDP, PDPAppSI>();
-    services.AddSingleton<Altinn.Notifications.Authorization.IAuthorizationService, AuthorizationService>();
+    services.AddSingleton<Altinn.Notifications.Core.Integrations.IAuthorizationService, AuthorizationService>();
 
     services.AddKafkaServices(config);
     services.AddAltinnClients(config);
