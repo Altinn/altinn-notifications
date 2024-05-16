@@ -15,15 +15,15 @@ using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Integrations;
 
-public class AuthorizationClientTests
+public class AuthorizationServiceTests
 {
     private Mock<IPDP> _pdpMock = new Mock<IPDP>();
 
-    private AuthorizationClient _target;
+    private AuthorizationService _target;
 
-    public AuthorizationClientTests()
+    public AuthorizationServiceTests()
     {
-        _target = new AuthorizationClient(_pdpMock.Object);
+        _target = new AuthorizationService(_pdpMock.Object);
     }
 
     [Fact]

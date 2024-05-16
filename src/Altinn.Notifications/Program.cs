@@ -185,12 +185,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     ResourceLinkExtensions.Initialize(generalSettings.BaseUri);
     AddInputModelValidators(services);
     services.AddCoreServices(config);
-
-    services.Configure<Altinn.Common.PEP.Configuration.PlatformSettings>(config.GetSection("PlatformSettings"));
-    services.AddHttpClient<AuthorizationApiClient>();
-    services.AddSingleton<IPDP, PDPAppSI>();
-    services.AddSingleton<Altinn.Notifications.Core.Integrations.IAuthorizationService, AuthorizationClient>();
-
+    services.AddAuthorizationService(config);
     services.AddKafkaServices(config);
     services.AddAltinnClients(config);
     services.AddPostgresRepositories(config);

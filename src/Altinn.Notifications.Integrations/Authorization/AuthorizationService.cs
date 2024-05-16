@@ -14,7 +14,7 @@ namespace Altinn.Notifications.Integrations.Authorization;
 /// An implementation of <see cref="IAuthorizationService"/> able to check that a potential
 /// recipient of a notification can access the resource that the notification is about.
 /// </summary>
-public class AuthorizationClient : IAuthorizationService
+public class AuthorizationService : IAuthorizationService
 {
     private const string UserIdUrn = "urn:altinn:userid";
 
@@ -26,9 +26,9 @@ public class AuthorizationClient : IAuthorizationService
     private readonly IPDP _pdp;
 
     /// <summary>
-    /// Initialize a new instance the <see cref="AuthorizationClient"/> class with the given dependenices.
+    /// Initialize a new instance the <see cref="AuthorizationService"/> class with the given dependenices.
     /// </summary>
-    public AuthorizationClient(IPDP pdp)
+    public AuthorizationService(IPDP pdp)
     {
         _pdp = pdp;
     }
