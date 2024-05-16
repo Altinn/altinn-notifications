@@ -12,7 +12,7 @@ public interface IAuthorizationService
     /// Describes a method that can create an authorization request to authorize a set of
     /// users for access to a resource.
     /// </summary>
-    /// <param name="organizationContactPoints">The list organizations with associated right holders.</param>
+    /// <param name="organizationContactPoints">The contact points of an organization including user registered contact points.</param>
     /// <param name="resourceId">The id of the resource.</param>
     /// <returns>A task</returns>
     Task<Dictionary<string, Dictionary<string, bool>>> AuthorizeUsersForResource(

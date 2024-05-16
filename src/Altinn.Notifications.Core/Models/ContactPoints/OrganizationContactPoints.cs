@@ -26,7 +26,7 @@ public class OrganizationContactPoints
     public List<string> EmailList { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets a list of user registered contanct points associated with the organisation.
+    /// Gets or sets a list of user registered contact points associated with the organization.
     /// </summary>
     public List<UserContactPoints> UserContactPoints { get; set; } = [];
 }
