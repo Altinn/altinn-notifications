@@ -15,6 +15,6 @@ public interface IAuthorizationService
     /// <param name="organizationContactPoints">The contact points of an organization including user registered contact points.</param>
     /// <param name="resourceId">The id of the resource.</param>
     /// <returns>A task</returns>
-    Task<Dictionary<string, Dictionary<string, bool>>> AuthorizeUsersForResource(
+    Task<List<OrganizationContactPoints>> AuthorizeUsersForResource(
         List<OrganizationContactPoints> organizationContactPoints, string resourceId);
 }

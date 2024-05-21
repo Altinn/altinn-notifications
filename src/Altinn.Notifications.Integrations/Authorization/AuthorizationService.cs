@@ -40,7 +40,46 @@ public class AuthorizationService : IAuthorizationService
     /// <param name="organizationContactPoints">The list organizations with associated right holders.</param>
     /// <param name="resourceId">The id of the resource.</param>
     /// <returns>A task</returns>
-    public async Task<Dictionary<string, Dictionary<string, bool>>> AuthorizeUsersForResource(List<OrganizationContactPoints> organizationContactPoints, string resourceId)
+    public async Task<List<OrganizationContactPoints>> AuthorizeUsersForResource(
+        List<OrganizationContactPoints> organizationContactPoints, string resourceId)
+    {
+        XacmlJsonRequestRoot jsonRequest = BuildAuthorizationRequest(organizationContactPoints, resourceId);
+
+        XacmlJsonResponse xacmlJsonResponse = await _pdp.GetDecisionForRequest(jsonRequest);
+
+        List<OrganizationContactPoints> filtered = 
+            organizationContactPoints.Select(o => o.CloneWithoutUsers()).ToList();
+
+        foreach (var response in xacmlJsonResponse.Response.Where(r => r.Decision == "Permit"))
+        {
+            string? partyId = GetValue(response, MatchAttributeCategory.Resource, AltinnXacmlUrns.PartyId);
+            string? userId = GetValue(response, MatchAttributeCategory.Subject, UserIdUrn);
+
+            if (partyId == null || userId == null)
+            {
+                continue;
+            }
+
+            OrganizationContactPoints? sourceOrg = organizationContactPoints.Find(o => o.PartyId == int.Parse(partyId));
+            OrganizationContactPoints? targetOrg = filtered.Find(o => o.PartyId == int.Parse(partyId));
+
+            if (sourceOrg is null || targetOrg is null)
+            {
+                continue;
+            }
+
+            UserContactPoints? user = sourceOrg.UserContactPoints.Find(u => u.UserId == int.Parse(userId));
+
+            if (user is not null)
+            {
+                targetOrg.UserContactPoints.Add(user.Clone());
+            }
+        }
+
+        return filtered;
+    }
+
+    private XacmlJsonRequestRoot BuildAuthorizationRequest(List<OrganizationContactPoints> organizationContactPoints, string resourceId)
     {
         XacmlJsonRequest request = new()
         {
@@ -73,52 +112,7 @@ public class AuthorizationService : IAuthorizationService
         }
 
         XacmlJsonRequestRoot jsonRequest = new() { Request = request };
-
-        XacmlJsonResponse xacmlJsonResponse = await _pdp.GetDecisionForRequest(jsonRequest);
-
-        Dictionary<string, Dictionary<string, bool>> permit = [];
-
-        foreach (var response in xacmlJsonResponse.Response.Where(r => r.Decision == "Permit"))
-        {
-            XacmlJsonCategory? resourceCategory =
-                response.Category.Find(c => c.CategoryId == MatchAttributeCategory.Resource);
-
-            string? partyId = null;
-
-            if (resourceCategory is not null)
-            {
-                XacmlJsonAttribute? partyAttribute =
-                    resourceCategory.Attribute.Find(a => a.AttributeId == AltinnXacmlUrns.PartyId);
-
-                if (partyAttribute is not null)
-                {
-                    partyId = partyAttribute.Value;
-                }
-            }
-
-            XacmlJsonCategory? subjectCategory =
-                response.Category.Find(c => c.CategoryId == MatchAttributeCategory.Subject);
-
-            if (subjectCategory is not null)
-            {
-                XacmlJsonAttribute? userAttribute
-                    = subjectCategory.Attribute.Find(a => a.AttributeId == UserIdUrn);
-
-                if (userAttribute is not null && partyId is not null)
-                {
-                    if (permit.TryGetValue(partyId, out Dictionary<string, bool>? value))
-                    {
-                        value.Add(userAttribute.Value, true);
-                    }
-                    else
-                    {
-                        permit.Add(partyId, new Dictionary<string, bool> { { userAttribute.Value, true } });
-                    }
-                }
-            }
-        }
-
-        return permit;
+        return jsonRequest;
     }
 
     private XacmlJsonCategory CreateActionCategory()
@@ -189,12 +183,23 @@ public class AuthorizationService : IAuthorizationService
     {
         return new XacmlJsonRequestReference
         {
-            ReferenceId = new List<string>
-            {
+            ReferenceId =
+            [
                 subjectCategoryId,
                 ActionCategoryId,
                 resourceCategoryId
-            }
+            ]
         };
+    }
+
+    private static string? GetValue(XacmlJsonResult response, string categoryId, string attributeId)
+    {
+        XacmlJsonCategory? resourceCategory =
+            response.Category.Find(c => c.CategoryId == categoryId);
+
+        XacmlJsonAttribute? partyAttribute =
+            resourceCategory?.Attribute.Find(a => a.AttributeId == attributeId);
+
+        return partyAttribute?.Value;
     }
 }

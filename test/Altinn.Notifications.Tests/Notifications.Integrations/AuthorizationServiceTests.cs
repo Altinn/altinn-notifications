@@ -50,19 +50,14 @@ public class AuthorizationServiceTests
             .ReturnsAsync(await TestDataLoader.Load<XacmlJsonResponse>("PermitAll"));
 
         // Act
-        Dictionary<string, Dictionary<string, bool>> actualResult =
+        List<OrganizationContactPoints> actualResult =
             await _target.AuthorizeUsersForResource(organizationContactPoints, "app_ttd_apps-test");
 
         // Assert
         XacmlJsonRequestRoot expectedRequest = await TestDataLoader.Load<XacmlJsonRequestRoot>("PermitAll");
         actualRequest.Should().BeEquivalentTo(expectedRequest);
 
-        Dictionary<string, Dictionary<string, bool>> expectedResult = new()
-        {
-            { "51326783", new Dictionary<string, bool>() { { "20020164", true } } },
-            { "51529389", new Dictionary<string, bool>() { { "20020106", true }, { "20020164", true } } }
-        };
-        actualResult.Should().BeEquivalentTo(expectedResult);
+        actualResult.Should().BeEquivalentTo(organizationContactPoints);
     }
 
     [Fact]
@@ -89,18 +84,26 @@ public class AuthorizationServiceTests
             .ReturnsAsync(await TestDataLoader.Load<XacmlJsonResponse>("DenyOne"));
 
         // Act
-        Dictionary<string, Dictionary<string, bool>> actualResult =
+        List<OrganizationContactPoints> actualResult =
             await _target.AuthorizeUsersForResource(organizationContactPoints, "app_ttd_apps-test");
 
         // Assert
         XacmlJsonRequestRoot expectedRequest = await TestDataLoader.Load<XacmlJsonRequestRoot>("DenyOne");
         actualRequest.Should().BeEquivalentTo(expectedRequest);
 
-        Dictionary<string, Dictionary<string, bool>> expectedResult = new()
-        {
-            { "51326783", new Dictionary<string, bool>() { { "20020164", true } } },
-            { "51529389", new Dictionary<string, bool>() { { "20020164", true } } }
-        };
+        List<OrganizationContactPoints> expectedResult =
+        [
+            new OrganizationContactPoints
+            {
+                PartyId = 51326783,
+                UserContactPoints = [new() { UserId = 20020164 }]
+            },
+            new OrganizationContactPoints
+            {
+                PartyId = 51529389,
+                UserContactPoints = [new() { UserId = 20020164 }]
+            }
+        ];
         actualResult.Should().BeEquivalentTo(expectedResult);
     }
 
@@ -128,14 +131,18 @@ public class AuthorizationServiceTests
             .ReturnsAsync(await TestDataLoader.Load<XacmlJsonResponse>("DenyAll"));
 
         // Act
-        Dictionary<string, Dictionary<string, bool>> actualResult =
+        List<OrganizationContactPoints> actualResult =
             await _target.AuthorizeUsersForResource(organizationContactPoints, "app_ttd_apps-test");
 
         // Assert
         XacmlJsonRequestRoot expectedRequest = await TestDataLoader.Load<XacmlJsonRequestRoot>("DenyAll");
         actualRequest.Should().BeEquivalentTo(expectedRequest);
 
-        Dictionary<string, Dictionary<string, bool>> expectedResult = []; // Empty
+        List<OrganizationContactPoints> expectedResult =
+        [
+            new OrganizationContactPoints { PartyId = 51326783, UserContactPoints = [] },
+            new OrganizationContactPoints { PartyId = 51529389, UserContactPoints = [] }
+        ];
         actualResult.Should().BeEquivalentTo(expectedResult);
     }
 }

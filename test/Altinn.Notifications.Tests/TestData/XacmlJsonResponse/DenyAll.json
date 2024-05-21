@@ -26,7 +26,7 @@
           "attribute": [
             {
               "attributeId": "urn:altinn:userid",
-              "value": "20020164",
+              "value": "55555555",
               "dataType": "http://www.w3.org/2001/XMLSchema#string",
               "includeInResult": false
             }
@@ -58,7 +58,7 @@
           "attribute": [
             {
               "attributeId": "urn:altinn:userid",
-              "value": "20020168",
+              "value": "66666666",
               "dataType": "http://www.w3.org/2001/XMLSchema#string",
               "includeInResult": false
             }
@@ -103,7 +103,7 @@
           "attribute": [
             {
               "attributeId": "urn:altinn:userid",
-              "value": "20020164",
+              "value": "55555555",
               "dataType": "http://www.w3.org/2001/XMLSchema#string",
               "includeInResult": false
             }
