@@ -1,4 +1,8 @@
-﻿using Altinn.Notifications.Core.Integrations;
+﻿using Altinn.Common.PEP.Clients;
+using Altinn.Common.PEP.Implementation;
+using Altinn.Common.PEP.Interfaces;
+using Altinn.Notifications.Core.Integrations;
+using Altinn.Notifications.Integrations.Authorization;
 using Altinn.Notifications.Integrations.Clients;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Health;
@@ -6,6 +10,7 @@ using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.Integrations.Kafka.Producers;
 using Altinn.Notifications.Integrations.Register;
 
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -51,6 +56,20 @@ public static class ServiceCollectionExtensions
         services.Configure<PlatformSettings>(config.GetSection(nameof(PlatformSettings)));
         services.AddHttpClient<IProfileClient, ProfileClient>();
         services.AddHttpClient<IRegisterClient, RegisterClient>();
+    }
+
+    /// <summary>
+    /// Adds Altinn clients and configurations to DI container.
+    /// </summary>
+    /// <param name="services">service collection.</param>
+    /// <param name="config">the configuration collection</param>
+    public static void AddAuthorizationService(this IServiceCollection services, IConfiguration config)
+    {
+        services.Configure<Common.PEP.Configuration.PlatformSettings>(config.GetSection("PlatformSettings"));
+        services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+        services.AddHttpClient<AuthorizationApiClient>();
+        services.AddSingleton<IPDP, PDPAppSI>();
+        services.AddSingleton<IAuthorizationService, AuthorizationService>();
     }
 
     /// <summary>

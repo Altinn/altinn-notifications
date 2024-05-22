@@ -35,6 +35,7 @@ public static class ServiceUtil
 
         services.AddLogging();
         services.AddPostgresRepositories(config);
+        services.AddAuthorizationService(config);
         services.AddCoreServices(config);
         services.AddKafkaServices(config);
         services.AddAltinnClients(config);

@@ -1,0 +1,125 @@
+{
+  "request": {
+    "returnPolicyIdList": false,
+    "combinedDecision": false,
+    "resource": [
+      {
+        "id": "resource51326783",
+        "attribute": [
+          {
+            "attributeId": "urn:altinn:org",
+            "value": "ttd",
+            "issuer": "Altinn",
+            "dataType": "http://www.w3.org/2001/XMLSchema#string",
+            "includeInResult": false
+          },
+          {
+            "attributeId": "urn:altinn:app",
+            "value": "apps-test",
+            "issuer": "Altinn",
+            "dataType": "http://www.w3.org/2001/XMLSchema#string",
+            "includeInResult": false
+          },
+          {
+            "attributeId": "urn:altinn:partyid",
+            "value": "51326783",
+            "issuer": "Altinn",
+            "dataType": "http://www.w3.org/2001/XMLSchema#string",
+            "includeInResult": true
+          }
+        ]
+      },
+      {
+        "id": "resource51529389",
+        "attribute": [
+          {
+            "attributeId": "urn:altinn:org",
+            "value": "ttd",
+            "issuer": "Altinn",
+            "dataType": "http://www.w3.org/2001/XMLSchema#string",
+            "includeInResult": false
+          },
+          {
+            "attributeId": "urn:altinn:app",
+            "value": "apps-test",
+            "issuer": "Altinn",
+            "dataType": "http://www.w3.org/2001/XMLSchema#string",
+            "includeInResult": false
+          },
+          {
+            "attributeId": "urn:altinn:partyid",
+            "value": "51529389",
+            "issuer": "Altinn",
+            "dataType": "http://www.w3.org/2001/XMLSchema#string",
+            "includeInResult": true
+          }
+        ]
+      }
+    ],
+    "action": [
+      {
+        "id": "action",
+        "attribute": [
+          {
+            "attributeId": "urn:oasis:names:tc:xacml:1.0:action:action-id",
+            "value": "read",
+            "issuer": "Altinn",
+            "dataType": "string",
+            "includeInResult": false
+          }
+        ]
+      }
+    ],
+    "accessSubject": [
+      {
+        "id": "subject20020164",
+        "attribute": [
+          {
+            "attributeId": "urn:altinn:userid",
+            "value": "20020164",
+            "issuer": "Altinn",
+            "dataType": "http://www.w3.org/2001/XMLSchema#string",
+            "includeInResult": true
+          }
+        ]
+      },
+      {
+        "id": "subject20020106",
+        "attribute": [
+          {
+            "attributeId": "urn:altinn:userid",
+            "value": "20020106",
+            "issuer": "Altinn",
+            "dataType": "http://www.w3.org/2001/XMLSchema#string",
+            "includeInResult": true
+          }
+        ]
+      }
+    ],
+    "multiRequests": {
+      "requestReference": [
+        {
+          "referenceId": [
+            "subject20020164",
+            "action",
+            "resource51326783"
+          ]
+        },
+        {
+          "referenceId": [
+            "subject20020106",
+            "action",
+            "resource51529389"
+          ]
+        },
+        {
+          "referenceId": [
+            "subject20020164",
+            "action",
+            "resource51529389"
+          ]
+        }
+      ]
+    }
+  }
+}

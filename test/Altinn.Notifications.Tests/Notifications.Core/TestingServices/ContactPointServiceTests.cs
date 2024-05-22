@@ -151,7 +151,10 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             Assert.Equivalent(expectedOutput, input);
         }
 
-        private static ContactPointService GetTestService(IProfileClient? profileClient = null, IRegisterClient? registerClient = null)
+        private static ContactPointService GetTestService(
+            IProfileClient? profileClient = null,
+            IRegisterClient? registerClient = null,
+            IAuthorizationService? authorizationService = null)
         {
             if (profileClient == null)
             {
@@ -165,7 +168,13 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 registerClient = registerClientMock.Object;
             }
 
-            return new ContactPointService(profileClient, registerClient);
+            if (authorizationService == null)
+            {
+                var authorizationServiceMock = new Mock<IAuthorizationService>();
+                authorizationService = authorizationServiceMock.Object;
+            }
+
+            return new ContactPointService(profileClient, registerClient, authorizationService);
         }
     }
 }

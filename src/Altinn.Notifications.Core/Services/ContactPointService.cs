@@ -14,14 +14,16 @@ namespace Altinn.Notifications.Core.Services
     {
         private readonly IProfileClient _profileClient;
         private readonly IRegisterClient _registerClient;
+        private readonly IAuthorizationService _authorizationService;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ContactPointService"/> class.
         /// </summary>
-        public ContactPointService(IProfileClient profile, IRegisterClient register)
+        public ContactPointService(IProfileClient profile, IRegisterClient register, IAuthorizationService authorizationService)
         {
             _profileClient = profile;
             _registerClient = register;
+            _authorizationService = authorizationService;
         }
 
         /// <inheritdoc/>
@@ -160,19 +162,19 @@ namespace Altinn.Notifications.Core.Services
             }
 
             Task<List<OrganizationContactPoints>> registerTask = _registerClient.GetOrganizationContactPoints(orgNos);
-            List<OrganizationContactPoints> userRegisteredContactPoints = new();
+            List<OrganizationContactPoints> authorizedUserContactPoints = new();
 
             if (!string.IsNullOrEmpty(resourceId))
             {
-                // TODO: call authorization to filter list before moving forward
-                userRegisteredContactPoints = await _profileClient.GetUserRegisteredOrganizationContactPoints(resourceId, orgNos);
+                var allUserContactPoints = await _profileClient.GetUserRegisteredOrganizationContactPoints(resourceId, orgNos);
+                authorizedUserContactPoints = await _authorizationService.AuthorizeUsersForResource(allUserContactPoints, resourceId);
             }
 
             List<OrganizationContactPoints> contactPoints = await registerTask;
 
             if (!string.IsNullOrEmpty(resourceId))
             {
-                foreach (var userContactPoint in userRegisteredContactPoints)
+                foreach (var userContactPoint in authorizedUserContactPoints)
                 {
                     userContactPoint.UserContactPoints.ForEach(userContactPoint =>
                     {
