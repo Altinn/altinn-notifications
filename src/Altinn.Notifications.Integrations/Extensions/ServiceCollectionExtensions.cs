@@ -66,7 +66,6 @@ public static class ServiceCollectionExtensions
     public static void AddAuthorizationService(this IServiceCollection services, IConfiguration config)
     {
         services.Configure<Common.PEP.Configuration.PlatformSettings>(config.GetSection("PlatformSettings"));
-        services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
         services.AddHttpClient<AuthorizationApiClient>();
         services.AddSingleton<IPDP, PDPAppSI>();
         services.AddSingleton<IAuthorizationService, AuthorizationService>();

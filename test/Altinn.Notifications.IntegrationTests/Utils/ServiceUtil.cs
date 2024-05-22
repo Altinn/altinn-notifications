@@ -3,6 +3,7 @@ using Altinn.Notifications.Integrations.Extensions;
 using Altinn.Notifications.Persistence.Extensions;
 
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -33,12 +34,13 @@ public static class ServiceUtil
 
         IServiceCollection services = new ServiceCollection();
 
+        services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
         services.AddLogging();
         services.AddPostgresRepositories(config);
-        services.AddAuthorizationService(config);
         services.AddCoreServices(config);
         services.AddKafkaServices(config);
         services.AddAltinnClients(config);
+        services.AddAuthorizationService(config);
 
         var serviceProvider = services.BuildServiceProvider();
         List<object> outputServices = new();
