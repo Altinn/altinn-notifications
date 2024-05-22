@@ -93,7 +93,7 @@ public class AuthorizationService : IAuthorizationService
         {
             XacmlJsonCategory resourceCategory = CreateResourceCategory(organization.PartyId, resourceId);
 
-            if (request.Resource.All(rc => rc.Id != resourceCategory.Id))
+            if (request.Resource.TrueForAll(rc => rc.Id != resourceCategory.Id))
             {
                 request.Resource.Add(resourceCategory);
             }
@@ -102,7 +102,7 @@ public class AuthorizationService : IAuthorizationService
             {
                 XacmlJsonCategory subjectCategory = CreateAccessSubjectCategory(userId);
 
-                if (request.AccessSubject.All(sc => sc.Id != subjectCategory.Id))
+                if (request.AccessSubject.TrueForAll(sc => sc.Id != subjectCategory.Id))
                 {
                     request.AccessSubject.Add(subjectCategory);
                 }
