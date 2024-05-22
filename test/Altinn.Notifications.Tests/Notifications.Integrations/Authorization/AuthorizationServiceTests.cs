@@ -13,7 +13,7 @@ using Moq;
 
 using Xunit;
 
-namespace Altinn.Notifications.Tests.Notifications.Integrations;
+namespace Altinn.Notifications.Tests.Notifications.Integrations.Authorization;
 
 public class AuthorizationServiceTests
 {
@@ -32,14 +32,14 @@ public class AuthorizationServiceTests
         // Arrange
         List<OrganizationContactPoints> organizationContactPoints =
         [
-            new OrganizationContactPoints 
-            { 
-                PartyId = 51326783, 
+            new OrganizationContactPoints
+            {
+                PartyId = 51326783,
                 UserContactPoints = [new() { UserId = 20020164 }]
             },
-            new OrganizationContactPoints 
-            { 
-                PartyId = 51529389, 
+            new OrganizationContactPoints
+            {
+                PartyId = 51529389,
                 UserContactPoints = [new() { UserId = 20020106 }, new() { UserId = 20020164 }]
             }
         ];
@@ -51,7 +51,7 @@ public class AuthorizationServiceTests
 
         // Act
         List<OrganizationContactPoints> actualResult =
-            await _target.AuthorizeUsersForResource(organizationContactPoints, "app_ttd_apps-test");
+            await _target.AuthorizeUserContactPointsForResource(organizationContactPoints, "app_ttd_apps-test");
 
         // Assert
         XacmlJsonRequestRoot expectedRequest = await TestDataLoader.Load<XacmlJsonRequestRoot>("PermitAll");
@@ -85,7 +85,7 @@ public class AuthorizationServiceTests
 
         // Act
         List<OrganizationContactPoints> actualResult =
-            await _target.AuthorizeUsersForResource(organizationContactPoints, "app_ttd_apps-test");
+            await _target.AuthorizeUserContactPointsForResource(organizationContactPoints, "app_ttd_apps-test");
 
         // Assert
         XacmlJsonRequestRoot expectedRequest = await TestDataLoader.Load<XacmlJsonRequestRoot>("DenyOne");
@@ -132,7 +132,7 @@ public class AuthorizationServiceTests
 
         // Act
         List<OrganizationContactPoints> actualResult =
-            await _target.AuthorizeUsersForResource(organizationContactPoints, "app_ttd_apps-test");
+            await _target.AuthorizeUserContactPointsForResource(organizationContactPoints, "app_ttd_apps-test");
 
         // Assert
         XacmlJsonRequestRoot expectedRequest = await TestDataLoader.Load<XacmlJsonRequestRoot>("DenyAll");

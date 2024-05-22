@@ -12,9 +12,11 @@ public interface IAuthorizationService
     /// Describes a method that can create an authorization request to authorize a set of
     /// users for access to a resource.
     /// </summary>
-    /// <param name="organizationContactPoints">The contact points of an organization including user registered contact points.</param>
+    /// <param name="organizationContactPoints">
+    /// The contact points of an organization including user registered contact points.
+    /// </param>
     /// <param name="resourceId">The id of the resource.</param>
-    /// <returns>A task</returns>
-    Task<List<OrganizationContactPoints>> AuthorizeUsersForResource(
+    /// <returns>A new list of <see cref="OrganizationContactPoints"/> with filtered list of recipients.</returns>
+    Task<List<OrganizationContactPoints>> AuthorizeUserContactPointsForResource(
         List<OrganizationContactPoints> organizationContactPoints, string resourceId);
 }
