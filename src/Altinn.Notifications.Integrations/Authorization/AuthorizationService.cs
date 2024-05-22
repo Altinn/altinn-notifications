@@ -115,7 +115,7 @@ public class AuthorizationService : IAuthorizationService
         return jsonRequest;
     }
 
-    private XacmlJsonCategory CreateActionCategory()
+    private static XacmlJsonCategory CreateActionCategory()
     {
         XacmlJsonAttribute attribute =
             DecisionHelper.CreateXacmlJsonAttribute(
@@ -166,7 +166,7 @@ public class AuthorizationService : IAuthorizationService
         };
     }
 
-    private XacmlJsonCategory CreateAccessSubjectCategory(int userId)
+    private static XacmlJsonCategory CreateAccessSubjectCategory(int userId)
     {
         XacmlJsonAttribute attribute =
             DecisionHelper.CreateXacmlJsonAttribute(
