@@ -34,13 +34,13 @@ public class AuthorizationService : IAuthorizationService
     }
 
     /// <summary>
-    /// An implementation of <see cref="IAuthorizationService.AuthorizeUsersForResource"/> that
+    /// An implementation of <see cref="IAuthorizationService.AuthorizeUserContactPointsForResource"/> that
     /// will generate an authorization call to Altinn Authorization to check that the given users have read access.
     /// </summary>
     /// <param name="organizationContactPoints">The list organizations with associated right holders.</param>
     /// <param name="resourceId">The id of the resource.</param>
-    /// <returns>A task</returns>
-    public async Task<List<OrganizationContactPoints>> AuthorizeUsersForResource(
+    /// <returns>A new list of <see cref="OrganizationContactPoints"/> with filtered list of recipients.</returns>
+    public async Task<List<OrganizationContactPoints>> AuthorizeUserContactPointsForResource(
         List<OrganizationContactPoints> organizationContactPoints, string resourceId)
     {
         XacmlJsonRequestRoot jsonRequest = BuildAuthorizationRequest(organizationContactPoints, resourceId);

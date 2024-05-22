@@ -58,10 +58,10 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Adds Altinn clients and configurations to DI container.
+    /// Adds services and other dependencies used for authorization.
     /// </summary>
-    /// <param name="services">service collection.</param>
-    /// <param name="config">the configuration collection</param>
+    /// <param name="services">The service collection.</param>
+    /// <param name="config">The configuration collection</param>
     public static void AddAuthorizationService(this IServiceCollection services, IConfiguration config)
     {
         services.Configure<Common.PEP.Configuration.PlatformSettings>(config.GetSection("PlatformSettings"));
