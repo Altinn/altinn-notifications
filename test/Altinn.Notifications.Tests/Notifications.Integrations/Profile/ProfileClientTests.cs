@@ -105,7 +105,17 @@ public class ProfileClientTests
 
         // Assert
         Assert.Equal(2, actual.Count);
-        Assert.Contains(new OrganizationContactPoints() { OrganizationNumber = "123456789", PartyId = 56789, UserContactPoints = [new() { UserId = 20001 }] }, actual);
+        Assert.Contains(actual, ocp => ocp.OrganizationNumber == "123456789" && ocp.PartyId == 56789 && ocp.UserContactPoints.Any(u => u.UserId == 20001));
+    }
+
+    [Fact]
+    public async Task GetUserRegisteredOrganizationContactPoints_FailureResponse_ExceptionIsThrown()
+    {
+        // Act
+        var exception = await Assert.ThrowsAsync<PlatformHttpException>(async () => await _profileClient.GetUserRegisteredOrganizationContactPoints("error-resource", ["12345678", "98754321"]));
+
+        Assert.StartsWith("ProfileClient.GetUserRegisteredOrganizationContactPoints failed with status code", exception.Message);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, exception.Response?.StatusCode);
     }
 
     private Task<HttpResponseMessage> GetUserProfileResponse(UserContactPointLookup lookup)

@@ -69,7 +69,7 @@ public class ProfileClient : IProfileClient
         }
 
         string responseContent = await response.Content.ReadAsStringAsync();
-        List<OrganizationContactPoints>? contactPoints = JsonSerializer.Deserialize<OrganizationContactPointsList>(responseContent, JsonSerializerOptionsProvider.Options)!.ContactPointsList;
+        List<OrganizationContactPoints>? contactPoints = JsonSerializer.Deserialize<List<OrganizationContactPoints>>(responseContent, JsonSerializerOptionsProvider.Options)!;
         
         return contactPoints!;
     }
