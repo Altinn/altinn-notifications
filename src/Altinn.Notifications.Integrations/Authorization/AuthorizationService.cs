@@ -48,7 +48,7 @@ public class AuthorizationService : IAuthorizationService
         XacmlJsonResponse xacmlJsonResponse = await _pdp.GetDecisionForRequest(jsonRequest);
 
         List<OrganizationContactPoints> filtered = 
-            organizationContactPoints.Select(o => o.CloneWithoutUsers()).ToList();
+            organizationContactPoints.Select(o => o.CloneWithoutContactPoints()).ToList();
 
         foreach (var response in xacmlJsonResponse.Response.Where(r => r.Decision == "Permit"))
         {

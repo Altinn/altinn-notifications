@@ -36,7 +36,7 @@ public class OrganizationContactPoints
     /// Create a new instance with the same values as the existing instance
     /// </summary>
     /// <returns>The new instance with copied values.</returns>
-    public OrganizationContactPoints CloneWithoutUsers()
+    public OrganizationContactPoints CloneWithoutContactPoints()
     {
         OrganizationContactPoints clone = new()
         {
@@ -46,9 +46,6 @@ public class OrganizationContactPoints
             EmailList = [],
             UserContactPoints = []
         };
-        
-        clone.MobileNumberList.AddRange(MobileNumberList);
-        clone.EmailList.AddRange(EmailList);
 
         return clone;
     }
