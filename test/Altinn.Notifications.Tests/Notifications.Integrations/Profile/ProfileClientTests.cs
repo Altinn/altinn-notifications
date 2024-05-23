@@ -12,6 +12,7 @@ using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Integrations.Clients;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Profile;
+using Altinn.Notifications.Integrations.Register;
 
 using Microsoft.Extensions.Options;
 
@@ -162,13 +163,16 @@ public class ProfileClientTests
         switch (lookup.ResourceId)
         {
             case "no-matches":
-                contentData = new List<OrganizationContactPoints>();
+                contentData = new OrgContactPointsList();
                 break;
             case "some-matches":
-                contentData = new List<OrganizationContactPoints>
+                contentData = new OrgContactPointsList()
                 {
-                    new() { OrganizationNumber = "123456789", PartyId = 56789, UserContactPoints = [new() { UserId = 20001 }] },
-                    new() { OrganizationNumber = "987654321", PartyId = 54321,  UserContactPoints = [new() { UserId = 20001 }] }
+                    ContactPointsList = new List<OrganizationContactPoints>
+                    {
+                        new() { OrganizationNumber = "123456789", PartyId = 56789, UserContactPoints = [new() { UserId = 20001 }] },
+                        new() { OrganizationNumber = "987654321", PartyId = 54321,  UserContactPoints = [new() { UserId = 20001 }] }
+                    }
                 };
                 break;
             case "error-resource":

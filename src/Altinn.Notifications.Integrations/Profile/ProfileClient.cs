@@ -7,6 +7,7 @@ using Altinn.Notifications.Core.Models.ContactPoints;
 using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Profile;
+using Altinn.Notifications.Integrations.Register;
 
 using Microsoft.Extensions.Options;
 
@@ -69,8 +70,8 @@ public class ProfileClient : IProfileClient
         }
 
         string responseContent = await response.Content.ReadAsStringAsync();
-        List<OrganizationContactPoints>? contactPoints = JsonSerializer.Deserialize<List<OrganizationContactPoints>>(responseContent, JsonSerializerOptionsProvider.Options)!;
+        OrgContactPointsList? contactPoints = JsonSerializer.Deserialize<OrgContactPointsList>(responseContent, JsonSerializerOptionsProvider.Options)!;
         
-        return contactPoints!;
+        return contactPoints.ContactPointsList!;
     }
 }
