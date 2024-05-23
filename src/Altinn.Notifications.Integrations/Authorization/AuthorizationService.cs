@@ -6,6 +6,7 @@ using Altinn.Common.PEP.Helpers;
 using Altinn.Common.PEP.Interfaces;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.ContactPoints;
+
 using static Altinn.Authorization.ABAC.Constants.XacmlConstants;
 
 namespace Altinn.Notifications.Integrations.Authorization;
@@ -79,7 +80,7 @@ public class AuthorizationService : IAuthorizationService
         return filtered;
     }
 
-    private XacmlJsonRequestRoot BuildAuthorizationRequest(List<OrganizationContactPoints> organizationContactPoints, string resourceId)
+    private static XacmlJsonRequestRoot BuildAuthorizationRequest(List<OrganizationContactPoints> organizationContactPoints, string resourceId)
     {
         XacmlJsonRequest request = new()
         {
@@ -93,7 +94,7 @@ public class AuthorizationService : IAuthorizationService
         {
             XacmlJsonCategory resourceCategory = CreateResourceCategory(organization.PartyId, resourceId);
 
-            if (request.Resource.All(rc => rc.Id != resourceCategory.Id))
+            if (request.Resource.TrueForAll(rc => rc.Id != resourceCategory.Id))
             {
                 request.Resource.Add(resourceCategory);
             }
@@ -102,7 +103,7 @@ public class AuthorizationService : IAuthorizationService
             {
                 XacmlJsonCategory subjectCategory = CreateAccessSubjectCategory(userId);
 
-                if (request.AccessSubject.All(sc => sc.Id != subjectCategory.Id))
+                if (request.AccessSubject.TrueForAll(sc => sc.Id != subjectCategory.Id))
                 {
                     request.AccessSubject.Add(subjectCategory);
                 }
@@ -115,7 +116,7 @@ public class AuthorizationService : IAuthorizationService
         return jsonRequest;
     }
 
-    private XacmlJsonCategory CreateActionCategory()
+    private static XacmlJsonCategory CreateActionCategory()
     {
         XacmlJsonAttribute attribute =
             DecisionHelper.CreateXacmlJsonAttribute(
@@ -166,7 +167,7 @@ public class AuthorizationService : IAuthorizationService
         };
     }
 
-    private XacmlJsonCategory CreateAccessSubjectCategory(int userId)
+    private static XacmlJsonCategory CreateAccessSubjectCategory(int userId)
     {
         XacmlJsonAttribute attribute =
             DecisionHelper.CreateXacmlJsonAttribute(
