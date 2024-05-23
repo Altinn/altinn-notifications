@@ -91,7 +91,7 @@ public class ProfileClientTests
     public async Task GetUserRegisteredOrganizationContactPoints_SuccessResponse_NoMatches()
     {
         // Act
-        List<OrganizationContactPoints> actual = await _profileClient.GetUserRegisteredOrganizationContactPoints("no-matches", ["12345678", "98754321"]);
+        List<OrganizationContactPoints> actual = await _profileClient.GetUserRegisteredOrganizationContactPoints(["12345678", "98754321"], "no-matches");
 
         // Assert
         Assert.Empty(actual);
@@ -101,7 +101,7 @@ public class ProfileClientTests
     public async Task GetUserRegisteredOrganizationContactPoints_SuccessResponse_TwoListElementsReturned()
     {
         // Act
-        List<OrganizationContactPoints> actual = await _profileClient.GetUserRegisteredOrganizationContactPoints("some-matches", ["12345678", "98754321"]);
+        List<OrganizationContactPoints> actual = await _profileClient.GetUserRegisteredOrganizationContactPoints(["12345678", "98754321"], "some-matches");
 
         // Assert
         Assert.Equal(2, actual.Count);
@@ -112,7 +112,8 @@ public class ProfileClientTests
     public async Task GetUserRegisteredOrganizationContactPoints_FailureResponse_ExceptionIsThrown()
     {
         // Act
-        var exception = await Assert.ThrowsAsync<PlatformHttpException>(async () => await _profileClient.GetUserRegisteredOrganizationContactPoints("error-resource", ["12345678", "98754321"]));
+        var exception = await Assert.ThrowsAsync<PlatformHttpException>(
+            async () => await _profileClient.GetUserRegisteredOrganizationContactPoints(["12345678", "98754321"], "error-resource"));
 
         Assert.StartsWith("ProfileClient.GetUserRegisteredOrganizationContactPoints failed with status code", exception.Message);
         Assert.Equal(HttpStatusCode.ServiceUnavailable, exception.Response?.StatusCode);

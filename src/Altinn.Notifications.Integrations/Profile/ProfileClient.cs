@@ -51,7 +51,7 @@ public class ProfileClient : IProfileClient
     }
 
     /// <inheritdoc/>
-    public async Task<List<OrganizationContactPoints>> GetUserRegisteredOrganizationContactPoints(string resourceId, List<string> organizationNumbers)
+    public async Task<List<OrganizationContactPoints>> GetUserRegisteredOrganizationContactPoints(List<string> organizationNumbers, string resourceId)
     {
         var lookupObject = new UnitContactPointLookup()
         {

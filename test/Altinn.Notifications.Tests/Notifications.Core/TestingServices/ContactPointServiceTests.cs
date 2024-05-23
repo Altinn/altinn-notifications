@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 using Altinn.Notifications.Core.Integrations;
@@ -148,6 +149,212 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             await service.AddEmailContactPoints(input, null);
 
             // Assert 
+            Assert.Equivalent(expectedOutput, input);
+        }
+
+        [Fact]
+        public async Task AddEmailContactPoints_OrganizationNumberAndResourceAvailable_AuthorizationPermitAll()
+        {
+            // Arrange
+            string resource = "urn:altinn:resource";
+
+            List<Recipient> input = [
+                new Recipient()
+                {
+                    OrganizationNumber = "12345678901"
+                }
+            ];
+
+            List<Recipient> expectedOutput = [
+                new Recipient()
+                {
+                    OrganizationNumber = "12345678901",
+                    AddressInfo = [new EmailAddressPoint("official@domain.com"), new EmailAddressPoint("user-1@domain.com"), new EmailAddressPoint("user-9@domain.com")]
+                }
+            ];
+
+            var registerClientMock = new Mock<IRegisterClient>();
+            registerClientMock
+                .Setup(r => r.GetOrganizationContactPoints(It.IsAny<List<string>>()))
+                .ReturnsAsync([new OrganizationContactPoints() { OrganizationNumber = "12345678901", EmailList = ["official@domain.com"] }]);
+
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(p => p.GetUserRegisteredOrganizationContactPoints(It.IsAny<List<string>>(), It.Is<string>(s => s.Equals("urn:altinn:resource"))))
+                .ReturnsAsync([
+                    new OrganizationContactPoints()
+                    {
+                        PartyId = 78901,
+                        OrganizationNumber = "12345678901",
+                        UserContactPoints = [
+                            new UserContactPoints()
+                            {
+                                UserId = 200001,
+                                Email = "user-1@domain.com"
+                            },
+                            new UserContactPoints()
+                            {
+                                UserId = 200009,
+                                Email = "user-9@domain.com"
+                            }
+                            ]
+                    }
+                    ]);
+
+            var authorizationServiceMock = new Mock<IAuthorizationService>();
+            authorizationServiceMock
+                .Setup(a => a.AuthorizeUserContactPointsForResource(It.IsAny<List<OrganizationContactPoints>>(), It.Is<string>(s => s.Equals("urn:altinn:resource"))))
+                .ReturnsAsync((List<OrganizationContactPoints> input, string resource) => input);
+
+            var service = GetTestService(profileClientMock.Object, registerClientMock.Object, authorizationServiceMock.Object);
+
+            // Act
+            await service.AddEmailContactPoints(input, resource);
+
+            // Assert 
+            registerClientMock.VerifyAll();
+            profileClientMock.VerifyAll();
+            authorizationServiceMock.VerifyAll();
+            Assert.Equivalent(expectedOutput, input);
+        }
+
+        [Fact]
+        public async Task AddEmailContactPoints_OrganizationNumberAndResourceAvailable_AuthorizationDenyOne()
+        {
+            // Arrange
+            string resource = "urn:altinn:resource";
+
+            List<Recipient> input = [
+                new Recipient()
+                {
+                    OrganizationNumber = "12345678901"
+                }
+            ];
+
+            List<Recipient> expectedOutput = [
+                new Recipient()
+                {
+                    OrganizationNumber = "12345678901",
+                    AddressInfo = [new EmailAddressPoint("official@domain.com"), new EmailAddressPoint("user-1@domain.com")]
+                }
+            ];
+
+            var registerClientMock = new Mock<IRegisterClient>();
+            registerClientMock
+                .Setup(r => r.GetOrganizationContactPoints(It.IsAny<List<string>>()))
+                .ReturnsAsync([new OrganizationContactPoints() { OrganizationNumber = "12345678901", EmailList = ["official@domain.com"] }]);
+
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(p => p.GetUserRegisteredOrganizationContactPoints(It.IsAny<List<string>>(), It.Is<string>(s => s.Equals("urn:altinn:resource"))))
+                .ReturnsAsync([
+                    new OrganizationContactPoints()
+                    {
+                        PartyId = 78901,
+                        OrganizationNumber = "12345678901",
+                        UserContactPoints = [
+                            new UserContactPoints()
+                            {
+                                UserId = 200001,
+                                Email = "user-1@domain.com"
+                            },
+                            new UserContactPoints()
+                            {
+                                UserId = 200009,
+                                Email = "user-9@domain.com"
+                            }
+                            ]
+                    }
+                    ]);
+
+            var authorizationServiceMock = new Mock<IAuthorizationService>();
+            authorizationServiceMock
+                .Setup(a => a.AuthorizeUserContactPointsForResource(It.IsAny<List<OrganizationContactPoints>>(), It.Is<string>(s => s.Equals("urn:altinn:resource"))))
+                .ReturnsAsync((List<OrganizationContactPoints> input, string resource) =>
+                {
+                    input[0].UserContactPoints.RemoveAll(u => u.UserId == 200009);
+                    return input;
+                });
+
+            var service = GetTestService(profileClientMock.Object, registerClientMock.Object, authorizationServiceMock.Object);
+
+            // Act
+            await service.AddEmailContactPoints(input, resource);
+
+            // Assert 
+            registerClientMock.VerifyAll();
+            profileClientMock.VerifyAll();
+            authorizationServiceMock.VerifyAll();
+            Assert.Equivalent(expectedOutput, input);
+        }
+
+        [Fact]
+        public async Task AddEmailContactPoints_OrganizationNumberAndResourceAvailable_AuthorizationDenyAll()
+        {
+            // Arrange
+            string resource = "urn:altinn:resource";
+
+            List<Recipient> input = [
+                new Recipient()
+                {
+                    OrganizationNumber = "12345678901"
+                }
+            ];
+
+            List<Recipient> expectedOutput = [
+                new Recipient()
+                {
+                    OrganizationNumber = "12345678901",
+                    AddressInfo = [new EmailAddressPoint("official@domain.com")]
+                }
+            ];
+
+            var registerClientMock = new Mock<IRegisterClient>();
+            registerClientMock
+                .Setup(r => r.GetOrganizationContactPoints(It.IsAny<List<string>>()))
+                .ReturnsAsync([new OrganizationContactPoints() { OrganizationNumber = "12345678901", EmailList = ["official@domain.com"] }]);
+
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(p => p.GetUserRegisteredOrganizationContactPoints(It.IsAny<List<string>>(), It.Is<string>(s => s.Equals("urn:altinn:resource"))))
+                .ReturnsAsync([
+                    new OrganizationContactPoints()
+                    {
+                        PartyId = 78901,
+                        OrganizationNumber = "12345678901",
+                        UserContactPoints = [
+                            new UserContactPoints()
+                            {
+                                UserId = 200001,
+                                Email = "user-1@domain.com"
+                            },
+                            new UserContactPoints()
+                            {
+                                UserId = 200009,
+                                Email = "user-9@domain.com"
+                            }
+                            ]
+                    }
+                    ]);
+
+            var authorizationServiceMock = new Mock<IAuthorizationService>();
+            authorizationServiceMock
+                .Setup(a => a.AuthorizeUserContactPointsForResource(It.IsAny<List<OrganizationContactPoints>>(), It.Is<string>(s => s.Equals("urn:altinn:resource"))))
+                .ReturnsAsync((List<OrganizationContactPoints> input, string resource) =>
+                {
+                    input.ForEach(ocp => ocp.UserContactPoints = []);
+                    return input;
+                });
+
+            var service = GetTestService(profileClientMock.Object, registerClientMock.Object, authorizationServiceMock.Object);
+
+            // Act
+            await service.AddEmailContactPoints(input, resource);
+
+            // Assert 
+            registerClientMock.VerifyAll();
+            profileClientMock.VerifyAll();
+            authorizationServiceMock.VerifyAll();
             Assert.Equivalent(expectedOutput, input);
         }
 
