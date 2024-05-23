@@ -219,7 +219,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         }
 
         [Fact]
-        public async Task AddEmailContactPoints_OrganizationNumberAndResourceAvailable_AuthorizationDenyOne()
+        public async Task AddEmailContactPoints_OrganizationNumberAndResourceAvailable_NoOfficialContact_AuthorizationDenyOne()
         {
             // Arrange
             string resource = "urn:altinn:resource";
@@ -235,14 +235,14 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 new Recipient()
                 {
                     OrganizationNumber = "12345678901",
-                    AddressInfo = [new EmailAddressPoint("official@domain.com"), new EmailAddressPoint("user-1@domain.com")]
+                    AddressInfo = [new EmailAddressPoint("user-1@domain.com")]
                 }
             ];
 
             var registerClientMock = new Mock<IRegisterClient>();
             registerClientMock
                 .Setup(r => r.GetOrganizationContactPoints(It.IsAny<List<string>>()))
-                .ReturnsAsync([new OrganizationContactPoints() { OrganizationNumber = "12345678901", EmailList = ["official@domain.com"] }]);
+                .ReturnsAsync([]);
 
             var profileClientMock = new Mock<IProfileClient>();
             profileClientMock
