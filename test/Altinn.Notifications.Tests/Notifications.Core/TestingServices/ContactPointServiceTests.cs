@@ -261,13 +261,13 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                               MobileNumber = "+4748123456",
                               Email = "user-1@domain.com"
                           },
-                            new UserContactPoints()
-                            {
-                                UserId = 200009,
-                                MobileNumber = "004699999999",
-                                Email = "user-9@domain.com"
-                            }
-                            ]
+                          new UserContactPoints()
+                          {
+                              UserId = 200009,
+                              MobileNumber = "004699999999",
+                              Email = "user-9@domain.com"
+                          }
+                        ]
                     }
                     ]);
 
