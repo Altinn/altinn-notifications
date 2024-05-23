@@ -1,4 +1,8 @@
-﻿using Altinn.Notifications.Core.Integrations;
+﻿using Altinn.Common.PEP.Clients;
+using Altinn.Common.PEP.Implementation;
+using Altinn.Common.PEP.Interfaces;
+using Altinn.Notifications.Core.Integrations;
+using Altinn.Notifications.Integrations.Authorization;
 using Altinn.Notifications.Integrations.Clients;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Health;
@@ -51,6 +55,19 @@ public static class ServiceCollectionExtensions
         services.Configure<PlatformSettings>(config.GetSection(nameof(PlatformSettings)));
         services.AddHttpClient<IProfileClient, ProfileClient>();
         services.AddHttpClient<IRegisterClient, RegisterClient>();
+    }
+
+    /// <summary>
+    /// Adds services and other dependencies used for authorization.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="config">The configuration collection</param>
+    public static void AddAuthorizationService(this IServiceCollection services, IConfiguration config)
+    {
+        services.Configure<Common.PEP.Configuration.PlatformSettings>(config.GetSection("PlatformSettings"));
+        services.AddHttpClient<AuthorizationApiClient>();
+        services.AddSingleton<IPDP, PDPAppSI>();
+        services.AddSingleton<IAuthorizationService, AuthorizationService>();
     }
 
     /// <summary>
