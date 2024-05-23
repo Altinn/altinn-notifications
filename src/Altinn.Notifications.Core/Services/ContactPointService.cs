@@ -149,7 +149,7 @@ namespace Altinn.Notifications.Core.Services
             return contactPoints;
         }
 
-        private async Task<List<OrganizationContactPoints>> LookupOrganizationContactPoints(List<Recipient> recipients, string? resourceId = null)
+        private async Task<List<OrganizationContactPoints>> LookupOrganizationContactPoints(List<Recipient> recipients, string? resourceId)
         {
             List<string> orgNos = recipients
              .Where(r => !string.IsNullOrEmpty(r.OrganizationNumber))
