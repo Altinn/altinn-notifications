@@ -6,6 +6,7 @@ using Altinn.Common.PEP.Helpers;
 using Altinn.Common.PEP.Interfaces;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.ContactPoints;
+
 using static Altinn.Authorization.ABAC.Constants.XacmlConstants;
 
 namespace Altinn.Notifications.Integrations.Authorization;
@@ -79,7 +80,7 @@ public class AuthorizationService : IAuthorizationService
         return filtered;
     }
 
-    private XacmlJsonRequestRoot BuildAuthorizationRequest(List<OrganizationContactPoints> organizationContactPoints, string resourceId)
+    private static XacmlJsonRequestRoot BuildAuthorizationRequest(List<OrganizationContactPoints> organizationContactPoints, string resourceId)
     {
         XacmlJsonRequest request = new()
         {
