@@ -52,7 +52,7 @@ public class ProfileClient : IProfileClient
     }
 
     /// <inheritdoc/>
-    public async Task<List<OrganizationContactPoints>> GetUserRegisteredOrganizationContactPoints(List<string> organizationNumbers, string resourceId)
+    public async Task<List<OrganizationContactPoints>> GetUserRegisteredContactPoints(List<string> organizationNumbers, string resourceId)
     {
         var lookupObject = new UnitContactPointLookup()
         {
@@ -66,7 +66,7 @@ public class ProfileClient : IProfileClient
 
         if (!response.IsSuccessStatusCode)
         {
-            throw new PlatformHttpException(response, $"ProfileClient.GetUserRegisteredOrganizationContactPoints failed with status code {response.StatusCode}");
+            throw new PlatformHttpException(response, $"ProfileClient.GetUserRegisteredContactPoints failed with status code {response.StatusCode}");
         }
 
         string responseContent = await response.Content.ReadAsStringAsync();

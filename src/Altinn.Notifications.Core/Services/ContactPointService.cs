@@ -166,7 +166,7 @@ namespace Altinn.Notifications.Core.Services
 
             if (!string.IsNullOrEmpty(resourceId))
             {
-                var allUserContactPoints = await _profileClient.GetUserRegisteredOrganizationContactPoints(orgNos, resourceId);
+                var allUserContactPoints = await _profileClient.GetUserRegisteredContactPoints(orgNos, resourceId);
                 authorizedUserContactPoints = await _authorizationService.AuthorizeUserContactPointsForResource(allUserContactPoints, resourceId);
             }
 

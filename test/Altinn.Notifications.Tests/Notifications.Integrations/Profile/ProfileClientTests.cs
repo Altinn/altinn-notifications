@@ -89,20 +89,20 @@ public class ProfileClientTests
     }
 
     [Fact]
-    public async Task GetUserRegisteredOrganizationContactPoints_SuccessResponse_NoMatches()
+    public async Task GetUserRegisteredContactPoints_SuccessResponse_NoMatches()
     {
         // Act
-        List<OrganizationContactPoints> actual = await _profileClient.GetUserRegisteredOrganizationContactPoints(["12345678", "98754321"], "no-matches");
+        List<OrganizationContactPoints> actual = await _profileClient.GetUserRegisteredContactPoints(["12345678", "98754321"], "no-matches");
 
         // Assert
         Assert.Empty(actual);
     }
 
     [Fact]
-    public async Task GetUserRegisteredOrganizationContactPoints_SuccessResponse_TwoListElementsReturned()
+    public async Task GetUserRegisteredContactPoints_SuccessResponse_TwoListElementsReturned()
     {
         // Act
-        List<OrganizationContactPoints> actual = await _profileClient.GetUserRegisteredOrganizationContactPoints(["12345678", "98754321"], "some-matches");
+        List<OrganizationContactPoints> actual = await _profileClient.GetUserRegisteredContactPoints(["12345678", "98754321"], "some-matches");
 
         // Assert
         Assert.Equal(2, actual.Count);
@@ -110,13 +110,13 @@ public class ProfileClientTests
     }
 
     [Fact]
-    public async Task GetUserRegisteredOrganizationContactPoints_FailureResponse_ExceptionIsThrown()
+    public async Task GetUserRegisteredContactPoints_FailureResponse_ExceptionIsThrown()
     {
         // Act
         var exception = await Assert.ThrowsAsync<PlatformHttpException>(
-            async () => await _profileClient.GetUserRegisteredOrganizationContactPoints(["12345678", "98754321"], "error-resource"));
+            async () => await _profileClient.GetUserRegisteredContactPoints(["12345678", "98754321"], "error-resource"));
 
-        Assert.StartsWith("ProfileClient.GetUserRegisteredOrganizationContactPoints failed with status code", exception.Message);
+        Assert.StartsWith("ProfileClient.GetUserRegisteredContactPoints failed with status code", exception.Message);
         Assert.Equal(HttpStatusCode.ServiceUnavailable, exception.Response?.StatusCode);
     }
 

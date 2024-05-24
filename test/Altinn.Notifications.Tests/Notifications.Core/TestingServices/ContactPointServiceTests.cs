@@ -113,7 +113,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             var profileClientMock = new Mock<IProfileClient>();
             profileClientMock
-                .Setup(p => p.GetUserRegisteredOrganizationContactPoints(It.IsAny<List<string>>(), It.Is<string>(s => s.Equals("urn:altinn:resource"))))
+                .Setup(p => p.GetUserRegisteredContactPoints(It.IsAny<List<string>>(), It.Is<string>(s => s.Equals("urn:altinn:resource"))))
                 .ReturnsAsync([
                     new OrganizationContactPoints()
                     {
@@ -248,7 +248,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             var profileClientMock = new Mock<IProfileClient>();
             profileClientMock
-                .Setup(p => p.GetUserRegisteredOrganizationContactPoints(It.IsAny<List<string>>(), It.Is<string>(s => s.Equals("urn:altinn:resource"))))
+                .Setup(p => p.GetUserRegisteredContactPoints(It.IsAny<List<string>>(), It.Is<string>(s => s.Equals("urn:altinn:resource"))))
                 .ReturnsAsync([
                     new OrganizationContactPoints()
                     {
@@ -320,7 +320,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             var profileClientMock = new Mock<IProfileClient>();
             profileClientMock
-                .Setup(p => p.GetUserRegisteredOrganizationContactPoints(It.IsAny<List<string>>(), It.Is<string>(s => s.Equals("urn:altinn:resource"))))
+                .Setup(p => p.GetUserRegisteredContactPoints(It.IsAny<List<string>>(), It.Is<string>(s => s.Equals("urn:altinn:resource"))))
                 .ReturnsAsync([
                     new OrganizationContactPoints()
                     {
