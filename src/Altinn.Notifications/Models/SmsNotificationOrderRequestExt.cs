@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Altinn.Notifications.Models;
@@ -21,6 +22,7 @@ public class SmsNotificationOrderRequestExt : NotificationOrderRequestBaseExt
     /// Gets or sets the body of the SMS
     /// </summary>
     [JsonPropertyName("body")]
+    [Required]
     public string Body { get; set; } = string.Empty;
 
     /// <summary>
