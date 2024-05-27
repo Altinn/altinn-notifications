@@ -15,7 +15,7 @@ public interface IProfileClient
     public Task<List<UserContactPoints>> GetUserContactPoints(List<string> nationalIdentityNumbers);
 
     /// <summary>
-    /// Retrieves the user registered contact points for a list of organization corresponding to a list of organization numbers
+    /// Retrieves the user registered contact points for a list of organizations identified by organization numbers
     /// </summary>
     /// <param name="organizationNumbers">The set or organizations to retrieve contact points for</param>
     /// <param name="resourceId">The id of the resource to look up contact points for</param>
