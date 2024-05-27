@@ -33,12 +33,12 @@ public class ProfileClientTests
     {
         var profileHttpMessageHandler = new DelegatingHandlerStub(async (request, token) =>
            {
-               if (request!.RequestUri!.AbsolutePath.EndsWith("users/contactpoint/lookup"))
+               if (request.RequestUri!.AbsolutePath.EndsWith("users/contactpoint/lookup"))
                {
                    UserContactPointLookup? lookup = JsonSerializer.Deserialize<UserContactPointLookup>(await request!.Content!.ReadAsStringAsync(token), JsonSerializerOptionsProvider.Options);
                    return await GetUserProfileResponse(lookup!);
                }
-               else if (request!.RequestUri!.AbsolutePath.EndsWith("units/contactpoint/lookup"))
+               else if (request.RequestUri!.AbsolutePath.EndsWith("units/contactpoint/lookup"))
                {
                    UnitContactPointLookup? lookup = JsonSerializer.Deserialize<UnitContactPointLookup>(await request!.Content!.ReadAsStringAsync(token), JsonSerializerOptionsProvider.Options);
                    return await GetUnitProfileResponse(lookup!);
@@ -117,7 +117,7 @@ public class ProfileClientTests
             async () => await _profileClient.GetUserRegisteredContactPoints(["12345678", "98754321"], "error-resource"));
 
         Assert.StartsWith("ProfileClient.GetUserRegisteredContactPoints failed with status code", exception.Message);
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, exception.Response?.StatusCode);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, exception.Response.StatusCode);
     }
 
     private Task<HttpResponseMessage> GetUserProfileResponse(UserContactPointLookup lookup)

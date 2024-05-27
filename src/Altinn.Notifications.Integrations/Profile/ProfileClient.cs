@@ -47,7 +47,7 @@ public class ProfileClient : IProfileClient
         }
 
         string responseContent = await response.Content.ReadAsStringAsync();
-        List<UserContactPoints>? contactPoints = JsonSerializer.Deserialize<UserContactPointsList>(responseContent, JsonSerializerOptionsProvider.Options)!.ContactPointsList;
+        List<UserContactPoints> contactPoints = JsonSerializer.Deserialize<UserContactPointsList>(responseContent, JsonSerializerOptionsProvider.Options)!.ContactPointsList;
         return contactPoints!;
     }
 
@@ -70,8 +70,8 @@ public class ProfileClient : IProfileClient
         }
 
         string responseContent = await response.Content.ReadAsStringAsync();
-        OrgContactPointsList? contactPoints = JsonSerializer.Deserialize<OrgContactPointsList>(responseContent, JsonSerializerOptionsProvider.Options)!;
-        
-        return contactPoints.ContactPointsList!;
+        OrgContactPointsList contactPoints = JsonSerializer.Deserialize<OrgContactPointsList>(responseContent, JsonSerializerOptionsProvider.Options)!;
+
+        return contactPoints.ContactPointsList;
     }
 }
