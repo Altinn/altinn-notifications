@@ -16,7 +16,7 @@ public class SmsNotificationOrderRequestExt : NotificationOrderRequestBaseExt
     /// Gets or sets the sender number of the SMS 
     /// </summary>
     [JsonPropertyName("senderNumber")]
-    public string SenderNumber { get; set; } = string.Empty;
+    public string? SenderNumber { get; set; }
 
     /// <summary>
     /// Gets or sets the body of the SMS
