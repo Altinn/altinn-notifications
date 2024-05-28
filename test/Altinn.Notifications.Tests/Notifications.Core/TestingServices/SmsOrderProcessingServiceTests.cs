@@ -119,8 +119,8 @@ public class SmsOrderProcessingServiceTests
                 It.IsAny<bool>()));
 
         var contactPointServiceMock = new Mock<IContactPointService>();
-        contactPointServiceMock.Setup(c => c.AddSmsContactPoints(It.Is<List<Recipient>>(r => r.Count == 1)))
-            .Callback<List<Recipient>>(r =>
+        contactPointServiceMock.Setup(c => c.AddSmsContactPoints(It.Is<List<Recipient>>(r => r.Count == 1), It.IsAny<string?>()))
+            .Callback<List<Recipient>, string?>((r, _) =>
             {
                 Recipient augumentedRecipient = new() { AddressInfo = [new SmsAddressPoint("+4712345678")], NationalIdentityNumber = r[0].NationalIdentityNumber };
                 r.Clear();
@@ -133,7 +133,7 @@ public class SmsOrderProcessingServiceTests
         await service.ProcessOrder(order);
 
         // Assert
-        contactPointServiceMock.Verify(c => c.AddSmsContactPoints(It.Is<List<Recipient>>(r => r.Count == 1)), Times.Once);
+        contactPointServiceMock.Verify(c => c.AddSmsContactPoints(It.Is<List<Recipient>>(r => r.Count == 1), It.IsAny<string?>()), Times.Once);
         notificationServiceMock.VerifyAll();
     }
 
@@ -212,7 +212,7 @@ public class SmsOrderProcessingServiceTests
         if (contactPointService == null)
         {
             var contactPointServiceMock = new Mock<IContactPointService>();
-            contactPointServiceMock.Setup(e => e.AddSmsContactPoints(It.IsAny<List<Recipient>>()));
+            contactPointServiceMock.Setup(e => e.AddSmsContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>()));
 
             contactPointService = contactPointServiceMock.Object;
         }

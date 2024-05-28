@@ -29,7 +29,7 @@ public class RegisterClientTests
 
     public RegisterClientTests()
     {
-        var sblBridgeHttpMessageHandler = new DelegatingHandlerStub(async (request, token) =>
+        var registerHttpMessageHandler = new DelegatingHandlerStub(async (request, token) =>
            {
                if (request!.RequestUri!.AbsolutePath.EndsWith("contactpoint/lookup"))
                {
@@ -46,7 +46,7 @@ public class RegisterClientTests
         };
 
         _registerClient = new RegisterClient(
-                      new HttpClient(sblBridgeHttpMessageHandler),
+                      new HttpClient(registerHttpMessageHandler),
                       Options.Create(settings));
     }
 

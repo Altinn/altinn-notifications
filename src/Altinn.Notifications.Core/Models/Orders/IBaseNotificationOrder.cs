@@ -33,6 +33,11 @@ public interface IBaseNotificationOrder
     public bool IgnoreReservation { get; }
 
     /// <summary>
+    /// Gets or sets the id of the resource that the notification is related to
+    /// </summary>
+    public string? ResourceId { get; }
+
+    /// <summary>
     /// Gets the creator of the notification
     /// </summary>
     public Creator Creator { get; }

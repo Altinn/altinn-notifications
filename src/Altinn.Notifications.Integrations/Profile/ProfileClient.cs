@@ -7,6 +7,7 @@ using Altinn.Notifications.Core.Models.ContactPoints;
 using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Profile;
+using Altinn.Notifications.Integrations.Register;
 
 using Microsoft.Extensions.Options;
 
@@ -46,7 +47,31 @@ public class ProfileClient : IProfileClient
         }
 
         string responseContent = await response.Content.ReadAsStringAsync();
-        List<UserContactPoints>? contactPoints = JsonSerializer.Deserialize<UserContactPointsList>(responseContent, JsonSerializerOptionsProvider.Options)!.ContactPointsList;
+        List<UserContactPoints> contactPoints = JsonSerializer.Deserialize<UserContactPointsList>(responseContent, JsonSerializerOptionsProvider.Options)!.ContactPointsList;
         return contactPoints!;
+    }
+
+    /// <inheritdoc/>
+    public async Task<List<OrganizationContactPoints>> GetUserRegisteredContactPoints(List<string> organizationNumbers, string resourceId)
+    {
+        var lookupObject = new UnitContactPointLookup()
+        {
+            ResourceId = resourceId,
+            OrganizationNumbers = organizationNumbers
+        };
+
+        HttpContent content = new StringContent(JsonSerializer.Serialize(lookupObject, JsonSerializerOptionsProvider.Options), Encoding.UTF8, "application/json");
+
+        var response = await _client.PostAsync("units/contactpoint/lookup", content);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new PlatformHttpException(response, $"ProfileClient.GetUserRegisteredContactPoints failed with status code {response.StatusCode}");
+        }
+
+        string responseContent = await response.Content.ReadAsStringAsync();
+        OrgContactPointsList contactPoints = JsonSerializer.Deserialize<OrgContactPointsList>(responseContent, JsonSerializerOptionsProvider.Options)!;
+
+        return contactPoints.ContactPointsList;
     }
 }

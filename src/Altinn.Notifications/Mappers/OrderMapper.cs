@@ -18,7 +18,11 @@ public static class OrderMapper
     /// </summary>
     public static NotificationOrderRequest MapToOrderRequest(this EmailNotificationOrderRequestExt extRequest, string creator)
     {
-        var emailTemplate = new EmailTemplate(null, extRequest.Subject, extRequest.Body, (EmailContentType)extRequest.ContentType);
+        var emailTemplate = new EmailTemplate(
+            null,
+            extRequest.Subject,
+            extRequest.Body,
+            (EmailContentType?)extRequest.ContentType ?? EmailContentType.Plain);
 
         List<Recipient> recipients =
             extRequest.Recipients
@@ -42,7 +46,8 @@ public static class OrderMapper
             extRequest.RequestedSendTime.ToUniversalTime(),
             NotificationChannel.Email,
             recipients,
-            extRequest.IgnoreReservation);
+            extRequest.IgnoreReservation,
+            extRequest.ResourceId);
     }
 
     /// <summary>
@@ -74,7 +79,8 @@ public static class OrderMapper
             extRequest.RequestedSendTime.ToUniversalTime(),
             NotificationChannel.Sms,
             recipients,
-            extRequest.IgnoreReservation);
+            extRequest.IgnoreReservation,
+            extRequest.ResourceId);
     }
 
     /// <summary>
@@ -205,7 +211,7 @@ public static class OrderMapper
         return recipientExt;
     }
 
-    private static IBaseNotificationOrderExt MapBaseNotificationOrder(this IBaseNotificationOrderExt orderExt, IBaseNotificationOrder order)
+    private static BaseNotificationOrderExt MapBaseNotificationOrder(this BaseNotificationOrderExt orderExt, IBaseNotificationOrder order)
     {
         orderExt.Id = order.Id.ToString();
         orderExt.SendersReference = order.SendersReference;
@@ -213,6 +219,9 @@ public static class OrderMapper
         orderExt.Creator = order.Creator.ShortName;
         orderExt.NotificationChannel = (NotificationChannelExt)order.NotificationChannel;
         orderExt.RequestedSendTime = order.RequestedSendTime;
+        orderExt.IgnoreReservation = order.IgnoreReservation;
+        orderExt.ResourceId = order.ResourceId;
+
         return orderExt;
     }
 

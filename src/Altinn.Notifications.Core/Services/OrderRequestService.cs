@@ -49,7 +49,7 @@ public class OrderRequestService : IOrderRequestService
 
         // copying recipients by value to not alter the orderRequest that will be persisted
         var copiedRecipents = orderRequest.Recipients.Select(r => r.DeepCopy()).ToList();
-        var lookupResult = await GetRecipientLookupResult(copiedRecipents, orderRequest.NotificationChannel);
+        var lookupResult = await GetRecipientLookupResult(copiedRecipents, orderRequest.NotificationChannel, orderRequest.ResourceId);
 
         var templates = SetSenderIfNotDefined(orderRequest.Templates);
 
@@ -62,7 +62,8 @@ public class OrderRequestService : IOrderRequestService
             orderRequest.Creator,
             created,
             orderRequest.Recipients, 
-            orderRequest.IgnoreReservation);
+            orderRequest.IgnoreReservation,
+            orderRequest.ResourceId);
 
         NotificationOrder savedOrder = await _repository.Create(order);
 
@@ -73,7 +74,7 @@ public class OrderRequestService : IOrderRequestService
         };
     }
 
-    private async Task<RecipientLookupResult?> GetRecipientLookupResult(List<Recipient> recipients, NotificationChannel channel)
+    private async Task<RecipientLookupResult?> GetRecipientLookupResult(List<Recipient> recipients, NotificationChannel channel, string? resourceId)
     {
         List<Recipient> recipientsWithoutContactPoint = [];
 
@@ -96,11 +97,11 @@ public class OrderRequestService : IOrderRequestService
 
         if (channel == NotificationChannel.Email)
         {
-            await _contactPointService.AddEmailContactPoints(recipientsWithoutContactPoint);
+            await _contactPointService.AddEmailContactPoints(recipientsWithoutContactPoint, resourceId);
         }
         else if (channel == NotificationChannel.Sms)
         {
-            await _contactPointService.AddSmsContactPoints(recipientsWithoutContactPoint);
+            await _contactPointService.AddSmsContactPoints(recipientsWithoutContactPoint, resourceId);
         }
 
         var isReserved = recipients.Where(r => r.IsReserved.HasValue && r.IsReserved.Value).Select(r => r.NationalIdentityNumber!).ToList();

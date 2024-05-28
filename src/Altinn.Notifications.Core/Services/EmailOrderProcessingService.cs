@@ -36,7 +36,7 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
         var recipients = order.Recipients;
         var recipientsWithoutEmail = recipients.Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email)).ToList();
 
-        await _contactPointService.AddEmailContactPoints(recipientsWithoutEmail);
+        await _contactPointService.AddEmailContactPoints(recipientsWithoutEmail, order.ResourceId);
 
         foreach (Recipient recipient in recipients)
         {
@@ -50,7 +50,7 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
         var recipients = order.Recipients;
         var recipientsWithoutEmail = recipients.Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email)).ToList();
 
-        await _contactPointService.AddEmailContactPoints(recipientsWithoutEmail);
+        await _contactPointService.AddEmailContactPoints(recipientsWithoutEmail, order.ResourceId);
 
         List<EmailRecipient> emailRecipients = await _emailNotificationRepository.GetRecipients(order.Id);
 
