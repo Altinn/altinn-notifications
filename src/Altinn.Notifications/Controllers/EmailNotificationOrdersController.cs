@@ -54,7 +54,7 @@ public class EmailNotificationOrdersController : ControllerBase
     [SwaggerResponseHeader(202, "Location", "string", "Link to access the newly created notification order.")]
     public async Task<ActionResult<NotificationOrderRequestResponseExt>> Post(EmailNotificationOrderRequestExt emailNotificationOrderRequest)
     {
-        var validationResult = await _validator.ValidateAsync(emailNotificationOrderRequest);
+        var validationResult = _validator.Validate(emailNotificationOrderRequest);
         if (!validationResult.IsValid)
         {
             validationResult.AddToModelState(this.ModelState);

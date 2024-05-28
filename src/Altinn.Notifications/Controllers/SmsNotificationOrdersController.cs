@@ -6,6 +6,7 @@ using Altinn.Notifications.Models;
 using Altinn.Notifications.Validators;
 
 using FluentValidation;
+using FluentValidation.Results;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -54,7 +55,7 @@ public class SmsNotificationOrdersController : ControllerBase
     [SwaggerResponseHeader(202, "Location", "string", "Link to access the newly created notification order.")]
     public async Task<ActionResult<NotificationOrderRequestResponseExt>> Post(SmsNotificationOrderRequestExt smsNotificationOrderRequest)
     {
-        FluentValidation.Results.ValidationResult validationResult = await _validator.ValidateAsync(smsNotificationOrderRequest);
+        ValidationResult validationResult = _validator.Validate(smsNotificationOrderRequest);
         if (!validationResult.IsValid)
         {
             validationResult.AddToModelState(this.ModelState);
