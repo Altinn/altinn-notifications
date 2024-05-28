@@ -25,7 +25,7 @@ public class NotificationOrder : IBaseNotificationOrder
     /// <inheritdoc/>>    
     public bool? IgnoreReservation { get; internal set; }
 
-    /// <inheritdoc/>>    
+    /// <inheritdoc/>>
     public string? ResourceId { get; internal set; }
 
     /// <inheritdoc/>>
