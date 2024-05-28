@@ -38,7 +38,7 @@ namespace Altinn.Notifications.Core.Services
 
                     if (!success)
                     {
-                        _logger.LogError("// NotificationsEmailServiceUpdateService // HandleServiceUpdate // Failed to parse message {message} into schema {schema}", serializedData, schema);
+                        _logger.LogError("// NotificationsEmailServiceUpdateService // HandleServiceUpdate // Failed to parse message {Message} into schema {schema}", serializedData, schema);
                         return;
                     }
 
