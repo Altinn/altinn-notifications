@@ -49,11 +49,6 @@ public class NotificationOrderRequest
     public string? ResourceId { get; internal set; }
 
     /// <summary>
-    /// Gets the id of the resource that the notification is related to
-    /// </summary>
-    public string? ResourceId { get; internal set; }
-
-    /// <summary>
     /// Initializes a new instance of the <see cref="NotificationOrderRequest"/> class.
     /// </summary>
     public NotificationOrderRequest(
