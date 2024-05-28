@@ -163,7 +163,8 @@ public class OrderMapperTests
             Body = "email-body",
             ContentType = EmailContentTypeExt.Html,
             RequestedSendTime = sendTime, // Local time zone
-            Subject = "email-subject"
+            Subject = "email-subject",
+            IgnoreReservation = true
         };
 
         NotificationOrderRequest expected = new()
@@ -178,7 +179,8 @@ public class OrderMapperTests
                     EmailContentType.Html)
             },
             RequestedSendTime = sendTime.ToUniversalTime(),  // Expecting the time in UTC time zone
-            NotificationChannel = NotificationChannel.Email
+            NotificationChannel = NotificationChannel.Email,
+            IgnoreReservation = true
         };
 
         // Act
