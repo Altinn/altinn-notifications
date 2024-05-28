@@ -26,9 +26,6 @@ public class NotificationOrder : IBaseNotificationOrder
     public bool? IgnoreReservation { get; internal set; }
 
     /// <inheritdoc/>>
-    public string? ResourceId { get; internal set; }
-
-    /// <inheritdoc/>>
     public Creator Creator { get; internal set; }
 
     /// <inheritdoc/>>
@@ -68,7 +65,6 @@ public class NotificationOrder : IBaseNotificationOrder
         Created = created;
         Recipients = recipients;
         IgnoreReservation = ignoreReservation;
-        ResourceId = resourceId;
     }
 
     /// <summary>

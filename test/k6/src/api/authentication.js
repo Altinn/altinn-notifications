@@ -2,15 +2,11 @@ import { check } from "k6";
 import http from "k6/http";
 
 import {
-  buildHeaderWithBearer,
-  buildHeaderWithContentType,
-  buildHeaderWithCookie,
+  buildHeaderWithBearer
 } from "../apiHelpers.js";
-import { platformAuthentication, portalAuthentication } from "../config.js";
+import { platformAuthentication } from "../config.js";
 import { stopIterationOnFail, addErrorCount } from "../errorhandler.js";
 
-const userName = __ENV.userName;
-const userPassword = __ENV.userPassword;
 
 export function exchangeToAltinnToken(token, test) {
   var endpoint = platformAuthentication.exchange + "?test=" + test;

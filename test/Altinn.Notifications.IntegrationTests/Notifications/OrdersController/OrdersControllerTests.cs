@@ -45,7 +45,8 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
             new Creator("ttd"),
             DateTime.UtcNow,
             new List<Recipient>(),
-            false);
+            false,
+            null);
 
         _orderWithStatus = new(
             Guid.NewGuid(),

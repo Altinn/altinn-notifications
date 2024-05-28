@@ -12,6 +12,7 @@ using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Integrations.Clients;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Profile;
+using Altinn.Notifications.Integrations.Register;
 
 using Microsoft.Extensions.Options;
 
@@ -30,12 +31,17 @@ public class ProfileClientTests
 
     public ProfileClientTests()
     {
-        var sblBridgeHttpMessageHandler = new DelegatingHandlerStub(async (request, token) =>
+        var profileHttpMessageHandler = new DelegatingHandlerStub(async (request, token) =>
            {
-               if (request!.RequestUri!.AbsolutePath.EndsWith("contactpoint/lookup"))
+               if (request.RequestUri!.AbsolutePath.EndsWith("users/contactpoint/lookup"))
                {
                    UserContactPointLookup? lookup = JsonSerializer.Deserialize<UserContactPointLookup>(await request!.Content!.ReadAsStringAsync(token), JsonSerializerOptionsProvider.Options);
-                   return await GetResponse(lookup!);
+                   return await GetUserProfileResponse(lookup!);
+               }
+               else if (request.RequestUri!.AbsolutePath.EndsWith("units/contactpoint/lookup"))
+               {
+                   UnitContactPointLookup? lookup = JsonSerializer.Deserialize<UnitContactPointLookup>(await request!.Content!.ReadAsStringAsync(token), JsonSerializerOptionsProvider.Options);
+                   return await GetUnitProfileResponse(lookup!);
                }
 
                return new HttpResponseMessage(HttpStatusCode.NotFound);
@@ -47,7 +53,7 @@ public class ProfileClientTests
         };
 
         _profileClient = new ProfileClient(
-                      new HttpClient(sblBridgeHttpMessageHandler),
+                      new HttpClient(profileHttpMessageHandler),
                       Options.Create(settings));
     }
 
@@ -82,7 +88,39 @@ public class ProfileClientTests
         Assert.Equal(HttpStatusCode.ServiceUnavailable, exception.Response?.StatusCode);
     }
 
-    private Task<HttpResponseMessage> GetResponse(UserContactPointLookup lookup)
+    [Fact]
+    public async Task GetUserRegisteredContactPoints_SuccessResponse_NoMatches()
+    {
+        // Act
+        List<OrganizationContactPoints> actual = await _profileClient.GetUserRegisteredContactPoints(["12345678", "98754321"], "no-matches");
+
+        // Assert
+        Assert.Empty(actual);
+    }
+
+    [Fact]
+    public async Task GetUserRegisteredContactPoints_SuccessResponse_TwoListElementsReturned()
+    {
+        // Act
+        List<OrganizationContactPoints> actual = await _profileClient.GetUserRegisteredContactPoints(["12345678", "98754321"], "some-matches");
+
+        // Assert
+        Assert.Equal(2, actual.Count);
+        Assert.Contains(actual, ocp => ocp.OrganizationNumber == "123456789" && ocp.PartyId == 56789 && ocp.UserContactPoints.Any(u => u.UserId == 20001));
+    }
+
+    [Fact]
+    public async Task GetUserRegisteredContactPoints_FailureResponse_ExceptionIsThrown()
+    {
+        // Act
+        var exception = await Assert.ThrowsAsync<PlatformHttpException>(
+            async () => await _profileClient.GetUserRegisteredContactPoints(["12345678", "98754321"], "error-resource"));
+
+        Assert.StartsWith("ProfileClient.GetUserRegisteredContactPoints failed with status code", exception.Message);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, exception.Response.StatusCode);
+    }
+
+    private Task<HttpResponseMessage> GetUserProfileResponse(UserContactPointLookup lookup)
     {
         HttpStatusCode statusCode = HttpStatusCode.OK;
         object? contentData = null;
@@ -103,6 +141,41 @@ public class ProfileClientTests
                 };
                 break;
             case "unavailable":
+                statusCode = HttpStatusCode.ServiceUnavailable;
+                break;
+        }
+
+        JsonContent? content = (contentData != null) ? JsonContent.Create(contentData, options: _serializerOptions) : null;
+
+        return Task.FromResult(
+            new HttpResponseMessage()
+            {
+                StatusCode = statusCode,
+                Content = content
+            });
+    }
+
+    private Task<HttpResponseMessage> GetUnitProfileResponse(UnitContactPointLookup lookup)
+    {
+        HttpStatusCode statusCode = HttpStatusCode.OK;
+        object? contentData = null;
+
+        switch (lookup.ResourceId)
+        {
+            case "no-matches":
+                contentData = new OrgContactPointsList();
+                break;
+            case "some-matches":
+                contentData = new OrgContactPointsList()
+                {
+                    ContactPointsList = new List<OrganizationContactPoints>
+                    {
+                        new() { OrganizationNumber = "123456789", PartyId = 56789, UserContactPoints = [new() { UserId = 20001 }] },
+                        new() { OrganizationNumber = "987654321", PartyId = 54321,  UserContactPoints = [new() { UserId = 20001 }] }
+                    }
+                };
+                break;
+            case "error-resource":
                 statusCode = HttpStatusCode.ServiceUnavailable;
                 break;
         }

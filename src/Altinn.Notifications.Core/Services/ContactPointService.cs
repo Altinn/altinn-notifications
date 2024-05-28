@@ -14,21 +14,24 @@ namespace Altinn.Notifications.Core.Services
     {
         private readonly IProfileClient _profileClient;
         private readonly IRegisterClient _registerClient;
+        private readonly IAuthorizationService _authorizationService;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ContactPointService"/> class.
         /// </summary>
-        public ContactPointService(IProfileClient profile, IRegisterClient register)
+        public ContactPointService(IProfileClient profile, IRegisterClient register, IAuthorizationService authorizationService)
         {
             _profileClient = profile;
             _registerClient = register;
+            _authorizationService = authorizationService;
         }
 
         /// <inheritdoc/>
-        public async Task AddEmailContactPoints(List<Recipient> recipients)
+        public async Task AddEmailContactPoints(List<Recipient> recipients, string? resourceId)
         {
             await AugmentRecipients(
                 recipients,
+                resourceId,
                 (recipient, userContactPoints) =>
                 {
                     if (!string.IsNullOrEmpty(userContactPoints.Email))
@@ -40,16 +43,24 @@ namespace Altinn.Notifications.Core.Services
                 },
                 (recipient, orgContactPoints) =>
                 {
-                    recipient.AddressInfo.AddRange(orgContactPoints.EmailList.Select(e => new EmailAddressPoint(e)).ToList());
+                    recipient.AddressInfo.AddRange(orgContactPoints.EmailList
+                        .Select(e => new EmailAddressPoint(e))
+                        .ToList());
+
+                    recipient.AddressInfo.AddRange(orgContactPoints.UserContactPoints
+                        .Where(u => !string.IsNullOrEmpty(u.Email))
+                        .Select(u => new EmailAddressPoint(u.Email))
+                        .ToList());
                     return recipient;
                 });
         }
 
         /// <inheritdoc/>
-        public async Task AddSmsContactPoints(List<Recipient> recipients)
+        public async Task AddSmsContactPoints(List<Recipient> recipients, string? resourceId)
         {
             await AugmentRecipients(
                 recipients,
+                resourceId,
                 (recipient, userContactPoints) =>
                 {
                     if (!string.IsNullOrEmpty(userContactPoints.MobileNumber))
@@ -61,20 +72,28 @@ namespace Altinn.Notifications.Core.Services
                 },
                 (recipient, orgContactPoints) =>
                 {
-                    recipient.AddressInfo.AddRange(orgContactPoints.MobileNumberList.Select(m => new SmsAddressPoint(m)).ToList());
+                    recipient.AddressInfo.AddRange(orgContactPoints.MobileNumberList
+                        .Select(m => new SmsAddressPoint(m))
+                        .ToList());
+
+                    recipient.AddressInfo.AddRange(orgContactPoints.UserContactPoints
+                      .Where(u => !string.IsNullOrEmpty(u.MobileNumber))
+                      .Select(u => new SmsAddressPoint(u.MobileNumber))
+                      .ToList());
                     return recipient;
                 });
         }
 
         private async Task<List<Recipient>> AugmentRecipients(
             List<Recipient> recipients,
+            string? resourceId,
             Func<Recipient, UserContactPoints, Recipient> createUserContactPoint,
             Func<Recipient, OrganizationContactPoints, Recipient> createOrgContactPoint)
         {
             List<Recipient> augmentedRecipients = [];
 
             var userLookupTask = LookupPersonContactPoints(recipients);
-            var orgLookupTask = LookupOrganizationContactPoints(recipients);
+            var orgLookupTask = LookupOrganizationContactPoints(recipients, resourceId);
             await Task.WhenAll(userLookupTask, orgLookupTask);
 
             List<UserContactPoints> userContactPointsList = userLookupTask.Result;
@@ -130,10 +149,8 @@ namespace Altinn.Notifications.Core.Services
             return contactPoints;
         }
 
-        private async Task<List<OrganizationContactPoints>> LookupOrganizationContactPoints(List<Recipient> recipients)
+        private async Task<List<OrganizationContactPoints>> LookupOrganizationContactPoints(List<Recipient> recipients, string? resourceId)
         {
-            /* the output from this function should include an AUHTORIZED list of user registered contact points if notification has a service affiliation 
-                will require the extension of the OrganizationContactPoints class */
             List<string> orgNos = recipients
              .Where(r => !string.IsNullOrEmpty(r.OrganizationNumber))
              .Select(r => r.OrganizationNumber!)
@@ -144,7 +161,38 @@ namespace Altinn.Notifications.Core.Services
                 return [];
             }
 
-            List<OrganizationContactPoints> contactPoints = await _registerClient.GetOrganizationContactPoints(orgNos);
+            Task<List<OrganizationContactPoints>> registerTask = _registerClient.GetOrganizationContactPoints(orgNos);
+            List<OrganizationContactPoints> authorizedUserContactPoints = new();
+
+            if (!string.IsNullOrEmpty(resourceId))
+            {
+                var allUserContactPoints = await _profileClient.GetUserRegisteredContactPoints(orgNos, resourceId);
+                authorizedUserContactPoints = await _authorizationService.AuthorizeUserContactPointsForResource(allUserContactPoints, resourceId);
+            }
+
+            List<OrganizationContactPoints> contactPoints = await registerTask;
+
+            if (!string.IsNullOrEmpty(resourceId))
+            {
+                foreach (var userContactPoint in authorizedUserContactPoints)
+                {
+                    userContactPoint.UserContactPoints.ForEach(userContactPoint =>
+                    {
+                        userContactPoint.MobileNumber = MobileNumberHelper.EnsureCountryCodeIfValidNumber(userContactPoint.MobileNumber);
+                    });
+
+                    var existingContactPoint = contactPoints.Find(cp => cp.OrganizationNumber == userContactPoint.OrganizationNumber);
+
+                    if (existingContactPoint != null)
+                    {
+                        existingContactPoint.UserContactPoints.AddRange(userContactPoint.UserContactPoints);
+                    }
+                    else
+                    {
+                        contactPoints.Add(userContactPoint);
+                    }
+                }
+            }
 
             contactPoints.ForEach(contactPoint =>
             {

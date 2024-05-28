@@ -30,6 +30,9 @@ public class NotificationOrderWithStatus : IBaseNotificationOrder
     /// <inheritdoc/>>
     public bool? IgnoreReservation { get; internal set; }
 
+    /// <inheritdoc/>>
+    public string? ResourceId { get; internal set; }
+
     /// <summary>
     /// Gets the processing status of the notication order
     /// </summary>
