@@ -33,7 +33,7 @@ BEGIN
     AND orders.creatorname = _creatorname;
     
     SELECT
-        SUM(CASE WHEN IN ('Delivered', 'Succeeded') THEN 1 ELSE 0 END), 
+        SUM(CASE WHEN result IN ('Delivered', 'Succeeded') THEN 1 ELSE 0 END), 
         COUNT(1) AS generatedEmailCount
     INTO _succeededEmailCount, _generatedEmailCount
     FROM notifications.emailnotifications
