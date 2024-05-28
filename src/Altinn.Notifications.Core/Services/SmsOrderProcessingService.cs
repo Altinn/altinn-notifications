@@ -42,7 +42,7 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
 
         foreach (Recipient recipient in recipients)
         {
-            await _smsService.CreateNotification(order.Id, order.RequestedSendTime, recipient, smsCount, order.IgnoreReservation);
+            await _smsService.CreateNotification(order.Id, order.RequestedSendTime, recipient, smsCount, order.IgnoreReservation ?? false);
         }
     }
 

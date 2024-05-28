@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION notifications.getorder_includestatus_v2(
+CREATE OR REPLACE FUNCTION notifications.getorder_includestatus_v3(
     _alternateid uuid,
     _creatorname text
 )
@@ -11,6 +11,8 @@ RETURNS TABLE(
     processed timestamp with time zone,
     processedstatus orderprocessingstate,
     notificationchannel text,
+    ignorereservation boolean,
+    resourceid text,
     generatedemailcount bigint,
     succeededemailcount bigint,
     generatedsmscount bigint, 
@@ -54,6 +56,11 @@ BEGIN
         orders.processed,
         orders.processedstatus,
         orders.notificationorder->>'NotificationChannel',
+        CASE 
+            WHEN orders.notificationorder->>'IgnoreReservation' IS NULL THEN NULL
+            ELSE (orders.notificationorder->>'IgnoreReservation')::BOOLEAN
+        END AS IgnoreReservation,
+        orders.notificationorder->>'ResourceId',
         _generatedEmailCount,
         _succeededEmailCount,
         _generatedSmsCount, 

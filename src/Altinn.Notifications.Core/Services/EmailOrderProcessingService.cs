@@ -40,7 +40,7 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
 
         foreach (Recipient recipient in recipients)
         {
-            await _emailService.CreateNotification(order.Id, order.RequestedSendTime, recipient, order.IgnoreReservation);
+            await _emailService.CreateNotification(order.Id, order.RequestedSendTime, recipient, order.IgnoreReservation ?? false);
         }
     }
 
@@ -63,7 +63,7 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
              && er.OrganizationNumber == recipient.OrganizationNumber
              && er.ToAddress == addressPoint?.EmailAddress))
             {
-                await _emailService.CreateNotification(order.Id, order.RequestedSendTime, recipient, order.IgnoreReservation);
+                await _emailService.CreateNotification(order.Id, order.RequestedSendTime, recipient, order.IgnoreReservation ?? false);
             }
         }
     }

@@ -55,6 +55,8 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
             new Creator("ttd"),
             DateTime.UtcNow,
             NotificationChannel.Email,
+            null, 
+            null,
             new ProcessingStatus());
     }
 

@@ -30,7 +30,7 @@ public class OrderRepository : IOrderRepository
     private const string _insertSmsTextSql = "insert into notifications.smstexts(_orderid, sendernumber, body) VALUES ($1, $2, $3)"; // __orderid, _sendernumber, _body
     private const string _setProcessCompleted = "update notifications.orders set processedstatus =$1::orderprocessingstate where alternateid=$2";
     private const string _getOrdersPastSendTimeUpdateStatus = "select notifications.getorders_pastsendtime_updatestatus()";
-    private const string _getOrderIncludeStatus = "select * from notifications.getorder_includestatus_v2($1, $2)"; // _alternateid,  creator
+    private const string _getOrderIncludeStatus = "select * from notifications.getorder_includestatus_v3($1, $2)"; // _alternateid,  creator
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderRepository"/> class.
@@ -166,6 +166,8 @@ public class OrderRepository : IOrderRepository
                     new Creator(reader.GetValue<string>("creatorname")),
                     reader.GetValue<DateTime>("created"),
                     reader.GetValue<NotificationChannel>("notificationchannel"),
+                    reader.GetValue<bool?>("ignorereservation"),
+                    reader.GetValue<string?>("resourceid"),
                     new ProcessingStatus(
                         reader.GetValue<OrderProcessingStatus>("processedstatus"),
                         reader.GetValue<DateTime>("processed")));
