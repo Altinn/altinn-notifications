@@ -47,9 +47,7 @@ public class OrderRequestService : IOrderRequestService
         Guid orderId = _guid.NewGuid();
         DateTime currentime = _dateTime.UtcNow();
 
-        // copying recipients by value to not alter the orderRequest that will be persisted
-        var copiedRecipents = orderRequest.Recipients.Select(r => r.DeepCopy()).ToList();
-        var lookupResult = await GetRecipientLookupResult(copiedRecipents, orderRequest.NotificationChannel, orderRequest.ResourceId);
+        var lookupResult = await GetRecipientLookupResult(orderRequest.Recipients, orderRequest.NotificationChannel, orderRequest.ResourceId);
 
         var templates = SetSenderIfNotDefined(orderRequest.Templates);
 
@@ -74,19 +72,19 @@ public class OrderRequestService : IOrderRequestService
         };
     }
 
-    private async Task<RecipientLookupResult?> GetRecipientLookupResult(List<Recipient> recipients, NotificationChannel channel, string? resourceId)
+    private async Task<RecipientLookupResult?> GetRecipientLookupResult(List<Recipient> originalRecipients, NotificationChannel channel, string? resourceId)
     {
         List<Recipient> recipientsWithoutContactPoint = [];
 
-        foreach (var recipient in recipients)
+        foreach (var recipient in originalRecipients)
         {
             if (channel == NotificationChannel.Email && !recipient.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email))
             {
-                recipientsWithoutContactPoint.Add(recipient);
+                recipientsWithoutContactPoint.Add(recipient.DeepCopy());
             }
             else if (channel == NotificationChannel.Sms && !recipient.AddressInfo.Exists(ap => ap.AddressType == AddressType.Sms))
             {
-                recipientsWithoutContactPoint.Add(recipient);
+                recipientsWithoutContactPoint.Add(recipient.DeepCopy());
             }
         }
 
@@ -104,12 +102,12 @@ public class OrderRequestService : IOrderRequestService
             await _contactPointService.AddSmsContactPoints(recipientsWithoutContactPoint, resourceId);
         }
 
-        var isReserved = recipients.Where(r => r.IsReserved.HasValue && r.IsReserved.Value).Select(r => r.NationalIdentityNumber!).ToList();
+        var isReserved = recipientsWithoutContactPoint.Where(r => r.IsReserved.HasValue && r.IsReserved.Value).Select(r => r.NationalIdentityNumber!).ToList();
 
         RecipientLookupResult lookupResult = new()
         {
             IsReserved = isReserved,
-            MissingContact = recipients
+            MissingContact = recipientsWithoutContactPoint
             .Where(r => channel == NotificationChannel.Email ?
                 !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email) :
                 !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Sms))
@@ -120,7 +118,7 @@ public class OrderRequestService : IOrderRequestService
 
         int recipientsWeCannotReach = lookupResult.MissingContact.Union(lookupResult.IsReserved).ToList().Count;
 
-        if (recipientsWeCannotReach == recipients.Count)
+        if (recipientsWeCannotReach == recipientsWithoutContactPoint.Count)
         {
             lookupResult.Status = RecipientLookupStatus.Failed;
         }
