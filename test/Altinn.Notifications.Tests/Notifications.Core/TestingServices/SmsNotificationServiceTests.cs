@@ -189,7 +189,7 @@ public class SmsNotificationServiceTests
         Recipient recipient = new()
         {
             OrganizationNumber = "org",
-            AddressInfo = [ new SmsAddressPoint("+4748123456"), new SmsAddressPoint("+4799123456")]
+            AddressInfo = [new SmsAddressPoint("+4748123456"), new SmsAddressPoint("+4799123456")]
         };
 
         var repoMock = new Mock<ISmsNotificationRepository>();
