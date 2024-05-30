@@ -183,6 +183,28 @@ public class SmsNotificationServiceTests
     }
 
     [Fact]
+    public async Task CreateNotification_RecipientHasTwoMobileNumbers_RepositoryCalledOnceForEachNumber()
+    {
+        // Arrange        
+        Recipient recipient = new()
+        {
+            OrganizationNumber = "org",
+            AddressInfo = [ new SmsAddressPoint("+4748123456"), new SmsAddressPoint("+4799123456")]
+        };
+
+        var repoMock = new Mock<ISmsNotificationRepository>();
+        repoMock.Setup(r => r.AddNotification(It.Is<SmsNotification>(s => s.Recipient.OrganizationNumber == "org"), It.IsAny<DateTime>(), It.IsAny<int>()));
+
+        var service = GetTestService(repo: repoMock.Object);
+
+        // Act
+        await service.CreateNotification(Guid.NewGuid(), DateTime.UtcNow, recipient, 1, true);
+
+        // Assert
+        repoMock.Verify(r => r.AddNotification(It.Is<SmsNotification>(s => s.Recipient.OrganizationNumber == "org"), It.IsAny<DateTime>(), It.IsAny<int>()), Times.Exactly(2));
+    }
+
+    [Fact]
     public async Task SendNotifications_ProducerCalledOnceForEachRetrievedSms()
     {
         // Arrange 
