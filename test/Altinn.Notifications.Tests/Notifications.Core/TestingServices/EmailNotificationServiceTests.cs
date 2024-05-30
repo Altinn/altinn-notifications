@@ -212,6 +212,28 @@ public class EmailNotificationServiceTests
     }
 
     [Fact]
+    public async Task CreateNotification_RecipientHasTwoEmailAddresses_RepositoryCalledOnceForEachAddress()
+    {
+        // Arrange        
+        Recipient recipient = new()
+        {
+            OrganizationNumber = "org",
+            AddressInfo = [new EmailAddressPoint("user_1@domain.com"), new EmailAddressPoint("user_2@domain.com")]
+        };
+
+        var repoMock = new Mock<IEmailNotificationRepository>();
+        repoMock.Setup(r => r.AddNotification(It.Is<EmailNotification>(s => s.Recipient.OrganizationNumber == "org"), It.IsAny<DateTime>()));
+
+        var service = GetTestService(repo: repoMock.Object);
+
+        // Act
+        await service.CreateNotification(Guid.NewGuid(), DateTime.UtcNow, recipient);
+
+        // Assert
+        repoMock.Verify(r => r.AddNotification(It.Is<EmailNotification>(s => s.Recipient.OrganizationNumber == "org"), It.IsAny<DateTime>()), Times.Exactly(2));
+    }
+
+    [Fact]
     public async Task UpdateSendStatus_SendResultDefined_Succeded()
     {
         // Arrange

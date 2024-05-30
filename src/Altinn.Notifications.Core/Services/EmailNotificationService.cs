@@ -43,13 +43,16 @@ public class EmailNotificationService : IEmailNotificationService
     /// <inheritdoc/>
     public async Task CreateNotification(Guid orderId, DateTime requestedSendTime, Recipient recipient, bool ignoreReservation = false)
     {
-        EmailAddressPoint? addressPoint = recipient.AddressInfo.Find(a => a.AddressType == AddressType.Email) as EmailAddressPoint;
+        List<EmailAddressPoint> emailAddresses = recipient.AddressInfo
+          .Where(a => a.AddressType == AddressType.Email)
+          .Select(a => (a as EmailAddressPoint)!)
+          .Where(a => a != null && !string.IsNullOrEmpty(a.EmailAddress))
+          .ToList();
 
         EmailRecipient emailRecipient = new()
         {
             OrganizationNumber = recipient.OrganizationNumber,
             NationalIdentityNumber = recipient.NationalIdentityNumber,
-            ToAddress = addressPoint?.EmailAddress ?? string.Empty,
             IsReserved = recipient.IsReserved
         };
 
@@ -59,13 +62,17 @@ public class EmailNotificationService : IEmailNotificationService
             await CreateNotificationForRecipient(orderId, requestedSendTime, emailRecipient, EmailNotificationResultType.Failed_RecipientReserved);
             return;
         }
-        else if (string.IsNullOrEmpty(addressPoint?.EmailAddress))
+        else if (emailAddresses.Count == 0)
         {
             await CreateNotificationForRecipient(orderId, requestedSendTime, emailRecipient, EmailNotificationResultType.Failed_RecipientNotIdentified);
             return;
         }
 
-        await CreateNotificationForRecipient(orderId, requestedSendTime, emailRecipient, EmailNotificationResultType.New);
+        foreach (EmailAddressPoint addressPoint in emailAddresses)
+        {
+            emailRecipient.ToAddress = addressPoint.EmailAddress;
+            await CreateNotificationForRecipient(orderId, requestedSendTime, emailRecipient, EmailNotificationResultType.New);
+        }        
     }
 
     /// <inheritdoc/>

@@ -43,29 +43,35 @@ public class SmsNotificationService : ISmsNotificationService
     /// <inheritdoc/>
     public async Task CreateNotification(Guid orderId, DateTime requestedSendTime, Recipient recipient, int smsCount, bool ignoreReservation = false)
     {
-        SmsAddressPoint? addressPoint = recipient.AddressInfo.Find(a => a.AddressType == AddressType.Sms) as SmsAddressPoint;
+        List<SmsAddressPoint> smsAddresses = recipient.AddressInfo
+          .Where(a => a.AddressType == AddressType.Sms)
+          .Select(a => (a as SmsAddressPoint)!)
+          .Where(a => a != null && !string.IsNullOrEmpty(a.MobileNumber))
+          .ToList();
 
         SmsRecipient smsRecipient = new()
         {
             OrganizationNumber = recipient.OrganizationNumber,
             NationalIdentityNumber = recipient.NationalIdentityNumber,
-            MobileNumber = addressPoint?.MobileNumber ?? string.Empty,
             IsReserved = recipient.IsReserved
         };
 
         if (recipient.IsReserved.HasValue && recipient.IsReserved.Value && !ignoreReservation)
         {
-            smsRecipient.MobileNumber = string.Empty; // not persisting mobile number for reserved recipient
             await CreateNotificationForRecipient(orderId, requestedSendTime, smsRecipient, SmsNotificationResultType.Failed_RecipientReserved);
             return;
         }
-        else if (string.IsNullOrEmpty(addressPoint?.MobileNumber))
+        else if (smsAddresses.Count == 0)
         {
             await CreateNotificationForRecipient(orderId, requestedSendTime, smsRecipient, SmsNotificationResultType.Failed_RecipientNotIdentified);
             return;
         }
 
-        await CreateNotificationForRecipient(orderId, requestedSendTime, smsRecipient, SmsNotificationResultType.New, smsCount);
+        foreach (SmsAddressPoint addressPoint in smsAddresses)
+        {
+            smsRecipient.MobileNumber = addressPoint.MobileNumber;
+            await CreateNotificationForRecipient(orderId, requestedSendTime, smsRecipient, SmsNotificationResultType.New, smsCount);
+        }
     }
 
     /// <inheritdoc/>
