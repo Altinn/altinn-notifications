@@ -17,7 +17,7 @@ BEGIN
         o.creatorname,
         COUNT(DISTINCT o._id) AS placed_orders,
         SUM(CASE WHEN e._id IS NOT NULL THEN 1 ELSE 0 END) AS sent_emails,
-        SUM(CASE WHEN e.result = 'Succeeded' THEN 1 ELSE 0 END) AS succeeded_emails,
+        SUM(CASE WHEN e.result IN ('Delivered', 'Succeeded') THEN 1 ELSE 0 END) AS succeeded_emails, 
         SUM(CASE WHEN s._id IS NOT NULL THEN s.smscount ELSE 0 END) AS sent_sms,
         SUM(CASE WHEN s.result = 'Accepted' THEN 1 ELSE 0 END) AS succeeded_sms
     FROM notifications.orders o
