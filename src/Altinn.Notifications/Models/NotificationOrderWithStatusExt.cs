@@ -14,11 +14,13 @@ public class NotificationOrderWithStatusExt : BaseNotificationOrderExt
     /// Gets or sets the processing status of the notication order
     /// </summary>
     [JsonPropertyName("processingStatus")]
+    [JsonPropertyOrder(9)]
     public StatusExt ProcessingStatus { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the summary of the notifiications statuses
     /// </summary>
     [JsonPropertyName("notificationsStatusSummary")]
+    [JsonPropertyOrder(10)]
     public NotificationsStatusSummaryExt? NotificationsStatusSummary { get; set; }
 }
