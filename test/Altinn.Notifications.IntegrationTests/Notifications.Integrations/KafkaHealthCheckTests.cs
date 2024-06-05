@@ -30,7 +30,7 @@ public class KafkaHealthCheckTests : IAsyncLifetime
         settings!.Admin.TopicList = new List<string>() { _topicName };
 
         _settings = settings;
-        _ = new KafkaProducer(Options.Create(settings), Mock.Of<ILogger<IKafkaProducer>>());
+        _ = new KafkaProducer(Options.Create(settings), Mock.Of<ILogger<KafkaProducer>>());
     }
 
     [Fact]
