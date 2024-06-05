@@ -16,12 +16,12 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
 {
     private readonly IProducer<Null, string> _producer;
     private readonly KafkaSettings _settings;
-    private readonly ILogger<IKafkaProducer> _logger;
+    private readonly ILogger<KafkaProducer> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="KafkaProducer"/> class.
     /// </summary>
-    public KafkaProducer(IOptions<KafkaSettings> settings, ILogger<IKafkaProducer> logger)
+    public KafkaProducer(IOptions<KafkaSettings> settings, ILogger<KafkaProducer> logger)
         : base(settings.Value)
     {
         _settings = settings.Value;
@@ -52,7 +52,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
 
             if (result.Status != PersistenceStatus.Persisted)
             {
-                _logger.LogError("// KafkaProducer // ProduceAsync // Message not ack'd by all brokers (value: '{message}'). Delivery status: {result.Status}", message, result.Status);
+                _logger.LogError("// KafkaProducer // ProduceAsync // Message not ack'd by all brokers (value: '{Message}'). Delivery status: {Status}", message, result.Status);
                 return false;
             }
         }

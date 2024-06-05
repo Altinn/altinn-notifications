@@ -14,7 +14,7 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers;
 public abstract class KafkaConsumerBase<T> : BackgroundService
     where T : class
 {
-    private readonly ILogger<T> _logger;
+    private readonly ILogger<KafkaConsumerBase<T>> _logger;
     private readonly IConsumer<string, string> _consumer;
     private readonly string _topicName;
 
@@ -23,7 +23,7 @@ public abstract class KafkaConsumerBase<T> : BackgroundService
     /// </summary>
     protected KafkaConsumerBase(
            IOptions<KafkaSettings> settings,
-           ILogger<T> logger,
+           ILogger<KafkaConsumerBase<T>> logger,
            string topicName)
     {
         _logger = logger;
@@ -39,7 +39,7 @@ public abstract class KafkaConsumerBase<T> : BackgroundService
         };
 
         _consumer = new ConsumerBuilder<string, string>(consumerConfig)
-            .SetErrorHandler((_, e) => _logger.LogError("// { Class } // Error: { e.Reason }", GetType().Name, e.Reason))
+            .SetErrorHandler((_, e) => _logger.LogError("// {Class} // Error: {Reason}", GetType().Name, e.Reason))
             .Build();
         _topicName = topicName;
     }
@@ -101,7 +101,7 @@ public abstract class KafkaConsumerBase<T> : BackgroundService
                     _consumer.Commit(consumeResult);
                     _consumer.StoreOffset(consumeResult);
                 }
-                
+
                 _logger.LogError(ex, "// {Class} // ConsumeMessage // An error occurred while consuming messages", GetType().Name);
             }
         }

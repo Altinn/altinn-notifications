@@ -150,7 +150,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
 
         services.AddApplicationInsightsTelemetryProcessor<HealthTelemetryFilter>();
         services.AddSingleton<ITelemetryInitializer, CustomTelemetryInitializer>();
-        logger.LogInformation($"// Program // Connected to Application Insights");
+        logger.LogInformation("// Program // Connected to Application Insights");
     }
 
     GeneralSettings generalSettings = config.GetSection("GeneralSettings").Get<GeneralSettings>();
@@ -240,7 +240,7 @@ async Task ConnectToKeyVaultAndSetApplicationInsights(ConfigurationManager confi
         }
         catch (Exception vaultException)
         {
-            logger.LogError(vaultException, $"Unable to read application insights key.");
+            logger.LogError(vaultException, "Unable to read application insights key.");
         }
     }
 }
