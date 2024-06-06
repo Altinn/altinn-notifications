@@ -10,6 +10,8 @@
     -e env=*** `
     -e emailRecipient=*** `
     -e ninRecipient=*** `
+    -e orgNoRecipient=*** `
+    -e resourceId=*** `
     -e runFullTestSet=true
 
     For use case tests omit environment variable runFullTestSet or set value to false
@@ -29,6 +31,8 @@ import { addErrorCount, stopIterationOnFail } from "../errorhandler.js";
 const scopes = "altinn:serviceowner/notifications.create";
 const emailRecipient = __ENV.emailRecipient.toLowerCase();
 const ninRecipient = __ENV.ninRecipient.toLowerCase();
+const orgNoRecipient = __ENV.orgNoRecipient.toLowerCase();
+const resourceId = __ENV.resourceId.toLowerCase();
 export const options = {
   thresholds: {
     errors: ["count<1"],
@@ -46,9 +50,13 @@ export function setup() {
     },
     {
       nationalIdentityNumber: ninRecipient
+    },
+    {
+      organizationNumber: orgNoRecipient
     }
   ];
   emailOrderRequest.sendersReference = sendersReference;
+  emailOrderRequest.resourceId = resourceId;
 
   const runFullTestSet = __ENV.runFullTestSet
     ? __ENV.runFullTestSet.toLowerCase().includes("true")
