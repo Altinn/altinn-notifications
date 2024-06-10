@@ -63,11 +63,10 @@ Ensure that Docker has been installed and is running.
 In a terminal navigate to the root of this repository
 and run command `podman compose -f setup-kafka.yml up -d`
 
-Kafdrop will be available on localhost:9000
+Kafdrop is not available at http://localhost:9000.
 
 ### Running the application
 The application runs on port 5090. See full details in Dockerfile.
-
 
 - In a terminal navigate to /src/Altinn.Notifications
 - Run `dotnet run ` or `dotnet watch`
