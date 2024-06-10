@@ -14,6 +14,12 @@ on:
         required: true
       AUTOMATEDTEST_EMAILRECIPIENT:
         required: true
+      AUTOMATEDTEST_NINRECIPIENT:
+        required: true
+      AUTOMATEDTEST_ORG_NO_RECIPIENT:
+        required: true
+      AUTOMATEDTEST_RESOURCE_ID:
+        required: true
       SLACK_WEBHOOK_URL_TEST:
         required: true
 
