@@ -74,23 +74,6 @@ and run command `podman compose -f setup-kafka.yml up -d`
 
 Kafdrop is not available at http://localhost:9000.
 
-### Running the application in a docker container
-
-- Start Altinn Notifications docker container run the command
-
-  ```cmd
-  podman compose up -d --build
-  ```
-
-- To stop the container running Altinn Notifications run the command
-
-  ```cmd
-  podman stop altinn-notifications
-  ```
-
-The notifications solution is now available locally at http://localhost:5090/.
-To access swagger use http://localhost:5090/swagger.
-
 ### Running the application with .NET
 
 The Notifications components can be run locally when developing/debugging. Follow the install steps above if this has not already been done.
