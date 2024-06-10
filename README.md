@@ -57,6 +57,15 @@ In pgAdmin
 
 A more detailed description of the database setup is available in [our developer handbook](https://docs.altinn.studio/community/contributing/handbook/postgres/)
 
+### Cloning the application
+
+Clone [Altinn Notifications repo](https://github.com/Altinn/altinn-notifications) and navigate to the folder.
+
+```bash
+git clone https://github.com/Altinn/altinn-notifications
+cd altinn-notifications
+```
+
 ### Setting up Kafka broker and visualization
 Ensure that Docker has been installed and is running.
 
@@ -65,11 +74,19 @@ and run command `podman compose -f setup-kafka.yml up -d`
 
 Kafdrop is not available at http://localhost:9000.
 
-### Running the application
-The application runs on port 5090. See full details in Dockerfile.
+### Running the application in a docker container
 
-- In a terminal navigate to /src/Altinn.Notifications
-- Run `dotnet run ` or `dotnet watch`
+- Start Altinn Notifications docker container run the command
+
+  ```cmd
+  podman compose up -d --build
+  ```
+
+- To stop the container running Altinn Notifications run the command
+
+  ```cmd
+  podman stop altinn-notifications
+  ```
 
 The notifications solution is now available locally at http://localhost:5090/.
 To access swagger use http://localhost:5090/swagger.
