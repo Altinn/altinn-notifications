@@ -32,7 +32,7 @@ const scopes = "altinn:serviceowner/notifications.create";
 const emailRecipient = __ENV.emailRecipient.toLowerCase();
 const ninRecipient = __ENV.ninRecipient.toLowerCase();
 const orgNoRecipient = __ENV.orgNoRecipient.toLowerCase();
-const resourceId = __ENV.resourceId.toLowerCase();
+const resourceId = __ENV.resourceId;
 export const options = {
   thresholds: {
     errors: ["count<1"],
