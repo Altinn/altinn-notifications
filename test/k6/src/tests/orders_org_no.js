@@ -17,7 +17,7 @@
     For use case tests omit environment variable runFullTestSet or set value to false
 */
 
-import { check } from "k6";
+import { check, sleep } from "k6";
 import * as setupToken from "../setup.js";
 import * as notificationsApi from "../api/notifications/notifications.js";
 import * as ordersApi from "../api/notifications/orders.js";
@@ -26,11 +26,10 @@ const emailOrderRequestJson = JSON.parse(
   open("../data/orders/01-email-request.json")
 );
 
-import { generateJUnitXML, reportPath } from "../report.js";
 import { addErrorCount, stopIterationOnFail } from "../errorhandler.js";
 const scopes = "altinn:serviceowner/notifications.create";
-const emailRecipient = __ENV.emailRecipient.toLowerCase();
-const ninRecipient = __ENV.ninRecipient.toLowerCase();
+const orgNoRecipient = __ENV.orgNoRecipient.toLowerCase();
+const resourceId = __ENV.resourceId;
 export const options = {
   thresholds: {
     errors: ["count<1"],
@@ -44,13 +43,11 @@ export function setup() {
   var emailOrderRequest = emailOrderRequestJson;
   emailOrderRequest.recipients = [
     {
-      emailAddress: emailRecipient,
-    },
-    {
-      nationalIdentityNumber: ninRecipient
+      organizationNumber: orgNoRecipient
     }
   ];
   emailOrderRequest.sendersReference = sendersReference;
+  emailOrderRequest.resourceId = resourceId;
 
   const runFullTestSet = __ENV.runFullTestSet
     ? __ENV.runFullTestSet.toLowerCase().includes("true")
@@ -98,7 +95,6 @@ function TC01_PostEmailNotificationOrderRequest(data) {
 function TC02_GetNotificationOrderById(data, selfLink, orderId) {
   var response, success;
   response = ordersApi.getByUrl(selfLink, data.token);
-
   success = check(response, {
     "GET notification order by id. Status is 200 OK": (r) => r.status === 200,
   });
@@ -123,7 +119,6 @@ function TC03_GetNotificationOrderBySendersReference(data) {
   var response, success;
 
   response = ordersApi.getBySendersReference(data.sendersReference, data.token);
-
   success = check(response, {
     "GET notification order by senders reference. Status is 200 OK": (r) =>
       r.status === 200,
@@ -179,6 +174,7 @@ function TC05_GetEmailNotificationSummary(data, orderId) {
   var response, success;
 
   response = notificationsApi.getEmailNotifications(orderId, data.token);
+  console.log(response.body);
   success = check(response, {
     "GET email notifications. Status is 200 OK": (r) => r.status === 200,
   });
@@ -196,12 +192,48 @@ function TC05_GetEmailNotificationSummary(data, orderId) {
   });
 }
 
+// 06 - Wait and GET email notification summary for verification
+function TC06_WaitAndGetEmailNotificationSummaryForVerification(data, orderId) {
+  var response, success;
+  sleep(60); // Waiting 1 minute for the notifications to be generated
+  response = notificationsApi.getEmailNotifications(orderId, data.token);
+  console.log(response.body);
+  success = check(response, {
+    "Wait and GET email notifications. Status is 200 OK": (r) => r.status === 200,
+  });
+
+  addErrorCount(success);
+  if (!success) {
+    // only continue to parse and check content if success response code
+    stopIterationOnFail(success);
+  }
+
+  success = check(JSON.parse(response.body), {
+    "Wait and GET email notifications. OrderId property is a match": (
+      notificationSummary
+    ) => notificationSummary.orderId === orderId,
+    "Wait and GET email notifications. At least one notification has been generated": (
+      notificationSummary
+    ) => notificationSummary.generated > 0,
+    "Wait and GET email notifications. At least one notification is in the notifications array": (
+      notificationSummary
+    ) => notificationSummary.notifications.length > 0,
+    "Wait and GET email notifications. Recipient organization number is a match": (
+      notificationSummary
+    ) => notificationSummary.notifications[0].recipient.organizationNumber === data.emailOrderRequest.recipients[0].organizationNumber,
+    "Wait and GET email notifications. Recipient email address for the organization is a match": (
+      notificationSummary
+    ) => notificationSummary.notifications[0].recipient.emailAddress, // notificationSummary.notifications[0].recipient.emailAddress === "eqk8100@yrgwzco9o.net",
+  });
+}
+
 /*
  * 01 - POST email notification order request
  * 02 - GET notification order by id
  * 03 - GET notification order by senders reference
  * 04 - GET notification order with status
  * 05 - GET email notification summary
+ * 06 - Wait and GET email notification summary for verification
  */
 export default function (data) {
   try {
@@ -212,11 +244,13 @@ export default function (data) {
       TC03_GetNotificationOrderBySendersReference(data);
       TC04_GetNotificationOrderWithStatus(data, id);
       TC05_GetEmailNotificationSummary(data, id);
+      TC06_WaitAndGetEmailNotificationSummaryForVerification(data, id);
     } else {
       // Limited test set for use case tests
       var selfLink = TC01_PostEmailNotificationOrderRequest(data);
       let id = selfLink.split("/").pop();
       TC05_GetEmailNotificationSummary(data, id);
+      TC06_WaitAndGetEmailNotificationSummaryForVerification(data, id);
     }
   } catch (error) {
     addErrorCount(false);
