@@ -72,7 +72,7 @@ Ensure that Docker has been installed and is running.
 In a terminal navigate to the root of this repository
 and run command `podman compose -f setup-kafka.yml up -d`
 
-Kafdrop is not available at http://localhost:9000.
+Kafdrop is now available at http://localhost:9000.
 
 ### Running the application with .NET
 
