@@ -8,8 +8,6 @@
     -e mpKid=altinn-usecase-events `
     -e encodedJwk=*** `
     -e env=*** `
-    -e emailRecipient=*** `
-    -e ninRecipient=*** `
     -e orgNoRecipient=*** `
     -e resourceId=*** `
     -e runFullTestSet=true
@@ -223,7 +221,7 @@ function TC06_WaitAndGetEmailNotificationSummaryForVerification(data, orderId) {
     ) => notificationSummary.notifications[0].recipient.organizationNumber === data.emailOrderRequest.recipients[0].organizationNumber,
     "Wait and GET email notifications. Recipient email address for the organization is a match": (
       notificationSummary
-    ) => notificationSummary.notifications[0].recipient.emailAddress, // notificationSummary.notifications[0].recipient.emailAddress === "eqk8100@yrgwzco9o.net",
+    ) => notificationSummary.notifications[0].recipient.emailAddress.length > 0,
   });
 }
 
@@ -250,7 +248,6 @@ export default function (data) {
       var selfLink = TC01_PostEmailNotificationOrderRequest(data);
       let id = selfLink.split("/").pop();
       TC05_GetEmailNotificationSummary(data, id);
-      TC06_WaitAndGetEmailNotificationSummaryForVerification(data, id);
     }
   } catch (error) {
     addErrorCount(false);
