@@ -33,7 +33,7 @@ Run test suite by specifying filename.
 
 For example:
 
- >$> docker-compose run k6 run /src/tests/orders_email.js `
+ >$> podman compose run k6 run /src/tests/orders_email.js `
     -e tokenGeneratorUserName=autotest `
     -e tokenGeneratorUserPwd=*** `
     -e env=*** `
@@ -42,7 +42,7 @@ For example:
 
 The comand consists of three sections
 
-`docker-compose run` to run the test in a docker container
+`podman compose run` to run the test in a docker container
 
 `k6 run {path to test file}` pointing to the test file you want to run e.g. `/src/tests/orders_email.js.js`
 

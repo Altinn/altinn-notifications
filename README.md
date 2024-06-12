@@ -36,10 +36,13 @@ The persistance layer that implements repository logic.
 
 ## Getting started
 
-### Prerequisites
-- [PostgreSQL](https://www.postgresql.org/download/) v15
-- [pgAdmin](https://www.pgadmin.org/download/)
-- [Docker](https://docs.docker.com/compose/install/)
+1. [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+2. Newest [Git](https://git-scm.com/downloads)
+3. A code editor - we like [Visual Studio Code](https://code.visualstudio.com/download)
+   - Also install [recommended extensions](https://code.visualstudio.com/docs/editor/extension-marketplace#_workspace-recommended-extensions) (e.g. [C#](https://marketplace.visualstudio.com/items?itemName=ms-dotnettools.csharp))
+4. [Podman](https://podman.io/) or another container tool such as Docker Desktop
+5. [PostgreSQL](https://www.postgresql.org/download/)
+6. [pgAdmin](https://www.pgadmin.org/download/)
 
 ### Setting up PostgreSQL
 
@@ -52,21 +55,35 @@ In pgAdmin
   - platform_notifications (canlogin)
 - Create schema _notifications_ in notificationsdb with owner _platform_notifications_admin_
 
+A more detailed description of the database setup is available in [our developer handbook](https://docs.altinn.studio/community/contributing/handbook/postgres/)
+
+### Cloning the application
+
+Clone [Altinn Notifications repo](https://github.com/Altinn/altinn-notifications) and navigate to the folder.
+
+```bash
+git clone https://github.com/Altinn/altinn-notifications
+cd altinn-notifications
+```
+
 ### Setting up Kafka broker and visualization
-Ensure that Dokcer has been installed and is running.
+Ensure that Docker has been installed and is running.
 
 In a terminal navigate to the root of this repository
-and run command `docker compose -f setup-kafka.yml up -d`
+and run command `podman compose -f setup-kafka.yml up -d`
 
-Kafdrop will be available on localhost:9000
+Kafdrop is now available at http://localhost:9000.
 
-### Running the application
-The application runs on port 5090. See full details in Dockerfile.
+### Running the application with .NET
 
+The Notifications components can be run locally when developing/debugging. Follow the install steps above if this has not already been done.
 
-- In a terminal navigate to /src/Altinn.Notifications
-- Run `dotnet run ` or `dotnet watch`
+- Navigate to _src/Notifications_, and build and run the code from there, or run the solution using you selected code editor
 
-Application is now available on localhost:5090.
+  ```cmd
+  cd src/Notifications
+  dotnet run
+  ```
 
-
+The notifications solution is now available locally at http://localhost:5090/.
+To access swagger use http://localhost:5090/swagger.
