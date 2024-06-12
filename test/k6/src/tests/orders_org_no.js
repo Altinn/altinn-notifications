@@ -217,7 +217,7 @@ function TC06_WaitAndGetEmailNotificationSummaryForVerification(data, orderId) {
     "Wait and GET email notifications. Recipient organization number is a match": (
       notificationSummary
     ) => notificationSummary.notifications[0].recipient.organizationNumber === data.emailOrderRequest.recipients[0].organizationNumber,
-    "Wait and GET email notifications. Recipient email address for the organization is a match": (
+    "Wait and GET email notifications. Recipient email address found in the contact lookup for the given organization number": (
       notificationSummary
     ) => notificationSummary.notifications[0].recipient.emailAddress.length > 0,
   });
