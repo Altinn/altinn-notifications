@@ -1,7 +1,7 @@
 /*
     Test script of platform notifications api with org token
     Command:
-    docker-compose run k6 run /src/tests/orders_email.js `
+    docker-compose run k6 run /src/tests/orders_org_no.js `
     -e tokenGeneratorUserName=autotest `
     -e tokenGeneratorUserPwd=*** `
     -e mpClientId=*** `
