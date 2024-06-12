@@ -41,7 +41,7 @@ The persistance layer that implements repository logic.
 3. A code editor - we like [Visual Studio Code](https://code.visualstudio.com/download)
    - Also install [recommended extensions](https://code.visualstudio.com/docs/editor/extension-marketplace#_workspace-recommended-extensions) (e.g. [C#](https://marketplace.visualstudio.com/items?itemName=ms-dotnettools.csharp))
 4. [Podman](https://podman.io/) or another container tool such as Docker Desktop
-5. [PostgreSQL 15](https://www.postgresql.org/download/)
+5. [PostgreSQL](https://www.postgresql.org/download/)
 6. [pgAdmin](https://www.pgadmin.org/download/)
 
 ### Setting up PostgreSQL
