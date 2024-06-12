@@ -10,8 +10,6 @@
     -e env=*** `
     -e emailRecipient=*** `
     -e ninRecipient=*** `
-    -e orgNoRecipient=*** `
-    -e resourceId=*** `
     -e runFullTestSet=true
 
     For use case tests omit environment variable runFullTestSet or set value to false
