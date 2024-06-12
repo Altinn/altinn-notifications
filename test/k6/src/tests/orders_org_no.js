@@ -172,7 +172,6 @@ function TC05_GetEmailNotificationSummary(data, orderId) {
   var response, success;
 
   response = notificationsApi.getEmailNotifications(orderId, data.token);
-  console.log(response.body);
   success = check(response, {
     "GET email notifications. Status is 200 OK": (r) => r.status === 200,
   });
@@ -195,7 +194,6 @@ function TC06_WaitAndGetEmailNotificationSummaryForVerification(data, orderId) {
   var response, success;
   sleep(60); // Waiting 1 minute for the notifications to be generated
   response = notificationsApi.getEmailNotifications(orderId, data.token);
-  console.log(response.body);
   success = check(response, {
     "Wait and GET email notifications. Status is 200 OK": (r) => r.status === 200,
   });
