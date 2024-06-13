@@ -189,13 +189,13 @@ function TC05_GetEmailNotificationSummary(data, orderId) {
   });
 }
 
-// 06 - Wait and GET email notification summary for verification
-function TC06_WaitAndGetEmailNotificationSummaryForVerification(data, orderId) {
-  var response, success;
+// 06 - GET email notifications summary again after one minute for verification
+function TC06_GetEmailNotificationSummaryAgainAfterOneMinuteForVerification(data, orderId) {
   sleep(60); // Waiting 1 minute for the notifications to be generated
+  var response, success;
   response = notificationsApi.getEmailNotifications(orderId, data.token);
   success = check(response, {
-    "Wait and GET email notifications. Status is 200 OK": (r) => r.status === 200,
+    "GET email notifications summary again after one minute for verification. Status is 200 OK": (r) => r.status === 200,
   });
 
   addErrorCount(success);
@@ -205,19 +205,19 @@ function TC06_WaitAndGetEmailNotificationSummaryForVerification(data, orderId) {
   }
 
   success = check(JSON.parse(response.body), {
-    "Wait and GET email notifications. OrderId property is a match": (
+    "GET email notifications summary again after one minute for verification. OrderId property is a match": (
       notificationSummary
     ) => notificationSummary.orderId === orderId,
-    "Wait and GET email notifications. At least one notification has been generated": (
+    "GET email notifications summary again after one minute for verification. At least one notification has been generated": (
       notificationSummary
     ) => notificationSummary.generated > 0,
-    "Wait and GET email notifications. At least one notification is in the notifications array": (
+    "GET email notifications summary again after one minute for verification. At least one notification is in the notifications array": (
       notificationSummary
     ) => notificationSummary.notifications.length > 0,
-    "Wait and GET email notifications. Recipient organization number is a match": (
+    "GET email notifications summary again after one minute for verification. Recipient organization number is a match": (
       notificationSummary
     ) => notificationSummary.notifications[0].recipient.organizationNumber === data.emailOrderRequest.recipients[0].organizationNumber,
-    "Wait and GET email notifications. Recipient email address found in the contact lookup for the given organization number": (
+    "GET email notifications summary again after one minute for verification. Recipient email address found in the contact lookup for the given organization number": (
       notificationSummary
     ) => notificationSummary.notifications[0].recipient.emailAddress.length > 0,
   });
@@ -229,7 +229,7 @@ function TC06_WaitAndGetEmailNotificationSummaryForVerification(data, orderId) {
  * 03 - GET notification order by senders reference
  * 04 - GET notification order with status
  * 05 - GET email notification summary
- * 06 - Wait and GET email notification summary for verification
+ * 06 - GET email notifications summary again after one minute for verification
  */
 export default function (data) {
   try {
@@ -240,7 +240,7 @@ export default function (data) {
       TC03_GetNotificationOrderBySendersReference(data);
       TC04_GetNotificationOrderWithStatus(data, id);
       TC05_GetEmailNotificationSummary(data, id);
-      TC06_WaitAndGetEmailNotificationSummaryForVerification(data, id);
+      TC06_GetEmailNotificationSummaryAgainAfterOneMinuteForVerification(data, id);
     } else {
       // Limited test set for use case tests
       var selfLink = TC01_PostEmailNotificationOrderRequest(data);
