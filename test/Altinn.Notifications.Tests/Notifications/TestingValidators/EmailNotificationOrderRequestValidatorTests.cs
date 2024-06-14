@@ -34,6 +34,40 @@ public class EmailNotificationOrderRequestValidatorTests
         Assert.True(actual.IsValid);
     }
 
+    [Theory]
+    [InlineData("123456789", true)]
+    [InlineData("12345678", false)]
+    [InlineData("abc456789", false)]
+    public void Validate_RecipientOrganizationNumber_MustBe9Digits(string organizationNumber, bool expectedResult)
+    {
+        var order = new EmailNotificationOrderRequestExt()
+        {
+            Subject = "This is an email subject",
+            Recipients = new List<RecipientExt>() { new RecipientExt() { OrganizationNumber = organizationNumber } },
+            Body = "This is an email body"
+        };
+
+        var validationResult = _validator.Validate(order);
+        Assert.Equal(expectedResult, validationResult.IsValid);
+    }
+
+    [Theory]
+    [InlineData("16069412345", true)]
+    [InlineData("ab069412345", false)]
+    [InlineData("123456784651", false)]
+    public void Validate_RecipientNationalIdentityNumber_MustBe11Digits(string nationalIdentityNumber, bool expectedResult)
+    {
+        var order = new EmailNotificationOrderRequestExt()
+        {
+            Subject = "This is an email subject",
+            Recipients = new List<RecipientExt>() { new RecipientExt() { NationalIdentityNumber = nationalIdentityNumber } },
+            Body = "This is an email body"
+        };
+
+        var validationResult = _validator.Validate(order);
+        Assert.Equal(expectedResult, validationResult.IsValid);
+    }
+
     [Fact]
     public void Validate_InvalidEmailFormatProvided_ReturnsFalse()
     {
@@ -47,7 +81,7 @@ public class EmailNotificationOrderRequestValidatorTests
         var actual = _validator.Validate(order);
 
         Assert.False(actual.IsValid);
-        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("Either a valid email address, organization number, or national identity number must be provided for each recipient."));
+        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("Invalid email address format."));
     }
 
     [Fact]
