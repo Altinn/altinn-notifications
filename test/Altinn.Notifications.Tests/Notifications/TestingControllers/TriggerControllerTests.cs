@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 
 using Altinn.Notifications.Controllers;
 using Altinn.Notifications.Core.Services.Interfaces;
-using Altinn.Notifications.Extensions;
 
 using Microsoft.AspNetCore.Mvc;
 
@@ -22,6 +21,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
         public TriggerControllerTests()
         {
             _smsNotificationServiceMock = new Mock<ISmsNotificationService>();
+            _smsNotificationServiceMock.Setup(x => x.SendNotifications()).Returns(Task.CompletedTask);
             _dateTimeServiceMock = new Mock<IDateTimeService>();
 
             _controller = new TriggerController(
@@ -47,16 +47,18 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
         }
 
         [Fact]
-        public void IsWithinBusinessHours_WithinBusinessHours_ReturnsTrue()
+        public async Task Trigger_SendSmsNotifications_BeforeBusinessHours_ServiceNotCalled()
         {
             // Arrange
-            var dateTime = new DateTime(2022, 1, 1, 10, 0, 0, DateTimeKind.Utc);
+            var afterBusinessHours = new DateTime(2022, 1, 1, 04, 0, 0, DateTimeKind.Utc);
+            _dateTimeServiceMock.Setup(x => x.UtcNow()).Returns(afterBusinessHours);
 
             // Act
-            var result = dateTime.IsWithinBusinessHours();
+            ActionResult result = await _controller.Trigger_SendSmsNotifications();
 
             // Assert
-            Assert.True(result);
+            _smsNotificationServiceMock.Verify(x => x.SendNotifications(), Times.Never);
+            Assert.IsType<OkResult>(result);
         }
     }
 }
