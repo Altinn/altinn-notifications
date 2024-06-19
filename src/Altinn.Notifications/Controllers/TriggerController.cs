@@ -1,4 +1,5 @@
 ﻿using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Extensions;
 
 using Microsoft.AspNetCore.Mvc;
 
@@ -15,6 +16,7 @@ public class TriggerController : ControllerBase
     private readonly IOrderProcessingService _orderProcessingService;
     private readonly IEmailNotificationService _emailNotificationService;
     private readonly ISmsNotificationService _smsNotificationService;
+    private readonly IDateTimeService _dateTimeService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TriggerController"/> class.
@@ -22,11 +24,13 @@ public class TriggerController : ControllerBase
     public TriggerController(
         IOrderProcessingService orderProcessingService,
         IEmailNotificationService emailNotificationService,
-        ISmsNotificationService smsNotificationService)
+        ISmsNotificationService smsNotificationService,
+        IDateTimeService dateTimeService)
     {
         _orderProcessingService = orderProcessingService;
         _emailNotificationService = emailNotificationService;
         _smsNotificationService = smsNotificationService;
+        _dateTimeService = dateTimeService;
     }
 
     /// <summary>
@@ -61,6 +65,11 @@ public class TriggerController : ControllerBase
     [Route("sendsms")]
     public async Task<ActionResult> Trigger_SendSmsNotifications()
     {
+        if (!_dateTimeService.UtcNow().IsWithinBusinessHours())
+        {
+            return Ok();
+        }
+
         await _smsNotificationService.SendNotifications();
         return Ok();
     }

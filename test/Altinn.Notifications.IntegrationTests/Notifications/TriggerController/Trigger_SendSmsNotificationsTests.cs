@@ -1,6 +1,7 @@
 ﻿using System.Net;
 
 using Altinn.Notifications.Core.Models.Notification;
+using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
@@ -11,6 +12,8 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Logging;
+
+using Moq;
 
 using Xunit;
 
@@ -23,6 +26,7 @@ public class Trigger_SendSmsNotificationsTests : IClassFixture<IntegrationTestWe
     private readonly IntegrationTestWebApplicationFactory<Controllers.TriggerController> _factory;
     private readonly string _topicName = Guid.NewGuid().ToString();
     private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
+    private readonly DateTime currentTime = DateTime.UtcNow.Date.AddHours(10);
 
     public Trigger_SendSmsNotificationsTests(IntegrationTestWebApplicationFactory<Controllers.TriggerController> factory)
     {
@@ -83,6 +87,10 @@ public class Trigger_SendSmsNotificationsTests : IClassFixture<IntegrationTestWe
                     opts.SmsQueueTopicName = _topicName;
                 });
 
+                Mock<IDateTimeService> dateMock = new();
+                dateMock.Setup(d => d.UtcNow()).Returns(currentTime);
+
+                services.AddSingleton(dateMock.Object);
                 // Set up mock authentication and authorization               
                 services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
             });
