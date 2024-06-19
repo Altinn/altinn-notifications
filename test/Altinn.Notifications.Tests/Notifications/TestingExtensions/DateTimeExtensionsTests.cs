@@ -22,10 +22,23 @@ namespace Altinn.Notifications.Tests.Notifications.TestingExtensions
         }
 
         [Fact]
-        public void IsWithinBusinessHours_OutsideBusinessHours_ReturnsFalse()
+        public void IsWithinBusinessHours_AfterBusinessHours_ReturnsFalse()
         {
             // Arrange
             var dateTime = new DateTime(2022, 1, 1, 20, 0, 0, DateTimeKind.Utc); // 20:00 UTC is 21:00 or 22:00 local time
+
+            // Act
+            var result = dateTime.IsWithinBusinessHours();
+
+            // Assert
+            Assert.False(result);
+        }
+
+        [Fact]
+        public void IsWithinBusinessHours_BeforeBusinessHours_ReturnsFalse()
+        {
+            // Arrange
+            var dateTime = new DateTime(2022, 1, 1, 5, 0, 0, DateTimeKind.Utc); // 05:00 UTC is 07:00 or 08:00 local time
 
             // Act
             var result = dateTime.IsWithinBusinessHours();
