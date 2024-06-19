@@ -89,8 +89,8 @@ public class Trigger_SendSmsNotificationsTests : IClassFixture<IntegrationTestWe
 
                 Mock<IDateTimeService> dateMock = new();
                 dateMock.Setup(d => d.UtcNow()).Returns(currentTime);
-
                 services.AddSingleton(dateMock.Object);
+
                 // Set up mock authentication and authorization               
                 services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
             });
