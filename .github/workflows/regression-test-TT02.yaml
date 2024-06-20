@@ -16,6 +16,11 @@ jobs:
       with:
         filename: test/k6/src/tests/orders_email.js
         flags: -e runFullTestSet=true -e env=${{ vars.ENV }} -e emailRecipient=${{ secrets.AUTOMATEDTEST_EMAILRECIPIENT }} -e ninRecipient=${{ secrets.AUTOMATEDTEST_NINRECIPIENT}} -e mpClientId=${{ secrets.MP_CLIENT_ID }} -e mpKid=${{ secrets.MP_KID }} -e encodedJwk=${{ secrets.MP_ENCODEDJWK }}
+    - name: Run contact(s) lookup by organization number regression tests with generating an email notification
+      uses: grafana/k6-action@v0.3.1
+      with:
+        filename: test/k6/src/tests/orders_org_no.js
+        flags: -e runFullTestSet=true -e env=${{ vars.ENV }} -e orgNoRecipient=${{ secrets.AUTOMATEDTEST_ORG_NO_RECIPIENT}} -e resourceId=${{ secrets.AUTOMATEDTEST_RESOURCE_ID}} -e mpClientId=${{ secrets.MP_CLIENT_ID }} -e mpKid=${{ secrets.MP_KID }} -e encodedJwk=${{ secrets.MP_ENCODEDJWK }}
     - name: Run sms notification order regression tests
       uses: grafana/k6-action@v0.3.1
       with:
