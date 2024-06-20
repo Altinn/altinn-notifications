@@ -51,7 +51,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
         {
             // Arrange
             var afterBusinessHours = new DateTime(2022, 1, 1, 04, 0, 0, DateTimeKind.Utc);
-            _notificationScheduleMock.Setup(x => x.CanSendSmsNotifications()).Returns(true);
+            _notificationScheduleMock.Setup(x => x.CanSendSmsNotifications()).Returns(false);
 
             // Act
             ActionResult result = await _controller.Trigger_SendSmsNotifications();
