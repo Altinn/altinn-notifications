@@ -65,6 +65,10 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Notifications\TestingExtensions\" />
+  </ItemGroup>
+
   <PropertyGroup>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);1591</NoWarn>

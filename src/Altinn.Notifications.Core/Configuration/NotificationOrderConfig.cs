@@ -14,4 +14,14 @@ public class NotificationOrderConfig
     /// Default sender number for sms notifications
     /// </summary>
     public string DefaultSmsSenderNumber { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Start hour of the SMS send window
+    /// </summary>
+    public int SmsSendWindowStartHour { get; set; } = 9;
+
+    /// <summary>
+    /// End hour of the SMS send window
+    /// </summary>
+    public int SmsSendWindowEndHour { get; set; } = 17;
 }

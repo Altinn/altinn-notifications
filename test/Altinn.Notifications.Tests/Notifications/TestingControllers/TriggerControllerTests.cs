@@ -15,20 +15,20 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
     public class TriggerControllerTests
     {
         private readonly Mock<ISmsNotificationService> _smsNotificationServiceMock;
-        private readonly Mock<IDateTimeService> _dateTimeServiceMock;
+        private readonly Mock<INotificationScheduleService> _notificationScheduleMock;
         private readonly TriggerController _controller;
 
         public TriggerControllerTests()
         {
             _smsNotificationServiceMock = new Mock<ISmsNotificationService>();
             _smsNotificationServiceMock.Setup(x => x.SendNotifications()).Returns(Task.CompletedTask);
-            _dateTimeServiceMock = new Mock<IDateTimeService>();
+            _notificationScheduleMock = new Mock<INotificationScheduleService>();
 
             _controller = new TriggerController(
                 new Mock<IOrderProcessingService>().Object,
                 new Mock<IEmailNotificationService>().Object,
                 _smsNotificationServiceMock.Object,
-                _dateTimeServiceMock.Object);
+                _notificationScheduleMock.Object);
         }
 
         [Fact]
@@ -36,7 +36,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
         {
             // Arrange
             var afterBusinessHours = new DateTime(2022, 1, 1, 20, 0, 0, DateTimeKind.Utc);
-            _dateTimeServiceMock.Setup(x => x.UtcNow()).Returns(afterBusinessHours);
+            _notificationScheduleMock.Setup(x => x.CanSendSmsNotifications()).Returns(false);
 
             // Act
             ActionResult result = await _controller.Trigger_SendSmsNotifications();
@@ -51,7 +51,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
         {
             // Arrange
             var afterBusinessHours = new DateTime(2022, 1, 1, 04, 0, 0, DateTimeKind.Utc);
-            _dateTimeServiceMock.Setup(x => x.UtcNow()).Returns(afterBusinessHours);
+            _notificationScheduleMock.Setup(x => x.CanSendSmsNotifications()).Returns(true);
 
             // Act
             ActionResult result = await _controller.Trigger_SendSmsNotifications();

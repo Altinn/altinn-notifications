@@ -43,6 +43,7 @@ public static class ServiceCollectionExtensions
             .AddSingleton<IAltinnServiceUpdateService, AltinnServiceUpdateService>()
             .AddSingleton<INotificationsEmailServiceUpdateService, NotificationsEmailServiceUpdateService>()
             .AddSingleton<IMetricsService, MetricsService>()
+            .AddSingleton<INotificationScheduleService, NotificationScheduleService>()
             .Configure<KafkaSettings>(config.GetSection("KafkaSettings"))
             .Configure<NotificationOrderConfig>(config.GetSection("NotificationOrderConfig"));
     }

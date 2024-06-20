@@ -19,19 +19,4 @@ public class GeneralSettings
     /// Name of the cookie for where JWT is stored
     /// </summary>
     public string JwtCookieName { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Default sender of email notifications
-    /// </summary>
-    public string DefaultEmailFromAddress { get; set; } = "noreply@altinn.no";
-
-    /// <summary>
-    /// Start hour of the SMS send window
-    /// </summary>
-    public static int SmsSendWindowStartHour { get; set; } = 9;
-
-    /// <summary>
-    /// End hour of the SMS send window
-    /// </summary>
-    public static int SmsSendWindowEndHour { get; set; } = 17;
 }
