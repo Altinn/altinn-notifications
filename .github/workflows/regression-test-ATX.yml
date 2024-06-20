@@ -14,6 +14,12 @@ on:
         required: true
       AUTOMATEDTEST_EMAILRECIPIENT:
         required: true
+      AUTOMATEDTEST_NINRECIPIENT:
+        required: true
+      AUTOMATEDTEST_ORG_NO_RECIPIENT:
+        required: true
+      AUTOMATEDTEST_RESOURCE_ID:
+        required: true
       SLACK_WEBHOOK_URL_TEST:
         required: true
 
@@ -29,6 +35,13 @@ jobs:
         filename: test/k6/src/tests/orders_email.js
         flags: -e runFullTestSet=true -e env=${{ vars.ENV }} -e tokenGeneratorUserName=${{ secrets.TOKENGENERATOR_USERNAME }} -e tokenGeneratorUserPwd=${{ secrets.TOKENGENERATOR_USERPASSWORD }} -e emailRecipient=${{ secrets.AUTOMATEDTEST_EMAILRECIPIENT }} -e ninRecipient=${{ secrets.AUTOMATEDTEST_NINRECIPIENT}}
 
+    - name: Run contact(s) lookup by organization number regression tests with generating an email notification
+      uses: grafana/k6-action@v0.3.1
+      with:
+        filename: test/k6/src/tests/orders_org_no.js
+        flags: -e runFullTestSet=true -e env=${{ vars.ENV }} -e tokenGeneratorUserName=${{ secrets.TOKENGENERATOR_USERNAME }} -e tokenGeneratorUserPwd=${{ secrets.TOKENGENERATOR_USERPASSWORD }} -e orgNoRecipient=${{ secrets.AUTOMATEDTEST_ORG_NO_RECIPIENT}} -e resourceId=${{ secrets.AUTOMATEDTEST_RESOURCE_ID}}
+
+        
     - name: Run sms notification order regression tests
       uses: grafana/k6-action@v0.3.1
       with:
