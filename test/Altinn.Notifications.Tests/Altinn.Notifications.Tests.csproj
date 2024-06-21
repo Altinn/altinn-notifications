@@ -7,6 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Notifications\TestingExtensions\**" />
+    <EmbeddedResource Remove="Notifications\TestingExtensions\**" />
+    <None Remove="Notifications\TestingExtensions\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.6" />
     <PackageReference Include="Microsoft.IdentityModel.Logging" Version="7.6.0" />
     <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="7.6.0" />
@@ -63,10 +69,6 @@
     <None Update="ttd-org.pfx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Notifications\TestingExtensions\" />
   </ItemGroup>
 
   <PropertyGroup>
