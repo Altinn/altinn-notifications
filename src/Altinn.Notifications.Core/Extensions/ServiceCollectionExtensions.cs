@@ -23,9 +23,9 @@ public static class ServiceCollectionExtensions
             .Get<KafkaSettings>()
             ?? throw new ArgumentNullException(nameof(config), "Required KafkaSettings is missing from application configuration");
 
-        _ = config.GetSection("NotificationOrderConfig")
-            .Get<NotificationOrderConfig>()
-            ?? throw new ArgumentNullException(nameof(config), "Required NotificationOrderConfig is missing from application configuration");
+        _ = config.GetSection("NotificationConfig")
+            .Get<NotificationConfig>()
+            ?? throw new ArgumentNullException(nameof(config), "Required NotificationConfig is missing from application configuration");
 
         services
             .AddSingleton<IGuidService, GuidService>()
@@ -43,7 +43,8 @@ public static class ServiceCollectionExtensions
             .AddSingleton<IAltinnServiceUpdateService, AltinnServiceUpdateService>()
             .AddSingleton<INotificationsEmailServiceUpdateService, NotificationsEmailServiceUpdateService>()
             .AddSingleton<IMetricsService, MetricsService>()
+            .AddSingleton<INotificationScheduleService, NotificationScheduleService>()
             .Configure<KafkaSettings>(config.GetSection("KafkaSettings"))
-            .Configure<NotificationOrderConfig>(config.GetSection("NotificationOrderConfig"));
+            .Configure<NotificationConfig>(config.GetSection("NotificationConfig"));
     }
 }

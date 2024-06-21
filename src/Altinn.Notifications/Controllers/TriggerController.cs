@@ -15,6 +15,7 @@ public class TriggerController : ControllerBase
     private readonly IOrderProcessingService _orderProcessingService;
     private readonly IEmailNotificationService _emailNotificationService;
     private readonly ISmsNotificationService _smsNotificationService;
+    private readonly INotificationScheduleService _scheduleService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TriggerController"/> class.
@@ -22,11 +23,13 @@ public class TriggerController : ControllerBase
     public TriggerController(
         IOrderProcessingService orderProcessingService,
         IEmailNotificationService emailNotificationService,
-        ISmsNotificationService smsNotificationService)
+        ISmsNotificationService smsNotificationService,
+        INotificationScheduleService scheduleService)
     {
         _orderProcessingService = orderProcessingService;
         _emailNotificationService = emailNotificationService;
         _smsNotificationService = smsNotificationService;
+        _scheduleService = scheduleService;
     }
 
     /// <summary>
@@ -61,6 +64,11 @@ public class TriggerController : ControllerBase
     [Route("sendsms")]
     public async Task<ActionResult> Trigger_SendSmsNotifications()
     {
+        if (!_scheduleService.CanSendSmsNotifications())
+        {
+            return Ok();
+        }
+
         await _smsNotificationService.SendNotifications();
         return Ok();
     }

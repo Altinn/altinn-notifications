@@ -407,7 +407,7 @@ public class OrderRequestServiceTests
             contactPointService = contactService.Object;
         }
 
-        var config = Options.Create<NotificationOrderConfig>(new()
+        var config = Options.Create<NotificationConfig>(new()
         {
             DefaultEmailFromAddress = "noreply@altinn.no",
             DefaultSmsSenderNumber = "TestDefaultSmsSenderNumberNumber"

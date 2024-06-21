@@ -31,7 +31,7 @@ public class OrderRequestService : IOrderRequestService
         IContactPointService contactPointService,
         IGuidService guid,
         IDateTimeService dateTime,
-        IOptions<NotificationOrderConfig> config)
+        IOptions<NotificationConfig> config)
     {
         _repository = repository;
         _contactPointService = contactPointService;
