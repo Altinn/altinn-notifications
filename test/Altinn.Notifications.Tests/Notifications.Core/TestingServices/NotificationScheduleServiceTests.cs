@@ -68,6 +68,5 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             // Assert
             Assert.False(result);
         }
-
     }
 }
