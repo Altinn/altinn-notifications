@@ -11,13 +11,13 @@ namespace Altinn.Notifications.Core.Services
     public class NotificationScheduleService : INotificationScheduleService
     {
         private readonly IDateTimeService _dateTimeService;
-        private readonly NotificationOrderConfig _config;
+        private readonly NotificationConfig _config;
         private const string _norwayTimeZoneId = "W. Europe Standard Time";
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NotificationScheduleService"/> class.
         /// </summary>
-        public NotificationScheduleService(IDateTimeService dateTimeService, IOptions<NotificationOrderConfig> config)
+        public NotificationScheduleService(IDateTimeService dateTimeService, IOptions<NotificationConfig> config)
         {
             _dateTimeService = dateTimeService;
             _config = config.Value;

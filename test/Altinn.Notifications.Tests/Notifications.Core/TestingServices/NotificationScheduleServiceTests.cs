@@ -19,7 +19,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
         public NotificationScheduleServiceTests()
         {
-            NotificationOrderConfig config = new()
+            NotificationConfig config = new()
             {
                 SmsSendWindowStartHour = 9,
                 SmsSendWindowEndHour = 17

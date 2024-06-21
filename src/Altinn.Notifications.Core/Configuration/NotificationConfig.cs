@@ -3,7 +3,7 @@
 /// <summary>
 /// Configuration class for notification orders
 /// </summary>
-public class NotificationOrderConfig
+public class NotificationConfig
 {
     /// <summary>
     /// Default from address for email notifications

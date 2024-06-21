@@ -15,7 +15,7 @@ public class ServiceCollectionExtensionsTests
     public void AddCoreServices_KafkaSettingsMissing_ThrowsException()
     {
         Environment.SetEnvironmentVariable("KafkaSettings__PastDueOrdersTopicName", null);
-        Environment.SetEnvironmentVariable("NotificationOrderConfig__DefaultEmailFromAddress", "value");
+        Environment.SetEnvironmentVariable("NotificationConfig__DefaultEmailFromAddress", "value");
 
         var config = new ConfigurationBuilder().AddEnvironmentVariables().Build();
 
@@ -25,10 +25,10 @@ public class ServiceCollectionExtensionsTests
     }
 
     [Fact]
-    public void AddCoreServices_NotificationOrderConfigMissing_ThrowsException()
+    public void AddCoreServices_NotificationConfigMissing_ThrowsException()
     {
         Environment.SetEnvironmentVariable("KafkaSettings__PastDueOrdersTopicName", "value");
-        Environment.SetEnvironmentVariable("NotificationOrderConfig__DefaultEmailFromAddress", null);
+        Environment.SetEnvironmentVariable("NotificationConfig__DefaultEmailFromAddress", null);
 
         var config = new ConfigurationBuilder().AddEnvironmentVariables().Build();
 
