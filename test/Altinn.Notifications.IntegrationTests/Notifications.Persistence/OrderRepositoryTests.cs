@@ -142,5 +142,36 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             Assert.Equal(1, emailTextCount);
             Assert.Equal(1, smsTextCound);
         }
+
+        [Fact]
+        public async Task GetOrderWithStatusById_ConfirmConditionEndpoint()
+        {
+            // Arrange
+            OrderRepository repo = (OrderRepository)ServiceUtil
+                .GetServices(new List<Type>() { typeof(IOrderRepository) })
+                .First(i => i.GetType() == typeof(OrderRepository));
+
+            NotificationOrder order = new()
+            {
+                Id = Guid.NewGuid(),
+                Created = DateTime.UtcNow,
+                Creator = new("test"),
+                Templates = new List<INotificationTemplate>()
+                {
+                    new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain),
+                    new SmsTemplate("Altinn", "This is the body")
+                },
+                ConditionEndpoint = new Uri("https://vg.no/condition")
+            };
+
+            _orderIdsToDelete.Add(order.Id);
+            await repo.Create(order);
+
+            // Act
+            NotificationOrderWithStatus? actual = await repo.GetOrderWithStatusById(order.Id, "test");
+
+            // Assert
+            Assert.Equal("https://vg.no/condition", actual?.ConditionEndpoint?.ToString());
+        }
     }
 }
