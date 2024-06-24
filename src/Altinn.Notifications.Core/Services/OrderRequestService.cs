@@ -61,7 +61,8 @@ public class OrderRequestService : IOrderRequestService
             currentime,
             orderRequest.Recipients,
             orderRequest.IgnoreReservation,
-            orderRequest.ResourceId);
+            orderRequest.ResourceId,
+            orderRequest.ConditionEndpoint);
 
         NotificationOrder savedOrder = await _repository.Create(order);
 

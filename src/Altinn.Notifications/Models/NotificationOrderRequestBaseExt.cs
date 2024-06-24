@@ -38,4 +38,10 @@ public class NotificationOrderRequestBaseExt
     /// </summary>
     [JsonPropertyName("resourceId")]
     public string? ResourceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the condition endpoint used to check the send condition
+    /// </summary>
+    [JsonPropertyName("conditionEndpoint")]
+    public Uri? ConditionEndpoint { get; set; }
 }

@@ -131,7 +131,7 @@ public class SmsNotificationOrderRequestValidatorTests
 
         Assert.True(actual.IsValid);
     }
-    
+
     [Fact]
     public void Validate_ForSmsSendTimeHasNoZone_ReturnsFalse()
     {
@@ -178,5 +178,5 @@ public class SmsNotificationOrderRequestValidatorTests
         var actual = _validator.Validate(order);
         Assert.False(actual.IsValid);
         Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("'Body' must not be empty."));
-    } 
+    }
 }

@@ -46,4 +46,9 @@ public interface IBaseNotificationOrder
     /// Gets the date and time for when the notification order was created
     /// </summary>
     public DateTime Created { get; }
+
+    /// <summary>
+    /// Gets or sets the condition endpoint used to check the send condition
+    /// </summary>
+    public Uri? ConditionEndpoint { get; set; }
 }
