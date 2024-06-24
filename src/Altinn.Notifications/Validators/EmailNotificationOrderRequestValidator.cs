@@ -1,5 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 
+using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Models;
 
 using FluentValidation;
@@ -53,7 +54,7 @@ public class EmailNotificationOrderRequestValidator : AbstractValidator<EmailNot
         RuleFor(order => order.Subject).NotEmpty();
 
         RuleFor(order => order.ConditionEndpoint)
-            .Must(uri => uri == null || (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
+            .Must(uri => uri == null || uri.IsValidUrl())
             .WithMessage("The condition endpoint must be a valid URL.");
     }
 
