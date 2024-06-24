@@ -9,7 +9,7 @@
     <ProjectGuid>{DB57DAD7-753D-4595-81AD-9CB43B7A697A}</ProjectGuid>
   </PropertyGroup>
 
-  <ItemGroup>
+   <ItemGroup>
     <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" Version="2.22.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.1" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="8.0.6" />
@@ -43,12 +43,6 @@
       <_Parameter1>Altinn.Notifications.Tests</_Parameter1>
     </AssemblyAttribute>
   </ItemGroup>
-
-	<ItemGroup>
-	  <Folder Include="Migration\NewFolder1\" />
-	  <Folder Include="Migration\NewFolder\" />
-	  <Folder Include="Migration\v0.33\" />
-	</ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <PropertyGroup>

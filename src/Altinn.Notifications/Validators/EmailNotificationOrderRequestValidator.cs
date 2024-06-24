@@ -55,7 +55,6 @@ public class EmailNotificationOrderRequestValidator : AbstractValidator<EmailNot
         RuleFor(order => order.ConditionEndpoint)
             .Must(uri => uri == null || (uri.IsAbsoluteUri && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)))
             .WithMessage("The condition endpoint must be a valid URL.");
-
     }
 
     /// <summary>
