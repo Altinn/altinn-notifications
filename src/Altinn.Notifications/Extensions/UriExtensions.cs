@@ -22,7 +22,7 @@ namespace Altinn.Notifications.Extensions
             // Check if the URL has a valid host and TLD
             string host = uri.Host;
             string domainPattern = @"^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$";
-            if (Regex.IsMatch(host, domainPattern))
+            if (Regex.IsMatch(host, domainPattern, RegexOptions.None, TimeSpan.FromSeconds(1)))
             {
                 return true;
             }
