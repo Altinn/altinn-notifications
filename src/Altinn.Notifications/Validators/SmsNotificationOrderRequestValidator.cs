@@ -51,7 +51,7 @@ public class SmsNotificationOrderRequestValidator : AbstractValidator<SmsNotific
         RuleFor(order => order.Body).NotEmpty();
 
         RuleFor(order => order.ConditionEndpoint)
-               .Must(uri => uri == null || (uri.IsAbsoluteUri && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)))
+               .Must(uri => uri == null || (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
                .WithMessage("The condition endpoint must be a valid URL.");
     }
 }
