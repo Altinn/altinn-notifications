@@ -1,5 +1,4 @@
 ﻿using System.Text.Json;
-using System.Text.Json.Serialization;
 
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.NotificationTemplate;

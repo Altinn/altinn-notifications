@@ -179,4 +179,20 @@ public class SmsNotificationOrderRequestValidatorTests
         Assert.False(actual.IsValid);
         Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("'Body' must not be empty."));
     }
+
+    [Fact]
+    public void Validate_InvalidConditionEndpoint_ReturnsFalse()
+    {
+        var order = new SmsNotificationOrderRequestExt()
+        {
+            SenderNumber = "+4740000001",
+            Recipients = new List<RecipientExt>() { new RecipientExt() { MobileNumber = "+4740000000" } },
+            Body = "This is an SMS body",
+            ConditionEndpoint = new Uri("www.vg.no")
+        };
+
+        var actual = _validator.Validate(order);
+
+        Assert.False(actual.IsValid);
+    }
 }
