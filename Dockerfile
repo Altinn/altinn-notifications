@@ -18,6 +18,9 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0.6-alpine3.18 AS final
 WORKDIR /app
 EXPOSE 5090
 
+# installing package for time zone functionality
+RUN apk add --no-cache tzdata
+
 COPY --from=build /app/out .
 COPY --from=build /app/src/Altinn.Notifications.Persistence/Migration ./Migration
 COPY src/Altinn.Notifications/Views ./Views
