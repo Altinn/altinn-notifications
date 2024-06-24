@@ -1,4 +1,6 @@
-﻿using Altinn.Notifications.Core.Configuration;
+﻿using System.Runtime.InteropServices;
+
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Services.Interfaces;
 
 using Microsoft.Extensions.Options;
@@ -12,7 +14,9 @@ namespace Altinn.Notifications.Core.Services
     {
         private readonly IDateTimeService _dateTimeService;
         private readonly NotificationConfig _config;
-        private const string _norwayTimeZoneId = "W. Europe Standard Time";
+        private readonly string _timeZoneId;
+        private const string _norwayTimeZoneIdWindows = "W. Europe Standard Time";
+        private const string _norwayTimeZoneIdLinux = "Europe/Oslo";
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NotificationScheduleService"/> class.
@@ -21,13 +25,14 @@ namespace Altinn.Notifications.Core.Services
         {
             _dateTimeService = dateTimeService;
             _config = config.Value;
+            _timeZoneId = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? _norwayTimeZoneIdWindows : _norwayTimeZoneIdLinux;
         }
 
         /// <inheritdoc/>
         public bool CanSendSmsNotifications()
         {
             DateTime dateTimeUtc = _dateTimeService.UtcNow();
-            TimeZoneInfo norwayTimeZone = TimeZoneInfo.FindSystemTimeZoneById(_norwayTimeZoneId);
+            TimeZoneInfo norwayTimeZone = TimeZoneInfo.FindSystemTimeZoneById(_timeZoneId);
 
             DateTime norwayTime = TimeZoneInfo.ConvertTimeFromUtc(dateTimeUtc, norwayTimeZone);
 
