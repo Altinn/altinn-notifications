@@ -1,7 +1,7 @@
 ﻿namespace Altinn.Notifications.Core.Models.SendCondition
 {
     /// <summary>
-    /// Condition client error class
+    /// Model describing a condition client error
     /// </summary>
     public class ConditionClientError
     {

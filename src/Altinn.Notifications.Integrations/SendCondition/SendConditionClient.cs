@@ -7,7 +7,7 @@ using Altinn.Notifications.Core.Shared;
 namespace Altinn.Notifications.Integrations.SendCondition
 {
     /// <summary>
-    /// Implementation of <see cref="IConditionClient"/> using an Altinn Client to send the condition request
+    /// Implementation of <see cref="IConditionClient"/> using a maskinporten client with Digdir credentials
     /// </summary>
     public class SendConditionClient : IConditionClient
     {
@@ -39,7 +39,7 @@ namespace Altinn.Notifications.Integrations.SendCondition
                     }
                     else
                     {
-                        return new ConditionClientError { StatusCode = (int)res.StatusCode, Message = responseString };
+                        return new ConditionClientError { StatusCode = (int)res.StatusCode, Message = $"No condition response in body: {responseString}" };
                     }
                 }
                 catch (JsonException)

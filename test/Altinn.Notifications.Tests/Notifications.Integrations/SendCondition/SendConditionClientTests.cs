@@ -40,6 +40,7 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
                     {
                         Content = new StringContent(JsonSerializer.Serialize(new SendConditionResponse { SendNotification = false }, _serializerOptions))
                     },
+                    "oknobody" => new HttpResponseMessage(HttpStatusCode.OK),
                     "invalidbody" => new HttpResponseMessage(HttpStatusCode.OK)
                     {
                         Content = new StringContent("This is not a valid JSON")
@@ -121,5 +122,21 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
                     return true;
                 });
         }
+
+        [Fact]
+        public async Task CheckSendCondition_OkResponseWithoutBody_ReturnsClientError()
+        {
+            // Act
+            Result<bool, ConditionClientError> result = await _sendConditionClient.CheckSendCondition(new Uri("http://test.com?desiredResponse=oknobody"));
+
+            // Assert
+            result.Match(
+                sendNotification => throw new Exception("No success value should be returned if non success code is returned"),
+                actuallError =>
+                {
+                    Assert.False(string.IsNullOrEmpty(actuallError?.Message));
+                    return true;
+                });
+        }        
     }
 }

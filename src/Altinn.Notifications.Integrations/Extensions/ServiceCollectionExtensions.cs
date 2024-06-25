@@ -72,13 +72,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IPDP, PDPAppSI>();
         services.AddSingleton<IAuthorizationService, AuthorizationService>();
 
-        var maskinportenSettings = config.GetSection("SendConditionClient:MaskinportenSettings");
-        if (!maskinportenSettings.Exists())
-        {
-            throw new ArgumentNullException(nameof(config), "Required MaskinportenSettings is missing from application configuration");
-        }
-
-        services.AddMaskinportenHttpClient<SettingsJwkClientDefinition, IConditionClient, SendConditionClient>(maskinportenSettings);
+        services.AddMaskinportenHttpClient<SettingsJwkClientDefinition, IConditionClient, SendConditionClient>(
+            config.GetSection("SendConditionClient:MaskinportenSettings"));
     }
 
     /// <summary>

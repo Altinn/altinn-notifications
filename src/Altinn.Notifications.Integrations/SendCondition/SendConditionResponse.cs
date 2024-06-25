@@ -3,7 +3,7 @@
 namespace Altinn.Notifications.Integrations.SendCondition
 {
     /// <summary>
-    /// Condition response model
+    /// Represents the response indicating whether a notification should be sent.
     /// </summary>
     public class SendConditionResponse
     {
