@@ -117,7 +117,7 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
                 sendNotification => throw new Exception("No success value should be returned if non success code is returned"),
                 actuallError =>
                 {
-                    Assert.Equal(200, actuallError?.StatusCode);
+                    Assert.Equal(400, actuallError?.StatusCode);
                     return true;
                 });
         }
