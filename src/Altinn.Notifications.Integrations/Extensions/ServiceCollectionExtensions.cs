@@ -1,4 +1,6 @@
-﻿using Altinn.Common.PEP.Clients;
+﻿using Altinn.ApiClients.Maskinporten.Extensions;
+using Altinn.ApiClients.Maskinporten.Services;
+using Altinn.Common.PEP.Clients;
 using Altinn.Common.PEP.Implementation;
 using Altinn.Common.PEP.Interfaces;
 using Altinn.Notifications.Core.Integrations;
@@ -9,6 +11,7 @@ using Altinn.Notifications.Integrations.Health;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.Integrations.Kafka.Producers;
 using Altinn.Notifications.Integrations.Register;
+using Altinn.Notifications.Integrations.SendCondition;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -68,6 +71,14 @@ public static class ServiceCollectionExtensions
         services.AddHttpClient<AuthorizationApiClient>();
         services.AddSingleton<IPDP, PDPAppSI>();
         services.AddSingleton<IAuthorizationService, AuthorizationService>();
+
+        var maskinportenSettings = config.GetSection("SendConditionClient:MaskinportenSettings");
+        if (!maskinportenSettings.Exists())
+        {
+            throw new ArgumentNullException(nameof(config), "Required MaskinportenSettings is missing from application configuration");
+        }
+
+        services.AddMaskinportenHttpClient<SettingsJwkClientDefinition, IConditionClient, SendConditionClient>(maskinportenSettings);
     }
 
     /// <summary>
