@@ -19,6 +19,7 @@ namespace Altinn.Notifications.Controllers
         /// Accepts an http post request and responds OK.
         /// </summary>
         [HttpGet]
+        [ExcludeFromCodeCoverage]
         public ActionResult Get([FromQuery] bool conditionMet)
         {
             return Ok(new SendConditionResponse() { SendNotification = conditionMet });
@@ -28,13 +29,13 @@ namespace Altinn.Notifications.Controllers
     /// <summary>
     /// Condition response model
     /// </summary>
-    [ExcludeFromCodeCoverage]
     public class SendConditionResponse
     {
         /// <summary>
         /// Gets or sets a boolean indicating if the notification should be sent
         /// </summary>
         [JsonPropertyName("sendNotification")]
+        [ExcludeFromCodeCoverage]
         public bool SendNotification { get; set; }
     }
 }
