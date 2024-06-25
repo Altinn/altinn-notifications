@@ -46,6 +46,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
             DateTime.UtcNow,
             new List<Recipient>(),
             false,
+            null,
             null);
 
         _orderWithStatus = new(
@@ -56,6 +57,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
             DateTime.UtcNow,
             NotificationChannel.Email,
             null, 
+            null,
             null,
             new ProcessingStatus());
     }

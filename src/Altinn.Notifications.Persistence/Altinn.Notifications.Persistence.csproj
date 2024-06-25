@@ -34,11 +34,11 @@
     </AdditionalFiles>
   </ItemGroup>
 
-	<ItemGroup>
-		<ProjectReference Include="..\DbTools\DbTools.csproj" />
-	</ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DbTools\DbTools.csproj" />
+  </ItemGroup>
 
-	<ItemGroup>
+  <ItemGroup>
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
       <_Parameter1>Altinn.Notifications.Tests</_Parameter1>
     </AssemblyAttribute>
@@ -46,15 +46,15 @@
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <PropertyGroup>
-			<DbToolsExecuted>false</DbToolsExecuted>
-		</PropertyGroup>
+      <DbToolsExecuted>false</DbToolsExecuted>
+    </PropertyGroup>
 
-	  <Exec Command="/app_tools/DbTools ./Migration" Condition="Exists('/app_tools/DbTools')" />
-		<PropertyGroup Condition="Exists('/app_tools/DbTools')">
-			<DbToolsExecuted>true</DbToolsExecuted>
-		</PropertyGroup>
+    <Exec Command="/app_tools/DbTools ./Migration" Condition="Exists('/app_tools/DbTools')" />
+    <PropertyGroup Condition="Exists('/app_tools/DbTools')">
+      <DbToolsExecuted>true</DbToolsExecuted>
+    </PropertyGroup>
 
-    <Exec Command="$(TargetDir)../../../../DbTools/bin/Debug/$(TargetFramework)/DbTools $(TargetDir)../../../Migration"
-    Condition="'$(DbToolsExecuted)' != 'true' and (Exists('$(TargetDir)../../../../DbTools/bin/Debug/$(TargetFramework)/DbTools') or Exists('$(TargetDir)../../../../DbTools/bin/Debug/$(TargetFramework)/DbTools.exe'))" />
-	</Target>
+    <Exec Command="$(TargetDir)../../../../DbTools/bin/Debug/$(TargetFramework)/DbTools $(TargetDir)../../../Migration" 
+          Condition="'$(DbToolsExecuted)' != 'true' and (Exists('$(TargetDir)../../../../DbTools/bin/Debug/$(TargetFramework)/DbTools') or Exists('$(TargetDir)../../../../DbTools/bin/Debug/$(TargetFramework)/DbTools.exe'))" />
+  </Target>
 </Project>

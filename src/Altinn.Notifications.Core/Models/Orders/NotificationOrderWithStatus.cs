@@ -33,6 +33,9 @@ public class NotificationOrderWithStatus : IBaseNotificationOrder
     /// <inheritdoc/>>
     public string? ResourceId { get; internal set; }
 
+    /// <inheritdoc/>>
+    public Uri? ConditionEndpoint { get; set; }
+
     /// <summary>
     /// Gets the processing status of the notication order
     /// </summary>
@@ -55,6 +58,7 @@ public class NotificationOrderWithStatus : IBaseNotificationOrder
         NotificationChannel notificationChannel,
         bool? ignoreReservation,
         string? resourceId,
+        Uri? conditionEndpoint,
         ProcessingStatus processingStatus)
     {
         Id = id;
@@ -65,6 +69,7 @@ public class NotificationOrderWithStatus : IBaseNotificationOrder
         NotificationChannel = notificationChannel;
         IgnoreReservation = ignoreReservation;
         ResourceId = resourceId;
+        ConditionEndpoint = conditionEndpoint;
         ProcessingStatus = processingStatus;
     }
 

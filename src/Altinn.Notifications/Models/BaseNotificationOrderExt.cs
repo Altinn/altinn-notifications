@@ -66,4 +66,11 @@ public class BaseNotificationOrderExt
     [JsonPropertyName("resourceId")]
     [JsonPropertyOrder(8)]
     public string? ResourceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the condition endpoint used to check the send condition
+    /// </summary>
+    [JsonPropertyName("conditionEndpoint")]
+    [JsonPropertyOrder(9)]
+    public Uri? ConditionEndpoint { get; set; }
 }

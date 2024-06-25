@@ -131,7 +131,7 @@ public class SmsNotificationOrderRequestValidatorTests
 
         Assert.True(actual.IsValid);
     }
-    
+
     [Fact]
     public void Validate_ForSmsSendTimeHasNoZone_ReturnsFalse()
     {
@@ -178,5 +178,22 @@ public class SmsNotificationOrderRequestValidatorTests
         var actual = _validator.Validate(order);
         Assert.False(actual.IsValid);
         Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("'Body' must not be empty."));
-    } 
+    }
+
+    [Fact]
+    public void Validate_ConditionEndpointIsUrn_ReturnsFalse()
+    {
+        var order = new SmsNotificationOrderRequestExt()
+        {
+            SenderNumber = "+4740000001",
+            Recipients = new List<RecipientExt>() { new RecipientExt() { MobileNumber = "+4740000000" } },
+            Body = "This is an SMS body",
+            ConditionEndpoint = new Uri("urn:altinn.test")
+        };
+
+        var actual = _validator.Validate(order);
+
+        Assert.False(actual.IsValid);
+        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("The condition endpoint must be a valid URL."));
+    }
 }

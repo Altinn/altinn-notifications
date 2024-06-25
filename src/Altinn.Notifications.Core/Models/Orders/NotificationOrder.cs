@@ -29,6 +29,9 @@ public class NotificationOrder : IBaseNotificationOrder
     public string? ResourceId { get; internal set; }
 
     /// <inheritdoc/>>
+    public Uri? ConditionEndpoint { get; set; }
+
+    /// <inheritdoc/>>
     public Creator Creator { get; internal set; }
 
     /// <inheritdoc/>>
@@ -57,7 +60,8 @@ public class NotificationOrder : IBaseNotificationOrder
         DateTime created,
         List<Recipient> recipients,
         bool? ignoreReservation,
-        string? resourceId)
+        string? resourceId,
+        Uri? conditionEndpoint)
     {
         Id = id;
         SendersReference = sendersReference;
@@ -69,6 +73,7 @@ public class NotificationOrder : IBaseNotificationOrder
         Recipients = recipients;
         IgnoreReservation = ignoreReservation;
         ResourceId = resourceId;
+        ConditionEndpoint = conditionEndpoint;
     }
 
     /// <summary>

@@ -47,7 +47,8 @@ public static class OrderMapper
             NotificationChannel.Email,
             recipients,
             extRequest.IgnoreReservation,
-            extRequest.ResourceId);
+            extRequest.ResourceId,
+            extRequest.ConditionEndpoint);
     }
 
     /// <summary>
@@ -80,7 +81,8 @@ public static class OrderMapper
             NotificationChannel.Sms,
             recipients,
             extRequest.IgnoreReservation,
-            extRequest.ResourceId);
+            extRequest.ResourceId,
+            extRequest.ConditionEndpoint);
     }
 
     /// <summary>
@@ -92,7 +94,6 @@ public static class OrderMapper
 
         orderExt.MapBaseNotificationOrder(order);
         orderExt.Recipients = order.Recipients.MapToRecipientExt();
-        orderExt.IgnoreReservation = order.IgnoreReservation;
 
         foreach (var template in order.Templates)
         {
@@ -221,6 +222,7 @@ public static class OrderMapper
         orderExt.RequestedSendTime = order.RequestedSendTime;
         orderExt.IgnoreReservation = order.IgnoreReservation;
         orderExt.ResourceId = order.ResourceId;
+        orderExt.ConditionEndpoint = order.ConditionEndpoint;
 
         return orderExt;
     }

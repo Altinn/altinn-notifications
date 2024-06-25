@@ -194,6 +194,23 @@ public class EmailNotificationOrderRequestValidatorTests
         Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("'Body' must not be empty."));
     }
 
+    [Fact]
+    public void Validate_ConditionEndpointIsUrn_ReturnsFalse()
+    {
+        var order = new EmailNotificationOrderRequestExt()
+        {
+            Subject = "This is an email subject",
+            Recipients = new List<RecipientExt>() { new RecipientExt() { EmailAddress = "recipient2@domain.com" } },
+            Body = "This is an email body",
+            ConditionEndpoint = new Uri("urn:altinn.test")
+        };
+
+        var actual = _validator.Validate(order);
+
+        Assert.False(actual.IsValid);
+        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("The condition endpoint must be a valid URL."));
+    }
+
     [Theory]
     [InlineData("stephanie@kul.no", true)]
     [InlineData("bakken_kundeservice@sykkelverksted.com", true)]

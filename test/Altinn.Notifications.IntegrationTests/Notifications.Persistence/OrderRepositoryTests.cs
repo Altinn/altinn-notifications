@@ -30,77 +30,6 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
         }
 
         [Fact]
-        public async Task Create_OrderWithSmsTemplate_SmsTextsPersisted()
-        {
-            // Arrange
-            OrderRepository repo = (OrderRepository)ServiceUtil
-                .GetServices(new List<Type>() { typeof(IOrderRepository) })
-                .First(i => i.GetType() == typeof(OrderRepository));
-
-            NotificationOrder order = new()
-            {
-                Id = Guid.NewGuid(),
-                Created = DateTime.UtcNow,
-                Creator = new("test"),
-                Templates = new List<INotificationTemplate>()
-                {
-                    new SmsTemplate("Altinn", "This is the body")
-                },
-                RequestedSendTime = DateTime.UtcNow
-            };
-
-            _orderIdsToDelete.Add(order.Id);
-
-            // Act
-            await repo.Create(order);
-
-            // Assert
-            string sql = $@"SELECT count(1) 
-              FROM notifications.smstexts as st
-              JOIN notifications.orders o ON st._orderid = o._id
-              WHERE o.alternateid = '{order.Id}'";
-
-            int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
-
-            Assert.Equal(1, actualCount);
-        }
-
-        [Fact]
-        public async Task Create_OrderWithEmailTemplate_EmailTextsPersisted()
-        {
-            // Arrange
-            OrderRepository repo = (OrderRepository)ServiceUtil
-                .GetServices(new List<Type>() { typeof(IOrderRepository) })
-                .First(i => i.GetType() == typeof(OrderRepository));
-
-            NotificationOrder order = new()
-            {
-                Id = Guid.NewGuid(),
-                Created = DateTime.UtcNow,
-                Creator = new("test"),
-                Templates = new List<INotificationTemplate>()
-                {
-                    new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)
-                }
-            };
-
-            _orderIdsToDelete.Add(order.Id);
-
-            // Act
-            await repo.Create(order);
-
-            // Assert
-            string sql = $@"SELECT count(1) 
-              FROM notifications.emailtexts as et
-              JOIN notifications.orders o ON et._orderid = o._id
-              WHERE o.alternateid = '{order.Id}'";
-
-            int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
-
-            Assert.Equal(1, actualCount);
-        }
-
-        [Fact]
         public async Task Create_OrderWithEmailAndSmsTemplate_BothTextsPersisted()
         {
             // Arrange
@@ -141,6 +70,37 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
 
             Assert.Equal(1, emailTextCount);
             Assert.Equal(1, smsTextCound);
+        }
+
+        [Fact]
+        public async Task GetOrderWithStatusById_ConfirmConditionEndpoint()
+        {
+            // Arrange
+            OrderRepository repo = (OrderRepository)ServiceUtil
+                .GetServices(new List<Type>() { typeof(IOrderRepository) })
+                .First(i => i.GetType() == typeof(OrderRepository));
+
+            NotificationOrder order = new()
+            {
+                Id = Guid.NewGuid(),
+                Created = DateTime.UtcNow,
+                Creator = new("test"),
+                Templates = new List<INotificationTemplate>()
+                {
+                    new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain),
+                    new SmsTemplate("Altinn", "This is the body")
+                },
+                ConditionEndpoint = new Uri("https://vg.no/condition")
+            };
+
+            _orderIdsToDelete.Add(order.Id);
+            await repo.Create(order);
+
+            // Act
+            NotificationOrderWithStatus? actual = await repo.GetOrderWithStatusById(order.Id, "test");
+
+            // Assert
+            Assert.Equal("https://vg.no/condition", actual?.ConditionEndpoint?.ToString());
         }
     }
 }
