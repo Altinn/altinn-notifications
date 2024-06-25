@@ -10,7 +10,6 @@ namespace Altinn.Notifications.Controllers
     /// <summary>
     /// Controller for supporting automated testing of send condition processing
     /// </summary>
-    [ExcludeFromCodeCoverage]
     [Route("notifications/api/v1/tests/sendcondition")]
     [Consumes("application/json")]
     [SwaggerTag("Private API")]
@@ -29,6 +28,7 @@ namespace Altinn.Notifications.Controllers
     /// <summary>
     /// Condition response model
     /// </summary>
+    [ExcludeFromCodeCoverage]
     public class SendConditionResponse
     {
         /// <summary>
