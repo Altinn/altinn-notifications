@@ -48,7 +48,7 @@ namespace Altinn.Notifications.Integrations.SendCondition
                 }
             }
 
-            return new ConditionClientError();
+            return new ConditionClientError { StatusCode = (int)res.StatusCode, Message = responseString };
         }
     }
 }

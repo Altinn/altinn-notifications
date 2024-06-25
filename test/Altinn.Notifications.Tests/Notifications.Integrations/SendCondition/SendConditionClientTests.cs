@@ -110,7 +110,7 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
         public async Task CheckSendCondition_BadRequestResponse_ReturnsClientError()
         {
             // Act
-            Result<bool, ConditionClientError> result = await _sendConditionClient.CheckSendCondition(new Uri("http://test.com?desiredResponse=badresponse"));
+            Result<bool, ConditionClientError> result = await _sendConditionClient.CheckSendCondition(new Uri("http://test.com?desiredResponse=badrequest"));
 
             // Assert
             result.Match(
