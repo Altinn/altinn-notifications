@@ -40,7 +40,10 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
                     {
                         Content = new StringContent(JsonSerializer.Serialize(new SendConditionResponse { SendNotification = false }, _serializerOptions))
                     },
-                    "oknobody" => new HttpResponseMessage(HttpStatusCode.OK),
+                    "oknobody" => new HttpResponseMessage(HttpStatusCode.OK)
+                    {
+                        Content = new StringContent("{\"isValidJson\": true}")
+                    },
                     "invalidbody" => new HttpResponseMessage(HttpStatusCode.OK)
                     {
                         Content = new StringContent("This is not a valid JSON")
@@ -137,6 +140,6 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
                     Assert.False(string.IsNullOrEmpty(actuallError?.Message));
                     return true;
                 });
-        }        
+        }
     }
 }
