@@ -17,7 +17,7 @@ namespace Altinn.Notifications.Controllers
     public class SendConditionController : Controller
     {
         /// <summary>
-        /// Accepts an http post request and responds OK.
+        /// Condition endpoint that returns a send condition response.
         /// </summary>
         [HttpGet]
         public ActionResult Get([FromQuery] bool conditionMet)
