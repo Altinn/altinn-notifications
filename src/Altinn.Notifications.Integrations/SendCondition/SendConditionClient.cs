@@ -35,7 +35,7 @@ namespace Altinn.Notifications.Integrations.SendCondition
 
                     if (conditionResponse?.SendNotification != null)
                     {
-                        return (bool)conditionResponse.SendNotification;
+                        return conditionResponse.SendNotification.Value;
                     }
                     else
                     {
