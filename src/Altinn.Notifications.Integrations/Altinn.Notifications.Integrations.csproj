@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Altinn.ApiClients.Maskinporten" Version="9.1.0" />
     <PackageReference Include="Altinn.Common.PEP" Version="4.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.1" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="8.0.6" />
