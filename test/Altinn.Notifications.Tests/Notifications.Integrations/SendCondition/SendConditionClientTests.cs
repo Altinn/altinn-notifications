@@ -105,7 +105,7 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
                 sendNotification => throw new Exception("No success value should be returned if json deserialization fails"),
                 actuallError =>
                 {
-                    Assert.False(string.IsNullOrEmpty(actuallError?.Message));
+                    Assert.False(string.IsNullOrEmpty(actuallError.Message));
                     return true;
                 });
         }
@@ -121,7 +121,7 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
                 sendNotification => throw new Exception("No success value should be returned if non success code is returned"),
                 actuallError =>
                 {
-                    Assert.Equal(400, actuallError?.StatusCode);
+                    Assert.Equal(400, actuallError.StatusCode);
                     return true;
                 });
         }
@@ -137,7 +137,7 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
                 sendNotification => throw new Exception("No success value should be returned if non success code is returned"),
                 actuallError =>
                 {
-                    Assert.False(string.IsNullOrEmpty(actuallError?.Message));
+                    Assert.False(string.IsNullOrEmpty(actuallError.Message));
                     return true;
                 });
         }
