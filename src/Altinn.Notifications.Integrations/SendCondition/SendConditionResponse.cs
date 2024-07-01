@@ -11,7 +11,7 @@ namespace Altinn.Notifications.Integrations.SendCondition
         /// A boolean indicating whether a notification should be sent or not
         /// </summary>
         /// <remarks>
-        /// Nullable to ensure default is not failse if deserialization fails
+        /// Nullable to ensure default is not false if deserialization fails
         /// </remarks>
         [JsonPropertyName("sendNotification")]
         public bool? SendNotification { get; set; }
