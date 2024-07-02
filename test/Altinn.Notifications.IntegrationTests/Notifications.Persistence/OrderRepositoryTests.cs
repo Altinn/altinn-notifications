@@ -102,5 +102,46 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             // Assert
             Assert.Equal("https://vg.no/condition", actual?.ConditionEndpoint?.ToString());
         }
+
+        [Fact]
+        public async Task SetProcessingStatus_AllStatusesSupported()
+        {
+            // Arrange
+            OrderRepository repo = (OrderRepository)ServiceUtil
+                .GetServices(new List<Type>() { typeof(IOrderRepository) })
+                .First(i => i.GetType() == typeof(OrderRepository));
+
+            NotificationOrder order = new()
+            {
+                Id = Guid.NewGuid(),
+                Created = DateTime.UtcNow,
+                Creator = new("test"),
+                Templates = new List<INotificationTemplate>()
+                {
+                    new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain),
+                    new SmsTemplate("Altinn", "This is the body")
+                },
+                ConditionEndpoint = new Uri("https://vg.no/condition")
+            };
+
+            _orderIdsToDelete.Add(order.Id);
+            await repo.Create(order);
+
+            foreach (OrderProcessingStatus statusType in Enum.GetValues(typeof(OrderProcessingStatus)))
+            {
+                // Act
+                await repo.SetProcessingStatus(order.Id, statusType);
+
+                // Assert
+                string sql = $@"SELECT count(1) 
+                                   FROM notifications.orders
+                                   WHERE alternateid = '{order.Id}'
+                                   AND processedstatus = '{statusType}'";
+
+                int orderCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
+
+                Assert.Equal(1, orderCount);
+            }
+        }
     }
 }
