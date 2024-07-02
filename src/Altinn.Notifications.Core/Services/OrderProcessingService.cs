@@ -118,7 +118,14 @@ public class OrderProcessingService : IOrderProcessingService
         await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.Completed);
     }
 
-    private async Task<bool> IsSendConditionMet(NotificationOrder order, bool isRetry)
+    /// <summary>
+    /// Checks the send condition provided by the order request to determine if condition is met
+    /// </summary>
+    /// <param name="order">The notification order to check</param>
+    /// <param name="isRetry">Boolean indicating if this is a retry attempt</param>
+    /// <returns>True if condition is met and processing should continue</returns>
+    /// <exception cref="OrderProcessingException">Throws an exception if failure on first attempt ot check condition</exception>
+    internal async Task<bool> IsSendConditionMet(NotificationOrder order, bool isRetry)
     {
         if (order.ConditionEndpoint == null)
         {
@@ -136,12 +143,11 @@ public class OrderProcessingService : IOrderProcessingService
           {
               if (!isRetry)
               {
-                  // always send to retry on first error.
+                  // Always send to retry on first error. Exception is caught by consumer and message is moved to retry topic.
                   throw new OrderProcessingException($"// OrderProcessingService // IsSendConditionMet // Condition check for order with ID '{order.Id}' failed with HTTP status code '{errorResult.StatusCode}' at endpoint '{order.ConditionEndpoint}'");
               }
 
               // notifications should always be created and sent if the condition check is not successful
-              // log error. 
               _logger.LogInformation("// OrderProcessingService // IsSendConditionMet // Condition check for order with ID '{order.Id}' failed on retry. Processing regardless.", order.Id);
               return true;
           });
