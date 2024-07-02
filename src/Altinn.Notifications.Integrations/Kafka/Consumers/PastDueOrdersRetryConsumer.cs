@@ -15,7 +15,7 @@ public class PastDueOrdersRetryConsumer : KafkaConsumerBase<PastDueOrdersRetryCo
     private readonly IOrderProcessingService _orderProcessingService;
     private readonly IDateTimeService _dateTime;
 
-    private readonly int _processingDelay = 60000;
+    private readonly int _processingDelayMins = 1;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PastDueOrdersRetryConsumer"/> class.
@@ -47,11 +47,13 @@ public class PastDueOrdersRetryConsumer : KafkaConsumerBase<PastDueOrdersRetryCo
         }
 
         // adding a delay relative to send time to allow transient faults to be resolved
-        int diff = (int)(_dateTime.UtcNow() - order.RequestedSendTime).TotalMilliseconds;
+        TimeSpan diff = _dateTime.UtcNow() - order.RequestedSendTime;
 
-        if (diff < _processingDelay)
+        TimeSpan delayForRetryAttempt = TimeSpan.FromMinutes(_processingDelayMins) - diff;
+
+        if (delayForRetryAttempt > TimeSpan.Zero)
         {
-            await Task.Delay(_processingDelay - diff);
+            await Task.Delay(delayForRetryAttempt);
         }
 
         await _orderProcessingService.ProcessOrderRetry(order!);
