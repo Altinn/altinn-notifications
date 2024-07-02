@@ -13,17 +13,22 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers;
 public class PastDueOrdersRetryConsumer : KafkaConsumerBase<PastDueOrdersRetryConsumer>
 {
     private readonly IOrderProcessingService _orderProcessingService;
+    private readonly IDateTimeService _dateTime;
+
+    private readonly int _processingDelayMins = 1;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PastDueOrdersRetryConsumer"/> class.
     /// </summary>
     public PastDueOrdersRetryConsumer(
         IOrderProcessingService orderProcessingService,
+        IDateTimeService dateTimeService,
         IOptions<KafkaSettings> settings,
         ILogger<PastDueOrdersRetryConsumer> logger)
         : base(settings, logger, settings.Value.PastDueOrdersRetryTopicName)
     {
         _orderProcessingService = orderProcessingService;
+        _dateTime = dateTimeService;
     }
 
     /// <inheritdoc/>
@@ -39,6 +44,16 @@ public class PastDueOrdersRetryConsumer : KafkaConsumerBase<PastDueOrdersRetryCo
         if (!succeeded)
         {
             return;
+        }
+
+        // adding a delay relative to send time to allow transient faults to be resolved
+        TimeSpan diff = _dateTime.UtcNow() - order.RequestedSendTime;
+
+        TimeSpan delayForRetryAttempt = TimeSpan.FromMinutes(_processingDelayMins) - diff;
+
+        if (delayForRetryAttempt > TimeSpan.Zero)
+        {
+            await Task.Delay(delayForRetryAttempt);
         }
 
         await _orderProcessingService.ProcessOrderRetry(order!);
