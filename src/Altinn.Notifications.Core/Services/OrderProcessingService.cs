@@ -2,11 +2,13 @@
 
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
 
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Core.Services;
@@ -19,8 +21,10 @@ public class OrderProcessingService : IOrderProcessingService
     private readonly IOrderRepository _orderRepository;
     private readonly IEmailOrderProcessingService _emailProcessingService;
     private readonly ISmsOrderProcessingService _smsProcessingService;
+    private readonly IConditionClient _conditionClient;
     private readonly IKafkaProducer _producer;
     private readonly string _pastDueOrdersTopic;
+    private readonly ILogger<OrderProcessingService> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderProcessingService"/> class.
@@ -29,14 +33,18 @@ public class OrderProcessingService : IOrderProcessingService
         IOrderRepository orderRepository,
         IEmailOrderProcessingService emailProcessingService,
         ISmsOrderProcessingService smsProcessingService,
+        IConditionClient conditionClient,
         IKafkaProducer producer,
-        IOptions<KafkaSettings> kafkaSettings)
+        IOptions<KafkaSettings> kafkaSettings,
+        ILogger<OrderProcessingService> logger)
     {
         _orderRepository = orderRepository;
         _emailProcessingService = emailProcessingService;
         _smsProcessingService = smsProcessingService;
+        _conditionClient = conditionClient;
         _producer = producer;
         _pastDueOrdersTopic = kafkaSettings.Value.PastDueOrdersTopicName;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -65,6 +73,12 @@ public class OrderProcessingService : IOrderProcessingService
     /// <inheritdoc/>
     public async Task ProcessOrder(NotificationOrder order)
     {
+        if (!await IsSendConditionMet(order, isRetry: false))
+        {
+            await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
+            return;
+        }
+
         NotificationChannel ch = order.NotificationChannel;
 
         switch (ch)
@@ -83,6 +97,12 @@ public class OrderProcessingService : IOrderProcessingService
     /// <inheritdoc/>
     public async Task ProcessOrderRetry(NotificationOrder order)
     {
+        if (!await IsSendConditionMet(order, isRetry: true))
+        {
+            await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
+            return;
+        }
+
         NotificationChannel ch = order.NotificationChannel;
 
         switch (ch)
@@ -96,5 +116,34 @@ public class OrderProcessingService : IOrderProcessingService
         }
 
         await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.Completed);
+    }
+
+    private async Task<bool> IsSendConditionMet(NotificationOrder order, bool isRetry)
+    {
+        if (order.ConditionEndpoint == null)
+        {
+            return true;
+        }
+
+        var conditionCheckResult = await _conditionClient.CheckSendCondition(order.ConditionEndpoint);
+
+        return conditionCheckResult.Match(
+          successResult =>
+          {
+              return successResult;
+          },
+          errorResult =>
+          {
+              if (!isRetry)
+              {
+                  // always send to retry on first error.
+                  throw new OrderProcessingException($"// OrderProcessingService // IsSendConditionMet // Condition check for order with ID '{order.Id}' failed with HTTP status code '{errorResult.StatusCode}' at endpoint '{order.ConditionEndpoint}'");
+              }
+
+              // notifications should always be created and sent if the condition check is not successful
+              // log error. 
+              _logger.LogInformation("// OrderProcessingService // IsSendConditionMet // Condition check for order with ID '{order.Id}' failed on retry. Processing regardless.", order.Id);
+              return true;
+          });
     }
 }

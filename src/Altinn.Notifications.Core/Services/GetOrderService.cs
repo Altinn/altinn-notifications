@@ -17,6 +17,7 @@ public class GetOrderService : IGetOrderService
             { OrderProcessingStatus.Registered, "Order has been registered and is awaiting requested send time before processing." },
             { OrderProcessingStatus.Processing, "Order processing is ongoing. Notifications are being generated." },
             { OrderProcessingStatus.Completed, "Order processing is completed. All notifications have been generated." },
+            { OrderProcessingStatus.SendConditionNotMet, "Order processing was stopped due to send condition not being met."}
         };
 
     /// <summary>

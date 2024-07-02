@@ -9,6 +9,9 @@ using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 
+using Castle.Core.Logging;
+
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using Moq;
@@ -179,7 +182,8 @@ public class OrderProcessingServiceTests
         IOrderRepository? repo = null,
         IEmailOrderProcessingService? emailMock = null,
         ISmsOrderProcessingService? smsMock = null,
-        IKafkaProducer? producer = null)
+        IKafkaProducer? producer = null,
+        IConditionClient? conditionClient = null)
     {
         if (repo == null)
         {
@@ -205,8 +209,14 @@ public class OrderProcessingServiceTests
             producer = producerMock.Object;
         }
 
+        if (conditionClient == null)
+        {
+            var conditionClientMock = new Mock<IConditionClient>();
+            conditionClient = conditionClientMock.Object;
+        }
+
         var kafkaSettings = new Altinn.Notifications.Core.Configuration.KafkaSettings() { PastDueOrdersTopicName = _pastDueTopicName };
 
-        return new OrderProcessingService(repo, emailMock, smsMock, producer, Options.Create(kafkaSettings));
+        return new OrderProcessingService(repo, emailMock, smsMock, conditionClient, producer, Options.Create(kafkaSettings), new LoggerFactory().CreateLogger<OrderProcessingService>());
     }
 }
