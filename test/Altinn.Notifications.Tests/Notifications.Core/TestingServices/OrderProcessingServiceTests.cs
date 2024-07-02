@@ -11,16 +11,12 @@ using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 
-using Castle.Core.Logging;
-
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using Moq;
 
 using Xunit;
-
-using static Altinn.Authorization.ABAC.Constants.XacmlConstants;
 
 namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 
@@ -99,6 +95,39 @@ public class OrderProcessingServiceTests
         // Assert
         smsMockService.Verify(s => s.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Once);
         emailMockService.Verify(e => e.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ProcessOrder_SmsOrder_SendConditionNotMet_ProcessingStops()
+    {
+        // Arrange 
+        NotificationOrder order = new()
+        {
+            Id = Guid.NewGuid(),
+            NotificationChannel = NotificationChannel.Sms,
+            ConditionEndpoint = new Uri("https://vg.no")
+        };
+
+        Mock<IConditionClient> clientMock = new();
+        clientMock.Setup(c => c.CheckSendCondition(It.IsAny<Uri>())).ReturnsAsync(false);
+
+        Mock<IOrderRepository> repoMock = new();
+        repoMock.Setup(r => r.SetProcessingStatus(
+            It.Is<Guid>(g => g.Equals(order.Id)),
+            It.Is<OrderProcessingStatus>(ops => ops == OrderProcessingStatus.SendConditionNotMet)));
+        var orderProcessingService = GetTestService(conditionClient: clientMock.Object, repo: repoMock.Object);
+
+        // Act
+        await orderProcessingService.ProcessOrder(order);
+
+        // Assert
+        clientMock.Verify(
+            c => c.CheckSendCondition(It.IsAny<Uri>()),
+            Times.Once);
+
+        repoMock.Verify(
+            r => r.SetProcessingStatus(It.Is<Guid>(g => g.Equals(order.Id)), It.Is<OrderProcessingStatus>(ops => ops == OrderProcessingStatus.SendConditionNotMet)),
+            Times.Once);
     }
 
     [Fact]
