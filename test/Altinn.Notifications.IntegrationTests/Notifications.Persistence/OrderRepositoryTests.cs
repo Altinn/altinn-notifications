@@ -134,9 +134,9 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
 
                 // Assert
                 string sql = $@"SELECT count(1) 
-                                   FROM notifications.orders
-                                   WHERE alternateid = '{order.Id}'
-                                   AND processedstatus = '{statusType}'";
+                                FROM notifications.orders
+                                WHERE alternateid = '{order.Id}'
+                                AND processedstatus = '{statusType}'";
 
                 int orderCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
 
