@@ -1,8 +1,11 @@
-﻿namespace Altinn.Notifications.Core.Exceptions;
+﻿using System.Diagnostics.CodeAnalysis;
+
+namespace Altinn.Notifications.Core.Exceptions;
 
 /// <summary>
 /// Represents errors that occur during order processing operations.
 /// </summary>
+[ExcludeFromCodeCoverage]
 public class OrderProcessingException : Exception
 {
     /// <summary>
