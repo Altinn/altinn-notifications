@@ -148,7 +148,7 @@ public class OrderProcessingService : IOrderProcessingService
               }
 
               // notifications should always be created and sent if the condition check is not successful
-              _logger.LogInformation("// OrderProcessingService // IsSendConditionMet // Condition check for order with ID '{order.Id}' failed on retry. Processing regardless.", order.Id);
+              _logger.LogInformation("// OrderProcessingService // IsSendConditionMet // Condition check for order with ID '{ID}' failed on retry. Processing regardless.", order.Id);
               return true;
           });
     }
