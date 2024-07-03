@@ -17,12 +17,9 @@ export function exchangeToAltinnToken(token, test) {
     "// Setup // Authentication towards Altinn 3 Success": (r) =>
       r.status === 200,
   });
+  
   addErrorCount(success);
-  stopIterationOnFail(
-    "// Setup // Authentication towards Altinn 3  Failed",
-    success,
-    res
-  );
+  stopIterationOnFail("// Setup // Authentication towards Altinn 3  Failed", success);
 
   return res.body;
 }

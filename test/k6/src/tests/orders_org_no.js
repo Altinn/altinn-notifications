@@ -16,23 +16,28 @@
 */
 
 import { check, sleep } from "k6";
+import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
+import { stopIterationOnFail } from "../errorhandler.js";
+
 import * as setupToken from "../setup.js";
 import * as notificationsApi from "../api/notifications/notifications.js";
 import * as ordersApi from "../api/notifications/orders.js";
-import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
+
 const emailOrderRequestJson = JSON.parse(
   open("../data/orders/01-email-request.json")
 );
 
-import { addErrorCount, stopIterationOnFail } from "../errorhandler.js";
 const scopes = "altinn:serviceowner/notifications.create";
 const orgNoRecipient = __ENV.orgNoRecipient.toLowerCase();
 const resourceId = __ENV.resourceId;
+
 export const options = {
   thresholds: {
-    errors: ["count<1"],
-  },
+    // Checks rate should be 100%. Raise error if any check has failed.
+    checks: ['rate>=1']
+  }
 };
+
 
 export function setup() {
   var token = setupToken.getAltinnTokenForOrg(scopes);
@@ -80,12 +85,8 @@ function TC01_PostEmailNotificationOrderRequest(data) {
       (r) => JSON.parse(r.body).recipientLookup.status == 'Success'
   });
 
-  addErrorCount(success);
-
-  if (!success) {
-    stopIterationOnFail(success);
-  }
-
+  stopIterationOnFail("POST email notification order request failed", success);
+  
   return selfLink;
 }
 
@@ -98,11 +99,7 @@ function TC02_GetEmailNotificationSummary(data, orderId) {
     "GET email notifications. Status is 200 OK": (r) => r.status === 200,
   });
 
-  addErrorCount(success);
-  if (!success) {
-    // only continue to parse and check content if success response code
-    stopIterationOnFail(success);
-  }
+  stopIterationOnFail("GET email notification summary request failed", success);
 
   success = check(JSON.parse(response.body), {
     "GET email notifications. OrderId property is a match": (
@@ -120,12 +117,8 @@ function TC03_GetEmailNotificationSummaryAgainAfterOneMinuteForVerification(data
     "GET email notifications summary again after one minute for verification. Status is 200 OK": (r) => r.status === 200,
   });
 
-  addErrorCount(success);
-  if (!success) {
-    // only continue to parse and check content if success response code
-    stopIterationOnFail(success);
-  }
-
+  stopIterationOnFail("Get email notification summary request after a delay failed", success);
+  
   success = check(JSON.parse(response.body), {
     "GET email notifications summary again after one minute for verification. OrderId property is a match": (
       notificationSummary
@@ -151,29 +144,13 @@ function TC03_GetEmailNotificationSummaryAgainAfterOneMinuteForVerification(data
  * 03 - GET email notifications summary again after one minute for verification
  */
 export default function (data) {
-  try {
-    if (data.runFullTestSet) {
-      var selfLink = TC01_PostEmailNotificationOrderRequest(data);
-      let id = selfLink.split("/").pop();
-      TC02_GetEmailNotificationSummary(data, id);
-      TC03_GetEmailNotificationSummaryAgainAfterOneMinuteForVerification(data, id);
-    } else {
-      // Limited test set for use case tests
-      var selfLink = TC01_PostEmailNotificationOrderRequest(data);
-      let id = selfLink.split("/").pop();
-      TC02_GetEmailNotificationSummary(data, id);
-    }
-  } catch (error) {
-    addErrorCount(false);
-    throw error;
+  var selfLink = TC01_PostEmailNotificationOrderRequest(data);
+  let id = selfLink.split("/").pop();
+
+  if (data.runFullTestSet) {
+    TC02_GetEmailNotificationSummary(data, id);
+    TC03_GetEmailNotificationSummaryAgainAfterOneMinuteForVerification(data, id);
+  } else {
+    TC02_GetEmailNotificationSummary(data, id);
   }
 }
-
-/*
-export function handleSummary(data) {
-  let result = {};
-  result[reportPath("events.xml")] = generateJUnitXML(data, "events");
-
-  return result;
-}
-*/

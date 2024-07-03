@@ -16,19 +16,22 @@
 
 import { check } from "k6";
 import { randomString } from "https://jslib.k6.io/k6-utils/1.2.0/index.js";
+import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
+import { stopIterationOnFail } from "../errorhandler.js";
+
 import * as setupToken from "../setup.js";
 import * as notificationsApi from "../api/notifications/notifications.js";
 import * as ordersApi from "../api/notifications/orders.js";
-import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
-import { generateJUnitXML, reportPath } from "../report.js";
-import { addErrorCount, stopIterationOnFail } from "../errorhandler.js";
-const scopes = "altinn:serviceowner/notifications.create";
-const smsRecipient = __ENV.smsRecipient.toLowerCase();
+
 export const options = {
   thresholds: {
-    errors: ["count<1"],
-  },
+    // Checks rate should be 100%. Raise error if any check has failed.
+    checks: ['rate>=1']
+  }
 };
+
+const scopes = "altinn:serviceowner/notifications.create";
+const smsRecipient = __ENV.smsRecipient.toLowerCase();
 
 export function setup() {
   var token = setupToken.getAltinnTokenForOrg(scopes);
@@ -78,11 +81,7 @@ function TC01_PostSmsNotificationOrderRequest(data) {
       (r) => r.body,
   });
 
-  addErrorCount(success);
-
-  if (!success) {
-    stopIterationOnFail(success);
-  }
+  stopIterationOnFail("POST sms notification order request failed", success);
 
   return selfLink;
 }
@@ -96,11 +95,7 @@ function TC02_GetNotificationOrderById(data, selfLink, orderId) {
     "GET notification order by id. Status is 200 OK": (r) => r.status === 200,
   });
 
-  addErrorCount(success);
-  if (!success) {
-    // only continue to parse and check content if success response code
-    stopIterationOnFail(success);
-  }
+  stopIterationOnFail("GET notification order by id request failed", success);
 
   success = check(JSON.parse(response.body), {
     "GET notification order by id. Id property is a match": (order) =>
@@ -108,7 +103,6 @@ function TC02_GetNotificationOrderById(data, selfLink, orderId) {
     "GET notification order by id. Creator property is a match": (order) =>
       order.creator === "ttd",
   });
-  addErrorCount(success);
 }
 
 // 03 - GET notification order by senders reference
@@ -122,11 +116,7 @@ function TC03_GetNotificationOrderBySendersReference(data) {
       r.status === 200,
   });
 
-  addErrorCount(success);
-  if (!success) {
-    // only continue to parse and check content if success response code
-    stopIterationOnFail(success);
-  }
+  stopIterationOnFail("GET notification order by senders reference request failed", success);
 
   success = check(JSON.parse(response.body), {
     "GET notification order by senders reference. Count is equal to 1": (
@@ -148,11 +138,7 @@ function TC04_GetNotificationOrderWithStatus(data, orderId) {
       r.status === 200,
   });
 
-  addErrorCount(success);
-  if (!success) {
-    // only continue to parse and check content if success response code
-    stopIterationOnFail(success);
-  }
+  stopIterationOnFail("GET notification order with status request failed", success);
 
   success = check(JSON.parse(response.body), {
     "GET notification order with status. Id property is a match": (order) =>
@@ -163,7 +149,6 @@ function TC04_GetNotificationOrderWithStatus(data, orderId) {
       order
     ) => order.processingStatus,
   });
-  addErrorCount(success);
 }
 
 // 05 - GET sms notification summary
@@ -175,11 +160,7 @@ function TC05_GetSmsNotificationSummary(data, orderId) {
     "GET sms notifications. Status is 200 OK": (r) => r.status === 200,
   });
 
-  addErrorCount(success);
-  if (!success) {
-    // only continue to parse and check content if success response code
-    stopIterationOnFail(success);
-  }
+  stopIterationOnFail("Get sms notification summary request failed", success);
 
   success = check(JSON.parse(response.body), {
     "GET sms notifications. OrderId property is a match": (
@@ -196,31 +177,14 @@ function TC05_GetSmsNotificationSummary(data, orderId) {
  * 05 - GET sms notification summary
  */
 export default function (data) {
-  try {
-    if (data.runFullTestSet) {
-      var selfLink = TC01_PostSmsNotificationOrderRequest(data);
-      let id = selfLink.split("/").pop();
-      TC02_GetNotificationOrderById(data, selfLink, id);
-      TC03_GetNotificationOrderBySendersReference(data);
-      TC04_GetNotificationOrderWithStatus(data, id);
-      TC05_GetSmsNotificationSummary(data, id);
-    } else {
-      // Limited test set for use case tests
-      var selfLink = TC01_PostSmsNotificationOrderRequest(data);
-      let id = selfLink.split("/").pop();
-      TC05_GetSmsNotificationSummary(data, id);
-    }
-  } catch (error) {
-    addErrorCount(false);
-    throw error;
+  var selfLink = TC01_PostSmsNotificationOrderRequest(data);
+  let id = selfLink.split("/").pop();
+
+  if (data.runFullTestSet) {
+    TC02_GetNotificationOrderById(data, selfLink, id);
+    TC03_GetNotificationOrderBySendersReference(data);
+    TC04_GetNotificationOrderWithStatus(data, id);
   }
-}
 
-/*
-export function handleSummary(data) {
-  let result = {};
-  result[reportPath("events.xml")] = generateJUnitXML(data, "events");
-
-  return result;
+  TC05_GetSmsNotificationSummary(data, id);
 }
-*/
