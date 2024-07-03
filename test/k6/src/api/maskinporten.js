@@ -7,7 +7,7 @@ import KJUR from "https://unpkg.com/jsrsasign@10.8.6/lib/jsrsasign.js";
 
 import { buildHeaderWithContentType}  from "../apiHelpers.js";
 import * as config from "../config.js";
-import { stopIterationOnFail, addErrorCount } from "../errorhandler.js";
+import { stopIterationOnFail } from "../errorhandler.js";
 
 const encodedJwk = __ENV.encodedJwk;
 const mpClientId = __ENV.mpClientId;
@@ -41,7 +41,6 @@ export function generateAccessToken(scopes) {
       r.status === 200,
   });
   
-  addErrorCount(success);
   stopIterationOnFail("// Setup // Authentication towards Maskinporten Failed", success);
 
   let accessToken = JSON.parse(res.body)['access_token'];

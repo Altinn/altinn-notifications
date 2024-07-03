@@ -5,7 +5,7 @@ import {
   buildHeaderWithBearer
 } from "../apiHelpers.js";
 import { platformAuthentication } from "../config.js";
-import { stopIterationOnFail, addErrorCount } from "../errorhandler.js";
+import { stopIterationOnFail } from "../errorhandler.js";
 
 
 export function exchangeToAltinnToken(token, test) {
@@ -18,7 +18,6 @@ export function exchangeToAltinnToken(token, test) {
       r.status === 200,
   });
   
-  addErrorCount(success);
   stopIterationOnFail("// Setup // Authentication towards Altinn 3  Failed", success);
 
   return res.body;
