@@ -51,7 +51,7 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
     }
 
     /// <summary>
-    /// When a new order is picked up by the consumer and all email notifications are created befor, only processedstatus is changed.
+    /// When a new order is picked up by the consumer and all email notifications are created before processedstatus is changed.
     /// We measure the sucess of this test by confirming that the processedstatus is completed.
     /// </summary>
     [Fact]
@@ -59,10 +59,10 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
     {
         // Arrange
         Dictionary<string, string> vars = new()
-    {
-        { "KafkaSettings__PastDueOrdersRetryTopicName", _retryTopicName },
-        { "KafkaSettings__Admin__TopicList", $"[\"{_retryTopicName}\"]" }
-    };
+        {
+            { "KafkaSettings__PastDueOrdersRetryTopicName", _retryTopicName },
+            { "KafkaSettings__Admin__TopicList", $"[\"{_retryTopicName}\"]" }
+        };
 
         using PastDueOrdersRetryConsumer consumerRetryService = (PastDueOrdersRetryConsumer)ServiceUtil
                                                     .GetServices(new List<Type>() { typeof(IHostedService) }, vars)

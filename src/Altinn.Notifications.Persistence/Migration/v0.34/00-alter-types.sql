@@ -1,0 +1,1 @@
+ALTER TYPE public.orderprocessingstate ADD VALUE IF NOT EXISTS 'SendConditionNotMet';
