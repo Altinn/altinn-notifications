@@ -23,7 +23,13 @@ import * as setupToken from "../setup.js";
 import * as notificationsApi from "../api/notifications/notifications.js";
 import * as ordersApi from "../api/notifications/orders.js";
 
-const emailOrderRequestJson = open("../data/orders/01-email-request.json");
+const emailOrderRequestJson = JSON.parse(
+  open("../data/orders/01-email-request.json")
+);
+
+const scopes = "altinn:serviceowner/notifications.create";
+const emailRecipient = __ENV.emailRecipient.toLowerCase();
+const ninRecipient = __ENV.ninRecipient.toLowerCase();
 
 export const options = {
   thresholds: {
@@ -33,17 +39,17 @@ export const options = {
 };
 
 export function setup() {
-  const token = setupToken.getAltinnTokenForOrg("altinn:serviceowner/notifications.create");
+  const token = setupToken.getAltinnTokenForOrg(scopes);
   const sendersReference = uuidv4();
 
-  var emailOrderRequest = JSON.parse(emailOrderRequestJson);
+  var emailOrderRequest = emailOrderRequestJson;
   emailOrderRequest.sendersReference = sendersReference;
   emailOrderRequest.recipients = [
     {
-      emailAddress: __ENV.emailRecipient.toLowerCase(),
+      emailAddress: emailRecipient
     },
     {
-      nationalIdentityNumber: __ENV.ninRecipient.toLowerCase()
+      nationalIdentityNumber: ninRecipient
     }
   ];
 
@@ -76,14 +82,16 @@ function TC01_PostEmailNotificationOrderRequest(data) {
 
   stopIterationOnFail("POST email notification order request failed", success);
 
+  const selfLink = response.headers["Location"];
+  
   success = check(response, {
-    "POST email notification order request. Location header providedStatus is 202 Accepted":
-      (r) => r.headers["Location"],
+    "POST email notification order request. Location header provided":
+      (_) => selfLink,
     "POST email notification order request. Recipient lookup was successful":
       (r) => JSON.parse(r.body).recipientLookup.status == 'Success'
   });
 
-  return response.headers["Location"];
+  return selfLink;
 }
 
 function TC02_GetNotificationOrderById(data, selfLink, orderId) {
@@ -95,8 +103,6 @@ function TC02_GetNotificationOrderById(data, selfLink, orderId) {
     "GET notification order by id. Status is 200 OK": 
       (r) => r.status === 200,
   });
-
-  stopIterationOnFail("GET notification order by id request failed", success);
 
   success = check(JSON.parse(response.body), {
     "GET notification order by id. Id property is a match": 
@@ -116,8 +122,6 @@ function TC03_GetNotificationOrderBySendersReference(data) {
       (r) => r.status === 200,
   });
 
-  stopIterationOnFail("GET notification order by senders reference request failed", success);
-
   success = check(JSON.parse(response.body), {
     "GET notification order by senders reference. Count is equal to 1": 
       (orderList) => orderList.count === 1,
@@ -135,8 +139,6 @@ function TC04_GetNotificationOrderWithStatus(data, orderId) {
     "GET notification order with status. Status is 200 OK": 
       (r) => r.status === 200,
   });
-
-  stopIterationOnFail("GET notification order with status request failed", success);
 
   success = check(JSON.parse(response.body), {
     "GET notification order with status. Id property is a match": 
@@ -157,8 +159,6 @@ function TC05_GetEmailNotificationSummary(data, orderId) {
     "GET email notifications. Status is 200 OK": (r) => r.status === 200,
   });
 
-  stopIterationOnFail("GET email notifications request failed", success);
-
   success = check(JSON.parse(response.body), {
     "GET email notifications. OrderId property is a match": 
       (notificationSummary) => notificationSummary.orderId === orderId,
@@ -173,7 +173,8 @@ export default function (data) {
     TC02_GetNotificationOrderById(data, selfLink, id);
     TC03_GetNotificationOrderBySendersReference(data);
     TC04_GetNotificationOrderWithStatus(data, id);
+    TC05_GetEmailNotificationSummary(data, id);
+  } else {
+    TC05_GetEmailNotificationSummary(data, id);
   }
-
-  TC05_GetEmailNotificationSummary(data, id);
 }

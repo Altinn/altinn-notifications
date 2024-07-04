@@ -38,7 +38,6 @@ export const options = {
   }
 };
 
-
 export function setup() {
   var token = setupToken.getAltinnTokenForOrg(scopes);
   var sendersReference = uuidv4();
@@ -74,18 +73,22 @@ function TC01_PostEmailNotificationOrderRequest(data) {
     JSON.stringify(data.emailOrderRequest),
     data.token
   );
-  var selfLink = response.headers["Location"];
 
   success = check(response, {
     "POST email notification order request. Status is 202 Accepted": (r) =>
       r.status === 202,
-    "POST email notification order request. Location header providedStatus is 202 Accepted":
+  });
+  
+  stopIterationOnFail("POST email notification order request failed", success);
+
+  var selfLink = response.headers["Location"];
+
+  success = check(response, {
+    "POST email notification order request. Location header provided":
       (r) => selfLink,
     "POST email notification order request. Recipient lookup was successful":
       (r) => JSON.parse(r.body).recipientLookup.status == 'Success'
   });
-
-  stopIterationOnFail("POST email notification order request failed", success);
   
   return selfLink;
 }
@@ -95,11 +98,10 @@ function TC02_GetEmailNotificationSummary(data, orderId) {
   var response, success;
 
   response = notificationsApi.getEmailNotifications(orderId, data.token);
+
   success = check(response, {
     "GET email notifications. Status is 200 OK": (r) => r.status === 200,
   });
-
-  stopIterationOnFail("GET email notification summary request failed", success);
 
   success = check(JSON.parse(response.body), {
     "GET email notifications. OrderId property is a match": (
@@ -114,27 +116,21 @@ function TC03_GetEmailNotificationSummaryAgainAfterOneMinuteForVerification(data
   var response, success;
   response = notificationsApi.getEmailNotifications(orderId, data.token);
   success = check(response, {
-    "GET email notifications summary again after one minute for verification. Status is 200 OK": (r) => r.status === 200,
+    "GET email notifications summary again after one minute for verification. Status is 200 OK": 
+      (r) => r.status === 200,
   });
-
-  stopIterationOnFail("Get email notification summary request after a delay failed", success);
   
   success = check(JSON.parse(response.body), {
-    "GET email notifications summary again after one minute for verification. OrderId property is a match": (
-      notificationSummary
-    ) => notificationSummary.orderId === orderId,
-    "GET email notifications summary again after one minute for verification. At least one notification has been generated": (
-      notificationSummary
-    ) => notificationSummary.generated > 0,
-    "GET email notifications summary again after one minute for verification. At least one notification is in the notifications array": (
-      notificationSummary
-    ) => notificationSummary.notifications.length > 0,
-    "GET email notifications summary again after one minute for verification. Recipient organization number is a match": (
-      notificationSummary
-    ) => notificationSummary.notifications[0].recipient.organizationNumber === data.emailOrderRequest.recipients[0].organizationNumber,
-    "GET email notifications summary again after one minute for verification. Recipient email address found in the contact lookup for the given organization number": (
-      notificationSummary
-    ) => notificationSummary.notifications[0].recipient.emailAddress.length > 0,
+    "GET email notifications summary again after one minute for verification. OrderId property is a match": 
+      (notificationSummary) => notificationSummary.orderId === orderId,
+    "GET email notifications summary again after one minute for verification. At least one notification has been generated": 
+      (notificationSummary) => notificationSummary.generated > 0,
+    "GET email notifications summary again after one minute for verification. At least one notification is in the notifications array": 
+      (notificationSummary) => notificationSummary.notifications.length > 0,
+    "GET email notifications summary again after one minute for verification. Recipient organization number is a match": 
+      (notificationSummary) => notificationSummary.notifications[0].recipient.organizationNumber === data.emailOrderRequest.recipients[0].organizationNumber,
+    "GET email notifications summary again after one minute for verification. Recipient email address found in the contact lookup for the given organization number": 
+      (notificationSummary) => notificationSummary.notifications[0].recipient.emailAddress.length > 0,
   });
 }
 

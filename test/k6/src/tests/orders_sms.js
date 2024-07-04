@@ -70,18 +70,22 @@ function TC01_PostSmsNotificationOrderRequest(data) {
     JSON.stringify(data.smsOrderRequest),
     data.token
   );
-  var selfLink = response.headers["Location"];
 
   success = check(response, {
     "POST sms notification order request. Status is 202 Accepted": (r) =>
-      r.status === 202,
-    "POST sms notification order request. Location header providedStatus is 202 Accepted":
-      (r) => selfLink,
-    "POST sms notification order request. Response body is not an empty string":
-      (r) => r.body,
+      r.status === 202
   });
 
   stopIterationOnFail("POST sms notification order request failed", success);
+
+  const selfLink = response.headers["Location"];
+
+  success = check(response, {
+    "POST sms notification order request. Location header providedStatus is 202 Accepted":
+      (_) => selfLink,
+    "POST sms notification order request. Response body is not an empty string":
+      (r) => r.body
+  });
 
   return selfLink;
 }
@@ -94,8 +98,6 @@ function TC02_GetNotificationOrderById(data, selfLink, orderId) {
   success = check(response, {
     "GET notification order by id. Status is 200 OK": (r) => r.status === 200,
   });
-
-  stopIterationOnFail("GET notification order by id request failed", success);
 
   success = check(JSON.parse(response.body), {
     "GET notification order by id. Id property is a match": (order) =>
@@ -115,8 +117,6 @@ function TC03_GetNotificationOrderBySendersReference(data) {
     "GET notification order by senders reference. Status is 200 OK": (r) =>
       r.status === 200,
   });
-
-  stopIterationOnFail("GET notification order by senders reference request failed", success);
 
   success = check(JSON.parse(response.body), {
     "GET notification order by senders reference. Count is equal to 1": (
@@ -138,8 +138,6 @@ function TC04_GetNotificationOrderWithStatus(data, orderId) {
       r.status === 200,
   });
 
-  stopIterationOnFail("GET notification order with status request failed", success);
-
   success = check(JSON.parse(response.body), {
     "GET notification order with status. Id property is a match": (order) =>
       order.id === orderId,
@@ -159,8 +157,6 @@ function TC05_GetSmsNotificationSummary(data, orderId) {
   success = check(response, {
     "GET sms notifications. Status is 200 OK": (r) => r.status === 200,
   });
-
-  stopIterationOnFail("Get sms notification summary request failed", success);
 
   success = check(JSON.parse(response.body), {
     "GET sms notifications. OrderId property is a match": (
@@ -184,7 +180,8 @@ export default function (data) {
     TC02_GetNotificationOrderById(data, selfLink, id);
     TC03_GetNotificationOrderBySendersReference(data);
     TC04_GetNotificationOrderWithStatus(data, id);
+    TC05_GetSmsNotificationSummary(data, id);
+  } else {
+    TC05_GetSmsNotificationSummary(data, id);
   }
-
-  TC05_GetSmsNotificationSummary(data, id);
 }
