@@ -1,5 +1,5 @@
 // Baseurls for platform
-export var baseUrls = {
+const baseUrls = {
   at21: "at21.altinn.cloud",
   at22: "at22.altinn.cloud",
   at23: "at23.altinn.cloud",
@@ -8,17 +8,17 @@ export var baseUrls = {
   prod: "altinn.no"
 };
 
-var maskinportenBaseUrls = {
+const maskinportenBaseUrls = {
   tt02: "https://test.maskinporten.no/",
   prod: "https://maskinporten.no/",
 };
 
-//Get values from environment
+// Get values from environment
 const environment = __ENV.env.toLowerCase();
-export let baseUrl = baseUrls[environment];
-let maskinportenBaseUrl = maskinportenBaseUrls[environment];
+const baseUrl = baseUrls[environment];
+const maskinportenBaseUrl = maskinportenBaseUrls[environment];
 
-//AltinnTestTools
+// AltinnTestTools
 export var tokenGenerator = {
   getEnterpriseToken:
     "https://altinn-testtools-token-generator.azurewebsites.net/api/GetEnterpriseToken",
@@ -44,6 +44,9 @@ export var notifications = {
   },
   notifications_sms: function (orderId) {
     return `https://platform.${baseUrl}/notifications/api/v1/orders/${orderId}/notifications/sms/`;
+  },
+  conditionCheck: function(conditionMet) {
+    return `http://altinn-notifications.default.svc.cluster.local/notifications/api/v1/tests/sendcondition?conditionMet=${conditionMet}`;
   }
 };
 

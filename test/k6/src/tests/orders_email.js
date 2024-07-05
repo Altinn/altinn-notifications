@@ -2,22 +2,23 @@
     Test script of platform notifications api with application owner token
     Command:
     podman compose run k6 run /src/tests/orders_email.js `
-    -e tokenGeneratorUserName=autotest `
+    -e tokenGeneratorUserName={the username to access the token generator} `
     -e tokenGeneratorUserPwd={the password to access the token generator}`
     -e mpClientId={the id of an integration defined in maskinporten} `
     -e mpKid={the key id of the JSON web key used to sign the maskinporten token request} `
     -e encodedJwk={the encoded JSON web key used to sign the maskinporten token request} `
-    -e env={environment: at21, at22, at23, at24, tt02, prod}`
-    -e emailRecipient={an email address to add as a notification recipient}`
-    -e ninRecipient={a national identity number of a person to include as a notification recipient}`
+    -e env={environment: at21, at22, at23, at24, tt02, prod} `
+    -e emailRecipient={an email address to add as a notification recipient} `
+    -e ninRecipient={a national identity number of a person to include as a notification recipient} `
     -e runFullTestSet=true
 
     For use case tests omit environment variable runFullTestSet or set value to false
 */
 
-import { check } from "k6";
+import { check, sleep } from "k6";
 import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 import { stopIterationOnFail } from "../errorhandler.js";
+import { notifications } from "../config.js";
 
 import * as setupToken from "../setup.js";
 import * as notificationsApi from "../api/notifications/notifications.js";
@@ -44,6 +45,7 @@ export function setup() {
 
   var emailOrderRequest = emailOrderRequestJson;
   emailOrderRequest.sendersReference = sendersReference;
+  emailOrderRequest.conditionEndpoint = notifications.conditionCheck(true);
   emailOrderRequest.recipients = [
     {
       emailAddress: emailRecipient
@@ -56,7 +58,7 @@ export function setup() {
   const runFullTestSet = __ENV.runFullTestSet
     ? __ENV.runFullTestSet.toLowerCase().includes("true")
     : false;
-
+  
   var data = {
     runFullTestSet: runFullTestSet,
     token: token,
@@ -165,6 +167,40 @@ function TC05_GetEmailNotificationSummary(data, orderId) {
   });
 }
 
+function TC06_PostEmailNotificationOrderWithNegativeConditionCheck(data) {
+  let success, response;
+
+  const emailOrderRequest = data.emailOrderRequest;
+  emailOrderRequest.conditionEndpoint = notifications.conditionCheck(false);
+  
+  response = ordersApi.postEmailNotificationOrder(
+    JSON.stringify(emailOrderRequest),
+    data.token
+  );
+
+  success = check(response, {
+    "POST email notification order request with condition. Status is 202 Accepted": 
+      (r) => r.status === 202
+  });
+
+  stopIterationOnFail("POST email notification order request with condition check failed", success);
+
+  sleep(60); // Waiting 1 minute for the notifications to be generated
+  
+  const order = JSON.parse(response.body)
+
+  response = ordersApi.getWithStatus(order.orderId, data.token);
+  success = check(response, {
+    "GET notification order with condition check status after one minute. Status is 200 OK": 
+      (r) => r.status === 200,
+  });
+
+  success = check(JSON.parse(response.body), {
+    "GET notification order with condition check status. Status is condition not met": 
+      (order) => order.processingStatus.status == "SendConditionNotMet",
+  });
+}
+
 export default function (data) {
   var selfLink = TC01_PostEmailNotificationOrderRequest(data);
   let id = selfLink.split("/").pop();
@@ -174,6 +210,7 @@ export default function (data) {
     TC03_GetNotificationOrderBySendersReference(data);
     TC04_GetNotificationOrderWithStatus(data, id);
     TC05_GetEmailNotificationSummary(data, id);
+    TC06_PostEmailNotificationOrderWithNegativeConditionCheck(data);
   } else {
     TC05_GetEmailNotificationSummary(data, id);
   }
