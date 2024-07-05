@@ -17,6 +17,7 @@ const maskinportenBaseUrls = {
 const environment = __ENV.env.toLowerCase();
 const baseUrl = baseUrls[environment];
 const maskinportenBaseUrl = maskinportenBaseUrls[environment];
+const subscriptionKey = __ENV.subscriptionKey;
 
 // AltinnTestTools
 export var tokenGenerator = {
@@ -46,7 +47,7 @@ export var notifications = {
     return `https://platform.${baseUrl}/notifications/api/v1/orders/${orderId}/notifications/sms/`;
   },
   conditionCheck: function(conditionMet) {
-    return `http://altinn-notifications.default.svc.cluster.local/notifications/api/v1/tests/sendcondition?conditionMet=${conditionMet}`;
+    return `https://platform.${baseUrl}/notifications/api/v1/tests/sendcondition?conditionMet=${conditionMet}&subscription-key=${subscriptionKey}`;
   }
 };
 
