@@ -379,8 +379,8 @@ public class OrderRequestServiceTests
 
         // Assert        
         Assert.Equal(RecipientLookupStatus.Success, actual.RecipientLookup?.Status);
-        Assert.True(actual.RecipientLookup!.IsReserved.IsNullOrEmpty());
-        Assert.True(actual.RecipientLookup!.MissingContact.IsNullOrEmpty());
+        Assert.Equal(0, actual.RecipientLookup!.IsReserved?.Count);
+        Assert.Equal(0, actual.RecipientLookup!.MissingContact?.Count);
         repoMock.VerifyAll();
         contactPointMock.VerifyAll();
     }
