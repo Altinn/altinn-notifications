@@ -1,6 +1,6 @@
 {
 	"subject": "Automated email from Altinn",
 	"body": "This is an automated email generated during testing of Altinn Notifications",
-	"content-type": "Html",
+	"contentType": "Html",
 	"fromAddress": "noreply@altinn.cloud"
 }
