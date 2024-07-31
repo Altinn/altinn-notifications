@@ -42,7 +42,10 @@ public class PreferredChannelProcessingService : IPreferredChannelProcessingServ
     private async Task ProcessOrderInternal(NotificationOrder order, bool isRetry)
     {
         List<Recipient> recipients = order.Recipients;
-        List<Recipient> recipientsWithoutContactPoint = recipients.Where(r => r.AddressInfo.Count == 0).ToList();
+        List<Recipient> recipientsWithoutContactPoint = 
+            recipients
+                .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email || ap.AddressType == AddressType.Sms))
+                .ToList();
 
         await _contactPointService.AddPreferredContactPoints(order.NotificationChannel, recipientsWithoutContactPoint, order.ResourceId);
 
