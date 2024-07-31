@@ -87,6 +87,10 @@ public class OrderRequestService : IOrderRequestService
             {
                 recipientsWithoutContactPoint.Add(recipient.DeepCopy());
             }
+            else if ((channel == NotificationChannel.EmailPreferred || channel == NotificationChannel.SmsPreferred) && recipient.AddressInfo.Count == 0)
+            {
+                recipientsWithoutContactPoint.Add(recipient.DeepCopy());
+            }
         }
 
         if (recipientsWithoutContactPoint.Count == 0)
@@ -94,13 +98,18 @@ public class OrderRequestService : IOrderRequestService
             return null;
         }
 
-        if (channel == NotificationChannel.Email)
+        switch (channel)
         {
-            await _contactPointService.AddEmailContactPoints(recipientsWithoutContactPoint, resourceId);
-        }
-        else if (channel == NotificationChannel.Sms)
-        {
-            await _contactPointService.AddSmsContactPoints(recipientsWithoutContactPoint, resourceId);
+            case NotificationChannel.Email:
+                await _contactPointService.AddEmailContactPoints(recipientsWithoutContactPoint, resourceId);
+                break;
+            case NotificationChannel.Sms:
+                await _contactPointService.AddSmsContactPoints(recipientsWithoutContactPoint, resourceId);
+                break;
+            case NotificationChannel.EmailPreferred:
+            case NotificationChannel.SmsPreferred:
+                await _contactPointService.AddPreferredContactPoints(channel, recipientsWithoutContactPoint, resourceId);
+                break;
         }
 
         var isReserved = recipientsWithoutContactPoint.Where(r => r.IsReserved.HasValue && r.IsReserved.Value).Select(r => r.NationalIdentityNumber!).ToList();
@@ -108,13 +117,7 @@ public class OrderRequestService : IOrderRequestService
         RecipientLookupResult lookupResult = new()
         {
             IsReserved = isReserved,
-            MissingContact = recipientsWithoutContactPoint
-            .Where(r => channel == NotificationChannel.Email ?
-                !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email) :
-                !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Sms))
-            .Select(r => r.OrganizationNumber ?? r.NationalIdentityNumber!)
-            .Except(isReserved)
-            .ToList()
+            MissingContact = GetMissingContactList(channel, recipientsWithoutContactPoint).Except(isReserved).ToList()
         };
 
         int recipientsWeCannotReach = lookupResult.MissingContact.Union(lookupResult.IsReserved).ToList().Count;
@@ -129,6 +132,26 @@ public class OrderRequestService : IOrderRequestService
         }
 
         return lookupResult;
+    }
+
+    private List<string> GetMissingContactList(NotificationChannel channel, List<Recipient> recipients)
+    {
+        return channel switch
+        {
+            NotificationChannel.Email => recipients
+                               .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email))
+                               .Select(r => r.OrganizationNumber ?? r.NationalIdentityNumber!)
+                               .ToList(),
+            NotificationChannel.Sms => recipients
+                                .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Sms))
+                                .Select(r => r.OrganizationNumber ?? r.NationalIdentityNumber!)
+                                .ToList(),
+            NotificationChannel.EmailPreferred or NotificationChannel.SmsPreferred => recipients
+                              .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email || ap.AddressType == AddressType.Sms))
+                              .Select(r => r.OrganizationNumber ?? r.NationalIdentityNumber!)
+                              .ToList(),
+            _ => [],
+        };
     }
 
     private List<INotificationTemplate> SetSenderIfNotDefined(List<INotificationTemplate> templates)

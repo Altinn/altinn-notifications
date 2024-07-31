@@ -1,5 +1,4 @@
-﻿using System.Runtime.CompilerServices;
-using System.Web;
+﻿using System.Web;
 
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
@@ -38,6 +37,12 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
         var recipientsWithoutMobileNumber = recipients.Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Sms)).ToList();
         await _contactPointService.AddSmsContactPoints(recipientsWithoutMobileNumber, order.ResourceId);
 
+        await ProcessOrderWithoutAddressLookup(order, recipients);
+    }
+
+    /// <inheritdoc/>
+    public async Task ProcessOrderWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients)
+    {
         int smsCount = GetSmsCountForOrder(order);
 
         foreach (Recipient recipient in recipients)
@@ -54,10 +59,16 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
 
         await _contactPointService.AddSmsContactPoints(recipientsWithoutMobileNumber, order.ResourceId);
 
+        await ProcessOrderRetryWithoutAddressLookup(order, recipients);
+    }
+
+    /// <inheritdoc/>
+    public async Task ProcessOrderRetryWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients)
+    {
         int smsCount = GetSmsCountForOrder(order);
         List<SmsRecipient> smsRecipients = await _smsNotificationRepository.GetRecipients(order.Id);
 
-        foreach (Recipient recipient in order.Recipients)
+        foreach (Recipient recipient in recipients)
         {
             SmsAddressPoint? addressPoint = recipient.AddressInfo.Find(a => a.AddressType == AddressType.Sms) as SmsAddressPoint;
 

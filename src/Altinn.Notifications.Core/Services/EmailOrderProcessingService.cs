@@ -38,6 +38,12 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
 
         await _contactPointService.AddEmailContactPoints(recipientsWithoutEmail, order.ResourceId);
 
+        await ProcessOrderWithoutAddressLookup(order, recipients);
+    }
+
+    /// <inheritdoc/>
+    public async Task ProcessOrderWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients)
+    {
         foreach (Recipient recipient in recipients)
         {
             await _emailService.CreateNotification(order.Id, order.RequestedSendTime, recipient, order.IgnoreReservation ?? false);
@@ -52,9 +58,15 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
 
         await _contactPointService.AddEmailContactPoints(recipientsWithoutEmail, order.ResourceId);
 
+        await ProcessOrderRetryWithoutAddressLookup(order, recipients);
+    }
+
+    /// <inheritdoc/>   
+    public async Task ProcessOrderRetryWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients)
+    {
         List<EmailRecipient> emailRecipients = await _emailNotificationRepository.GetRecipients(order.Id);
 
-        foreach (Recipient recipient in order.Recipients)
+        foreach (Recipient recipient in recipients)
         {
             EmailAddressPoint? addressPoint = recipient.AddressInfo.Find(a => a.AddressType == AddressType.Email) as EmailAddressPoint;
 
