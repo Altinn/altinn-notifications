@@ -437,7 +437,8 @@ public class OrderRequestServiceTests
             Recipients = [
                 new Recipient() { NationalIdentityNumber = "1" },
                 new Recipient() { NationalIdentityNumber = "2" },
-                new Recipient() { NationalIdentityNumber = "3" }
+                new Recipient() { NationalIdentityNumber = "3" },
+                new Recipient() { NationalIdentityNumber = "4" }
 
                 ],
             RequestedSendTime = sendTime,
@@ -472,6 +473,10 @@ public class OrderRequestServiceTests
                     {
                         recipient.IsReserved = true;
                     }
+                    else if (recipient.NationalIdentityNumber == "4")
+                    {
+                        recipient.IsReserved = false;
+                    }
                 }
             });
 
@@ -482,8 +487,8 @@ public class OrderRequestServiceTests
 
         // Assert        
         Assert.Equal(RecipientLookupStatus.PartialSuccess, actual.RecipientLookup?.Status);
-        Assert.Single(actual.RecipientLookup?.IsReserved!);
-        Assert.Equal(0, actual.RecipientLookup!.MissingContact?.Count);
+        Assert.Single(actual.RecipientLookup!.IsReserved!);
+        Assert.Single(actual.RecipientLookup!.MissingContact!);
         repoMock.VerifyAll();
         contactPointMock.VerifyAll();
     }
