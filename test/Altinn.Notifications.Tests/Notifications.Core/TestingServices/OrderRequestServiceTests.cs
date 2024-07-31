@@ -524,7 +524,7 @@ public class OrderRequestServiceTests
         Mock<IContactPointService> contactPointMock = new();
         contactPointMock
             .Setup(cp => cp.AddPreferredContactPoints(input.NotificationChannel, It.IsAny<List<Recipient>>(), It.IsAny<string?>()))
-            .Callback<NotificationChannel, List<Recipient>, string?>((_,recipients, _) =>
+            .Callback<NotificationChannel, List<Recipient>, string?>((_, recipients, _) =>
             {
                 foreach (var recipient in recipients)
                 {

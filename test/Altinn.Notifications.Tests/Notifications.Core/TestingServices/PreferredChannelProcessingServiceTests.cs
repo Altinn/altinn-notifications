@@ -20,7 +20,9 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         /// Scenario: 1 recipient with email, 1 recipient with mobile, 1 reserved alid recipient, 1 recipient without contact point
         /// Expected; Email service is called with three recipients, SMS service is called with one recipient
         /// </summary>
-        /// Assertion logic is mostly within the setup of the mocked functions in the processing services</remarks>
+        /// <remarks>
+        /// Assertion logic is mostly within the setup of the mocked functions in the processing services
+        /// </remarks>
         [Fact]
         public async Task ProcessOrder_EmailPreferredChannel_WithoutRetry()
         {
@@ -88,7 +90,9 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         /// Scenario: 1 recipient with email, 1 recipient with mobile, 1 reserved alid recipient, 1 recipient without contact point
         /// Expected; Email service is called with three recipients, SMS service is called with one recipient
         /// </summary>
-        /// Assertion logic is mostly within the setup of the mocked functions in the processing services</remarks>
+        /// <remarks>
+        /// Assertion logic is mostly within the setup of the mocked functions in the processing services
+        /// </remarks>
         [Fact]
         public async Task ProcessOrder_EmailPreferredChannel_WithRetry()
         {
@@ -156,8 +160,10 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         /// Scenario: 1 recipient with email, 1 recipient with mobile, 1 reserved alid recipient, 1 recipient without contact point
         /// Expected; SMS service is called with three recipients, email service is called with one recipient
         /// </summary>
-        /// Assertion logic is mostly within the setup of the mocked functions in the processing services</remarks>
-       [Fact]
+        /// <remarks>
+        /// Assertion logic is mostly within the setup of the mocked functions in the processing services
+        /// </remarks>
+        [Fact]
         public async Task ProcessOrder_SmsPreferredChannel_WithoutRetry()
         {
             // Arrange
@@ -225,7 +231,8 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         /// Expected; SMS service is called with three recipients, email service is called with one recipient
         /// </summary>
         /// <remarks>
-        /// Assertion logic is mostly within the setup of the mocked functions in the processing services</remarks>
+        /// Assertion logic is mostly within the setup of the mocked functions in the processing services
+        /// </remarks>
         [Fact]
         public async Task ProcessOrder_SmsPreferredChannel_WithRetry()
         {
@@ -243,11 +250,11 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             Mock<IEmailOrderProcessingService> emailProcessingMock = new();
             emailProcessingMock
                 .Setup(x => x.ProcessOrderRetryWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.Is<List<Recipient>>(l => l.Count == 1 && l.Exists(r => r.NationalIdentityNumber == "2"))));
-            
+
             Mock<ISmsOrderProcessingService> smsProcessingMock = new();
             smsProcessingMock
                 .Setup(x => x.ProcessOrderRetryWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.Is<List<Recipient>>(l => l.Count == 3 && !l.Exists(r => r.NationalIdentityNumber == "2"))));
-            
+
             Mock<IContactPointService> contactPointMock = new();
             contactPointMock
                 .Setup(cp => cp.AddPreferredContactPoints(order.NotificationChannel, It.IsAny<List<Recipient>>(), It.IsAny<string?>()))
