@@ -75,23 +75,7 @@ public class OrderRequestService : IOrderRequestService
 
     private async Task<RecipientLookupResult?> GetRecipientLookupResult(List<Recipient> originalRecipients, NotificationChannel channel, string? resourceId)
     {
-        List<Recipient> recipientsWithoutContactPoint = [];
-
-        foreach (var recipient in originalRecipients)
-        {
-            if (channel == NotificationChannel.Email && !recipient.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email))
-            {
-                recipientsWithoutContactPoint.Add(recipient.DeepCopy());
-            }
-            else if (channel == NotificationChannel.Sms && !recipient.AddressInfo.Exists(ap => ap.AddressType == AddressType.Sms))
-            {
-                recipientsWithoutContactPoint.Add(recipient.DeepCopy());
-            }
-            else if ((channel == NotificationChannel.EmailPreferred || channel == NotificationChannel.SmsPreferred) && recipient.AddressInfo.Count == 0)
-            {
-                recipientsWithoutContactPoint.Add(recipient.DeepCopy());
-            }
-        }
+        List<Recipient> recipientsWithoutContactPoint = GetMissingContactRecipientList(channel, originalRecipients);
 
         if (recipientsWithoutContactPoint.Count == 0)
         {
@@ -117,7 +101,7 @@ public class OrderRequestService : IOrderRequestService
         RecipientLookupResult lookupResult = new()
         {
             IsReserved = isReserved,
-            MissingContact = GetMissingContactList(channel, recipientsWithoutContactPoint).Except(isReserved).ToList()
+            MissingContact = GetMissingContactListIds(channel, recipientsWithoutContactPoint).Except(isReserved).ToList()
         };
 
         int recipientsWeCannotReach = lookupResult.MissingContact.Union(lookupResult.IsReserved).ToList().Count;
@@ -134,7 +118,7 @@ public class OrderRequestService : IOrderRequestService
         return lookupResult;
     }
 
-    private List<string> GetMissingContactList(NotificationChannel channel, List<Recipient> recipients)
+    private static List<string> GetMissingContactListIds(NotificationChannel channel, List<Recipient> recipients)
     {
         return channel switch
         {
@@ -150,6 +134,26 @@ public class OrderRequestService : IOrderRequestService
                               .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email || ap.AddressType == AddressType.Sms))
                               .Select(r => r.OrganizationNumber ?? r.NationalIdentityNumber!)
                               .ToList(),
+            _ => [],
+        };
+    }
+
+    private static List<Recipient> GetMissingContactRecipientList(NotificationChannel channel, List<Recipient> recipients)
+    {
+        return channel switch
+        {
+            NotificationChannel.Email => recipients
+                               .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email))
+                               .Select(r => r.DeepCopy())
+                               .ToList(),
+            NotificationChannel.Sms => recipients
+                                .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Sms))
+                              .Select(r => r.DeepCopy())
+                               .ToList(),
+            NotificationChannel.EmailPreferred or NotificationChannel.SmsPreferred => recipients
+                              .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email || ap.AddressType == AddressType.Sms))
+                             .Select(r => r.DeepCopy())
+                               .ToList(),
             _ => [],
         };
     }

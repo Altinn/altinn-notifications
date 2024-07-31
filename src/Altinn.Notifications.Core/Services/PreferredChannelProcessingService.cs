@@ -87,7 +87,7 @@ public class PreferredChannelProcessingService : IPreferredChannelProcessingServ
         }
     }
 
-    private (List<Recipient> PreferredChannelRecipients, List<Recipient> FallBackChannelRecipients) GenerateRecipientLists(
+    private static (List<Recipient> PreferredChannelRecipients, List<Recipient> FallBackChannelRecipients) GenerateRecipientLists(
       List<Recipient> recipients,
       AddressType preferredAddressType,
       AddressType fallbackAddressType)

@@ -116,7 +116,6 @@ namespace Altinn.Notifications.Core.Services
                 },
                 (recipient, orgContactPoints) =>
                 {
-                    // handling official contact points
                     if (channel == NotificationChannel.EmailPreferred)
                     {
                         AddPreferredOrFallbackContactPointList(
@@ -126,7 +125,6 @@ namespace Altinn.Notifications.Core.Services
                            e => new EmailAddressPoint(e),
                            m => new SmsAddressPoint(m));
 
-                        // Add user registered contact points
                         foreach (var userContact in orgContactPoints.UserContactPoints)
                         {
                             AddPreferredOrFallbackContactPoint(
@@ -139,7 +137,6 @@ namespace Altinn.Notifications.Core.Services
                     }
                     else if (channel == NotificationChannel.SmsPreferred)
                     {
-                        // handling official contact points
                         AddPreferredOrFallbackContactPointList(
                            recipient,
                            orgContactPoints.MobileNumberList,
@@ -147,7 +144,6 @@ namespace Altinn.Notifications.Core.Services
                            m => new SmsAddressPoint(m),
                            e => new EmailAddressPoint(e));
 
-                        // Add user registered contact points
                         foreach (var userContact in orgContactPoints.UserContactPoints)
                         {
                             AddPreferredOrFallbackContactPoint(
