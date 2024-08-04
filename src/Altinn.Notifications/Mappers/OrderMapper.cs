@@ -193,6 +193,35 @@ public static class OrderMapper
     }
 
     /// <summary>
+    /// Maps an <see cref="EmailNotificationOrderRequestExt"/> to an <see cref="EmailTemplateExt"/>.
+    /// </summary>
+    /// <param name="request">The email notification order request.</param>
+    /// <returns>The mapped email template.</returns>
+    public static EmailTemplateExt ToEmailTemplateExt(this EmailNotificationOrderRequestExt request)
+    {
+        return new EmailTemplateExt
+        {
+            Body = request.Body,
+            Subject = request.Subject,
+            ContentType = request.ContentType ?? EmailContentTypeExt.Plain
+        };
+    }
+
+    /// <summary>
+    /// Maps an <see cref="SmsNotificationOrderRequestExt"/> to an <see cref="SmsTemplateExt"/>.
+    /// </summary>
+    /// <param name="request">The SMS notification order request.</param>
+    /// <returns>The mapped SMS template.</returns>
+    public static SmsTemplateExt ToSmsTemplateExt(this SmsNotificationOrderRequestExt request)
+    {
+        return new SmsTemplateExt
+        {
+            Body = request.Body,
+            SenderNumber = request.SenderNumber ?? string.Empty
+        };
+    }
+
+    /// <summary>
     /// Maps a List of <see cref="Recipient"/> to a List of <see cref="RecipientExt"/>
     /// </summary>
     internal static List<RecipientExt> MapToRecipientExt(this List<Recipient> recipients)
