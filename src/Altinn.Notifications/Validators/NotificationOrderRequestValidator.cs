@@ -1,10 +1,7 @@
-﻿using Altinn.Notifications.Core.Models;
-using Altinn.Notifications.Models;
+﻿using Altinn.Notifications.Models;
 using Altinn.Notifications.Validators.Rules;
 
 using FluentValidation;
-
-using Microsoft.IdentityModel.Tokens;
 
 namespace Altinn.Notifications.Validators;
 
@@ -32,18 +29,6 @@ public class NotificationOrderRequestValidator : AbstractValidator<NotificationO
         .ValidateOptionalSmsTemplate();
 
         RuleFor(order => order.Recipients)
-            .ChildRules(recipients =>
-            {
-                recipients.RuleForEach(recipient => recipient)
-                    .ChildRules(recipient =>
-                    {
-                        recipient.RuleFor(r => r)
-                            .Must(r => !string.IsNullOrEmpty(r.EmailAddress) ||
-                                !string.IsNullOrEmpty(r.MobileNumber) ||
-                                !string.IsNullOrEmpty(r.OrganizationNumber) ||
-                                !string.IsNullOrEmpty(r.NationalIdentityNumber))
-                            .WithMessage("Either a valid email address, mobile number starting with country code, organization number, or national identity number must be provided for each recipient.");
-                    });
-            });
+            .ValidatePreferredRecipients();
     }
 }

@@ -27,58 +27,199 @@ public static class RecipientRules
     private const int _organizationNumberLength = 9;
 
     /// <summary>
-    /// Validates a collection of recipients in a notification order request.
+    /// Adds validation rules for a collection of preferred recipients in a notification order request.
     /// </summary>
-    /// <typeparam name="T">The type of the collection, which must be an enumerable of <see cref="RecipientExt"/>.</typeparam>
+    /// <typeparam name="T">The type of the object being validated.</typeparam>
     /// <param name="ruleBuilder">The rule builder to which the validation rules will be added.</param>
     /// <returns>The rule builder options with the added validation rules.</returns>
     /// <remarks>
-    /// This method ensures that each recipient in the collection has valid email addresses, mobile numbers, national identity numbers, and organization numbers.
-    /// It also ensures that the collection is not empty.
+    /// This method ensures that each recipient in the collection has a valid email address, mobile number, organization number, or national identity number.
+    /// It also ensures that the email address, mobile number, national identity number, and organization number are in the correct format and that certain combinations are not allowed.
     /// </remarks>
-    public static IRuleBuilderOptions<T, IEnumerable<RecipientExt>> ValidateRecipients<T>(this IRuleBuilderInitial<T, IEnumerable<RecipientExt>> ruleBuilder)
+    public static IRuleBuilderOptions<T, IEnumerable<RecipientExt>> ValidatePreferredRecipients<T>(this IRuleBuilderInitial<T, IEnumerable<RecipientExt>> ruleBuilder)
     {
         return ruleBuilder
-            .ChildRules(recipients =>
-            {
-                recipients.RuleFor(recipients => recipients)
-                    .NotEmpty()
-                    .WithMessage("One or more recipient is required.");
+        .ChildRules(recipients =>
+        {
+            recipients.RuleFor(recipients => recipients)
+                .MustProvideRecipient();
 
-                recipients.RuleForEach(recipient => recipient)
-                    .ChildRules(recipient =>
-                    {
-                        recipient.RuleFor(r => r.EmailAddress)
-                           .Must(email => IsValidEmail(email))
-                           .When(r => !string.IsNullOrEmpty(r.EmailAddress))
-                           .WithMessage("Invalid email address format.");
+            recipients.RuleForEach(recipient => recipient)
+                .ChildRules(recipient =>
+                {
+                    recipient
+                        .RuleFor(r => r)
+                        .Must(r => !string.IsNullOrEmpty(r.EmailAddress) ||
+                              !string.IsNullOrEmpty(r.MobileNumber) ||
+                              !string.IsNullOrEmpty(r.OrganizationNumber) ||
+                              !string.IsNullOrEmpty(r.NationalIdentityNumber))
+                        .WithMessage("Either a valid email address, mobile number starting with country code, organization number, or national identity number must be provided for each recipient.");
 
-                        recipient.RuleFor(r => r.MobileNumber)
-                            .Must(mobileNumber => MobileNumberHelper.IsValidMobileNumber(mobileNumber))
-                            .When(r => !string.IsNullOrEmpty(r.MobileNumber))
-                            .WithMessage("Invalid mobile number format.");
+                    recipient.RuleFor(r => r.EmailAddress).MustBeValidEmail();
+                    recipient.RuleFor(r => r.MobileNumber).MustBeValidMobileNumber();
+                    recipient.RuleFor(r => r.NationalIdentityNumber).MustBeValidNationalIdentityNumber();
+                    recipient.RuleFor(r => r.OrganizationNumber).MustBeValidOrganizationNumber();
+                    recipient.RuleFor(r => r).MustNotCombineNationalIdentityNumber();
+                    recipient.RuleFor(r => r).MustNotCombineOrganizationNumber();
+                });
+        });
+    }
 
-                        recipient.RuleFor(r => r.NationalIdentityNumber)
-                            .Must(nin => nin?.Length == _nationalIdentityNumberLength && nin.All(char.IsDigit))
-                            .When(r => !string.IsNullOrEmpty(r.NationalIdentityNumber))
-                            .WithMessage($"National identity number must be {_nationalIdentityNumberLength} digits long.");
+    /// <summary>
+    /// Adds validation rules for a collection of SMS recipients in a notification order request.
+    /// </summary>
+    /// <typeparam name="T">The type of the object being validated.</typeparam>
+    /// <param name="ruleBuilder">The rule builder to which the validation rules will be added.</param>
+    /// <returns>The rule builder options with the added validation rules.</returns>
+    /// <remarks>
+    /// This method ensures that each recipient in the collection has a valid mobile number, organization number, or national identity number.
+    /// It also ensures that the mobile number, national identity number, and organization number are in the correct format and that certain combinations are not allowed.
+    /// </remarks>
+    public static IRuleBuilderOptions<T, IEnumerable<RecipientExt>> ValidateSmsRecipients<T>(this IRuleBuilderInitial<T, IEnumerable<RecipientExt>> ruleBuilder)
+    {
+        return ruleBuilder
+        .ChildRules(recipients =>
+        {
+            recipients.RuleFor(recipients => recipients)
+                .MustProvideRecipient();
 
-                        recipient.RuleFor(r => r)
-                            .Must(r => string.IsNullOrEmpty(r.EmailAddress) && string.IsNullOrEmpty(r.MobileNumber) && string.IsNullOrEmpty(r.OrganizationNumber))
-                            .When(r => !string.IsNullOrEmpty(r.NationalIdentityNumber))
-                            .WithMessage("National identity number cannot be combined with email address, mobile number, or organization number.");
+            recipients.RuleForEach(recipient => recipient)
+                .ChildRules(recipient =>
+                {
+                    recipient.RuleFor(r => r)
+                         .Must(r => !string.IsNullOrEmpty(r.MobileNumber) ||
+                         !string.IsNullOrEmpty(r.OrganizationNumber) ||
+                         !string.IsNullOrEmpty(r.NationalIdentityNumber))
+                         .WithMessage("Either a valid mobile number starting with country code, organization number, or national identity number must be provided for each recipient.");
 
-                        recipient.RuleFor(r => r.OrganizationNumber)
-                            .Must(on => on?.Length == _organizationNumberLength && on.All(char.IsDigit))
-                            .When(r => !string.IsNullOrEmpty(r.OrganizationNumber))
-                            .WithMessage($"Organization number must be {_organizationNumberLength} digits long.");
+                    recipient.RuleFor(r => r.MobileNumber).MustBeValidMobileNumber();
+                    recipient.RuleFor(r => r.NationalIdentityNumber).MustBeValidNationalIdentityNumber();
+                    recipient.RuleFor(r => r.OrganizationNumber).MustBeValidOrganizationNumber();
+                    recipient.RuleFor(r => r).MustNotCombineNationalIdentityNumber();
+                    recipient.RuleFor(r => r).MustNotCombineOrganizationNumber();
+                });
+        });
+    }
 
-                        recipient.RuleFor(r => r)
-                            .Must(r => string.IsNullOrEmpty(r.EmailAddress) && string.IsNullOrEmpty(r.MobileNumber) && string.IsNullOrEmpty(r.NationalIdentityNumber))
-                            .When(r => !string.IsNullOrEmpty(r.OrganizationNumber))
-                            .WithMessage("Organization number cannot be combined with email address, mobile number or national identity number.");
-                    });
-            });
+    /// <summary>
+    /// Adds validation rules for a collection of email recipients in a notification order request.
+    /// </summary>
+    /// <typeparam name="T">The type of the object being validated.</typeparam>
+    /// <param name="ruleBuilder">The rule builder to which the validation rules will be added.</param>
+    /// <returns>The rule builder options with the added validation rules.</returns>
+    /// <remarks>
+    /// This method ensures that each recipient in the collection has a valid email address, organization number, or national identity number.
+    /// It also ensures that the email address, national identity number, and organization number are in the correct format and that certain combinations are not allowed.
+    /// </remarks>
+    public static IRuleBuilderOptions<T, IEnumerable<RecipientExt>> ValidateEmailRecipients<T>(this IRuleBuilderInitial<T, IEnumerable<RecipientExt>> ruleBuilder)
+    {
+        return ruleBuilder
+        .ChildRules(recipients =>
+        {
+            recipients.RuleFor(recipients => recipients)
+                .MustProvideRecipient();
+
+            recipients.RuleForEach(recipient => recipient)
+                .ChildRules(recipient =>
+                {
+                    recipient
+                     .RuleFor(r => r)
+                     .Must(r => !string.IsNullOrEmpty(r.EmailAddress) ||
+                     !string.IsNullOrEmpty(r.OrganizationNumber) ||
+                     !string.IsNullOrEmpty(r.NationalIdentityNumber))
+                     .WithMessage("Either a valid email address, organization number, or national identity number must be provided for each recipient.");
+
+                    recipient.RuleFor(r => r.EmailAddress).MustBeValidEmail();
+                    recipient.RuleFor(r => r.NationalIdentityNumber).MustBeValidNationalIdentityNumber();
+                    recipient.RuleFor(r => r.OrganizationNumber).MustBeValidOrganizationNumber();
+                    recipient.RuleFor(r => r).MustNotCombineNationalIdentityNumber();
+                    recipient.RuleFor(r => r).MustNotCombineOrganizationNumber();
+                });
+        });
+    }
+
+    private static IRuleBuilderOptions<T, IEnumerable<RecipientExt>> MustProvideRecipient<T>(this IRuleBuilder<T, IEnumerable<RecipientExt>> ruleBuilder)
+    {
+        return ruleBuilder
+           .ChildRules(recipients =>
+           {
+               recipients
+               .RuleFor(recipients => recipients)
+                  .NotEmpty()
+                  .WithMessage("One or more recipient is required.");
+           });
+    }
+
+    private static IRuleBuilderOptions<T, string?> MustBeValidEmail<T>(this IRuleBuilder<T, string?> ruleBuilder)
+    {
+        return ruleBuilder
+             .ChildRules(email =>
+             {
+                 email.RuleFor(email => email)
+                    .Must(email => IsValidEmail(email))
+                    .When(email => !string.IsNullOrEmpty(email))
+                    .WithMessage("Invalid email address format.");
+             });
+    }
+
+    private static IRuleBuilderOptions<T, string?> MustBeValidMobileNumber<T>(this IRuleBuilder<T, string?> ruleBuilder)
+    {
+        return ruleBuilder
+        .ChildRules(mobileNumber =>
+        {
+            mobileNumber.RuleFor(mobileNumber => mobileNumber)
+                .Must(mobileNumber => MobileNumberHelper.IsValidMobileNumber(mobileNumber))
+                .When(mobileNumber => !string.IsNullOrEmpty(mobileNumber))
+                .WithMessage("Invalid mobile number format.");
+        });
+    }
+
+    private static IRuleBuilderOptions<T, string?> MustBeValidNationalIdentityNumber<T>(this IRuleBuilder<T, string?> ruleBuilder)
+    {
+        return ruleBuilder
+        .ChildRules(nationalIdentityNumber =>
+        {
+            nationalIdentityNumber.RuleFor(nin => nin)
+                .Must(nin => nin?.Length == _nationalIdentityNumberLength && nin.All(char.IsDigit))
+                .When(nin => !string.IsNullOrEmpty(nin))
+                .WithMessage($"National identity number must be {_nationalIdentityNumberLength} digits long.");
+        });
+    }
+
+    private static IRuleBuilderOptions<T, string?> MustBeValidOrganizationNumber<T>(this IRuleBuilder<T, string?> ruleBuilder)
+    {
+        return ruleBuilder
+       .ChildRules(organizationNumber =>
+       {
+           organizationNumber.RuleFor(on => on)
+           .Must(on => on?.Length == _organizationNumberLength && on.All(char.IsDigit))
+            .When(on => !string.IsNullOrEmpty(on))
+            .WithMessage($"Organization number must be {_organizationNumberLength} digits long.");
+       });
+    }
+
+    private static IRuleBuilderOptions<T, RecipientExt> MustNotCombineNationalIdentityNumber<T>(this IRuleBuilder<T, RecipientExt> ruleBuilder)
+    {
+        return ruleBuilder
+        .ChildRules(recipient =>
+        {
+            recipient.RuleFor(r => r)
+            .Must(r => string.IsNullOrEmpty(r.EmailAddress) && string.IsNullOrEmpty(r.MobileNumber) && string.IsNullOrEmpty(r.OrganizationNumber))
+            .When(r => !string.IsNullOrEmpty(r.NationalIdentityNumber))
+            .WithMessage("National identity number cannot be combined with email address, mobile number, or organization number.");
+        });
+    }
+
+    private static IRuleBuilderOptions<T, RecipientExt> MustNotCombineOrganizationNumber<T>(this IRuleBuilder<T, RecipientExt> ruleBuilder)
+    {
+        return ruleBuilder
+        .ChildRules(recipient =>
+        {
+            recipient.RuleFor(r => r)
+                .Must(r => string.IsNullOrEmpty(r.EmailAddress) && string.IsNullOrEmpty(r.MobileNumber) && string.IsNullOrEmpty(r.NationalIdentityNumber))
+                .When(r => !string.IsNullOrEmpty(r.OrganizationNumber))
+                .WithMessage("Organization number cannot be combined with email address, mobile number, or national identity number.");
+        });
     }
 
     /// <summary>
@@ -86,7 +227,7 @@ public static class RecipientRules
     /// </summary>
     /// <param name="email">The string to validate as an email address</param>
     /// <returns>A boolean indicating that the email is valid or not</returns>
-    public static bool IsValidEmail(string? email)
+    internal static bool IsValidEmail(string? email)
     {
         if (string.IsNullOrEmpty(email))
         {

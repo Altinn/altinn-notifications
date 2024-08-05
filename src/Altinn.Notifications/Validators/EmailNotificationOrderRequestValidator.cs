@@ -22,18 +22,6 @@ public class EmailNotificationOrderRequestValidator : AbstractValidator<EmailNot
             .ValidateEmailTemplateContent();
 
         RuleFor(order => order.Recipients)
-            .ValidateRecipients();
-
-        RuleFor(order => order.Recipients)
-        .ChildRules(recipients =>
-        {
-            recipients.RuleForEach(recipient => recipient)
-                .ChildRules(recipient =>
-                {
-                    recipient.RuleFor(r => r)
-                   .Must(r => !string.IsNullOrEmpty(r.EmailAddress) || !string.IsNullOrEmpty(r.OrganizationNumber) || !string.IsNullOrEmpty(r.NationalIdentityNumber))
-                   .WithMessage("Either a valid email address, organization number, or national identity number must be provided for each recipient.");
-                });
-        });
+            .ValidateEmailRecipients();
     }
 }

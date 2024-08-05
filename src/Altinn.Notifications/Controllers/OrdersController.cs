@@ -1,16 +1,21 @@
 ﻿using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
+using Altinn.Notifications.Validators;
+
+using FluentValidation;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 using Swashbuckle.AspNetCore.Annotations;
+using Swashbuckle.AspNetCore.Filters;
 
 namespace Altinn.Notifications.Controllers;
 
@@ -24,14 +29,18 @@ namespace Altinn.Notifications.Controllers;
 [SwaggerResponse(403, "Caller is not authorized to access the requested resource")]
 public class OrdersController : ControllerBase
 {
+    private readonly IValidator<NotificationOrderRequestExt> _validator;
     private readonly IGetOrderService _getOrderService;
+    private readonly IOrderRequestService _orderRequestService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrdersController"/> class.
     /// </summary>
-    public OrdersController(IGetOrderService getOrderService)
+    public OrdersController(IValidator<NotificationOrderRequestExt> validator, IGetOrderService getOrderService, IOrderRequestService orderRequestService)
     {
+        _validator = validator;
         _getOrderService = getOrderService;
+        _orderRequestService = orderRequestService;
     }
 
     /// <summary>
@@ -115,5 +124,41 @@ public class OrdersController : ControllerBase
              return order.MapToNotificationOrderWithStatusExt();
          },
          error => StatusCode(error.ErrorCode, error.ErrorMessage));
+    }
+
+    /// <summary>
+    /// Add an email notification order.
+    /// </summary>
+    /// <remarks>
+    /// The API will accept the request after som basic validation of the request.
+    /// The system will also attempt to verify that it will be possible to fulfill the order.
+    /// </remarks>
+    /// <returns>The notification order request response</returns>
+    [HttpPost]
+    [Consumes("application/json")]
+    [Produces("application/json")]
+    [SwaggerResponse(202, "The notification order was accepted", typeof(NotificationOrderRequestResponseExt))]
+    [SwaggerResponse(400, "The notification order is invalid", typeof(ValidationProblemDetails))]
+    [SwaggerResponseHeader(202, "Location", "string", "Link to access the newly created notification order.")]
+    public async Task<ActionResult<NotificationOrderRequestResponseExt>> Post(NotificationOrderRequestExt notificationOrderRequest)
+    {
+        var validationResult = _validator.Validate(notificationOrderRequest);
+        if (!validationResult.IsValid)
+        {
+            validationResult.AddToModelState(this.ModelState);
+            return ValidationProblem(ModelState);
+        }
+
+        string? creator = HttpContext.GetOrg();
+
+        if (creator == null)
+        {
+            return Forbid();
+        }
+
+        var orderRequest = notificationOrderRequest.MapToOrderRequest(creator);
+        NotificationOrderRequestResponse result = await _orderRequestService.RegisterNotificationOrder(orderRequest);
+
+        return Accepted(result.OrderId!.GetSelfLinkFromOrderId(), result.MapToExternal());
     }
 }

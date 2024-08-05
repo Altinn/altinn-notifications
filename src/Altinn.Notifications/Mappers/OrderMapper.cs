@@ -14,6 +14,58 @@ namespace Altinn.Notifications.Mappers;
 public static class OrderMapper
 {
     /// <summary>
+    /// Maps a <see cref="NotificationOrderRequestExt"/> to a <see cref="NotificationOrderRequest"/>
+    /// </summary>
+    public static NotificationOrderRequest MapToOrderRequest(this NotificationOrderRequestExt extRequest, string creator)
+    {
+        List<Recipient> recipients =
+          extRequest.Recipients
+          .Select(r =>
+          {
+              List<IAddressPoint> addresses = [];
+
+              if (!string.IsNullOrEmpty(r.EmailAddress))
+              {
+                  addresses.Add(new EmailAddressPoint(r.EmailAddress));
+              }
+
+              return new Recipient(addresses, r.OrganizationNumber, r.NationalIdentityNumber);
+          })
+          .ToList();
+
+        List<INotificationTemplate> templateList = new();
+
+        if (extRequest.EmailTemplate != null)
+        {
+            var emailTemplate = new EmailTemplate(
+                null,
+                extRequest.EmailTemplate.Subject,
+                extRequest.EmailTemplate.Body,
+                (EmailContentType?)extRequest.EmailTemplate.ContentType ?? EmailContentType.Plain);
+
+            templateList.Add(emailTemplate);
+        }
+
+        if (extRequest.SmsTemplate != null)
+        {
+            INotificationTemplate smsTemplate = new SmsTemplate(extRequest.SmsTemplate.SenderNumber, extRequest.SmsTemplate.Body);
+
+            templateList.Add(smsTemplate);
+        }
+
+        return new NotificationOrderRequest(
+            extRequest.SendersReference,
+            creator,
+            templateList,
+            extRequest.RequestedSendTime.ToUniversalTime(),
+            NotificationChannel.Email,
+            recipients,
+            extRequest.IgnoreReservation,
+            extRequest.ResourceId,
+            extRequest.ConditionEndpoint);
+    }
+
+    /// <summary>
     /// Maps a <see cref="EmailNotificationOrderRequestExt"/> to a <see cref="NotificationOrderRequest"/>
     /// </summary>
     public static NotificationOrderRequest MapToOrderRequest(this EmailNotificationOrderRequestExt extRequest, string creator)
