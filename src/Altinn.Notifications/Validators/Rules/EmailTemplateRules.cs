@@ -54,7 +54,7 @@ namespace Altinn.Notifications.Validators.Rules
             return ruleBuilder
                 .ChildRules(order =>
                 {
-                    order.RuleFor(order => order.ToEmailTemplateExt())
+                    order.RuleFor(order => order.MapToEmailTemplateExt())
                       .ChildRules(template =>
                       {
                           ApplyCommonEmailTemplateRules(template.RuleFor(t => t));

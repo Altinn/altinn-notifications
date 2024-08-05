@@ -249,7 +249,7 @@ public static class OrderMapper
     /// </summary>
     /// <param name="request">The email notification order request.</param>
     /// <returns>The mapped email template.</returns>
-    public static EmailTemplateExt ToEmailTemplateExt(this EmailNotificationOrderRequestExt request)
+    public static EmailTemplateExt MapToEmailTemplateExt(this EmailNotificationOrderRequestExt request)
     {
         return new EmailTemplateExt
         {
@@ -264,7 +264,7 @@ public static class OrderMapper
     /// </summary>
     /// <param name="request">The SMS notification order request.</param>
     /// <returns>The mapped SMS template.</returns>
-    public static SmsTemplateExt ToSmsTemplateExt(this SmsNotificationOrderRequestExt request)
+    public static SmsTemplateExt MapToSmsTemplateExt(this SmsNotificationOrderRequestExt request)
     {
         return new SmsTemplateExt
         {

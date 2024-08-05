@@ -26,7 +26,7 @@ public class NotificationOrderRequestValidator : AbstractValidator<NotificationO
                .ValidateOptionalEmailTemplate();
 
         RuleFor(order => order)
-        .ValidateOptionalSmsTemplate();
+            .ValidateOptionalSmsTemplate();
 
         RuleFor(order => order.Recipients)
             .ValidatePreferredRecipients();

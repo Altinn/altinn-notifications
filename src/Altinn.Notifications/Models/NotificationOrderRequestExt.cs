@@ -3,7 +3,7 @@
 namespace Altinn.Notifications.Models
 {
     /// <summary>
-    /// Class representing an notification order request
+    /// Class representing a notification order request
     /// </summary>
     /// <remarks>
     /// External representation to be used in the API.

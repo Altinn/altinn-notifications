@@ -127,7 +127,7 @@ public class OrdersController : ControllerBase
     }
 
     /// <summary>
-    /// Add an email notification order.
+    /// Add a notification order.
     /// </summary>
     /// <remarks>
     /// The API will accept the request after som basic validation of the request.

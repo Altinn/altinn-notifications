@@ -6,9 +6,9 @@ using FluentValidation;
 namespace Altinn.Notifications.Validators.Rules
 {
     /// <summary>
-    /// Provides validation rules for Sms templates used in notification order requests.
-    /// This class contains methods to validate the presence and content of Sms templates
-    /// based on the notification channel and specific properties of the Sms template.
+    /// Provides validation rules for SMS templates used in notification order requests.
+    /// This class contains methods to validate the presence and content of SMS templates
+    /// based on the notification channel and specific properties of the SMS template.
     /// </summary>
     public static class SmsTemplateRules
     {
@@ -20,7 +20,7 @@ namespace Altinn.Notifications.Validators.Rules
         ];
 
         /// <summary>
-        /// Validates the Sms template for the specified notification order request.
+        /// Validates the SMS template for the specified notification order request.
         /// </summary>
         /// <typeparam name="T">The type of the notification order request.</typeparam>
         /// <param name="ruleBuilder">The rule builder.</param>
@@ -34,7 +34,7 @@ namespace Altinn.Notifications.Validators.Rules
                     order.RuleFor(o => o.SmsTemplate)
                        .NotNull()
                        .When(order => _smsTemplateRequiredChannels.Contains(order.NotificationChannel!.Value))
-                       .WithMessage("An sms template is required for the selected the notification channel.")
+                       .WithMessage("An SMS template is required for the selected the notification channel.")
                        .DependentRules(() =>
                        {
                            ApplyCommonSmsTemplateRules(order.RuleFor(o => o.SmsTemplate!));
@@ -43,9 +43,9 @@ namespace Altinn.Notifications.Validators.Rules
         }
 
         /// <summary>
-        /// Validates the Sms template properties for the specified Sms notification order request.
+        /// Validates the SMS template properties for the specified SMS notification order request.
         /// </summary>
-        /// <typeparam name="T">The type of the Sms notification order request.</typeparam>
+        /// <typeparam name="T">The type of the SMS notification order request.</typeparam>
         /// <param name="ruleBuilder">The rule builder.</param>
         /// <returns>The rule builder options.</returns>
         public static IRuleBuilderOptions<T, T> ValidateSmsTemplateContent<T>(this IRuleBuilderInitial<T, T> ruleBuilder)
@@ -54,7 +54,7 @@ namespace Altinn.Notifications.Validators.Rules
             return ruleBuilder
                 .ChildRules(order =>
                 {                  
-                    order.RuleFor(order => order.ToSmsTemplateExt())
+                    order.RuleFor(order => order.MapToSmsTemplateExt())
                       .ChildRules(template =>
                       {
                           ApplyCommonSmsTemplateRules(template.RuleFor(t => t));
@@ -63,7 +63,7 @@ namespace Altinn.Notifications.Validators.Rules
         }
 
         /// <summary>
-        /// Applies common validation rules for the Sms template.
+        /// Applies common validation rules for the SMS template.
         /// </summary>
         /// <typeparam name="T">The type of the template.</typeparam>
         /// <param name="ruleBuilder">The rule builder for the template.</param>
@@ -74,7 +74,7 @@ namespace Altinn.Notifications.Validators.Rules
                 {
                     template.RuleFor(t => t.Body)
                         .NotEmpty()
-                        .WithMessage("The sms template body must not be empty.");
+                        .WithMessage("The SMS template body must not be empty.");
                 });
         }
     }
