@@ -33,8 +33,8 @@ namespace Altinn.Notifications.Validators.Rules
                 {
                     order.RuleFor(o => o.EmailTemplate)
                        .NotNull()
-                       .When(order => _emailTemplateRequiredChannels.Contains(order.NotificationChannel!.Value))
-                       .WithMessage("An email template is required for the selected the notification channel.")
+                       .When(order => order.NotificationChannel.HasValue && _emailTemplateRequiredChannels.Contains(order.NotificationChannel.Value))
+                       .WithMessage("An email template is required for the selected notification channel.")
                        .DependentRules(() =>
                        {
                            ApplyCommonEmailTemplateRules(order.RuleFor(o => o.EmailTemplate!));

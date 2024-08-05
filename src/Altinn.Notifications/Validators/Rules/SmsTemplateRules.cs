@@ -33,7 +33,7 @@ namespace Altinn.Notifications.Validators.Rules
                 {
                     order.RuleFor(o => o.SmsTemplate)
                        .NotNull()
-                       .When(order => _smsTemplateRequiredChannels.Contains(order.NotificationChannel!.Value))
+                       .When(order => order.NotificationChannel.HasValue && _smsTemplateRequiredChannels.Contains(order.NotificationChannel.Value))
                        .WithMessage("An SMS template is required for the selected the notification channel.")
                        .DependentRules(() =>
                        {
