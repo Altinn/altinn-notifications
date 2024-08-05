@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Validators;
+using Altinn.Notifications.Validators.Rules;
 
 using FluentValidation;
 
@@ -177,7 +178,7 @@ public class EmailNotificationOrderRequestValidatorTests
 
         var actual = _validator.Validate(order);
         Assert.False(actual.IsValid);
-        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("'Subject' must not be empty."));
+        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("The email template subject must not be empty."));
     }
 
     [Fact]
@@ -191,7 +192,7 @@ public class EmailNotificationOrderRequestValidatorTests
 
         var actual = _validator.Validate(order);
         Assert.False(actual.IsValid);
-        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("'Body' must not be empty."));
+        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("The email template body must not be empty."));
     }
 
     [Fact]
@@ -226,7 +227,7 @@ public class EmailNotificationOrderRequestValidatorTests
     [InlineData("user.@example.com", false)]
     public void IsValidEmail(string email, bool expectedResult)
     {
-        bool actual = EmailNotificationOrderRequestValidator.IsValidEmail(email);
+        bool actual = RecipientRules.IsValidEmail(email);
         Assert.Equal(expectedResult, actual);
     }
 }

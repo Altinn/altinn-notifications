@@ -177,7 +177,7 @@ public class SmsNotificationOrderRequestValidatorTests
 
         var actual = _validator.Validate(order);
         Assert.False(actual.IsValid);
-        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("'Body' must not be empty."));
+        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("The sms template body must not be empty."));
     }
 
     [Fact]
