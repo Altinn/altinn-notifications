@@ -25,7 +25,7 @@ public interface IEmailOrderProcessingService
     public Task ProcessOrderRetry(NotificationOrder order);
 
     /// <summary>
-    /// Pretry processing of a notification order for the provided list of recipients
+    /// Retryprocessing of a notification order for the provided list of recipients
     /// without looking up additional recipient data
     /// </summary>
     public Task ProcessOrderRetryWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients);

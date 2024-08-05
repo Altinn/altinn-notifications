@@ -15,7 +15,7 @@ public class PreferredChannelProcessingService : IPreferredChannelProcessingServ
     private readonly IContactPointService _contactPointService;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="OrderProcessingService"/> class.
+    /// Initializes a new instance of the <see cref="PreferredChannelProcessingService"/> class.
     /// </summary>
     public PreferredChannelProcessingService(
         IEmailOrderProcessingService emailProcessingService,
