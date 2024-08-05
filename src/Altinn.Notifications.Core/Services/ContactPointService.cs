@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Helpers;
+﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Helpers;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
@@ -82,6 +83,114 @@ namespace Altinn.Notifications.Core.Services
                       .ToList());
                     return recipient;
                 });
+        }
+
+        /// <inheritdoc/>
+        public async Task AddPreferredContactPoints(NotificationChannel channel, List<Recipient> recipients, string? resourceId)
+        {
+            await AugmentRecipients(
+                recipients,
+                resourceId,
+                (recipient, userContactPoints) =>
+                {
+                    if (channel == NotificationChannel.EmailPreferred)
+                    {
+                        AddPreferredOrFallbackContactPoint(
+                            recipient,
+                            userContactPoints.Email,
+                            userContactPoints.MobileNumber,
+                            email => new EmailAddressPoint(email),
+                            mobile => new SmsAddressPoint(mobile));
+                    }
+                    else if (channel == NotificationChannel.SmsPreferred)
+                    {
+                        AddPreferredOrFallbackContactPoint(
+                           recipient,
+                           userContactPoints.MobileNumber,
+                           userContactPoints.Email,
+                           mobile => new SmsAddressPoint(mobile),
+                           email => new EmailAddressPoint(email));
+                    }
+
+                    return recipient;
+                },
+                (recipient, orgContactPoints) =>
+                {
+                    if (channel == NotificationChannel.EmailPreferred)
+                    {
+                        AddPreferredOrFallbackContactPointList(
+                           recipient,
+                           orgContactPoints.EmailList,
+                           orgContactPoints.MobileNumberList,
+                           e => new EmailAddressPoint(e),
+                           m => new SmsAddressPoint(m));
+
+                        foreach (var userContact in orgContactPoints.UserContactPoints)
+                        {
+                            AddPreferredOrFallbackContactPoint(
+                                recipient,
+                                userContact.Email,
+                                userContact.MobileNumber,
+                                email => new EmailAddressPoint(email),
+                                mobile => new SmsAddressPoint(mobile));
+                        }
+                    }
+                    else if (channel == NotificationChannel.SmsPreferred)
+                    {
+                        AddPreferredOrFallbackContactPointList(
+                           recipient,
+                           orgContactPoints.MobileNumberList,
+                           orgContactPoints.EmailList,
+                           m => new SmsAddressPoint(m),
+                           e => new EmailAddressPoint(e));
+
+                        foreach (var userContact in orgContactPoints.UserContactPoints)
+                        {
+                            AddPreferredOrFallbackContactPoint(
+                                recipient,
+                                userContact.MobileNumber,
+                                userContact.Email,
+                                mobile => new SmsAddressPoint(mobile),
+                                email => new EmailAddressPoint(email));
+                        }
+                    }
+
+                    return recipient;
+                });
+        }
+
+        private static void AddPreferredOrFallbackContactPointList<TPreferred, TFallback>(
+        Recipient recipient,
+        List<TPreferred> preferredList,
+        List<TFallback> fallbackList,
+        Func<TPreferred, IAddressPoint> preferredSelector,
+        Func<TFallback, IAddressPoint> fallbackSelector)
+        {
+            if (preferredList.Count > 0)
+            {
+                recipient.AddressInfo.AddRange(preferredList.Select(preferredSelector).ToList());
+            }
+            else
+            {
+                recipient.AddressInfo.AddRange(fallbackList.Select(fallbackSelector).ToList());
+            }
+        }
+
+        private static void AddPreferredOrFallbackContactPoint<TPreferred, TFallback>(
+            Recipient recipient,
+            TPreferred preferredContact,
+            TFallback fallbackContact,
+            Func<TPreferred, IAddressPoint> preferredSelector,
+            Func<TFallback, IAddressPoint> fallbackSelector)
+        {
+            if (!string.IsNullOrEmpty(preferredContact?.ToString()))
+            {
+                recipient.AddressInfo.Add(preferredSelector(preferredContact));
+            }
+            else if (!string.IsNullOrEmpty(fallbackContact?.ToString()))
+            {
+                recipient.AddressInfo.Add(fallbackSelector(fallbackContact));
+            }
         }
 
         private async Task<List<Recipient>> AugmentRecipients(

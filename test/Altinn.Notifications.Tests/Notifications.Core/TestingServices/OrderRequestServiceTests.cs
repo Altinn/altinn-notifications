@@ -213,7 +213,7 @@ public class OrderRequestServiceTests
     }
 
     [Fact]
-    public async Task RegisterNotificationOrder_LookupFails_OrderCreated()
+    public async Task RegisterNotificationOrder_ForSms_LookupFails_OrderCreated()
     {
         // Arrange
         DateTime sendTime = DateTime.UtcNow;
@@ -317,7 +317,7 @@ public class OrderRequestServiceTests
         repoMock.VerifyAll();
         contactPointMock.VerifyAll();
     }
-    
+
     [Fact]
     public async Task RegisterNotificationOrder_ForSms_LookupSuccess_OrderCreated()
     {
@@ -335,7 +335,7 @@ public class OrderRequestServiceTests
             RequestedSendTime = sendTime,
             Recipients = [
                 new Recipient() { NationalIdentityNumber = "16069412345" },
-                ],
+            ],
             Templates = { new SmsTemplate { Body = "sms-body", SenderNumber = "TestDefaultSmsSenderNumberNumber" } }
         };
 
@@ -346,7 +346,7 @@ public class OrderRequestServiceTests
             NotificationChannel = NotificationChannel.Sms,
             Recipients = [
                 new Recipient() { NationalIdentityNumber = "16069412345" },
-                ],
+            ],
             RequestedSendTime = sendTime,
             Templates = { new SmsTemplate { Body = "sms-body" } }
         };
@@ -367,6 +367,175 @@ public class OrderRequestServiceTests
                     if (recipient.NationalIdentityNumber == "16069412345")
                     {
                         recipient.AddressInfo.Add(new SmsAddressPoint("+4799999999"));
+                        recipient.IsReserved = false;
+                    }
+                }
+            });
+
+        var service = GetTestService(repoMock.Object, contactPointMock.Object, id, createdTime);
+
+        // Act
+        NotificationOrderRequestResponse actual = await service.RegisterNotificationOrder(input);
+
+        // Assert        
+        Assert.Equal(RecipientLookupStatus.Success, actual.RecipientLookup?.Status);
+        Assert.Equal(0, actual.RecipientLookup!.IsReserved?.Count);
+        Assert.Equal(0, actual.RecipientLookup!.MissingContact?.Count);
+        repoMock.VerifyAll();
+        contactPointMock.VerifyAll();
+    }
+
+    [Fact]
+    public async Task RegisterNotificationOrder_ForSmsPreferred_LookupFails_OrderCreated()
+    {
+        // Arrange
+        DateTime sendTime = DateTime.UtcNow;
+        DateTime createdTime = DateTime.UtcNow.AddMinutes(-2);
+        Guid id = Guid.NewGuid();
+
+        NotificationOrderRequest input = new()
+        {
+            Creator = new Creator("ttd"),
+
+            NotificationChannel = NotificationChannel.SmsPreferred,
+            Recipients = [new Recipient() { NationalIdentityNumber = "1" }],
+            SendersReference = "senders-reference",
+            RequestedSendTime = sendTime,
+            Templates = [
+                    new SmsTemplate { Body = "sms-body" },
+                new EmailTemplate { Body = "email-body", FromAddress = "noreply@altinn.no" }]
+        };
+
+        Mock<IOrderRepository> repoMock = new();
+        repoMock
+            .Setup(r => r.Create(It.IsAny<NotificationOrder>()))
+            .ReturnsAsync((NotificationOrder order) => order);
+
+        var service = GetTestService(repoMock.Object, null, id, createdTime);
+
+        // Act
+        NotificationOrderRequestResponse actual = await service.RegisterNotificationOrder(input);
+
+        // Assert        
+        Assert.Equal(RecipientLookupStatus.Failed, actual.RecipientLookup?.Status);
+        repoMock.Verify(r => r.Create(It.IsAny<NotificationOrder>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task RegisterNotificationOrder_ForSmsPreferred_LookupPartialSuccess_OrderCreated()
+    {
+        // Arrange
+        DateTime sendTime = DateTime.UtcNow;
+        DateTime createdTime = DateTime.UtcNow.AddMinutes(-2);
+        Guid id = Guid.NewGuid();
+
+        NotificationOrderRequest input = new()
+        {
+            Creator = new Creator("ttd"),
+
+            NotificationChannel = NotificationChannel.SmsPreferred,
+            Recipients = [
+                new Recipient() { NationalIdentityNumber = "1" },
+                new Recipient() { NationalIdentityNumber = "2" },
+                new Recipient() { NationalIdentityNumber = "3" },
+                new Recipient() { NationalIdentityNumber = "4" }
+
+                ],
+            RequestedSendTime = sendTime,
+            Templates = [
+                new SmsTemplate { Body = "sms-body" },
+                new EmailTemplate { Body = "email-body", FromAddress = "noreply@altinn.no" }]
+        };
+
+        Mock<IOrderRepository> repoMock = new();
+        repoMock
+            .Setup(r => r.Create(It.IsAny<NotificationOrder>()))
+            .ReturnsAsync((NotificationOrder order) => order);
+
+        Mock<IContactPointService> contactPointMock = new();
+        contactPointMock
+            .Setup(cp => cp.AddPreferredContactPoints(input.NotificationChannel, It.IsAny<List<Recipient>>(), It.IsAny<string?>()))
+            .Callback<NotificationChannel, List<Recipient>, string?>((_, recipients, _) =>
+            {
+                foreach (var recipient in recipients)
+                {
+                    if (recipient.NationalIdentityNumber == "1")
+                    {
+                        recipient.AddressInfo.Add(new SmsAddressPoint("+4799999999"));
+                        recipient.IsReserved = false;
+                    }
+                    else if (recipient.NationalIdentityNumber == "2")
+                    {
+                        recipient.AddressInfo.Add(new EmailAddressPoint("2@user.com"));
+                        recipient.IsReserved = false;
+                    }
+                    else if (recipient.NationalIdentityNumber == "3")
+                    {
+                        recipient.IsReserved = true;
+                    }
+                    else if (recipient.NationalIdentityNumber == "4")
+                    {
+                        recipient.IsReserved = false;
+                    }
+                }
+            });
+
+        var service = GetTestService(repoMock.Object, contactPointMock.Object, id, createdTime);
+
+        // Act
+        NotificationOrderRequestResponse actual = await service.RegisterNotificationOrder(input);
+
+        // Assert        
+        Assert.Equal(RecipientLookupStatus.PartialSuccess, actual.RecipientLookup?.Status);
+        Assert.Single(actual.RecipientLookup!.IsReserved!);
+        Assert.Single(actual.RecipientLookup!.MissingContact!);
+        repoMock.VerifyAll();
+        contactPointMock.VerifyAll();
+    }
+
+    [Fact]
+    public async Task RegisterNotificationOrder_ForSmsPreferred_LookupSuccess_OrderCreated()
+    {
+        // Arrange
+        DateTime sendTime = DateTime.UtcNow;
+        DateTime createdTime = DateTime.UtcNow.AddMinutes(-2);
+        Guid id = Guid.NewGuid();
+
+        NotificationOrderRequest input = new()
+        {
+            Creator = new Creator("ttd"),
+
+            NotificationChannel = NotificationChannel.SmsPreferred,
+            Recipients = [
+               new Recipient() { NationalIdentityNumber = "1" },
+                new Recipient() { NationalIdentityNumber = "2" }
+               ],
+            RequestedSendTime = sendTime,
+            Templates = [
+                   new SmsTemplate { Body = "sms-body" },
+                new EmailTemplate { Body = "email-body", FromAddress = "noreply@altinn.no" }]
+        };
+
+        Mock<IOrderRepository> repoMock = new();
+        repoMock
+            .Setup(r => r.Create(It.IsAny<NotificationOrder>()))
+            .ReturnsAsync((NotificationOrder order) => order);
+
+        Mock<IContactPointService> contactPointMock = new();
+        contactPointMock
+            .Setup(cp => cp.AddPreferredContactPoints(input.NotificationChannel, It.IsAny<List<Recipient>>(), It.IsAny<string?>()))
+            .Callback<NotificationChannel, List<Recipient>, string?>((_, recipients, _) =>
+            {
+                foreach (var recipient in recipients)
+                {
+                    if (recipient.NationalIdentityNumber == "1")
+                    {
+                        recipient.AddressInfo.Add(new SmsAddressPoint("+4799999999"));
+                        recipient.IsReserved = false;
+                    }
+                    else if (recipient.NationalIdentityNumber == "2")
+                    {
+                        recipient.AddressInfo.Add(new EmailAddressPoint("2@user.com"));
                         recipient.IsReserved = false;
                     }
                 }

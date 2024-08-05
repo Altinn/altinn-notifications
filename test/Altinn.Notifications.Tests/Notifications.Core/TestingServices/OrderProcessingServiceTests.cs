@@ -97,6 +97,37 @@ public class OrderProcessingServiceTests
         emailMockService.Verify(e => e.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Never);
     }
 
+    [Theory]
+    [InlineData(NotificationChannel.EmailPreferred)]
+    [InlineData(NotificationChannel.SmsPreferred)]
+    public async Task ProcessOrder_EmailOrSmsPreferredOrder_PreferredServiceCalled(NotificationChannel notificationChannel)
+    {
+        // Arrange 
+        NotificationOrder order = new()
+        {
+            NotificationChannel = notificationChannel,
+        };
+
+        var emailMockService = new Mock<IEmailOrderProcessingService>();
+        emailMockService.Setup(e => e.ProcessOrder(It.IsAny<NotificationOrder>()));
+
+        var smsMockService = new Mock<ISmsOrderProcessingService>();
+        smsMockService.Setup(s => s.ProcessOrder(It.IsAny<NotificationOrder>()));
+
+        var preferredMockService = new Mock<IPreferredChannelProcessingService>();
+        preferredMockService.Setup(e => e.ProcessOrder(It.IsAny<NotificationOrder>()));
+
+        var orderProcessingService = GetTestService(emailMock: emailMockService.Object, smsMock: smsMockService.Object, preferredMock: preferredMockService.Object);
+
+        // Act
+        await orderProcessingService.ProcessOrder(order);
+
+        // Assert
+        emailMockService.Verify(e => e.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Never);
+        smsMockService.Verify(s => s.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Never);
+        preferredMockService.Verify(s => s.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Once);
+    }
+
     [Fact]
     public async Task ProcessOrder_SendConditionNotMet_ProcessingStops()
     {
@@ -180,6 +211,36 @@ public class OrderProcessingServiceTests
         // Assert
         smsMockService.Verify(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Once);
         emailMockService.Verify(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData(NotificationChannel.EmailPreferred)]
+    [InlineData(NotificationChannel.SmsPreferred)]
+    public async Task ProcessOrderRetry_EmailOrSmsPreferredOrder_PreferredServiceCalled(NotificationChannel notificationChannel)
+    {
+        // Arrange 
+        NotificationOrder order = new()
+        {
+            NotificationChannel = notificationChannel,
+        };
+        var emailMockService = new Mock<IEmailOrderProcessingService>();
+        emailMockService.Setup(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>()));
+
+        var smsMockService = new Mock<ISmsOrderProcessingService>();
+        smsMockService.Setup(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>()));
+
+        var preferredMockService = new Mock<IPreferredChannelProcessingService>();
+        preferredMockService.Setup(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>()));
+
+        var orderProcessingService = GetTestService(emailMock: emailMockService.Object, smsMock: smsMockService.Object, preferredMock: preferredMockService.Object);
+
+        // Act
+        await orderProcessingService.ProcessOrderRetry(order);
+
+        // Assert
+        emailMockService.Verify(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Never);
+        smsMockService.Verify(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Never);
+        preferredMockService.Verify(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Once);
     }
 
     [Fact]
@@ -312,6 +373,7 @@ public class OrderProcessingServiceTests
         IOrderRepository? repo = null,
         IEmailOrderProcessingService? emailMock = null,
         ISmsOrderProcessingService? smsMock = null,
+        IPreferredChannelProcessingService? preferredMock = null,
         IKafkaProducer? producer = null,
         IConditionClient? conditionClient = null)
     {
@@ -333,6 +395,12 @@ public class OrderProcessingServiceTests
             smsMock = smsMockService.Object;
         }
 
+        if (preferredMock == null)
+        {
+            var preferredMockService = new Mock<IPreferredChannelProcessingService>();
+            preferredMock = preferredMockService.Object;
+        }
+
         if (producer == null)
         {
             var producerMock = new Mock<IKafkaProducer>();
@@ -347,6 +415,6 @@ public class OrderProcessingServiceTests
 
         var kafkaSettings = new Altinn.Notifications.Core.Configuration.KafkaSettings() { PastDueOrdersTopicName = _pastDueTopicName };
 
-        return new OrderProcessingService(repo, emailMock, smsMock, conditionClient, producer, Options.Create(kafkaSettings), new LoggerFactory().CreateLogger<OrderProcessingService>());
+        return new OrderProcessingService(repo, emailMock, smsMock, preferredMock, conditionClient, producer, Options.Create(kafkaSettings), new LoggerFactory().CreateLogger<OrderProcessingService>());
     }
 }

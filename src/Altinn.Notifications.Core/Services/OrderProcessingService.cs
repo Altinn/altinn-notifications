@@ -21,6 +21,7 @@ public class OrderProcessingService : IOrderProcessingService
     private readonly IOrderRepository _orderRepository;
     private readonly IEmailOrderProcessingService _emailProcessingService;
     private readonly ISmsOrderProcessingService _smsProcessingService;
+    private readonly IPreferredChannelProcessingService _preferredChannelProcessingService;
     private readonly IConditionClient _conditionClient;
     private readonly IKafkaProducer _producer;
     private readonly string _pastDueOrdersTopic;
@@ -33,6 +34,7 @@ public class OrderProcessingService : IOrderProcessingService
         IOrderRepository orderRepository,
         IEmailOrderProcessingService emailProcessingService,
         ISmsOrderProcessingService smsProcessingService,
+        IPreferredChannelProcessingService preferredChannelProcessingService,
         IConditionClient conditionClient,
         IKafkaProducer producer,
         IOptions<KafkaSettings> kafkaSettings,
@@ -41,6 +43,7 @@ public class OrderProcessingService : IOrderProcessingService
         _orderRepository = orderRepository;
         _emailProcessingService = emailProcessingService;
         _smsProcessingService = smsProcessingService;
+        _preferredChannelProcessingService = preferredChannelProcessingService;
         _conditionClient = conditionClient;
         _producer = producer;
         _pastDueOrdersTopic = kafkaSettings.Value.PastDueOrdersTopicName;
@@ -89,6 +92,10 @@ public class OrderProcessingService : IOrderProcessingService
             case NotificationChannel.Sms:
                 await _smsProcessingService.ProcessOrder(order);
                 break;
+            case NotificationChannel.EmailPreferred:
+            case NotificationChannel.SmsPreferred:
+                await _preferredChannelProcessingService.ProcessOrder(order);
+                break;
         }
 
         await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.Completed);
@@ -112,6 +119,10 @@ public class OrderProcessingService : IOrderProcessingService
                 break;
             case NotificationChannel.Sms:
                 await _smsProcessingService.ProcessOrderRetry(order);
+                break;
+            case NotificationChannel.EmailPreferred:
+            case NotificationChannel.SmsPreferred:
+                await _preferredChannelProcessingService.ProcessOrderRetry(order);
                 break;
         }
 
