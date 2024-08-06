@@ -33,7 +33,7 @@ public static class OrderMapper
           })
           .ToList();
 
-        List<INotificationTemplate> templateList = new();
+        List<INotificationTemplate> templateList = [];
 
         if (extRequest.EmailTemplate != null)
         {

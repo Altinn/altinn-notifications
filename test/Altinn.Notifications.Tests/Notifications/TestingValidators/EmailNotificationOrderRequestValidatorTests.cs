@@ -27,7 +27,7 @@ public class EmailNotificationOrderRequestValidatorTests
         var order = new EmailNotificationOrderRequestExt()
         {
             Subject = "This is an email subject",
-            Recipients = new List<RecipientExt>() { new RecipientExt() { EmailAddress = "recipient2@domain.com" } },
+            Recipients = [new RecipientExt() { EmailAddress = "recipient2@domain.com" }],
             Body = "This is an email body"
         };
 
@@ -44,7 +44,7 @@ public class EmailNotificationOrderRequestValidatorTests
         var order = new EmailNotificationOrderRequestExt()
         {
             Subject = "This is an email subject",
-            Recipients = new List<RecipientExt>() { new RecipientExt() { OrganizationNumber = organizationNumber } },
+            Recipients = [new RecipientExt() { OrganizationNumber = organizationNumber }],
             Body = "This is an email body"
         };
 
@@ -61,7 +61,7 @@ public class EmailNotificationOrderRequestValidatorTests
         var order = new EmailNotificationOrderRequestExt()
         {
             Subject = "This is an email subject",
-            Recipients = new List<RecipientExt>() { new RecipientExt() { NationalIdentityNumber = nationalIdentityNumber } },
+            Recipients = [new RecipientExt() { NationalIdentityNumber = nationalIdentityNumber }],
             Body = "This is an email body"
         };
 
@@ -75,7 +75,7 @@ public class EmailNotificationOrderRequestValidatorTests
         var order = new EmailNotificationOrderRequestExt()
         {
             Subject = "This is an email subject",
-            Recipients = new List<RecipientExt>() { new RecipientExt() { EmailAddress = "@domain.com" } },
+            Recipients = [new RecipientExt() { EmailAddress = "@domain.com" }],
             Body = "This is an email body"
         };
 
@@ -91,7 +91,7 @@ public class EmailNotificationOrderRequestValidatorTests
         var order = new EmailNotificationOrderRequestExt()
         {
             Subject = "This is an email subject",
-            Recipients = new List<RecipientExt>() { new RecipientExt() },
+            Recipients = [new RecipientExt()],
             Body = "This is an email body"
         };
 
@@ -107,7 +107,7 @@ public class EmailNotificationOrderRequestValidatorTests
         var order = new EmailNotificationOrderRequestExt()
         {
             Subject = "This is an email subject",
-            Recipients = new List<RecipientExt>() { new RecipientExt() { EmailAddress = "recipient2@domain.com" } },
+            Recipients = [new RecipientExt() { EmailAddress = "recipient2@domain.com" }],
             Body = "This is an email body",
             RequestedSendTime = DateTime.Now
         };
@@ -123,7 +123,7 @@ public class EmailNotificationOrderRequestValidatorTests
         var order = new EmailNotificationOrderRequestExt()
         {
             Subject = "This is an email subject",
-            Recipients = new List<RecipientExt>() { new RecipientExt() { EmailAddress = "recipient2@domain.com" } },
+            Recipients = [new RecipientExt() { EmailAddress = "recipient2@domain.com" }],
             Body = "This is an email body",
             RequestedSendTime = DateTime.UtcNow
         };
@@ -139,7 +139,7 @@ public class EmailNotificationOrderRequestValidatorTests
         var order = new EmailNotificationOrderRequestExt()
         {
             Subject = "This is an email subject",
-            Recipients = new List<RecipientExt>() { new RecipientExt() { EmailAddress = "recipient2@domain.com" } },
+            Recipients = [new RecipientExt() { EmailAddress = "recipient2@domain.com" }],
             Body = "This is an email body",
             RequestedSendTime = new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Unspecified)
         };
@@ -156,7 +156,7 @@ public class EmailNotificationOrderRequestValidatorTests
         var order = new EmailNotificationOrderRequestExt()
         {
             Subject = "This is an email subject",
-            Recipients = new List<RecipientExt>() { new RecipientExt() { EmailAddress = "recipient2@domain.com" } },
+            Recipients = [new RecipientExt() { EmailAddress = "recipient2@domain.com" }],
             Body = "This is an email body",
             RequestedSendTime = DateTime.UtcNow.AddDays(-1)
         };
@@ -172,7 +172,7 @@ public class EmailNotificationOrderRequestValidatorTests
     {
         var order = new EmailNotificationOrderRequestExt()
         {
-            Recipients = new List<RecipientExt>() { new RecipientExt() { EmailAddress = "recipient2@domain.com" } },
+            Recipients = [new RecipientExt() { EmailAddress = "recipient2@domain.com" }],
             Body = "This is an email body"
         };
 
@@ -187,7 +187,7 @@ public class EmailNotificationOrderRequestValidatorTests
         var order = new EmailNotificationOrderRequestExt()
         {
             Subject = "This is an email subject",
-            Recipients = new List<RecipientExt>() { new RecipientExt() { EmailAddress = "recipient2@domain.com" } },
+            Recipients = [new RecipientExt() { EmailAddress = "recipient2@domain.com" }],
         };
 
         var actual = _validator.Validate(order);
@@ -201,7 +201,7 @@ public class EmailNotificationOrderRequestValidatorTests
         var order = new EmailNotificationOrderRequestExt()
         {
             Subject = "This is an email subject",
-            Recipients = new List<RecipientExt>() { new RecipientExt() { EmailAddress = "recipient2@domain.com" } },
+            Recipients = [new RecipientExt() { EmailAddress = "recipient2@domain.com" }],
             Body = "This is an email body",
             ConditionEndpoint = new Uri("urn:altinn.test")
         };

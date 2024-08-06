@@ -186,7 +186,7 @@ public class SmsNotificationOrderRequestValidatorTests
         var order = new SmsNotificationOrderRequestExt()
         {
             SenderNumber = "+4740000001",
-            Recipients = new List<RecipientExt>() { new RecipientExt() { MobileNumber = "+4740000000" } },
+            Recipients = [new RecipientExt() { MobileNumber = "+4740000000" }],
             Body = "This is an SMS body",
             ConditionEndpoint = new Uri("urn:altinn.test")
         };

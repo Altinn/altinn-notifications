@@ -27,14 +27,14 @@ namespace Altinn.Notifications.Tests.Notifications.TestingValidators
             {
                 NotificationChannel = NotificationChannelExt.Email,
                 EmailTemplate = new EmailTemplateExt { Subject = "Test", Body = "Test Body" },
-                Recipients = new List<RecipientExt> { new RecipientExt { EmailAddress = "test@test.com" } }
+                Recipients = [new RecipientExt { EmailAddress = "test@test.com" }]
             };
 
             _validSmsOrder = new()
             {
                 NotificationChannel = NotificationChannelExt.Sms,
                 SmsTemplate = new SmsTemplateExt { Body = "Test Body" },
-                Recipients = new List<RecipientExt> { new RecipientExt { MobileNumber = "+4799999999" } }
+                Recipients = [new RecipientExt { MobileNumber = "+4799999999" }]
             };
 
             _validEmailPreferredOrder = new()
@@ -42,7 +42,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingValidators
                 NotificationChannel = NotificationChannelExt.EmailPreferred,
                 EmailTemplate = new EmailTemplateExt { Subject = "Test", Body = "Test Body" },
                 SmsTemplate = new SmsTemplateExt { Body = "Test Body" },
-                Recipients = new List<RecipientExt> { new RecipientExt { NationalIdentityNumber = "16069412345" } }
+                Recipients = [new RecipientExt { NationalIdentityNumber = "16069412345" }]
             };
 
             _validSmsPreferredOrder = new()
@@ -50,7 +50,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingValidators
                 NotificationChannel = NotificationChannelExt.SmsPreferred,
                 EmailTemplate = new EmailTemplateExt { Subject = "Test", Body = "Test Body" },
                 SmsTemplate = new SmsTemplateExt { Body = "Test Body" },
-                Recipients = new List<RecipientExt> { new RecipientExt { OrganizationNumber = "123456789" } }
+                Recipients = [new RecipientExt { OrganizationNumber = "123456789" }]
             };
         }
 
