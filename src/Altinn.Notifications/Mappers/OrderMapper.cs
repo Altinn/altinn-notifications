@@ -41,7 +41,7 @@ public static class OrderMapper
                 null,
                 extRequest.EmailTemplate.Subject,
                 extRequest.EmailTemplate.Body,
-                (EmailContentType?)extRequest.EmailTemplate.ContentType ?? EmailContentType.Plain);
+                (EmailContentType)extRequest.EmailTemplate.ContentType);
 
             templateList.Add(emailTemplate);
         }
