@@ -7,7 +7,6 @@ using System.Text.Json.Serialization;
 using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
-using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
@@ -17,6 +16,7 @@ using Altinn.Notifications.Tests.Notifications.Utils;
 
 using AltinnCore.Authentication.JwtCookie;
 
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -540,6 +540,31 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + _orderId, response.Headers?.Location?.ToString());
 
         orderRequestService.VerifyAll();
+    }
+
+    [Fact]
+    public async Task Post_InvalidOrderRequest_BadRequest()
+    {
+        HttpClient client = GetTestClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
+
+        var invalidRequest = _orderRequest;
+        invalidRequest.NotificationChannel = null;
+
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
+        {
+            Content = new StringContent(JsonSerializer.Serialize(invalidRequest), Encoding.UTF8, "application/json")
+        };
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        string content = await response.Content.ReadAsStringAsync();
+        ProblemDetails? actual = JsonSerializer.Deserialize<ProblemDetails>(content, _options);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("One or more validation errors occurred.", actual?.Title);
     }
 
     private HttpClient GetTestClient(IGetOrderService? getOrderService = null, IOrderRequestService? orderRequestService = null)
