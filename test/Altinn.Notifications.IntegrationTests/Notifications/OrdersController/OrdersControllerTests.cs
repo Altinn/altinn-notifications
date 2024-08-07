@@ -1,18 +1,22 @@
 ﻿using System.Net;
 using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
-using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
+using Altinn.Notifications.Models;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using Altinn.Notifications.Tests.Notifications.Utils;
 
 using AltinnCore.Authentication.JwtCookie;
 
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -31,35 +35,60 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
     private readonly IntegrationTestWebApplicationFactory<Controllers.OrdersController> _factory;
     private readonly NotificationOrder _order;
     private readonly NotificationOrderWithStatus _orderWithStatus;
+    private readonly NotificationOrderRequestResponse _requestResponse;
+    private readonly NotificationOrderRequestExt _orderRequest;
+    private readonly JsonSerializerOptions _options;
+    private readonly Guid _orderId = Guid.NewGuid();
 
     public OrdersControllerTests(IntegrationTestWebApplicationFactory<Controllers.OrdersController> factory)
     {
         _factory = factory;
 
         _order = new(
-            Guid.NewGuid(),
+            _orderId,
             "senders-reference",
-            new List<INotificationTemplate>(),
+            [],
             DateTime.UtcNow,
             NotificationChannel.Email,
             new Creator("ttd"),
             DateTime.UtcNow,
-            new List<Recipient>(),
+            [],
             false,
             null,
             null);
 
         _orderWithStatus = new(
-            Guid.NewGuid(),
+            _orderId,
             "senders-reference",
             DateTime.UtcNow,
             new Creator("ttd"),
             DateTime.UtcNow,
             NotificationChannel.Email,
-            null, 
+            null,
             null,
             null,
             new ProcessingStatus());
+
+        _requestResponse = new()
+        {
+            OrderId = _orderId,
+            RecipientLookup = new()
+        };
+
+        _orderRequest = new()
+        {
+            NotificationChannel = NotificationChannelExt.EmailPreferred,
+            EmailTemplate = new EmailTemplateExt { Subject = "Test", Body = "Test Body" },
+            SmsTemplate = new SmsTemplateExt { Body = "Test Body" },
+            Recipients = [new RecipientExt { NationalIdentityNumber = "16069412345" }],
+            RequestedSendTime = DateTime.UtcNow.AddDays(1)
+        };
+
+        _options = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+            Converters = { new JsonStringEnumConverter() }
+        };
     }
 
     [Fact]
@@ -406,9 +435,141 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    private HttpClient GetTestClient(IGetOrderService? orderService = null)
+    [Fact]
+    public async Task Post_MissingBearer_ReturnsUnauthorized()
     {
-        if (orderService == null)
+        // Arrange
+        HttpClient client = GetTestClient();
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath);
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Post_CalledByUser_ReturnsForbidden()
+    {
+        // Arrange
+        HttpClient client = GetTestClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetUserToken(1337));
+
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath);
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Post_CalledWithInvalidScope_ReturnsForbidden()
+    {
+        // Arrange
+        HttpClient client = GetTestClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "dummy:scope"));
+
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath);
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Post_ValidBearerToken_CorrespondingServiceMethodCalled()
+    {
+        // Arrange
+        var orderRequestService = new Mock<IOrderRequestService>();
+        orderRequestService
+             .Setup(o => o.RegisterNotificationOrder(It.IsAny<NotificationOrderRequest>()))
+             .ReturnsAsync(_requestResponse);
+
+        HttpClient client = GetTestClient(orderRequestService: orderRequestService.Object);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
+
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
+        {
+            Content = new StringContent(JsonSerializer.Serialize(_orderRequest), Encoding.UTF8, "application/json")
+        };
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        string respoonseString = await response.Content.ReadAsStringAsync();
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        NotificationOrderRequestResponseExt? orderIdObjectExt = JsonSerializer.Deserialize<NotificationOrderRequestResponseExt>(respoonseString, _options);
+        Assert.Equal(_orderId, orderIdObjectExt!.OrderId);
+        Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + _orderId, response.Headers?.Location?.ToString());
+
+        orderRequestService.VerifyAll();
+    }
+
+    [Fact]
+    public async Task Post_ValidPlatformAccessToken_CorrespondingServiceMethodCalled()
+    {
+        // Arrange
+        var orderRequestService = new Mock<IOrderRequestService>();
+        orderRequestService
+             .Setup(o => o.RegisterNotificationOrder(It.IsAny<NotificationOrderRequest>()))
+             .ReturnsAsync(_requestResponse);
+
+        HttpClient client = GetTestClient(orderRequestService: orderRequestService.Object);
+
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
+        {
+            Content = new StringContent(JsonSerializer.Serialize(_orderRequest), Encoding.UTF8, "application/json")
+        };
+
+        httpRequestMessage.Headers.Add("PlatformAccessToken", PrincipalUtil.GetAccessToken("ttd", "apps-test"));
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        string respoonseString = await response.Content.ReadAsStringAsync();
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        NotificationOrderRequestResponseExt? orderIdObjectExt = JsonSerializer.Deserialize<NotificationOrderRequestResponseExt>(respoonseString, _options);
+        Assert.Equal(_orderId, orderIdObjectExt!.OrderId);
+        Assert.Equal("http://localhost:5090/notifications/api/v1/orders/" + _orderId, response.Headers?.Location?.ToString());
+
+        orderRequestService.VerifyAll();
+    }
+
+    [Fact]
+    public async Task Post_InvalidOrderRequest_BadRequest()
+    {
+        HttpClient client = GetTestClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
+
+        var invalidRequest = _orderRequest;
+        invalidRequest.NotificationChannel = null;
+
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath)
+        {
+            Content = new StringContent(JsonSerializer.Serialize(invalidRequest), Encoding.UTF8, "application/json")
+        };
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        string content = await response.Content.ReadAsStringAsync();
+        ProblemDetails? actual = JsonSerializer.Deserialize<ProblemDetails>(content, _options);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("One or more validation errors occurred.", actual?.Title);
+    }
+
+    private HttpClient GetTestClient(IGetOrderService? getOrderService = null, IOrderRequestService? orderRequestService = null)
+    {
+        if (getOrderService == null)
         {
             var orderServiceMock = new Mock<IGetOrderService>();
             orderServiceMock
@@ -419,7 +580,17 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
                  .Setup(o => o.GetOrdersBySendersReference(It.IsAny<string>(), It.IsAny<string>()))
                  .ReturnsAsync(new List<NotificationOrder>() { _order });
 
-            orderService = orderServiceMock.Object;
+            getOrderService = orderServiceMock.Object;
+        }
+
+        if (orderRequestService == null)
+        {
+            var orderRequestServiceMock = new Mock<IOrderRequestService>();
+            orderRequestServiceMock
+                .Setup(o => o.RegisterNotificationOrder(It.IsAny<NotificationOrderRequest>()))
+                .ReturnsAsync(new NotificationOrderRequestResponse());
+
+            orderRequestService = orderRequestServiceMock.Object;
         }
 
         HttpClient client = _factory.WithWebHostBuilder(builder =>
@@ -428,7 +599,8 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
 
             builder.ConfigureTestServices(services =>
             {
-                services.AddSingleton(orderService);
+                services.AddSingleton(getOrderService);
+                services.AddSingleton(orderRequestService);
 
                 // Set up mock authentication and authorization
                 services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();

@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 namespace Altinn.Notifications.Models;
 
 /// <summary>
-/// Class representing an email notiication order request
+/// Class representing an email notification order request
 /// </summary>
 /// <remarks>
 /// External representation to be used in the API
