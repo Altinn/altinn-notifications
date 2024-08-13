@@ -14,6 +14,11 @@ namespace Altinn.Notifications.Extensions
         /// </summary>
         public static bool IsValidUrl(this Uri uri)
         {
+            if (!Uri.TryCreate(uri.ToString(), UriKind.Absolute, out _))
+            {
+                return false;
+            }
+
             if (uri.Scheme != "http" && uri.Scheme != "https")
             {
                 return false;
