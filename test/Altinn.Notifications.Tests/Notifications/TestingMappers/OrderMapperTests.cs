@@ -316,7 +316,7 @@ public class OrderMapperTests
             Recipients = new List<Recipient>()
             {
                         new Recipient() { AddressInfo = new List<IAddressPoint>() { new EmailAddressPoint("recipient1@domain.com") } },
-                        new Recipient() {NationalIdentityNumber = "123456" }
+                        new Recipient() { NationalIdentityNumber = "123456" }
             },
             ConditionEndpoint = new Uri("https://vg.no"),
             IgnoreReservation = true,
