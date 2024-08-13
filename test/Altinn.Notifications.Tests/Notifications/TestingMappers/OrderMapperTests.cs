@@ -266,6 +266,72 @@ public class OrderMapperTests
         Assert.Equivalent(expected, actual, true);
     }
 
+    [Theory]
+    [InlineData(NotificationChannelExt.Email, NotificationChannel.Email)]
+    [InlineData(NotificationChannelExt.EmailPreferred, NotificationChannel.EmailPreferred)]
+    [InlineData(NotificationChannelExt.Sms, NotificationChannel.Sms)]
+    [InlineData(NotificationChannelExt.SmsPreferred, NotificationChannel.SmsPreferred)]
+    public void MapToOrderRequest_AreEquivalent(NotificationChannelExt extChannel, NotificationChannel expectedChannel)
+    {
+        // Arrange
+        DateTime sendTime = DateTime.UtcNow;
+
+        NotificationOrderRequestExt ext = new()
+        {
+            NotificationChannel = extChannel,
+            EmailTemplate = new()
+            {
+                Subject = "email-subject",
+                Body = "email-body",
+                ContentType = EmailContentTypeExt.Html
+            },
+            SmsTemplate = new()
+            {
+                Body = "sms-body",
+            },
+            Recipients = new List<RecipientExt>() { new RecipientExt() { EmailAddress = "recipient1@domain.com" }, new RecipientExt() { NationalIdentityNumber = "123456" } },
+            SendersReference = "senders-reference",
+            RequestedSendTime = sendTime,
+            ConditionEndpoint = new Uri("https://vg.no"),
+            IgnoreReservation = true,
+            ResourceId = "urn:altinn:resource:test"
+        };
+
+        NotificationOrderRequest expected = new()
+        {
+            SendersReference = "senders-reference",
+            Creator = new Creator("ttd"),
+            Templates = new List<INotificationTemplate>()
+            {
+                new EmailTemplate(
+                    string.Empty,
+                    "email-subject",
+                    "email-body",
+                    EmailContentType.Html),
+                new SmsTemplate(
+                    string.Empty,
+                    "sms-body")
+            },
+            RequestedSendTime = sendTime,
+            Recipients = new List<Recipient>()
+            {
+                        new Recipient() { AddressInfo = new List<IAddressPoint>() { new EmailAddressPoint("recipient1@domain.com") } },
+                        new Recipient() { NationalIdentityNumber = "123456" }
+            },
+            ConditionEndpoint = new Uri("https://vg.no"),
+            IgnoreReservation = true,
+            ResourceId = "urn:altinn:resource:test"
+        };
+
+        expected.NotificationChannel = expectedChannel;
+
+        // Act
+        var actual = ext.MapToOrderRequest("ttd");
+
+        // Assert
+        Assert.Equivalent(expected, actual);
+    }
+
     [Fact]
     public void MapToNotificationOrderWithStatusExt_EmailStatusProvided_AreEquivalent()
     {

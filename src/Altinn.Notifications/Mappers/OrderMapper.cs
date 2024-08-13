@@ -58,7 +58,7 @@ public static class OrderMapper
             creator,
             templateList,
             extRequest.RequestedSendTime.ToUniversalTime(),
-            NotificationChannel.Email,
+            (NotificationChannel)extRequest.NotificationChannel!,
             recipients,
             extRequest.IgnoreReservation,
             extRequest.ResourceId,
