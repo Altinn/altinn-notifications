@@ -719,7 +719,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
 
-    private HttpClient GetTestClient(IGetOrderService? getOrderService = null, IOrderRequestService? orderRequestService = null, ICancelOrderService cancelOrderService = null)
+    private HttpClient GetTestClient(IGetOrderService? getOrderService = null, IOrderRequestService? orderRequestService = null, ICancelOrderService? cancelOrderService = null)
     {
         if (getOrderService == null)
         {
@@ -745,7 +745,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
             orderRequestService = orderRequestServiceMock.Object;
         }
 
-        if(cancelOrderService == null)
+        if (cancelOrderService == null)
         {
             Mock<ICancelOrderService> cancelOrderMock = new();
             cancelOrderMock

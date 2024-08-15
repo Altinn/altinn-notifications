@@ -195,7 +195,7 @@ public class OrderRepository : IOrderRepository
         return order!;
     }
 
-    private NotificationOrderWithStatus? ReadNotificationOrderWithStatus(NpgsqlDataReader reader)
+    private static NotificationOrderWithStatus? ReadNotificationOrderWithStatus(NpgsqlDataReader reader)
     {
         string? conditionEndpointString = reader.GetValue<string>("conditionendpoint");
         Uri? conditionEndpoint = conditionEndpointString == null ? null : new Uri(conditionEndpointString);
