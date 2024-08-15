@@ -159,6 +159,13 @@ public class OrderRepository : IOrderRepository
 
         await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync())
         {
+            if (!reader.HasRows)
+            {
+                tracker.Track();
+                return null;
+            }
+
+            await reader.ReadAsync();
             order = ReadNotificationOrderWithStatus(reader);
         }
 
