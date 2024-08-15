@@ -1,4 +1,5 @@
 ﻿using Altinn.Notifications.Configuration;
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
@@ -31,15 +32,17 @@ public class OrdersController : ControllerBase
     private readonly IValidator<NotificationOrderRequestExt> _validator;
     private readonly IGetOrderService _getOrderService;
     private readonly IOrderRequestService _orderRequestService;
+    private readonly ICancelOrderService _cancelOrderService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrdersController"/> class.
     /// </summary>
-    public OrdersController(IValidator<NotificationOrderRequestExt> validator, IGetOrderService getOrderService, IOrderRequestService orderRequestService)
+    public OrdersController(IValidator<NotificationOrderRequestExt> validator, IGetOrderService getOrderService, IOrderRequestService orderRequestService, ICancelOrderService cancelOrderService)
     {
         _validator = validator;
         _getOrderService = getOrderService;
         _orderRequestService = orderRequestService;
+        _cancelOrderService = cancelOrderService;
     }
 
     /// <summary>
@@ -159,5 +162,43 @@ public class OrdersController : ControllerBase
         NotificationOrderRequestResponse result = await _orderRequestService.RegisterNotificationOrder(orderRequest);
 
         return Accepted(result.OrderId!.GetSelfLinkFromOrderId(), result.MapToExternal());
+    }
+
+    /// <summary>
+    /// Cancel a notification order.
+    /// </summary>
+    /// <param name="id">The id of the order to cancel.</param>
+    /// <returns>The cancelled notification order</returns>
+    [HttpPut]
+    [Route("{id}/cancel")]
+    [Produces("application/json")]
+    [SwaggerResponse(200, "The notification order was cancelled. No notifications will be sent.", typeof(NotificationOrderWithStatusExt))]
+    [SwaggerResponse(409, "The order cannot be cancelled due to current processing status")]
+    [SwaggerResponse(404, "No order with the provided id was found")]
+    public async Task<ActionResult<NotificationOrderWithStatusExt>> CancelOrder([FromRoute] Guid id)
+    {
+        string? expectedCreator = HttpContext.GetOrg();
+
+        if (expectedCreator == null)
+        {
+            return Forbid();
+        }
+
+        Result<NotificationOrderWithStatus, CancellationError> result = await _cancelOrderService.CancelOrder(id, expectedCreator);
+
+        return result.Match(
+         order =>
+         {
+             return order.MapToNotificationOrderWithStatusExt();
+         },
+         error =>
+         {
+             return error switch
+             {
+                 CancellationError.OrderNotFound => (ActionResult<NotificationOrderWithStatusExt>)NotFound(),
+                 CancellationError.CancellationProhibited => (ActionResult<NotificationOrderWithStatusExt>)Conflict(),
+                 _ => (ActionResult<NotificationOrderWithStatusExt>)StatusCode(500),
+             };
+         });
     }
 }

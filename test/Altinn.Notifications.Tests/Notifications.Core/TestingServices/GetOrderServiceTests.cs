@@ -136,6 +136,7 @@ public class GetOrderServiceTests
     [InlineData(OrderProcessingStatus.Processing, "Order processing is ongoing. Notifications are being generated.")]
     [InlineData(OrderProcessingStatus.Completed, "Order processing is completed. All notifications have been generated.")]
     [InlineData(OrderProcessingStatus.SendConditionNotMet, "Order processing was stopped due to send condition not being met.")]
+    [InlineData(OrderProcessingStatus.Cancelled, "Order processing was stopped due to order being cancelled.")]
     public void GetStatusDescription_ExpectedDescription(OrderProcessingStatus status, string expected)
     {
         string actual = GetOrderService.GetStatusDescription(status);

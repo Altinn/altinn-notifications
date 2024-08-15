@@ -8,6 +8,7 @@ using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Models;
@@ -567,7 +568,158 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
         Assert.Equal("One or more validation errors occurred.", actual?.Title);
     }
 
-    private HttpClient GetTestClient(IGetOrderService? getOrderService = null, IOrderRequestService? orderRequestService = null)
+    [Fact]
+    public async Task CancelOrder_MissingBearer_ReturnsUnauthorized()
+    {
+        // Arrange
+        HttpClient client = GetTestClient();
+        string url = _basePath + "/" + Guid.NewGuid() + "/cancel";
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Put, url);
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CancelOrder_CalledByUser_ReturnsForbidden()
+    {
+        // Arrange
+        HttpClient client = GetTestClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetUserToken(1337));
+
+        string url = _basePath + "/" + Guid.NewGuid() + "/cancel";
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Put, url);
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CancelOrder_CalledWithInvalidScope_ReturnsForbidden()
+    {
+        // Arrange
+        HttpClient client = GetTestClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "dummy:scope"));
+
+        string url = _basePath + "/" + Guid.NewGuid() + "/cancel";
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Put, url);
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CancelOrder_ValidBearerToken_CorrespondingServiceMethodCalled()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+
+        Mock<ICancelOrderService> orderService = new();
+        orderService
+             .Setup(o => o.CancelOrder(It.Is<Guid>(g => g.Equals(orderId)), It.Is<string>(s => s.Equals("ttd"))))
+             .ReturnsAsync(_orderWithStatus);
+
+        HttpClient client = GetTestClient(cancelOrderService: orderService.Object);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
+
+        string url = _basePath + "/" + orderId + "/cancel";
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Put, url);
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
+        orderService.VerifyAll();
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CancelOrder_ValidPlatformAccessToken_CorrespondingServiceMethodCalled()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+
+        Mock<ICancelOrderService> orderService = new();
+        orderService
+                  .Setup(o => o.CancelOrder(It.Is<Guid>(g => g.Equals(orderId)), It.Is<string>(s => s.Equals("ttd"))))
+          .ReturnsAsync(_orderWithStatus);
+
+        HttpClient client = GetTestClient(cancelOrderService: orderService.Object);
+
+        string url = _basePath + "/" + orderId + "/cancel";
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Put, url);
+        httpRequestMessage.Headers.Add("PlatformAccessToken", PrincipalUtil.GetAccessToken("ttd", "apps-test"));
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
+        orderService.VerifyAll();
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CancelOrder_ServiceReturnsOrderNotFound_ReturnsNotFound()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+
+        Mock<ICancelOrderService> orderService = new();
+        orderService
+                  .Setup(o => o.CancelOrder(It.Is<Guid>(g => g.Equals(orderId)), It.Is<string>(s => s.Equals("ttd"))))
+          .ReturnsAsync(CancellationError.OrderNotFound);
+
+        HttpClient client = GetTestClient(cancelOrderService: orderService.Object);
+
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
+
+        string url = _basePath + "/" + orderId + "/cancel";
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Put, url);
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
+        orderService.VerifyAll();
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CancelOrder_ServiceReturnsCancellationProhibited_ReturnsConflict()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+
+        Mock<ICancelOrderService> orderService = new();
+        orderService
+          .Setup(o => o.CancelOrder(It.Is<Guid>(g => g.Equals(orderId)), It.IsAny<string>()))
+          .ReturnsAsync(CancellationError.CancellationProhibited);
+
+        HttpClient client = GetTestClient(cancelOrderService: orderService.Object);
+
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
+
+        string url = _basePath + "/" + orderId + "/cancel";
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Put, url);
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
+        orderService.VerifyAll();
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
+    private HttpClient GetTestClient(IGetOrderService? getOrderService = null, IOrderRequestService? orderRequestService = null, ICancelOrderService cancelOrderService = null)
     {
         if (getOrderService == null)
         {
@@ -593,6 +745,15 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
             orderRequestService = orderRequestServiceMock.Object;
         }
 
+        if(cancelOrderService == null)
+        {
+            Mock<ICancelOrderService> cancelOrderMock = new();
+            cancelOrderMock
+                .Setup(o => o.CancelOrder(It.IsAny<Guid>(), It.IsAny<string>()))
+                .ReturnsAsync(_orderWithStatus);
+            cancelOrderService = cancelOrderMock.Object;
+        }
+
         HttpClient client = _factory.WithWebHostBuilder(builder =>
         {
             IdentityModelEventSource.ShowPII = true;
@@ -601,6 +762,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
             {
                 services.AddSingleton(getOrderService);
                 services.AddSingleton(orderRequestService);
+                services.AddSingleton(cancelOrderService);
 
                 // Set up mock authentication and authorization
                 services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();

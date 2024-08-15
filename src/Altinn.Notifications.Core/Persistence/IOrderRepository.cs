@@ -1,5 +1,6 @@
 ﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Shared;
 
 namespace Altinn.Notifications.Core.Persistence;
 
@@ -49,4 +50,12 @@ public interface IOrderRepository
     /// <param name="creator">The short name of the order creator</param>
     /// <returns>A list of notification orders</returns>
     public Task<List<NotificationOrder>> GetOrdersBySendersReference(string sendersReference, string creator);
+
+    /// <summary>
+    /// Cancels the order corresponding to the provided id within the provided creator scope if processing has not started yet
+    /// </summary>
+    /// <param name="id">The order id</param>
+    /// <param name="creator">The short name of the order creator</param>
+    /// <returns>If successful the cancelled notification order with status info. If error a cancellation error type.</returns>
+    public Task<Result<NotificationOrderWithStatus, CancellationError>> CancelOrder(Guid id, string creator);
 }

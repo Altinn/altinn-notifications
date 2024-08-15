@@ -5,6 +5,7 @@ using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Persistence;
+using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Persistence.Extensions;
 
 using Microsoft.ApplicationInsights;
@@ -31,6 +32,7 @@ public class OrderRepository : IOrderRepository
     private const string _setProcessCompleted = "update notifications.orders set processedstatus =$1::orderprocessingstate where alternateid=$2";
     private const string _getOrdersPastSendTimeUpdateStatus = "select notifications.getorders_pastsendtime_updatestatus()";
     private const string _getOrderIncludeStatus = "select * from notifications.getorder_includestatus_v4($1, $2)"; // _alternateid,  creator
+    private const string _cancelAndReturnOrder = "select * from notifications.cancelorder($1, $2)"; // _alternateid,  creator
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderRepository"/> class.
@@ -157,44 +159,77 @@ public class OrderRepository : IOrderRepository
 
         await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync())
         {
-            while (await reader.ReadAsync())
-            {
-                string? conditionEndpointString = reader.GetValue<string>("conditionendpoint");
-                Uri? conditionEndpoint = conditionEndpointString == null ? null : new Uri(conditionEndpointString);
-
-                order = new(
-                    reader.GetValue<Guid>("alternateid"),
-                    reader.GetValue<string>("sendersreference"),
-                    reader.GetValue<DateTime>("requestedsendtime"), // all decimals are not included
-                    new Creator(reader.GetValue<string>("creatorname")),
-                    reader.GetValue<DateTime>("created"),
-                    reader.GetValue<NotificationChannel>("notificationchannel"),
-                    reader.GetValue<bool?>("ignorereservation"),
-                    reader.GetValue<string?>("resourceid"),
-                    conditionEndpoint,
-                    new ProcessingStatus(
-                        reader.GetValue<OrderProcessingStatus>("processedstatus"),
-                        reader.GetValue<DateTime>("processed")));
-
-                int generatedEmail = (int)reader.GetValue<long>("generatedEmailCount");
-                int succeededEmail = (int)reader.GetValue<long>("succeededEmailCount");
-
-                int generatedSms = (int)reader.GetValue<long>("generatedSmsCount");
-                int succeededSms = (int)reader.GetValue<long>("succeededSmsCount");
-
-                if (generatedEmail > 0)
-                {
-                    order.SetNotificationStatuses(NotificationTemplateType.Email, generatedEmail, succeededEmail);
-                }
-
-                if (generatedSms > 0)
-                {
-                    order.SetNotificationStatuses(NotificationTemplateType.Sms, generatedSms, succeededSms);
-                }
-            }
+            order = ReadNotificationOrderWithStatus(reader);
         }
 
         tracker.Track();
+        return order;
+    }
+
+    /// <inheritdoc/>
+    public async Task<Result<NotificationOrderWithStatus, CancellationError>> CancelOrder(Guid id, string creator)
+    {
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_cancelAndReturnOrder);
+        using TelemetryTracker tracker = new(_telemetryClient, pgcom);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, id);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, creator);
+
+        await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync();
+        if (!reader.HasRows)
+        {
+            tracker.Track();
+            return CancellationError.OrderNotFound;
+        }
+
+        await reader.ReadAsync();
+        bool canCanel = reader.GetValue<bool>("cancelallowed");
+
+        if (!canCanel)
+        {
+            tracker.Track();
+            return CancellationError.CancellationProhibited;
+        }
+
+        NotificationOrderWithStatus? order = ReadNotificationOrderWithStatus(reader);
+        tracker.Track();
+        return order!;
+    }
+
+    private NotificationOrderWithStatus? ReadNotificationOrderWithStatus(NpgsqlDataReader reader)
+    {
+        string? conditionEndpointString = reader.GetValue<string>("conditionendpoint");
+        Uri? conditionEndpoint = conditionEndpointString == null ? null : new Uri(conditionEndpointString);
+
+        NotificationOrderWithStatus order = new(
+             reader.GetValue<Guid>("alternateid"),
+             reader.GetValue<string>("sendersreference"),
+             reader.GetValue<DateTime>("requestedsendtime"), // all decimals are not included
+             new Creator(reader.GetValue<string>("creatorname")),
+             reader.GetValue<DateTime>("created"),
+             reader.GetValue<NotificationChannel>("notificationchannel"),
+             reader.GetValue<bool?>("ignorereservation"),
+             reader.GetValue<string?>("resourceid"),
+             conditionEndpoint,
+             new ProcessingStatus(
+                 reader.GetValue<OrderProcessingStatus>("processedstatus"),
+                 reader.GetValue<DateTime>("processed")));
+
+        int generatedEmail = (int)reader.GetValue<long>("generatedEmailCount");
+        int succeededEmail = (int)reader.GetValue<long>("succeededEmailCount");
+
+        int generatedSms = (int)reader.GetValue<long>("generatedSmsCount");
+        int succeededSms = (int)reader.GetValue<long>("succeededSmsCount");
+
+        if (generatedEmail > 0)
+        {
+            order.SetNotificationStatuses(NotificationTemplateType.Email, generatedEmail, succeededEmail);
+        }
+
+        if (generatedSms > 0)
+        {
+            order.SetNotificationStatuses(NotificationTemplateType.Sms, generatedSms, succeededSms);
+        }
+
         return order;
     }
 
