@@ -191,7 +191,7 @@ public class OrderRepository : IOrderRepository
         await reader.ReadAsync();
         bool canCancel = reader.GetValue<bool>("cancelallowed");
 
-        if (!canCanel)
+        if (!canCancel)
         {
             tracker.Track();
             return CancellationError.CancellationProhibited;
