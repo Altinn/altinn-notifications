@@ -189,7 +189,7 @@ public class OrderRepository : IOrderRepository
         }
 
         await reader.ReadAsync();
-        bool canCanel = reader.GetValue<bool>("cancelallowed");
+        bool canCancel = reader.GetValue<bool>("cancelallowed");
 
         if (!canCanel)
         {
