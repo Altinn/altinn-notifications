@@ -54,7 +54,6 @@
       <DbToolsExecuted>true</DbToolsExecuted>
     </PropertyGroup>
 
-    <Exec Command="$(TargetDir)../../../../DbTools/bin/Debug/$(TargetFramework)/DbTools $(TargetDir)../../../Migration" 
-          Condition="'$(DbToolsExecuted)' != 'true' and (Exists('$(TargetDir)../../../../DbTools/bin/Debug/$(TargetFramework)/DbTools') or Exists('$(TargetDir)../../../../DbTools/bin/Debug/$(TargetFramework)/DbTools.exe'))" />
+    <Exec Command="$(TargetDir)../../../../DbTools/bin/Debug/$(TargetFramework)/DbTools $(TargetDir)../../../Migration" Condition="'$(DbToolsExecuted)' != 'true' and (Exists('$(TargetDir)../../../../DbTools/bin/Debug/$(TargetFramework)/DbTools') or Exists('$(TargetDir)../../../../DbTools/bin/Debug/$(TargetFramework)/DbTools.exe'))" />
   </Target>
 </Project>
