@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Validators;
@@ -195,5 +194,24 @@ public class SmsNotificationOrderRequestValidatorTests
 
         Assert.False(actual.IsValid);
         Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("The condition endpoint must be a valid URL."));
+    }
+
+    [Theory]
+    [InlineData("No URLs here!", true)]
+    [InlineData("user:pass@example.com", false)]
+    [InlineData("ftp://example.com/resource", false)]
+    [InlineData("Visit http://example.com for more info.", false)]
+    [InlineData("Check out https://www.example.com/path?query=string.", false)]
+    public void Validate_BodyMustNotContainUrl(string messageBody, bool expectedResult)
+    {
+        var order = new SmsNotificationOrderRequestExt()
+        {
+            SenderNumber = "+4740000001",
+            Recipients = [new RecipientExt() { MobileNumber = "+4740000000" }],
+            Body = messageBody
+        };
+
+        var validationResult = _validator.Validate(order);
+        Assert.Equal(expectedResult, validationResult.IsValid);
     }
 }

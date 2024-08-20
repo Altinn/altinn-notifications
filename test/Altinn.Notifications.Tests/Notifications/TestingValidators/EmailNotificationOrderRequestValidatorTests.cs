@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Validators;
@@ -229,5 +228,24 @@ public class EmailNotificationOrderRequestValidatorTests
     {
         bool actual = RecipientRules.IsValidEmail(email);
         Assert.Equal(expectedResult, actual);
+    }
+
+    [Theory]
+    [InlineData("This is an email body", true)]
+    [InlineData("user:pass@example.com", false)]
+    [InlineData("ftp://example.com/resource", false)]
+    [InlineData("Visit http://example.com for more info.", false)]
+    [InlineData("Check out https://www.example.com/path?query=string.", false)]
+    public void Validate_BodyMustNotContainUrl(string emailBody, bool expectedResult)
+    {
+        var order = new EmailNotificationOrderRequestExt()
+        {
+            Subject = "This is an email subject",
+            Recipients = [new RecipientExt() { EmailAddress = "recipient2@domain.com" }],
+            Body = emailBody
+        };
+
+        var validationResult = _validator.Validate(order);
+        Assert.Equal(expectedResult, validationResult.IsValid);
     }
 }
