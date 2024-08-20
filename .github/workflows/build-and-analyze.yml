@@ -81,9 +81,14 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
-#      - name: Process .NET test result
-#        if: always()
-#        uses: NasAmin/trx-parser@v0.6.0
-#        with:
-#          TRX_PATH: ${{ github.workspace }}/TestResults
-#          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload test results
+        uses: actions/upload-artifact@v2
+        with:
+          name: TestResults
+          path: '**/TestResults/*.trx'
+      - name: Process unit test result
+        if: always()
+        uses: NasAmin/trx-parser@v0.6.0
+        with:
+          TRX_PATH: ${{ github.workspace }}/TestResults
+          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
