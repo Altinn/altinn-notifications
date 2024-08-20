@@ -93,7 +93,7 @@ namespace Altinn.Notifications.Tests.Services
                 success => throw new Exception("No success value should be returned if order is not found."),
                 error =>
                 {
-                    Assert.Equal(CancellationError.OrderNotFound, error;
+                    Assert.Equal(CancellationError.OrderNotFound, error);
                     return true;
                 });
         }
