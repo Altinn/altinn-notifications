@@ -27,7 +27,7 @@ namespace Altinn.Notifications.Tests.Services
         [Fact]
         public async Task CancelOrder_SuccessfullyCancelled_ReturnsOrderWithStatus()
         {
-            // Arrange      
+            // Arrange
             Guid orderId = Guid.NewGuid();
 
             _repositoryMock.Setup(r => r.CancelOrder(It.IsAny<Guid>(), It.IsAny<string>()))
@@ -56,8 +56,8 @@ namespace Altinn.Notifications.Tests.Services
 
         [Fact]
         public async Task CancelOrder_OrderDoesNotExist_ReturnsCancellationError()
-        {  
-            // Arrange      
+        {
+            // Arrange
             Guid orderId = Guid.NewGuid();
 
             _repositoryMock.Setup(r => r.CancelOrder(It.IsAny<Guid>(), It.IsAny<string>()))
@@ -69,7 +69,7 @@ namespace Altinn.Notifications.Tests.Services
             // Assert
             result.Match(
                 success => throw new Exception("No success value should be returned if order is not found."),
-                error => 
+                error =>
                 {
                     Assert.Equal(CancellationError.OrderNotFound, error);
                     return true;
@@ -79,7 +79,7 @@ namespace Altinn.Notifications.Tests.Services
         [Fact]
         public async Task CancelOrder_OrderNotCancelled_ReturnsCancellationError()
         {
-            // Arrange      
+            // Arrange
             Guid orderId = Guid.NewGuid();
 
             _repositoryMock.Setup(r => r.CancelOrder(It.IsAny<Guid>(), It.IsAny<string>()))
@@ -93,7 +93,7 @@ namespace Altinn.Notifications.Tests.Services
                 success => throw new Exception("No success value should be returned if order is not found."),
                 error =>
                 {
-                    Assert.Equal(CancellationError.CancellationProhibited, error);
+                    Assert.Equal(CancellationError.OrderNotFound, error;
                     return true;
                 });
         }
