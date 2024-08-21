@@ -36,16 +36,22 @@ public class SharedClientConfig
         var adminConfig = new AdminClientConfig()
         {
             BootstrapServers = settings.BrokerAddress,
+            ReconnectBackoffMs = 50,
+            ReconnectBackoffMaxMs = 10000
         };
 
         var producerConfig = new ClientConfig
         {
             BootstrapServers = settings.BrokerAddress,
+            ReconnectBackoffMs = 50,
+            ReconnectBackoffMaxMs = 10000
         };
 
         var consumerConfig = new ClientConfig
         {
-            BootstrapServers = settings.BrokerAddress
+            BootstrapServers = settings.BrokerAddress,
+            ReconnectBackoffMs = 50,
+            ReconnectBackoffMaxMs = 10000
         };
 
         var topicSpec = new TopicSpecification()
@@ -79,7 +85,8 @@ public class SharedClientConfig
             topicSpec.ReplicationFactor = 3;
             topicSpec.Configs = new Dictionary<string, string>()
                                 {
-                                    { "retention.ms", retentionTime },
+                                    { "retention.ms", retentionTime
+},
                                     { "cleanup.policy", "delete" }
                                 };
         }
