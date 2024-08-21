@@ -68,6 +68,7 @@ jobs:
           dotnet build Altinn.Notifications.sln -v q
 
           dotnet test Altinn.Notifications.sln \
+          > /dev/null 2>&1 \
           -v q \
           --collect:"XPlat Code Coverage" \
           --results-directory TestResults/ \
