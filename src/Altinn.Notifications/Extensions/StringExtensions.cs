@@ -6,7 +6,7 @@ namespace Altinn.Notifications.Extensions;
 /// <summary>
 /// Extension class for String.
 /// </summary>
-public static class StringExtensions
+public static partial class StringExtensions
 {
     /// <summary>
     /// Represents a regex pattern to detect URLs in a string.
@@ -26,6 +26,13 @@ public static class StringExtensions
         }
 
         string decodedUrl = HttpUtility.UrlDecode(stringToCheck);
-        return Regex.IsMatch(decodedUrl, _urlPattern) is false;
+        return !UrlRegexPattern().IsMatch(decodedUrl);
     }
+
+    /// <summary>
+    /// Generates a compiled regular expression based on the specified URL pattern.
+    /// </summary>
+    /// <returns>A <see cref="Regex"/> object that represents the compiled regular expression for detecting URLs.</returns>
+    [GeneratedRegex(_urlPattern)]
+    private static partial Regex UrlRegexPattern();
 }
