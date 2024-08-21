@@ -84,6 +84,10 @@ namespace Altinn.Notifications.Validators.Rules
                     template.RuleFor(t => t.Subject)
                         .NotEmpty()
                         .WithMessage("The email template subject must not be empty.");
+
+                    template.RuleFor(t => t.Subject)
+                        .Must(e => e.DoesNotContainUrl())
+                        .WithMessage("The email template subject must not contain any URLs.");
                 });
         }
     }
