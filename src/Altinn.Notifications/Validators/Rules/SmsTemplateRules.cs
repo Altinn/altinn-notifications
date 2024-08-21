@@ -75,9 +75,7 @@ namespace Altinn.Notifications.Validators.Rules
                 {
                     template.RuleFor(t => t.Body)
                         .NotEmpty()
-                        .WithMessage("The SMS template body must not be empty.");
-
-                    template.RuleFor(t => t.Body)
+                        .WithMessage("The SMS template body must not be empty.")
                         .Must(e => e.DoesNotContainUrl())
                         .WithMessage("The SMS template body must not contain any URLs.");
                 });
