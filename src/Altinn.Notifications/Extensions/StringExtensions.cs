@@ -26,7 +26,16 @@ public static partial class StringExtensions
         }
 
         string decodedUrl = HttpUtility.UrlDecode(stringToCheck);
-        return !UrlRegexPattern().IsMatch(decodedUrl);
+     
+        try
+        {
+            Regex regex = new Regex(_urlPattern, RegexOptions.Compiled, TimeSpan.FromSeconds(1));
+            return !regex.IsMatch(decodedUrl);
+        }
+        catch (RegexMatchTimeoutException)
+        {
+            return false;
+        }
     }
 
     /// <summary>
