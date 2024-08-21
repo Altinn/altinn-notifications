@@ -85,8 +85,7 @@ public class SharedClientConfig
             topicSpec.ReplicationFactor = 3;
             topicSpec.Configs = new Dictionary<string, string>()
                                 {
-                                    { "retention.ms", retentionTime
-},
+                                    { "retention.ms", retentionTime },
                                     { "cleanup.policy", "delete" }
                                 };
         }
