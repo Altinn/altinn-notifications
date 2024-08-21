@@ -10,7 +10,7 @@ public static class StringExtensions
     /// <summary>
     /// Represents a regex pattern to detect URLs in a string.
     /// </summary>
-    private const string _urlPattern = @"\b([a-zA-Z0-9]+:\/\/)?([a-zA-Z0-9_]+:[a-zA-Z0-9_]+@)?([a-zA-Z0-9.-]+\.[A-Za-z]{1,})(:\d+)?(\/[\w\- .\/?%&=]*)?\b";
+    private const string _urlPattern = @"\b([a-zA-Z0-9]+:\/\/)?([a-zA-Z0-9_]+:[a-zA-Z0-9_]+@)?((\d{1,3}\.){3}\d{1,3}|[a-zA-Z0-9.-]+\.[A-Za-z]{1,})(:\d+)?(\/[\w\- .\/?%&=]*)?\b";
 
     /// <summary>
     /// Checks if the passed string does not contain URLs.

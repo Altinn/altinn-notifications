@@ -231,11 +231,27 @@ public class EmailNotificationOrderRequestValidatorTests
     }
 
     [Theory]
-    [InlineData("This is an email body", true)]
+    [InlineData("No URLs here!", true)]
     [InlineData("user:pass@example.com", false)]
     [InlineData("ftp://example.com/resource", false)]
     [InlineData("Visit http://example.com for more info.", false)]
     [InlineData("Check out https://www.example.com/path?query=string.", false)]
+    [InlineData("Complete your payment here: www.example.com/payment.", false)]
+    [InlineData("Check your account details here: https://my-secure.example.com.", false)]
+    [InlineData("Your invoice is overdue. Pay now at http://bit.ly/securepayment.", false)]
+    [InlineData("Click here to claim your prize: http://example.com/win?user=you&id=12345.", false)]
+    [InlineData("To update your billing information, visit http://not-really-example.com/update.", false)]
+    [InlineData("Your account requires verification. Please go to https://example.com:8080/verify.", false)]
+    [InlineData("Contact us immediately at support@example.com or visit http://example.com/support.", false)]
+    [InlineData("You have received a new secure message. Please review it at http://mail.example.com.", false)]
+    [InlineData("Please verify your accounts: http://example.com/login and https://another-example.com.", false)]
+    [InlineData("For immediate action, visit http://192.168.1.1/security/update to secure your account.", false)]
+    [InlineData("Important notice: <a href='http://example.com/reset-password'>Reset your password here</a>.", false)]
+    [InlineData("You must log in to secure your account, visit our website at https://example.com to proceed.", false)]
+    [InlineData("Please verify your account at http://www.example[dot]com/login or contact us at support[at]example.com.", false)]
+    [InlineData("Alert: Unusual activity detected on your account. Log in at https://login.example-bank.com immediately.", false)]
+    [InlineData("Your package is waiting for delivery. Confirm your address here: https://secure.example.com/track/package12345.", false)]
+    [InlineData("Dear user, your account has been compromised. Please verify your details at http://example.com/login to avoid suspension.", false)]
     public void Validate_BodyMustNotContainUrl(string emailBody, bool expectedResult)
     {
         var order = new EmailNotificationOrderRequestExt()
