@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Mappers;
+﻿using Altinn.Notifications.Extensions;
+using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
 
 using FluentValidation;
@@ -53,7 +54,7 @@ namespace Altinn.Notifications.Validators.Rules
         {
             return ruleBuilder
                 .ChildRules(order =>
-                {                  
+                {
                     order.RuleFor(order => order.MapToSmsTemplateExt())
                       .ChildRules(template =>
                       {
@@ -74,7 +75,9 @@ namespace Altinn.Notifications.Validators.Rules
                 {
                     template.RuleFor(t => t.Body)
                         .NotEmpty()
-                        .WithMessage("The SMS template body must not be empty.");
+                        .WithMessage("The SMS template body must not be empty.")
+                        .Must(e => e.DoesNotContainUrl())
+                        .WithMessage("The SMS template body must not contain any URLs.");
                 });
         }
     }

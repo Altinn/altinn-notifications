@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Mappers;
+﻿using Altinn.Notifications.Extensions;
+using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
 
 using FluentValidation;
@@ -74,11 +75,15 @@ namespace Altinn.Notifications.Validators.Rules
                 {
                     template.RuleFor(t => t.Body)
                         .NotEmpty()
-                        .WithMessage("The email template body must not be empty.");
+                        .WithMessage("The email template body must not be empty.")
+                        .Must(e => e.DoesNotContainUrl())
+                        .WithMessage("The email template body must not contain any URLs.");
 
                     template.RuleFor(t => t.Subject)
                         .NotEmpty()
-                        .WithMessage("The email template subject must not be empty.");
+                        .WithMessage("The email template subject must not be empty.")
+                        .Must(e => e.DoesNotContainUrl())
+                        .WithMessage("The email template subject must not contain any URLs.");
                 });
         }
     }
