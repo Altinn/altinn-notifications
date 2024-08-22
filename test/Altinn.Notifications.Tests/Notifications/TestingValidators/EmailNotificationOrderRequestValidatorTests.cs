@@ -230,33 +230,31 @@ public class EmailNotificationOrderRequestValidatorTests
         Assert.Equal(expectedResult, actual);
     }
 
-    [Theory]
-    [InlineData("Dear user, your account has been compromised. Please verify your details at http%3A%2F%2Fexample.com%2Flogin to avoid suspension.", false)]
-    public void Validate_BodyMustNotContainUrl(string emailBody, bool expectedResult)
+    [Fact]
+    public void Validate_SubjectContainsUrl_ReturnsFalse()
+    {
+        var order = new EmailNotificationOrderRequestExt()
+        {
+            Subject = "Encoded URL: %68%74%74%70%3A%2F%2F%77%77%77%2E%65%78%61%6D%70%6C%65%2E%63%6F%6D",
+            Recipients = { new RecipientExt() { EmailAddress = "recipient2@domain.com" } },
+            Body = "This is a valid body"
+        };
+
+        var validationResult = _validator.Validate(order);
+        Assert.False(validationResult.IsValid);
+    }
+
+    [Fact]
+    public void Validate_BodyContainsUrl_ReturnsFalse()
     {
         var order = new EmailNotificationOrderRequestExt()
         {
             Subject = "This is a valid subject",
-            Recipients = [new RecipientExt() { EmailAddress = "recipient2@domain.com" }],
-            Body = emailBody
+            Recipients = { new RecipientExt() { EmailAddress = "recipient2@domain.com" } },
+            Body = "Dear user, your account has been compromised. Please verify your details at http%3A%2F%2Fexample.com%2Flogin to avoid suspension."
         };
 
         var validationResult = _validator.Validate(order);
-        Assert.Equal(expectedResult, validationResult.IsValid);
-    }
-
-    [Theory]
-    [InlineData("Encoded URL: %68%74%74%70%3A%2F%2F%77%77%77%2E%65%78%61%6D%70%6C%65%2E%63%6F%6D", false)]
-    public void Validate_SubjectMustNotContainUrl(string emailSubject, bool expectedResult)
-    {
-        var order = new EmailNotificationOrderRequestExt()
-        {
-            Subject = emailSubject,
-            Recipients = [new RecipientExt() { EmailAddress = "recipient2@domain.com" }],
-            Body = "This is a valid subject"
-        };
-
-        var validationResult = _validator.Validate(order);
-        Assert.Equal(expectedResult, validationResult.IsValid);
+        Assert.False(validationResult.IsValid);
     }
 }

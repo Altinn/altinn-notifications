@@ -196,18 +196,17 @@ public class SmsNotificationOrderRequestValidatorTests
         Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("The condition endpoint must be a valid URL."));
     }
 
-    [Theory]
-    [InlineData("Text with newlines\nhttp://example.com\nMore text", false)]
-    public void Validate_BodyMustNotContainUrl(string messageBody, bool expectedResult)
+    [Fact]
+    public void Validate_BodyContainsUrl_ReturnsFalse()
     {
         var order = new SmsNotificationOrderRequestExt()
         {
             SenderNumber = "+4740000001",
-            Recipients = [new RecipientExt() { MobileNumber = "+4740000000" }],
-            Body = messageBody
+            Recipients = { new RecipientExt() { MobileNumber = "+4740000000" } },
+            Body = "Text with newlines\nhttp://example.com\nMore text"
         };
 
         var validationResult = _validator.Validate(order);
-        Assert.Equal(expectedResult, validationResult.IsValid);
+        Assert.False(validationResult.IsValid);
     }
 }
