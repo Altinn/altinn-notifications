@@ -140,8 +140,8 @@ public class OrderMapperTests
             NotificationChannel = NotificationChannel.Email,
             Recipients = new List<Recipient>()
             {
-                        new Recipient() { AddressInfo = new List<IAddressPoint>() { new EmailAddressPoint("recipient1@domain.com") } },
-                        new Recipient() { AddressInfo = new List<IAddressPoint>() { new EmailAddressPoint("recipient2@domain.com") } }
+                new Recipient() { AddressInfo = new List<IAddressPoint>() { new EmailAddressPoint("recipient1@domain.com") } },
+                new Recipient() { AddressInfo = new List<IAddressPoint>() { new EmailAddressPoint("recipient2@domain.com") } }
             }
         };
 
@@ -222,8 +222,8 @@ public class OrderMapperTests
             NotificationChannel = NotificationChannel.Sms,
             Recipients = new List<Recipient>()
             {
-                        new Recipient() { AddressInfo = new List<IAddressPoint>() { new SmsAddressPoint("+4740000001") } },
-                        new Recipient() { AddressInfo = new List<IAddressPoint>() { new SmsAddressPoint("+4740000002") } }
+                new Recipient() { AddressInfo = new List<IAddressPoint>() { new SmsAddressPoint("+4740000001") } },
+                new Recipient() { AddressInfo = new List<IAddressPoint>() { new SmsAddressPoint("+4740000002") } }
             }
         };
 
@@ -289,7 +289,12 @@ public class OrderMapperTests
             {
                 Body = "sms-body",
             },
-            Recipients = new List<RecipientExt>() { new RecipientExt() { EmailAddress = "recipient1@domain.com" }, new RecipientExt() { NationalIdentityNumber = "123456" } },
+            Recipients = new List<RecipientExt>()
+            {
+                new RecipientExt() { EmailAddress = "recipient1@domain.com" },
+                new RecipientExt() { NationalIdentityNumber = "123456" },
+                new RecipientExt() { MobileNumber = "+4712345678" }
+            },
             SendersReference = "senders-reference",
             RequestedSendTime = sendTime,
             ConditionEndpoint = new Uri("https://vg.no"),
@@ -315,8 +320,9 @@ public class OrderMapperTests
             RequestedSendTime = sendTime,
             Recipients = new List<Recipient>()
             {
-                        new Recipient() { AddressInfo = new List<IAddressPoint>() { new EmailAddressPoint("recipient1@domain.com") } },
-                        new Recipient() { NationalIdentityNumber = "123456" }
+                new Recipient() { AddressInfo = new List<IAddressPoint>() { new EmailAddressPoint("recipient1@domain.com") } },
+                new Recipient() { NationalIdentityNumber = "123456" },
+                new Recipient() { AddressInfo = new List<IAddressPoint>() { new SmsAddressPoint("+4712345678") } }
             },
             ConditionEndpoint = new Uri("https://vg.no"),
             IgnoreReservation = true,
