@@ -32,4 +32,12 @@ public class StringExtensionsTests
         var result = testString.DoesNotContainUrl();
         Assert.Equal(expectedResult, result);
     }
+
+    [Fact]
+    public void Validate_BodyMustNotContainUrl_Bug()
+    {
+        string testString = "td.mj-full-width-mobile";
+        var result = testString.DoesNotContainUrl();
+        Assert.False(result);
+    }
 }
