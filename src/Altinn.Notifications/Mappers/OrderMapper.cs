@@ -29,6 +29,11 @@ public static class OrderMapper
                   addresses.Add(new EmailAddressPoint(r.EmailAddress));
               }
 
+              if (!string.IsNullOrEmpty(r.MobileNumber))
+              {
+                  addresses.Add(new SmsAddressPoint(r.MobileNumber));
+              }
+
               return new Recipient(addresses, r.OrganizationNumber, r.NationalIdentityNumber);
           })
           .ToList();
