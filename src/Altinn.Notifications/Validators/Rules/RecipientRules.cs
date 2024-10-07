@@ -170,10 +170,10 @@ public static class RecipientRules
             mobileNumber.RuleFor(mobileNumber => mobileNumber)
                 .Must(mobileNumber => MobileNumberHelper.IsValidMobileNumber(mobileNumber))
                 .When(mobileNumber => !string.IsNullOrEmpty(mobileNumber))
-                .WithMessage("Invalid mobile number format.");
+                .WithMessage("Mobile number can contain only '+' and numeric characters, and it must adhere to the E.164 standard.");
         });
     }
-
+    
     private static IRuleBuilderOptions<T, string?> MustBeValidNationalIdentityNumber<T>(this IRuleBuilder<T, string?> ruleBuilder)
     {
         return ruleBuilder
@@ -234,7 +234,7 @@ public static class RecipientRules
             return false;
         }
 
-        string emailRegexPattern = @"((&quot;[^&quot;]+&quot;)|(([a-zA-Z0-9!#$%&amp;'*+\-=?\^_`{|}~])+(\.([a-zA-Z0-9!#$%&amp;'*+\-=?\^_`{|}~])+)*))@((((([a-zA-Z0-9æøåÆØÅ]([a-zA-Z0-9\-æøåÆØÅ]{0,61})[a-zA-Z0-9æøåÆØÅ]\.)|[a-zA-Z0-9æøåÆØÅ]\.){1,9})([a-zA-Z]{2,14}))|((\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})))";
+        string emailRegexPattern = @"((&quot;[^&quot;]+&quot;)|(([a-zA-Z0-9!#$%&amp;'*+\-=?\^_`{|}~])+(\.([a-zA-Z0-9!#$%&amp;'*+\-=?\^_`{|}~])+)*))@((((([a-zA-Z0-9ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½]([a-zA-Z0-9\-ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½]{0,61})[a-zA-Z0-9ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½]\.)|[a-zA-Z0-9ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½]\.){1,9})([a-zA-Z]{2,14}))|((\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})))";
 
         Regex regex = new(emailRegexPattern, RegexOptions.None, TimeSpan.FromSeconds(1));
 
