@@ -80,7 +80,7 @@ public class SmsNotificationOrderRequestValidatorTests
         var actual = _validator.Validate(order);
 
         Assert.False(actual.IsValid);
-        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("Invalid mobile number format."));
+        Assert.Contains(actual.Errors, a => a.ErrorMessage.Equals("Mobile number can contain only '+' and numeric characters, and it must adhere to the E.164 standard."));
     }
 
     [Fact]
