@@ -49,8 +49,20 @@ namespace Altinn.Notifications.Core.Helpers
             }
 
             PhoneNumberUtil phoneNumberUtil = PhoneNumberUtil.GetInstance();
+
+            bool isValidNumber;
+            
+            try
+            {
             PhoneNumber phoneNumber = phoneNumberUtil.Parse(mobileNumber, null);
-            return phoneNumberUtil.IsValidNumber(phoneNumber);
+            isValidNumber = phoneNumberUtil.IsValidNumber(phoneNumber);
+            }
+            catch (NumberParseException)
+            {
+                isValidNumber = false;
+            }
+
+            return isValidNumber;
         }
     }
 }
