@@ -54,8 +54,8 @@ namespace Altinn.Notifications.Core.Helpers
             
             try
             {
-            PhoneNumber phoneNumber = phoneNumberUtil.Parse(mobileNumber, null);
-            isValidNumber = phoneNumberUtil.IsValidNumber(phoneNumber);
+                PhoneNumber phoneNumber = phoneNumberUtil.Parse(mobileNumber, null);
+                isValidNumber = phoneNumberUtil.IsValidNumber(phoneNumber);
             }
             catch (NumberParseException)
             {
