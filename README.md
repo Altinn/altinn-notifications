@@ -78,7 +78,7 @@ Kafdrop is now available at http://localhost:9000.
 
 The Notifications components can be run locally when developing/debugging. Follow the install steps above if this has not already been done.
 
-- Navigate to _src/Notifications_, and build and run the code from there, or run the solution using you selected code editor
+- Navigate to _src/Altinn.Notifications_, and build and run the code from there, or run the solution using you selected code editor
 
   ```cmd
   cd src/Notifications
