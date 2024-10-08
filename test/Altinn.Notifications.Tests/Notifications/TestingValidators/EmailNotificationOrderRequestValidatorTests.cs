@@ -34,6 +34,20 @@ public class EmailNotificationOrderRequestValidatorTests
         Assert.True(actual.IsValid);
     }
 
+    [Fact]
+    public void Validate_RecipientWithNorwegianChars_ReturnsTrue()
+    {
+        var order = new EmailNotificationOrderRequestExt()
+        {
+            Subject = "This is an email subject",
+            Recipients = [new RecipientExt() { EmailAddress = "æge_sjøåsen@domain.com" }],
+            Body = "This is an email body"
+        };
+
+        var actual = _validator.Validate(order);
+        Assert.True(actual.IsValid);
+    }
+
     [Theory]
     [InlineData("123456789", true)]
     [InlineData("12345678", false)]
