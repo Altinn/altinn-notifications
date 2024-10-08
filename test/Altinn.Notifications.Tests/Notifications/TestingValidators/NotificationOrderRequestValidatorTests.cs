@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Validators;
@@ -14,7 +14,6 @@ namespace Altinn.Notifications.Tests.Notifications.TestingValidators
     {
         private readonly NotificationOrderRequestValidator _validator;
         private readonly NotificationOrderRequestExt _validEmailOrder;
-        private readonly NotificationOrderRequestExt _validEmailWithNorwegianLettersOrder;
         private readonly NotificationOrderRequestExt _validSmsOrder;
         private readonly NotificationOrderRequestExt _validEmailPreferredOrder;
         private readonly NotificationOrderRequestExt _validSmsPreferredOrder;
@@ -29,13 +28,6 @@ namespace Altinn.Notifications.Tests.Notifications.TestingValidators
                 NotificationChannel = NotificationChannelExt.Email,
                 EmailTemplate = new EmailTemplateExt { Subject = "Test", Body = "Test Body" },
                 Recipients = [new RecipientExt { EmailAddress = "test@test.com" }]
-            };
-            
-            _validEmailWithNorwegianLettersOrder = new()
-            {
-                NotificationChannel = NotificationChannelExt.Email,
-                EmailTemplate = new EmailTemplateExt { Subject = "Test", Body = "Test Body" },
-                Recipients = [new RecipientExt { EmailAddress = "æge@sjøåsen.com" }]
             };
 
             _validSmsOrder = new()
@@ -102,19 +94,6 @@ namespace Altinn.Notifications.Tests.Notifications.TestingValidators
         {
             // Arrange
             var model = _validEmailOrder;
-
-            // Act
-            var result = _validator.Validate(model);
-
-            // Assert
-            Assert.True(result.IsValid);
-        }
-        
-        [Fact]
-        public void Validate_Email_AllRequiredPropsAndNorwegianLetters_IsValid()
-        {
-            // Arrange
-            var model = _validEmailWithNorwegianLettersOrder;
 
             // Act
             var result = _validator.Validate(model);

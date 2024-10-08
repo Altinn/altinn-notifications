@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Validators;
@@ -27,20 +27,6 @@ public class EmailNotificationOrderRequestValidatorTests
         {
             Subject = "This is an email subject",
             Recipients = [new RecipientExt() { EmailAddress = "recipient2@domain.com" }],
-            Body = "This is an email body"
-        };
-
-        var actual = _validator.Validate(order);
-        Assert.True(actual.IsValid);
-    }
-
-    [Fact]
-    public void Validate_RecipientWithNorwegianChars_ReturnsTrue()
-    {
-        var order = new EmailNotificationOrderRequestExt()
-        {
-            Subject = "This is an email subject",
-            Recipients = [new RecipientExt() { EmailAddress = "æge_sjøåsen@domain.com" }],
             Body = "This is an email body"
         };
 
@@ -226,6 +212,7 @@ public class EmailNotificationOrderRequestValidatorTests
     }
 
     [Theory]
+    [InlineData("æge_sjøåsen@domain.com", true)]
     [InlineData("stephanie@kul.no", true)]
     [InlineData("bakken_kundeservice@sykkelverksted.com", true)]
     [InlineData("john.doe@sub.domain.example", true)]
