@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Validators;
@@ -14,10 +14,10 @@ namespace Altinn.Notifications.Tests.Notifications.TestingValidators
     {
         private readonly NotificationOrderRequestValidator _validator;
         private readonly NotificationOrderRequestExt _validEmailOrder;
-
         private readonly NotificationOrderRequestExt _validSmsOrder;
         private readonly NotificationOrderRequestExt _validEmailPreferredOrder;
         private readonly NotificationOrderRequestExt _validSmsPreferredOrder;
+        private readonly NotificationOrderRequestExt _invalidSmsPreferredOrder;
 
         public NotificationOrderRequestValidatorTests()
         {
@@ -51,6 +51,14 @@ namespace Altinn.Notifications.Tests.Notifications.TestingValidators
                 EmailTemplate = new EmailTemplateExt { Subject = "Test", Body = "Test Body" },
                 SmsTemplate = new SmsTemplateExt { Body = "Test Body" },
                 Recipients = [new RecipientExt { OrganizationNumber = "123456789" }]
+            };
+
+            _invalidSmsPreferredOrder = new()
+            {
+                NotificationChannel = NotificationChannelExt.SmsPreferred,
+                EmailTemplate = new EmailTemplateExt { Subject = "Test", Body = "Test Body" },
+                SmsTemplate = new SmsTemplateExt { Body = "Test Body" },
+                Recipients = [new RecipientExt { MobileNumber = "+47invalidChar" }]
             };
         }
 
@@ -148,6 +156,20 @@ namespace Altinn.Notifications.Tests.Notifications.TestingValidators
             // Assert
             Assert.False(result.IsValid);
             Assert.Contains(result.Errors, a => a.ErrorMessage.Equals("Organization number cannot be combined with email address, mobile number, or national identity number."));
+        }
+
+        [Fact]
+        public void Validate_SmsPreferred_LettersInMobileNumber_IsNotValid()
+        {
+            // Arrange
+            var model = _invalidSmsPreferredOrder;
+
+            // Act
+            var result = _validator.TestValidate(model);
+
+            // Assert
+            Assert.False(result.IsValid);
+            Assert.Contains(result.Errors, a => a.ErrorMessage.Equals("Mobile number can contain only '+' and numeric characters, and it must adhere to the E.164 standard."));
         }
     }
 }

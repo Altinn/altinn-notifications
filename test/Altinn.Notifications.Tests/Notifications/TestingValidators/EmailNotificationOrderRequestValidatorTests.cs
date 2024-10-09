@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Validators;
@@ -212,6 +212,7 @@ public class EmailNotificationOrderRequestValidatorTests
     }
 
     [Theory]
+    [InlineData("æge_sjøåsen@domain.com", true)]
     [InlineData("stephanie@kul.no", true)]
     [InlineData("bakken_kundeservice@sykkelverksted.com", true)]
     [InlineData("john.doe@sub.domain.example", true)]
