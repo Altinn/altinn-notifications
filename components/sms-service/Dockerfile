@@ -1,5 +1,5 @@
 #Use the official .NET SDK image with Alpine Linux as a base image
-FROM mcr.microsoft.com/dotnet/sdk:8.0.402-alpine3.20 AS build
+FROM mcr.microsoft.com/dotnet/sdk:8.0.403-alpine3.20 AS build
 
 # Set the working directory in the container
 WORKDIR /app
@@ -17,7 +17,7 @@ RUN dotnet publish -c Release -o out ./src/Altinn.Notifications.Sms/Altinn.Notif
 
 
 # Use the official .NET runtime image with Alpine Linux as a base image
-FROM mcr.microsoft.com/dotnet/aspnet:8.0.8-alpine3.20 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:8.0.10-alpine3.20 AS final
 EXPOSE 5092
 WORKDIR /app
 COPY --from=build /app/out ./
