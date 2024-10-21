@@ -58,10 +58,10 @@ jobs:
         uses: ybyzek/cp-all-in-one-action@v0.2.1
         with:
           service: broker
-      - name: Sleep for 30 seconds to allow services to start
+      - name: Sleep for 15 seconds to allow services to start
         uses: GuillaumeFalourd/wait-sleep-action@v1
         with:
-          time: '30s' # for 1 minute      
+          time: '15s' # for 15 seconds
       - name: Build & Test
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
