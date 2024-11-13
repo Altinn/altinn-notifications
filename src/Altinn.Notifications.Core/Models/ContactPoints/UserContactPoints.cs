@@ -8,12 +8,12 @@ public class UserContactPoints
     /// <summary>
     /// Gets or sets the ID of the user
     /// </summary>
-    public int? UserId { get; set; }
+    public int UserId { get; set; }
 
     /// <summary>
     /// Gets or sets the national identityt number of the user
     /// </summary>
-    public string? NationalIdentityNumber { get; set; }
+    public string NationalIdentityNumber { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets a boolean indicating whether the user has reserved themselves from electronic communication
@@ -23,12 +23,12 @@ public class UserContactPoints
     /// <summary>
     /// Gets or sets the mobile number
     /// </summary>
-    public string? MobileNumber { get; set; }
+    public string MobileNumber { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the email address
     /// </summary>
-    public string? Email { get; set; }
+    public string Email { get; set; } = string.Empty;
 
     /// <summary>
     /// Create a new instance with the same values as the existing instance
