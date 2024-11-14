@@ -84,7 +84,7 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
         List<Email> emailToBeSent = await repo.GetNewNotifications();
 
         // Assert
-        Assert.NotEmpty(emailToBeSent.Where(s => s.NotificationId == emailNotification.Id));
+        Assert.Contains(emailToBeSent, s => s.NotificationId == emailNotification.Id);
     }
 
     [Fact]

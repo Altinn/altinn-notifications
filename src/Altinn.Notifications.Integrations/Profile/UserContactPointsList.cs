@@ -1,4 +1,5 @@
 ﻿using Altinn.Notifications.Core.Models.ContactPoints;
+using Altinn.Notifications.Integrations.Profile.Models;
 
 namespace Altinn.Notifications.Integrations.Profile;
 
@@ -10,5 +11,5 @@ public class UserContactPointsList
     /// <summary>
     /// A list containing contact points for users
     /// </summary>
-    public List<UserContactPoints> ContactPointsList { get; set; } = [];
+    public List<UserContactPointsDto> ContactPointsList { get; set; } = [];
 }

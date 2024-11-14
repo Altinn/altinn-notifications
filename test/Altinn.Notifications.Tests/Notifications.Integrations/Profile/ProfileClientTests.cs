@@ -12,6 +12,7 @@ using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Integrations.Clients;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Profile;
+using Altinn.Notifications.Integrations.Profile.Models;
 using Altinn.Notifications.Integrations.Register;
 
 using Microsoft.Extensions.Options;
@@ -128,15 +129,15 @@ public class ProfileClientTests
         switch (lookup.NationalIdentityNumbers[0])
         {
             case "empty-list":
-                contentData = new UserContactPointsList() { ContactPointsList = new List<UserContactPoints>() };
+                contentData = new UserContactPointsList() { ContactPointsList = new List<UserContactPointsDto>() };
                 break;
             case "populated-list":
                 contentData = new UserContactPointsList()
                 {
                     ContactPointsList =
                     [
-                        new UserContactPoints() { NationalIdentityNumber = "01025101038", Email = string.Empty },
-                        new UserContactPoints() { NationalIdentityNumber = "01025101037", Email = string.Empty }
+                        new UserContactPointsDto() { NationalIdentityNumber = "01025101038", Email = string.Empty },
+                        new UserContactPointsDto() { NationalIdentityNumber = "01025101037", Email = string.Empty }
                     ]
                 };
                 break;
