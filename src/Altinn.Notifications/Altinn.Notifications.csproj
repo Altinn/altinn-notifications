@@ -10,7 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Altinn.Common.AccessToken" Version="4.5.3" />
+    <PackageReference Include="Altinn.Common.AccessToken" Version="4.5.4" />
     <PackageReference Include="Altinn.Common.PEP" Version="4.1.0" />
     <PackageReference Include="FluentValidation" Version="11.10.0" />
     <PackageReference Include="JWTCookieAuthentication" Version="4.0.1" />
