@@ -3,7 +3,7 @@ namespace Altinn.Notifications.Integrations.Profile.Models;
 /// <summary>
 /// Data transfer object for the API model describing the availability of contact points for a user, received from the ProfileClient
 /// </summary>
-public class UserContactPointsDTO
+public class UserContactPointsDto
 {
     /// <summary>
     /// Gets or sets the ID of the user

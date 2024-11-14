@@ -2,15 +2,15 @@ using Altinn.Notifications.Integrations.Profile.Mappers;
 using Altinn.Notifications.Integrations.Profile.Models;
 using Xunit;
 
-namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Profile.Mappers;
+namespace Altinn.Notifications.Tests.Notifications.Integrations.Profile.Mappers;
 
-public class UserContactPointsDTOMapperExtensionTests
+public class UserContactPointsDtoMapperExtensionTests
 {
     [Fact]
     public void ToUserContactPoint_NullValues_MapsCorrectly()   
     {
         // Arrange
-        var userContactPointsDTO = new UserContactPointsDTO
+        var userContactPointsDTO = new UserContactPointsDto
         {
             UserId = null,
             NationalIdentityNumber = null,
@@ -42,7 +42,7 @@ public class UserContactPointsDTOMapperExtensionTests
             isReserved = false,
             mobileNumber = "+4712345678"
         };
-        var userContactPointsDTO = new UserContactPointsDTO
+        var userContactPointsDTO = new UserContactPointsDto
         {
             UserId = testData.userId,
             NationalIdentityNumber = testData.nationalIdentityNumber,

@@ -129,15 +129,15 @@ public class ProfileClientTests
         switch (lookup.NationalIdentityNumbers[0])
         {
             case "empty-list":
-                contentData = new UserContactPointsList() { ContactPointsList = new List<UserContactPointsDTO>() };
+                contentData = new UserContactPointsList() { ContactPointsList = new List<UserContactPointsDto>() };
                 break;
             case "populated-list":
                 contentData = new UserContactPointsList()
                 {
                     ContactPointsList =
                     [
-                        new UserContactPointsDTO() { NationalIdentityNumber = "01025101038", Email = string.Empty },
-                        new UserContactPointsDTO() { NationalIdentityNumber = "01025101037", Email = string.Empty }
+                        new UserContactPointsDto() { NationalIdentityNumber = "01025101038", Email = string.Empty },
+                        new UserContactPointsDto() { NationalIdentityNumber = "01025101037", Email = string.Empty }
                     ]
                 };
                 break;
