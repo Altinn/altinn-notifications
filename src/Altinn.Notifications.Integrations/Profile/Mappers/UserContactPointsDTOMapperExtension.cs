@@ -4,7 +4,7 @@ using Altinn.Notifications.Integrations.Profile.Models;
 namespace Altinn.Notifications.Integrations.Profile.Mappers;
 
 /// <summary>
-/// Extension class to map from DTO / Profile API model to domain model for UserContactPoints
+/// Extension class to map user contact points from DTO to domain model
 /// </summary>
 public static class UserContactPointsDtoMapperExtension
 {

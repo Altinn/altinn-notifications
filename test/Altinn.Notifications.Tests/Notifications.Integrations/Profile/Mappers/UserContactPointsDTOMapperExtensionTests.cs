@@ -14,8 +14,8 @@ public class UserContactPointsDtoMapperExtensionTests
         {
             UserId = null,
             NationalIdentityNumber = null,
-            Email = null,
             IsReserved = false,
+            Email = null,
             MobileNumber = null
         };
     
@@ -25,9 +25,9 @@ public class UserContactPointsDtoMapperExtensionTests
         // Assert
         Assert.Equal(0, mappedResult.UserId);
         Assert.Equal(string.Empty, mappedResult.NationalIdentityNumber);
+        Assert.False(mappedResult.IsReserved);
         Assert.Equal(string.Empty, mappedResult.Email);
         Assert.Equal(string.Empty, mappedResult.MobileNumber);
-        Assert.False(mappedResult.IsReserved);
     }
 
     [Fact]
