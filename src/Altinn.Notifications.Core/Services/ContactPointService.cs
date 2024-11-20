@@ -53,7 +53,7 @@ public class ContactPointService : IContactPointService
                     .Select(u => new EmailAddressPoint(u.Email))
                     .ToList());
                 return recipient;
-            });
+            }).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -82,7 +82,131 @@ public class ContactPointService : IContactPointService
                   .Select(u => new SmsAddressPoint(u.MobileNumber))
                   .ToList());
                 return recipient;
-            });
+            }).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Adds the name components (e.g., name, first name, middle name, last name) to the specified recipients.
+    /// </summary>
+    /// <param name="recipients">
+    /// A list of <see cref="Recipient"/> objects to which the name components will be added. 
+    /// Recipients must have their <see cref="Recipient.NationalIdentityNumber"/> populated.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task"/> representing the asynchronous operation to add name components to the recipients.
+    /// </returns>
+    public async Task AddRecipientNameComponents(List<Recipient> recipients)
+    {
+        if (recipients == null || recipients.Count == 0)
+        {
+            return;
+        }
+
+        await AddRecipientNameComponentsForPersons(recipients).ConfigureAwait(false);
+
+        await AddRecipientNameComponentsForOrganizations(recipients).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Adds name components to the recipients based on their national identity numbers.
+    /// </summary>
+    /// <param name="recipients">The list of recipients to augment with name components.</param>
+    private async Task AddRecipientNameComponentsForPersons(List<Recipient> recipients)
+    {
+        if (recipients == null || recipients.Count == 0)
+        {
+            return;
+        }
+
+        var nationalIdentityNumbers = recipients
+           .Where(r => !string.IsNullOrWhiteSpace(r.NationalIdentityNumber))
+           .Select(r => r.NationalIdentityNumber!)
+           .ToList();
+
+        if (nationalIdentityNumbers.Count == 0)
+        {
+            return;
+        }
+
+        var partyDetails = await _registerClient.GetPartyDetailsForPersons(nationalIdentityNumbers).ConfigureAwait(false);
+        if (partyDetails == null || partyDetails.Count == 0)
+        {
+            return;
+        }
+
+        var partyLookup = partyDetails
+            .Where(static p => !string.IsNullOrWhiteSpace(p.NationalIdentityNumber))
+            .ToDictionary(p => p.NationalIdentityNumber!, p => p);
+
+        foreach (var recipient in recipients)
+        {
+            if (string.IsNullOrWhiteSpace(recipient.NationalIdentityNumber))
+            {
+                continue;
+            }
+
+            if (partyLookup.TryGetValue(recipient.NationalIdentityNumber, out var party))
+            {
+                recipient.NameComponents = new RecipientNameComponents
+                {
+                    Name = party.Name,
+                    LastName = party.PersonName?.LastName,
+                    FirstName = party.PersonName?.FirstName,
+                    MiddleName = party.PersonName?.MiddleName,
+                };
+            }
+        }
+    }
+
+    /// <summary>
+    /// Adds name components to the recipients based on their organization numbers.
+    /// </summary>
+    /// <param name="recipients">The list of recipients to augment with name components.</param>
+    private async Task AddRecipientNameComponentsForOrganizations(List<Recipient> recipients)
+    {
+        if (recipients == null || recipients.Count == 0)
+        {
+            return;
+        }
+
+        var organizationNumbers = recipients
+                  .Where(r => !string.IsNullOrWhiteSpace(r.OrganizationNumber))
+                  .Select(r => r.OrganizationNumber!)
+                  .ToList();
+
+        if (organizationNumbers.Count == 0)
+        {
+            return;
+        }
+
+        var partyDetails = await _registerClient.GetPartyDetailsForOrganizations(organizationNumbers).ConfigureAwait(false);
+        if (partyDetails == null || partyDetails.Count == 0)
+        {
+            return;
+        }
+
+        var partyLookup = partyDetails
+            .Where(static p => !string.IsNullOrWhiteSpace(p.OrganizationNumber))
+            .ToDictionary(p => p.OrganizationNumber!, p => p);
+
+        foreach (var recipient in recipients)
+        {
+            if (string.IsNullOrWhiteSpace(recipient.OrganizationNumber))
+            {
+                continue;
+            }
+
+            if (partyLookup.TryGetValue(recipient.OrganizationNumber, out var party))
+            {
+                recipient.NameComponents = new RecipientNameComponents
+                {
+                    LastName = null,
+                    FirstName = null,
+                    MiddleName = null,
+                    Name = party.Name,
+                };
+            }
+        }
     }
 
     /// <inheritdoc/>
@@ -270,8 +394,8 @@ public class ContactPointService : IContactPointService
             return [];
         }
 
+        List<OrganizationContactPoints> authorizedUserContactPoints = [];
         Task<List<OrganizationContactPoints>> registerTask = _registerClient.GetOrganizationContactPoints(orgNos);
-        List<OrganizationContactPoints> authorizedUserContactPoints = new();
 
         if (!string.IsNullOrEmpty(resourceId))
         {
@@ -315,58 +439,4 @@ public class ContactPointService : IContactPointService
 
         return contactPoints;
     }
-
-    /// <summary>
-    /// Adds the name components (e.g., name, first name, middle name, last name) to the specified recipients.
-    /// </summary>
-    /// <param name="recipients">
-    /// A list of <see cref="Recipient"/> objects to which the name components will be added. 
-    /// Recipients must have their <see cref="Recipient.NationalIdentityNumber"/> populated.
-    /// </param>
-    /// <returns>
-    /// A <see cref="Task"/> representing the asynchronous operation to add name components to the recipients.
-    /// </returns>
-    public async Task AddRecipientNameComponents(List<Recipient> recipients)
-    {
-        if (recipients == null || recipients.Count == 0)
-        {
-            return;
-        }
-
-        var nationalIdentityNumbers = recipients
-            .Where(r => !string.IsNullOrWhiteSpace(r.NationalIdentityNumber))
-            .Select(r => r.NationalIdentityNumber!)
-            .Distinct()
-            .ToList();
-
-        if (nationalIdentityNumbers.Count == 0)
-        {
-            return;
-        }
-
-        var partyDetails = await _registerClient.GetPartyDetails(nationalIdentityNumbers);
-        if (partyDetails == null || partyDetails.Count == 0)
-        {
-            return;
-        }
-
-        var partyLookup = partyDetails
-            .Where(static p => !string.IsNullOrWhiteSpace(p.NationalIdentityNumber))
-            .ToDictionary(p => p.NationalIdentityNumber!, p => p);
-
-        foreach (var recipient in recipients)
-        {
-            if (recipient.NationalIdentityNumber != null && partyLookup.TryGetValue(recipient.NationalIdentityNumber, out var party))
-            {
-                recipient.NameComponents = new RecipientNameComponents
-                {
-                    Name = party.Name,
-                    LastName = party.PersonName?.LastName,
-                    FirstName = party.PersonName?.FirstName,
-                    MiddleName = party.PersonName?.MiddleName,
-                };
-            }
-        }
-    }
-
 }

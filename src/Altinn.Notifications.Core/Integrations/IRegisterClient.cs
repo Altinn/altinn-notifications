@@ -19,12 +19,22 @@ public interface IRegisterClient
     Task<List<OrganizationContactPoints>> GetOrganizationContactPoints(List<string> organizationNumbers);
 
     /// <summary>
-    /// Asynchronously retrieves the party details for the specified social security numbers.
+    /// Asynchronously retrieves detailed information about parties based on their social security numbers.
     /// </summary>
     /// <param name="socialSecurityNumbers">A collection of social security numbers for which party details are requested.</param>
     /// <returns>
     /// A task that represents the asynchronous operation. 
-    /// The task result contains a list of <see cref="PartyDetails"/> representing the details of the specified parties.
+    /// The task result contains a list of <see cref="PartyDetails"/> representing the details of the specified individuals.
     /// </returns>
-    Task<List<PartyDetails>> GetPartyDetails(List<string> socialSecurityNumbers);
+    Task<List<PartyDetails>> GetPartyDetailsForPersons(List<string> socialSecurityNumbers);
+
+    /// <summary>
+    /// Asynchronously retrieves detailed information about parties based on their organization numbers.
+    /// </summary>
+    /// <param name="organizationNumbers">A collection of organization numbers for which party details are requested.</param>
+    /// <returns>
+    /// A task that represents the asynchronous operation. 
+    /// The task result contains a list of <see cref="PartyDetails"/> representing the details of the specified organizations.
+    /// </returns>
+    Task<List<PartyDetails>> GetPartyDetailsForOrganizations(List<string> organizationNumbers);
 }
