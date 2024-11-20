@@ -51,6 +51,12 @@ public class OrderRequestService : IOrderRequestService
 
         var templates = SetSenderIfNotDefined(orderRequest.Templates);
 
+        var containsRecipientNamePlaceholders = orderRequest.Templates.Exists(e => e.HasRecipientNamePlaceholders);
+        if (containsRecipientNamePlaceholders)
+        {
+            await _contactPointService.AddRecipientNameComponents(orderRequest.Recipients);
+        }
+
         var order = new NotificationOrder(
             orderId,
             orderRequest.SendersReference,

@@ -5,39 +5,34 @@ using Altinn.Notifications.Core.Models.Address;
 namespace Altinn.Notifications.Core.Models;
 
 /// <summary>
-/// Class representing a notification recipient
+/// Class representing a notification recipient.
 /// </summary>
 public class Recipient
 {
     /// <summary>
-    /// Gets the recipient's organization number
+    /// Gets or sets the list of address points for the recipient.
     /// </summary>
-    public string? OrganizationNumber { get; set; } = null;
+    public List<IAddressPoint> AddressInfo { get; set; } = new();
 
     /// <summary>
-    /// Gets the recipient's national identity number
-    /// </summary>
-    public string? NationalIdentityNumber { get; set; } = null;
-
-    /// <summary>
-    /// Gets or sets a value indicating whether the recipient is reserved from digital communication
+    /// Gets or sets a value indicating whether the recipient is reserved from digital communication.
     /// </summary>
     public bool? IsReserved { get; set; }
 
     /// <summary>
-    /// Gets a list of address points for the recipient
+    /// Gets or sets the recipient name components.
     /// </summary>
-    public List<IAddressPoint> AddressInfo { get; set; } = new List<IAddressPoint>();
+    public RecipientNameComponents? NameComponents { get; set; }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="Recipient"/> class.
+    /// Gets or sets the recipient's national identity number.
     /// </summary>
-    public Recipient(List<IAddressPoint> addressInfo, string? organizationNumber = null, string? nationalIdentityNumber = null)
-    {
-        OrganizationNumber = organizationNumber;
-        NationalIdentityNumber = nationalIdentityNumber;
-        AddressInfo = addressInfo;
-    }
+    public string? NationalIdentityNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets the recipient's organization number.
+    /// </summary>
+    public string? OrganizationNumber { get; set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Recipient"/> class.
@@ -47,8 +42,24 @@ public class Recipient
     }
 
     /// <summary>
-    /// Creates a deep copy of the recipient object
+    /// Initializes a new instance of the <see cref="Recipient"/> class.
     /// </summary>
+    /// <param name="addressInfo">The list of address points for the recipient.</param>
+    /// <param name="organizationNumber">The recipient's organization number.</param>
+    /// <param name="nationalIdentityNumber">The recipient's national identity number.</param>
+    /// <param name="nameComponents">The recipient name components.</param>
+    public Recipient(List<IAddressPoint> addressInfo, string? organizationNumber = null, string? nationalIdentityNumber = null, RecipientNameComponents? nameComponents = null)
+    {
+        AddressInfo = addressInfo;
+        NameComponents = nameComponents;
+        OrganizationNumber = organizationNumber;
+        NationalIdentityNumber = nationalIdentityNumber;
+    }
+
+    /// <summary>
+    /// Creates a deep copy of the recipient object.
+    /// </summary>
+    /// <returns>A deep copy of the recipient object.</returns>
     internal Recipient DeepCopy()
     {
         string json = JsonSerializer.Serialize(this);
