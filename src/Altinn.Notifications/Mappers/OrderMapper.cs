@@ -24,6 +24,14 @@ public static class OrderMapper
           {
               List<IAddressPoint> addresses = [];
 
+              RecipientNameComponents nameComponents = new()
+              {
+                  Name = r.Name,
+                  LastName = r.LastName,
+                  FirstName = r.FirstName,
+                  MiddleName = r.MiddleName
+              };
+
               if (!string.IsNullOrEmpty(r.EmailAddress))
               {
                   addresses.Add(new EmailAddressPoint(r.EmailAddress));
@@ -34,7 +42,7 @@ public static class OrderMapper
                   addresses.Add(new SmsAddressPoint(r.MobileNumber));
               }
 
-              return new Recipient(addresses, r.OrganizationNumber, r.NationalIdentityNumber);
+              return new Recipient(addresses, r.OrganizationNumber, r.NationalIdentityNumber, nameComponents);
           })
           .ToList();
 

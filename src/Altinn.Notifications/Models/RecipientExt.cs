@@ -11,6 +11,30 @@ namespace Altinn.Notifications.Models;
 public class RecipientExt
 {
     /// <summary>
+    /// Gets or sets the full name.
+    /// </summary>
+    [JsonPropertyName("name")]
+    public string? Name { get; init; }
+
+    /// <summary>
+    /// Gets or sets the first name.
+    /// </summary>
+    [JsonPropertyName("firstName")] 
+    public string? FirstName { get; init; }
+
+    /// <summary>
+    /// Gets or sets the middle name.
+    /// </summary>
+    [JsonPropertyName("middleName")] 
+    public string? MiddleName { get; init; }
+
+    /// <summary>
+    /// Gets or sets the last name (surname).
+    /// </summary>
+    [JsonPropertyName("lastName")]
+    public string? LastName { get; init; }
+
+    /// <summary>
     /// Gets or sets the email address of the recipient.
     /// </summary>
     [JsonPropertyName("emailAddress")]
