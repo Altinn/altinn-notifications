@@ -8,22 +8,22 @@ namespace Altinn.Notifications.Core.Models;
 public class RecipientNameComponents
 {
     /// <summary>
-    /// Gets the first name.
+    /// Gets or sets the first name.
     /// </summary>
     public string? FirstName { get; init; }
 
     /// <summary>
-    /// Gets the full name.
+    /// Gets or sets the full name.
     /// </summary>
     public string? Name { get; init; }
 
     /// <summary>
-    /// Gets the last name (surname).
+    /// Gets or sets the last name (surname).
     /// </summary>
     public string? LastName { get; init; }
 
     /// <summary>
-    /// Gets the middle name.
+    /// Gets or sets the middle name.
     /// </summary>
     public string? MiddleName { get; init; }
 }
