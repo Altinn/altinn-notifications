@@ -10,7 +10,12 @@ public static partial class StringExtensions
     /// <summary>
     /// The regex pattern used to identify recipient name placeholders in a string.
     /// </summary>
-    private static readonly Regex _recipientNamePlaceholdersRegex = RecipientNamePlaceholdersKeywordsRegex();
+    private static readonly Regex _recipientNamePlaceholdersKeywordsRegex = RecipientNamePlaceholdersKeywordsRegexPattern();
+
+    /// <summary>
+    /// The regex pattern used to identify recipient number placeholders in a string.
+    /// </summary>
+    private static readonly Regex _recipientNumberPlaceholdersKeywordsRegex = RecipientNumberPlaceholdersKeywordsRegexPattern();
 
     /// <summary>
     /// Checks whether the specified string contains any recipient name placeholders.
@@ -33,9 +38,33 @@ public static partial class StringExtensions
             return false;
         }
 
-        return _recipientNamePlaceholdersRegex.IsMatch(value);
+        return _recipientNamePlaceholdersKeywordsRegex.IsMatch(value);
+    }
+
+    /// <summary>
+    /// Checks whether the specified string contains any recipient number placeholders.
+    /// </summary>
+    /// <param name="value">The string to check.</param>
+    /// <returns><c>true</c> if the string contains one or more recipient number placeholders; otherwise, <c>false</c>.</returns>
+    /// <remarks>
+    /// The following recipient number placeholders are supported:
+    /// <list type="bullet">
+    /// <item><description><c>recipientNumber</c> - The organization number when recipient is an organization.</description></item>
+    /// </list>
+    /// </remarks>
+    public static bool ContainsRecipientNumberPlaceholders(this string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        return _recipientNumberPlaceholdersKeywordsRegex.IsMatch(value);
     }
 
     [GeneratedRegex(@"\$recipient(FirstName|MiddleName|LastName|Name)\$", RegexOptions.Compiled | RegexOptions.CultureInvariant)]
-    private static partial Regex RecipientNamePlaceholdersKeywordsRegex();
+    private static partial Regex RecipientNamePlaceholdersKeywordsRegexPattern();
+
+    [GeneratedRegex(@"\$recipient(Number)\$", RegexOptions.Compiled | RegexOptions.CultureInvariant)]
+    private static partial Regex RecipientNumberPlaceholdersKeywordsRegexPattern();
 }
