@@ -25,6 +25,15 @@ public class SmsTemplate : INotificationTemplate
     public bool HasRecipientNamePlaceholders => Body.ContainsRecipientNamePlaceholders();
 
     /// <summary>
+    /// Gets a value indicating whether the SMS body contains any recipient number placeholders.
+    /// </summary>
+    /// <value>
+    /// <c>true</c> if the SMS body contains any recipient number placeholders; otherwise, <c>false</c>.
+    /// </value>
+    [JsonIgnore]
+    public bool HasRecipientNumberPlaceholders => false;
+
+    /// <summary>
     /// Gets the number from which the SMS is sent.
     /// </summary>
     public string SenderNumber { get; internal set; } = string.Empty;

@@ -32,13 +32,16 @@ public class EmailTemplate : INotificationTemplate
     /// <c>true</c> if the email body or subject contains any recipient name placeholders; otherwise, <c>false</c>.
     /// </value>
     [JsonIgnore]
-    public bool HasRecipientNamePlaceholders
-    {
-        get
-        {
-            return Subject.ContainsRecipientNamePlaceholders() || Body.ContainsRecipientNamePlaceholders();
-        }
-    }
+    public bool HasRecipientNamePlaceholders => Subject.ContainsRecipientNamePlaceholders() || Body.ContainsRecipientNamePlaceholders();
+
+    /// <summary>
+    /// Gets a value indicating whether the email body contains any recipient number placeholders.
+    /// </summary>
+    /// <value>
+    /// <c>true</c> if the email body contains any recipient number placeholders; otherwise, <c>false</c>.
+    /// </value>
+    [JsonIgnore]
+    public bool HasRecipientNumberPlaceholders => Body.ContainsRecipientNumberPlaceholders();
 
     /// <summary>
     /// Gets the subject of the email.

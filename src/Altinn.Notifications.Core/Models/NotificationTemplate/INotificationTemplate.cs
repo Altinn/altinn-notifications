@@ -13,13 +13,19 @@ namespace Altinn.Notifications.Core.Models.NotificationTemplate;
 public interface INotificationTemplate
 {
     /// <summary>
-    /// Indicates whether the notification contains any recipient name placeholders.
+    /// Gets a value indicating whether the email body or subject contains any recipient name placeholders.
     /// </summary>
     [JsonIgnore]
     bool HasRecipientNamePlaceholders { get; }
 
     /// <summary>
-    /// The type of the notification template.
+    /// Gets a value indicating whether the email body contains any recipient number placeholders.
+    /// </summary>
+    [JsonIgnore]
+    bool HasRecipientNumberPlaceholders { get; }
+
+    /// <summary>
+    /// Gets the type of the notification template.
     /// </summary>
     NotificationTemplateType Type { get; }
 }
