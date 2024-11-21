@@ -1,6 +1,5 @@
 ﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
-using Altinn.Notifications.Core.Models.Parties;
 
 namespace Altinn.Notifications.Core.Services.Interfaces;
 
@@ -36,15 +35,4 @@ public interface IContactPointService
     /// <returns>A task representing the asynchronous operation.</returns>
     /// <remarks>Implementation alters the recipient reference object directly.</remarks>
     public Task AddPreferredContactPoints(NotificationChannel channel, List<Recipient> recipients, string? resourceId);
-
-    /// <summary>
-    /// Adds the name components (e.g., name, first name, middle name, last name) to the specified recipients.
-    /// </summary>
-    /// <param name="recipients">
-    /// A list of <see cref="Recipient"/> objects to which the name components will be added. 
-    /// </param>
-    /// <returns>
-    /// A <see cref="Task"/> representing the asynchronous operation to add name components to the recipients.
-    /// </returns>
-    public Task AddRecipientNameComponents(List<Recipient> recipients);
 }
