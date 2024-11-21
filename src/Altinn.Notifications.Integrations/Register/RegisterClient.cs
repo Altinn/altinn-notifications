@@ -38,11 +38,16 @@ public class RegisterClient : IRegisterClient
     /// </summary>
     /// <param name="organizationNumbers">A collection of organization numbers for which contact point details are requested.</param>
     /// <returns>
-    /// A task that represents the asynchronous operation. 
-    /// The task result contains a list of <see cref="OrganizationContactPoints"/> representing the contact points of the specified organizations.
+    /// A task that represents the asynchronous operation.
+    /// The task result contains a list of <see cref="OrganizationContactPoints" /> representing the contact points of the specified organizations.
     /// </returns>
     public async Task<List<OrganizationContactPoints>> GetOrganizationContactPoints(List<string> organizationNumbers)
     {
+        if (organizationNumbers == null || organizationNumbers.Count == 0)
+        {
+            return [];
+        }
+
         var lookupObject = new OrgContactPointLookup
         {
             OrganizationNumbers = organizationNumbers
@@ -63,46 +68,12 @@ public class RegisterClient : IRegisterClient
     }
 
     /// <summary>
-    /// Asynchronously retrieves detailed information about parties based on their social security numbers.
-    /// </summary>
-    /// <param name="socialSecurityNumbers">A collection of social security numbers for which party details are requested.</param>
-    /// <returns>
-    /// A task that represents the asynchronous operation. 
-    /// The task result contains a list of <see cref="PartyDetails"/> representing the details of the specified individuals.
-    /// </returns>
-    public async Task<List<PartyDetails>> GetPartyDetailsForPersons(List<string> socialSecurityNumbers)
-    {
-        if (socialSecurityNumbers == null || socialSecurityNumbers.Count == 0)
-        {
-            return [];
-        }
-
-        var partyDetailsLookupBatch = new PartyDetailsLookupBatch
-        {
-            PartyDetailsLookupRequestList = socialSecurityNumbers.Select(ssn => new PartyDetailsLookupRequest { SocialSecurityNumber = ssn }).ToList()
-        };
-
-        HttpContent content = new StringContent(JsonSerializer.Serialize(partyDetailsLookupBatch), Encoding.UTF8, "application/json");
-
-        var response = await _client.PostAsync($"{_nameComponentsLookupEndpoint}?partyComponentOption=person-name", content);
-
-        if (!response.IsSuccessStatusCode)
-        {
-            throw await PlatformHttpException.CreateAsync(response);
-        }
-
-        string responseContent = await response.Content.ReadAsStringAsync();
-        var partyNamesLookupResponse = JsonSerializer.Deserialize<PartyDetailsLookupResult>(responseContent, _jsonSerializerOptions);
-        return partyNamesLookupResponse?.PartyDetailsList ?? [];
-    }
-
-    /// <summary>
-    /// Asynchronously retrieves detailed information about parties based on their organization numbers.
+    /// Asynchronously retrieves party details for the specified organizations.
     /// </summary>
     /// <param name="organizationNumbers">A collection of organization numbers for which party details are requested.</param>
     /// <returns>
-    /// A task that represents the asynchronous operation. 
-    /// The task result contains a list of <see cref="PartyDetails"/> representing the details of the specified organizations.
+    /// A task that represents the asynchronous operation.
+    /// The task result contains a list of <see cref="PartyDetails" /> representing the details of the specified organizations.
     /// </returns>
     public async Task<List<PartyDetails>> GetPartyDetailsForOrganizations(List<string> organizationNumbers)
     {
@@ -119,6 +90,40 @@ public class RegisterClient : IRegisterClient
         HttpContent content = new StringContent(JsonSerializer.Serialize(partyDetailsLookupBatch), Encoding.UTF8, "application/json");
 
         var response = await _client.PostAsync($"{_nameComponentsLookupEndpoint}", content);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw await PlatformHttpException.CreateAsync(response);
+        }
+
+        string responseContent = await response.Content.ReadAsStringAsync();
+        var partyNamesLookupResponse = JsonSerializer.Deserialize<PartyDetailsLookupResult>(responseContent, _jsonSerializerOptions);
+        return partyNamesLookupResponse?.PartyDetailsList ?? [];
+    }
+
+    /// <summary>
+    /// Asynchronously retrieves party details for the specified persons.
+    /// </summary>
+    /// <param name="socialSecurityNumbers">A collection of social security numbers for which party details are requested.</param>
+    /// <returns>
+    /// A task that represents the asynchronous operation.
+    /// The task result contains a list of <see cref="PartyDetails" /> representing the details of the specified individuals.
+    /// </returns>
+    public async Task<List<PartyDetails>> GetPartyDetailsForPersons(List<string> socialSecurityNumbers)
+    {
+        if (socialSecurityNumbers == null || socialSecurityNumbers.Count == 0)
+        {
+            return [];
+        }
+
+        var partyDetailsLookupBatch = new PartyDetailsLookupBatch
+        {
+            PartyDetailsLookupRequestList = socialSecurityNumbers.Select(ssn => new PartyDetailsLookupRequest { SocialSecurityNumber = ssn }).ToList()
+        };
+
+        HttpContent content = new StringContent(JsonSerializer.Serialize(partyDetailsLookupBatch), Encoding.UTF8, "application/json");
+
+        var response = await _client.PostAsync($"{_nameComponentsLookupEndpoint}?partyComponentOption=person-name", content);
 
         if (!response.IsSuccessStatusCode)
         {
