@@ -12,17 +12,12 @@ public class Recipient
     /// <summary>
     /// Gets or sets the list of address points for the recipient.
     /// </summary>
-    public List<IAddressPoint> AddressInfo { get; set; } = new();
+    public List<IAddressPoint> AddressInfo { get; set; } = [];
 
     /// <summary>
     /// Gets or sets a value indicating whether the recipient is reserved from digital communication.
     /// </summary>
     public bool? IsReserved { get; set; }
-
-    /// <summary>
-    /// Gets or sets the recipient name components.
-    /// </summary>
-    public RecipientNameComponents? NameComponents { get; set; }
 
     /// <summary>
     /// Gets or sets the recipient's national identity number.
@@ -47,11 +42,9 @@ public class Recipient
     /// <param name="addressInfo">The list of address points for the recipient.</param>
     /// <param name="organizationNumber">The recipient's organization number.</param>
     /// <param name="nationalIdentityNumber">The recipient's national identity number.</param>
-    /// <param name="nameComponents">The recipient name components.</param>
-    public Recipient(List<IAddressPoint> addressInfo, string? organizationNumber = null, string? nationalIdentityNumber = null, RecipientNameComponents? nameComponents = null)
+    public Recipient(List<IAddressPoint> addressInfo, string? organizationNumber = null, string? nationalIdentityNumber = null)
     {
         AddressInfo = addressInfo;
-        NameComponents = nameComponents;
         OrganizationNumber = organizationNumber;
         NationalIdentityNumber = nationalIdentityNumber;
     }
