@@ -1,7 +1,4 @@
-using System.Text.Json.Serialization;
-
 using Altinn.Notifications.Core.Enums;
-using Altinn.Notifications.Core.Extensions;
 
 namespace Altinn.Notifications.Core.Models.NotificationTemplate;
 
@@ -14,24 +11,6 @@ public class SmsTemplate : INotificationTemplate
     /// Gets the body of the SMS.
     /// </summary>
     public string Body { get; internal set; } = string.Empty;
-
-    /// <summary>
-    /// Gets a value indicating whether the SMS body contains any recipient name placeholders.
-    /// </summary>
-    /// <value>
-    ///   <c>true</c> if the SMS body contains any recipient name placeholders; otherwise, <c>false</c>.
-    /// </value>
-    [JsonIgnore]
-    public bool HasRecipientNamePlaceholders => Body.ContainsRecipientNamePlaceholders();
-
-    /// <summary>
-    /// Gets a value indicating whether the SMS body contains any recipient number placeholders.
-    /// </summary>
-    /// <value>
-    /// <c>true</c> if the SMS body contains any recipient number placeholders; otherwise, <c>false</c>.
-    /// </value>
-    [JsonIgnore]
-    public bool HasRecipientNumberPlaceholders => false;
 
     /// <summary>
     /// Gets the number from which the SMS is sent.

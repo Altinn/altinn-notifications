@@ -1,7 +1,4 @@
-﻿using System.Text.Json.Serialization;
-
-using Altinn.Notifications.Core.Enums;
-using Altinn.Notifications.Core.Extensions;
+﻿using Altinn.Notifications.Core.Enums;
 
 namespace Altinn.Notifications.Core.Models.NotificationTemplate;
 
@@ -24,24 +21,6 @@ public class EmailTemplate : INotificationTemplate
     /// Gets the sender address of the email.
     /// </summary>
     public string FromAddress { get; internal set; } = string.Empty;
-
-    /// <summary>
-    /// Gets a value indicating whether the email body or subject contains any recipient name placeholders.
-    /// </summary>
-    /// <value>
-    /// <c>true</c> if the email body or subject contains any recipient name placeholders; otherwise, <c>false</c>.
-    /// </value>
-    [JsonIgnore]
-    public bool HasRecipientNamePlaceholders => Subject.ContainsRecipientNamePlaceholders() || Body.ContainsRecipientNamePlaceholders();
-
-    /// <summary>
-    /// Gets a value indicating whether the email body contains any recipient number placeholders.
-    /// </summary>
-    /// <value>
-    /// <c>true</c> if the email body contains any recipient number placeholders; otherwise, <c>false</c>.
-    /// </value>
-    [JsonIgnore]
-    public bool HasRecipientNumberPlaceholders => Body.ContainsRecipientNumberPlaceholders();
 
     /// <summary>
     /// Gets the subject of the email.
