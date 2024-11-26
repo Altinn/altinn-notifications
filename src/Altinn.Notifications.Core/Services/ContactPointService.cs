@@ -53,7 +53,7 @@ public class ContactPointService : IContactPointService
                     .Select(u => new EmailAddressPoint(u.Email))
                     .ToList());
                 return recipient;
-            }).ConfigureAwait(false);
+            });
     }
 
     /// <inheritdoc/>
@@ -82,7 +82,7 @@ public class ContactPointService : IContactPointService
                   .Select(u => new SmsAddressPoint(u.MobileNumber))
                   .ToList());
                 return recipient;
-            }).ConfigureAwait(false);
+            });
     }
 
     /// <inheritdoc/>
