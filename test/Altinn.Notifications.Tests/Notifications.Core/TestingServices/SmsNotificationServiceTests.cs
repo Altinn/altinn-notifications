@@ -23,7 +23,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 public class SmsNotificationServiceTests
 {
     private const string _smsQueueTopicName = "test.sms.queue";
-    private readonly Sms _sms = new(Guid.NewGuid(), "Altinn Test", "Recipient", "Text message");
+    private readonly Sms _sms = new(Guid.NewGuid(), "Altinn Test", "Recipient", "Text message", "Test national identity number", "Test organization number");
 
     [Fact]
     public async Task CreateNotifications_NewSmsNotification_RepositoryCalledOnce()
@@ -281,7 +281,7 @@ public class SmsNotificationServiceTests
         repoMock.Verify();
     }
 
-    private static SmsNotificationService GetTestService(ISmsNotificationRepository? repo = null, IKafkaProducer? producer = null, Guid? guidOutput = null, DateTime? dateTimeOutput = null)
+    private static SmsNotificationService GetTestService(ISmsNotificationRepository? repo = null, IKafkaProducer? producer = null, Guid? guidOutput = null, DateTime? dateTimeOutput = null, IKeywordsService? keywordsService = null)
     {
         var guidService = new Mock<IGuidService>();
         guidService
@@ -304,6 +304,11 @@ public class SmsNotificationServiceTests
             producer = producerMock.Object;
         }
 
-        return new SmsNotificationService(guidService.Object, dateTimeService.Object, repo, producer, Options.Create(new KafkaSettings { SmsQueueTopicName = _smsQueueTopicName }));
+        if (keywordsService == null)
+        {
+            keywordsService = new Mock<IKeywordsService>().Object;
+        }
+
+        return new SmsNotificationService(guidService.Object, dateTimeService.Object, repo, producer, Options.Create(new KafkaSettings { SmsQueueTopicName = _smsQueueTopicName }), keywordsService);
     }
 }

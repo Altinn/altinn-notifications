@@ -30,7 +30,7 @@ public class EmailNotificationRepository : IEmailNotificationRepository
             resulttime = now(), 
             operationid = $2
         WHERE alternateid = $3 OR operationid = $2;";    // (_result, _operationid, _alternateid)
-   
+
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotificationRepository"/> class.
     /// </summary>
@@ -80,7 +80,9 @@ public class EmailNotificationRepository : IEmailNotificationRepository
                     reader.GetValue<string>("body"),
                     reader.GetValue<string>("fromaddress"),
                     reader.GetValue<string>("toaddress"),
-                    emailContentType);
+                    emailContentType,
+                    reader.GetValue<string>("recipientnin"),
+                    reader.GetValue<string>("recipientorgno"));
 
                 searchResult.Add(email);
             }
@@ -114,7 +116,7 @@ public class EmailNotificationRepository : IEmailNotificationRepository
         {
             while (await reader.ReadAsync())
             {
-                searchResult.Add(new EmailRecipient() 
+                searchResult.Add(new EmailRecipient()
                 {
                     OrganizationNumber = reader.GetValue<string?>("recipientorgno"),
                     NationalIdentityNumber = reader.GetValue<string?>("recipientnin"),

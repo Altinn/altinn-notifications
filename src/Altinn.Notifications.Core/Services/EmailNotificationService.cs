@@ -21,6 +21,7 @@ public class EmailNotificationService : IEmailNotificationService
     private readonly IDateTimeService _dateTime;
     private readonly IEmailNotificationRepository _repository;
     private readonly IKafkaProducer _producer;
+    private readonly IKeywordsService _keywordsService;
     private readonly string _emailQueueTopicName;
 
     /// <summary>
@@ -31,13 +32,15 @@ public class EmailNotificationService : IEmailNotificationService
         IDateTimeService dateTime,
         IEmailNotificationRepository repository,
         IKafkaProducer producer,
-        IOptions<KafkaSettings> kafkaSettings)
+        IOptions<KafkaSettings> kafkaSettings,
+        IKeywordsService keywordsService)
     {
         _guid = guid;
         _dateTime = dateTime;
         _repository = repository;
         _producer = producer;
         _emailQueueTopicName = kafkaSettings.Value.EmailQueueTopicName;
+        _keywordsService = keywordsService;
     }
 
     /// <inheritdoc/>
@@ -79,6 +82,7 @@ public class EmailNotificationService : IEmailNotificationService
     public async Task SendNotifications()
     {
         List<Email> emails = await _repository.GetNewNotifications();
+        emails = await _keywordsService.ReplaceKeywordsAsync(emails);
 
         foreach (Email email in emails)
         {

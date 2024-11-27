@@ -35,6 +35,22 @@ public class Email
     public string ToAddress { get; set; }
 
     /// <summary>
+    /// Gets or sets the national identity number.
+    /// </summary>
+    /// <value>
+    /// The national identity number.
+    /// </value>
+    public string NationalIdentityNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets the organization number.
+    /// </summary>
+    /// <value>
+    /// The organization number.
+    /// </value>
+    public string OrganizationNumber { get; set; }
+
+    /// <summary>
     /// Gets or sets the content type of the email.
     /// </summary>
     public EmailContentType ContentType { get; set; }
@@ -42,7 +58,7 @@ public class Email
     /// <summary>
     /// Initializes a new instance of the <see cref="Email"/> class.
     /// </summary>
-    public Email(Guid notificationId, string subject, string body, string fromAddress, string toAddress, EmailContentType contentType)
+    public Email(Guid notificationId, string subject, string body, string fromAddress, string toAddress, EmailContentType contentType, string nationalIdentityNumber, string organizationNumber)
     {
         NotificationId = notificationId;
         Subject = subject;
@@ -50,6 +66,8 @@ public class Email
         FromAddress = fromAddress;
         ToAddress = toAddress;
         ContentType = contentType;
+        NationalIdentityNumber = nationalIdentityNumber;
+        OrganizationNumber = organizationNumber;
     }
 
     /// <summary>

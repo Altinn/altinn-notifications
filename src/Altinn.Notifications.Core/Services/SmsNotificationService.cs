@@ -21,6 +21,7 @@ public class SmsNotificationService : ISmsNotificationService
     private readonly IDateTimeService _dateTime;
     private readonly ISmsNotificationRepository _repository;
     private readonly IKafkaProducer _producer;
+    private readonly IKeywordsService _keywordsService;
     private readonly string _smsQueueTopicName;
 
     /// <summary>
@@ -31,12 +32,14 @@ public class SmsNotificationService : ISmsNotificationService
         IDateTimeService dateTime,
         ISmsNotificationRepository repository,
         IKafkaProducer producer,
-        IOptions<KafkaSettings> kafkaSettings)
+        IOptions<KafkaSettings> kafkaSettings,
+        IKeywordsService keywordsService)
     {
         _guid = guid;
         _dateTime = dateTime;
         _repository = repository;
         _producer = producer;
+        _keywordsService = keywordsService;
         _smsQueueTopicName = kafkaSettings.Value.SmsQueueTopicName;
     }
 
@@ -77,7 +80,8 @@ public class SmsNotificationService : ISmsNotificationService
     /// <inheritdoc/>
     public async Task SendNotifications()
     {
-        List<Sms> smsList = await _repository.GetNewNotifications();
+        var smsList = await _repository.GetNewNotifications();
+        smsList = await _keywordsService.ReplaceKeywordsAsync(smsList);
 
         foreach (Sms sms in smsList)
         {

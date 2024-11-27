@@ -23,7 +23,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 public class EmailNotificationServiceTests
 {
     private const string _emailQueueTopicName = "email.queue";
-    private readonly Email _email = new(Guid.NewGuid(), "email.subject", "email.body", "from@domain.com", "to@domain.com", Altinn.Notifications.Core.Enums.EmailContentType.Plain);
+    private readonly Email _email = new(Guid.NewGuid(), "email.subject", "email.body", "from@domain.com", "to@domain.com", EmailContentType.Plain, "Test organization number", "Test national identity number");
 
     [Fact]
     public async Task SendNotifications_ProducerCalledOnceForEachRetrievedEmail()
@@ -288,7 +288,7 @@ public class EmailNotificationServiceTests
         repoMock.Verify();
     }
 
-    private static EmailNotificationService GetTestService(IEmailNotificationRepository? repo = null, IKafkaProducer? producer = null, Guid? guidOutput = null, DateTime? dateTimeOutput = null)
+    private static EmailNotificationService GetTestService(IEmailNotificationRepository? repo = null, IKafkaProducer? producer = null, Guid? guidOutput = null, DateTime? dateTimeOutput = null, IKeywordsService? keywordsService = null)
     {
         var guidService = new Mock<IGuidService>();
         guidService
@@ -311,6 +311,11 @@ public class EmailNotificationServiceTests
             producer = producerMock.Object;
         }
 
-        return new EmailNotificationService(guidService.Object, dateTimeService.Object, repo, producer, Options.Create(new KafkaSettings { EmailQueueTopicName = _emailQueueTopicName }));
+        if (keywordsService == null)
+        {
+            keywordsService = new Mock<IKeywordsService>().Object;
+        }
+
+        return new EmailNotificationService(guidService.Object, dateTimeService.Object, repo, producer, Options.Create(new KafkaSettings { EmailQueueTopicName = _emailQueueTopicName }), keywordsService);
     }
 }
