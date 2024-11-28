@@ -84,7 +84,7 @@ public class RegisterClient : IRegisterClient
 
         var partyDetailsLookupBatch = new PartyDetailsLookupBatch
         {
-            PartyDetailsLookupRequestList = organizationNumbers.Select(orgNumber => new PartyDetailsLookupRequest { OrganizationNumber = orgNumber }).ToList()
+            PartyDetailsLookupRequestList = organizationNumbers.Select(orgNumber => new PartyDetailsLookupRequest(organizationNumber: orgNumber)).ToList()
         };
 
         HttpContent content = new StringContent(JsonSerializer.Serialize(partyDetailsLookupBatch), Encoding.UTF8, "application/json");
@@ -118,7 +118,7 @@ public class RegisterClient : IRegisterClient
 
         var partyDetailsLookupBatch = new PartyDetailsLookupBatch
         {
-            PartyDetailsLookupRequestList = socialSecurityNumbers.Select(ssn => new PartyDetailsLookupRequest { SocialSecurityNumber = ssn }).ToList()
+            PartyDetailsLookupRequestList = socialSecurityNumbers.Select(ssn => new PartyDetailsLookupRequest(socialSecurityNumber: ssn)).ToList()
         };
 
         HttpContent content = new StringContent(JsonSerializer.Serialize(partyDetailsLookupBatch), Encoding.UTF8, "application/json");
