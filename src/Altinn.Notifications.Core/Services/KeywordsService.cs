@@ -2,6 +2,7 @@
 
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Services.Interfaces;
 
 namespace Altinn.Notifications.Core.Services
@@ -33,13 +34,13 @@ namespace Altinn.Notifications.Core.Services
         }
 
         /// <inheritdoc/>
-        public bool ContainsRecipientNamePlaceholder(string value)
+        public bool ContainsRecipientNamePlaceholder(string? value)
         {
             return !string.IsNullOrWhiteSpace(value) && _recipientNamePlaceholderRegex.Value.IsMatch(value);
         }
 
         /// <inheritdoc/>
-        public bool ContainsRecipientNumberPlaceholder(string value)
+        public bool ContainsRecipientNumberPlaceholder(string? value)
         {
             return !string.IsNullOrWhiteSpace(value) && _recipientNumberPlaceholderRegex.Value.IsMatch(value);
         }
@@ -64,22 +65,17 @@ namespace Altinn.Notifications.Core.Services
         }
 
         /// <inheritdoc/>
-        public async Task<List<Email>> ReplaceKeywordsAsync(List<Email> emailList)
+        public async Task<EmailRecipient> ReplaceKeywordsAsync(EmailRecipient emailRecipient)
         {
-            ArgumentNullException.ThrowIfNull(emailList);
+            ArgumentNullException.ThrowIfNull(emailRecipient);
 
-            if (emailList.Count == 0)
-            {
-                return emailList;
-            }
+            emailRecipient = await InjectPersonNameAsync(emailRecipient);
+            emailRecipient = InjectNationalIdentityNumbers(emailRecipient);
 
-            emailList = await InjectPersonNameAsync(emailList);
-            emailList = InjectNationalIdentityNumbers(emailList);
+            emailRecipient = InjectOrganizationNumbers(emailRecipient);
+            emailRecipient = await InjectOrganizationNameAsync(emailRecipient);
 
-            emailList = InjectOrganizationNumbers(emailList);
-            emailList = await InjectOrganizationNameAsync(emailList);
-
-            return emailList;
+            return emailRecipient;
         }
 
         /// <summary>
@@ -130,51 +126,47 @@ namespace Altinn.Notifications.Core.Services
         }
 
         /// <summary>
-        /// Injects the recipient's name into the email where the $recipientName$ placeholder is found.
+        /// Injects the recipient's name wherever the $recipientName$ placeholder is found.
         /// </summary>
-        /// <param name="emailList">The list of <see cref="Email"/>.</param>
-        /// <returns>The updated list of <see cref="Email"/>.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="emailList"/> is null.</exception>
-        private async Task<List<Email>> InjectPersonNameAsync(List<Email> emailList)
+        /// <param name="emailRecipient">The list of <see cref="EmailRecipient"/>.</param>
+        /// <returns>The updated list of <see cref="EmailRecipient"/>.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="emailRecipient"/> is null.</exception>
+        private async Task<EmailRecipient> InjectPersonNameAsync(EmailRecipient emailRecipient)
         {
-            ArgumentNullException.ThrowIfNull(emailList);
+            ArgumentNullException.ThrowIfNull(emailRecipient);
 
-            if (emailList.Count == 0)
+            // If the recipient does not contain the recipient name placeholder, we do not need to look up the person name.
+            bool containsRecipientNamePlaceholder = ContainsRecipientNamePlaceholder(emailRecipient.CustomizedBody) ||
+                                                    ContainsRecipientNamePlaceholder(emailRecipient.CustomizedSubject);
+            if (!containsRecipientNamePlaceholder)
             {
-                return emailList;
+                return emailRecipient;
             }
 
-            var nationalIdentityNumbers = emailList
-                .Where(e => ContainsRecipientNamePlaceholder(e.Subject) || ContainsRecipientNamePlaceholder(e.Body))
-                .Where(e => !string.IsNullOrEmpty(e.NationalIdentityNumber))
-                .Select(e => e.NationalIdentityNumber)
-                .Distinct()
-                .ToList();
-
-            if (nationalIdentityNumbers.Count == 0)
+            // If the recipient does not have an person number, we do not need to look up the person name.
+            if (string.IsNullOrWhiteSpace(emailRecipient.NationalIdentityNumber))
             {
-                return emailList;
+                return emailRecipient;
             }
 
-            var partyDetails = await _registerClient.GetPartyDetailsForPersons(nationalIdentityNumbers);
+            // Look up the person name and replace the recipient name placeholder with the person name.
+            var partyDetails = await _registerClient.GetPartyDetailsForOrganizations([emailRecipient.NationalIdentityNumber]);
             if (partyDetails == null || partyDetails.Count == 0)
             {
-                return emailList;
+                return emailRecipient;
             }
 
-            foreach (var partyDetail in partyDetails)
+            if (!string.IsNullOrWhiteSpace(emailRecipient.CustomizedBody))
             {
-                var email = emailList.Find(e => e.NationalIdentityNumber == partyDetail.NationalIdentityNumber);
-                if (email == null)
-                {
-                    continue;
-                }
-
-                email.Body = email.Body.Replace(_recipientNamePlaceholder, partyDetail.Name ?? string.Empty);
-                email.Subject = email.Subject.Replace(_recipientNamePlaceholder, partyDetail.Name ?? string.Empty);
+                emailRecipient.CustomizedBody = emailRecipient.CustomizedBody.Replace(_recipientNamePlaceholder, partyDetails[0].Name ?? string.Empty);
             }
 
-            return emailList;
+            if (!string.IsNullOrWhiteSpace(emailRecipient.CustomizedSubject))
+            {
+                emailRecipient.CustomizedSubject = emailRecipient.CustomizedSubject.Replace(_recipientNamePlaceholder, partyDetails[0].Name ?? string.Empty);
+            }
+
+            return emailRecipient;
         }
 
         /// <summary>
@@ -213,39 +205,38 @@ namespace Altinn.Notifications.Core.Services
         }
 
         /// <summary>
-        /// Injects the recipient's national identity number into the email where the $recipientNumber$ placeholder is found.
+        /// Injects the recipient's national identity number wherever the $recipientNumber$ placeholder is found.
         /// </summary>
-        /// <param name="emailList">The list of <see cref="Email"/>.</param>
-        /// <returns>The updated list of <see cref="Email"/>.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="emailList"/> is null.</exception>
-        private List<Email> InjectNationalIdentityNumbers(List<Email> emailList)
+        /// <param name="emailRecipient">The list of <see cref="EmailRecipient"/>.</param>
+        /// <returns>The updated list of <see cref="EmailRecipient"/>.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="emailRecipient"/> is null.</exception>
+        private EmailRecipient InjectNationalIdentityNumbers(EmailRecipient emailRecipient)
         {
-            ArgumentNullException.ThrowIfNull(emailList);
+            ArgumentNullException.ThrowIfNull(emailRecipient);
 
-            if (emailList.Count == 0)
+            bool containsRecipientNumberPlaceholder = ContainsRecipientNumberPlaceholder(emailRecipient.CustomizedBody) ||
+                                                      ContainsRecipientNumberPlaceholder(emailRecipient.CustomizedSubject);
+            if (!containsRecipientNumberPlaceholder)
             {
-                return emailList;
+                return emailRecipient;
             }
 
-            var emailWithNationalIdentityNumber = emailList
-                .Where(e => ContainsRecipientNumberPlaceholder(e.Subject) || ContainsRecipientNumberPlaceholder(e.Body))
-                .Where(e => !string.IsNullOrEmpty(e.NationalIdentityNumber))
-                .Distinct()
-                .ToList();
-
-            foreach (var emailWithKeyword in emailWithNationalIdentityNumber)
+            if (string.IsNullOrWhiteSpace(emailRecipient.NationalIdentityNumber))
             {
-                var email = emailList.Find(e => e.NationalIdentityNumber == emailWithKeyword.NationalIdentityNumber);
-                if (email == null)
-                {
-                    continue;
-                }
-
-                email.Body = email.Body.Replace(_recipientNumberPlaceholder, email.NationalIdentityNumber ?? string.Empty);
-                email.Subject = email.Subject.Replace(_recipientNumberPlaceholder, email.NationalIdentityNumber ?? string.Empty);
+                return emailRecipient;
             }
 
-            return emailList;
+            if (!string.IsNullOrWhiteSpace(emailRecipient.CustomizedBody))
+            {
+                emailRecipient.CustomizedBody = emailRecipient.CustomizedBody.Replace(_recipientNumberPlaceholder, emailRecipient.NationalIdentityNumber ?? string.Empty);
+            }
+
+            if (!string.IsNullOrWhiteSpace(emailRecipient.CustomizedSubject))
+            {
+                emailRecipient.CustomizedSubject = emailRecipient.CustomizedSubject.Replace(_recipientNumberPlaceholder, emailRecipient.NationalIdentityNumber ?? string.Empty);
+            }
+
+            return emailRecipient;
         }
 
         /// <summary>
@@ -284,39 +275,38 @@ namespace Altinn.Notifications.Core.Services
         }
 
         /// <summary>
-        /// Injects the recipient's organization number into the email where the $recipientNumber$ placeholder is found.
+        /// Injects the recipient's organization number wherever the $recipientNumber$ placeholder is found.
         /// </summary>
-        /// <param name="emailList">The list of <see cref="Email"/>.</param>
-        /// <returns>The updated list of <see cref="Email"/>.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="emailList"/> is null.</exception>
-        private List<Email> InjectOrganizationNumbers(List<Email> emailList)
+        /// <param name="emailRecipient">The list of <see cref="EmailRecipient"/>.</param>
+        /// <returns>The updated list of <see cref="EmailRecipient"/>.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="emailRecipient"/> is null.</exception>
+        private EmailRecipient InjectOrganizationNumbers(EmailRecipient emailRecipient)
         {
-            ArgumentNullException.ThrowIfNull(emailList);
+            ArgumentNullException.ThrowIfNull(emailRecipient);
 
-            if (emailList.Count == 0)
+            bool containsRecipientNumberPlaceholder = ContainsRecipientNumberPlaceholder(emailRecipient.CustomizedBody) ||
+                                                      ContainsRecipientNumberPlaceholder(emailRecipient.CustomizedSubject);
+            if (!containsRecipientNumberPlaceholder)
             {
-                return emailList;
+                return emailRecipient;
             }
 
-            var emailWithNationalIdentityNumber = emailList
-                .Where(e => ContainsRecipientNumberPlaceholder(e.Subject) || ContainsRecipientNumberPlaceholder(e.Body))
-                .Where(e => !string.IsNullOrEmpty(e.OrganizationNumber))
-                .Distinct()
-                .ToList();
-
-            foreach (var emailWithKeyword in emailWithNationalIdentityNumber)
+            if (string.IsNullOrWhiteSpace(emailRecipient.OrganizationNumber))
             {
-                var email = emailList.Find(e => e.OrganizationNumber == emailWithKeyword.OrganizationNumber);
-                if (email == null)
-                {
-                    continue;
-                }
-
-                email.Body = email.Body.Replace(_recipientNumberPlaceholder, email.OrganizationNumber ?? string.Empty);
-                email.Subject = email.Subject.Replace(_recipientNumberPlaceholder, email.OrganizationNumber ?? string.Empty);
+                return emailRecipient;
             }
 
-            return emailList;
+            if (!string.IsNullOrWhiteSpace(emailRecipient.CustomizedBody))
+            {
+                emailRecipient.CustomizedBody = emailRecipient.CustomizedBody.Replace(_recipientNumberPlaceholder, emailRecipient.OrganizationNumber ?? string.Empty);
+            }
+
+            if (!string.IsNullOrWhiteSpace(emailRecipient.CustomizedSubject))
+            {
+                emailRecipient.CustomizedSubject = emailRecipient.CustomizedSubject.Replace(_recipientNumberPlaceholder, emailRecipient.OrganizationNumber ?? string.Empty);
+            }
+
+            return emailRecipient;
         }
 
         /// <summary>
@@ -367,51 +357,47 @@ namespace Altinn.Notifications.Core.Services
         }
 
         /// <summary>
-        /// Injects the recipient's organization name into the email where the $recipientName$ placeholder is found.
+        /// Injects the recipient's organization name wherever the $recipientName$ placeholder is found.
         /// </summary>
-        /// <param name="emailList">The list of <see cref="Email"/>.</param>
-        /// <returns>The updated list of <see cref="Email"/>.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="emailList"/> is null.</exception>
-        private async Task<List<Email>> InjectOrganizationNameAsync(List<Email> emailList)
+        /// <param name="emailRecipient">The <see cref="EmailRecipient"/>.</param>
+        /// <returns>The updated <see cref="EmailRecipient"/>.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="emailRecipient"/> is null.</exception>
+        private async Task<EmailRecipient> InjectOrganizationNameAsync(EmailRecipient emailRecipient)
         {
-            ArgumentNullException.ThrowIfNull(emailList);
+            ArgumentNullException.ThrowIfNull(emailRecipient);
 
-            if (emailList.Count == 0)
+            // If the recipient does not contain the recipient name placeholder, we do not need to look up the organization name.
+            bool containsRecipientNamePlaceholder = ContainsRecipientNamePlaceholder(emailRecipient.CustomizedBody) ||
+                                                    ContainsRecipientNamePlaceholder(emailRecipient.CustomizedSubject);
+            if (!containsRecipientNamePlaceholder)
             {
-                return emailList;
+                return emailRecipient;
             }
 
-            var organizationNumbers = emailList
-                .Where(e => ContainsRecipientNamePlaceholder(e.Subject) || ContainsRecipientNamePlaceholder(e.Body))
-                .Where(e => !string.IsNullOrEmpty(e.OrganizationNumber))
-                .Select(e => e.OrganizationNumber)
-                .Distinct()
-                .ToList();
-
-            if (organizationNumbers.Count == 0)
+            // If the recipient does not have an organization number, we do not need to look up the organization name.
+            if (string.IsNullOrWhiteSpace(emailRecipient.OrganizationNumber))
             {
-                return emailList;
+                return emailRecipient;
             }
 
-            var partyDetails = await _registerClient.GetPartyDetailsForOrganizations(organizationNumbers);
+            // Look up the organization name and replace the recipient name placeholder with the organization name.
+            var partyDetails = await _registerClient.GetPartyDetailsForOrganizations([emailRecipient.OrganizationNumber]);
             if (partyDetails == null || partyDetails.Count == 0)
             {
-                return emailList;
+                return emailRecipient;
             }
 
-            foreach (var partyDetail in partyDetails)
+            if (!string.IsNullOrWhiteSpace(emailRecipient.CustomizedBody))
             {
-                var email = emailList.Find(e => e.OrganizationNumber == partyDetail.OrganizationNumber);
-                if (email == null)
-                {
-                    continue;
-                }
-
-                email.Body = email.Body.Replace(_recipientNamePlaceholder, partyDetail.Name ?? string.Empty);
-                email.Subject = email.Subject.Replace(_recipientNamePlaceholder, partyDetail.Name ?? string.Empty);
+                emailRecipient.CustomizedBody = emailRecipient.CustomizedBody.Replace(_recipientNamePlaceholder, partyDetails[0].Name ?? string.Empty);
             }
 
-            return emailList;
+            if (!string.IsNullOrWhiteSpace(emailRecipient.CustomizedSubject))
+            {
+                emailRecipient.CustomizedSubject = emailRecipient.CustomizedSubject.Replace(_recipientNamePlaceholder, partyDetails[0].Name ?? string.Empty);
+            }
+
+            return emailRecipient;
         }
     }
 }

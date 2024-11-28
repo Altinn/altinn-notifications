@@ -21,8 +21,8 @@ public class EmailNotificationService : IEmailNotificationService
     private readonly IDateTimeService _dateTime;
     private readonly IEmailNotificationRepository _repository;
     private readonly IKafkaProducer _producer;
-    private readonly IKeywordsService _keywordsService;
     private readonly string _emailQueueTopicName;
+    private readonly IKeywordsService _keywordsService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotificationService"/> class.
@@ -44,7 +44,7 @@ public class EmailNotificationService : IEmailNotificationService
     }
 
     /// <inheritdoc/>
-    public async Task CreateNotification(Guid orderId, DateTime requestedSendTime, Recipient recipient, bool ignoreReservation = false)
+    public async Task CreateNotification(Guid orderId, DateTime requestedSendTime, Recipient recipient, bool ignoreReservation = false, string? emailBody = null, string? emailSubject = null)
     {
         List<EmailAddressPoint> emailAddresses = recipient.AddressInfo
           .Where(a => a.AddressType == AddressType.Email)
@@ -54,10 +54,14 @@ public class EmailNotificationService : IEmailNotificationService
 
         EmailRecipient emailRecipient = new()
         {
+            IsReserved = recipient.IsReserved,
             OrganizationNumber = recipient.OrganizationNumber,
             NationalIdentityNumber = recipient.NationalIdentityNumber,
-            IsReserved = recipient.IsReserved
+            CustomizedBody = (_keywordsService.ContainsRecipientNumberPlaceholder(emailBody) || _keywordsService.ContainsRecipientNamePlaceholder(emailBody)) ? emailBody : null,
+            CustomizedSubject = (_keywordsService.ContainsRecipientNumberPlaceholder(emailSubject) || _keywordsService.ContainsRecipientNamePlaceholder(emailSubject)) ? emailSubject : null,
         };
+
+        emailRecipient = await _keywordsService.ReplaceKeywordsAsync(emailRecipient);
 
         if (recipient.IsReserved.HasValue && recipient.IsReserved.Value && !ignoreReservation)
         {
@@ -74,15 +78,15 @@ public class EmailNotificationService : IEmailNotificationService
         foreach (EmailAddressPoint addressPoint in emailAddresses)
         {
             emailRecipient.ToAddress = addressPoint.EmailAddress;
+
             await CreateNotificationForRecipient(orderId, requestedSendTime, emailRecipient, EmailNotificationResultType.New);
-        }        
+        }
     }
 
     /// <inheritdoc/>
     public async Task SendNotifications()
     {
         List<Email> emails = await _repository.GetNewNotifications();
-        emails = await _keywordsService.ReplaceKeywordsAsync(emails);
 
         foreach (Email email in emails)
         {
@@ -110,10 +114,10 @@ public class EmailNotificationService : IEmailNotificationService
     {
         var emailNotification = new EmailNotification()
         {
-            Id = _guid.NewGuid(),
             OrderId = orderId,
-            RequestedSendTime = requestedSendTime,
+            Id = _guid.NewGuid(),
             Recipient = recipient,
+            RequestedSendTime = requestedSendTime,
             SendResult = new(result, _dateTime.UtcNow())
         };
 

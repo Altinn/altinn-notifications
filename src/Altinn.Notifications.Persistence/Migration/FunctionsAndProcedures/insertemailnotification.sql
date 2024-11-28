@@ -1,11 +1,13 @@
 CREATE OR REPLACE PROCEDURE notifications.insertemailnotification(
-_orderid uuid, 
-_alternateid uuid, 
+_orderid uuid,
+_alternateid uuid,
 _recipientorgno TEXT,
 _recipientnin TEXT,
-_toaddress TEXT, 
-_result text, 
-_resulttime timestamptz, 
+_toaddress TEXT,
+_customizedbody TEXT,
+_customizedsubject TEXT,
+_result TEXT,
+_resulttime timestamptz,
 _expirytime timestamptz)
 LANGUAGE 'plpgsql'
 AS $BODY$
@@ -15,19 +17,24 @@ __orderid BIGINT := (SELECT _id from notifications.orders
 BEGIN
 
 INSERT INTO notifications.emailnotifications(
-_orderid, 
-alternateid, 
-recipientorgno, 
-recipientnin, 
-toaddress, result, 
-resulttime, 
+_orderid,
+alternateid,
+recipientorgno,
+recipientnin,
+toaddress,
+customizedBody,
+customizedSubject,
+result,
+resulttime,
 expirytime)
 VALUES (
-__orderid, 
+__orderid,
 _alternateid,
 _recipientorgno,
 _recipientnin,
 _toaddress,
+_customizedbody,
+_customizedsubject,
 _result::emailnotificationresulttype,
 _resulttime,
 _expirytime);

@@ -11,7 +11,7 @@ public interface IEmailNotificationService
     /// <summary>
     /// Creates a new email notification based on the provided orderId and recipient
     /// </summary>
-    public Task CreateNotification(Guid orderId, DateTime requestedSendTime, Recipient recipient, bool ignoreReservation = false);
+    public Task CreateNotification(Guid orderId, DateTime requestedSendTime, Recipient recipient, bool ignoreReservation = false, string? emailBody = null, string? emailSubject = null);
 
     /// <summary>
     /// Starts the process of sending all ready email notifications

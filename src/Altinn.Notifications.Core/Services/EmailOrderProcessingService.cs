@@ -1,6 +1,7 @@
 ﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
+using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
@@ -44,9 +45,10 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
     /// <inheritdoc/>
     public async Task ProcessOrderWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients)
     {
+        var emailTemplate = order.Templates[0] as EmailTemplate;
         foreach (Recipient recipient in recipients)
         {
-            await _emailService.CreateNotification(order.Id, order.RequestedSendTime, recipient, order.IgnoreReservation ?? false);
+            await _emailService.CreateNotification(order.Id, order.RequestedSendTime, recipient, order.IgnoreReservation ?? false, emailTemplate?.Body, emailTemplate?.Subject);
         }
     }
 
