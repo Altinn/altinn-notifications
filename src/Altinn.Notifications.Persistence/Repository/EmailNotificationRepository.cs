@@ -82,9 +82,7 @@ public class EmailNotificationRepository : IEmailNotificationRepository
                     reader.GetValue<string>("body"),
                     reader.GetValue<string>("fromaddress"),
                     reader.GetValue<string>("toaddress"),
-                    emailContentType,
-                    reader.GetValue<string>("recipientnin"),
-                    reader.GetValue<string>("recipientorgno"));
+                    emailContentType);
 
                 searchResult.Add(email);
             }
