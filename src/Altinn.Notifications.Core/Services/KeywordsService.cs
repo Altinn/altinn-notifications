@@ -154,7 +154,7 @@ namespace Altinn.Notifications.Core.Services
         /// <param name="setBody">A function to set the body of the recipient.</param>
         /// <param name="nationalIdentityNumberGetter">A function to get the national identity number of the recipient.</param>
         /// <param name="organizationNumberGetter">A function to get the organization number of the recipient.</param>
-        private void ReplaceRecipientNumberPlaceholder<T>(
+        private static void ReplaceRecipientNumberPlaceholder<T>(
             T recipient,
             Func<T, string?> getBody,
             Action<T, string?> setBody,
