@@ -44,7 +44,7 @@ public class SmsOrderProcessingServiceTests
         Recipient expectedRecipient = new(new List<IAddressPoint>() { new SmsAddressPoint("+4799999999") }, nationalIdentityNumber: "enduser-nin");
 
         var notificationServiceMock = new Mock<ISmsNotificationService>();
-        notificationServiceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.Is<DateTime>(d => d.Equals(requested)), It.Is<Recipient>(r => AssertUtils.AreEquivalent(expectedRecipient, r)), It.IsAny<int>(), It.IsAny<bool>()));
+        notificationServiceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.Is<DateTime>(d => d.Equals(requested)), It.Is<Recipient>(r => AssertUtils.AreEquivalent(expectedRecipient, r)), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>()));
 
         var service = GetTestService(smsService: notificationServiceMock.Object);
 
@@ -80,7 +80,7 @@ public class SmsOrderProcessingServiceTests
         };
 
         var notificationServiceMock = new Mock<ISmsNotificationService>();
-        notificationServiceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>(), It.IsAny<int>(), It.IsAny<bool>()));
+        notificationServiceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>()));
 
         var service = GetTestService(smsService: notificationServiceMock.Object);
 
@@ -88,7 +88,7 @@ public class SmsOrderProcessingServiceTests
         await service.ProcessOrder(order);
 
         // Assert
-        notificationServiceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>(), It.IsAny<int>(), It.IsAny<bool>()), Times.Exactly(2));
+        notificationServiceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>()), Times.Exactly(2));
     }
 
     [Fact]
@@ -116,7 +116,8 @@ public class SmsOrderProcessingServiceTests
                 It.IsAny<DateTime>(),
                 It.Is<Recipient>(r => r.NationalIdentityNumber == "123456"),
                 It.IsAny<int>(),
-                It.IsAny<bool>()));
+                It.IsAny<bool>(),
+                It.IsAny<string>()));
 
         var contactPointServiceMock = new Mock<IContactPointService>();
         contactPointServiceMock.Setup(c => c.AddSmsContactPoints(It.Is<List<Recipient>>(r => r.Count == 1), It.IsAny<string?>()))
@@ -124,7 +125,7 @@ public class SmsOrderProcessingServiceTests
             {
                 Recipient augumentedRecipient = new() { AddressInfo = [new SmsAddressPoint("+4712345678")], NationalIdentityNumber = r[0].NationalIdentityNumber };
                 r.Clear();
-                r.Add(augumentedRecipient); 
+                r.Add(augumentedRecipient);
             });
 
         var service = GetTestService(smsService: notificationServiceMock.Object, contactPointService: contactPointServiceMock.Object);
@@ -156,7 +157,7 @@ public class SmsOrderProcessingServiceTests
         };
 
         var notificationServiceMock = new Mock<ISmsNotificationService>();
-        notificationServiceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>(), It.IsAny<int>(), It.IsAny<bool>()));
+        notificationServiceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>()));
 
         var smsRepoMock = new Mock<ISmsNotificationRepository>();
         smsRepoMock.Setup(e => e.GetRecipients(It.IsAny<Guid>())).ReturnsAsync(
@@ -172,7 +173,7 @@ public class SmsOrderProcessingServiceTests
 
         // Assert
         smsRepoMock.Verify(e => e.GetRecipients(It.IsAny<Guid>()), Times.Once);
-        notificationServiceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>(), It.IsAny<int>(), It.IsAny<bool>()), Times.Exactly(2));
+        notificationServiceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>()), Times.Exactly(2));
     }
 
     [Theory]

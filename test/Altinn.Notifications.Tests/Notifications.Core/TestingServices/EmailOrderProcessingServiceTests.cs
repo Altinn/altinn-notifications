@@ -44,7 +44,7 @@ public class EmailOrderProcessingServiceTests
         };
 
         var serviceMock = new Mock<IEmailNotificationService>();
-        serviceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>(), It.IsAny<bool>()));
+        serviceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>()));
 
         var service = GetTestService(emailService: serviceMock.Object);
 
@@ -52,7 +52,7 @@ public class EmailOrderProcessingServiceTests
         await service.ProcessOrder(order);
 
         // Assert
-        serviceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>(), It.IsAny<bool>()), Times.Exactly(2));
+        serviceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>()), Times.Exactly(2));
     }
 
     [Fact]
@@ -76,7 +76,7 @@ public class EmailOrderProcessingServiceTests
         Recipient expectedRecipient = new(new List<IAddressPoint>() { new EmailAddressPoint("test@test.com") }, organizationNumber: "skd-orgno");
 
         var serviceMock = new Mock<IEmailNotificationService>();
-        serviceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.Is<DateTime>(d => d.Equals(requested)), It.Is<Recipient>(r => AssertUtils.AreEquivalent(expectedRecipient, r)), It.IsAny<bool>()));
+        serviceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.Is<DateTime>(d => d.Equals(requested)), It.Is<Recipient>(r => AssertUtils.AreEquivalent(expectedRecipient, r)), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>()));
 
         var service = GetTestService(emailService: serviceMock.Object);
 
@@ -101,7 +101,7 @@ public class EmailOrderProcessingServiceTests
         };
 
         var serviceMock = new Mock<IEmailNotificationService>();
-        serviceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>(), It.IsAny<bool>()))
+        serviceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>()))
             .ThrowsAsync(new Exception());
 
         var repoMock = new Mock<IOrderRepository>();
@@ -113,7 +113,7 @@ public class EmailOrderProcessingServiceTests
         await Assert.ThrowsAsync<Exception>(async () => await service.ProcessOrder(order));
 
         // Assert
-        serviceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>(), It.IsAny<bool>()), Times.Once);
+        serviceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>()), Times.Once);
         repoMock.Verify(r => r.SetProcessingStatus(It.IsAny<Guid>(), It.IsAny<OrderProcessingStatus>()), Times.Never);
     }
 
@@ -141,7 +141,9 @@ public class EmailOrderProcessingServiceTests
                 It.IsAny<Guid>(),
                 It.IsAny<DateTime>(),
                 It.Is<Recipient>(r => r.NationalIdentityNumber == "123456"),
-                It.IsAny<bool>()));
+                It.IsAny<bool>(),
+                It.IsAny<string>(),
+                It.IsAny<string>()));
 
         var contactPointServiceMock = new Mock<IContactPointService>();
         contactPointServiceMock.Setup(c => c.AddEmailContactPoints(It.Is<List<Recipient>>(r => r.Count == 1), It.IsAny<string?>()));
@@ -174,7 +176,7 @@ public class EmailOrderProcessingServiceTests
         };
 
         var serviceMock = new Mock<IEmailNotificationService>();
-        serviceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>(), It.IsAny<bool>()));
+        serviceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>()));
 
         var emailRepoMock = new Mock<IEmailNotificationRepository>();
         emailRepoMock.Setup(e => e.GetRecipients(It.IsAny<Guid>())).ReturnsAsync(new List<EmailRecipient>()
@@ -190,7 +192,7 @@ public class EmailOrderProcessingServiceTests
 
         // Assert
         emailRepoMock.Verify(e => e.GetRecipients(It.IsAny<Guid>()), Times.Once);
-        serviceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>(), It.IsAny<bool>()), Times.Exactly(2));
+        serviceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>()), Times.Exactly(2));
     }
 
     private static EmailOrderProcessingService GetTestService(
