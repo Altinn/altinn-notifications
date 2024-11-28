@@ -23,11 +23,11 @@ namespace Altinn.Notifications.Core.Services.Interfaces
         bool ContainsRecipientNumberPlaceholder(string? value);
 
         /// <summary>
-        /// Replaces placeholder keywords in a collection of <seealso cref="Sms"/> with actual values.
+        /// Replaces placeholder keywords in an <seealso cref="SmsRecipient"/> with actual values.
         /// </summary>
-        /// <param name="smsList">The collection of <seealso cref="Sms"/> to process.</param>
-        /// <returns>A task that represents the asynchronous operation. The task result contains the collection of <seealso cref="Sms"/> with replaced keywords.</returns>
-        Task<List<Sms>> ReplaceKeywordsAsync(List<Sms> smsList);
+        /// <param name="smsRecipient">The <seealso cref="SmsRecipient"/> to process.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains the <seealso cref="SmsRecipient"/> with actual values.</returns>
+        Task<SmsRecipient> ReplaceKeywordsAsync(SmsRecipient smsRecipient);
 
         /// <summary>
         /// Replaces placeholder keywords in an <seealso cref="EmailRecipient"/> with actual values.

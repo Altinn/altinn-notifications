@@ -46,22 +46,17 @@ namespace Altinn.Notifications.Core.Services
         }
 
         /// <inheritdoc/>
-        public async Task<List<Sms>> ReplaceKeywordsAsync(List<Sms> smsList)
+        public async Task<SmsRecipient> ReplaceKeywordsAsync(SmsRecipient smsRecipient)
         {
-            ArgumentNullException.ThrowIfNull(smsList);
+            ArgumentNullException.ThrowIfNull(smsRecipient);
 
-            if (smsList.Count == 0)
-            {
-                return smsList;
-            }
+            smsRecipient = await InjectPersonNameAsync(smsRecipient);
+            smsRecipient = InjectNationalIdentityNumbers(smsRecipient);
 
-            smsList = await InjectPersonNameAsync(smsList);
-            smsList = InjectNationalIdentityNumbers(smsList);
+            smsRecipient = InjectOrganizationNumbers(smsRecipient);
+            smsRecipient = await InjectOrganizationNameAsync(smsRecipient);
 
-            smsList = InjectOrganizationNumbers(smsList);
-            smsList = await InjectOrganizationNameAsync(smsList);
-
-            return smsList;
+            return smsRecipient;
         }
 
         /// <inheritdoc/>
@@ -79,50 +74,40 @@ namespace Altinn.Notifications.Core.Services
         }
 
         /// <summary>
-        /// Injects the recipient's name into the SMS where the $recipientName$ placeholder is found.
+        /// Injects the recipient's name wherever the $recipientName$ placeholder is found.
         /// </summary>
-        /// <param name="smsList">The list of <see cref="Sms"/>.</param>
-        /// <returns>The updated list of <see cref="Sms"/>.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="smsList"/> is null.</exception>
-        private async Task<List<Sms>> InjectPersonNameAsync(List<Sms> smsList)
+        /// <param name="smsRecipient">The <see cref="SmsRecipient"/>.</param>
+        /// <returns>The updated <see cref="SmsRecipient"/>.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="smsRecipient"/> is null.</exception>
+        private async Task<SmsRecipient> InjectPersonNameAsync(SmsRecipient smsRecipient)
         {
-            ArgumentNullException.ThrowIfNull(smsList);
+            ArgumentNullException.ThrowIfNull(smsRecipient);
 
-            if (smsList.Count == 0)
+            // If the recipient does not contain the recipient name placeholder, we do not need to look up the person name.
+            if (!ContainsRecipientNamePlaceholder(smsRecipient.CustomizedBody))
             {
-                return smsList;
+                return smsRecipient;
             }
 
-            var nationalIdentityNumbers = smsList
-                .Where(e => ContainsRecipientNamePlaceholder(e.Message))
-                .Where(e => !string.IsNullOrEmpty(e.NationalIdentityNumber))
-                .Select(e => e.NationalIdentityNumber)
-                .Distinct()
-                .ToList();
-
-            if (nationalIdentityNumbers.Count == 0)
+            // If the recipient does not have an person number, we do not need to look up the person name.
+            if (string.IsNullOrWhiteSpace(smsRecipient.NationalIdentityNumber))
             {
-                return smsList;
+                return smsRecipient;
             }
 
-            var partyDetails = await _registerClient.GetPartyDetailsForPersons(nationalIdentityNumbers);
+            // Look up the person name and replace the recipient name placeholder with the person name.
+            var partyDetails = await _registerClient.GetPartyDetailsForPersons([smsRecipient.NationalIdentityNumber]);
             if (partyDetails == null || partyDetails.Count == 0)
             {
-                return smsList;
+                return smsRecipient;
             }
 
-            foreach (var partyDetail in partyDetails)
+            if (!string.IsNullOrWhiteSpace(smsRecipient.CustomizedBody))
             {
-                var sms = smsList.Find(e => e.NationalIdentityNumber == partyDetail.NationalIdentityNumber);
-                if (sms == null)
-                {
-                    continue;
-                }
-
-                sms.Message = sms.Message.Replace(_recipientNamePlaceholder, partyDetail.Name ?? string.Empty);
+                smsRecipient.CustomizedBody = smsRecipient.CustomizedBody.Replace(_recipientNamePlaceholder, partyDetails[0].Name ?? string.Empty);
             }
 
-            return smsList;
+            return smsRecipient;
         }
 
         /// <summary>
@@ -172,36 +157,29 @@ namespace Altinn.Notifications.Core.Services
         /// <summary>
         /// Injects the recipient's national identity number into the SMS where the $recipientNumber$ placeholder is found.
         /// </summary>
-        /// <param name="smsList">The list of <see cref="Sms"/>.</param>
-        /// <returns>The updated list of <see cref="Sms"/>.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="smsList"/> is null.</exception>
-        private List<Sms> InjectNationalIdentityNumbers(List<Sms> smsList)
+        /// <param name="smsRecipient">The list of <see cref="SmsRecipient"/>.</param>
+        /// <returns>The updated list of <see cref="SmsRecipient"/>.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="smsRecipient"/> is null.</exception>
+        private SmsRecipient InjectNationalIdentityNumbers(SmsRecipient smsRecipient)
         {
-            ArgumentNullException.ThrowIfNull(smsList);
+            ArgumentNullException.ThrowIfNull(smsRecipient);
 
-            if (smsList.Count == 0)
+            if (!ContainsRecipientNumberPlaceholder(smsRecipient.CustomizedBody))
             {
-                return smsList;
+                return smsRecipient;
             }
 
-            var smsWithNationalIdentityNumber = smsList
-                .Where(e => ContainsRecipientNumberPlaceholder(e.Message))
-                .Where(e => !string.IsNullOrEmpty(e.NationalIdentityNumber))
-                .Distinct()
-                .ToList();
-
-            foreach (var smsWithKeyword in smsWithNationalIdentityNumber)
+            if (string.IsNullOrWhiteSpace(smsRecipient.NationalIdentityNumber))
             {
-                var sms = smsList.Find(e => e.NationalIdentityNumber == smsWithKeyword.NationalIdentityNumber);
-                if (sms == null)
-                {
-                    continue;
-                }
-
-                sms.Message = sms.Message.Replace(_recipientNumberPlaceholder, sms.NationalIdentityNumber ?? string.Empty);
+                return smsRecipient;
             }
 
-            return smsList;
+            if (!string.IsNullOrWhiteSpace(smsRecipient.CustomizedBody))
+            {
+                smsRecipient.CustomizedBody = smsRecipient.CustomizedBody.Replace(_recipientNumberPlaceholder, smsRecipient.NationalIdentityNumber ?? string.Empty);
+            }
+
+            return smsRecipient;
         }
 
         /// <summary>
@@ -240,38 +218,31 @@ namespace Altinn.Notifications.Core.Services
         }
 
         /// <summary>
-        /// Injects the recipient's organization number into the SMS where the $recipientNumber$ placeholder is found.
+        /// Injects the recipient's organization number wherever the $recipientNumber$ placeholder is found.
         /// </summary>
-        /// <param name="smsList">The list of <see cref="Sms"/>.</param>
-        /// <returns>The updated list of <see cref="Sms"/>.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="smsList"/> is null.</exception>
-        private List<Sms> InjectOrganizationNumbers(List<Sms> smsList)
+        /// <param name="smsRecipient">The <see cref="SmsRecipient"/>.</param>
+        /// <returns>The updated <see cref="SmsRecipient"/>.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="smsRecipient"/> is null.</exception>
+        private SmsRecipient InjectOrganizationNumbers(SmsRecipient smsRecipient)
         {
-            ArgumentNullException.ThrowIfNull(smsList);
+            ArgumentNullException.ThrowIfNull(smsRecipient);
 
-            if (smsList.Count == 0)
+            if (!ContainsRecipientNumberPlaceholder(smsRecipient.CustomizedBody))
             {
-                return smsList;
+                return smsRecipient;
             }
 
-            var smsWithNationalIdentityNumber = smsList
-                .Where(e => ContainsRecipientNumberPlaceholder(e.Message))
-                .Where(e => !string.IsNullOrEmpty(e.OrganizationNumber))
-                .Distinct()
-                .ToList();
-
-            foreach (var smsWithKeyword in smsWithNationalIdentityNumber)
+            if (string.IsNullOrWhiteSpace(smsRecipient.OrganizationNumber))
             {
-                var sms = smsList.Find(e => e.OrganizationNumber == smsWithKeyword.OrganizationNumber);
-                if (sms == null)
-                {
-                    continue;
-                }
-
-                sms.Message = sms.Message.Replace(_recipientNumberPlaceholder, sms.OrganizationNumber ?? string.Empty);
+                return smsRecipient;
             }
 
-            return smsList;
+            if (!string.IsNullOrWhiteSpace(smsRecipient.CustomizedBody))
+            {
+                smsRecipient.CustomizedBody = smsRecipient.CustomizedBody.Replace(_recipientNumberPlaceholder, smsRecipient.OrganizationNumber ?? string.Empty);
+            }
+
+            return smsRecipient;
         }
 
         /// <summary>
@@ -310,50 +281,40 @@ namespace Altinn.Notifications.Core.Services
         }
 
         /// <summary>
-        /// Injects the recipient's organization name into the SMS where the $recipientName$ placeholder is found.
+        /// Injects the recipient's organization name wherever the $recipientName$ placeholder is found.
         /// </summary>
-        /// <param name="smsList">The list of <see cref="Sms"/>.</param>
-        /// <returns>The updated list of <see cref="Sms"/>.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="smsList"/> is null.</exception>
-        private async Task<List<Sms>> InjectOrganizationNameAsync(List<Sms> smsList)
+        /// <param name="smsRecipient">The <see cref="SmsRecipient"/>.</param>
+        /// <returns>The updated <see cref="SmsRecipient"/>.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="smsRecipient"/> is null.</exception>
+        private async Task<SmsRecipient> InjectOrganizationNameAsync(SmsRecipient smsRecipient)
         {
-            ArgumentNullException.ThrowIfNull(smsList);
+            ArgumentNullException.ThrowIfNull(smsRecipient);
 
-            if (smsList.Count == 0)
+            // If the recipient does not contain the recipient name placeholder, we do not need to look up the organization name.
+            if (!ContainsRecipientNamePlaceholder(smsRecipient.CustomizedBody))
             {
-                return smsList;
+                return smsRecipient;
             }
 
-            var organizationNumbers = smsList
-                .Where(e => ContainsRecipientNamePlaceholder(e.Message))
-                .Where(e => !string.IsNullOrEmpty(e.OrganizationNumber))
-                .Select(e => e.OrganizationNumber)
-                .Distinct()
-                .ToList();
-
-            if (organizationNumbers.Count == 0)
+            // If the recipient does not have an organization number, we do not need to look up the organization name.
+            if (string.IsNullOrWhiteSpace(smsRecipient.OrganizationNumber))
             {
-                return smsList;
+                return smsRecipient;
             }
 
-            var partyDetails = await _registerClient.GetPartyDetailsForOrganizations(organizationNumbers);
+            // Look up the organization name and replace the recipient name placeholder with the organization name.
+            var partyDetails = await _registerClient.GetPartyDetailsForOrganizations([smsRecipient.OrganizationNumber]);
             if (partyDetails == null || partyDetails.Count == 0)
             {
-                return smsList;
+                return smsRecipient;
             }
 
-            foreach (var partyDetail in partyDetails)
+            if (!string.IsNullOrWhiteSpace(smsRecipient.CustomizedBody))
             {
-                var sms = smsList.Find(e => e.OrganizationNumber == partyDetail.OrganizationNumber);
-                if (sms == null)
-                {
-                    continue;
-                }
-
-                sms.Message = sms.Message.Replace(_recipientNamePlaceholder, partyDetail.Name ?? string.Empty);
+                smsRecipient.CustomizedBody = smsRecipient.CustomizedBody.Replace(_recipientNamePlaceholder, partyDetails[0].Name ?? string.Empty);
             }
 
-            return smsList;
+            return smsRecipient;
         }
 
         /// <summary>

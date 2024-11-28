@@ -45,9 +45,11 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
     {
         int smsCount = GetSmsCountForOrder(order);
 
+        var smsTemplate = order.Templates[0] as SmsTemplate;
+
         foreach (Recipient recipient in recipients)
         {
-            await _smsService.CreateNotification(order.Id, order.RequestedSendTime, recipient, smsCount, order.IgnoreReservation ?? false);
+            await _smsService.CreateNotification(order.Id, order.RequestedSendTime, recipient, smsCount, order.IgnoreReservation ?? false, smsTemplate?.Body);
         }
     }
 

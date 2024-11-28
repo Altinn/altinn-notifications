@@ -21,8 +21,8 @@ public class SmsNotificationService : ISmsNotificationService
     private readonly IDateTimeService _dateTime;
     private readonly ISmsNotificationRepository _repository;
     private readonly IKafkaProducer _producer;
-    private readonly IKeywordsService _keywordsService;
     private readonly string _smsQueueTopicName;
+    private readonly IKeywordsService _keywordsService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsNotificationService"/> class.
@@ -39,12 +39,12 @@ public class SmsNotificationService : ISmsNotificationService
         _dateTime = dateTime;
         _repository = repository;
         _producer = producer;
-        _keywordsService = keywordsService;
         _smsQueueTopicName = kafkaSettings.Value.SmsQueueTopicName;
+        _keywordsService = keywordsService;
     }
 
     /// <inheritdoc/>
-    public async Task CreateNotification(Guid orderId, DateTime requestedSendTime, Recipient recipient, int smsCount, bool ignoreReservation = false)
+    public async Task CreateNotification(Guid orderId, DateTime requestedSendTime, Recipient recipient, int smsCount, bool ignoreReservation = false, string? smsBody = null)
     {
         List<SmsAddressPoint> smsAddresses = recipient.AddressInfo
           .Where(a => a.AddressType == AddressType.Sms)
@@ -54,10 +54,13 @@ public class SmsNotificationService : ISmsNotificationService
 
         SmsRecipient smsRecipient = new()
         {
+            IsReserved = recipient.IsReserved,
             OrganizationNumber = recipient.OrganizationNumber,
             NationalIdentityNumber = recipient.NationalIdentityNumber,
-            IsReserved = recipient.IsReserved
+            CustomizedBody = (_keywordsService.ContainsRecipientNumberPlaceholder(smsBody) || _keywordsService.ContainsRecipientNamePlaceholder(smsBody)) ? smsBody : null,
         };
+
+        smsRecipient = await _keywordsService.ReplaceKeywordsAsync(smsRecipient);
 
         if (recipient.IsReserved.HasValue && recipient.IsReserved.Value && !ignoreReservation)
         {
@@ -81,8 +84,6 @@ public class SmsNotificationService : ISmsNotificationService
     public async Task SendNotifications()
     {
         var smsList = await _repository.GetNewNotifications();
-        smsList = await _keywordsService.ReplaceKeywordsAsync(smsList);
-
         foreach (Sms sms in smsList)
         {
             bool success = await _producer.ProduceAsync(_smsQueueTopicName, sms.Serialize());

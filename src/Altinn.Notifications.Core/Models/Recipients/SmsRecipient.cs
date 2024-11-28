@@ -21,6 +21,11 @@ public class SmsRecipient
     public string MobileNumber { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the customized body of the SMS.
+    /// </summary>
+    public string? CustomizedBody { get; set; } = null;
+
+    /// <summary>
     /// Gets or sets a value indicating whether the recipient is reserved from digital communication
     /// </summary>
     public bool? IsReserved { get; set; }
