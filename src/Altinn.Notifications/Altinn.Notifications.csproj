@@ -11,7 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="Altinn.Common.AccessToken" Version="4.5.4" />
-    <PackageReference Include="Altinn.Common.PEP" Version="4.1.0" />
+    <PackageReference Include="Altinn.Common.PEP" Version="4.1.1" />
     <PackageReference Include="FluentValidation" Version="11.11.0" />
     <PackageReference Include="JWTCookieAuthentication" Version="4.0.1" />
     <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" Version="2.22.0" />
