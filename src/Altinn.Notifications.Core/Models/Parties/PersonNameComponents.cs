@@ -16,7 +16,7 @@ public record PersonNameComponents
     public string? MiddleName { get; init; }
 
     /// <summary>
-    /// Gets the sure name.
+    /// Gets the surname.
     /// </summary>
     public string? LastName { get; init; }
 }

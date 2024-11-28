@@ -82,10 +82,7 @@ public class RegisterClient : IRegisterClient
             return [];
         }
 
-        var partyDetailsLookupBatch = new PartyDetailsLookupBatch
-        {
-            PartyDetailsLookupRequestList = organizationNumbers.Select(orgNumber => new PartyDetailsLookupRequest(organizationNumber: orgNumber)).ToList()
-        };
+        var partyDetailsLookupBatch = new PartyDetailsLookupBatch(organizationNumbers: organizationNumbers);
 
         HttpContent content = new StringContent(JsonSerializer.Serialize(partyDetailsLookupBatch), Encoding.UTF8, "application/json");
 
@@ -116,10 +113,7 @@ public class RegisterClient : IRegisterClient
             return [];
         }
 
-        var partyDetailsLookupBatch = new PartyDetailsLookupBatch
-        {
-            PartyDetailsLookupRequestList = socialSecurityNumbers.Select(ssn => new PartyDetailsLookupRequest(socialSecurityNumber: ssn)).ToList()
-        };
+        var partyDetailsLookupBatch = new PartyDetailsLookupBatch(socialSecurityNumbers: socialSecurityNumbers);
 
         HttpContent content = new StringContent(JsonSerializer.Serialize(partyDetailsLookupBatch), Encoding.UTF8, "application/json");
 
