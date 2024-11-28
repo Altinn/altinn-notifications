@@ -1,6 +1,4 @@
-﻿using System.Text.RegularExpressions;
-
-using Altinn.Notifications.Core.Integrations;
+﻿using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Services.Interfaces;
 
@@ -16,12 +14,6 @@ namespace Altinn.Notifications.Core.Services
         private const string _recipientNamePlaceholder = "$recipientName$";
         private const string _recipientNumberPlaceholder = "$recipientNumber$";
 
-        private static readonly Lazy<Regex> _recipientNamePlaceholderRegex =
-            new(() => new Regex(Regex.Escape(_recipientNamePlaceholder), RegexOptions.Compiled | RegexOptions.CultureInvariant));
-
-        private static readonly Lazy<Regex> _recipientNumberPlaceholderRegex =
-            new(() => new Regex(Regex.Escape(_recipientNumberPlaceholder), RegexOptions.Compiled | RegexOptions.CultureInvariant));
-
         /// <summary>
         /// Initializes a new instance of the <see cref="KeywordsService"/> class.
         /// </summary>
@@ -35,13 +27,13 @@ namespace Altinn.Notifications.Core.Services
         /// <inheritdoc/>
         public bool ContainsRecipientNamePlaceholder(string? value)
         {
-            return !string.IsNullOrWhiteSpace(value) && _recipientNamePlaceholderRegex.Value.IsMatch(value);
+            return !string.IsNullOrWhiteSpace(value) && value.Contains(_recipientNamePlaceholder);
         }
 
         /// <inheritdoc/>
         public bool ContainsRecipientNumberPlaceholder(string? value)
         {
-            return !string.IsNullOrWhiteSpace(value) && _recipientNumberPlaceholderRegex.Value.IsMatch(value);
+            return !string.IsNullOrWhiteSpace(value) && value.Contains(_recipientNumberPlaceholder);
         }
 
         /// <inheritdoc/>
