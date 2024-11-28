@@ -66,6 +66,7 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
     /// <inheritdoc/>   
     public async Task ProcessOrderRetryWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients)
     {
+        var emailTemplate = order.Templates[0] as EmailTemplate;
         List<EmailRecipient> emailRecipients = await _emailNotificationRepository.GetRecipients(order.Id);
 
         foreach (Recipient recipient in recipients)
@@ -77,7 +78,7 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
              && er.OrganizationNumber == recipient.OrganizationNumber
              && er.ToAddress == addressPoint?.EmailAddress))
             {
-                await _emailService.CreateNotification(order.Id, order.RequestedSendTime, recipient, order.IgnoreReservation ?? false);
+                await _emailService.CreateNotification(order.Id, order.RequestedSendTime, recipient, order.IgnoreReservation ?? false, emailTemplate?.Body, emailTemplate?.Subject);
             }
         }
     }
