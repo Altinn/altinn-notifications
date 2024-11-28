@@ -18,8 +18,8 @@ public class RegisterClient : IRegisterClient
 {
     private readonly HttpClient _client;
     private readonly JsonSerializerOptions _jsonSerializerOptions;
-    private readonly string _nameComponentsLookupEndpoint = "parties/nameslookup";
     private readonly string _contactPointLookupEndpoint = "organizations/contactpoint/lookup";
+    private readonly string _nameComponentsLookupEndpoint = "parties/nameslookup";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RegisterClient"/> class.
@@ -39,7 +39,7 @@ public class RegisterClient : IRegisterClient
     /// <param name="organizationNumbers">A collection of organization numbers for which contact point details are requested.</param>
     /// <returns>
     /// A task that represents the asynchronous operation.
-    /// The task result contains a list of <see cref="OrganizationContactPoints" /> representing the contact points of the specified organizations.
+    /// The task result contains a list of <see cref="OrganizationContactPoints"/> representing the contact points of the specified organizations.
     /// </returns>
     public async Task<List<OrganizationContactPoints>> GetOrganizationContactPoints(List<string> organizationNumbers)
     {
@@ -73,7 +73,7 @@ public class RegisterClient : IRegisterClient
     /// <param name="organizationNumbers">A collection of organization numbers for which party details are requested.</param>
     /// <returns>
     /// A task that represents the asynchronous operation.
-    /// The task result contains a list of <see cref="PartyDetails" /> representing the details of the specified organizations.
+    /// The task result contains a list of <see cref="PartyDetails"/> representing the details of the specified organizations.
     /// </returns>
     public async Task<List<PartyDetails>> GetPartyDetailsForOrganizations(List<string> organizationNumbers)
     {
@@ -107,7 +107,7 @@ public class RegisterClient : IRegisterClient
     /// <param name="socialSecurityNumbers">A collection of social security numbers for which party details are requested.</param>
     /// <returns>
     /// A task that represents the asynchronous operation.
-    /// The task result contains a list of <see cref="PartyDetails" /> representing the details of the specified individuals.
+    /// The task result contains a list of <see cref="PartyDetails"/> representing the details of the specified individuals.
     /// </returns>
     public async Task<List<PartyDetails>> GetPartyDetailsForPersons(List<string> socialSecurityNumbers)
     {
@@ -123,7 +123,13 @@ public class RegisterClient : IRegisterClient
 
         HttpContent content = new StringContent(JsonSerializer.Serialize(partyDetailsLookupBatch), Encoding.UTF8, "application/json");
 
-        var response = await _client.PostAsync($"{_nameComponentsLookupEndpoint}?partyComponentOption=person-name", content);
+        var request = new HttpRequestMessage(HttpMethod.Post, $"{_nameComponentsLookupEndpoint}")
+        {
+            Content = content
+        };
+        request.Headers.Add("partyComponentOption", "person-name");
+
+        var response = await _client.SendAsync(request);
 
         if (!response.IsSuccessStatusCode)
         {
