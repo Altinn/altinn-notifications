@@ -24,8 +24,8 @@ BEGIN
         recipientorgno,
         recipientnin,
         toaddress,
-        customizedBody,
-        customizedSubject,
+        customizedbody,
+        customizedsubject,
         result,
         resulttime,
         expirytime)
