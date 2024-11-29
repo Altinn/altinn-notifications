@@ -1,17 +1,17 @@
 namespace Altinn.Notifications.Core.Models.Recipients;
 
 /// <summary>
-/// Class representing an email recipient.
+/// Represents an email recipient with various properties for customization and identification.
 /// </summary>
 public class EmailRecipient
 {
     /// <summary>
-    /// Gets or sets the customized body of the email.
+    /// Gets or sets the customized body of the email after replacing the keywords with actual values.
     /// </summary>
     public string? CustomizedBody { get; set; } = null;
 
     /// <summary>
-    /// Gets or sets the customized subject of the email.
+    /// Gets or sets the customized subject of the email after replacing the keywords with actual values.
     /// </summary>
     public string? CustomizedSubject { get; set; } = null;
 
