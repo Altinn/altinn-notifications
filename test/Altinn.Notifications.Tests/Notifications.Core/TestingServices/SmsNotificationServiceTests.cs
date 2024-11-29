@@ -307,9 +307,9 @@ public class SmsNotificationServiceTests
 
         if (keywordsService == null)
         {
-            var keywordsServiceMock = new Mock<IKeywordsService>();
-            keywordsServiceMock.Setup(e => e.ReplaceKeywordsAsync(It.IsAny<SmsRecipient>())).ReturnsAsync((SmsRecipient recipient) => recipient);
-            keywordsService = keywordsServiceMock.Object;
+            //var keywordsServiceMock = new Mock<IKeywordsService>();
+            //keywordsServiceMock.Setup(e => e.ReplaceKeywordsAsync(It.IsAny<SmsRecipient>())).ReturnsAsync((SmsRecipient recipient) => recipient);
+            //keywordsService = keywordsServiceMock.Object;
         }
 
         return new SmsNotificationService(guidService.Object, dateTimeService.Object, repo, producer, Options.Create(new KafkaSettings { SmsQueueTopicName = _smsQueueTopicName }), keywordsService);

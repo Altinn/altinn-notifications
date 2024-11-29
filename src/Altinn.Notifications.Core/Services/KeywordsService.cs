@@ -19,23 +19,18 @@ namespace Altinn.Notifications.Core.Services
         /// Initializes a new instance of the <see cref="KeywordsService"/> class.
         /// </summary>
         /// <param name="registerClient">The register client to interact with the register service.</param>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="registerClient"/> is null.</exception>
         public KeywordsService(IRegisterClient registerClient)
         {
             _registerClient = registerClient ?? throw new ArgumentNullException(nameof(registerClient));
         }
 
         /// <inheritdoc/>
-        public bool ContainsRecipientNamePlaceholder(string? value)
-        {
-            return !string.IsNullOrWhiteSpace(value) && value.Contains(_recipientNamePlaceholder);
-        }
+        public bool ContainsRecipientNamePlaceholder(string? value) =>
+            !string.IsNullOrWhiteSpace(value) && value.Contains(_recipientNamePlaceholder);
 
         /// <inheritdoc/>
-        public bool ContainsRecipientNumberPlaceholder(string? value)
-        {
-            return !string.IsNullOrWhiteSpace(value) && value.Contains(_recipientNumberPlaceholder);
-        }
+        public bool ContainsRecipientNumberPlaceholder(string? value) =>
+            !string.IsNullOrWhiteSpace(value) && value.Contains(_recipientNumberPlaceholder);
 
         /// <inheritdoc/>
         public async Task<IEnumerable<SmsRecipient>> ReplaceKeywordsAsync(IEnumerable<SmsRecipient> smsRecipients)
@@ -52,22 +47,12 @@ namespace Altinn.Notifications.Core.Services
                 .Select(r => r.NationalIdentityNumber!)
                 .ToList();
 
-            var personDetailsTask = nationalIdentityNumbers.Count > 0
-                ? _registerClient.GetPartyDetailsForPersons(nationalIdentityNumbers)
-                : Task.FromResult(new List<PartyDetails>());
-
-            var organizationDetailsTask = organizationNumbers.Count > 0
-                ? _registerClient.GetPartyDetailsForOrganizations(organizationNumbers)
-                : Task.FromResult(new List<PartyDetails>());
-
-            await Task.WhenAll(personDetailsTask, organizationDetailsTask);
-
-            var personDetails = personDetailsTask.Result;
-            var organizationDetails = organizationDetailsTask.Result;
+            var (personDetails, organizationDetails) = await FetchPartyDetailsAsync(organizationNumbers, nationalIdentityNumbers);
 
             foreach (var smsRecipient in smsRecipients)
             {
-                smsRecipient.CustomizedBody = ReplaceRecipientPlaceholders(smsRecipient.CustomizedBody, smsRecipient.OrganizationNumber, smsRecipient.NationalIdentityNumber, organizationDetails, personDetails);
+                smsRecipient.CustomizedBody =
+                    ReplacePlaceholders(smsRecipient.CustomizedBody, smsRecipient.OrganizationNumber, smsRecipient.NationalIdentityNumber, organizationDetails, personDetails);
             }
 
             return smsRecipients;
@@ -88,56 +73,92 @@ namespace Altinn.Notifications.Core.Services
                 .Select(r => r.NationalIdentityNumber!)
                 .ToList();
 
-            var personDetailsTask = nationalIdentityNumbers.Count > 0
-                ? _registerClient.GetPartyDetailsForPersons(nationalIdentityNumbers)
-                : Task.FromResult(new List<PartyDetails>());
-
-            var organizationDetailsTask = organizationNumbers.Count > 0
-                ? _registerClient.GetPartyDetailsForOrganizations(organizationNumbers)
-                : Task.FromResult(new List<PartyDetails>());
-
-            await Task.WhenAll(personDetailsTask, organizationDetailsTask);
-
-            var personDetails = personDetailsTask.Result;
-            var organizationDetails = organizationDetailsTask.Result;
+            var (personDetails, organizationDetails) = await FetchPartyDetailsAsync(organizationNumbers, nationalIdentityNumbers);
 
             foreach (var emailRecipient in emailRecipients)
             {
-                emailRecipient.CustomizedBody = ReplaceRecipientPlaceholders(emailRecipient.CustomizedBody, emailRecipient.OrganizationNumber, emailRecipient.NationalIdentityNumber, organizationDetails, personDetails);
+                emailRecipient.CustomizedBody =
+                    ReplacePlaceholders(emailRecipient.CustomizedBody, emailRecipient.OrganizationNumber, emailRecipient.NationalIdentityNumber, organizationDetails, personDetails);
 
-                emailRecipient.CustomizedSubject = ReplaceRecipientPlaceholders(emailRecipient.CustomizedSubject, emailRecipient.OrganizationNumber, emailRecipient.NationalIdentityNumber, organizationDetails, personDetails);
+                emailRecipient.CustomizedSubject =
+                    ReplacePlaceholders(emailRecipient.CustomizedSubject, emailRecipient.OrganizationNumber, emailRecipient.NationalIdentityNumber, organizationDetails, personDetails);
             }
 
             return emailRecipients;
         }
 
         /// <summary>
-        /// Replaces the recipient placeholders in the specified text with actual values.
+        /// Fetches party details for the given national identity and organization numbers.
         /// </summary>
-        /// <param name="text">The text to process.</param>
-        /// <param name="organizationNumber">The organization number of the recipient.</param>
-        /// <param name="nationalIdentityNumber">The national identity number of the recipient.</param>
+        /// <param name="organizationNumbers">The list of organization numbers.</param>
+        /// <param name="nationalIdentityNumbers">The list of national identity numbers.</param>
+        /// <returns>A tuple containing lists of person and organization details.</returns>
+        private async Task<(List<PartyDetails> PersonDetails, List<PartyDetails> OrganizationDetails)> FetchPartyDetailsAsync(
+            List<string> organizationNumbers,
+            List<string> nationalIdentityNumbers)
+        {
+            var organizationDetailsTask = organizationNumbers.Count != 0
+                ? _registerClient.GetPartyDetailsForOrganizations(organizationNumbers)
+                : Task.FromResult(new List<PartyDetails>());
+
+            var personDetailsTask = nationalIdentityNumbers.Count != 0
+                ? _registerClient.GetPartyDetailsForPersons(nationalIdentityNumbers)
+                : Task.FromResult(new List<PartyDetails>());
+
+            await Task.WhenAll(personDetailsTask, organizationDetailsTask);
+
+            return (personDetailsTask.Result, organizationDetailsTask.Result);
+        }
+
+        /// <summary>
+        /// Replaces placeholders in the given text with actual values from the provided details.
+        /// </summary>
+        /// <param name="text">The text containing placeholders.</param>
+        /// <param name="organizationNumber">The organization number.</param>
+        /// <param name="nationalIdentityNumber">The national identity number.</param>
         /// <param name="organizationDetails">The list of organization details.</param>
         /// <param name="personDetails">The list of person details.</param>
-        /// <returns>The text with the placeholders replaced by actual values.</returns>
-        private static string? ReplaceRecipientPlaceholders(string? text, string? organizationNumber, string? nationalIdentityNumber, List<PartyDetails> organizationDetails, List<PartyDetails> personDetails)
+        /// <returns>The text with placeholders replaced by actual values.</returns>
+        private static string? ReplacePlaceholders(
+            string? text,
+            string? organizationNumber,
+            string? nationalIdentityNumber,
+            IEnumerable<PartyDetails> organizationDetails,
+            IEnumerable<PartyDetails> personDetails)
         {
-            if (!string.IsNullOrWhiteSpace(organizationNumber))
+            text = ReplaceWithDetails(text, organizationNumber, organizationDetails, p => p.OrganizationNumber);
+
+            text = ReplaceWithDetails(text, nationalIdentityNumber, personDetails, p => p.NationalIdentityNumber);
+
+            return text;
+        }
+
+        /// <summary>
+        /// Replaces placeholders in the given text with actual values from the provided details.
+        /// </summary>
+        /// <param name="text">The text containing placeholders.</param>
+        /// <param name="key">The key to match in the details.</param>
+        /// <param name="details">The list of details.</param>
+        /// <param name="keySelector">The function to select the key from the details.</param>
+        /// <returns>The text with placeholders replaced by actual values.</returns>
+        private static string? ReplaceWithDetails(
+            string? text,
+            string? key,
+            IEnumerable<PartyDetails> details,
+            Func<PartyDetails, string?> keySelector)
+        {
+            if (string.IsNullOrWhiteSpace(key))
             {
-                var partyDetail = organizationDetails.Find(p => p.OrganizationNumber == organizationNumber);
-                if (partyDetail != null)
-                {
-                    text = text?.Replace(_recipientNamePlaceholder, partyDetail.Name ?? string.Empty);
-                }
+                return text;
             }
 
-            if (!string.IsNullOrWhiteSpace(nationalIdentityNumber))
+            var detail = details.FirstOrDefault(e => keySelector(e) == key);
+
+            if (detail != null)
             {
-                var partyDetail = personDetails.Find(p => p.NationalIdentityNumber == nationalIdentityNumber);
-                if (partyDetail != null)
-                {
-                    text = text?.Replace(_recipientNamePlaceholder, partyDetail.Name ?? string.Empty);
-                }
+                text = text?.Replace(_recipientNamePlaceholder, detail.Name ?? string.Empty);
+
+                text = text?.Replace(_recipientNumberPlaceholder, keySelector(detail) ?? string.Empty);
             }
 
             return text;

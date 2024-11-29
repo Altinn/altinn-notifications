@@ -314,9 +314,9 @@ public class EmailNotificationServiceTests
 
         if (keywordsService == null)
         {
-            var keywordsServiceMock = new Mock<IKeywordsService>();
-            keywordsServiceMock.Setup(e => e.ReplaceKeywordsAsync(It.IsAny<EmailRecipient>())).ReturnsAsync((EmailRecipient recipient) => recipient);
-            keywordsService = keywordsServiceMock.Object;
+            //var keywordsServiceMock = new Mock<IKeywordsService>();
+            //keywordsServiceMock.Setup(e => e.ReplaceKeywordsAsync(It.IsAny<EmailRecipient>())).ReturnsAsync((EmailRecipient recipient) => recipient);
+            //keywordsService = keywordsServiceMock.Object;
         }
 
         return new EmailNotificationService(guidService.Object, dateTimeService.Object, repo, producer, Options.Create(new KafkaSettings { EmailQueueTopicName = _emailQueueTopicName }), keywordsService);

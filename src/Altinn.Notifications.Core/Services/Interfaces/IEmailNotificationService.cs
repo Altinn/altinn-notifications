@@ -1,25 +1,35 @@
-﻿using Altinn.Notifications.Core.Models;
+﻿using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Notification;
+using Altinn.Notifications.Core.Models.Recipients;
 
 namespace Altinn.Notifications.Core.Services.Interfaces;
 
 /// <summary>
-/// Interface for email notification service
+/// Interface for the email notification service.
 /// </summary>
 public interface IEmailNotificationService
 {
     /// <summary>
-    /// Creates a new email notification based on the provided orderId and recipient
+    /// Creates a new email notification.
     /// </summary>
-    public Task CreateNotification(Guid orderId, DateTime requestedSendTime, Recipient recipient, bool ignoreReservation = false, string? emailBody = null, string? emailSubject = null);
+    /// <param name="orderId">The unique identifier for the order associated with the notification.</param>
+    /// <param name="requestedSendTime">The time at which the notification is requested to be sent.</param>
+    /// <param name="emailAddresses">The list of email addresses to send the notification to.</param>
+    /// <param name="emailRecipient">The details of the email recipient.</param>
+    /// <param name="ignoreReservation">Indicates whether to ignore the reservation status of the recipient.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    Task CreateNotification(Guid orderId, DateTime requestedSendTime, List<EmailAddressPoint> emailAddresses, EmailRecipient emailRecipient, bool ignoreReservation = false);
 
     /// <summary>
-    /// Starts the process of sending all ready email notifications
+    /// Initiates the process of sending all ready email notifications.
     /// </summary>
-    public Task SendNotifications();
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    Task SendNotifications();
 
     /// <summary>
-    /// Update send status for a notification
+    /// Updates the send status of a notification.
     /// </summary>
-    public Task UpdateSendStatus(EmailSendOperationResult sendOperationResult);
+    /// <param name="sendOperationResult">The result of the send operation.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    Task UpdateSendStatus(EmailSendOperationResult sendOperationResult);
 }

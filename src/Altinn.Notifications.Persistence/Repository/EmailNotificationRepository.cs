@@ -107,7 +107,7 @@ public class EmailNotificationRepository : IEmailNotificationRepository
     /// <inheritdoc/>
     public async Task<List<EmailRecipient>> GetRecipients(Guid orderId)
     {
-        List<EmailRecipient> searchResult = new();
+        List<EmailRecipient> searchResult = [];
 
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getEmailRecipients);
         using TelemetryTracker tracker = new(_telemetryClient, pgcom);
@@ -118,9 +118,11 @@ public class EmailNotificationRepository : IEmailNotificationRepository
             {
                 searchResult.Add(new EmailRecipient()
                 {
+                    ToAddress = reader.GetValue<string>("toaddress"),
+                    CustomizedBody = reader.GetValue<string?>("customizedbody"),
                     OrganizationNumber = reader.GetValue<string?>("recipientorgno"),
+                    CustomizedSubject = reader.GetValue<string?>("customizedsubject"),
                     NationalIdentityNumber = reader.GetValue<string?>("recipientnin"),
-                    ToAddress = reader.GetValue<string>("toaddress")
                 });
             }
         }

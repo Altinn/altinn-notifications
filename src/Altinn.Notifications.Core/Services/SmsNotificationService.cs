@@ -60,7 +60,7 @@ public class SmsNotificationService : ISmsNotificationService
             CustomizedBody = (_keywordsService.ContainsRecipientNumberPlaceholder(smsBody) || _keywordsService.ContainsRecipientNamePlaceholder(smsBody)) ? smsBody : null,
         };
 
-        smsRecipient = await _keywordsService.ReplaceKeywordsAsync(smsRecipient);
+        //smsRecipient = await _keywordsService.ReplaceKeywordsAsync(smsRecipient);
 
         if (recipient.IsReserved.HasValue && recipient.IsReserved.Value && !ignoreReservation)
         {

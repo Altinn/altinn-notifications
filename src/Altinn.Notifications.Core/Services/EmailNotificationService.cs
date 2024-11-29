@@ -13,63 +13,49 @@ using Microsoft.Extensions.Options;
 namespace Altinn.Notifications.Core.Services;
 
 /// <summary>
-/// Implementation of <see cref="IEmailNotificationService"/>
+/// Implementation of <see cref="IEmailNotificationService"/>.
 /// </summary>
 public class EmailNotificationService : IEmailNotificationService
 {
-    private readonly IGuidService _guid;
     private readonly IDateTimeService _dateTime;
+    private readonly IGuidService _guid;
+    private readonly string _emailQueueTopicName;
     private readonly IEmailNotificationRepository _repository;
     private readonly IKafkaProducer _producer;
-    private readonly string _emailQueueTopicName;
-    private readonly IKeywordsService _keywordsService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotificationService"/> class.
     /// </summary>
+    /// <param name="guid">The GUID service.</param>
+    /// <param name="dateTime">The date time service.</param>
+    /// <param name="repository">The email notification repository.</param>
+    /// <param name="producer">The Kafka producer.</param>
+    /// <param name="kafkaSettings">The Kafka settings.</param>
     public EmailNotificationService(
         IGuidService guid,
         IDateTimeService dateTime,
         IEmailNotificationRepository repository,
         IKafkaProducer producer,
-        IOptions<KafkaSettings> kafkaSettings,
-        IKeywordsService keywordsService)
+        IOptions<KafkaSettings> kafkaSettings)
     {
         _guid = guid;
         _dateTime = dateTime;
-        _repository = repository;
         _producer = producer;
+        _repository = repository;
         _emailQueueTopicName = kafkaSettings.Value.EmailQueueTopicName;
-        _keywordsService = keywordsService;
     }
 
     /// <inheritdoc/>
-    public async Task CreateNotification(Guid orderId, DateTime requestedSendTime, Recipient recipient, bool ignoreReservation = false, string? emailBody = null, string? emailSubject = null)
+    public async Task CreateNotification(Guid orderId, DateTime requestedSendTime, List<EmailAddressPoint> emailAddresses, EmailRecipient emailRecipient, bool ignoreReservation = false)
     {
-        List<EmailAddressPoint> emailAddresses = recipient.AddressInfo
-          .Where(a => a.AddressType == AddressType.Email)
-          .Select(a => (a as EmailAddressPoint)!)
-          .Where(a => a != null && !string.IsNullOrEmpty(a.EmailAddress))
-          .ToList();
-
-        EmailRecipient emailRecipient = new()
-        {
-            IsReserved = recipient.IsReserved,
-            OrganizationNumber = recipient.OrganizationNumber,
-            NationalIdentityNumber = recipient.NationalIdentityNumber,
-            CustomizedBody = (_keywordsService.ContainsRecipientNumberPlaceholder(emailBody) || _keywordsService.ContainsRecipientNamePlaceholder(emailBody)) ? emailBody : null,
-            CustomizedSubject = (_keywordsService.ContainsRecipientNumberPlaceholder(emailSubject) || _keywordsService.ContainsRecipientNamePlaceholder(emailSubject)) ? emailSubject : null,
-        };
-
-        emailRecipient = await _keywordsService.ReplaceKeywordsAsync(emailRecipient);
-
-        if (recipient.IsReserved.HasValue && recipient.IsReserved.Value && !ignoreReservation)
+        if (emailRecipient.IsReserved.HasValue && emailRecipient.IsReserved.Value && !ignoreReservation)
         {
             emailRecipient.ToAddress = string.Empty; // not persisting email address for reserved recipients
             await CreateNotificationForRecipient(orderId, requestedSendTime, emailRecipient, EmailNotificationResultType.Failed_RecipientReserved);
             return;
         }
-        else if (emailAddresses.Count == 0)
+
+        if (emailAddresses.Count == 0)
         {
             await CreateNotificationForRecipient(orderId, requestedSendTime, emailRecipient, EmailNotificationResultType.Failed_RecipientNotIdentified);
             return;
@@ -110,6 +96,14 @@ public class EmailNotificationService : IEmailNotificationService
         await _repository.UpdateSendStatus(sendOperationResult.NotificationId, (EmailNotificationResultType)sendOperationResult.SendResult!, sendOperationResult.OperationId);
     }
 
+    /// <summary>
+    /// Creates a notification for a recipient.
+    /// </summary>
+    /// <param name="orderId">The order identifier.</param>
+    /// <param name="requestedSendTime">The requested send time.</param>
+    /// <param name="recipient">The email recipient.</param>
+    /// <param name="result">The result of the notification.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     private async Task CreateNotificationForRecipient(Guid orderId, DateTime requestedSendTime, EmailRecipient recipient, EmailNotificationResultType result)
     {
         var emailNotification = new EmailNotification()
@@ -129,7 +123,6 @@ public class EmailNotificationService : IEmailNotificationService
         }
         else
         {
-            // lets see how much time it takes to get a status for communication services
             expiry = requestedSendTime.AddHours(1);
         }
 
