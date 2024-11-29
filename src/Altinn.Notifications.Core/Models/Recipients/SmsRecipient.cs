@@ -1,7 +1,7 @@
 namespace Altinn.Notifications.Core.Models.Recipients;
 
 /// <summary>
-/// Class representing an sms recipient
+/// Class representing an SMS recipient
 /// </summary>
 public class SmsRecipient
 {

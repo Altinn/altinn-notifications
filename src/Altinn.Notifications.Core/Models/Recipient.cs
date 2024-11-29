@@ -5,7 +5,7 @@ using Altinn.Notifications.Core.Models.Address;
 namespace Altinn.Notifications.Core.Models;
 
 /// <summary>
-/// Class representing a notification recipient.
+/// Represents a notification recipient.
 /// </summary>
 public class Recipient
 {
@@ -37,7 +37,7 @@ public class Recipient
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="Recipient"/> class.
+    /// Initializes a new instance of the <see cref="Recipient"/> class with the specified address information, organization number, and national identity number.
     /// </summary>
     /// <param name="addressInfo">The list of address points for the recipient.</param>
     /// <param name="organizationNumber">The recipient's organization number.</param>
