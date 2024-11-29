@@ -31,7 +31,6 @@ public class NotificationOrderTests
             {
                  new EmailTemplate()
                  {
-                     Type = NotificationTemplateType.Email,
                      FromAddress = "sender@domain.com",
                      Subject = "email-subject",
                      Body = "email-body",

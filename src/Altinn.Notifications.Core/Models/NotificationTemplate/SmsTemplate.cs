@@ -3,7 +3,7 @@ using Altinn.Notifications.Core.Enums;
 namespace Altinn.Notifications.Core.Models.NotificationTemplate;
 
 /// <summary>
-/// Template for an SMS notification.
+/// Represents a template for an SMS notification.
 /// </summary>
 public class SmsTemplate : INotificationTemplate
 {
@@ -21,9 +21,9 @@ public class SmsTemplate : INotificationTemplate
     /// Gets the type of the notification template.
     /// </summary>
     /// <value>
-    /// The type of the notification template, represented by the <see cref="NotificationTemplateType" /> enum.
+    /// The type of the notification template, represented by the <see cref="NotificationTemplateType"/> enum.
     /// </value>
-    public NotificationTemplateType Type { get; internal set; } = NotificationTemplateType.Sms;
+    public NotificationTemplateType Type { get; } = NotificationTemplateType.Sms;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsTemplate"/> class with the specified sender number and body.

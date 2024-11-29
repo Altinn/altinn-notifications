@@ -3,7 +3,7 @@
 namespace Altinn.Notifications.Core.Models.NotificationTemplate;
 
 /// <summary>
-/// Template for an email notification.
+/// Represents a template for an email notification.
 /// </summary>
 public class EmailTemplate : INotificationTemplate
 {
@@ -31,9 +31,9 @@ public class EmailTemplate : INotificationTemplate
     /// Gets the type of the notification template.
     /// </summary>
     /// <value>
-    /// The type of the notification template, represented by the <see cref="NotificationTemplateType" /> enum.
+    /// The type of the notification template, represented by the <see cref="NotificationTemplateType"/> enum.
     /// </value>
-    public NotificationTemplateType Type { get; internal set; } = NotificationTemplateType.Email;
+    public NotificationTemplateType Type { get; } = NotificationTemplateType.Email;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailTemplate"/> class with the specified from address, subject, body, and content type.
