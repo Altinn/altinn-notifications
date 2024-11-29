@@ -101,7 +101,7 @@ public class EmailNotificationService : IEmailNotificationService
     /// <inheritdoc/>
     public async Task UpdateSendStatus(EmailSendOperationResult sendOperationResult)
     {
-        // set to new to allow new iteration of regular proceessing if transient error
+        // set to new to allow new iteration of regular processing if transient error
         if (sendOperationResult.SendResult == EmailNotificationResultType.Failed_TransientError)
         {
             sendOperationResult.SendResult = EmailNotificationResultType.New;
