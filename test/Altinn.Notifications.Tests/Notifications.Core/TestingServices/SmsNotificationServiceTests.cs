@@ -23,7 +23,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 public class SmsNotificationServiceTests
 {
     private const string _smsQueueTopicName = "test.sms.queue";
-    private readonly Sms _sms = new(Guid.NewGuid(), "Altinn Test", "Recipient", "Text message", "10825795702 ", "310679941");
+    private readonly Sms _sms = new(Guid.NewGuid(), "Altinn Test", "Recipient", "Text message");
 
     [Fact]
     public async Task CreateNotifications_NewSmsNotification_RepositoryCalledOnce()
