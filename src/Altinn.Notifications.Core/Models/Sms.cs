@@ -31,32 +31,18 @@ public class Sms
     public string Message { get; set; }
 
     /// <summary>
-    /// Gets or sets the national identity number of the recipient.
-    /// </summary>
-    public string NationalIdentityNumber { get; set; }
-
-    /// <summary>
-    /// Gets or sets the organization number of the recipient.
-    /// </summary>
-    public string OrganizationNumber { get; set; }
-
-    /// <summary>
     /// Initializes a new instance of the <see cref="Sms"/> class with the specified parameters.
     /// </summary>
     /// <param name="notificationId">The ID of the SMS.</param>
     /// <param name="sender">The sender of the SMS message.</param>
     /// <param name="recipient">The recipient of the SMS message.</param>
     /// <param name="message">The contents of the SMS message.</param>
-    /// <param name="nationalIdentityNumber">The national identity number of the recipient.</param>
-    /// <param name="organizationNumber">The organization number of the recipient.</param>
-    public Sms(Guid notificationId, string sender, string recipient, string message, string nationalIdentityNumber, string organizationNumber)
+    public Sms(Guid notificationId, string sender, string recipient, string message)
     {
         NotificationId = notificationId;
         Recipient = recipient;
         Sender = sender;
         Message = message;
-        NationalIdentityNumber = nationalIdentityNumber;
-        OrganizationNumber = organizationNumber;
     }
 
     /// <summary>
