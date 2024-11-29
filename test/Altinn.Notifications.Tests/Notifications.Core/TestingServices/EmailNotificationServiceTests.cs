@@ -8,6 +8,7 @@ using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Notification;
+using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
@@ -313,7 +314,9 @@ public class EmailNotificationServiceTests
 
         if (keywordsService == null)
         {
-            keywordsService = new Mock<IKeywordsService>().Object;
+            var keywordsServiceMock = new Mock<IKeywordsService>();
+            keywordsServiceMock.Setup(e => e.ReplaceKeywordsAsync(It.IsAny<EmailRecipient>())).ReturnsAsync((EmailRecipient recipient) => recipient);
+            keywordsService = keywordsServiceMock.Object;
         }
 
         return new EmailNotificationService(guidService.Object, dateTimeService.Object, repo, producer, Options.Create(new KafkaSettings { EmailQueueTopicName = _emailQueueTopicName }), keywordsService);
