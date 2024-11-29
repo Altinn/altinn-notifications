@@ -104,7 +104,7 @@ public class SmsNotificationRepository : ISmsNotificationRepository
                     reader.GetValue<Guid>("alternateid"),
                     reader.GetValue<string>("sendernumber"),
                     reader.GetValue<string>("mobilenumber"),
-                    reader.GetValue<string>("body");
+                    reader.GetValue<string>("body"));
 
                 searchResult.Add(sms);
             }
