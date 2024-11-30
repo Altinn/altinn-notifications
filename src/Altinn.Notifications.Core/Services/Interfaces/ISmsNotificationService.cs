@@ -1,5 +1,6 @@
-﻿using Altinn.Notifications.Core.Models;
+﻿using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Notification;
+using Altinn.Notifications.Core.Models.Recipients;
 
 namespace Altinn.Notifications.Core.Services.Interfaces;
 
@@ -11,7 +12,7 @@ public interface ISmsNotificationService
     /// <summary>
     /// Creates a new SMS notification based on the provided orderId and recipient
     /// </summary>
-    public Task CreateNotification(Guid orderId, DateTime requestedSendTime, Recipient recipient, int smsCount, bool ignoreReservation = false, string? body = null);
+    public Task CreateNotification(Guid orderId, DateTime requestedSendTime, List<SmsAddressPoint> smsAddresses, SmsRecipient smsRecipient, int smsCount, bool ignoreReservation = false);
 
     /// <summary>
     /// Starts the process of sending all ready SMS notifications

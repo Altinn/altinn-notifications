@@ -22,7 +22,6 @@ public class SmsNotificationService : ISmsNotificationService
     private readonly ISmsNotificationRepository _repository;
     private readonly IKafkaProducer _producer;
     private readonly string _smsQueueTopicName;
-    private readonly IKeywordsService _keywordsService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsNotificationService"/> class.
@@ -32,37 +31,19 @@ public class SmsNotificationService : ISmsNotificationService
         IDateTimeService dateTime,
         ISmsNotificationRepository repository,
         IKafkaProducer producer,
-        IOptions<KafkaSettings> kafkaSettings,
-        IKeywordsService keywordsService)
+        IOptions<KafkaSettings> kafkaSettings)
     {
         _guid = guid;
         _dateTime = dateTime;
         _repository = repository;
         _producer = producer;
         _smsQueueTopicName = kafkaSettings.Value.SmsQueueTopicName;
-        _keywordsService = keywordsService;
     }
 
     /// <inheritdoc/>
-    public async Task CreateNotification(Guid orderId, DateTime requestedSendTime, Recipient recipient, int smsCount, bool ignoreReservation = false, string? smsBody = null)
+    public async Task CreateNotification(Guid orderId, DateTime requestedSendTime, List<SmsAddressPoint> smsAddresses, SmsRecipient smsRecipient, int smsCount, bool ignoreReservation = false)
     {
-        List<SmsAddressPoint> smsAddresses = recipient.AddressInfo
-          .Where(a => a.AddressType == AddressType.Sms)
-          .Select(a => (a as SmsAddressPoint)!)
-          .Where(a => a != null && !string.IsNullOrEmpty(a.MobileNumber))
-          .ToList();
-
-        SmsRecipient smsRecipient = new()
-        {
-            IsReserved = recipient.IsReserved,
-            OrganizationNumber = recipient.OrganizationNumber,
-            NationalIdentityNumber = recipient.NationalIdentityNumber,
-            CustomizedBody = (_keywordsService.ContainsRecipientNumberPlaceholder(smsBody) || _keywordsService.ContainsRecipientNamePlaceholder(smsBody)) ? smsBody : null,
-        };
-
-        //smsRecipient = await _keywordsService.ReplaceKeywordsAsync(smsRecipient);
-
-        if (recipient.IsReserved.HasValue && recipient.IsReserved.Value && !ignoreReservation)
+        if (smsRecipient.IsReserved.HasValue && smsRecipient.IsReserved.Value && !ignoreReservation)
         {
             await CreateNotificationForRecipient(orderId, requestedSendTime, smsRecipient, SmsNotificationResultType.Failed_RecipientReserved);
             return;
