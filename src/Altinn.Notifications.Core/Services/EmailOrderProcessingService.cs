@@ -94,10 +94,6 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
         foreach (var recipient in recipients)
         {
             var emailRecipient = FindEmailRecipient(emailRecipients, recipient);
-            if (emailRecipient == null)
-            {
-                continue;
-            }
 
             var emailAddresses = recipient.AddressInfo
                 .OfType<EmailAddressPoint>()
@@ -125,15 +121,13 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
         ArgumentNullException.ThrowIfNull(order.Templates);
 
         var emailTemplate = order.Templates.OfType<EmailTemplate>().FirstOrDefault();
-        ArgumentNullException.ThrowIfNull(emailTemplate);
-
         var emailRecipients = recipients.Select(recipient => new EmailRecipient
         {
             IsReserved = recipient.IsReserved,
             OrganizationNumber = recipient.OrganizationNumber,
             NationalIdentityNumber = recipient.NationalIdentityNumber,
-            CustomizedBody = (_keywordsService.ContainsRecipientNumberPlaceholder(emailTemplate.Body) || _keywordsService.ContainsRecipientNamePlaceholder(emailTemplate.Body)) ? emailTemplate.Body : null,
-            CustomizedSubject = (_keywordsService.ContainsRecipientNumberPlaceholder(emailTemplate.Subject) || _keywordsService.ContainsRecipientNamePlaceholder(emailTemplate.Subject)) ? emailTemplate.Subject : null,
+            CustomizedBody = (_keywordsService.ContainsRecipientNumberPlaceholder(emailTemplate?.Body) || _keywordsService.ContainsRecipientNamePlaceholder(emailTemplate?.Body)) ? emailTemplate?.Body : null,
+            CustomizedSubject = (_keywordsService.ContainsRecipientNumberPlaceholder(emailTemplate?.Subject) || _keywordsService.ContainsRecipientNamePlaceholder(emailTemplate?.Subject)) ? emailTemplate?.Subject : null,
         }).ToList();
 
         return await _keywordsService.ReplaceKeywordsAsync(emailRecipients);

@@ -193,7 +193,7 @@ public class EmailNotificationServiceTests
         DateTime requestedSendTime = DateTime.UtcNow;
         DateTime dateTimeOutput = DateTime.UtcNow;
         DateTime expectedExpiry = dateTimeOutput;
-        var emailAddressPoints = new List<EmailAddressPoint>() { new() };
+        var emailAddressPoints = new List<EmailAddressPoint>();
         var emailRecipient = new EmailRecipient() { OrganizationNumber = "skd-orgno" };
 
         EmailNotification expected = new()
