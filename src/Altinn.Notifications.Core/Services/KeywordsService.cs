@@ -88,7 +88,7 @@ namespace Altinn.Notifications.Core.Services
         }
 
         /// <summary>
-        /// Fetches party details for the given national identity and organization numbers.
+        /// Fetches party details for the given organization and national identity numbers.
         /// </summary>
         /// <param name="organizationNumbers">The list of organization numbers.</param>
         /// <param name="nationalIdentityNumbers">The list of national identity numbers.</param>

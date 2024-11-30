@@ -18,7 +18,7 @@ public record PartyDetailsLookupRequest
     {
         if (!string.IsNullOrEmpty(organizationNumber) && !string.IsNullOrEmpty(socialSecurityNumber))
         {
-            throw new ArgumentException("Only one of OrganizationNumber or SocialSecurityNumber can be set.");
+            throw new ArgumentException("You can specify either an OrganizationNumber or a SocialSecurityNumber, but not both.");
         }
 
         OrganizationNumber = organizationNumber;

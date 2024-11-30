@@ -24,7 +24,7 @@ public class PartyDetailsLookupBatch
 
         if (organizationNumbers != null)
         {
-            PartyDetailsLookupRequestList.AddRange(organizationNumbers.Select(orgNumber => new PartyDetailsLookupRequest(organizationNumber: orgNumber)));
+            PartyDetailsLookupRequestList.AddRange(organizationNumbers.Select(orgNu => new PartyDetailsLookupRequest(organizationNumber: orgNu)));
         }
 
         if (socialSecurityNumbers != null)
