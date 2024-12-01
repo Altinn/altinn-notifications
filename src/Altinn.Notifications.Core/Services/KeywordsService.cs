@@ -113,55 +113,55 @@ namespace Altinn.Notifications.Core.Services
         /// <summary>
         /// Replaces placeholders in the given text with actual values from the provided details.
         /// </summary>
-        /// <param name="text">The text containing placeholders.</param>
+        /// <param name="customizedText">The text containing placeholders.</param>
         /// <param name="organizationNumber">The organization number.</param>
         /// <param name="nationalIdentityNumber">The national identity number.</param>
         /// <param name="organizationDetails">The list of organization details.</param>
         /// <param name="personDetails">The list of person details.</param>
         /// <returns>The text with placeholders replaced by actual values.</returns>
         private static string? ReplacePlaceholders(
-            string? text,
+            string? customizedText,
             string? organizationNumber,
             string? nationalIdentityNumber,
             IEnumerable<PartyDetails> organizationDetails,
             IEnumerable<PartyDetails> personDetails)
         {
-            text = ReplaceWithDetails(text, organizationNumber, organizationDetails, p => p.OrganizationNumber);
+            customizedText = ReplaceWithDetails(customizedText, organizationNumber, organizationDetails, p => p.OrganizationNumber);
 
-            text = ReplaceWithDetails(text, nationalIdentityNumber, personDetails, p => p.NationalIdentityNumber);
+            customizedText = ReplaceWithDetails(customizedText, nationalIdentityNumber, personDetails, p => p.NationalIdentityNumber);
 
-            return text;
+            return customizedText;
         }
 
         /// <summary>
         /// Replaces placeholders in the given text with actual values from the provided details.
         /// </summary>
-        /// <param name="text">The text containing placeholders.</param>
-        /// <param name="key">The key to match in the details.</param>
+        /// <param name="customizedText">The text containing placeholders.</param>
+        /// <param name="searchKey">The key to match in the details.</param>
         /// <param name="details">The list of details.</param>
         /// <param name="keySelector">The function to select the key from the details.</param>
         /// <returns>The text with placeholders replaced by actual values.</returns>
         private static string? ReplaceWithDetails(
-            string? text,
-            string? key,
+            string? customizedText,
+            string? searchKey,
             IEnumerable<PartyDetails> details,
             Func<PartyDetails, string?> keySelector)
         {
-            if (string.IsNullOrWhiteSpace(key))
+            if (string.IsNullOrWhiteSpace(searchKey))
             {
-                return text;
+                return customizedText;
             }
 
-            var detail = details.FirstOrDefault(e => keySelector(e) == key);
+            var detail = details.FirstOrDefault(e => keySelector(e) == searchKey);
 
             if (detail != null)
             {
-                text = text?.Replace(_recipientNamePlaceholder, detail.Name ?? string.Empty);
+                customizedText = customizedText?.Replace(_recipientNamePlaceholder, detail.Name ?? string.Empty);
 
-                text = text?.Replace(_recipientNumberPlaceholder, keySelector(detail) ?? string.Empty);
+                customizedText = customizedText?.Replace(_recipientNumberPlaceholder, keySelector(detail) ?? string.Empty);
             }
 
-            return text;
+            return customizedText;
         }
     }
 }
