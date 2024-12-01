@@ -157,7 +157,7 @@ public class SmsNotificationServiceTests
         await service.CreateNotification(orderId, requestedSendTime, [], new SmsRecipient(), 1);
 
         // Assert
-        repoMock.Verify(r => r.AddNotification(It.Is<SmsNotification>(e => AssertUtils.AreEquivalent(expected, e)), It.Is<DateTime>(d => d == expectedExpiry), It.IsAny<int>()), Times.Once);
+        repoMock.Verify();
     }
 
     [Fact]

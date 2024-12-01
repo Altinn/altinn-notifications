@@ -79,6 +79,7 @@ public static class TestdataUtil
             {
                 new Recipient()
                 {
+                    OrganizationNumber = "314396189",
                     AddressInfo = new()
                     {
                         new EmailAddressPoint()

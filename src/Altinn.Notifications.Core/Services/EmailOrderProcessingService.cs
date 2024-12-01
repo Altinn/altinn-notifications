@@ -72,16 +72,24 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
                 er.OrganizationNumber == recipient.OrganizationNumber &&
                 er.NationalIdentityNumber == recipient.NationalIdentityNumber);
 
-            if (emailRecipient == null || addressPoint == null)
+            if (emailRecipient == null && addressPoint == null)
             {
                 continue;
+            }
+
+            if (emailRecipient == null && addressPoint != null)
+            {
+                emailRecipient = new()
+                {
+                    ToAddress = addressPoint.EmailAddress
+                };
             }
 
             await _emailService.CreateNotification(
                 order.Id,
                 order.RequestedSendTime,
                 [addressPoint],
-                emailRecipient,
+                emailRecipient!,
                 order.IgnoreReservation ?? false);
         }
     }
@@ -93,12 +101,13 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
 
         foreach (var recipient in recipients)
         {
-            var emailRecipient = FindEmailRecipient(emailRecipients, recipient);
-
             var emailAddresses = recipient.AddressInfo
                 .OfType<EmailAddressPoint>()
                 .Where(a => !string.IsNullOrWhiteSpace(a.EmailAddress))
                 .ToList();
+
+            var emailRecipient = FindEmailRecipient(emailRecipients, recipient);
+            emailRecipient ??= new() { ToAddress = emailAddresses[0].EmailAddress };
 
             await _emailService.CreateNotification(
                 order.Id,
