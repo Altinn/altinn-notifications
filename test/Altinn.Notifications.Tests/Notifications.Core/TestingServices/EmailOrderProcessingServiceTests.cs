@@ -98,10 +98,20 @@ public class EmailOrderProcessingServiceTests
         var order = new NotificationOrder()
         {
             NotificationChannel = NotificationChannel.Email,
-            Recipients = new List<Recipient>()
-            {
+            Recipients =
+            [
                 new()
-            }
+                {
+                    AddressInfo =
+                    [
+                        new EmailAddressPoint()
+                        {
+                            AddressType = AddressType.Email,
+                            EmailAddress = "recipient@domain.com"
+                        }
+                    ]
+                }
+            ]
         };
 
         var serviceMock = new Mock<IEmailNotificationService>();

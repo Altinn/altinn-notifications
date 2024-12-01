@@ -72,17 +72,9 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
                 er.OrganizationNumber == recipient.OrganizationNumber &&
                 er.NationalIdentityNumber == recipient.NationalIdentityNumber);
 
-            if (emailRecipient == null && addressPoint == null)
+            if (emailRecipient == null)
             {
                 continue;
-            }
-
-            if (emailRecipient == null && addressPoint != null)
-            {
-                emailRecipient = new()
-                {
-                    ToAddress = addressPoint.EmailAddress
-                };
             }
 
             await _emailService.CreateNotification(
