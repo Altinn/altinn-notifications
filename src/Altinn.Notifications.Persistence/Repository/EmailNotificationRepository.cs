@@ -119,9 +119,7 @@ public class EmailNotificationRepository : IEmailNotificationRepository
                 searchResult.Add(new EmailRecipient()
                 {
                     ToAddress = reader.GetValue<string>("toaddress"),
-                    CustomizedBody = reader.GetValue<string?>("customizedbody"),
                     OrganizationNumber = reader.GetValue<string?>("recipientorgno"),
-                    CustomizedSubject = reader.GetValue<string?>("customizedsubject"),
                     NationalIdentityNumber = reader.GetValue<string?>("recipientnin"),
                 });
             }
