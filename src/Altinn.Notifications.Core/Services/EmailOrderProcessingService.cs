@@ -61,27 +61,31 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
     /// <inheritdoc/>
     public async Task ProcessOrderRetryWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients)
     {
+        var allEmailRecipients = await GetEmailRecipientsAsync(order, recipients);
         var emailRecipients = await _emailNotificationRepository.GetRecipients(order.Id);
 
         foreach (var recipient in recipients)
         {
             var addressPoint = recipient.AddressInfo.OfType<EmailAddressPoint>().FirstOrDefault();
 
-            var emailRecipient = emailRecipients.Find(er =>
-                er.ToAddress == addressPoint?.EmailAddress &&
-                er.OrganizationNumber == recipient.OrganizationNumber &&
-                er.NationalIdentityNumber == recipient.NationalIdentityNumber);
+            var isEmailRecipientMissing = !emailRecipients.Exists(
+               er => er.ToAddress == addressPoint?.EmailAddress &&
+               er.OrganizationNumber == recipient.OrganizationNumber &&
+               er.NationalIdentityNumber == recipient.NationalIdentityNumber);
 
-            if (emailRecipient == null)
+            if (!isEmailRecipientMissing)
             {
                 continue;
             }
+
+            var missingEmailRecipient = FindEmailRecipient(allEmailRecipients, recipient);
+            missingEmailRecipient ??= new EmailRecipient { IsReserved = recipient.IsReserved };
 
             await _emailService.CreateNotification(
                 order.Id,
                 order.RequestedSendTime,
                 [addressPoint],
-                emailRecipient!,
+                missingEmailRecipient,
                 order.IgnoreReservation ?? false);
         }
     }
@@ -99,7 +103,7 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
                 .ToList();
 
             var emailRecipient = FindEmailRecipient(emailRecipients, recipient);
-            emailRecipient ??= new() { ToAddress = emailAddresses[0].EmailAddress };
+            emailRecipient ??= new EmailRecipient { IsReserved = recipient.IsReserved };
 
             await _emailService.CreateNotification(
                 order.Id,
@@ -143,8 +147,9 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
     private static EmailRecipient? FindEmailRecipient(IEnumerable<EmailRecipient> emailRecipients, Recipient recipient)
     {
         return emailRecipients.FirstOrDefault(er =>
-            (!string.IsNullOrWhiteSpace(recipient.OrganizationNumber) && er.OrganizationNumber == recipient.OrganizationNumber) ||
-            (!string.IsNullOrWhiteSpace(recipient.NationalIdentityNumber) && er.NationalIdentityNumber == recipient.NationalIdentityNumber));
+        (!string.IsNullOrWhiteSpace(recipient.OrganizationNumber) && er.OrganizationNumber == recipient.OrganizationNumber) ||
+        (recipient.AddressInfo != null && recipient.AddressInfo.OfType<EmailAddressPoint>().Any(e => e.EmailAddress == er.ToAddress)) ||
+        (!string.IsNullOrWhiteSpace(recipient.NationalIdentityNumber) && er.NationalIdentityNumber == recipient.NationalIdentityNumber));
     }
 
     /// <summary>
