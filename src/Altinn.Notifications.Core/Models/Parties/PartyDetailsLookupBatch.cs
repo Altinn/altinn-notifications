@@ -12,18 +12,13 @@ public class PartyDetailsLookupBatch
     /// </summary>
     /// <param name="organizationNumbers">A list of organization numbers to look up.</param>
     /// <param name="socialSecurityNumbers">A list of social security numbers to look up.</param>
-    /// <exception cref="ArgumentException">Thrown when both <paramref name="organizationNumbers"/> and <paramref name="socialSecurityNumbers"/> are provided simultaneously or when both are null or empty.</exception>
+    /// <exception cref="ArgumentException">Thrown when both <paramref name="organizationNumbers"/> and <paramref name="socialSecurityNumbers"/> are null or empty.</exception>
     [JsonConstructor]
     public PartyDetailsLookupBatch(List<string>? organizationNumbers = null, List<string>? socialSecurityNumbers = null)
     {
         if ((organizationNumbers == null || organizationNumbers.Count == 0) && (socialSecurityNumbers == null || socialSecurityNumbers.Count == 0))
         {
             throw new ArgumentException("At least one of organizationNumbers or socialSecurityNumbers must be provided.");
-        }
-
-        if (organizationNumbers != null && organizationNumbers.Count > 0 && socialSecurityNumbers != null && socialSecurityNumbers.Count > 0)
-        {
-            throw new ArgumentException("Both organizationNumbers and socialSecurityNumbers cannot be provided simultaneously. Please provide only one.");
         }
 
         OrganizationNumbers = organizationNumbers ?? [];

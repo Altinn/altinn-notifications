@@ -62,30 +62,29 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
     public async Task ProcessOrderRetryWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients)
     {
         var allEmailRecipients = await GetEmailRecipientsAsync(order, recipients);
-        var emailRecipients = await _emailNotificationRepository.GetRecipients(order.Id);
+        var registeredEmailRecipients = await _emailNotificationRepository.GetRecipients(order.Id);
 
         foreach (var recipient in recipients)
         {
             var addressPoint = recipient.AddressInfo.OfType<EmailAddressPoint>().FirstOrDefault();
 
-            var isEmailRecipientMissing = !emailRecipients.Exists(
-               er => er.ToAddress == addressPoint?.EmailAddress &&
-               er.OrganizationNumber == recipient.OrganizationNumber &&
-               er.NationalIdentityNumber == recipient.NationalIdentityNumber);
-
-            if (!isEmailRecipientMissing)
+            var isEmailRecipientRegistered =
+                registeredEmailRecipients.Exists(er => er.ToAddress == addressPoint?.EmailAddress &&
+                                                 er.OrganizationNumber == recipient.OrganizationNumber &&
+                                                 er.NationalIdentityNumber == recipient.NationalIdentityNumber);
+            if (isEmailRecipientRegistered)
             {
                 continue;
             }
 
-            var missingEmailRecipient = FindEmailRecipient(allEmailRecipients, recipient);
-            missingEmailRecipient ??= new EmailRecipient { IsReserved = recipient.IsReserved };
+            var matchedEmailRecipient = FindEmailRecipient(allEmailRecipients, recipient);
+            var emailRecipient = matchedEmailRecipient ?? new EmailRecipient { IsReserved = recipient.IsReserved };
 
             await _emailService.CreateNotification(
                 order.Id,
                 order.RequestedSendTime,
                 [addressPoint],
-                missingEmailRecipient,
+                emailRecipient,
                 order.IgnoreReservation ?? false);
         }
     }
@@ -93,7 +92,7 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
     /// <inheritdoc/>
     public async Task ProcessOrderWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients)
     {
-        var emailRecipients = await GetEmailRecipientsAsync(order, recipients);
+        var allEmailRecipients = await GetEmailRecipientsAsync(order, recipients);
 
         foreach (var recipient in recipients)
         {
@@ -102,8 +101,8 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
                 .Where(a => !string.IsNullOrWhiteSpace(a.EmailAddress))
                 .ToList();
 
-            var emailRecipient = FindEmailRecipient(emailRecipients, recipient);
-            emailRecipient ??= new EmailRecipient { IsReserved = recipient.IsReserved };
+            var matchedEmailRecipient = FindEmailRecipient(allEmailRecipients, recipient);
+            var emailRecipient = matchedEmailRecipient ?? new EmailRecipient { IsReserved = recipient.IsReserved };
 
             await _emailService.CreateNotification(
                 order.Id,
@@ -115,24 +114,36 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
     }
 
     /// <summary>
-    /// Retrieves email recipients with replaced keywords.
+    /// Determines whether the specified template part requires customization by checking for placeholder keywords.
     /// </summary>
-    /// <param name="order">The notification order.</param>
-    /// <param name="recipients">The list of recipients.</param>
-    /// <returns>A task that represents the asynchronous operation. The task result contains the list of email recipients.</returns>
+    /// <param name="templatePart">The part of the email template (subject or body) to evaluate.</param>
+    /// <returns><c>true</c> if the template part contains placeholders for recipient-specific customization; otherwise, <c>false</c>.</returns>
+    private bool RequiresCustomization(string? templatePart)
+    {
+        return _keywordsService.ContainsRecipientNumberPlaceholder(templatePart) || _keywordsService.ContainsRecipientNamePlaceholder(templatePart);
+    }
+
+    /// <summary>
+    /// Retrieves a list of recipients for sending emails, replacing keywords in the subject and body with actual values.
+    /// </summary>
+    /// <param name="order">The notification order containing the email template and recipients.</param>
+    /// <param name="recipients">The list of recipients to process.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains the list of email recipients with keywords replaced.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when the order or its templates are null.</exception>
     private async Task<IEnumerable<EmailRecipient>> GetEmailRecipientsAsync(NotificationOrder order, IEnumerable<Recipient> recipients)
     {
         ArgumentNullException.ThrowIfNull(order);
         ArgumentNullException.ThrowIfNull(order.Templates);
 
         var emailTemplate = order.Templates.OfType<EmailTemplate>().FirstOrDefault();
+
         var emailRecipients = recipients.Select(recipient => new EmailRecipient
         {
             IsReserved = recipient.IsReserved,
             OrganizationNumber = recipient.OrganizationNumber,
             NationalIdentityNumber = recipient.NationalIdentityNumber,
-            CustomizedBody = (_keywordsService.ContainsRecipientNumberPlaceholder(emailTemplate?.Body) || _keywordsService.ContainsRecipientNamePlaceholder(emailTemplate?.Body)) ? emailTemplate?.Body : null,
-            CustomizedSubject = (_keywordsService.ContainsRecipientNumberPlaceholder(emailTemplate?.Subject) || _keywordsService.ContainsRecipientNamePlaceholder(emailTemplate?.Subject)) ? emailTemplate?.Subject : null,
+            CustomizedBody = RequiresCustomization(emailTemplate?.Body) ? emailTemplate?.Body : null,
+            CustomizedSubject = RequiresCustomization(emailTemplate?.Subject) ? emailTemplate?.Subject : null,
         }).ToList();
 
         return await _keywordsService.ReplaceKeywordsAsync(emailRecipients);
@@ -148,7 +159,6 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
     {
         return emailRecipients.FirstOrDefault(er =>
         (!string.IsNullOrWhiteSpace(recipient.OrganizationNumber) && er.OrganizationNumber == recipient.OrganizationNumber) ||
-        (recipient.AddressInfo != null && recipient.AddressInfo.OfType<EmailAddressPoint>().Any(e => e.EmailAddress == er.ToAddress)) ||
         (!string.IsNullOrWhiteSpace(recipient.NationalIdentityNumber) && er.NationalIdentityNumber == recipient.NationalIdentityNumber));
     }
 
@@ -163,7 +173,7 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
             .Where(r => !r.AddressInfo.Exists(a => a.AddressType == AddressType.Email))
             .ToList();
 
-        if (recipientsWithoutEmail.Count != 0)
+        if (recipientsWithoutEmail.Count > 0)
         {
             await _contactPointService.AddEmailContactPoints(recipientsWithoutEmail, order.ResourceId);
         }
