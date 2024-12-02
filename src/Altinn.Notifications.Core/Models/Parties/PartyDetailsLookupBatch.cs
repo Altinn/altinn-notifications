@@ -12,7 +12,8 @@ public class PartyDetailsLookupBatch
     /// </summary>
     /// <param name="organizationNumbers">A list of organization numbers to look up.</param>
     /// <param name="socialSecurityNumbers">A list of social security numbers to look up.</param>
-    /// <exception cref="ArgumentException">Thrown when both <paramref name="organizationNumbers"/> and <paramref name="socialSecurityNumbers"/> are null or empty.</exception>
+    /// <exception cref="ArgumentException">Thrown when both <paramref name="organizationNumbers"/> and <paramref name="socialSecurityNumbers"/> are provided simultaneously or when both are null or empty.</exception>
+    [JsonConstructor]
     public PartyDetailsLookupBatch(List<string>? organizationNumbers = null, List<string>? socialSecurityNumbers = null)
     {
         if ((organizationNumbers == null || organizationNumbers.Count == 0) && (socialSecurityNumbers == null || socialSecurityNumbers.Count == 0))
@@ -20,22 +21,42 @@ public class PartyDetailsLookupBatch
             throw new ArgumentException("At least one of organizationNumbers or socialSecurityNumbers must be provided.");
         }
 
-        PartyDetailsLookupRequestList = [];
-
-        if (organizationNumbers != null)
+        if (organizationNumbers != null && organizationNumbers.Count > 0 && socialSecurityNumbers != null && socialSecurityNumbers.Count > 0)
         {
-            PartyDetailsLookupRequestList.AddRange(organizationNumbers.Select(orgNu => new PartyDetailsLookupRequest(organizationNumber: orgNu)));
+            throw new ArgumentException("Both organizationNumbers and socialSecurityNumbers cannot be provided simultaneously. Please provide only one.");
         }
 
-        if (socialSecurityNumbers != null)
+        OrganizationNumbers = organizationNumbers ?? [];
+        SocialSecurityNumbers = socialSecurityNumbers ?? [];
+
+        PartyDetailsLookupRequestList = [];
+
+        if (OrganizationNumbers.Count != 0)
         {
-            PartyDetailsLookupRequestList.AddRange(socialSecurityNumbers.Select(ssn => new PartyDetailsLookupRequest(socialSecurityNumber: ssn)));
+            PartyDetailsLookupRequestList.AddRange(OrganizationNumbers.Select(orgNum => new PartyDetailsLookupRequest(organizationNumber: orgNum)));
+        }
+
+        if (SocialSecurityNumbers.Count != 0)
+        {
+            PartyDetailsLookupRequestList.AddRange(SocialSecurityNumbers.Select(ssn => new PartyDetailsLookupRequest(socialSecurityNumber: ssn)));
         }
     }
 
     /// <summary>
-    /// Gets or sets the list of lookup criteria for parties.
+    /// Gets the organization numbers to look up.
+    /// </summary>
+    [JsonPropertyName("organizationNumbers")]
+    public List<string> OrganizationNumbers { get; }
+
+    /// <summary>
+    /// Gets the social security numbers to look up.
+    /// </summary>
+    [JsonPropertyName("socialSecurityNumbers")]
+    public List<string> SocialSecurityNumbers { get; }
+
+    /// <summary>
+    /// Gets the list of lookup criteria for parties.
     /// </summary>
     [JsonPropertyName("parties")]
-    public List<PartyDetailsLookupRequest>? PartyDetailsLookupRequestList { get; }
+    public List<PartyDetailsLookupRequest> PartyDetailsLookupRequestList { get; private set; }
 }

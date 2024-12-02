@@ -97,12 +97,12 @@ namespace Altinn.Notifications.Core.Services
             List<string> organizationNumbers,
             List<string> nationalIdentityNumbers)
         {
-            var organizationDetailsTask = organizationNumbers.Count != 0
-                ? _registerClient.GetPartyDetailsForOrganizations(organizationNumbers)
-                : Task.FromResult(new List<PartyDetails>());
-
             var personDetailsTask = nationalIdentityNumbers.Count != 0
                 ? _registerClient.GetPartyDetailsForPersons(nationalIdentityNumbers)
+                : Task.FromResult(new List<PartyDetails>());
+
+            var organizationDetailsTask = organizationNumbers.Count != 0
+                ? _registerClient.GetPartyDetailsForOrganizations(organizationNumbers)
                 : Task.FromResult(new List<PartyDetails>());
 
             await Task.WhenAll(personDetailsTask, organizationDetailsTask);
