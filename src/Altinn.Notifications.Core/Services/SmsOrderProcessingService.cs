@@ -60,21 +60,26 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
     public async Task ProcessOrderRetryWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients)
     {
         int smsCount = GetSmsCountForOrder(order);
-        List<SmsRecipient> smsRecipients = await _smsNotificationRepository.GetRecipients(order.Id);
+
+        var allSmsRecipients = await GetSmsRecipientsAsync(order, recipients);
+        var registeredSmsRecipients = await _smsNotificationRepository.GetRecipients(order.Id);
 
         foreach (var recipient in recipients)
         {
             var smsAddress = recipient.AddressInfo.OfType<SmsAddressPoint>().FirstOrDefault();
 
-            var smsRecipient = smsRecipients.Find(er =>
-                er.MobileNumber == smsAddress?.MobileNumber &&
-                er.OrganizationNumber == recipient.OrganizationNumber &&
-                er.NationalIdentityNumber == recipient.NationalIdentityNumber);
-
-            if (smsRecipient == null || smsAddress == null)
+            var isSmsRecipientRegistered =
+                registeredSmsRecipients.Exists(er =>
+                                               er.MobileNumber == smsAddress?.MobileNumber &&
+                                               er.OrganizationNumber == recipient.OrganizationNumber &&
+                                               er.NationalIdentityNumber == recipient.NationalIdentityNumber);
+            if (isSmsRecipientRegistered)
             {
                 continue;
             }
+            
+            var matchedSmsRecipient = FindSmsRecipient(allSmsRecipients, recipient);
+            var smsRecipient = matchedSmsRecipient ?? new SmsRecipient { IsReserved = recipient.IsReserved };
 
             await _smsService.CreateNotification(
                 order.Id,
@@ -90,33 +95,35 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
     {
         int smsCount = GetSmsCountForOrder(order);
 
-        var emailRecipients = await GetSmsRecipientsAsync(order, recipients);
+        var allSmsRecipients = await GetSmsRecipientsAsync(order, recipients);
 
         foreach (var recipient in recipients)
         {
-            var emailRecipient = FindEmailRecipient(emailRecipients, recipient);
-
             var emailAddresses = recipient.AddressInfo
                 .OfType<SmsAddressPoint>()
                 .Where(a => !string.IsNullOrWhiteSpace(a.MobileNumber))
                 .ToList();
 
+            var matchedSmsRecipient = FindSmsRecipient(allSmsRecipients, recipient);
+            var smsRecipient = matchedSmsRecipient ?? new SmsRecipient { IsReserved = recipient.IsReserved };
+
             await _smsService.CreateNotification(
                 order.Id,
                 order.RequestedSendTime,
                 emailAddresses,
-                emailRecipient,
-                smsCount, 
+                smsRecipient,
+                smsCount,
                 order.IgnoreReservation ?? false);
         }
     }
 
     /// <summary>
-    /// Retrieves email recipients with replaced keywords.
+    /// Retrieves a list of recipients for sending SMS, replacing keywords in the body with actual values.
     /// </summary>
-    /// <param name="order">The notification order.</param>
-    /// <param name="recipients">The list of recipients.</param>
-    /// <returns>A task that represents the asynchronous operation. The task result contains the list of email recipients.</returns>
+    /// <param name="order">The notification order containing the SMS template and recipients.</param>
+    /// <param name="recipients">The list of recipients to process.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains the list of SMS recipients with keywords replaced.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when the order or its templates are null.</exception>
     private async Task<IEnumerable<SmsRecipient>> GetSmsRecipientsAsync(NotificationOrder order, IEnumerable<Recipient> recipients)
     {
         ArgumentNullException.ThrowIfNull(order);
@@ -135,14 +142,14 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
     }
 
     /// <summary>
-    /// Finds the email recipient matching the given recipient.
+    /// Finds the SMS recipient matching the given recipient.
     /// </summary>
-    /// <param name="emailRecipients">The list of email recipients.</param>
+    /// <param name="smsRecipients">The list of SMS recipients.</param>
     /// <param name="recipient">The recipient to match.</param>
-    /// <returns>The matching email recipient, or null if no match is found.</returns>
-    private static SmsRecipient? FindEmailRecipient(IEnumerable<SmsRecipient> emailRecipients, Recipient recipient)
+    /// <returns>The matching SMS recipient, or null if no match is found.</returns>
+    private static SmsRecipient? FindSmsRecipient(IEnumerable<SmsRecipient> smsRecipients, Recipient recipient)
     {
-        return emailRecipients.FirstOrDefault(er =>
+        return smsRecipients.FirstOrDefault(er =>
             (!string.IsNullOrWhiteSpace(recipient.OrganizationNumber) && er.OrganizationNumber == recipient.OrganizationNumber) ||
             (!string.IsNullOrWhiteSpace(recipient.NationalIdentityNumber) && er.NationalIdentityNumber == recipient.NationalIdentityNumber));
     }
