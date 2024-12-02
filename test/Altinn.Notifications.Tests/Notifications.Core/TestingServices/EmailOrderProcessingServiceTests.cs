@@ -28,19 +28,19 @@ public class EmailOrderProcessingServiceTests
         {
             Id = Guid.NewGuid(),
             NotificationChannel = NotificationChannel.Email,
-            Recipients = new List<Recipient>()
-            {
+            Recipients =
+            [
                 new()
                 {
-                OrganizationNumber = "123456",
-                AddressInfo = [new EmailAddressPoint("email@test.com")]
+                    OrganizationNumber = "123456",
+                    AddressInfo = [new EmailAddressPoint("email@test.com")]
                 },
                 new()
                 {
-                OrganizationNumber = "654321",
-                AddressInfo = [new EmailAddressPoint("email@test.com")]
+                    OrganizationNumber = "654321",
+                    AddressInfo = [new EmailAddressPoint("email@test.com")]
                 }
-            }
+            ]
         };
 
         var serviceMock = new Mock<IEmailNotificationService>();
@@ -59,28 +59,30 @@ public class EmailOrderProcessingServiceTests
     public async Task ProcessOrder_ExpectedInputToNotificationService()
     {
         // Arrange
-        Guid orderId = Guid.NewGuid();
         DateTime requested = DateTime.UtcNow;
+        Guid orderId = Guid.NewGuid();
 
         var order = new NotificationOrder()
         {
             Id = orderId,
             NotificationChannel = NotificationChannel.Email,
             RequestedSendTime = requested,
-            Recipients = new List<Recipient>()
-            {
-                new(new List<IAddressPoint>() { new EmailAddressPoint("test@test.com") }, organizationNumber: "skd-orgno")
-            }
+            Recipients =
+            [
+                new([new EmailAddressPoint("test@test.com")], organizationNumber: "skd-orgno")
+            ]
         };
 
         List<EmailAddressPoint> expectedEmailAddressPoints = [new("test@test.com")];
-        EmailRecipient expectedEmailRecipient = new()
-        {
-            OrganizationNumber = "skd-orgno"
-        };
+        EmailRecipient expectedEmailRecipient = new() { OrganizationNumber = "skd-orgno" };
 
         var serviceMock = new Mock<IEmailNotificationService>();
-        serviceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.Is<DateTime>(d => d.Equals(requested)), It.Is<List<EmailAddressPoint>>(r => AssertUtils.AreEquivalent(expectedEmailAddressPoints, r)), It.Is<EmailRecipient>(e => AssertUtils.AreEquivalent(expectedEmailRecipient, e)), It.IsAny<bool>()));
+        serviceMock.Setup(s => s.CreateNotification(
+            It.IsAny<Guid>(),
+            It.Is<DateTime>(d => d.Equals(requested)),
+            It.Is<List<EmailAddressPoint>>(r => AssertUtils.AreEquivalent(expectedEmailAddressPoints, r)),
+            It.Is<EmailRecipient>(e => AssertUtils.AreEquivalent(expectedEmailRecipient, e)),
+            It.IsAny<bool>()));
 
         var service = GetTestService(emailService: serviceMock.Object);
 
@@ -101,16 +103,6 @@ public class EmailOrderProcessingServiceTests
             Recipients =
             [
                 new()
-                {
-                    AddressInfo =
-                    [
-                        new EmailAddressPoint()
-                        {
-                            AddressType = AddressType.Email,
-                            EmailAddress = "recipient@domain.com"
-                        }
-                    ]
-                }
             ]
         };
 
@@ -179,13 +171,13 @@ public class EmailOrderProcessingServiceTests
         {
             Id = Guid.NewGuid(),
             NotificationChannel = NotificationChannel.Email,
-            Recipients = new List<Recipient>()
-            {
+            Recipients =
+            [
                 new(),
-                new(new List<IAddressPoint>() { new EmailAddressPoint("test@test.com") }, nationalIdentityNumber: "enduser-nin"),
-                new(new List<IAddressPoint>() { new EmailAddressPoint("test@test.com") }, organizationNumber : "skd-orgNo"),
-                new(new List<IAddressPoint>() { new EmailAddressPoint("test@domain.com") })
-            }
+                new([new EmailAddressPoint("test@test.com")], nationalIdentityNumber: "enduser-nin"),
+                new([new EmailAddressPoint("test@test.com")], organizationNumber : "skd-orgNo"),
+                new([new EmailAddressPoint("test@domain.com")])
+            ]
         };
 
         var serviceMock = new Mock<IEmailNotificationService>();
@@ -209,10 +201,10 @@ public class EmailOrderProcessingServiceTests
     }
 
     private static EmailOrderProcessingService GetTestService(
-        IEmailNotificationRepository? emailRepo = null,
-        IEmailNotificationService? emailService = null,
-        IContactPointService? contactPointService = null,
-        IKeywordsService? keywordsService = null)
+         IEmailNotificationRepository? emailRepo = null,
+         IEmailNotificationService? emailService = null,
+         IContactPointService? contactPointService = null,
+         IKeywordsService? keywordsService = null)
     {
         if (emailRepo == null)
         {
