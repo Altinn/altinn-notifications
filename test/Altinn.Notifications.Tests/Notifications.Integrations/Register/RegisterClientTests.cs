@@ -87,6 +87,40 @@ public class RegisterClientTests
     }
 
     [Fact]
+    public async Task GetOrganizationContactPoints_NullOrganizationNumbers_ReturnsEmpty()
+    {
+        // Act
+        List<OrganizationContactPoints> actual = await _registerClient.GetOrganizationContactPoints(null);
+
+        // Assert
+        Assert.Empty(actual);
+    }
+
+    [Fact]
+    public async Task GetOrganizationContactPoints_EmptyOrganizationNumbers_ReturnsEmpty()
+    {
+        // Act
+        List<OrganizationContactPoints> actual = await _registerClient.GetOrganizationContactPoints([]);
+
+        // Assert
+        Assert.Empty(actual);
+    }
+
+    [Fact]
+    public async Task GetOrganizationContactPoints_NullContactPointsList_ReturnsEmpty()
+    {
+        // Arrange
+        var organizationNumbers = new List<string> { "null-contact-points-list" };
+
+        // Act
+        var result = await _registerClient.GetOrganizationContactPoints(organizationNumbers);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Empty(result);
+    }
+
+    [Fact]
     public async Task GetPartyDetailsForOrganizations_SuccessResponse_NoMatches()
     {
         // Act
@@ -148,16 +182,28 @@ public class RegisterClientTests
         Assert.Equal(HttpStatusCode.ServiceUnavailable, exception.Response?.StatusCode);
     }
 
+    private Task<HttpResponseMessage> CreateMockResponse(object? contentData, HttpStatusCode statusCode)
+    {
+        JsonContent? content = (contentData != null) ? JsonContent.Create(contentData, options: _serializerOptions) : null;
+
+        return Task.FromResult(new HttpResponseMessage()
+        {
+            StatusCode = statusCode,
+            Content = content
+        });
+    }
+
     private Task<HttpResponseMessage> GetResponse(OrgContactPointLookup lookup)
     {
-        HttpStatusCode statusCode = HttpStatusCode.OK;
         object? contentData = null;
+        HttpStatusCode statusCode = HttpStatusCode.OK;
 
         switch (lookup.OrganizationNumbers[0])
         {
             case "empty-list":
                 contentData = new OrgContactPointsList() { ContactPointsList = [] };
                 break;
+
             case "populated-list":
                 contentData = new OrgContactPointsList
                 {
@@ -168,77 +214,77 @@ public class RegisterClientTests
                     ]
                 };
                 break;
+
             case "unavailable":
                 statusCode = HttpStatusCode.ServiceUnavailable;
                 break;
+
+            case "null-contact-points-list":
+                contentData = new OrgContactPointsList { ContactPointsList = null };
+                break;
         }
 
-        JsonContent? content = (contentData != null) ? JsonContent.Create(contentData, options: _serializerOptions) : null;
-
-        return Task.FromResult(
-            new HttpResponseMessage()
-            {
-                StatusCode = statusCode,
-                Content = content
-            });
+        return CreateMockResponse(contentData, statusCode);
     }
 
     private Task<HttpResponseMessage> GetPartyDetailsResponse(PartyDetailsLookupBatch lookup)
     {
-        HttpStatusCode statusCode = HttpStatusCode.OK;
         object? contentData = null;
+        HttpStatusCode statusCode = HttpStatusCode.OK;
 
-        switch (lookup.PartyDetailsLookupRequestList?.FirstOrDefault()?.OrganizationNumber)
+        var firstRequest = lookup.PartyDetailsLookupRequestList?.FirstOrDefault();
+        if (firstRequest != null)
         {
-            case "empty-list":
-                contentData = new PartyDetailsLookupResult() { PartyDetailsList = [] };
-                break;
-
-            case "populated-list":
-                contentData = new PartyDetailsLookupResult
-                {
-                    PartyDetailsList =
-                    [
-                        new() { OrganizationNumber = "313600947", Name = "Test Organization 1" },
-                        new() { OrganizationNumber = "315058384", Name = "Test Organization 2" }
-                    ]
-                };
-                break;
-
-            case "unavailable":
-                statusCode = HttpStatusCode.ServiceUnavailable;
-                break;
-        }
-
-        switch (lookup.PartyDetailsLookupRequestList?.FirstOrDefault()?.SocialSecurityNumber)
-        {
-            case "empty-list":
-                contentData = new PartyDetailsLookupResult() { PartyDetailsList = [] };
-                break;
-
-            case "populated-list":
-                contentData = new PartyDetailsLookupResult
-                {
-                    PartyDetailsList =
-                    [
-                        new() { NationalIdentityNumber = "07837399275", Name = "Test Person 1" },
-                        new() { NationalIdentityNumber = "04917199103", Name = "Test Person 2" }
-                    ]
-                };
-                break;
-
-            case "unavailable":
-                statusCode = HttpStatusCode.ServiceUnavailable;
-                break;
-        }
-
-        JsonContent? content = (contentData != null) ? JsonContent.Create(contentData, options: _serializerOptions) : null;
-
-        return Task.FromResult(
-            new HttpResponseMessage()
+            if (firstRequest.OrganizationNumber != null)
             {
-                StatusCode = statusCode,
-                Content = content
-            });
+                switch (firstRequest.OrganizationNumber)
+                {
+                    case "empty-list":
+                        contentData = new PartyDetailsLookupResult() { PartyDetailsList = [] };
+                        break;
+
+                    case "populated-list":
+                        contentData = new PartyDetailsLookupResult
+                        {
+                            PartyDetailsList =
+                            [
+                                new() { OrganizationNumber = "313600947", Name = "Test Organization 1" },
+                                new() { OrganizationNumber = "315058384", Name = "Test Organization 2" }
+                            ]
+                        };
+                        break;
+
+                    case "unavailable":
+                        statusCode = HttpStatusCode.ServiceUnavailable;
+                        break;
+                }
+            }
+            else if (firstRequest.SocialSecurityNumber != null)
+            {
+                switch (firstRequest.SocialSecurityNumber)
+                {
+                    case "empty-list":
+                        contentData = new PartyDetailsLookupResult() { PartyDetailsList = [] };
+                        break;
+
+                    case "populated-list":
+                        contentData = new PartyDetailsLookupResult
+                        {
+                            PartyDetailsList =
+                            [
+                                new() { NationalIdentityNumber = "07837399275", Name = "Test Person 1" },
+                                new() { NationalIdentityNumber = "04917199103", Name = "Test Person 2" }
+                            ]
+                        };
+                        break;
+
+                    case "unavailable":
+                        statusCode = HttpStatusCode.ServiceUnavailable;
+                        break;
+                }
+            }
+        }
+
+        return CreateMockResponse(contentData, statusCode);
     }
 }
