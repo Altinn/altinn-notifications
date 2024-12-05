@@ -16,8 +16,8 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 
 public class KeywordsServiceTests
 {
+    private readonly KeywordsService _keywordsService;
     private readonly Mock<IRegisterClient> _registerClientMock;
-    private readonly IKeywordsService _keywordsService;
 
     public KeywordsServiceTests()
     {
