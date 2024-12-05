@@ -121,7 +121,6 @@ public class RegisterClient : IRegisterClient
         {
             Content = content
         };
-        request.Headers.Add("partyComponentOption", "person-name");
 
         var response = await _client.SendAsync(request);
 

@@ -20,12 +20,6 @@ public class PartyDetails
     public string? OrganizationNumber { get; set; }
 
     /// <summary>
-    /// Gets or sets the components of the person's name, if available.
-    /// </summary>
-    [JsonPropertyName("personName")]
-    public PersonNameComponents? PersonName { get; set; }
-
-    /// <summary>
     /// Gets or sets the social security number of the party, if applicable.
     /// </summary>
     [JsonPropertyName("ssn")]
