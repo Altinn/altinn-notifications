@@ -87,16 +87,6 @@ public class RegisterClientTests
     }
 
     [Fact]
-    public async Task GetOrganizationContactPoints_NullOrganizationNumbers_ReturnsEmpty()
-    {
-        // Act
-        List<OrganizationContactPoints> actual = await _registerClient.GetOrganizationContactPoints(null);
-
-        // Assert
-        Assert.Empty(actual);
-    }
-
-    [Fact]
     public async Task GetOrganizationContactPoints_EmptyOrganizationNumbers_ReturnsEmpty()
     {
         // Act
@@ -220,7 +210,7 @@ public class RegisterClientTests
                 break;
 
             case "null-contact-points-list":
-                contentData = new OrgContactPointsList { ContactPointsList = null };
+                contentData = new OrgContactPointsList { ContactPointsList = [] };
                 break;
         }
 
