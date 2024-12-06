@@ -21,7 +21,7 @@ public class SmsNotificationRepository : ISmsNotificationRepository
     private readonly NpgsqlDataSource _dataSource;
     private readonly TelemetryClient? _telemetryClient;
 
-    private const string _insertSmsNotificationSql = "call notifications.insertsmsnotification($1, $2, $3, $4, $5, $6, $7, $8, $9)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _result, _smscount, _resulttime, _expirytime)
+    private const string _insertSmsNotificationSql = "call notifications.insertsmsnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _customizedbody, _result, _smscount, _resulttime, _expirytime)
     private const string _getSmsNotificationsSql = "select * from notifications.getsms_statusnew_updatestatus()";
     private const string _getSmsRecipients = "select * from notifications.getsmsrecipients_v2($1)"; // (_orderid)
 
@@ -52,8 +52,9 @@ public class SmsNotificationRepository : ISmsNotificationRepository
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notification.OrderId);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notification.Id);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, (object)DBNull.Value); // recipientorgno
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.NationalIdentityNumber ?? (object)DBNull.Value); 
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.NationalIdentityNumber ?? (object)DBNull.Value);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.MobileNumber);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.CustomizedBody ?? (object)DBNull.Value);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.SendResult.Result.ToString());
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Integer, smsCount);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, notification.SendResult.ResultTime);

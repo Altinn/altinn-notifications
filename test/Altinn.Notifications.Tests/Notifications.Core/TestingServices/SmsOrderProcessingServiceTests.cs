@@ -41,10 +41,16 @@ public class SmsOrderProcessingServiceTests
             Templates = [new SmsTemplate("Altinn", "this is the body")]
         };
 
-        Recipient expectedRecipient = new(new List<IAddressPoint>() { new SmsAddressPoint("+4799999999") }, nationalIdentityNumber: "enduser-nin");
+        var smsAddressPoints = new List<SmsAddressPoint> { new("+4799999999"), };
 
         var notificationServiceMock = new Mock<ISmsNotificationService>();
-        notificationServiceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.Is<DateTime>(d => d.Equals(requested)), It.Is<Recipient>(r => AssertUtils.AreEquivalent(expectedRecipient, r)), It.IsAny<int>(), It.IsAny<bool>()));
+        notificationServiceMock.Setup(s => s.CreateNotification(
+            It.IsAny<Guid>(),
+            It.Is<DateTime>(d => d.Equals(requested)),
+            It.Is<List<SmsAddressPoint>>(r => AssertUtils.AreEquivalent(smsAddressPoints, r)),
+            It.Is<SmsRecipient>(r => r.NationalIdentityNumber == "enduser-nin"),
+            It.IsAny<int>(),
+            It.IsAny<bool>()));
 
         var service = GetTestService(smsService: notificationServiceMock.Object);
 
@@ -80,7 +86,7 @@ public class SmsOrderProcessingServiceTests
         };
 
         var notificationServiceMock = new Mock<ISmsNotificationService>();
-        notificationServiceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>(), It.IsAny<int>(), It.IsAny<bool>()));
+        notificationServiceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<List<SmsAddressPoint>>(), It.IsAny<SmsRecipient>(), It.IsAny<int>(), It.IsAny<bool>()));
 
         var service = GetTestService(smsService: notificationServiceMock.Object);
 
@@ -88,7 +94,7 @@ public class SmsOrderProcessingServiceTests
         await service.ProcessOrder(order);
 
         // Assert
-        notificationServiceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>(), It.IsAny<int>(), It.IsAny<bool>()), Times.Exactly(2));
+        notificationServiceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<List<SmsAddressPoint>>(), It.IsAny<SmsRecipient>(), It.IsAny<int>(), It.IsAny<bool>()), Times.Exactly(2));
     }
 
     [Fact]
@@ -114,7 +120,8 @@ public class SmsOrderProcessingServiceTests
             s => s.CreateNotification(
                 It.IsAny<Guid>(),
                 It.IsAny<DateTime>(),
-                It.Is<Recipient>(r => r.NationalIdentityNumber == "123456"),
+                It.IsAny<List<SmsAddressPoint>>(),
+                It.Is<SmsRecipient>(r => r.NationalIdentityNumber == "123456"),
                 It.IsAny<int>(),
                 It.IsAny<bool>()));
 
@@ -124,7 +131,7 @@ public class SmsOrderProcessingServiceTests
             {
                 Recipient augumentedRecipient = new() { AddressInfo = [new SmsAddressPoint("+4712345678")], NationalIdentityNumber = r[0].NationalIdentityNumber };
                 r.Clear();
-                r.Add(augumentedRecipient); 
+                r.Add(augumentedRecipient);
             });
 
         var service = GetTestService(smsService: notificationServiceMock.Object, contactPointService: contactPointServiceMock.Object);
@@ -156,7 +163,7 @@ public class SmsOrderProcessingServiceTests
         };
 
         var notificationServiceMock = new Mock<ISmsNotificationService>();
-        notificationServiceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>(), It.IsAny<int>(), It.IsAny<bool>()));
+        notificationServiceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<List<SmsAddressPoint>>(), It.IsAny<SmsRecipient>(), It.IsAny<int>(), It.IsAny<bool>()));
 
         var smsRepoMock = new Mock<ISmsNotificationRepository>();
         smsRepoMock.Setup(e => e.GetRecipients(It.IsAny<Guid>())).ReturnsAsync(
@@ -172,7 +179,7 @@ public class SmsOrderProcessingServiceTests
 
         // Assert
         smsRepoMock.Verify(e => e.GetRecipients(It.IsAny<Guid>()), Times.Once);
-        notificationServiceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<Recipient>(), It.IsAny<int>(), It.IsAny<bool>()), Times.Exactly(2));
+        notificationServiceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<List<SmsAddressPoint>>(), It.IsAny<SmsRecipient>(), It.IsAny<int>(), It.IsAny<bool>()), Times.Exactly(2));
     }
 
     [Theory]
@@ -195,7 +202,8 @@ public class SmsOrderProcessingServiceTests
     private static SmsOrderProcessingService GetTestService(
         ISmsNotificationRepository? smsRepo = null,
         ISmsNotificationService? smsService = null,
-        IContactPointService? contactPointService = null)
+        IContactPointService? contactPointService = null,
+        IKeywordsService? keywordsService = null)
     {
         if (smsRepo == null)
         {
@@ -217,6 +225,13 @@ public class SmsOrderProcessingServiceTests
             contactPointService = contactPointServiceMock.Object;
         }
 
-        return new SmsOrderProcessingService(smsRepo, smsService, contactPointService);
+        if (keywordsService == null)
+        {
+            var keywordsServiceMock = new Mock<IKeywordsService>();
+            keywordsServiceMock.Setup(e => e.ReplaceKeywordsAsync(It.IsAny<List<SmsRecipient>>())).ReturnsAsync((List<SmsRecipient> recipient) => recipient);
+            keywordsService = keywordsServiceMock.Object;
+        }
+
+        return new SmsOrderProcessingService(smsRepo, smsService, contactPointService, keywordsService);
     }
 }

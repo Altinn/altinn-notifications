@@ -23,10 +23,10 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
     {
         // Arrange
         Dictionary<string, string> vars = new()
-    {
-        { "KafkaSettings__PastDueOrdersRetryTopicName", _retryTopicName },
-        { "KafkaSettings__Admin__TopicList", $"[\"{_retryTopicName}\"]" }
-    };
+        {
+            { "KafkaSettings__PastDueOrdersRetryTopicName", _retryTopicName },
+            { "KafkaSettings__Admin__TopicList", $"[\"{_retryTopicName}\"]" }
+        };
 
         using PastDueOrdersRetryConsumer consumerRetryService = (PastDueOrdersRetryConsumer)ServiceUtil
                                                     .GetServices(new List<Type>() { typeof(IHostedService) }, vars)

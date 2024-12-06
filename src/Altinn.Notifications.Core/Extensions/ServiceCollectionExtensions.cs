@@ -46,6 +46,7 @@ public static class ServiceCollectionExtensions
             .AddSingleton<INotificationsEmailServiceUpdateService, NotificationsEmailServiceUpdateService>()
             .AddSingleton<IMetricsService, MetricsService>()
             .AddSingleton<INotificationScheduleService, NotificationScheduleService>()
+            .AddSingleton<IKeywordsService, KeywordsService>()
             .Configure<KafkaSettings>(config.GetSection("KafkaSettings"))
             .Configure<NotificationConfig>(config.GetSection("NotificationConfig"));
     }

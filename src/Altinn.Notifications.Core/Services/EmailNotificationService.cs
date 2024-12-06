@@ -13,19 +13,24 @@ using Microsoft.Extensions.Options;
 namespace Altinn.Notifications.Core.Services;
 
 /// <summary>
-/// Implementation of <see cref="IEmailNotificationService"/>
+/// Implementation of <see cref="IEmailNotificationService"/>.
 /// </summary>
 public class EmailNotificationService : IEmailNotificationService
 {
-    private readonly IGuidService _guid;
     private readonly IDateTimeService _dateTime;
+    private readonly IGuidService _guid;
+    private readonly string _emailQueueTopicName;
     private readonly IEmailNotificationRepository _repository;
     private readonly IKafkaProducer _producer;
-    private readonly string _emailQueueTopicName;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotificationService"/> class.
     /// </summary>
+    /// <param name="guid">The GUID service.</param>
+    /// <param name="dateTime">The date time service.</param>
+    /// <param name="repository">The email notification repository.</param>
+    /// <param name="producer">The Kafka producer.</param>
+    /// <param name="kafkaSettings">The Kafka settings.</param>
     public EmailNotificationService(
         IGuidService guid,
         IDateTimeService dateTime,
@@ -35,34 +40,22 @@ public class EmailNotificationService : IEmailNotificationService
     {
         _guid = guid;
         _dateTime = dateTime;
-        _repository = repository;
         _producer = producer;
+        _repository = repository;
         _emailQueueTopicName = kafkaSettings.Value.EmailQueueTopicName;
     }
 
     /// <inheritdoc/>
-    public async Task CreateNotification(Guid orderId, DateTime requestedSendTime, Recipient recipient, bool ignoreReservation = false)
+    public async Task CreateNotification(Guid orderId, DateTime requestedSendTime, List<EmailAddressPoint> emailAddresses, EmailRecipient emailRecipient, bool ignoreReservation = false)
     {
-        List<EmailAddressPoint> emailAddresses = recipient.AddressInfo
-          .Where(a => a.AddressType == AddressType.Email)
-          .Select(a => (a as EmailAddressPoint)!)
-          .Where(a => a != null && !string.IsNullOrEmpty(a.EmailAddress))
-          .ToList();
-
-        EmailRecipient emailRecipient = new()
-        {
-            OrganizationNumber = recipient.OrganizationNumber,
-            NationalIdentityNumber = recipient.NationalIdentityNumber,
-            IsReserved = recipient.IsReserved
-        };
-
-        if (recipient.IsReserved.HasValue && recipient.IsReserved.Value && !ignoreReservation)
+        if (emailRecipient.IsReserved.HasValue && emailRecipient.IsReserved.Value && !ignoreReservation)
         {
             emailRecipient.ToAddress = string.Empty; // not persisting email address for reserved recipients
             await CreateNotificationForRecipient(orderId, requestedSendTime, emailRecipient, EmailNotificationResultType.Failed_RecipientReserved);
             return;
         }
-        else if (emailAddresses.Count == 0)
+
+        if (emailAddresses.Count == 0)
         {
             await CreateNotificationForRecipient(orderId, requestedSendTime, emailRecipient, EmailNotificationResultType.Failed_RecipientNotIdentified);
             return;
@@ -71,8 +64,9 @@ public class EmailNotificationService : IEmailNotificationService
         foreach (EmailAddressPoint addressPoint in emailAddresses)
         {
             emailRecipient.ToAddress = addressPoint.EmailAddress;
+
             await CreateNotificationForRecipient(orderId, requestedSendTime, emailRecipient, EmailNotificationResultType.New);
-        }        
+        }
     }
 
     /// <inheritdoc/>
@@ -93,7 +87,7 @@ public class EmailNotificationService : IEmailNotificationService
     /// <inheritdoc/>
     public async Task UpdateSendStatus(EmailSendOperationResult sendOperationResult)
     {
-        // set to new to allow new iteration of regular proceessing if transient error
+        // set to new to allow new iteration of regular processing if transient error
         if (sendOperationResult.SendResult == EmailNotificationResultType.Failed_TransientError)
         {
             sendOperationResult.SendResult = EmailNotificationResultType.New;
@@ -102,14 +96,22 @@ public class EmailNotificationService : IEmailNotificationService
         await _repository.UpdateSendStatus(sendOperationResult.NotificationId, (EmailNotificationResultType)sendOperationResult.SendResult!, sendOperationResult.OperationId);
     }
 
+    /// <summary>
+    /// Creates a notification for a recipient.
+    /// </summary>
+    /// <param name="orderId">The order identifier.</param>
+    /// <param name="requestedSendTime">The requested send time.</param>
+    /// <param name="recipient">The email recipient.</param>
+    /// <param name="result">The result of the notification.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     private async Task CreateNotificationForRecipient(Guid orderId, DateTime requestedSendTime, EmailRecipient recipient, EmailNotificationResultType result)
     {
         var emailNotification = new EmailNotification()
         {
-            Id = _guid.NewGuid(),
             OrderId = orderId,
-            RequestedSendTime = requestedSendTime,
+            Id = _guid.NewGuid(),
             Recipient = recipient,
+            RequestedSendTime = requestedSendTime,
             SendResult = new(result, _dateTime.UtcNow())
         };
 
@@ -121,7 +123,6 @@ public class EmailNotificationService : IEmailNotificationService
         }
         else
         {
-            // lets see how much time it takes to get a status for communication services
             expiry = requestedSendTime.AddHours(1);
         }
 
