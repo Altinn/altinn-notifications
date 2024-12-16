@@ -111,7 +111,7 @@ namespace Altinn.Notifications.Core.Services
         }
 
         /// <summary>
-        /// Replaces placeholders in the given text with actual values from the provided details.
+        /// Replaces placeholders in the given text with actual values from the provided party details.
         /// </summary>
         /// <param name="customizedText">The text containing placeholders.</param>
         /// <param name="organizationNumber">The organization number.</param>
@@ -128,7 +128,7 @@ namespace Altinn.Notifications.Core.Services
         {
             customizedText = ReplaceWithDetails(customizedText, organizationNumber, organizationDetails, p => p.OrganizationNumber);
 
-            customizedText = ReplaceWithDetails(customizedText, nationalIdentityNumber, personDetails, p => p.NationalIdentityNumber);
+            customizedText = ReplaceWithDetails(customizedText, nationalIdentityNumber, personDetails, p => p.NationalIdentityNumber, true);
 
             return customizedText;
         }
@@ -136,16 +136,18 @@ namespace Altinn.Notifications.Core.Services
         /// <summary>
         /// Replaces placeholders in the given text with actual values from the provided details.
         /// </summary>
-        /// <param name="customizedText">The text containing placeholders.</param>
-        /// <param name="searchKey">The key to match in the details.</param>
-        /// <param name="details">The list of details.</param>
-        /// <param name="keySelector">The function to select the key from the details.</param>
-        /// <returns>The text with placeholders replaced by actual values.</returns>
+        /// <param name="customizedText">The text containing placeholders to be replaced.</param>
+        /// <param name="searchKey">The key used to find the matching detail in the list of details.</param>
+        /// <param name="details">The list of details from which to retrieve the actual values.</param>
+        /// <param name="keySelector">A function to select the key from the details for matching purposes.</param>
+        /// <param name="isPerson">Indicates whether the detail is for a person. If <c>true</c>, the $recipientNumber$ placeholder will be replaced with an empty string.</param>
+        /// <returns>The text with placeholders replaced by actual values from the matching detail, or the original text if no matching detail is found.</returns>
         private static string? ReplaceWithDetails(
             string? customizedText,
             string? searchKey,
             IEnumerable<PartyDetails> details,
-            Func<PartyDetails, string?> keySelector)
+            Func<PartyDetails, string?> keySelector,
+            bool isPerson = false)
         {
             if (string.IsNullOrWhiteSpace(searchKey))
             {
@@ -158,7 +160,9 @@ namespace Altinn.Notifications.Core.Services
             {
                 customizedText = customizedText?.Replace(_recipientNamePlaceholder, detail.Name ?? string.Empty);
 
-                customizedText = customizedText?.Replace(_recipientNumberPlaceholder, keySelector(detail) ?? string.Empty);
+                customizedText = isPerson
+                    ? customizedText?.Replace(_recipientNumberPlaceholder, string.Empty)
+                    : customizedText?.Replace(_recipientNumberPlaceholder, keySelector(detail) ?? string.Empty);
             }
 
             return customizedText;
