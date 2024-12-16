@@ -104,7 +104,7 @@ public class KeywordsServiceTests
         // Assert
         var recipient = result.First();
         Assert.Equal("Hello Person name", recipient.CustomizedBody);
-        Assert.Equal("Subject 07837399275", recipient.CustomizedSubject);
+        Assert.Equal("Subject ", recipient.CustomizedSubject);
     }
 
     [Fact]
@@ -162,7 +162,7 @@ public class KeywordsServiceTests
 
         // Assert
         var recipient = result.First();
-        Assert.Equal("Hello Person name your national identity number is 07837399275", recipient.CustomizedBody);
+        Assert.Equal("Hello Person name your national identity number is ", recipient.CustomizedBody);
     }
 
     [Fact]

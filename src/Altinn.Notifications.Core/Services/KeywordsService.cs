@@ -97,11 +97,11 @@ namespace Altinn.Notifications.Core.Services
             List<string> organizationNumbers,
             List<string> nationalIdentityNumbers)
         {
-            var personDetailsTask = nationalIdentityNumbers.Count != 0
+            var personDetailsTask = (nationalIdentityNumbers != null && nationalIdentityNumbers.Count > 0)
                 ? _registerClient.GetPartyDetailsForPersons(nationalIdentityNumbers)
                 : Task.FromResult(new List<PartyDetails>());
 
-            var organizationDetailsTask = organizationNumbers.Count != 0
+            var organizationDetailsTask = (organizationNumbers != null && organizationNumbers.Count > 0)
                 ? _registerClient.GetPartyDetailsForOrganizations(organizationNumbers)
                 : Task.FromResult(new List<PartyDetails>());
 
@@ -134,36 +134,44 @@ namespace Altinn.Notifications.Core.Services
         }
 
         /// <summary>
-        /// Replaces placeholders in the given text with actual values from the provided details.
+        /// Replaces placeholders in the provided text with values from the matching party details.
         /// </summary>
         /// <param name="customizedText">The text containing placeholders to be replaced.</param>
-        /// <param name="searchKey">The key used to find the matching detail in the list of details.</param>
-        /// <param name="details">The list of details from which to retrieve the actual values.</param>
-        /// <param name="keySelector">A function to select the key from the details for matching purposes.</param>
-        /// <param name="isPerson">Indicates whether the detail is for a person. If <c>true</c>, the $recipientNumber$ placeholder will be replaced with an empty string.</param>
-        /// <returns>The text with placeholders replaced by actual values from the matching detail, or the original text if no matching detail is found.</returns>
+        /// <param name="searchKey">The key used to locate a matching party details from the list of party details.</param>
+        /// <param name="partyDetails">The list of party details to search for a match.</param>
+        /// <param name="keySelector">A function to extract the key from a party detail for matching purposes.</param>
+        /// <param name="isPerson">
+        /// A flag indicating whether the detail represents a person. If <c>true</c>, the $recipientNumber$ placeholder will 
+        /// be removed from the text. Otherwise, it will be replaced with the corresponding detail key value.
+        /// </param>
+        /// <returns>
+        /// The text with placeholders replaced by values from the matching detail. If no match is found, the original text is returned.
+        /// </returns>
         private static string? ReplaceWithDetails(
             string? customizedText,
             string? searchKey,
-            IEnumerable<PartyDetails> details,
+            IEnumerable<PartyDetails> partyDetails,
             Func<PartyDetails, string?> keySelector,
             bool isPerson = false)
         {
-            if (string.IsNullOrWhiteSpace(searchKey))
+            if (string.IsNullOrWhiteSpace(customizedText) || string.IsNullOrWhiteSpace(searchKey))
             {
                 return customizedText;
             }
 
-            var detail = details.FirstOrDefault(e => keySelector(e) == searchKey);
+            var matchingDetail = partyDetails.FirstOrDefault(detail => keySelector(detail) == searchKey);
 
-            if (detail != null)
+            if (matchingDetail == null)
             {
-                customizedText = customizedText?.Replace(_recipientNamePlaceholder, detail.Name ?? string.Empty);
-
-                customizedText = isPerson
-                    ? customizedText?.Replace(_recipientNumberPlaceholder, string.Empty)
-                    : customizedText?.Replace(_recipientNumberPlaceholder, keySelector(detail) ?? string.Empty);
+                return customizedText;
             }
+
+            // Replace the $recipientName$ placeholder with the detail's name or an empty string if null.
+            customizedText = customizedText.Replace(_recipientNamePlaceholder, matchingDetail.Name ?? string.Empty);
+
+            // Replace the $recipientNumber$ placeholder based on whether the detail represents a person or not.
+            string recipientNumberReplacement = isPerson ? string.Empty : (keySelector(matchingDetail) ?? string.Empty);
+            customizedText = customizedText.Replace(_recipientNumberPlaceholder, recipientNumberReplacement);
 
             return customizedText;
         }
