@@ -65,7 +65,6 @@ public static class TestdataUtil
             {
                 new EmailTemplate()
                 {
-                    Type = NotificationTemplateType.Email,
                     FromAddress = "sender@domain.com",
                     Subject = "email-subject",
                     Body = "email-body",
@@ -105,7 +104,6 @@ public static class TestdataUtil
             {
                 new SmsTemplate()
                 {
-                    Type = NotificationTemplateType.Sms,
                     Body = "sms-body",
                     SenderNumber = "Altinn local test"
                 }

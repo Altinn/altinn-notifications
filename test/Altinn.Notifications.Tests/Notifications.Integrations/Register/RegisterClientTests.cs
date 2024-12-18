@@ -6,8 +6,8 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-using Altinn.Notifications.Core;
 using Altinn.Notifications.Core.Models.ContactPoints;
+using Altinn.Notifications.Core.Models.Parties;
 using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Register;
@@ -30,15 +30,20 @@ public class RegisterClientTests
     public RegisterClientTests()
     {
         var registerHttpMessageHandler = new DelegatingHandlerStub(async (request, token) =>
-           {
-               if (request!.RequestUri!.AbsolutePath.EndsWith("contactpoint/lookup"))
-               {
-                   OrgContactPointLookup? lookup = JsonSerializer.Deserialize<OrgContactPointLookup>(await request!.Content!.ReadAsStringAsync(token), JsonSerializerOptionsProvider.Options);
-                   return await GetResponse(lookup!);
-               }
+        {
+            if (request!.RequestUri!.AbsolutePath.EndsWith("contactpoint/lookup"))
+            {
+                OrgContactPointLookup? lookup = JsonSerializer.Deserialize<OrgContactPointLookup>(await request!.Content!.ReadAsStringAsync(token), _serializerOptions);
+                return await GetResponse(lookup!);
+            }
+            else if (request!.RequestUri!.AbsolutePath.EndsWith("nameslookup"))
+            {
+                PartyDetailsLookupBatch? lookup = JsonSerializer.Deserialize<PartyDetailsLookupBatch>(await request!.Content!.ReadAsStringAsync(token), _serializerOptions);
+                return await GetPartyDetailsResponse(lookup!);
+            }
 
-               return new HttpResponseMessage(HttpStatusCode.NotFound);
-           });
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        });
 
         PlatformSettings settings = new()
         {
@@ -46,8 +51,8 @@ public class RegisterClientTests
         };
 
         _registerClient = new RegisterClient(
-                      new HttpClient(registerHttpMessageHandler),
-                      Options.Create(settings));
+            new HttpClient(registerHttpMessageHandler),
+            Options.Create(settings));
     }
 
     [Fact]
@@ -81,38 +86,195 @@ public class RegisterClientTests
         Assert.Equal(HttpStatusCode.ServiceUnavailable, exception.Response?.StatusCode);
     }
 
+    [Fact]
+    public async Task GetOrganizationContactPoints_EmptyOrganizationNumbers_ReturnsEmpty()
+    {
+        // Act
+        List<OrganizationContactPoints> actual = await _registerClient.GetOrganizationContactPoints([]);
+
+        // Assert
+        Assert.Empty(actual);
+    }
+
+    [Fact]
+    public async Task GetOrganizationContactPoints_NullContactPointsList_ReturnsEmpty()
+    {
+        // Arrange
+        var organizationNumbers = new List<string> { "null-contact-points-list" };
+
+        // Act
+        var result = await _registerClient.GetOrganizationContactPoints(organizationNumbers);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetPartyDetailsForOrganizations_SuccessResponse_NoMatches()
+    {
+        // Act
+        List<PartyDetails> actual = await _registerClient.GetPartyDetailsForOrganizations(["empty-list"]);
+
+        // Assert
+        Assert.Empty(actual);
+    }
+
+    [Fact]
+    public async Task GetPartyDetailsForOrganizations_SuccessResponse_TwoElementsInResponse()
+    {
+        // Act
+        List<PartyDetails> actual = await _registerClient.GetPartyDetailsForOrganizations(["populated-list"]);
+
+        // Assert
+        Assert.Equal(2, actual.Count);
+        Assert.Contains("313600947", actual.Select(pd => pd.OrganizationNumber));
+    }
+
+    [Fact]
+    public async Task GetPartyDetailsForOrganizations_FailureResponse_ExceptionIsThrown()
+    {
+        // Act
+        var exception = await Assert.ThrowsAsync<PlatformHttpException>(async () => await _registerClient.GetPartyDetailsForOrganizations(["unavailable"]));
+
+        Assert.StartsWith("503 - Service Unavailable", exception.Message);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, exception.Response?.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetPartyDetailsForPersons_SuccessResponse_NoMatches()
+    {
+        // Act
+        List<PartyDetails> actual = await _registerClient.GetPartyDetailsForPersons(["empty-list"]);
+
+        // Assert
+        Assert.Empty(actual);
+    }
+
+    [Fact]
+    public async Task GetPartyDetailsForPersons_SuccessResponse_TwoElementsInResponse()
+    {
+        // Act
+        List<PartyDetails> actual = await _registerClient.GetPartyDetailsForPersons(["populated-list"]);
+
+        // Assert
+        Assert.Equal(2, actual.Count);
+        Assert.Contains("04917199103", actual.Select(pd => pd.NationalIdentityNumber));
+    }
+
+    [Fact]
+    public async Task GetPartyDetailsForPersons_FailureResponse_ExceptionIsThrown()
+    {
+        // Act
+        var exception = await Assert.ThrowsAsync<PlatformHttpException>(async () => await _registerClient.GetPartyDetailsForPersons(["unavailable"]));
+
+        Assert.StartsWith("503 - Service Unavailable", exception.Message);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, exception.Response?.StatusCode);
+    }
+
+    private Task<HttpResponseMessage> CreateMockResponse(object? contentData, HttpStatusCode statusCode)
+    {
+        JsonContent? content = (contentData != null) ? JsonContent.Create(contentData, options: _serializerOptions) : null;
+
+        return Task.FromResult(new HttpResponseMessage()
+        {
+            StatusCode = statusCode,
+            Content = content
+        });
+    }
+
     private Task<HttpResponseMessage> GetResponse(OrgContactPointLookup lookup)
     {
-        HttpStatusCode statusCode = HttpStatusCode.OK;
         object? contentData = null;
+        HttpStatusCode statusCode = HttpStatusCode.OK;
 
         switch (lookup.OrganizationNumbers[0])
         {
             case "empty-list":
-                contentData = new OrgContactPointsList() { ContactPointsList = new List<OrganizationContactPoints>() };
+                contentData = new OrgContactPointsList() { ContactPointsList = [] };
                 break;
+
             case "populated-list":
                 contentData = new OrgContactPointsList
                 {
                     ContactPointsList =
                     [
-                        new OrganizationContactPoints() { OrganizationNumber = "910011154", EmailList = [] },
-                        new OrganizationContactPoints() { OrganizationNumber = "910011155", EmailList = [] }
+                        new() { OrganizationNumber = "910011154", EmailList = [] },
+                        new() { OrganizationNumber = "910011155", EmailList = [] }
                     ]
                 };
                 break;
+
             case "unavailable":
                 statusCode = HttpStatusCode.ServiceUnavailable;
                 break;
+
+            case "null-contact-points-list":
+                contentData = new OrgContactPointsList { ContactPointsList = [] };
+                break;
         }
 
-        JsonContent? content = (contentData != null) ? JsonContent.Create(contentData, options: _serializerOptions) : null;
+        return CreateMockResponse(contentData, statusCode);
+    }
 
-        return Task.FromResult(
-            new HttpResponseMessage()
+    private Task<HttpResponseMessage> GetPartyDetailsResponse(PartyDetailsLookupBatch lookup)
+    {
+        object? contentData = null;
+        HttpStatusCode statusCode = HttpStatusCode.OK;
+
+        var firstRequest = lookup.PartyDetailsLookupRequestList?.FirstOrDefault();
+        if (firstRequest != null)
+        {
+            if (firstRequest.OrganizationNumber != null)
             {
-                StatusCode = statusCode,
-                Content = content
-            });
+                switch (firstRequest.OrganizationNumber)
+                {
+                    case "empty-list":
+                        contentData = new PartyDetailsLookupResult() { PartyDetailsList = [] };
+                        break;
+
+                    case "populated-list":
+                        contentData = new PartyDetailsLookupResult
+                        {
+                            PartyDetailsList =
+                            [
+                                new() { OrganizationNumber = "313600947", Name = "Test Organization 1" },
+                                new() { OrganizationNumber = "315058384", Name = "Test Organization 2" }
+                            ]
+                        };
+                        break;
+
+                    case "unavailable":
+                        statusCode = HttpStatusCode.ServiceUnavailable;
+                        break;
+                }
+            }
+            else if (firstRequest.SocialSecurityNumber != null)
+            {
+                switch (firstRequest.SocialSecurityNumber)
+                {
+                    case "empty-list":
+                        contentData = new PartyDetailsLookupResult() { PartyDetailsList = [] };
+                        break;
+
+                    case "populated-list":
+                        contentData = new PartyDetailsLookupResult
+                        {
+                            PartyDetailsList =
+                            [
+                                new() { NationalIdentityNumber = "07837399275", Name = "Test Person 1" },
+                                new() { NationalIdentityNumber = "04917199103", Name = "Test Person 2" }
+                            ]
+                        };
+                        break;
+
+                    case "unavailable":
+                        statusCode = HttpStatusCode.ServiceUnavailable;
+                        break;
+                }
+            }
+        }
+
+        return CreateMockResponse(contentData, statusCode);
     }
 }

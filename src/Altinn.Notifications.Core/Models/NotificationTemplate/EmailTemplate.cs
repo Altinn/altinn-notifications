@@ -3,43 +3,51 @@
 namespace Altinn.Notifications.Core.Models.NotificationTemplate;
 
 /// <summary>
-/// Template for an email notification
+/// Represents a template for an email notification.
 /// </summary>
 public class EmailTemplate : INotificationTemplate
 {
-    /// <inheritdoc/>
-    public NotificationTemplateType Type { get; internal set; }
-
     /// <summary>
-    /// Gets the from adress of emails created by the template    
-    /// </summary>
-    public string FromAddress { get; internal set; } = string.Empty;
-
-    /// <summary>
-    /// Gets the subject of emails created by the template    
-    /// </summary>
-    public string Subject { get; internal set; } = string.Empty;
-
-    /// <summary>
-    /// Gets the body of emails created by the template    
+    /// Gets the body of the email.
     /// </summary>
     public string Body { get; internal set; } = string.Empty;
 
     /// <summary>
-    /// Gets the content type of emails created by the template
+    /// Gets the content type of the email.
     /// </summary>
     public EmailContentType ContentType { get; internal set; }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="EmailTemplate"/> class.
+    /// Gets the sender address of the email.
     /// </summary>
+    public string FromAddress { get; internal set; } = string.Empty;
+
+    /// <summary>
+    /// Gets the subject of the email.
+    /// </summary>
+    public string Subject { get; internal set; } = string.Empty;
+
+    /// <summary>
+    /// Gets the type of the notification template.
+    /// </summary>
+    /// <value>
+    /// The type of the notification template, represented by the <see cref="NotificationTemplateType"/> enum.
+    /// </value>
+    public NotificationTemplateType Type { get; } = NotificationTemplateType.Email;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EmailTemplate"/> class with the specified from address, subject, body, and content type.
+    /// </summary>
+    /// <param name="fromAddress">The sender address of the email. If null, an empty string is used.</param>
+    /// <param name="subject">The subject of the email.</param>
+    /// <param name="body">The body of the email.</param>
+    /// <param name="contentType">The content type of the email.</param>
     public EmailTemplate(string? fromAddress, string subject, string body, EmailContentType contentType)
     {
-        FromAddress = fromAddress ?? string.Empty;
-        Subject = subject;
         Body = body;
+        Subject = subject;
         ContentType = contentType;
-        Type = NotificationTemplateType.Email;
+        FromAddress = fromAddress ?? string.Empty;
     }
 
     /// <summary>

@@ -41,22 +41,9 @@ public class SmsNotificationService : ISmsNotificationService
     }
 
     /// <inheritdoc/>
-    public async Task CreateNotification(Guid orderId, DateTime requestedSendTime, Recipient recipient, int smsCount, bool ignoreReservation = false)
+    public async Task CreateNotification(Guid orderId, DateTime requestedSendTime, List<SmsAddressPoint> smsAddresses, SmsRecipient smsRecipient, int smsCount, bool ignoreReservation = false)
     {
-        List<SmsAddressPoint> smsAddresses = recipient.AddressInfo
-          .Where(a => a.AddressType == AddressType.Sms)
-          .Select(a => (a as SmsAddressPoint)!)
-          .Where(a => a != null && !string.IsNullOrEmpty(a.MobileNumber))
-          .ToList();
-
-        SmsRecipient smsRecipient = new()
-        {
-            OrganizationNumber = recipient.OrganizationNumber,
-            NationalIdentityNumber = recipient.NationalIdentityNumber,
-            IsReserved = recipient.IsReserved
-        };
-
-        if (recipient.IsReserved.HasValue && recipient.IsReserved.Value && !ignoreReservation)
+        if (smsRecipient.IsReserved.HasValue && smsRecipient.IsReserved.Value && !ignoreReservation)
         {
             await CreateNotificationForRecipient(orderId, requestedSendTime, smsRecipient, SmsNotificationResultType.Failed_RecipientReserved);
             return;
@@ -77,8 +64,7 @@ public class SmsNotificationService : ISmsNotificationService
     /// <inheritdoc/>
     public async Task SendNotifications()
     {
-        List<Sms> smsList = await _repository.GetNewNotifications();
-
+        var smsList = await _repository.GetNewNotifications();
         foreach (Sms sms in smsList)
         {
             bool success = await _producer.ProduceAsync(_smsQueueTopicName, sms.Serialize());
