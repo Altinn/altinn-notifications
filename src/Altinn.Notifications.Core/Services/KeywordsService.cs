@@ -167,11 +167,11 @@ namespace Altinn.Notifications.Core.Services
             }
 
             // Replace the $recipientName$ placeholder with the detail's name or an empty string if null.
-            customizedText = customizedText.Replace(_recipientNamePlaceholder, matchingDetail.Name ?? string.Empty);
+            customizedText = customizedText.Replace(_recipientNamePlaceholder, matchingDetail.Name ?? string.Empty, StringComparison.Ordinal);
 
             // Replace the $recipientNumber$ placeholder based on whether the detail represents a person or not.
             string recipientNumberReplacement = isPerson ? string.Empty : (keySelector(matchingDetail) ?? string.Empty);
-            customizedText = customizedText.Replace(_recipientNumberPlaceholder, recipientNumberReplacement);
+            customizedText = customizedText.Replace(_recipientNumberPlaceholder, recipientNumberReplacement, StringComparison.Ordinal);
 
             return customizedText;
         }
