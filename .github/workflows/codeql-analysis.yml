@@ -4,12 +4,12 @@ on:
   push:
     branches: [ main ]
     paths:
-    - 'src/**'
+      - 'src/**'
   pull_request:
     # The branches below must be a subset of the branches above
     branches: [ main ]
     paths:
-    - 'src/**'
+      - 'src/**'
   schedule:
     - cron: '18 22 * * 3'
 
@@ -29,11 +29,11 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-    - name: Setup .NET 8.0.* SDK
+    - name: Setup .NET 9.0.* SDK
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: |
-          8.0.x
+          9.0.x
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v3
       with:

@@ -14,25 +14,25 @@ jobs:
     name: Build, test & analyze
     runs-on: ubuntu-latest
     services:
-     postgres:
-       image: postgres:17
-       env:
-         POSTGRES_USER: platform_notifications_admin
-         POSTGRES_PASSWORD: Password
-         POSTGRES_DB: notificationsdb
-       options: >-
-         --health-cmd pg_isready
-         --health-interval 10s
-         --health-timeout 5s
-         --health-retries 5
-       ports:
-         - 5432:5432
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: platform_notifications_admin
+          POSTGRES_PASSWORD: Password
+          POSTGRES_DB: notificationsdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
     steps:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            8.0.x
+            9.0.x
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
@@ -52,8 +52,8 @@ jobs:
           dotnet tool install --global dotnet-sonarscanner
       - name: Setup PostgreSQL
         run: |
-            chmod +x dbsetup.sh
-            ./dbsetup.sh
+          chmod +x dbsetup.sh
+          ./dbsetup.sh
       - name: Set up Kafka
         uses: ybyzek/cp-all-in-one-action@v0.2.1
         with:
