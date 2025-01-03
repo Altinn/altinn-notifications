@@ -21,7 +21,7 @@ public class EmailNotificationRepository : IEmailNotificationRepository
     private readonly NpgsqlDataSource _dataSource;
     private readonly TelemetryClient? _telemetryClient;
 
-    private const string _insertEmailNotificationSql = "call notifications.insertemailnotification($1, $2, $3, $4, $5, $6, $7, $8)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _toaddress, _result, _resulttime, _expirytime)
+    private const string _insertEmailNotificationSql = "call notifications.insertemailnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _toaddress, _customizedbody, _customizedsubject, _result, _resulttime, _expirytime)
     private const string _getEmailNotificationsSql = "select * from notifications.getemails_statusnew_updatestatus()";
     private const string _getEmailRecipients = "select * from notifications.getemailrecipients_v2($1)"; // (_orderid)
     private const string _updateEmailStatus =
@@ -30,7 +30,7 @@ public class EmailNotificationRepository : IEmailNotificationRepository
             resulttime = now(), 
             operationid = $2
         WHERE alternateid = $3 OR operationid = $2;";    // (_result, _operationid, _alternateid)
-   
+
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotificationRepository"/> class.
     /// </summary>
@@ -53,6 +53,8 @@ public class EmailNotificationRepository : IEmailNotificationRepository
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.OrganizationNumber ?? (object)DBNull.Value);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.NationalIdentityNumber ?? (object)DBNull.Value);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.ToAddress);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.CustomizedBody ?? (object)DBNull.Value);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.CustomizedSubject ?? (object)DBNull.Value);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.SendResult.Result.ToString());
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, notification.SendResult.ResultTime);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, expiry);
@@ -105,7 +107,7 @@ public class EmailNotificationRepository : IEmailNotificationRepository
     /// <inheritdoc/>
     public async Task<List<EmailRecipient>> GetRecipients(Guid orderId)
     {
-        List<EmailRecipient> searchResult = new();
+        List<EmailRecipient> searchResult = [];
 
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getEmailRecipients);
         using TelemetryTracker tracker = new(_telemetryClient, pgcom);
@@ -114,11 +116,11 @@ public class EmailNotificationRepository : IEmailNotificationRepository
         {
             while (await reader.ReadAsync())
             {
-                searchResult.Add(new EmailRecipient() 
+                searchResult.Add(new EmailRecipient()
                 {
+                    ToAddress = reader.GetValue<string>("toaddress"),
                     OrganizationNumber = reader.GetValue<string?>("recipientorgno"),
                     NationalIdentityNumber = reader.GetValue<string?>("recipientnin"),
-                    ToAddress = reader.GetValue<string>("toaddress")
                 });
             }
         }

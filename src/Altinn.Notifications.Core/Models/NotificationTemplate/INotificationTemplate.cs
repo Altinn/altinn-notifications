@@ -5,7 +5,7 @@ using Altinn.Notifications.Core.Enums;
 namespace Altinn.Notifications.Core.Models.NotificationTemplate;
 
 /// <summary>
-/// Base class for a notification template
+/// Represents a base notification template.
 /// </summary>
 [JsonDerivedType(typeof(EmailTemplate), "email")]
 [JsonDerivedType(typeof(SmsTemplate), "sms")]
@@ -13,7 +13,7 @@ namespace Altinn.Notifications.Core.Models.NotificationTemplate;
 public interface INotificationTemplate
 {
     /// <summary>
-    /// Gets the type for the template
+    /// Gets the type of the notification template.
     /// </summary>
-    public NotificationTemplateType Type { get; }
+    NotificationTemplateType Type { get; }
 }

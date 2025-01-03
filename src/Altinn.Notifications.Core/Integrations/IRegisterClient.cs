@@ -1,17 +1,40 @@
 ﻿using Altinn.Notifications.Core.Models.ContactPoints;
+using Altinn.Notifications.Core.Models.Parties;
 
-namespace Altinn.Notifications.Core.Integrations
+namespace Altinn.Notifications.Core.Integrations;
+
+/// <summary>
+/// Defines a contract for interacting with the register service.
+/// </summary>
+public interface IRegisterClient
 {
     /// <summary>
-    /// Interface describing a client for the register service
+    /// Asynchronously retrieves contact point details for the specified organizations.
     /// </summary>
-    public interface IRegisterClient
-    {
-        /// <summary>
-        /// Retrieves contact points for a list of organizations
-        /// </summary>
-        /// <param name="organizationNumbers">A list of organization numbers to look up contact points for</param>
-        /// <returns>A list of <see cref="OrganizationContactPoints"/> for the provided organizations</returns>
-        public Task<List<OrganizationContactPoints>> GetOrganizationContactPoints(List<string> organizationNumbers);
-    }
+    /// <param name="organizationNumbers">A collection of organization numbers for which contact point details are requested.</param>
+    /// <returns>
+    /// A task that represents the asynchronous operation. 
+    /// The task result contains a list of <see cref="OrganizationContactPoints"/> representing the contact points of the specified organizations.
+    /// </returns>
+    Task<List<OrganizationContactPoints>> GetOrganizationContactPoints(List<string> organizationNumbers);
+
+    /// <summary>
+    /// Asynchronously retrieves party details for the specified organizations.
+    /// </summary>
+    /// <param name="organizationNumbers">A collection of organization numbers for which party details are requested.</param>
+    /// <returns>
+    /// A task that represents the asynchronous operation. 
+    /// The task result contains a list of <see cref="PartyDetails"/> representing the details of the specified organizations.
+    /// </returns>
+    Task<List<PartyDetails>> GetPartyDetailsForOrganizations(List<string> organizationNumbers);
+
+    /// <summary>
+    /// Asynchronously retrieves party details for the specified persons.
+    /// </summary>
+    /// <param name="socialSecurityNumbers">A collection of social security numbers for which party details are requested.</param>
+    /// <returns>
+    /// A task that represents the asynchronous operation. 
+    /// The task result contains a list of <see cref="PartyDetails"/> representing the details of the specified individuals.
+    /// </returns>
+    Task<List<PartyDetails>> GetPartyDetailsForPersons(List<string> socialSecurityNumbers);
 }

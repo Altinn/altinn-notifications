@@ -4,7 +4,7 @@ using Altinn.Notifications.Core.Models.Orders;
 namespace Altinn.Notifications.Core.Services.Interfaces;
 
 /// <summary>
-/// Interface for the order processing service speficic to sms orders
+/// Interface for the order processing service specific to SMS orders
 /// </summary>
 public interface ISmsOrderProcessingService
 {
@@ -25,7 +25,7 @@ public interface ISmsOrderProcessingService
     public Task ProcessOrderRetry(NotificationOrder order);
 
     /// <summary>
-    /// Retryprocessing of a notification order for the provided list of recipients
+    /// Retry processing of a notification order for the provided list of recipients
     /// without looking up additional recipient data
     /// </summary>
     public Task ProcessOrderRetryWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients);

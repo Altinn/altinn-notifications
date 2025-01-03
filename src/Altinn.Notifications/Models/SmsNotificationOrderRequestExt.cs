@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 namespace Altinn.Notifications.Models;
 
 /// <summary>
-/// Class representing an SMS notification order request
+/// Class representing an SMS notification order request.
 /// </summary>
 /// <remarks>
 /// External representation to be used in the API.
@@ -13,21 +13,22 @@ namespace Altinn.Notifications.Models;
 public class SmsNotificationOrderRequestExt : NotificationOrderRequestBaseExt
 {
     /// <summary>
-    /// Gets or sets the sender number of the SMS 
+    /// Gets or sets the sender number of the SMS.
     /// </summary>
     [JsonPropertyName("senderNumber")]
     public string? SenderNumber { get; set; }
 
     /// <summary>
-    /// Gets or sets the body of the SMS
+    /// Gets or sets the body of the SMS.
     /// </summary>
     [JsonPropertyName("body")]
     [Required]
     public string Body { get; set; } = string.Empty;
 
     /// <summary>
-    /// Json serialized the <see cref="SmsNotificationOrderRequestExt"/>
+    /// Serializes the <see cref="SmsNotificationOrderRequestExt"/> to JSON.
     /// </summary>
+    /// <returns>A JSON string representation of the object.</returns>
     public string Serialize()
     {
         return JsonSerializer.Serialize(this);

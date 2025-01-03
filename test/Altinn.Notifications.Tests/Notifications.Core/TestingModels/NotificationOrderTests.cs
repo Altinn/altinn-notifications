@@ -31,7 +31,6 @@ public class NotificationOrderTests
             {
                  new EmailTemplate()
                  {
-                     Type = NotificationTemplateType.Email,
                      FromAddress = "sender@domain.com",
                      Subject = "email-subject",
                      Body = "email-body",
@@ -81,11 +80,11 @@ public class NotificationOrderTests
                     new JsonObject()
                     {
                         { "$", "email" },
-                        { "type", "Email" },
+                        { "body", "email-body" },
+                        { "contentType", "Html" },
                         { "fromAddress", "sender@domain.com" },
                         { "subject", "email-subject" },
-                        { "body", "email-body" },
-                        { "contentType", "Html" }
+                        { "type", "Email" }
                     }
                 }
             },
@@ -94,12 +93,6 @@ public class NotificationOrderTests
                 {
                     new JsonObject()
                     {
-                        {
-                            "nationalIdentityNumber", "nationalidentitynumber"
-                        },
-                        {
-                            "isReserved", false
-                        },
                         {
                             "addressInfo",  new JsonArray()
                             {
@@ -110,10 +103,16 @@ public class NotificationOrderTests
                                  { "emailAddress", "recipient1@domain.com" }
                              }
                             }
+                        },
+                        {
+                            "isReserved", false
+                        },
+                        {
+                            "nationalIdentityNumber", "nationalidentitynumber"
                         }
                     }
                 }
-            }           
+            }
         }.ToJsonString();
     }
 
