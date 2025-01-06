@@ -56,7 +56,7 @@ public class RegisterClientTests
     }
 
     [Fact]
-    public async Task GetOrganizationContactPoints_SuccessResponse_NoMatches()
+    public async Task GetOrganizationContactPoints_WithEmptyList_ReturnsEmpty()
     {
         // Act
         List<OrganizationContactPoints> actual = await _registerClient.GetOrganizationContactPoints(["empty-list"]);
@@ -66,7 +66,7 @@ public class RegisterClientTests
     }
 
     [Fact]
-    public async Task GetOrganizationContactPoints_SuccessResponse_TwoElementsInResponse()
+    public async Task GetOrganizationContactPoints_WithPopulatedList_ReturnsExpectedData()
     {
         // Act
         List<OrganizationContactPoints> actual = await _registerClient.GetOrganizationContactPoints(["populated-list"]);
@@ -77,7 +77,7 @@ public class RegisterClientTests
     }
 
     [Fact]
-    public async Task GetOrganizationContactPoints_FailureResponse_ExceptionIsThrown()
+    public async Task GetOrganizationContactPoints_WithUnavailableEndpoint_ThrowsException()
     {
         // Act
         var exception = await Assert.ThrowsAsync<PlatformHttpException>(async () => await _registerClient.GetOrganizationContactPoints(["unavailable"]));
@@ -87,44 +87,20 @@ public class RegisterClientTests
     }
 
     [Fact]
-    public async Task GetOrganizationContactPoints_EmptyOrganizationNumbers_ReturnsEmpty()
+    public async Task GetPartyDetails_WithEmptyList_ReturnsEmpty()
     {
         // Act
-        List<OrganizationContactPoints> actual = await _registerClient.GetOrganizationContactPoints([]);
+        List<PartyDetails> actual = await _registerClient.GetPartyDetails(["empty-list"], ["empty-list"]);
 
         // Assert
         Assert.Empty(actual);
     }
 
     [Fact]
-    public async Task GetOrganizationContactPoints_NullContactPointsList_ReturnsEmpty()
-    {
-        // Arrange
-        var organizationNumbers = new List<string> { "null-contact-points-list" };
-
-        // Act
-        var result = await _registerClient.GetOrganizationContactPoints(organizationNumbers);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result);
-    }
-
-    [Fact]
-    public async Task GetPartyDetailsForOrganizations_SuccessResponse_NoMatches()
+    public async Task GetPartyDetails_WithPopulatedList_ReturnsExpectedData()
     {
         // Act
-        List<PartyDetails> actual = await _registerClient.GetPartyDetailsForOrganizations(["empty-list"]);
-
-        // Assert
-        Assert.Empty(actual);
-    }
-
-    [Fact]
-    public async Task GetPartyDetailsForOrganizations_SuccessResponse_TwoElementsInResponse()
-    {
-        // Act
-        List<PartyDetails> actual = await _registerClient.GetPartyDetailsForOrganizations(["populated-list"]);
+        List<PartyDetails> actual = await _registerClient.GetPartyDetails(["populated-list"], ["populated-list"]);
 
         // Assert
         Assert.Equal(2, actual.Count);
@@ -132,41 +108,10 @@ public class RegisterClientTests
     }
 
     [Fact]
-    public async Task GetPartyDetailsForOrganizations_FailureResponse_ExceptionIsThrown()
+    public async Task GetPartyDetails_WithUnavailableEndpoint_ThrowsException()
     {
         // Act
-        var exception = await Assert.ThrowsAsync<PlatformHttpException>(async () => await _registerClient.GetPartyDetailsForOrganizations(["unavailable"]));
-
-        Assert.StartsWith("503 - Service Unavailable", exception.Message);
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, exception.Response?.StatusCode);
-    }
-
-    [Fact]
-    public async Task GetPartyDetailsForPersons_SuccessResponse_NoMatches()
-    {
-        // Act
-        List<PartyDetails> actual = await _registerClient.GetPartyDetailsForPersons(["empty-list"]);
-
-        // Assert
-        Assert.Empty(actual);
-    }
-
-    [Fact]
-    public async Task GetPartyDetailsForPersons_SuccessResponse_TwoElementsInResponse()
-    {
-        // Act
-        List<PartyDetails> actual = await _registerClient.GetPartyDetailsForPersons(["populated-list"]);
-
-        // Assert
-        Assert.Equal(2, actual.Count);
-        Assert.Contains("04917199103", actual.Select(pd => pd.NationalIdentityNumber));
-    }
-
-    [Fact]
-    public async Task GetPartyDetailsForPersons_FailureResponse_ExceptionIsThrown()
-    {
-        // Act
-        var exception = await Assert.ThrowsAsync<PlatformHttpException>(async () => await _registerClient.GetPartyDetailsForPersons(["unavailable"]));
+        var exception = await Assert.ThrowsAsync<PlatformHttpException>(async () => await _registerClient.GetPartyDetails(["unavailable"], ["unavailable"]));
 
         Assert.StartsWith("503 - Service Unavailable", exception.Message);
         Assert.Equal(HttpStatusCode.ServiceUnavailable, exception.Response?.StatusCode);

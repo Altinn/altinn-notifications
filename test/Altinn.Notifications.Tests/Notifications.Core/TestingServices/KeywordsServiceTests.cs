@@ -6,7 +6,6 @@ using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.Parties;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Services;
-using Altinn.Notifications.Core.Services.Interfaces;
 
 using Moq;
 
@@ -96,7 +95,8 @@ public class KeywordsServiceTests
             new() { NationalIdentityNumber = "07837399275", Name = "Person name" }
         };
 
-        _registerClientMock.Setup(client => client.GetPartyDetailsForPersons(It.IsAny<List<string>>())).ReturnsAsync(personDetails);
+        _registerClientMock.Setup(client => client.GetPartyDetails(It.IsAny<List<string>>(), It.IsAny<List<string>>()))
+            .ReturnsAsync(personDetails);
 
         // Act
         var result = await _keywordsService.ReplaceKeywordsAsync(emailRecipients);
@@ -126,7 +126,8 @@ public class KeywordsServiceTests
             new() { OrganizationNumber = "313997901", Name = "Organization name" }
         };
 
-        _registerClientMock.Setup(client => client.GetPartyDetailsForOrganizations(It.IsAny<List<string>>())).ReturnsAsync(organizationDetails);
+        _registerClientMock.Setup(client => client.GetPartyDetails(It.IsAny<List<string>>(), It.IsAny<List<string>>()))
+            .ReturnsAsync(organizationDetails);
 
         // Act
         var result = await _keywordsService.ReplaceKeywordsAsync(emailRecipients);
@@ -138,10 +139,10 @@ public class KeywordsServiceTests
     }
 
     [Fact]
-    public async Task ReplaceKeywordsAsync_SmsRecipient_ShouldReplacePlaceholdersForPersons()
+    public async Task ReplaceKeywordsAsync_SMSRecipient_ShouldReplacePlaceholdersForPersons()
     {
         // Arrange
-        var emailRecipients = new List<SmsRecipient>
+        var smsRecipients = new List<SmsRecipient>
         {
             new()
             {
@@ -155,10 +156,11 @@ public class KeywordsServiceTests
             new() { NationalIdentityNumber = "07837399275", Name = "Person name" }
         };
 
-        _registerClientMock.Setup(client => client.GetPartyDetailsForPersons(It.IsAny<List<string>>())).ReturnsAsync(personDetails);
+        _registerClientMock.Setup(client => client.GetPartyDetails(It.IsAny<List<string>>(), It.IsAny<List<string>>()))
+            .ReturnsAsync(personDetails);
 
         // Act
-        var result = await _keywordsService.ReplaceKeywordsAsync(emailRecipients);
+        var result = await _keywordsService.ReplaceKeywordsAsync(smsRecipients);
 
         // Assert
         var recipient = result.First();
@@ -166,10 +168,10 @@ public class KeywordsServiceTests
     }
 
     [Fact]
-    public async Task ReplaceKeywordsAsync_SmsRecipients_ShouldReplacePlaceholdersForOrganizations()
+    public async Task ReplaceKeywordsAsync_SMSRecipients_ShouldReplacePlaceholdersForOrganizations()
     {
         // Arrange
-        var emailRecipients = new List<SmsRecipient>
+        var smsRecipients = new List<SmsRecipient>
         {
             new()
             {
@@ -183,13 +185,86 @@ public class KeywordsServiceTests
             new() { OrganizationNumber = "313418154", Name = "Organization name" }
         };
 
-        _registerClientMock.Setup(client => client.GetPartyDetailsForOrganizations(It.IsAny<List<string>>())).ReturnsAsync(organizationDetails);
+        _registerClientMock.Setup(client => client.GetPartyDetails(It.IsAny<List<string>>(), It.IsAny<List<string>>()))
+            .ReturnsAsync(organizationDetails);
+
+        // Act
+        var result = await _keywordsService.ReplaceKeywordsAsync(smsRecipients);
+
+        // Assert
+        var recipient = result.First();
+        Assert.Equal("Hello Organization name your organization number is 313418154", recipient.CustomizedBody);
+    }
+
+    [Fact]
+    public async Task ReplaceKeywordsAsync_EmailRecipients_ShouldHandleEmptyLists()
+    {
+        // Arrange
+        var emailRecipients = new List<EmailRecipient>();
+
+        // Act
+        var result = await _keywordsService.ReplaceKeywordsAsync(emailRecipients);
+
+        // Assert
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task ReplaceKeywordsAsync_SMSRecipients_ShouldHandleEmptyLists()
+    {
+        // Arrange
+        var smsRecipients = new List<SmsRecipient>();
+
+        // Act
+        var result = await _keywordsService.ReplaceKeywordsAsync(smsRecipients);
+
+        // Assert
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task ReplaceKeywordsAsync_EmailRecipients_ShouldHandleNullValues()
+    {
+        // Arrange
+        var emailRecipients = new List<EmailRecipient>
+        {
+            new()
+            {
+                NationalIdentityNumber = null,
+                OrganizationNumber = null,
+                CustomizedBody = "Hello $recipientName$",
+                CustomizedSubject = "Subject $recipientNumber$",
+            }
+        };
 
         // Act
         var result = await _keywordsService.ReplaceKeywordsAsync(emailRecipients);
 
         // Assert
         var recipient = result.First();
-        Assert.Equal("Hello Organization name your organization number is 313418154", recipient.CustomizedBody);
+        Assert.Equal("Hello $recipientName$", recipient.CustomizedBody);
+        Assert.Equal("Subject $recipientNumber$", recipient.CustomizedSubject);
+    }
+
+    [Fact]
+    public async Task ReplaceKeywordsAsync_SMSRecipients_ShouldHandleNullValues()
+    {
+        // Arrange
+        var smsRecipients = new List<SmsRecipient>
+        {
+            new()
+            {
+                OrganizationNumber = null,
+                NationalIdentityNumber = null,
+                CustomizedBody = "Hello $recipientName$ your number is $recipientNumber$"
+            }
+        };
+
+        // Act
+        var result = await _keywordsService.ReplaceKeywordsAsync(smsRecipients);
+
+        // Assert
+        var recipient = result.First();
+        Assert.Equal("Hello $recipientName$ your number is $recipientNumber$", recipient.CustomizedBody);
     }
 }

@@ -62,32 +62,6 @@ public class RegisterClient : IRegisterClient
         return await PostAsync<List<PartyDetails>>(_nameComponentsLookupEndpoint, partyDetailsLookupBatch);
     }
 
-    /// <inheritdoc/>
-    public async Task<List<PartyDetails>> GetPartyDetailsForOrganizations(List<string> organizationNumbers)
-    {
-        if (organizationNumbers == null || organizationNumbers.Count == 0)
-        {
-            return [];
-        }
-
-        var partyDetailsLookupBatch = new PartyDetailsLookupBatch(organizationNumbers: organizationNumbers);
-
-        return await PostAsync<List<PartyDetails>>(_nameComponentsLookupEndpoint, partyDetailsLookupBatch);
-    }
-
-    /// <inheritdoc/>
-    public async Task<List<PartyDetails>> GetPartyDetailsForPersons(List<string> socialSecurityNumbers)
-    {
-        if (socialSecurityNumbers == null || socialSecurityNumbers.Count == 0)
-        {
-            return [];
-        }
-
-        var partyDetailsLookupBatch = new PartyDetailsLookupBatch(socialSecurityNumbers: socialSecurityNumbers);
-
-        return await PostAsync<List<PartyDetails>>(_nameComponentsLookupEndpoint, partyDetailsLookupBatch);
-    }
-
     /// <summary>
     /// Sends a POST request to the specified endpoint with the given payload and deserializes the response to the specified type.
     /// </summary>
