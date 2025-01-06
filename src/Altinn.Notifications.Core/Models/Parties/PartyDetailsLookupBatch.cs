@@ -16,9 +16,9 @@ public class PartyDetailsLookupBatch
     [JsonConstructor]
     public PartyDetailsLookupBatch(List<string>? organizationNumbers = null, List<string>? socialSecurityNumbers = null)
     {
-        if ((organizationNumbers == null || organizationNumbers.Count == 0) && (socialSecurityNumbers == null || socialSecurityNumbers.Count == 0))
+        if ((organizationNumbers?.Count ?? 0) == 0 && (socialSecurityNumbers?.Count ?? 0) == 0)
         {
-            throw new ArgumentException("At least one of organizationNumbers or socialSecurityNumbers must be provided.");
+            throw new ArgumentException("You must provide either an organization number or a social security number");
         }
 
         OrganizationNumbers = organizationNumbers ?? [];

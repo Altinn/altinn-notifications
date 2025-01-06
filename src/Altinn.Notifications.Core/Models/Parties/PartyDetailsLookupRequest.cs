@@ -16,9 +16,14 @@ public record PartyDetailsLookupRequest
     /// <exception cref="ArgumentException">Thrown when both <paramref name="organizationNumber"/> and <paramref name="socialSecurityNumber"/> are set.</exception>
     public PartyDetailsLookupRequest(string? organizationNumber = null, string? socialSecurityNumber = null)
     {
-        if (!string.IsNullOrEmpty(organizationNumber) && !string.IsNullOrEmpty(socialSecurityNumber))
+        if (string.IsNullOrWhiteSpace(organizationNumber) && string.IsNullOrWhiteSpace(socialSecurityNumber))
         {
-            throw new ArgumentException("You can specify either an OrganizationNumber or a SocialSecurityNumber, but not both.");
+            throw new ArgumentException("You must provide either an organization number or a social security number.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(organizationNumber) && !string.IsNullOrWhiteSpace(socialSecurityNumber))
+        {
+            throw new ArgumentException("You can provide either an organization number or a social security number, but not both.");
         }
 
         OrganizationNumber = organizationNumber;
