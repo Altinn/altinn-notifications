@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-
 using Altinn.Notifications.Integrations.Register.Models;
-
 using Xunit;
 
-namespace Altinn.Notifications.Tests.Notifications.Core.TestingModels;
+namespace Altinn.Notifications.IntegrationTests.Register;
 
 public class PartyDetailsLookupBatchTests
 {

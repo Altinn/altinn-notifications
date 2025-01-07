@@ -1,10 +1,6 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
+﻿using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 using Altinn.Notifications.Core.Models.ContactPoints;
 using Altinn.Notifications.Core.Models.Parties;
@@ -17,7 +13,7 @@ using Microsoft.Extensions.Options;
 
 using Xunit;
 
-namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Register;
+namespace Altinn.Notifications.IntegrationTests.Register;
 
 public class RegisterClientTests
 {
@@ -182,7 +178,7 @@ public class RegisterClientTests
             return CreateMockResponse(contentData, statusCode);
         }
 
-        if (string.IsNullOrWhiteSpace(firstRequest.OrganizationNumber))
+        if (!string.IsNullOrWhiteSpace(firstRequest.OrganizationNumber))
         {
             switch (firstRequest.OrganizationNumber)
             {
@@ -206,7 +202,7 @@ public class RegisterClientTests
                     break;
             }
         }
-        else if (string.IsNullOrWhiteSpace(firstRequest.SocialSecurityNumber))
+        else if (!string.IsNullOrWhiteSpace(firstRequest.SocialSecurityNumber))
         {
             switch (firstRequest.SocialSecurityNumber)
             {
