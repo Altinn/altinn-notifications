@@ -80,9 +80,9 @@ public class RegisterClient : IRegisterClient
         }
 
         var responseContent = await response.Content.ReadAsStringAsync();
-        var partyNamesLookupResponse = JsonSerializer.Deserialize<PartyDetailsLookupResult>(responseContent, _jsonSerializerOptions);
+        var partyDetailsList = JsonSerializer.Deserialize<PartyDetailsLookupResult>(responseContent, _jsonSerializerOptions)?.PartyDetailsList;
 
-        return partyNamesLookupResponse == null ? [] : partyNamesLookupResponse.PartyDetailsList;
+        return partyDetailsList ?? [];
     }
 
     /// <summary>
