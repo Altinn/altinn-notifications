@@ -144,8 +144,8 @@ public class RegisterClientTests
                 {
                     ContactPointsList =
                     [
-                        new() { OrganizationNumber = "910011154", EmailList = [] },
-                        new() { OrganizationNumber = "910011155", EmailList = [] }
+                        new OrganizationContactPoints { OrganizationNumber = "910011154", EmailList = [] },
+                        new OrganizationContactPoints { OrganizationNumber = "910011155", EmailList = [] }
                     ]
                 };
                 break;

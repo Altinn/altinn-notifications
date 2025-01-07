@@ -46,7 +46,18 @@ public class RegisterClient : IRegisterClient
             OrganizationNumbers = organizationNumbers
         };
 
-        return await PostAsync<List<OrganizationContactPoints>>(_contactPointLookupEndpoint, lookupObject);
+        HttpContent content = new StringContent(JsonSerializer.Serialize(lookupObject, _jsonSerializerOptions), Encoding.UTF8, "application/json");
+
+        var response = await _client.PostAsync(_contactPointLookupEndpoint, content);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw await PlatformHttpException.CreateAsync(response);
+        }
+
+        string responseContent = await response.Content.ReadAsStringAsync();
+        var contactPoints = JsonSerializer.Deserialize<OrgContactPointsList>(responseContent, _jsonSerializerOptions)?.ContactPointsList;
+        return contactPoints ?? [];
     }
 
     /// <inheritdoc/>
@@ -59,23 +70,14 @@ public class RegisterClient : IRegisterClient
 
         var partyDetailsLookupBatch = new PartyDetailsLookupBatch(organizationNumbers, socialSecurityNumbers);
 
-        return await PostAsync<List<PartyDetails>>(_nameComponentsLookupEndpoint, partyDetailsLookupBatch);
-    }
+        HttpContent content = new StringContent(JsonSerializer.Serialize(partyDetailsLookupBatch), Encoding.UTF8, "application/json");
 
-    /// <summary>
-    /// Sends a POST request to the specified endpoint with the given payload and deserializes the response to the specified type.
-    /// </summary>
-    /// <typeparam name="T">The type to which the response content should be deserialized.</typeparam>
-    /// <param name="endpoint">The endpoint to which the POST request should be sent.</param>
-    /// <param name="payload">The payload to be sent in the POST request.</param>
-    /// <returns>A task that represents the asynchronous operation. The task result contains the deserialized response content.</returns>
-    /// <exception cref="PlatformHttpException">Thrown when the HTTP response indicates a failure.</exception>
-    /// <exception cref="InvalidOperationException">Thrown when deserialization of the response content fails.</exception>
-    private async Task<T> PostAsync<T>(string endpoint, object payload)
-    {
-        HttpContent content = new StringContent(JsonSerializer.Serialize(payload, _jsonSerializerOptions), Encoding.UTF8, "application/json");
+        var request = new HttpRequestMessage(HttpMethod.Post, $"{_nameComponentsLookupEndpoint}")
+        {
+            Content = content
+        };
 
-        var response = await _client.PostAsync(endpoint, content);
+        var response = await _client.SendAsync(request);
 
         if (!response.IsSuccessStatusCode)
         {
@@ -83,6 +85,7 @@ public class RegisterClient : IRegisterClient
         }
 
         string responseContent = await response.Content.ReadAsStringAsync();
-        return JsonSerializer.Deserialize<T>(responseContent, _jsonSerializerOptions) ?? throw new InvalidOperationException("Deserialization failed");
+        var partyNamesLookupResponse = JsonSerializer.Deserialize<PartyDetailsLookupResult>(responseContent, _jsonSerializerOptions);
+        return partyNamesLookupResponse?.PartyDetailsList ?? [];
     }
 }
