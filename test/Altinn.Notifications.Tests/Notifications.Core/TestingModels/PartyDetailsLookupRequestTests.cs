@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Text.Json;
-
 using Altinn.Notifications.Core.Models.Parties;
-
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Core.TestingModels;
@@ -18,18 +16,15 @@ public class PartyDetailsLookupRequestTests
 
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() => new PartyDetailsLookupRequest(organizationNumber, socialSecurityNumber));
-        Assert.Equal("You can specify either an OrganizationNumber or a SocialSecurityNumber, but not both.", exception.Message);
+        Assert.Equal("You can provide either an organization number or a social security number, but not both.", exception.Message);
     }
 
     [Fact]
-    public void Constructor_WithNoParameters_SetsBothPropertiesToNull()
+    public void Constructor_WithNoParameters_ThrowsArgumentException()
     {
-        // Act
-        var request = new PartyDetailsLookupRequest();
-
-        // Assert
-        Assert.Null(request.OrganizationNumber);
-        Assert.Null(request.SocialSecurityNumber);
+        // Act & Assert
+        var exception = Assert.Throws<ArgumentException>(() => new PartyDetailsLookupRequest());
+        Assert.Equal("You must provide either an organization number or a social security number.", exception.Message);
     }
 
     [Fact]
@@ -61,22 +56,7 @@ public class PartyDetailsLookupRequestTests
     }
 
     [Fact]
-    public void JsonSerialization_WithNullProperties_ExcludesNullProperties()
-    {
-        // Arrange
-        var request = new PartyDetailsLookupRequest();
-
-        // Act
-        var json = JsonSerializer.Serialize(request);
-
-        // Assert
-        Assert.DoesNotContain("\"orgNo\"", json);
-        Assert.DoesNotContain("\"ssn\"", json);
-        Assert.Equal("{}", json);
-    }
-
-    [Fact]
-    public void JsonSerialization_WithOrganizationNumber_OnlyIncludesOrganizationNumber()
+    public void JSONSerialization_WithOrganizationNumber_OnlyIncludesOrganizationNumber()
     {
         // Arrange
         var request = new PartyDetailsLookupRequest(organizationNumber: "314204298");
@@ -90,7 +70,7 @@ public class PartyDetailsLookupRequestTests
     }
 
     [Fact]
-    public void JsonSerialization_WithSocialSecurityNumber_OnlyIncludesSocialSecurityNumber()
+    public void JSONSerialization_WithSocialSecurityNumber_OnlyIncludesSocialSecurityNumber()
     {
         // Arrange
         var request = new PartyDetailsLookupRequest(socialSecurityNumber: "09827398702");
