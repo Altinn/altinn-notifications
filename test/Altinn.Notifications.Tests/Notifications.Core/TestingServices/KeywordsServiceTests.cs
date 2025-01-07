@@ -202,6 +202,9 @@ public class KeywordsServiceTests
         // Arrange
         var emailRecipients = new List<EmailRecipient>();
 
+        _registerClientMock.Setup(client => client.GetPartyDetails(It.Is<List<string>>(x => x != null && x.Count == 0), It.Is<List<string>>(x => x != null && x.Count == 0)))
+            .ReturnsAsync([]);
+
         // Act
         var result = await _keywordsService.ReplaceKeywordsAsync(emailRecipients);
 
@@ -214,6 +217,9 @@ public class KeywordsServiceTests
     {
         // Arrange
         var smsRecipients = new List<SmsRecipient>();
+
+        _registerClientMock.Setup(client => client.GetPartyDetails(It.Is<List<string>>(x => x != null && x.Count == 0), It.Is<List<string>>(x => x != null && x.Count == 0)))
+            .ReturnsAsync([]);
 
         // Act
         var result = await _keywordsService.ReplaceKeywordsAsync(smsRecipients);
@@ -230,12 +236,15 @@ public class KeywordsServiceTests
         {
             new()
             {
-                NationalIdentityNumber = null,
                 OrganizationNumber = null,
+                NationalIdentityNumber = null,
                 CustomizedBody = "Hello $recipientName$",
                 CustomizedSubject = "Subject $recipientNumber$",
             }
         };
+
+        _registerClientMock.Setup(client => client.GetPartyDetails(It.IsAny<List<string>>(), It.IsAny<List<string>>()))
+            .ReturnsAsync([]);
 
         // Act
         var result = await _keywordsService.ReplaceKeywordsAsync(emailRecipients);
@@ -259,6 +268,9 @@ public class KeywordsServiceTests
                 CustomizedBody = "Hello $recipientName$ your number is $recipientNumber$"
             }
         };
+
+        _registerClientMock.Setup(client => client.GetPartyDetails(It.IsAny<List<string>>(), It.IsAny<List<string>>()))
+            .ReturnsAsync([]);
 
         // Act
         var result = await _keywordsService.ReplaceKeywordsAsync(smsRecipients);
