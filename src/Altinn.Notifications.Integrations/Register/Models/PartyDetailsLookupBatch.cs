@@ -1,6 +1,8 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Altinn.Notifications.Core.Models.Parties;
+using Altinn.Notifications.Core.Models.Parties;
+
+namespace Altinn.Notifications.Integrations.Register.Models;
 
 /// <summary>
 /// Represents a request to look up party details by their identifiers.

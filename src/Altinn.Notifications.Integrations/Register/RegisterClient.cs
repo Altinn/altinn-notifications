@@ -6,6 +6,7 @@ using Altinn.Notifications.Core.Models.ContactPoints;
 using Altinn.Notifications.Core.Models.Parties;
 using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Integrations.Configuration;
+using Altinn.Notifications.Integrations.Register.Models;
 
 using Microsoft.Extensions.Options;
 

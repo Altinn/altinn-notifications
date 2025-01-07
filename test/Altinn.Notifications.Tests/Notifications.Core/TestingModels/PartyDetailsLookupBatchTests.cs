@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-using Altinn.Notifications.Core.Models.Parties;
+using Altinn.Notifications.Integrations.Register.Models;
 
 using Xunit;
 
