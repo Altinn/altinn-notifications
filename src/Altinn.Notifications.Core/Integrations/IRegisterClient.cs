@@ -19,7 +19,7 @@ public interface IRegisterClient
     Task<List<OrganizationContactPoints>> GetOrganizationContactPoints(List<string> organizationNumbers);
 
     /// <summary>
-    /// Asynchronously retrieves party details for the specified persons and organizations.
+    /// Asynchronously retrieves party details for the specified persons and/or organizations.
     /// </summary>
     /// <param name="organizationNumbers">A collection of organization numbers for which party details are requested.</param>
     /// <param name="socialSecurityNumbers">A collection of social security numbers for which party details are requested.</param>

@@ -46,7 +46,7 @@ public class RegisterClient : IRegisterClient
             OrganizationNumbers = organizationNumbers
         };
 
-        HttpContent content = new StringContent(JsonSerializer.Serialize(lookupObject, _jsonSerializerOptions), Encoding.UTF8, "application/json");
+        var content = CreateJsonContent(lookupObject);
 
         var response = await _client.PostAsync(_contactPointLookupEndpoint, content);
 
@@ -55,9 +55,9 @@ public class RegisterClient : IRegisterClient
             throw await PlatformHttpException.CreateAsync(response);
         }
 
-        string responseContent = await response.Content.ReadAsStringAsync();
+        var responseContent = await response.Content.ReadAsStringAsync();
         var contactPoints = JsonSerializer.Deserialize<OrgContactPointsList>(responseContent, _jsonSerializerOptions)?.ContactPointsList;
-        return contactPoints ?? [];
+        return contactPoints ?? new List<OrganizationContactPoints>();
     }
 
     /// <inheritdoc/>
@@ -69,23 +69,35 @@ public class RegisterClient : IRegisterClient
         }
 
         var partyDetailsLookupBatch = new PartyDetailsLookupBatch(organizationNumbers, socialSecurityNumbers);
+        var content = CreateJsonContent(partyDetailsLookupBatch);
 
-        HttpContent content = new StringContent(JsonSerializer.Serialize(partyDetailsLookupBatch), Encoding.UTF8, "application/json");
-
-        var request = new HttpRequestMessage(HttpMethod.Post, $"{_nameComponentsLookupEndpoint}")
-        {
-            Content = content
-        };
-
-        var response = await _client.SendAsync(request);
+        var response = await _client.PostAsync(_nameComponentsLookupEndpoint, content);
 
         if (!response.IsSuccessStatusCode)
         {
             throw await PlatformHttpException.CreateAsync(response);
         }
 
-        string responseContent = await response.Content.ReadAsStringAsync();
+        var responseContent = await response.Content.ReadAsStringAsync();
         var partyNamesLookupResponse = JsonSerializer.Deserialize<PartyDetailsLookupResult>(responseContent, _jsonSerializerOptions);
         return partyNamesLookupResponse?.PartyDetailsList ?? [];
+    }
+
+    /// <summary>
+    /// Creates an HTTP content object with a JSON-serialized representation of the specified object.
+    /// </summary>
+    /// <typeparam name="T">The type of the object to serialize.</typeparam>
+    /// <param name="payload">The object to serialize into JSON.</param>
+    /// <returns>
+    /// An <see cref="HttpContent"/> object containing the serialized JSON representation 
+    /// of the provided object, encoded in UTF-8, with a media type of "application/json".
+    /// </returns>
+    /// <remarks>
+    /// This method uses the specified <see cref="JsonSerializerOptions"/> to control the serialization behavior.
+    /// </remarks>
+    private StringContent CreateJsonContent<T>(T payload)
+    {
+        var json = JsonSerializer.Serialize(payload, _jsonSerializerOptions);
+        return new StringContent(json, Encoding.UTF8, "application/json");
     }
 }
