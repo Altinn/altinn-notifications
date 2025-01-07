@@ -57,7 +57,7 @@ public class RegisterClient : IRegisterClient
 
         var responseContent = await response.Content.ReadAsStringAsync();
         var contactPoints = JsonSerializer.Deserialize<OrgContactPointsList>(responseContent, _jsonSerializerOptions)?.ContactPointsList;
-        return contactPoints ?? new List<OrganizationContactPoints>();
+        return contactPoints ?? [];
     }
 
     /// <inheritdoc/>
@@ -80,7 +80,8 @@ public class RegisterClient : IRegisterClient
 
         var responseContent = await response.Content.ReadAsStringAsync();
         var partyNamesLookupResponse = JsonSerializer.Deserialize<PartyDetailsLookupResult>(responseContent, _jsonSerializerOptions);
-        return partyNamesLookupResponse?.PartyDetailsList ?? [];
+
+        return partyNamesLookupResponse == null ? [] : partyNamesLookupResponse.PartyDetailsList;
     }
 
     /// <summary>
