@@ -1,9 +1,9 @@
-﻿using System;
-using System.Text.Json;
-using Altinn.Notifications.Core.Models.Parties;
+﻿using System.Text.Json;
+using Altinn.Notifications.Integrations.Register.Models;
+
 using Xunit;
 
-namespace Altinn.Notifications.Tests.Notifications.Core.TestingModels;
+namespace Altinn.Notifications.IntegrationTests.Register;
 
 public class PartyDetailsLookupRequestTests
 {

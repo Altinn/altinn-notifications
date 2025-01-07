@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Altinn.Notifications.Core.Models.Parties;
+namespace Altinn.Notifications.Integrations.Register.Models;
 
 /// <summary>
 /// Represents a lookup criterion for a single party.

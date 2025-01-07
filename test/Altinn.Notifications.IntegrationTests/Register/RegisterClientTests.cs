@@ -192,7 +192,7 @@ public class RegisterClientTests
                         PartyDetailsList =
                         [
                             new() { OrganizationNumber = "313600947", Name = "Test Organization 1" },
-                                new() { OrganizationNumber = "315058384", Name = "Test Organization 2" }
+                            new() { OrganizationNumber = "315058384", Name = "Test Organization 2" }
                         ]
                     };
                     break;
@@ -216,7 +216,7 @@ public class RegisterClientTests
                         PartyDetailsList =
                         [
                             new() { NationalIdentityNumber = "07837399275", Name = "Test Person 1" },
-                                new() { NationalIdentityNumber = "04917199103", Name = "Test Person 2" }
+                            new() { NationalIdentityNumber = "04917199103", Name = "Test Person 2" }
                         ]
                     };
                     break;
