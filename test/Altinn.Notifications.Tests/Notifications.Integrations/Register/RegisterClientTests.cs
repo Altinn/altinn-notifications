@@ -87,6 +87,20 @@ public class RegisterClientTests
     }
 
     [Fact]
+    public async Task GetOrganizationContactPoints_WithEmptyOrganizationNumbers_ReturnsEmpty()
+    {
+        // Arrange
+        List<string> organizationNumbers = [];
+
+        // Act
+        var result = await _registerClient.GetOrganizationContactPoints(organizationNumbers);
+
+        // Assert
+        Assert.Empty(result);
+        Assert.NotNull(result);
+    }
+
+    [Fact]
     public async Task GetPartyDetails_WithEmptyList_ReturnsEmpty()
     {
         // Act
