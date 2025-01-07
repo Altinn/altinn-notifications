@@ -25,6 +25,7 @@ public class PartyDetailsLookupBatchTests
         Assert.NotEmpty(batch.SocialSecurityNumbers);
         Assert.Single(batch.OrganizationNumbers, "313556263");
         Assert.Single(batch.SocialSecurityNumbers, "16877298896");
+        Assert.Equal(2, batch.PartyDetailsLookupRequestList.Count);
     }
 
     [Fact]
@@ -41,6 +42,8 @@ public class PartyDetailsLookupBatchTests
         Assert.NotNull(batch);
         Assert.NotEmpty(batch.OrganizationNumbers);
         Assert.Single(batch.OrganizationNumbers, "314727878");
+        Assert.Empty(batch.SocialSecurityNumbers);
+        Assert.Single(batch.PartyDetailsLookupRequestList);
     }
 
     [Fact]
@@ -57,6 +60,8 @@ public class PartyDetailsLookupBatchTests
         Assert.NotNull(batch);
         Assert.NotEmpty(batch.SocialSecurityNumbers);
         Assert.Single(batch.SocialSecurityNumbers, "55869600449");
+        Assert.Empty(batch.OrganizationNumbers);
+        Assert.Single(batch.PartyDetailsLookupRequestList);
     }
 
     [Fact]
@@ -68,8 +73,7 @@ public class PartyDetailsLookupBatchTests
 
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() => new PartyDetailsLookupBatch(organizationNumbers, socialSecurityNumbers));
-
-        Assert.Equal("At least one of organizationNumbers or socialSecurityNumbers must be provided.", exception.Message);
+        Assert.Equal("You must provide either an organization number or a social security number", exception.Message);
     }
 
     [Fact]
@@ -81,8 +85,7 @@ public class PartyDetailsLookupBatchTests
 
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() => new PartyDetailsLookupBatch(organizationNumbers, socialSecurityNumbers));
-
-        Assert.Equal("At least one of organizationNumbers or socialSecurityNumbers must be provided.", exception.Message);
+        Assert.Equal("You must provide either an organization number or a social security number", exception.Message);
     }
 
     [Fact]
@@ -94,8 +97,7 @@ public class PartyDetailsLookupBatchTests
 
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() => new PartyDetailsLookupBatch(organizationNumbers, socialSecurityNumbers));
-
-        Assert.Equal("At least one of organizationNumbers or socialSecurityNumbers must be provided.", exception.Message);
+        Assert.Equal("You must provide either an organization number or a social security number", exception.Message);
     }
 
     [Fact]
@@ -107,7 +109,6 @@ public class PartyDetailsLookupBatchTests
 
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() => new PartyDetailsLookupBatch(organizationNumbers, socialSecurityNumbers));
-
-        Assert.Equal("At least one of organizationNumbers or socialSecurityNumbers must be provided.", exception.Message);
+        Assert.Equal("You must provide either an organization number or a social security number", exception.Message);
     }
 }
