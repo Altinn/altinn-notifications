@@ -51,9 +51,7 @@ public class RegisterClientTests
             ApiRegisterEndpoint = "https://platform.at22.altinn.cloud/register/api/v1/"
         };
 
-        _registerClient = new RegisterClient(
-            new HttpClient(registerHttpMessageHandler),
-            Options.Create(settings));
+        _registerClient = new RegisterClient(new HttpClient(registerHttpMessageHandler), Options.Create(settings));
     }
 
     [Fact]
@@ -168,10 +166,6 @@ public class RegisterClientTests
             case "unavailable":
                 statusCode = HttpStatusCode.ServiceUnavailable;
                 break;
-
-            case "null-contact-points-list":
-                contentData = new OrgContactPointsList { ContactPointsList = [] };
-                break;
         }
 
         return CreateMockResponse(contentData, statusCode);
@@ -183,55 +177,57 @@ public class RegisterClientTests
         HttpStatusCode statusCode = HttpStatusCode.OK;
 
         var firstRequest = lookup.PartyDetailsLookupRequestList?.FirstOrDefault();
-        if (firstRequest != null)
+        if (firstRequest == null)
         {
-            if (firstRequest.OrganizationNumber != null)
-            {
-                switch (firstRequest.OrganizationNumber)
-                {
-                    case "empty-list":
-                        contentData = new PartyDetailsLookupResult() { PartyDetailsList = [] };
-                        break;
+            return CreateMockResponse(contentData, statusCode);
+        }
 
-                    case "populated-list":
-                        contentData = new PartyDetailsLookupResult
-                        {
-                            PartyDetailsList =
-                            [
-                                new() { OrganizationNumber = "313600947", Name = "Test Organization 1" },
+        if (string.IsNullOrWhiteSpace(firstRequest.OrganizationNumber))
+        {
+            switch (firstRequest.OrganizationNumber)
+            {
+                case "empty-list":
+                    contentData = new PartyDetailsLookupResult() { PartyDetailsList = [] };
+                    break;
+
+                case "populated-list":
+                    contentData = new PartyDetailsLookupResult
+                    {
+                        PartyDetailsList =
+                        [
+                            new() { OrganizationNumber = "313600947", Name = "Test Organization 1" },
                                 new() { OrganizationNumber = "315058384", Name = "Test Organization 2" }
-                            ]
-                        };
-                        break;
+                        ]
+                    };
+                    break;
 
-                    case "unavailable":
-                        statusCode = HttpStatusCode.ServiceUnavailable;
-                        break;
-                }
+                case "unavailable":
+                    statusCode = HttpStatusCode.ServiceUnavailable;
+                    break;
             }
-            else if (firstRequest.SocialSecurityNumber != null)
+        }
+        else if (string.IsNullOrWhiteSpace(firstRequest.SocialSecurityNumber))
+        {
+            switch (firstRequest.SocialSecurityNumber)
             {
-                switch (firstRequest.SocialSecurityNumber)
-                {
-                    case "empty-list":
-                        contentData = new PartyDetailsLookupResult() { PartyDetailsList = [] };
-                        break;
+                case "empty-list":
+                    contentData = new PartyDetailsLookupResult() { PartyDetailsList = [] };
+                    break;
 
-                    case "populated-list":
-                        contentData = new PartyDetailsLookupResult
-                        {
-                            PartyDetailsList =
-                            [
-                                new() { NationalIdentityNumber = "07837399275", Name = "Test Person 1" },
+                case "populated-list":
+                    contentData = new PartyDetailsLookupResult
+                    {
+                        PartyDetailsList =
+                        [
+                            new() { NationalIdentityNumber = "07837399275", Name = "Test Person 1" },
                                 new() { NationalIdentityNumber = "04917199103", Name = "Test Person 2" }
-                            ]
-                        };
-                        break;
+                        ]
+                    };
+                    break;
 
-                    case "unavailable":
-                        statusCode = HttpStatusCode.ServiceUnavailable;
-                        break;
-                }
+                case "unavailable":
+                    statusCode = HttpStatusCode.ServiceUnavailable;
+                    break;
             }
         }
 
