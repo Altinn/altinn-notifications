@@ -77,7 +77,7 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
             {
                 continue;
             }
-            
+
             var matchedSmsRecipient = FindSmsRecipient(allSmsRecipients, recipient);
             var smsRecipient = matchedSmsRecipient ?? new SmsRecipient { IsReserved = recipient.IsReserved };
 
@@ -135,10 +135,20 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
             IsReserved = recipient.IsReserved,
             OrganizationNumber = recipient.OrganizationNumber,
             NationalIdentityNumber = recipient.NationalIdentityNumber,
-            CustomizedBody = (_keywordsService.ContainsRecipientNumberPlaceholder(smsTemplate?.Body) || _keywordsService.ContainsRecipientNamePlaceholder(smsTemplate?.Body)) ? smsTemplate?.Body : null,
+            CustomizedBody = RequiresCustomization(smsTemplate?.Body) ? smsTemplate!.Body : null
         }).ToList();
 
         return await _keywordsService.ReplaceKeywordsAsync(smsRecipients);
+    }
+
+    /// <summary>
+    /// Determines whether the specified template part requires customization by checking for placeholder keywords.
+    /// </summary>
+    /// <param name="templatePart">The part of the SMS template (The SMS body) to evaluate.</param>
+    /// <returns><c>true</c> if the template part contains placeholders for recipient-specific customization; otherwise, <c>false</c>.</returns>
+    private bool RequiresCustomization(string? templatePart)
+    {
+        return _keywordsService.ContainsRecipientNumberPlaceholder(templatePart) || _keywordsService.ContainsRecipientNamePlaceholder(templatePart);
     }
 
     /// <summary>
