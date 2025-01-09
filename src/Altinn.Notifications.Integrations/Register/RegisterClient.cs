@@ -6,6 +6,7 @@ using Altinn.Notifications.Core.Models.ContactPoints;
 using Altinn.Notifications.Core.Models.Parties;
 using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Integrations.Configuration;
+using Altinn.Notifications.Integrations.Register.Models;
 
 using Microsoft.Extensions.Options;
 
@@ -33,14 +34,7 @@ public class RegisterClient : IRegisterClient
         _jsonSerializerOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
     }
 
-    /// <summary>
-    /// Asynchronously retrieves contact point details for the specified organizations.
-    /// </summary>
-    /// <param name="organizationNumbers">A collection of organization numbers for which contact point details are requested.</param>
-    /// <returns>
-    /// A task that represents the asynchronous operation.
-    /// The task result contains a list of <see cref="OrganizationContactPoints"/> representing the contact points of the specified organizations.
-    /// </returns>
+    /// <inheritdoc/>
     public async Task<List<OrganizationContactPoints>> GetOrganizationContactPoints(List<string> organizationNumbers)
     {
         if (organizationNumbers == null || organizationNumbers.Count == 0)
@@ -53,7 +47,7 @@ public class RegisterClient : IRegisterClient
             OrganizationNumbers = organizationNumbers
         };
 
-        HttpContent content = new StringContent(JsonSerializer.Serialize(lookupObject, _jsonSerializerOptions), Encoding.UTF8, "application/json");
+        var content = CreateJsonContent(lookupObject);
 
         var response = await _client.PostAsync(_contactPointLookupEndpoint, content);
 
@@ -62,75 +56,50 @@ public class RegisterClient : IRegisterClient
             throw await PlatformHttpException.CreateAsync(response);
         }
 
-        string responseContent = await response.Content.ReadAsStringAsync();
+        var responseContent = await response.Content.ReadAsStringAsync();
         var contactPoints = JsonSerializer.Deserialize<OrgContactPointsList>(responseContent, _jsonSerializerOptions)?.ContactPointsList;
         return contactPoints ?? [];
     }
 
-    /// <summary>
-    /// Asynchronously retrieves party details for the specified organizations.
-    /// </summary>
-    /// <param name="organizationNumbers">A collection of organization numbers for which party details are requested.</param>
-    /// <returns>
-    /// A task that represents the asynchronous operation.
-    /// The task result contains a list of <see cref="PartyDetails"/> representing the details of the specified organizations.
-    /// </returns>
-    public async Task<List<PartyDetails>> GetPartyDetailsForOrganizations(List<string> organizationNumbers)
+    /// <inheritdoc/>
+    public async Task<List<PartyDetails>> GetPartyDetails(List<string> organizationNumbers, List<string> socialSecurityNumbers)
     {
-        if (organizationNumbers == null || organizationNumbers.Count == 0)
+        if ((organizationNumbers?.Count ?? 0) == 0 && (socialSecurityNumbers?.Count ?? 0) == 0)
         {
             return [];
         }
 
-        var partyDetailsLookupBatch = new PartyDetailsLookupBatch(organizationNumbers: organizationNumbers);
+        var partyDetailsLookupBatch = new PartyDetailsLookupBatch(organizationNumbers, socialSecurityNumbers);
+        var content = CreateJsonContent(partyDetailsLookupBatch);
 
-        HttpContent content = new StringContent(JsonSerializer.Serialize(partyDetailsLookupBatch), Encoding.UTF8, "application/json");
-
-        var response = await _client.PostAsync($"{_nameComponentsLookupEndpoint}", content);
+        var response = await _client.PostAsync(_nameComponentsLookupEndpoint, content);
 
         if (!response.IsSuccessStatusCode)
         {
             throw await PlatformHttpException.CreateAsync(response);
         }
 
-        string responseContent = await response.Content.ReadAsStringAsync();
-        var partyNamesLookupResponse = JsonSerializer.Deserialize<PartyDetailsLookupResult>(responseContent, _jsonSerializerOptions);
-        return partyNamesLookupResponse?.PartyDetailsList ?? [];
+        var responseContent = await response.Content.ReadAsStringAsync();
+        var partyDetailsList = JsonSerializer.Deserialize<PartyDetailsLookupResult>(responseContent, _jsonSerializerOptions)?.PartyDetailsList;
+
+        return partyDetailsList ?? [];
     }
 
     /// <summary>
-    /// Asynchronously retrieves party details for the specified persons.
+    /// Creates an HTTP content object with a JSON-serialized representation of the specified object.
     /// </summary>
-    /// <param name="socialSecurityNumbers">A collection of social security numbers for which party details are requested.</param>
+    /// <typeparam name="T">The type of the object to serialize.</typeparam>
+    /// <param name="payload">The object to serialize into JSON.</param>
     /// <returns>
-    /// A task that represents the asynchronous operation.
-    /// The task result contains a list of <see cref="PartyDetails"/> representing the details of the specified individuals.
+    /// An <see cref="HttpContent"/> object containing the serialized JSON representation 
+    /// of the provided object, encoded in UTF-8, with a media type of "application/json".
     /// </returns>
-    public async Task<List<PartyDetails>> GetPartyDetailsForPersons(List<string> socialSecurityNumbers)
+    /// <remarks>
+    /// This method uses the specified <see cref="JsonSerializerOptions"/> to control the serialization behavior.
+    /// </remarks>
+    private StringContent CreateJsonContent<T>(T payload)
     {
-        if (socialSecurityNumbers == null || socialSecurityNumbers.Count == 0)
-        {
-            return [];
-        }
-
-        var partyDetailsLookupBatch = new PartyDetailsLookupBatch(socialSecurityNumbers: socialSecurityNumbers);
-
-        HttpContent content = new StringContent(JsonSerializer.Serialize(partyDetailsLookupBatch), Encoding.UTF8, "application/json");
-
-        var request = new HttpRequestMessage(HttpMethod.Post, $"{_nameComponentsLookupEndpoint}")
-        {
-            Content = content
-        };
-
-        var response = await _client.SendAsync(request);
-
-        if (!response.IsSuccessStatusCode)
-        {
-            throw await PlatformHttpException.CreateAsync(response);
-        }
-
-        string responseContent = await response.Content.ReadAsStringAsync();
-        var partyNamesLookupResponse = JsonSerializer.Deserialize<PartyDetailsLookupResult>(responseContent, _jsonSerializerOptions);
-        return partyNamesLookupResponse?.PartyDetailsList ?? [];
+        var json = JsonSerializer.Serialize(payload, _jsonSerializerOptions);
+        return new StringContent(json, Encoding.UTF8, "application/json");
     }
 }

@@ -11,5 +11,5 @@ public class PartyDetailsLookupResult
     /// Gets or sets the list of party details.
     /// </summary>
     [JsonPropertyName("partyNames")]
-    public List<PartyDetails>? PartyDetailsList { get; set; } = [];
+    public List<PartyDetails> PartyDetailsList { get; set; } = [];
 }
