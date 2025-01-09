@@ -38,13 +38,15 @@ public class KeywordsService : IKeywordsService
         ArgumentNullException.ThrowIfNull(smsRecipients);
 
         var organizationNumbers = smsRecipients
-            .Where(r => !string.IsNullOrWhiteSpace(r.OrganizationNumber))
-            .Select(r => r.OrganizationNumber!)
+            .Where(e => !string.IsNullOrWhiteSpace(e.CustomizedBody))
+            .Where(e => !string.IsNullOrWhiteSpace(e.OrganizationNumber))
+            .Select(e => e.OrganizationNumber!)
             .ToList();
 
         var nationalIdentityNumbers = smsRecipients
-            .Where(r => !string.IsNullOrWhiteSpace(r.NationalIdentityNumber))
-            .Select(r => r.NationalIdentityNumber!)
+            .Where(e => !string.IsNullOrWhiteSpace(e.CustomizedBody))
+            .Where(e => !string.IsNullOrWhiteSpace(e.NationalIdentityNumber))
+            .Select(e => e.NationalIdentityNumber!)
             .ToList();
 
         var (personDetails, organizationDetails) = await FetchPartyDetailsAsync(organizationNumbers, nationalIdentityNumbers);
@@ -64,13 +66,15 @@ public class KeywordsService : IKeywordsService
         ArgumentNullException.ThrowIfNull(emailRecipients);
 
         var organizationNumbers = emailRecipients
-            .Where(r => !string.IsNullOrWhiteSpace(r.OrganizationNumber))
-            .Select(r => r.OrganizationNumber!)
+            .Where(e => !string.IsNullOrWhiteSpace(e.OrganizationNumber))
+            .Where(e => !string.IsNullOrWhiteSpace(e.CustomizedBody) || !string.IsNullOrWhiteSpace(e.CustomizedSubject))
+            .Select(e => e.OrganizationNumber!)
             .ToList();
 
         var nationalIdentityNumbers = emailRecipients
-            .Where(r => !string.IsNullOrWhiteSpace(r.NationalIdentityNumber))
-            .Select(r => r.NationalIdentityNumber!)
+            .Where(e => !string.IsNullOrWhiteSpace(e.NationalIdentityNumber))
+            .Where(e => !string.IsNullOrWhiteSpace(e.CustomizedBody) || !string.IsNullOrWhiteSpace(e.CustomizedSubject))
+            .Select(e => e.NationalIdentityNumber!)
             .ToList();
 
         var (personDetails, organizationDetails) = await FetchPartyDetailsAsync(organizationNumbers, nationalIdentityNumbers);

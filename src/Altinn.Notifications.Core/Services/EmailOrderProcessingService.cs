@@ -142,8 +142,8 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
             IsReserved = recipient.IsReserved,
             OrganizationNumber = recipient.OrganizationNumber,
             NationalIdentityNumber = recipient.NationalIdentityNumber,
-            CustomizedBody = RequiresCustomization(emailTemplate?.Body) ? emailTemplate?.Body : null,
-            CustomizedSubject = RequiresCustomization(emailTemplate?.Subject) ? emailTemplate?.Subject : null,
+            CustomizedBody = RequiresCustomization(emailTemplate?.Body) ? emailTemplate!.Body : null,
+            CustomizedSubject = RequiresCustomization(emailTemplate?.Subject) ? emailTemplate!.Subject : null,
         }).ToList();
 
         return await _keywordsService.ReplaceKeywordsAsync(emailRecipients);
