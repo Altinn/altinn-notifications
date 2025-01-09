@@ -44,7 +44,7 @@ public class RegisterClientTests
 
         PlatformSettings settings = new()
         {
-            ApiRegisterEndpoint = "https://platform.at22.altinn.cloud/register/api/v1/"
+            ApiRegisterEndpoint = "https://dummy.endpoint/register/api/v1/"
         };
 
         _registerClient = new RegisterClient(new HttpClient(registerHttpMessageHandler), Options.Create(settings));
