@@ -4,29 +4,37 @@ using Altinn.Notifications.Core.Models.Orders;
 namespace Altinn.Notifications.Core.Services.Interfaces;
 
 /// <summary>
-/// Interface for the order processing service speficic to email orders
+/// Interface for the order processing service specific to email orders.
 /// </summary>
 public interface IEmailOrderProcessingService
 {
     /// <summary>
-    /// Processes a notification order
+    /// Processes a notification order.
     /// </summary>
-    public Task ProcessOrder(NotificationOrder order);
+    /// <param name="order">The notification order to process.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    Task ProcessOrder(NotificationOrder order);
 
     /// <summary>
-    /// Processes a notification order for the provided list of recipients
-    /// without looking up additional recipient data
+    /// Processes a notification order for the provided list of recipients without looking up additional recipient data.
     /// </summary>
-    public Task ProcessOrderWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients);
+    /// <param name="order">The notification order to process.</param>
+    /// <param name="recipients">The list of recipients to process.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    Task ProcessOrderWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients);
 
     /// <summary>
-    /// Retry processing of a notification order
+    /// Retries processing of a notification order.
     /// </summary>
-    public Task ProcessOrderRetry(NotificationOrder order);
+    /// <param name="order">The notification order to retry processing.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    Task ProcessOrderRetry(NotificationOrder order);
 
     /// <summary>
-    /// Retryprocessing of a notification order for the provided list of recipients
-    /// without looking up additional recipient data
+    /// Retries processing of a notification order for the provided list of recipients without looking up additional recipient data.
     /// </summary>
-    public Task ProcessOrderRetryWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients);
+    /// <param name="order">The notification order to retry processing.</param>
+    /// <param name="recipients">The list of recipients to process.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    Task ProcessOrderRetryWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients);
 }

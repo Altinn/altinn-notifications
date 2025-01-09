@@ -1,52 +1,105 @@
 ﻿using System.Text;
 using System.Text.Json;
 
-using Altinn.Notifications.Core;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.ContactPoints;
+using Altinn.Notifications.Core.Models.Parties;
 using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Integrations.Configuration;
+using Altinn.Notifications.Integrations.Register.Models;
 
 using Microsoft.Extensions.Options;
 
-namespace Altinn.Notifications.Integrations.Register
+namespace Altinn.Notifications.Integrations.Register;
+
+/// <summary>
+/// Implementation of the <see cref="IRegisterClient"/> to retrieve information for organizations and individuals.
+/// </summary>
+public class RegisterClient : IRegisterClient
 {
+    private readonly HttpClient _client;
+    private readonly JsonSerializerOptions _jsonSerializerOptions;
+    private readonly string _contactPointLookupEndpoint = "organizations/contactpoint/lookup";
+    private readonly string _nameComponentsLookupEndpoint = "parties/nameslookup";
+
     /// <summary>
-    /// Implementation of the <see cref="IRegisterClient"/>
+    /// Initializes a new instance of the <see cref="RegisterClient"/> class.
     /// </summary>
-    public class RegisterClient : IRegisterClient
+    /// <param name="client">The HTTP client used to make requests to the register service.</param>
+    /// <param name="settings">The platform settings containing the API endpoints.</param>
+    public RegisterClient(HttpClient client, IOptions<PlatformSettings> settings)
     {
-        private readonly HttpClient _client;
+        _client = client;
+        _client.BaseAddress = new Uri(settings.Value.ApiRegisterEndpoint);
+        _jsonSerializerOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+    }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RegisterClient"/> class.
-        /// </summary>
-        public RegisterClient(HttpClient client, IOptions<PlatformSettings> settings)
+    /// <inheritdoc/>
+    public async Task<List<OrganizationContactPoints>> GetOrganizationContactPoints(List<string> organizationNumbers)
+    {
+        if (organizationNumbers == null || organizationNumbers.Count == 0)
         {
-            _client = client;
-            _client.BaseAddress = new Uri(settings.Value.ApiRegisterEndpoint);
+            return [];
         }
 
-        /// <inheritdoc/>
-        public async Task<List<OrganizationContactPoints>> GetOrganizationContactPoints(List<string> organizationNumbers)
+        var lookupObject = new OrgContactPointLookup
         {
-            var lookupObject = new OrgContactPointLookup
-            {
-                OrganizationNumbers = organizationNumbers
-            };
+            OrganizationNumbers = organizationNumbers
+        };
 
-            HttpContent content = new StringContent(JsonSerializer.Serialize(lookupObject, JsonSerializerOptionsProvider.Options), Encoding.UTF8, "application/json");
+        var content = CreateJsonContent(lookupObject);
 
-            var response = await _client.PostAsync("organizations/contactpoint/lookup", content);
+        var response = await _client.PostAsync(_contactPointLookupEndpoint, content);
 
-            if (!response.IsSuccessStatusCode)
-            {
-                throw await PlatformHttpException.CreateAsync(response);
-            }
-
-            string responseContent = await response.Content.ReadAsStringAsync();
-            List<OrganizationContactPoints>? contactPoints = JsonSerializer.Deserialize<OrgContactPointsList>(responseContent, JsonSerializerOptionsProvider.Options)!.ContactPointsList;
-            return contactPoints!;
+        if (!response.IsSuccessStatusCode)
+        {
+            throw await PlatformHttpException.CreateAsync(response);
         }
+
+        var responseContent = await response.Content.ReadAsStringAsync();
+        var contactPoints = JsonSerializer.Deserialize<OrgContactPointsList>(responseContent, _jsonSerializerOptions)?.ContactPointsList;
+        return contactPoints ?? [];
+    }
+
+    /// <inheritdoc/>
+    public async Task<List<PartyDetails>> GetPartyDetails(List<string> organizationNumbers, List<string> socialSecurityNumbers)
+    {
+        if ((organizationNumbers?.Count ?? 0) == 0 && (socialSecurityNumbers?.Count ?? 0) == 0)
+        {
+            return [];
+        }
+
+        var partyDetailsLookupBatch = new PartyDetailsLookupBatch(organizationNumbers, socialSecurityNumbers);
+        var content = CreateJsonContent(partyDetailsLookupBatch);
+
+        var response = await _client.PostAsync(_nameComponentsLookupEndpoint, content);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw await PlatformHttpException.CreateAsync(response);
+        }
+
+        var responseContent = await response.Content.ReadAsStringAsync();
+        var partyDetailsList = JsonSerializer.Deserialize<PartyDetailsLookupResult>(responseContent, _jsonSerializerOptions)?.PartyDetailsList;
+
+        return partyDetailsList ?? [];
+    }
+
+    /// <summary>
+    /// Creates an HTTP content object with a JSON-serialized representation of the specified object.
+    /// </summary>
+    /// <typeparam name="T">The type of the object to serialize.</typeparam>
+    /// <param name="payload">The object to serialize into JSON.</param>
+    /// <returns>
+    /// An <see cref="HttpContent"/> object containing the serialized JSON representation 
+    /// of the provided object, encoded in UTF-8, with a media type of "application/json".
+    /// </returns>
+    /// <remarks>
+    /// This method uses the specified <see cref="JsonSerializerOptions"/> to control the serialization behavior.
+    /// </remarks>
+    private StringContent CreateJsonContent<T>(T payload)
+    {
+        var json = JsonSerializer.Serialize(payload, _jsonSerializerOptions);
+        return new StringContent(json, Encoding.UTF8, "application/json");
     }
 }
