@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 
 using Altinn.Common.AccessTokenClient.Services;
@@ -98,6 +99,39 @@ public class RegisterClientTests
         // Assert
         Assert.Empty(result);
         Assert.NotNull(result);
+    }
+
+    [Fact]
+    public async Task GetOrganizationContactPoints_WithNullResponseContent_ReturnsEmpty()
+    {
+        // Arrange
+        var registerHttpMessageHandler = new DelegatingHandlerStub((request, token) =>
+        {
+            if (request!.RequestUri!.AbsolutePath.EndsWith("contactpoint/lookup"))
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("null", Encoding.UTF8, "application/json")
+                });
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        });
+
+        PlatformSettings settings = new()
+        {
+            ApiRegisterEndpoint = "https://dummy.endpoint/register/api/v1/"
+        };
+
+        Mock<IAccessTokenGenerator> accessTokenGenerator = new();
+
+        var registerClient = new RegisterClient(new HttpClient(registerHttpMessageHandler), Options.Create(settings), accessTokenGenerator.Object);
+
+        // Act
+        List<OrganizationContactPoints> actual = await registerClient.GetOrganizationContactPoints(["test-org"]);
+
+        // Assert
+        Assert.Empty(actual);
     }
 
     [Fact]
