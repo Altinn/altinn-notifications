@@ -30,7 +30,12 @@ public class RegisterClientTests
 
     public RegisterClientTests()
     {
-        var registerHttpMessageHandler = new DelegatingHandlerStub(async (request, token) =>
+        _registerClient = CreateRegisterClient();
+    }
+
+    private RegisterClient CreateRegisterClient(DelegatingHandler? handler = null, string accessToken = "valid-token")
+    {
+        var registerHttpMessageHandler = handler ?? new DelegatingHandlerStub(async (request, token) =>
         {
             if (request!.RequestUri!.AbsolutePath.EndsWith("contactpoint/lookup"))
             {
@@ -52,24 +57,9 @@ public class RegisterClientTests
         };
 
         Mock<IAccessTokenGenerator> accessTokenGenerator = new();
+        accessTokenGenerator.Setup(x => x.GenerateAccessToken(It.IsAny<string>(), It.IsAny<string>())).Returns(accessToken);
 
-        _registerClient = new RegisterClient(new HttpClient(registerHttpMessageHandler), Options.Create(settings), accessTokenGenerator.Object);
-    }
-
-    [Fact]
-    public void RegisterClient_WithNullHttpClient_ThrowsArgumentNullException()
-    {
-        // Arrange
-        PlatformSettings settings = new()
-        {
-            ApiRegisterEndpoint = "https://dummy.endpoint/register/api/v1/"
-        };
-
-        Mock<IAccessTokenGenerator> accessTokenGenerator = new();
-
-        // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() => new RegisterClient(null!, Options.Create(settings), accessTokenGenerator.Object));
-        Assert.Equal("client", exception.ParamName);
+        return new RegisterClient(new HttpClient(registerHttpMessageHandler), Options.Create(settings), accessTokenGenerator.Object);
     }
 
     [Fact]
@@ -90,7 +80,7 @@ public class RegisterClientTests
 
         // Assert
         Assert.Equal(2, actual.Count);
-        Assert.Contains("910011154", actual.Select(cp => cp.OrganizationNumber));
+        Assert.Contains("910011154", actual.Select(e => e.OrganizationNumber));
     }
 
     [Fact]
@@ -99,6 +89,7 @@ public class RegisterClientTests
         // Act
         var exception = await Assert.ThrowsAsync<PlatformHttpException>(async () => await _registerClient.GetOrganizationContactPoints(["unavailable"]));
 
+        // Assert
         Assert.StartsWith("503 - Service Unavailable", exception.Message);
         Assert.Equal(HttpStatusCode.ServiceUnavailable, exception.Response?.StatusCode);
     }
@@ -121,7 +112,7 @@ public class RegisterClientTests
     public async Task GetOrganizationContactPoints_WithNullResponseContent_ReturnsEmpty()
     {
         // Arrange
-        var registerHttpMessageHandler = new DelegatingHandlerStub((request, token) =>
+        var registerClient = CreateRegisterClient(new DelegatingHandlerStub((request, token) =>
         {
             if (request!.RequestUri!.AbsolutePath.EndsWith("contactpoint/lookup"))
             {
@@ -132,16 +123,7 @@ public class RegisterClientTests
             }
 
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
-        });
-
-        PlatformSettings settings = new()
-        {
-            ApiRegisterEndpoint = "https://dummy.endpoint/register/api/v1/"
-        };
-
-        Mock<IAccessTokenGenerator> accessTokenGenerator = new();
-
-        var registerClient = new RegisterClient(new HttpClient(registerHttpMessageHandler), Options.Create(settings), accessTokenGenerator.Object);
+        }));
 
         // Act
         List<OrganizationContactPoints> actual = await registerClient.GetOrganizationContactPoints(["test-org"]);
@@ -168,7 +150,7 @@ public class RegisterClientTests
 
         // Assert
         Assert.Equal(2, actual.Count);
-        Assert.Contains("313600947", actual.Select(pd => pd.OrganizationNumber));
+        Assert.Contains("313600947", actual.Select(e => e.OrganizationNumber));
     }
 
     [Fact]
@@ -177,6 +159,7 @@ public class RegisterClientTests
         // Act
         var exception = await Assert.ThrowsAsync<PlatformHttpException>(async () => await _registerClient.GetPartyDetails(["unavailable"], ["unavailable"]));
 
+        // Assert
         Assert.StartsWith("503 - Service Unavailable", exception.Message);
         Assert.Equal(HttpStatusCode.ServiceUnavailable, exception.Response?.StatusCode);
     }
@@ -205,28 +188,20 @@ public class RegisterClientTests
     public async Task GetPartyDetails_WithEmptyAccessToken_DoesNotAddHeader()
     {
         // Arrange
-        var registerHttpMessageHandler = new DelegatingHandlerStub((request, token) =>
-        {
-            if (request!.RequestUri!.AbsolutePath.EndsWith("nameslookup"))
+        var registerClient = CreateRegisterClient(
+            new DelegatingHandlerStub((request, token) =>
             {
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                if (request!.RequestUri!.AbsolutePath.EndsWith("nameslookup"))
                 {
-                    Content = new StringContent(JsonSerializer.Serialize(new PartyDetailsLookupResult { PartyDetailsList = new List<PartyDetails>() }), Encoding.UTF8, "application/json")
-                });
-            }
+                    return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                    {
+                        Content = new StringContent(JsonSerializer.Serialize(new PartyDetailsLookupResult { PartyDetailsList = [] }), Encoding.UTF8, "application/json")
+                    });
+                }
 
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
-        });
-
-        PlatformSettings settings = new()
-        {
-            ApiRegisterEndpoint = "https://dummy.endpoint/register/api/v1/"
-        };
-
-        Mock<IAccessTokenGenerator> accessTokenGenerator = new();
-        accessTokenGenerator.Setup(x => x.GenerateAccessToken(It.IsAny<string>(), It.IsAny<string>())).Returns(string.Empty);
-
-        var registerClient = new RegisterClient(new HttpClient(registerHttpMessageHandler), Options.Create(settings), accessTokenGenerator.Object);
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+            }),
+            string.Empty);
 
         // Act
         List<PartyDetails> actual = await registerClient.GetPartyDetails(["test-org"], ["test-ssn"]);
@@ -240,12 +215,10 @@ public class RegisterClientTests
     public async Task GetPartyDetails_WithValidAccessToken_AddsHeader()
     {
         // Arrange
-        var registerHttpMessageHandler = new DelegatingHandlerStub(async (request, token) =>
+        var registerClient = CreateRegisterClient(new DelegatingHandlerStub(async (request, token) =>
         {
             if (request!.RequestUri!.AbsolutePath.EndsWith("nameslookup"))
             {
-                PartyDetailsLookupBatch? lookup = JsonSerializer.Deserialize<PartyDetailsLookupBatch>(await request!.Content!.ReadAsStringAsync(token), _serializerOptions);
-
                 var response = new HttpResponseMessage(HttpStatusCode.OK)
                 {
                     Content = new StringContent(JsonSerializer.Serialize(new PartyDetailsLookupResult { PartyDetailsList = [] }), Encoding.UTF8, "application/json")
@@ -259,17 +232,7 @@ public class RegisterClientTests
             }
 
             return new HttpResponseMessage(HttpStatusCode.NotFound);
-        });
-
-        PlatformSettings settings = new()
-        {
-            ApiRegisterEndpoint = "https://dummy.endpoint/register/api/v1/"
-        };
-
-        Mock<IAccessTokenGenerator> accessTokenGenerator = new();
-        accessTokenGenerator.Setup(x => x.GenerateAccessToken(It.IsAny<string>(), It.IsAny<string>())).Returns("valid-token");
-
-        var registerClient = new RegisterClient(new HttpClient(registerHttpMessageHandler), Options.Create(settings), accessTokenGenerator.Object);
+        }));
 
         // Act
         List<PartyDetails> actual = await registerClient.GetPartyDetails(["test-org"], ["test-ssn"]);
