@@ -229,7 +229,11 @@ public class RegisterClientTests
             if (request!.RequestUri!.AbsolutePath.EndsWith("nameslookup"))
             {
                 PartyDetailsLookupBatch? lookup = JsonSerializer.Deserialize<PartyDetailsLookupBatch>(await request!.Content!.ReadAsStringAsync(token), _serializerOptions);
-                var response = await GetPartyDetailsResponse(lookup!);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(JsonSerializer.Serialize(new PartyDetailsLookupResult { PartyDetailsList = [] }), Encoding.UTF8, "application/json")
+                };
 
                 // Assert that the PlatformAccessToken header is present
                 Assert.True(request.Headers.Contains("PlatformAccessToken"));
