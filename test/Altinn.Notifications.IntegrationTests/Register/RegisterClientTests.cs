@@ -165,6 +165,26 @@ public class RegisterClientTests
         Assert.Equal(HttpStatusCode.ServiceUnavailable, exception.Response?.StatusCode);
     }
 
+    [Fact]
+    public async Task GetPartyDetails_WithNullOrganizationNumbersAndEmptySocialSecurityNumbers_ReturnsEmpty()
+    {
+        // Act
+        List<PartyDetails> actual = await _registerClient.GetPartyDetails(null, []);
+
+        // Assert
+        Assert.Empty(actual);
+    }
+
+    [Fact]
+    public async Task GetPartyDetails_WithEmptyOrganizationNumbersAndNullSocialSecurityNumbers_ReturnsEmpty()
+    {
+        // Act
+        List<PartyDetails> actual = await _registerClient.GetPartyDetails([], null);
+
+        // Assert
+        Assert.Empty(actual);
+    }
+
     private Task<HttpResponseMessage> CreateMockResponse(object? contentData, HttpStatusCode statusCode)
     {
         JsonContent? content = (contentData != null) ? JsonContent.Create(contentData, options: _serializerOptions) : null;
