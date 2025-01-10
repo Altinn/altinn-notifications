@@ -69,7 +69,7 @@ public class RegisterClient : IRegisterClient
     }
 
     /// <inheritdoc/>
-    public async Task<List<PartyDetails>> GetPartyDetails(List<string> organizationNumbers, List<string> socialSecurityNumbers)
+    public async Task<List<PartyDetails>> GetPartyDetails(List<string>? organizationNumbers = null, List<string>? socialSecurityNumbers = null)
     {
         if ((organizationNumbers?.Count ?? 0) == 0 && (socialSecurityNumbers?.Count ?? 0) == 0)
         {

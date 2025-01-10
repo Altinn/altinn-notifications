@@ -24,14 +24,14 @@ public interface IKeywordsService
     /// <summary>
     /// Replaces placeholder keywords in a collection of <see cref="SmsRecipient"/> with actual values.
     /// </summary>
-    /// <param name="smsRecipients">The collection of <see cref="SmsRecipient"/> to process.</param>
+    /// <param name="recipients">The collection of <see cref="SmsRecipient"/> to process.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains the collection of <see cref="SmsRecipient"/> with the placeholder keywords replaced by actual values.</returns>
-    Task<IEnumerable<SmsRecipient>> ReplaceKeywordsAsync(IEnumerable<SmsRecipient> smsRecipients);
+    Task<IEnumerable<SmsRecipient>> ReplaceKeywordsAsync(IEnumerable<SmsRecipient> recipients);
 
     /// <summary>
     /// Replaces placeholder keywords in a collection of <see cref="EmailRecipient"/> with actual values.
     /// </summary>
-    /// <param name="emailRecipients">The collection of <see cref="EmailRecipient"/> to process.</param>
+    /// <param name="recipients">The collection of <see cref="EmailRecipient"/> to process.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains the collection of <see cref="EmailRecipient"/> with the placeholder keywords replaced by actual values.</returns>
-    Task<IEnumerable<EmailRecipient>> ReplaceKeywordsAsync(IEnumerable<EmailRecipient> emailRecipients);
+    Task<IEnumerable<EmailRecipient>> ReplaceKeywordsAsync(IEnumerable<EmailRecipient> recipients);
 }
