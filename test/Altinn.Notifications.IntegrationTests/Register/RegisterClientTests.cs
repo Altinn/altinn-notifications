@@ -185,6 +185,41 @@ public class RegisterClientTests
         Assert.Empty(actual);
     }
 
+    [Fact]
+    public async Task GetPartyDetails_WithEmptyAccessToken_DoesNotAddHeader()
+    {
+        // Arrange
+        var registerHttpMessageHandler = new DelegatingHandlerStub((request, token) =>
+        {
+            if (request!.RequestUri!.AbsolutePath.EndsWith("nameslookup"))
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(JsonSerializer.Serialize(new PartyDetailsLookupResult { PartyDetailsList = new List<PartyDetails>() }), Encoding.UTF8, "application/json")
+                });
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        });
+
+        PlatformSettings settings = new()
+        {
+            ApiRegisterEndpoint = "https://dummy.endpoint/register/api/v1/"
+        };
+
+        Mock<IAccessTokenGenerator> accessTokenGenerator = new();
+        accessTokenGenerator.Setup(x => x.GenerateAccessToken(It.IsAny<string>(), It.IsAny<string>())).Returns(string.Empty);
+
+        var registerClient = new RegisterClient(new HttpClient(registerHttpMessageHandler), Options.Create(settings), accessTokenGenerator.Object);
+
+        // Act
+        List<PartyDetails> actual = await registerClient.GetPartyDetails(["test-org"], ["test-ssn"]);
+
+        // Assert
+        Assert.NotNull(actual);
+        Assert.Empty(actual);
+    }
+
     private Task<HttpResponseMessage> CreateMockResponse(object? contentData, HttpStatusCode statusCode)
     {
         JsonContent? content = (contentData != null) ? JsonContent.Create(contentData, options: _serializerOptions) : null;
