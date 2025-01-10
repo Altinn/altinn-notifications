@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using System.Text.Json;
 
+using Altinn.Common.AccessTokenClient.Services;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.ContactPoints;
 using Altinn.Notifications.Core.Models.Parties;
@@ -22,15 +23,21 @@ public class RegisterClient : IRegisterClient
     private readonly string _contactPointLookupEndpoint = "organizations/contactpoint/lookup";
     private readonly string _nameComponentsLookupEndpoint = "parties/nameslookup";
 
+    private readonly IAccessTokenGenerator _accessTokenGenerator;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="RegisterClient"/> class.
     /// </summary>
     /// <param name="client">The HTTP client used to make requests to the register service.</param>
     /// <param name="settings">The platform settings containing the API endpoints.</param>
-    public RegisterClient(HttpClient client, IOptions<PlatformSettings> settings)
+    /// <param name="accessTokenGenerator">The access token generator.</param>
+    public RegisterClient(HttpClient client, IOptions<PlatformSettings> settings, IAccessTokenGenerator accessTokenGenerator)
     {
+        _accessTokenGenerator = accessTokenGenerator;
+
         _client = client;
         _client.BaseAddress = new Uri(settings.Value.ApiRegisterEndpoint);
+
         _jsonSerializerOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
     }
 
@@ -69,10 +76,18 @@ public class RegisterClient : IRegisterClient
             return [];
         }
 
-        var partyDetailsLookupBatch = new PartyDetailsLookupBatch(organizationNumbers, socialSecurityNumbers);
-        var content = CreateJsonContent(partyDetailsLookupBatch);
+        HttpRequestMessage requestMessage = new(HttpMethod.Post, _nameComponentsLookupEndpoint)
+        {
+            Content = CreateJsonContent(new PartyDetailsLookupBatch(organizationNumbers, socialSecurityNumbers))
+        };
 
-        var response = await _client.PostAsync(_nameComponentsLookupEndpoint, content);
+        var accessToken = _accessTokenGenerator.GenerateAccessToken("platform", "notification");
+        if (!string.IsNullOrEmpty(accessToken))
+        {
+            requestMessage.Headers.Add("PlatformAccessToken", accessToken);
+        }
+
+        var response = await _client.SendAsync(requestMessage, CancellationToken.None);
 
         if (!response.IsSuccessStatusCode)
         {

@@ -102,7 +102,7 @@ public class KeywordsService : IKeywordsService
         List<string> organizationNumbers,
         List<string> nationalIdentityNumbers)
     {
-        var partyDetails = await _registerClient.GetPartyDetails(nationalIdentityNumbers, organizationNumbers);
+        var partyDetails = await _registerClient.GetPartyDetails(organizationNumbers, nationalIdentityNumbers);
 
         var organizationDetails = partyDetails
             .Where(e => !string.IsNullOrWhiteSpace(e.OrganizationNumber) && organizationNumbers.Contains(e.OrganizationNumber))

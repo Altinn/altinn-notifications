@@ -1,5 +1,6 @@
 ﻿using Altinn.ApiClients.Maskinporten.Extensions;
 using Altinn.ApiClients.Maskinporten.Services;
+using Altinn.Common.AccessTokenClient.Services;
 using Altinn.Common.PEP.Clients;
 using Altinn.Common.PEP.Implementation;
 using Altinn.Common.PEP.Interfaces;
@@ -13,6 +14,7 @@ using Altinn.Notifications.Integrations.Kafka.Producers;
 using Altinn.Notifications.Integrations.Register;
 using Altinn.Notifications.Integrations.SendCondition;
 
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -70,6 +72,8 @@ public static class ServiceCollectionExtensions
         services.Configure<Common.PEP.Configuration.PlatformSettings>(config.GetSection("PlatformSettings"));
         services.AddHttpClient<AuthorizationApiClient>();
         services.AddSingleton<IPDP, PDPAppSI>();
+        services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+        services.AddTransient<IAccessTokenGenerator, AccessTokenGenerator>();
         services.AddSingleton<IAuthorizationService, AuthorizationService>();
 
         services.AddMaskinportenHttpClient<SettingsJwkClientDefinition, IConditionClient, SendConditionClient>(
@@ -77,7 +81,7 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Adds kafka health checks
+    /// Adds Kafka health checks
     /// </summary>
     /// <param name="services">service collection.</param>
     /// <param name="config">the configuration collection</param>
