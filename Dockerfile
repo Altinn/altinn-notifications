@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:8.0.404-alpine3.20 AS build
+FROM mcr.microsoft.com/dotnet/sdk:9.0.101-alpine3.20 AS build
 WORKDIR /app
 
 # Copy csproj and restore as distinct layers
@@ -14,11 +14,11 @@ RUN dotnet build ./src/DbTools/DbTools.csproj -c Release -o /app_tools
 RUN dotnet publish -c Release -o out ./src/Altinn.Notifications/Altinn.Notifications.csproj
 
 # Build runtime image
-FROM mcr.microsoft.com/dotnet/aspnet:8.0.11-alpine3.20 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:9.0.0-alpine3.20 AS final
 WORKDIR /app
 EXPOSE 5090
 
-# installing package for time zone functionality
+# Installing package for time zone functionality
 RUN apk add --no-cache tzdata
 
 COPY --from=build /app/out .
