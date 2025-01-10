@@ -2,6 +2,7 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 
+using Altinn.Common.AccessTokenClient.Services;
 using Altinn.Notifications.Core.Models.ContactPoints;
 using Altinn.Notifications.Core.Models.Parties;
 using Altinn.Notifications.Core.Shared;
@@ -10,6 +11,8 @@ using Altinn.Notifications.Integrations.Register;
 using Altinn.Notifications.Integrations.Register.Models;
 
 using Microsoft.Extensions.Options;
+
+using Moq;
 
 using Xunit;
 
@@ -47,7 +50,9 @@ public class RegisterClientTests
             ApiRegisterEndpoint = "https://dummy.endpoint/register/api/v1/"
         };
 
-        _registerClient = new RegisterClient(new HttpClient(registerHttpMessageHandler), Options.Create(settings));
+        Mock<IAccessTokenGenerator> accessTokenGenerator = new();
+
+        _registerClient = new RegisterClient(new HttpClient(registerHttpMessageHandler), Options.Create(settings), accessTokenGenerator.Object);
     }
 
     [Fact]
