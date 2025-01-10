@@ -72,7 +72,6 @@ public static class ServiceCollectionExtensions
         services.Configure<Common.PEP.Configuration.PlatformSettings>(config.GetSection("PlatformSettings"));
         services.AddHttpClient<AuthorizationApiClient>();
         services.AddSingleton<IPDP, PDPAppSI>();
-        services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
         services.AddTransient<IAccessTokenGenerator, AccessTokenGenerator>();
         services.AddSingleton<IAuthorizationService, AuthorizationService>();
 
