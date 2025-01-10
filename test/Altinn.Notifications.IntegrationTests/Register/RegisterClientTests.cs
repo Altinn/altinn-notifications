@@ -216,6 +216,45 @@ public class RegisterClientTests
         List<PartyDetails> actual = await registerClient.GetPartyDetails(["test-org"], ["test-ssn"]);
 
         // Assert
+        Assert.Empty(actual);
+        Assert.NotNull(actual);
+    }
+
+    [Fact]
+    public async Task GetPartyDetails_WithValidAccessToken_AddsHeader()
+    {
+        // Arrange
+        var registerHttpMessageHandler = new DelegatingHandlerStub(async (request, token) =>
+        {
+            if (request!.RequestUri!.AbsolutePath.EndsWith("nameslookup"))
+            {
+                PartyDetailsLookupBatch? lookup = JsonSerializer.Deserialize<PartyDetailsLookupBatch>(await request!.Content!.ReadAsStringAsync(token), _serializerOptions);
+                var response = await GetPartyDetailsResponse(lookup!);
+
+                // Assert that the PlatformAccessToken header is present
+                Assert.True(request.Headers.Contains("PlatformAccessToken"));
+                Assert.Equal("valid-token", request.Headers.GetValues("PlatformAccessToken").First());
+
+                return response;
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        });
+
+        PlatformSettings settings = new()
+        {
+            ApiRegisterEndpoint = "https://dummy.endpoint/register/api/v1/"
+        };
+
+        Mock<IAccessTokenGenerator> accessTokenGenerator = new();
+        accessTokenGenerator.Setup(x => x.GenerateAccessToken(It.IsAny<string>(), It.IsAny<string>())).Returns("valid-token");
+
+        var registerClient = new RegisterClient(new HttpClient(registerHttpMessageHandler), Options.Create(settings), accessTokenGenerator.Object);
+
+        // Act
+        List<PartyDetails> actual = await registerClient.GetPartyDetails(["test-org"], ["test-ssn"]);
+
+        // Assert
         Assert.NotNull(actual);
         Assert.Empty(actual);
     }
