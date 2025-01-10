@@ -57,6 +57,22 @@ public class RegisterClientTests
     }
 
     [Fact]
+    public void RegisterClient_WithNullHttpClient_ThrowsArgumentNullException()
+    {
+        // Arrange
+        PlatformSettings settings = new()
+        {
+            ApiRegisterEndpoint = "https://dummy.endpoint/register/api/v1/"
+        };
+
+        Mock<IAccessTokenGenerator> accessTokenGenerator = new();
+
+        // Act & Assert
+        var exception = Assert.Throws<ArgumentNullException>(() => new RegisterClient(null!, Options.Create(settings), accessTokenGenerator.Object));
+        Assert.Equal("client", exception.ParamName);
+    }
+
+    [Fact]
     public async Task GetOrganizationContactPoints_WithEmptyList_ReturnsEmpty()
     {
         // Act
