@@ -14,7 +14,7 @@ using Microsoft.Extensions.Options;
 namespace Altinn.Notifications.Integrations.Register;
 
 /// <summary>
-/// A client implementing the <see cref="IRegisterClient"/> to retrieve information for organizations and individuals.
+/// A client implementation of <see cref="IRegisterClient"/> for retrieving information about organizations and individuals.
 /// </summary>
 public class RegisterClient : IRegisterClient
 {
