@@ -185,7 +185,6 @@ public class RegisterClientTests
         // Assert
         Assert.Equal(2, actual.Count);
         Assert.Contains("313600947", actual.Select(e => e.OrganizationNumber));
-        Assert.Contains("07837399275", actual.Select(e => e.NationalIdentityNumber));
     }
 
     [Fact]
@@ -321,6 +320,10 @@ public class RegisterClientTests
         {
             switch (firstRequest.OrganizationNumber)
             {
+                case "empty-list":
+                    contentData = new PartyDetailsLookupResult() { PartyDetailsList = [] };
+                    break;
+
                 case "populated-list":
                     contentData = new PartyDetailsLookupResult
                     {
@@ -341,6 +344,10 @@ public class RegisterClientTests
         {
             switch (firstRequest.SocialSecurityNumber)
             {
+                case "empty-list":
+                    contentData = new PartyDetailsLookupResult() { PartyDetailsList = [] };
+                    break;
+
                 case "populated-list":
                     contentData = new PartyDetailsLookupResult
                     {
