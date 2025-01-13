@@ -239,7 +239,7 @@ public class RegisterClientTests
     public async Task GetPartyDetails_WithValidAccessToken_AddsHeader()
     {
         // Arrange
-        var registerClient = CreateRegisterClient(new DelegatingHandlerStub(async (request, token) =>
+        var registerClient = CreateRegisterClient(new DelegatingHandlerStub((request, token) =>
         {
             if (request!.RequestUri!.AbsolutePath.EndsWith("nameslookup"))
             {
@@ -252,10 +252,10 @@ public class RegisterClientTests
                 Assert.True(request.Headers.Contains("PlatformAccessToken"));
                 Assert.Equal("valid-token", request.Headers.GetValues("PlatformAccessToken").First());
 
-                return response;
+                return Task.FromResult(response);
             }
 
-            return new HttpResponseMessage(HttpStatusCode.NotFound);
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
         }));
 
         // Act
