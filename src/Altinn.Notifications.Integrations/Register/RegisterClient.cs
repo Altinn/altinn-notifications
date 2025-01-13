@@ -14,7 +14,7 @@ using Microsoft.Extensions.Options;
 namespace Altinn.Notifications.Integrations.Register;
 
 /// <summary>
-/// Implementation of the <see cref="IRegisterClient"/> to retrieve information for organizations and individuals.
+/// A client implementing the <see cref="IRegisterClient"/> to retrieve information for organizations and individuals.
 /// </summary>
 public class RegisterClient : IRegisterClient
 {
@@ -33,10 +33,10 @@ public class RegisterClient : IRegisterClient
     /// <param name="accessTokenGenerator">The access token generator.</param>
     public RegisterClient(HttpClient client, IOptions<PlatformSettings> settings, IAccessTokenGenerator accessTokenGenerator)
     {
-        _accessTokenGenerator = accessTokenGenerator;
-
         _client = client;
         _client.BaseAddress = new Uri(settings.Value.ApiRegisterEndpoint);
+
+        _accessTokenGenerator = accessTokenGenerator;
 
         _jsonSerializerOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
     }
@@ -96,15 +96,8 @@ public class RegisterClient : IRegisterClient
 
         var responseContent = await response.Content.ReadAsStringAsync();
 
-        try
-        {
-            var partyDetailsList = JsonSerializer.Deserialize<PartyDetailsLookupResult>(responseContent, _jsonSerializerOptions)?.PartyDetailsList;
-            return partyDetailsList ?? [];
-        }
-        catch (JsonException)
-        {
-            return [];
-        }
+        var partyDetailsList = JsonSerializer.Deserialize<PartyDetailsLookupResult>(responseContent, _jsonSerializerOptions)?.PartyDetailsList;
+        return partyDetailsList ?? [];
     }
 
     /// <summary>
