@@ -321,10 +321,6 @@ public class RegisterClientTests
         {
             switch (firstRequest.OrganizationNumber)
             {
-                case "empty-list":
-                    contentData = new PartyDetailsLookupResult() { PartyDetailsList = [] };
-                    break;
-
                 case "populated-list":
                     contentData = new PartyDetailsLookupResult
                     {
@@ -345,10 +341,6 @@ public class RegisterClientTests
         {
             switch (firstRequest.SocialSecurityNumber)
             {
-                case "empty-list":
-                    contentData = new PartyDetailsLookupResult() { PartyDetailsList = [] };
-                    break;
-
                 case "populated-list":
                     contentData = new PartyDetailsLookupResult
                     {
