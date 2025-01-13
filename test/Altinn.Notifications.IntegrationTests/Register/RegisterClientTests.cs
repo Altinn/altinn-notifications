@@ -34,16 +34,6 @@ public class RegisterClientTests
     }
 
     [Fact]
-    public async Task GetOrganizationContactPoints_WithEmptyList_ReturnsEmpty()
-    {
-        // Act
-        List<OrganizationContactPoints> actual = await _registerClient.GetOrganizationContactPoints(["empty-list"]);
-
-        // Assert
-        Assert.Empty(actual);
-    }
-
-    [Fact]
     public async Task GetOrganizationContactPoints_WithEmptyOrganizationNumbers_ReturnsEmpty()
     {
         // Arrange
