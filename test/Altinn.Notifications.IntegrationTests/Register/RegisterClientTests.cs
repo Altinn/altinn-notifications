@@ -239,6 +239,30 @@ public class RegisterClientTests
         Assert.Empty(actual);
     }
 
+    [Fact]
+    public async Task GetPartyDetails_WithNullDeserializedResponse_ReturnsEmpty()
+    {
+        // Arrange
+        var registerClient = CreateRegisterClient(new DelegatingHandlerStub((request, token) =>
+        {
+            if (request!.RequestUri!.AbsolutePath.EndsWith("nameslookup"))
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("{}", Encoding.UTF8, "application/json")
+                });
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        }));
+
+        // Act
+        List<PartyDetails> actual = await registerClient.GetPartyDetails(["test-org"], ["test-ssn"]);
+
+        // Assert
+        Assert.Empty(actual);
+    }
+
     private Task<HttpResponseMessage> CreateMockResponse(object? contentData, HttpStatusCode statusCode)
     {
         JsonContent? content = (contentData != null) ? JsonContent.Create(contentData, options: _serializerOptions) : null;
