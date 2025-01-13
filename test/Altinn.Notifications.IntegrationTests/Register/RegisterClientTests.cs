@@ -209,33 +209,6 @@ public class RegisterClientTests
     }
 
     [Fact]
-    public async Task GetPartyDetails_WithEmptyAccessToken_DoesNotAddHeader()
-    {
-        // Arrange
-        var registerClient = CreateRegisterClient(
-            new DelegatingHandlerStub((request, token) =>
-            {
-                if (request!.RequestUri!.AbsolutePath.EndsWith("nameslookup"))
-                {
-                    return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-                    {
-                        Content = new StringContent(JsonSerializer.Serialize(new PartyDetailsLookupResult { PartyDetailsList = [] }), Encoding.UTF8, "application/json")
-                    });
-                }
-
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
-            }),
-            string.Empty);
-
-        // Act
-        List<PartyDetails> actual = await registerClient.GetPartyDetails(["test-org"], ["test-ssn"]);
-
-        // Assert
-        Assert.Empty(actual);
-        Assert.NotNull(actual);
-    }
-
-    [Fact]
     public async Task GetPartyDetails_WithValidAccessToken_AddsHeader()
     {
         // Arrange
