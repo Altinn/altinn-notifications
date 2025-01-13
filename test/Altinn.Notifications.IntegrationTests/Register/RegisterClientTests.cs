@@ -189,21 +189,21 @@ public class RegisterClientTests
         // Assert
         Assert.Equal(4, actual.Count);
 
-        var organization1 = actual.FirstOrDefault(e => e.OrganizationNumber == "313600947");
-        Assert.NotNull(organization1);
-        Assert.Equal("Test Organization 1", organization1.Name);
+        var firstOrganization = actual.FirstOrDefault(e => e.OrganizationNumber == "313600947");
+        Assert.NotNull(firstOrganization);
+        Assert.Equal("Test Organization 1", firstOrganization.Name);
 
-        var organization2 = actual.FirstOrDefault(e => e.OrganizationNumber == "315058384");
-        Assert.NotNull(organization2);
-        Assert.Equal("Test Organization 2", organization2.Name);
+        var secondOrganization = actual.FirstOrDefault(e => e.OrganizationNumber == "315058384");
+        Assert.NotNull(secondOrganization);
+        Assert.Equal("Test Organization 2", secondOrganization.Name);
 
-        var person1 = actual.FirstOrDefault(e => e.NationalIdentityNumber == "07837399275");
-        Assert.NotNull(person1);
-        Assert.Equal("Test Person 1", person1.Name);
+        var firstPerson = actual.FirstOrDefault(e => e.NationalIdentityNumber == "07837399275");
+        Assert.NotNull(firstPerson);
+        Assert.Equal("Test Person 1", firstPerson.Name);
 
-        var person2 = actual.FirstOrDefault(e => e.NationalIdentityNumber == "04917199103");
-        Assert.NotNull(person2);
-        Assert.Equal("Test Person 2", person2.Name);
+        var secondPerson = actual.FirstOrDefault(e => e.NationalIdentityNumber == "04917199103");
+        Assert.NotNull(secondPerson);
+        Assert.Equal("Test Person 2", secondPerson.Name);
     }
 
     [Fact]
@@ -246,42 +246,6 @@ public class RegisterClientTests
         // Assert
         Assert.NotNull(actual);
         Assert.Empty(actual);
-    }
-
-    [Fact]
-    public async Task GetPartyDetails_WithValidJSONResponse_ReturnsPopulatedList()
-    {
-        // Arrange
-        var registerClient = CreateRegisterClient(new DelegatingHandlerStub((request, token) =>
-        {
-            if (request!.RequestUri!.AbsolutePath.EndsWith("nameslookup"))
-            {
-                var responseContent = new PartyDetailsLookupResult
-                {
-                    PartyDetailsList =
-                    [
-                        new() { NationalIdentityNumber = "987654321", Name = "Person 1" },
-                        new() { OrganizationNumber = "123456789", Name = "Organization 1" }
-                    ]
-                };
-
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-                {
-                    Content = new StringContent(JsonSerializer.Serialize(responseContent), Encoding.UTF8, "application/json")
-                });
-            }
-
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
-        }));
-
-        // Act
-        List<PartyDetails> actual = await registerClient.GetPartyDetails(["test-org"], ["test-ssn"]);
-
-        // Assert
-        Assert.NotEmpty(actual);
-        Assert.Equal(2, actual.Count);
-        Assert.Contains(actual, e => e.NationalIdentityNumber == "987654321" && e.Name == "Person 1");
-        Assert.Contains(actual, e => e.OrganizationNumber == "123456789" && e.Name == "Organization 1");
     }
 
     private RegisterClient CreateRegisterClient(DelegatingHandler? handler = null, string accessToken = "valid-token")
