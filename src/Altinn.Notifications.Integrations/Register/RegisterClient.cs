@@ -96,8 +96,8 @@ public class RegisterClient : IRegisterClient
 
         var responseContent = await response.Content.ReadAsStringAsync();
 
-        var partyDetailsList = JsonSerializer.Deserialize<PartyDetailsLookupResult>(responseContent, _jsonSerializerOptions)?.PartyDetailsList;
-        return partyDetailsList ?? [];
+        var deserializeResponse = JsonSerializer.Deserialize<PartyDetailsLookupResult>(responseContent, _jsonSerializerOptions);
+        return deserializeResponse?.PartyDetailsList ?? [];
     }
 
     /// <summary>
