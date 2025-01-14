@@ -14,7 +14,6 @@ using Altinn.Notifications.Integrations.Kafka.Producers;
 using Altinn.Notifications.Integrations.Register;
 using Altinn.Notifications.Integrations.SendCondition;
 
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
