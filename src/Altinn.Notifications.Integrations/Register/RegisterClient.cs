@@ -81,7 +81,7 @@ public class RegisterClient : IRegisterClient
             Content = CreateJsonContent(new PartyDetailsLookupBatch(organizationNumbers, socialSecurityNumbers))
         };
 
-        var accessToken = _accessTokenGenerator.GenerateAccessToken("platform", "notification");
+        var accessToken = _accessTokenGenerator.GenerateAccessToken("platform", "notifications");
         if (!string.IsNullOrEmpty(accessToken))
         {
             requestMessage.Headers.Add("PlatformAccessToken", accessToken);
