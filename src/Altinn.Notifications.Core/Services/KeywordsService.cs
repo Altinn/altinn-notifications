@@ -33,17 +33,17 @@ public class KeywordsService : IKeywordsService
         !string.IsNullOrWhiteSpace(value) && value.Contains(_recipientNumberPlaceholder);
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<SmsRecipient>> ReplaceKeywordsAsync(IEnumerable<SmsRecipient> smsRecipients)
+    public async Task<IEnumerable<SmsRecipient>> ReplaceKeywordsAsync(IEnumerable<SmsRecipient> recipients)
     {
-        ArgumentNullException.ThrowIfNull(smsRecipients);
+        ArgumentNullException.ThrowIfNull(recipients);
 
-        var organizationNumbers = smsRecipients
+        var organizationNumbers = recipients
             .Where(e => !string.IsNullOrWhiteSpace(e.CustomizedBody))
             .Where(e => !string.IsNullOrWhiteSpace(e.OrganizationNumber))
             .Select(e => e.OrganizationNumber!)
             .ToList();
 
-        var nationalIdentityNumbers = smsRecipients
+        var nationalIdentityNumbers = recipients
             .Where(e => !string.IsNullOrWhiteSpace(e.CustomizedBody))
             .Where(e => !string.IsNullOrWhiteSpace(e.NationalIdentityNumber))
             .Select(e => e.NationalIdentityNumber!)
@@ -51,27 +51,27 @@ public class KeywordsService : IKeywordsService
 
         var (personDetails, organizationDetails) = await FetchPartyDetailsAsync(organizationNumbers, nationalIdentityNumbers);
 
-        foreach (var smsRecipient in smsRecipients)
+        foreach (var smsRecipient in recipients)
         {
             smsRecipient.CustomizedBody =
                 ReplacePlaceholders(smsRecipient.CustomizedBody, smsRecipient.OrganizationNumber, smsRecipient.NationalIdentityNumber, organizationDetails, personDetails);
         }
 
-        return smsRecipients;
+        return recipients;
     }
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<EmailRecipient>> ReplaceKeywordsAsync(IEnumerable<EmailRecipient> emailRecipients)
+    public async Task<IEnumerable<EmailRecipient>> ReplaceKeywordsAsync(IEnumerable<EmailRecipient> recipients)
     {
-        ArgumentNullException.ThrowIfNull(emailRecipients);
+        ArgumentNullException.ThrowIfNull(recipients);
 
-        var organizationNumbers = emailRecipients
+        var organizationNumbers = recipients
             .Where(e => !string.IsNullOrWhiteSpace(e.OrganizationNumber))
             .Where(e => !string.IsNullOrWhiteSpace(e.CustomizedBody) || !string.IsNullOrWhiteSpace(e.CustomizedSubject))
             .Select(e => e.OrganizationNumber!)
             .ToList();
 
-        var nationalIdentityNumbers = emailRecipients
+        var nationalIdentityNumbers = recipients
             .Where(e => !string.IsNullOrWhiteSpace(e.NationalIdentityNumber))
             .Where(e => !string.IsNullOrWhiteSpace(e.CustomizedBody) || !string.IsNullOrWhiteSpace(e.CustomizedSubject))
             .Select(e => e.NationalIdentityNumber!)
@@ -79,7 +79,7 @@ public class KeywordsService : IKeywordsService
 
         var (personDetails, organizationDetails) = await FetchPartyDetailsAsync(organizationNumbers, nationalIdentityNumbers);
 
-        foreach (var emailRecipient in emailRecipients)
+        foreach (var emailRecipient in recipients)
         {
             emailRecipient.CustomizedBody =
                 ReplacePlaceholders(emailRecipient.CustomizedBody, emailRecipient.OrganizationNumber, emailRecipient.NationalIdentityNumber, organizationDetails, personDetails);
@@ -88,7 +88,7 @@ public class KeywordsService : IKeywordsService
                 ReplacePlaceholders(emailRecipient.CustomizedSubject, emailRecipient.OrganizationNumber, emailRecipient.NationalIdentityNumber, organizationDetails, personDetails);
         }
 
-        return emailRecipients;
+        return recipients;
     }
 
     /// <summary>
@@ -102,7 +102,7 @@ public class KeywordsService : IKeywordsService
         List<string> organizationNumbers,
         List<string> nationalIdentityNumbers)
     {
-        var partyDetails = await _registerClient.GetPartyDetails(nationalIdentityNumbers, organizationNumbers);
+        var partyDetails = await _registerClient.GetPartyDetails(organizationNumbers, nationalIdentityNumbers);
 
         var organizationDetails = partyDetails
             .Where(e => !string.IsNullOrWhiteSpace(e.OrganizationNumber) && organizationNumbers.Contains(e.OrganizationNumber))
