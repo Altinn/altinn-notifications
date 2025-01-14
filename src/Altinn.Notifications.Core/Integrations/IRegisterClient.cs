@@ -27,5 +27,5 @@ public interface IRegisterClient
     /// A task that represents the asynchronous operation. 
     /// The task result contains a list of <see cref="PartyDetails"/> representing the details of the specified individuals and organizations.
     /// </returns>
-    Task<List<PartyDetails>> GetPartyDetails(List<string>? organizationNumbers = null, List<string>? socialSecurityNumbers = null);
+    Task<List<PartyDetails>> GetPartyDetails(List<string>? organizationNumbers, List<string>? socialSecurityNumbers);
 }
