@@ -1,4 +1,4 @@
-﻿using System.Text;
+﻿using System.Net.Http.Json;
 using System.Text.Json;
 
 using Altinn.Common.AccessTokenClient.Services;
@@ -54,7 +54,7 @@ public class RegisterClient : IRegisterClient
             OrganizationNumbers = organizationNumbers
         };
 
-        var content = CreateJsonContent(lookupObject);
+        var content = JsonContent.Create(lookupObject, options: _jsonSerializerOptions);
 
         var response = await _client.PostAsync(_contactPointLookupEndpoint, content);
 
@@ -63,9 +63,8 @@ public class RegisterClient : IRegisterClient
             throw await PlatformHttpException.CreateAsync(response);
         }
 
-        var responseContent = await response.Content.ReadAsStringAsync();
-        var contactPoints = JsonSerializer.Deserialize<OrgContactPointsList>(responseContent, _jsonSerializerOptions)?.ContactPointsList;
-        return contactPoints ?? [];
+        var contactPoints = await response.Content.ReadFromJsonAsync<OrgContactPointsList>(_jsonSerializerOptions);
+        return contactPoints?.ContactPointsList ?? [];
     }
 
     /// <inheritdoc/>
@@ -78,7 +77,7 @@ public class RegisterClient : IRegisterClient
 
         HttpRequestMessage requestMessage = new(HttpMethod.Post, _nameComponentsLookupEndpoint)
         {
-            Content = CreateJsonContent(new PartyDetailsLookupBatch(organizationNumbers, socialSecurityNumbers))
+            Content = JsonContent.Create(new PartyDetailsLookupBatch(organizationNumbers, socialSecurityNumbers), options: _jsonSerializerOptions)
         };
 
         var accessToken = _accessTokenGenerator.GenerateAccessToken("platform", "notifications");
@@ -94,27 +93,7 @@ public class RegisterClient : IRegisterClient
             throw await PlatformHttpException.CreateAsync(response);
         }
 
-        var responseContent = await response.Content.ReadAsStringAsync();
-
-        var deserializeResponse = JsonSerializer.Deserialize<PartyDetailsLookupResult>(responseContent, _jsonSerializerOptions);
+        var deserializeResponse = await response.Content.ReadFromJsonAsync<PartyDetailsLookupResult>(_jsonSerializerOptions);
         return deserializeResponse?.PartyDetailsList ?? [];
-    }
-
-    /// <summary>
-    /// Creates an HTTP content object with a JSON-serialized representation of the specified object.
-    /// </summary>
-    /// <typeparam name="T">The type of the object to serialize.</typeparam>
-    /// <param name="payload">The object to serialize into JSON.</param>
-    /// <returns>
-    /// An <see cref="HttpContent"/> object containing the serialized JSON representation 
-    /// of the provided object, encoded in UTF-8, with a media type of "application/json".
-    /// </returns>
-    /// <remarks>
-    /// This method uses the specified <see cref="JsonSerializerOptions"/> to control the serialization behavior.
-    /// </remarks>
-    private StringContent CreateJsonContent<T>(T payload)
-    {
-        var json = JsonSerializer.Serialize(payload, _jsonSerializerOptions);
-        return new StringContent(json, Encoding.UTF8, "application/json");
     }
 }

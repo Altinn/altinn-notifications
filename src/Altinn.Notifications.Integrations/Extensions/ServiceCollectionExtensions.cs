@@ -73,6 +73,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IPDP, PDPAppSI>();
         services.AddTransient<IAccessTokenGenerator, AccessTokenGenerator>();
         services.AddSingleton<IAuthorizationService, AuthorizationService>();
+        services.AddTransient<ISigningCredentialsResolver, SigningCredentialsResolver>();
 
         services.AddMaskinportenHttpClient<SettingsJwkClientDefinition, IConditionClient, SendConditionClient>(
             config.GetSection("SendConditionClient:MaskinportenSettings"));
