@@ -1,10 +1,9 @@
 import http from "k6/http";
 import { check } from "k6";
 import encoding from "k6/encoding";
-
 import * as config from "../config.js";
-import { stopIterationOnFail } from "../errorhandler.js";
 import * as apiHelpers from "../apiHelpers.js";
+import { stopIterationOnFail } from "../errorhandler.js";
 
 const tokenGeneratorUserName = __ENV.tokenGeneratorUserName;
 const tokenGeneratorUserPwd = __ENV.tokenGeneratorUserPwd;
@@ -13,7 +12,7 @@ const tokenGeneratorUserPwd = __ENV.tokenGeneratorUserPwd;
 Generate enterprise token for test environment
 */
 export function generateEnterpriseToken(queryParams) {
-  var endpoint =
+  const endpoint =
     config.tokenGenerator.getEnterpriseToken +
     apiHelpers.buildQueryParametersForEndpoint(queryParams);
 
@@ -21,7 +20,7 @@ export function generateEnterpriseToken(queryParams) {
 }
 
 export function generatePersonalToken(queryParams) {
-  var endpoint =
+  const endpoint =
     config.tokenGenerator.getPersonalToken +
     apiHelpers.buildQueryParametersForEndpoint(queryParams);
 
@@ -32,14 +31,14 @@ function generateToken(endpoint) {
   const credentials = `${tokenGeneratorUserName}:${tokenGeneratorUserPwd}`;
   const encodedCredentials = encoding.b64encode(credentials);
 
-  var params = apiHelpers.buildHeaderWithBasic(encodedCredentials);
+  const params = apiHelpers.buildHeaderWithBasic(encodedCredentials);
 
-  var response = http.get(endpoint, params);
+  const response = http.get(endpoint, params);
 
   if (response.status != 200) {
     stopIterationOnFail("Token generation failed", false);
   }
 
-  var token = response.body;
+  const token = response.body;
   return token;
 }
