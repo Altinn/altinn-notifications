@@ -5,48 +5,45 @@ import * as config from "../../config.js";
 import * as apiHelpers from "../../apiHelpers.js";
 
 export function postEmailNotificationOrder(serializedOrder, token) {
-  var endpoint = config.notifications.orders_email;
+  const endpoint = config.notifications.orders_email;
 
-  var params = apiHelpers.buildHeaderWithBearerAndContentType(token);
+  const params = apiHelpers.buildHeaderWithBearerAndContentType(token);
 
-  var response = http.post(endpoint, serializedOrder, params);
-
-  return response;
+  return http.post(endpoint, serializedOrder, params);
 }
 
 export function postSmsNotificationOrder(serializedOrder, token) {
-  var endpoint = config.notifications.orders_sms;
+  const endpoint = config.notifications.orders_sms;
 
-  var params = apiHelpers.buildHeaderWithBearerAndContentType(token);
+  const params = apiHelpers.buildHeaderWithBearerAndContentType(token);
 
-  var response = http.post(endpoint, serializedOrder, params);
-
-  return response;
+  return http.post(endpoint, serializedOrder, params);
 }
 
 export function getById(id, token) {
-  var endpoint = config.notifications.orders_fromId(id);
+  const endpoint = config.notifications.orders_fromId(id);
+
   return getByUrl(endpoint, token);
 }
 
 export function getByUrl(url, token) {
-  var params = apiHelpers.buildHeaderWithBearer(token);
-  var response = http.get(url, params);
+  const params = apiHelpers.buildHeaderWithBearer(token);
 
-  return response;
+  return http.get(url, params);
 }
 
 export function getBySendersReference(sendersReference, token) {
-  var endpoint =
-    config.notifications.orders_fromSendersRef(sendersReference);
-  var params = apiHelpers.buildHeaderWithBearer(token);
-  var response = http.get(endpoint, params);
-  return response;
+  const endpoint = config.notifications.orders_fromSendersRef(sendersReference);
+
+  const params = apiHelpers.buildHeaderWithBearer(token);
+
+  return http.get(endpoint, params);
 }
 
 export function getWithStatus(orderId, token) {
-  var endpoint = config.notifications.orders_status(orderId);
-  var params = apiHelpers.buildHeaderWithBearer(token);
-  var response = http.get(endpoint, params);
-  return response;
+  const endpoint = config.notifications.orders_status(orderId);
+
+  const params = apiHelpers.buildHeaderWithBearer(token);
+
+  return http.get(endpoint, params);
 }

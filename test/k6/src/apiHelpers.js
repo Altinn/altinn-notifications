@@ -6,6 +6,7 @@
  */
 export function buildQueryParametersForEndpoint(queryparams) {
   let query = "?";
+
   Object.keys(queryparams).forEach((key) => {
     if (Array.isArray(queryparams[key])) {
       queryparams[key].forEach((value) => {
@@ -15,7 +16,9 @@ export function buildQueryParametersForEndpoint(queryparams) {
       query += `${key}=${queryparams[key]}&`;
     }
   });
+
   query = query.slice(0, -1);
+  
   return query;
 }
 
