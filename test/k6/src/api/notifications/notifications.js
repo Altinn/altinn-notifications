@@ -1,7 +1,5 @@
 import http from "k6/http";
-
 import * as config from "../../config.js";
-
 import * as apiHelpers from "../../apiHelpers.js";
 
 export function getEmailNotifications(orderId, token) {

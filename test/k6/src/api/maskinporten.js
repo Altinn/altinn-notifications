@@ -1,17 +1,10 @@
 import http from "k6/http";
-
 import { check } from "k6";
-
 import encoding from "k6/encoding";
-
 import * as config from "../config.js";
-
 import { stopIterationOnFail } from "../errorhandler.js";
-
 import { buildHeaderWithContentType } from "../apiHelpers.js";
-
 import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
-
 import KJUR from "https://unpkg.com/jsrsasign@10.8.6/lib/jsrsasign.js";
 
 const mpKid = __ENV.mpKid;
