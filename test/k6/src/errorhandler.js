@@ -6,7 +6,7 @@ import { fail } from "k6";
  * @param {boolean} success The result of a check
  */
 export function stopIterationOnFail(failReason, success) {
-  if (!success) {
-    fail(failReason);
-  }
+    if (!success) {
+        fail(failReason);
+    }
 }

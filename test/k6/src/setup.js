@@ -2,7 +2,10 @@ import * as maskinporten from "./api/maskinporten.js";
 import * as authentication from "./api/authentication.js";
 import * as tokenGenerator from "./api/token-generator.js";
 
-const environment = __ENV.env.toLowerCase();
+const environment = __ENV.env ? __ENV.env.toLowerCase() : null;
+if (!environment) {
+    stopIterationOnFail("Environment variable 'env' is not set", false);
+}
 
 /*
  * Generate an Altinn token for an organization based on the environment using AltinnTestTools.
