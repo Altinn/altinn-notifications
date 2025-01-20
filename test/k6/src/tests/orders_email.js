@@ -44,12 +44,8 @@ export function setup() {
     const sendersReference = uuidv4();
     const token = setupToken.getAltinnTokenForOrg(scopes);
 
-    const emailOrderRequest = emailOrderRequestJson;
+    const emailOrderRequest = { ...emailOrderRequestJson, sendersReference, conditionEndpoint: notifications.conditionCheck(true), recipients: [] };
 
-    emailOrderRequest.sendersReference = sendersReference;
-    emailOrderRequest.conditionEndpoint = notifications.conditionCheck(true);
-
-    emailOrderRequest.recipients = [];
     if (ninRecipient) {
         emailOrderRequest.recipients.push({ nationalIdentityNumber: ninRecipient });
     }
@@ -62,159 +58,127 @@ export function setup() {
         ? __ENV.runFullTestSet.toLowerCase().includes("true")
         : false;
 
-    const data = {
-        token: token,
-        runFullTestSet: runFullTestSet,
-        sendersReference: sendersReference,
-        emailOrderRequest: emailOrderRequest,
+    return {
+        token,
+        runFullTestSet,
+        sendersReference,
+        emailOrderRequest,
     };
-
-    return data;
 }
 
-function TC01_PostEmailNotificationOrderRequest(data) {
-    let success;
-
+function postEmailNotificationOrderRequest(data) {
     const response = ordersApi.postEmailNotificationOrder(
         JSON.stringify(data.emailOrderRequest),
         data.token
     );
 
-    success = check(response, {
-        "POST email notification order request. Status is 202 Accepted":
-            (r) => r.status === 202
+    const success = check(response, {
+        "POST email notification order request. Status is 202 Accepted": (r) => r.status === 202
     });
 
     stopIterationOnFail("POST email notification order request failed", success);
 
     const selfLink = response.headers["Location"];
 
-    success = check(response, {
-        "POST email notification order request. Location header provided":
-            (_) => selfLink,
-        "POST email notification order request. Recipient lookup was successful":
-            (r) => JSON.parse(r.body).recipientLookup.status == 'Success'
+    check(response, {
+        "POST email notification order request. Location header provided": (_) => selfLink,
+        "POST email notification order request. Recipient lookup was successful": (r) => JSON.parse(r.body).recipientLookup.status == 'Success'
     });
 
     return selfLink;
 }
 
-function TC02_GetNotificationOrderById(data, selfLink, orderId) {
-    let success;
-
+function getNotificationOrderById(data, selfLink, orderId) {
     const response = ordersApi.getByUrl(selfLink, data.token);
 
-    success = check(response, {
-        "GET notification order by id. Status is 200 OK":
-            (r) => r.status === 200,
+    check(response, {
+        "GET notification order by id. Status is 200 OK": (r) => r.status === 200,
     });
 
-    success = check(JSON.parse(response.body), {
-        "GET notification order by id. Id property is a match":
-            (order) => order.id === orderId,
-        "GET notification order by id. Creator property is a match":
-            (order) => order.creator === "ttd",
+    check(JSON.parse(response.body), {
+        "GET notification order by id. Id property is a match": (order) => order.id === orderId,
+        "GET notification order by id. Creator property is a match": (order) => order.creator === "ttd",
     });
 }
 
-function TC03_GetNotificationOrderBySendersReference(data) {
-    let success;
-
+function getNotificationOrderBySendersReference(data) {
     const response = ordersApi.getBySendersReference(data.sendersReference, data.token);
 
-    success = check(response, {
-        "GET notification order by senders reference. Status is 200 OK":
-            (r) => r.status === 200,
+    check(response, {
+        "GET notification order by senders reference. Status is 200 OK": (r) => r.status === 200,
     });
 
-    success = check(JSON.parse(response.body), {
-        "GET notification order by senders reference. Count is equal to 1":
-            (orderList) => orderList.count === 1,
-        "GET notification order by senders reference. Orderlist contains one element":
-            (orderList) => Array.isArray(orderList.orders) && orderList.orders.length == 1,
+    check(JSON.parse(response.body), {
+        "GET notification order by senders reference. Count is equal to 1": (orderList) => orderList.count === 1,
+        "GET notification order by senders reference. Orderlist contains one element": (orderList) => Array.isArray(orderList.orders) && orderList.orders.length == 1,
     });
 }
 
-function TC04_GetNotificationOrderWithStatus(data, orderId) {
-    let success;
-
+function getNotificationOrderWithStatus(data, orderId) {
     const response = ordersApi.getWithStatus(orderId, data.token);
 
-    success = check(response, {
-        "GET notification order with status. Status is 200 OK":
-            (r) => r.status === 200,
+    check(response, {
+        "GET notification order with status. Status is 200 OK": (r) => r.status === 200,
     });
 
-    success = check(JSON.parse(response.body), {
-        "GET notification order with status. Id property is a match":
-            (order) => order.id === orderId,
-        "GET notification order with status. NotificationChannel is email":
-            (order) => order.notificationChannel === "Email",
-        "GET notification order with status. ProcessingStatus is defined":
-            (order) => order.processingStatus,
+    check(JSON.parse(response.body), {
+        "GET notification order with status. Id property is a match": (order) => order.id === orderId,
+        "GET notification order with status. NotificationChannel is email": (order) => order.notificationChannel === "Email",
+        "GET notification order with status. ProcessingStatus is defined": (order) => order.processingStatus,
     });
 }
 
-function TC05_GetEmailNotificationSummary(data, orderId) {
-    let success;
-
+function getEmailNotificationSummary(data, orderId) {
     const response = notificationsApi.getEmailNotifications(orderId, data.token);
 
-    success = check(response, {
+    check(response, {
         "GET email notifications. Status is 200 OK": (r) => r.status === 200,
     });
 
-    success = check(JSON.parse(response.body), {
-        "GET email notifications. OrderId property is a match":
-            (notificationSummary) => notificationSummary.orderId === orderId,
+    check(JSON.parse(response.body), {
+        "GET email notifications. OrderId property is a match": (notificationSummary) => notificationSummary.orderId === orderId,
     });
 }
 
-function TC06_PostEmailNotificationOrderWithNegativeConditionCheck(data) {
-    let success, response;
+function postEmailNotificationOrderWithNegativeConditionCheck(data) {
+    const emailOrderRequest = { ...data.emailOrderRequest, conditionEndpoint: notifications.conditionCheck(false) };
 
-    const emailOrderRequest = data.emailOrderRequest;
-    emailOrderRequest.conditionEndpoint = notifications.conditionCheck(false);
-
-    response = ordersApi.postEmailNotificationOrder(
+    let response = ordersApi.postEmailNotificationOrder(
         JSON.stringify(emailOrderRequest),
         data.token
     );
 
-    success = check(response, {
-        "POST email notification order request with condition. Status is 202 Accepted":
-            (r) => r.status === 202
+    let success = check(response, {
+        "POST email notification order request with condition. Status is 202 Accepted": (r) => r.status === 202
     });
 
     stopIterationOnFail("POST email notification order request with condition check failed", success);
 
     sleep(60); // Waiting 1 minute for the notifications to be generated
 
-    const order = JSON.parse(response.body)
+    const order = JSON.parse(response.body);
 
     response = ordersApi.getWithStatus(order.orderId, data.token);
-    success = check(response, {
-        "GET notification order with condition check status after one minute. Status is 200 OK":
-            (r) => r.status === 200,
+    check(response, {
+        "GET notification order with condition check status after one minute. Status is 200 OK": (r) => r.status === 200,
     });
 
-    success = check(JSON.parse(response.body), {
-        "GET notification order with condition check status. Status is condition not met":
-            (order) => order.processingStatus.status == "SendConditionNotMet",
+    check(JSON.parse(response.body), {
+        "GET notification order with condition check status. Status is condition not met": (order) => order.processingStatus.status == "SendConditionNotMet",
     });
 }
 
 export default function (data) {
-    const selfLink = TC01_PostEmailNotificationOrderRequest(data);
-    let id = selfLink.split("/").pop();
+    const selfLink = postEmailNotificationOrderRequest(data);
+    const id = selfLink.split("/").pop();
 
     if (data.runFullTestSet) {
-        TC02_GetNotificationOrderById(data, selfLink, id);
-        TC03_GetNotificationOrderBySendersReference(data);
-        TC04_GetNotificationOrderWithStatus(data, id);
-        TC05_GetEmailNotificationSummary(data, id);
-        TC06_PostEmailNotificationOrderWithNegativeConditionCheck(data);
+        getNotificationOrderById(data, selfLink, id);
+        getNotificationOrderBySendersReference(data);
+        getNotificationOrderWithStatus(data, id);
+        getEmailNotificationSummary(data, id);
+        postEmailNotificationOrderWithNegativeConditionCheck(data);
     } else {
-        TC05_GetEmailNotificationSummary(data, id);
+        getEmailNotificationSummary(data, id);
     }
 }
