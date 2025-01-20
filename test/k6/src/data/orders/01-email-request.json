@@ -1,6 +1,6 @@
 {
 	"subject": "Automated email from Altinn",
-	"body": "This is an automated email generated during testing of Altinn Notifications",
+	"body": "Dear $recipientName$! This is an automated email generated during the testing of Altinn Notifications. Your registration number is $recipientNumber$. Best regards, Altinn Team",
 	"contentType": "Html",
 	"fromAddress": "noreply@altinn.cloud"
 }
