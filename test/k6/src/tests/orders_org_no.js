@@ -140,10 +140,9 @@ export default function (data) {
     const selfLink = postEmailNotificationOrderRequest(data);
     const id = selfLink.split("/").pop();
 
+    getEmailNotificationSummary(data, id);
+
     if (data.runFullTestSet) {
-        getEmailNotificationSummary(data, id);
         getEmailNotificationSummaryAgainAfterOneMinuteForVerification(data, id);
-    } else {
-        getEmailNotificationSummary(data, id);
     }
 }
