@@ -175,8 +175,7 @@ export default function (data) {
         getNotificationOrderById(data, selfLink, id);
         getNotificationOrderBySendersReference(data);
         getNotificationOrderWithStatus(data, id);
-        getSmsNotificationSummary(data, id);
-    } else {
-        getSmsNotificationSummary(data, id);
     }
+
+    getSmsNotificationSummary(data, id);
 }
