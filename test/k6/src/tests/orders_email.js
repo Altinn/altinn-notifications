@@ -1,16 +1,16 @@
 /*
     Test script of platform notifications API with application owner token
     Command:
-    podman compose run k6 run /src/tests/orders_email.js `
-    -e tokenGeneratorUserName={the user name to access the token generator} `
-    -e tokenGeneratorUserPwd={the password to access the token generator}`
-    -e mpClientId={the id of an integration defined in maskinporten} `
-    -e mpKid={the key id of the JSON web key used to sign the maskinporten token request} `
-    -e encodedJwk={the encoded JSON web key used to sign the maskinporten token request} `
-    -e env={environment: at22, at23, at24, tt02, prod} `
-    -e emailRecipient={an email address to add as a notification recipient} `
-    -e ninRecipient={a national identity number of a person to include as a notification recipient} `
-    -e subscriptionKey={the subscription key with access to the automated tests product} `
+    podman compose run k6 run /src/tests/orders_email.js \
+    -e tokenGeneratorUserName={the user name to access the token generator} \
+    -e tokenGeneratorUserPwd={the password to access the token generator} \
+    -e mpClientId={the id of an integration defined in maskinporten} \
+    -e mpKid={the key id of the JSON web key used to sign the maskinporten token request} \
+    -e encodedJwk={the encoded JSON web key used to sign the maskinporten token request} \
+    -e env={environment: at22, at23, at24, tt02, prod} \
+    -e emailRecipient={an email address to add as a notification recipient} \
+    -e ninRecipient={a national identity number of a person to include as a notification recipient} \
+    -e subscriptionKey={the subscription key with access to the automated tests product} \
     -e runFullTestSet=true
 
     For use case tests omit environment variable runFullTestSet or set value to false
@@ -40,6 +40,10 @@ export const options = {
     }
 };
 
+/**
+ * Initialize test data.
+ * @returns {Object} The data object containing token, runFullTestSet, sendersReference, and emailOrderRequest.
+ */
 export function setup() {
     const sendersReference = uuidv4();
     const token = setupToken.getAltinnTokenForOrg(scopes);
@@ -66,6 +70,11 @@ export function setup() {
     };
 }
 
+/**
+ * Posts an email notification order request.
+ * @param {Object} data - The data object containing emailOrderRequest and token.
+ * @returns {string} The selfLink of the created order.
+ */
 function postEmailNotificationOrderRequest(data) {
     const response = ordersApi.postEmailNotificationOrder(
         JSON.stringify(data.emailOrderRequest),
@@ -88,6 +97,12 @@ function postEmailNotificationOrderRequest(data) {
     return selfLink;
 }
 
+/**
+ * Gets a notification order by its ID.
+ * @param {Object} data - The data object containing token.
+ * @param {string} selfLink - The selfLink of the order.
+ * @param {string} orderId - The order identifier.
+ */
 function getNotificationOrderById(data, selfLink, orderId) {
     const response = ordersApi.getByUrl(selfLink, data.token);
 
@@ -101,6 +116,10 @@ function getNotificationOrderById(data, selfLink, orderId) {
     });
 }
 
+/**
+ * Gets a notification order by the sender's reference.
+ * @param {Object} data - The data object containing sendersReference and token.
+ */
 function getNotificationOrderBySendersReference(data) {
     const response = ordersApi.getBySendersReference(data.sendersReference, data.token);
 
@@ -114,6 +133,11 @@ function getNotificationOrderBySendersReference(data) {
     });
 }
 
+/**
+ * Gets a notification order with its status.
+ * @param {Object} data - The data object containing token.
+ * @param {string} orderId - The ID of the order.
+ */
 function getNotificationOrderWithStatus(data, orderId) {
     const response = ordersApi.getWithStatus(orderId, data.token);
 
@@ -128,6 +152,11 @@ function getNotificationOrderWithStatus(data, orderId) {
     });
 }
 
+/**
+ * Gets the email notification summary.
+ * @param {Object} data - The data object containing token.
+ * @param {string} orderId - The ID of the order.
+ */
 function getEmailNotificationSummary(data, orderId) {
     const response = notificationsApi.getEmailNotifications(orderId, data.token);
 
@@ -140,6 +169,10 @@ function getEmailNotificationSummary(data, orderId) {
     });
 }
 
+/**
+ * Posts an email notification order request with a negative condition check.
+ * @param {Object} data - The data object containing emailOrderRequest and token.
+ */
 function postEmailNotificationOrderWithNegativeConditionCheck(data) {
     const emailOrderRequest = { ...data.emailOrderRequest, conditionEndpoint: notifications.conditionCheck(false) };
 
@@ -168,6 +201,10 @@ function postEmailNotificationOrderWithNegativeConditionCheck(data) {
     });
 }
 
+/**
+ * The main function to run the test.
+ * @param {Object} data - The data object containing runFullTestSet and other test data.
+ */
 export default function (data) {
     const selfLink = postEmailNotificationOrderRequest(data);
     const id = selfLink.split("/").pop();
