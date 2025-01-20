@@ -45,16 +45,18 @@ export function setup() {
     const token = setupToken.getAltinnTokenForOrg(scopes);
 
     const emailOrderRequest = emailOrderRequestJson;
+
     emailOrderRequest.sendersReference = sendersReference;
     emailOrderRequest.conditionEndpoint = notifications.conditionCheck(true);
-    emailOrderRequest.recipients = [
-        {
-            emailAddress: emailRecipient
-        },
-        {
-            nationalIdentityNumber: ninRecipient
-        }
-    ];
+
+    emailOrderRequest.recipients = [];
+    if (ninRecipient) {
+        emailOrderRequest.recipients.push({ nationalIdentityNumber: ninRecipient });
+    }
+
+    if (emailRecipient) {
+        emailOrderRequest.recipients.push({ emailAddress: emailRecipient });
+    }
 
     const runFullTestSet = __ENV.runFullTestSet
         ? __ENV.runFullTestSet.toLowerCase().includes("true")
