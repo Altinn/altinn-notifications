@@ -1,7 +1,7 @@
 import { fail } from "k6";
 
 /**
- * Stops k6 iteration when success is false and prints test name with response code
+ * Terminates the k6 iteration when the success condition is false and outputs detailed information about the failure.
  * @param {String} failReason The reason for stopping the tests
  * @param {boolean} success The result of a check
  */

@@ -1,3 +1,5 @@
+import { stopIterationOnFail } from "./errorhandler.js";
+
 // Base URLs for the Altinn platform across different environments.
 const baseUrls = {
     prod: "altinn.no",
@@ -23,7 +25,11 @@ if (!baseUrl) {
     stopIterationOnFail(`Invalid value for environment variable 'env': '${environment}'.`, false);
 }
 
-const subscriptionKey = __ENV.subscriptionKey;
+const subscriptionKey = __ENV.subscriptionKey || null;
+if (!subscriptionKey) {
+    stopIterationOnFail("Environment variable 'subscriptionKey' is not set", false);
+}
+
 const maskinportenBaseUrl = maskinportenBaseUrls[environment];
 
 // Altinn TestTools token generator URL.
