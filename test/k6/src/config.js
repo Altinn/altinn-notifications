@@ -25,11 +25,7 @@ if (!baseUrl) {
     stopIterationOnFail(`Invalid value for environment variable 'env': '${environment}'.`, false);
 }
 
-const subscriptionKey = __ENV.subscriptionKey || null;
-if (!subscriptionKey) {
-    stopIterationOnFail("Environment variable 'subscriptionKey' is not set", false);
-}
-
+const subscriptionKey = __ENV.subscriptionKey;
 const maskinportenBaseUrl = maskinportenBaseUrls[environment];
 
 // Altinn TestTools token generator URL.
