@@ -1,5 +1,6 @@
 /*
-    Test script of platform notifications API with application owner token
+    Test script for Platform Notifications API using an application owner token.
+
     Command:
     podman compose run k6 run /src/tests/orders_email.js \
     -e tokenGeneratorUserName={the user name to access the token generator} \
@@ -13,7 +14,14 @@
     -e subscriptionKey={the subscription key with access to the automated tests product} \
     -e runFullTestSet=true
 
-    For use case tests omit environment variable runFullTestSet or set value to false
+    Notes:
+    - To run only use case tests, omit `runFullTestSet` or set it to `false`.
+    - The `subscriptionKey` is required and can be retrieved from API management in Azure.
+
+    Command syntax for different shells:
+    - Bash: Use the command as written above.
+    - PowerShell: Replace `\` with a backtick (`` ` ``) at the end of each line.
+    - Command Prompt (cmd.exe): Replace `\` with `^` at the end of each line.
 */
 
 import { check, sleep } from "k6";

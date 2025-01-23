@@ -1,17 +1,24 @@
 /*
-    Test script of platform notifications API with org token
+    Test script for Platform Notifications API using an organization token.
+
     Command:
     podman compose run k6 run /src/tests/orders_sms.js \
-    -e tokenGeneratorUserName=autotest \
-    -e tokenGeneratorUserPwd=*** \
-    -e mpClientId=*** \
-    -e mpKid=altinn-usecase-events \
-    -e encodedJwk=*** \
-    -e env=*** \
-    -e smsRecipient=*** \
-    -e runFullTestSet=true
+        -e tokenGeneratorUserName=autotest \
+        -e tokenGeneratorUserPwd=*** \
+        -e mpClientId=*** \
+        -e mpKid=altinn-usecase-events \
+        -e encodedJwk=*** \
+        -e env=*** \
+        -e smsRecipient=*** \
+        -e runFullTestSet=true
 
-    For use case tests omit environment variable runFullTestSet or set value to false
+    Notes:
+    - To run only use case tests, omit `runFullTestSet` or set it to `false`.
+
+    Command syntax for different shells:
+    - Bash: Use the command as written above.
+    - PowerShell: Replace `\` with a backtick (`` ` ``) at the end of each line.
+    - Command Prompt (cmd.exe): Replace `\` with `^` at the end of each line.
 */
 
 import { check } from "k6";
