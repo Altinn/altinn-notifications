@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
-var  anyOrigin = "_anyOrigin";
 
 
 // Add services to the container.
@@ -57,46 +56,25 @@ app.UseHttpsRedirection();
 
 
 app.MapPost("/notification",
-        ([FromBody] NotificationOrder notification) =>
+        ([FromBody] Notification notification) =>
         {
             //validation
-            if (notification.Notifications == null || notification.Notifications.Count == 0)
+            
+            NotificationResponse response = new()
             {
-                return Results.BadRequest(new ProblemDetails
-                {
-                    Title = "No notifications provided",
-                    Detail = "No notifications were provided in the request"
-                });
-            }
-            //filter notifications for all elements of type Notification
-            
-            
-            if (notification.Notifications.FindAll(notification1 => notification1.NotificationType == NotificationType.Notification).Count != 1) 
-            {
-                return Results.BadRequest(new ProblemDetails
-                {
-                    Title = "NotificationType.Notification can be excactly 1",
-                    Detail = "Too many or too few notifications of type 'Notification' was provided in the request"
-                });
-            }
-            
-            
-            List<NotificationResponse> responses = new();
-            
-            notification.Notifications.ForEach(n =>
-            {
-                NotificationResponse response = new()
+                NotificationId = Guid.NewGuid(),
+                SendersReference = notification.SendersReference,
+                Reminders = notification.Reminders.Select(r => new BaseNotificationResponse()
                 {
                     NotificationId = Guid.NewGuid(),
-                    SendersReference = n.SendersReference,
-                    NotificationType = n.NotificationType
-                };
-                responses.Add(response);
-            });
+                    SendersReference = r.SendersReference
+                }).ToList()
+            };
             
-            return Results.Ok(responses);
+            return Results.Ok(response);
         })
-    .Produces<List<NotificationResponse>>(StatusCodes.Status200OK)
+    //.Accepts<Notification>("application/json") //json is default
+    .Produces<NotificationResponse>(StatusCodes.Status200OK)
     .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
     .WithName("CreateNotification")
     .WithSummary("Create a notification")
@@ -120,6 +98,8 @@ app.MapPost("/notification",
             return operation;
         }
     );
+
+
 
 
 app.Run();
