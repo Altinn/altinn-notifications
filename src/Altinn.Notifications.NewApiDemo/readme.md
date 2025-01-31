@@ -17,7 +17,7 @@ docker run -p 127.0.0.1:5151:5151 notification-mock
 
 Then you should be able to open the OpenAPI-doc through either Scalar (http://localhost:5151/scalar/v2) or Swagger (http://localhost:5151/swagger/index.html)
 
-There is a Bruno (https://www.usebruno.com/) collection in [../test/Altinn.Notifications.NewApiDemoTest/bruno](../test/Altinn.Notifications.NewApiDemoTest/bruno) with examples/testcases for the API.
+There is a Bruno (https://www.usebruno.com/) collection in [../../test/Altinn.Notifications.NewApiDemoTest/bruno](../../test/Altinn.Notifications.NewApiDemoTest/bruno) with examples/testcases for the API.
 
 Known issues:
 * Some of the text in the spec is off (e.g. the Swagger-heading "Altinn.Notifications.NewApiDemo | v1" referencing "v1" etc.)
