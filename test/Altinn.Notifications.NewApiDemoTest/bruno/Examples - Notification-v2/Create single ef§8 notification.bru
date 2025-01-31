@@ -1,0 +1,37 @@
+meta {
+  name: Create single ef§8 notification
+  type: http
+  seq: 2
+}
+
+post {
+  url: http://localhost:5151/notification
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "idempotencyId": "1",
+    "conditionEndpoint": "string",
+    "resourceId": "string",
+    "associations": "string",
+    "sendersReference": "te-123-123-notification_main",
+    "notBefore": "2025-01-31T12:59:08.677Z",
+    "delayDays": 0,
+    "recipient": {
+      "recipientType": "email",
+      "emailAddress": "ola.normann@example.com",
+      "emailSettings": {
+        "notificationScheme": "Daytime_Workingdays_v1",
+        "subject": "Ny melding fra TE",
+        "body": "Du har fått en ny melding fra TE i Altinn meldingsboks. Logg inn i Altinn for å gjøre deg kjent med innholdet."
+      }
+    },
+    "reminders": [
+      {
+        "sendersReference": "te-123-123-notification_reminder-2"
+      }
+    ]
+  }
+}
