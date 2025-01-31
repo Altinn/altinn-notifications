@@ -13,12 +13,8 @@ post {
 body:json {
   {
     "idempotencyId": "1",
-    "conditionEndpoint": "string",
-    "resourceId": "string",
-    "associations": "string",
     "sendersReference": "te-123-123-notification_main",
-    "notBefore": "2025-01-31T12:59:08.677Z",
-    "delayDays": 0,
+    "requestedSendTime": "2025-01-31T12:59:08.677Z",
     "recipient": {
       "recipientType": "email",
       "emailAddress": "ola.normann@example.com",
@@ -30,7 +26,8 @@ body:json {
     },
     "reminders": [
       {
-        "sendersReference": "te-123-123-notification_reminder-2"
+        "sendersReference": "te-123-123-notification_reminder-2",
+        "delayDays": 7
       }
     ]
   }

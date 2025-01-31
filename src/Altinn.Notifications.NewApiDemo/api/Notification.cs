@@ -28,7 +28,7 @@ public class Notification
     public string? SendersReference { get; set; }
     
     [Description("Date and time this notification can be sent at the earliest. If not set, this defaults to 'now()'. The Notification will be processed on or as soon as possible after this time, in accordance with the selected policy.")]
-    [JsonPropertyName("notBefore")]
+    [JsonPropertyName("requestedSendTime")]
     public DateTime? RequestedSendTime {get;set;}   
     
     
