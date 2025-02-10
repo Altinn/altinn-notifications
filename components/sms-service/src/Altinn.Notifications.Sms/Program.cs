@@ -4,7 +4,7 @@ using Altinn.Notifications.Sms.Configuration;
 using Altinn.Notifications.Sms.Core.Configuration;
 using Altinn.Notifications.Sms.Health;
 using Altinn.Notifications.Sms.Integrations.Configuration;
-using Altinn.Profile.Telemetry;
+using Altinn.Notifications.Sms.Telemetry;
 using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.Exporter;
 using Azure.Security.KeyVault.Secrets;
@@ -51,7 +51,7 @@ if (app.Environment.IsDevelopment())
 
 Configure();
 
-app.Run();
+await app.RunAsync();
 
 void ConfigureWebHostCreationLogging()
 {
@@ -126,7 +126,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
 
     var attributes = new List<KeyValuePair<string, object>>(2)
     {
-        KeyValuePair.Create("service.name", (object)"platform-notification-sms"),
+        KeyValuePair.Create("service.name", (object)"platform-notifications-sms"),
     };
     
     services.AddOpenTelemetry()

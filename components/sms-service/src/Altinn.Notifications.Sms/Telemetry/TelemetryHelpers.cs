@@ -1,9 +1,6 @@
-﻿using System;
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 
-using Microsoft.AspNetCore.Http;
-
-namespace Altinn.Profile.Telemetry;
+namespace Altinn.Notifications.Sms.Telemetry;
 
 /// <summary>
 /// Helper class for telemetry configuration.
