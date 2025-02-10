@@ -4,17 +4,17 @@ using Altinn.Notifications.Sms.Configuration;
 using Altinn.Notifications.Sms.Core.Configuration;
 using Altinn.Notifications.Sms.Health;
 using Altinn.Notifications.Sms.Integrations.Configuration;
-using Altinn.Notifications.Sms.Startup;
-
+using Altinn.Profile.Telemetry;
 using Azure.Identity;
+using Azure.Monitor.OpenTelemetry.Exporter;
 using Azure.Security.KeyVault.Secrets;
 
-using Microsoft.ApplicationInsights.AspNetCore.Extensions;
-using Microsoft.ApplicationInsights.Channel;
-using Microsoft.ApplicationInsights.Extensibility;
-using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.FileProviders;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using Swashbuckle.AspNetCore.Filters;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
@@ -28,7 +28,7 @@ ConfigureWebHostCreationLogging();
 
 await SetConfigurationProviders(appBuilder.Configuration);
 
-appBuilder.Logging.ConfigureApplicationLogging(applicationInsightsConnectionString);
+ConfigureApplicationLogging(appBuilder.Logging);
 
 ConfigureServices(appBuilder.Services, appBuilder.Configuration);
 
@@ -106,6 +106,15 @@ async Task ConnectToKeyVaultAndSetApplicationInsights(ConfigurationManager confi
     }
 }
 
+void ConfigureApplicationLogging(ILoggingBuilder logging)
+{
+    logging.AddOpenTelemetry(builder =>
+    {
+       builder.IncludeFormattedMessage = true;
+       builder.IncludeScopes = true; 
+    });
+}
+
 void ConfigureServices(IServiceCollection services, ConfigurationManager configuration)
 {
     SmsDeliveryReportSettings smsDeliveryReportSettings = configuration!.GetSection(nameof(SmsDeliveryReportSettings)).Get<SmsDeliveryReportSettings>()!;
@@ -115,6 +124,41 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
         throw new ArgumentNullException(nameof(configuration), "Required delivery report settings is missing from application configuration");
     }
 
+    var attributes = new List<KeyValuePair<string, object>>(2)
+    {
+        KeyValuePair.Create("service.name", (object)"platform-notification-sms"),
+    };
+    
+    services.AddOpenTelemetry()
+        .ConfigureResource(resourceBuilder => resourceBuilder.AddAttributes(attributes))
+        .WithMetrics(metrics => 
+        {
+            metrics.AddAspNetCoreInstrumentation();
+            metrics.AddMeter(
+                "Microsoft.AspNetCore.Hosting",
+                "Microsoft.AspNetCore.Server.Kestrel",
+                "System.Net.Http");
+        })
+        .WithTracing(tracing => 
+        {
+            if (appBuilder.Environment.IsDevelopment())
+            {
+                tracing.SetSampler(new AlwaysOnSampler());
+            }
+
+            tracing.AddAspNetCoreInstrumentation(configOptions =>
+            {
+                configOptions.Filter = (httpContext) => !TelemetryHelpers.ShouldExclude(httpContext.Request.Path);
+            });
+
+            tracing.AddHttpClientInstrumentation();
+        });
+
+    if (!string.IsNullOrEmpty(applicationInsightsConnectionString))
+    {
+        AddAzureMonitorTelemetryExporters(services, applicationInsightsConnectionString);
+    }
+
     services.AddSingleton(smsDeliveryReportSettings);
     services.AddControllers();
     services.AddHealthChecks().AddCheck<HealthCheck>("notifications_sms_health_check");
@@ -122,19 +166,23 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddCoreServices(configuration);
     services.AddIntegrationServices(configuration);
 
-    if (!string.IsNullOrEmpty(applicationInsightsConnectionString))
-    {
-        services.AddSingleton(typeof(ITelemetryChannel), new ServerTelemetryChannel { StorageFolder = "/tmp/logtelemetry" });
-        services.AddApplicationInsightsTelemetry(new ApplicationInsightsServiceOptions
-        {
-            ConnectionString = applicationInsightsConnectionString
-        });
-
-        services.AddApplicationInsightsTelemetryProcessor<HealthTelemetryFilter>();
-        services.AddSingleton<ITelemetryInitializer, CustomTelemetryInitializer>();
-    }
-
     services.AddAuthentication("BasicAuthentication").AddScheme<AuthenticationSchemeOptions, BasicAuthenticationHandler>("BasicAuthentication", null);
+}
+
+static void AddAzureMonitorTelemetryExporters(IServiceCollection services, string applicationInsightsConnectionString)
+{
+    services.Configure<OpenTelemetryLoggerOptions>(logging => logging.AddAzureMonitorLogExporter(o =>
+    {
+        o.ConnectionString = applicationInsightsConnectionString;
+    }));
+    services.ConfigureOpenTelemetryMeterProvider(metrics => metrics.AddAzureMonitorMetricExporter(o =>
+    {
+        o.ConnectionString = applicationInsightsConnectionString;
+    }));
+    services.ConfigureOpenTelemetryTracerProvider(tracing => tracing.AddAzureMonitorTraceExporter(o =>
+    {
+        o.ConnectionString = applicationInsightsConnectionString;
+    }));
 }
 
 void Configure()
