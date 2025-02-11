@@ -27,6 +27,11 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
 
     public async Task DisposeAsync()
     {
+        if (_orderIdsToDelete.Count == 0)
+        {
+            return;
+        }
+
         string deleteSql = $@"DELETE from notifications.orders o where o.alternateid in ('{string.Join("','", _orderIdsToDelete)}')";
         await PostgreUtil.RunSql(deleteSql);
     }
