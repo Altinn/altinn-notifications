@@ -188,4 +188,24 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
             }
         }
     }
+
+    [Fact]
+    public async Task UpdateSendStatus_WithEmptyGuid_ThrowsArgumentException()
+    {
+        // Arrange
+        SmsNotificationRepository repo = (SmsNotificationRepository)ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .First(i => i.GetType() == typeof(SmsNotificationRepository));
+
+        Guid emptyGuid = Guid.Empty;
+        SmsNotificationResultType resultType = SmsNotificationResultType.Failed;
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<ArgumentException>(async () =>
+        {
+            await repo.UpdateSendStatus(emptyGuid, resultType);
+        });
+
+        Assert.Equal("The provided SMS identifier is invalid.", exception.Message);
+    }
 }
