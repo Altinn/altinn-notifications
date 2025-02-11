@@ -44,7 +44,7 @@ public class SmsNotificationRepository : ISmsNotificationRepository
     }
 
     /// <inheritdoc/>
-    public async Task AddNotification(SmsNotification notification, DateTime expiry, int smsCount)
+    public async Task AddNotification(SmsNotification notification, DateTime expiry, int count)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_insertSmsNotificationSql);
         using TelemetryTracker tracker = new(_telemetryClient, pgcom);
@@ -56,7 +56,7 @@ public class SmsNotificationRepository : ISmsNotificationRepository
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.MobileNumber);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.CustomizedBody ?? (object)DBNull.Value);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.SendResult.Result.ToString());
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Integer, smsCount);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Integer, count);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, notification.SendResult.ResultTime);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, expiry);
 
@@ -67,32 +67,34 @@ public class SmsNotificationRepository : ISmsNotificationRepository
     /// <inheritdoc/>
     public async Task<List<SmsRecipient>> GetRecipients(Guid orderId)
     {
-        List<SmsRecipient> searchResult = [];
+        List<SmsRecipient> recipients = [];
 
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getSmsRecipients);
         using TelemetryTracker tracker = new(_telemetryClient, pgcom);
+
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, orderId);
+        
         await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync())
         {
             while (await reader.ReadAsync())
             {
-                searchResult.Add(new SmsRecipient()
+                recipients.Add(new SmsRecipient()
                 {
+                    MobileNumber = reader.GetValue<string>("mobilenumber"),
                     OrganizationNumber = reader.GetValue<string?>("recipientorgno"),
-                    NationalIdentityNumber = reader.GetValue<string?>("recipientnin"),
-                    MobileNumber = reader.GetValue<string>("mobilenumber")
+                    NationalIdentityNumber = reader.GetValue<string?>("recipientnin")
                 });
             }
         }
 
         tracker.Track();
-        return searchResult;
+        return recipients;
     }
 
     /// <inheritdoc/>
     public async Task<List<Sms>> GetNewNotifications()
     {
-        List<Sms> searchResult = [];
+        List<Sms> readyToSendSMS = [];
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getSmsNotificationsSql);
         using TelemetryTracker tracker = new(_telemetryClient, pgcom);
 
@@ -106,12 +108,12 @@ public class SmsNotificationRepository : ISmsNotificationRepository
                     reader.GetValue<string>("mobilenumber"),
                     reader.GetValue<string>("body"));
 
-                searchResult.Add(sms);
+                readyToSendSMS.Add(sms);
             }
         }
 
         tracker.Track();
-        return searchResult;
+        return readyToSendSMS;
     }
 
     /// <inheritdoc/>
@@ -119,7 +121,7 @@ public class SmsNotificationRepository : ISmsNotificationRepository
     {
         if (id == Guid.Empty)
         {
-            throw new ArgumentException("The provided SMS order identifier is invalid.");
+            throw new ArgumentException("The provided SMS identifier is invalid.");
         }
 
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_updateSmsNotificationStatus);

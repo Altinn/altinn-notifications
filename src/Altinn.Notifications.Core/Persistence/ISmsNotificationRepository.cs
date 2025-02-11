@@ -15,9 +15,9 @@ public interface ISmsNotificationRepository
     /// </summary>
     /// <param name="notification">The SMS notification to be added.</param>
     /// <param name="expiry">The expiration date and time of the notification.</param>
-    /// <param name="smsCount">The number of SMS messages.</param>
+    /// <param name="count">The number of SMS messages.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    Task AddNotification(SmsNotification notification, DateTime expiry, int smsCount);
+    Task AddNotification(SmsNotification notification, DateTime expiry, int count);
 
     /// <summary>
     /// Retrieves all SMS notifications with a status 'New'.
