@@ -13,14 +13,6 @@ public class Notification
     [Description("sender-scoped unique key")]
     public required string IdempotencyId { get; set; }
     
-    [JsonPropertyName("conditionEndpoint")]
-    public Uri? ConditionEndpoint { get; set; }
-    
-    [Description("The resource that the notification is related to, and that recipient elegebility will be evaluated on (e.g. when sending to an org. no will result in a notification to the official contact and only individuals with custom notifications AND access to the resource")]
-    [JsonPropertyName("resourceId")]
-    public string? ResourceId { get; set; }
-    
-    
     public AssociationDialogporten? AssociationDialogporten { get; set; }
     
     [Description("Reference determined bt the sender. May be unique or non-unique")]
@@ -31,10 +23,11 @@ public class Notification
     [JsonPropertyName("requestedSendTime")]
     public DateTime? RequestedSendTime {get;set;}   
     
-    
+    [JsonPropertyName("conditionEndpoint")]
+    public Uri? ConditionEndpoint { get; set; }
     
     [JsonPropertyName("recipient")]
-    public required Recipient Recipient {get;set;}
+    public required Altinn.Notifications.NewApiDemo.api.Recipient.Notification.Recipient NotificationRecipient {get;set;}
     
     [JsonPropertyName("reminders")]
     public List<Reminder>? Reminders {get;set;}

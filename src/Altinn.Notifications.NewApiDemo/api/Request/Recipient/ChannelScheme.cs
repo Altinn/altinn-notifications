@@ -1,4 +1,4 @@
-﻿namespace WebApplication1;
+﻿namespace Altinn.Notifications.NewApiDemo.api.Recipient;
 
 using System.Text.Json.Serialization;
 using System.ComponentModel;
@@ -7,7 +7,7 @@ using System.ComponentModel;
 public enum ChannelScheme
 {
     EmailPreferred,
-    SMSPreferred,
+    SmsPreferred,
     EmailOnly,
     SMSOnly
 }

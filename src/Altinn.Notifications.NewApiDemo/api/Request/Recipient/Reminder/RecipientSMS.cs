@@ -1,10 +1,10 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace WebApplication1;
+namespace Altinn.Notifications.NewApiDemo.api.Recipient.Reminder;
 
-public class RecipientSMS: Recipient
+public class RecipientSms: Recipient
 {
-    
+    [JsonPropertyName("phoneNumber")]
     public string? PhoneNumber { get; set; }
     
     //sms settings

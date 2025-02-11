@@ -1,6 +1,6 @@
 ﻿
 
-namespace WebApplication1;
+namespace Altinn.Notifications.NewApiDemo.api.Recipient;
 
 using System.Text.Json.Serialization;
 using System.ComponentModel;

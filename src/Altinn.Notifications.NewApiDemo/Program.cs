@@ -43,38 +43,51 @@ if (app.Environment.IsDevelopment())
 {
     
     app.MapOpenApi("/openapi/v2.json");
+    /*
     app.UseSwaggerUI(options =>
     {
         options.SwaggerEndpoint("/openapi/v2.json", "v2");
         
     });
-    
+    */
     app.MapScalarApiReference();
 }
 
 app.UseHttpsRedirection();
 
 
-app.MapPost("/notification",
+app.MapPost("/order",
         ([FromBody] Notification notification) =>
         {
             //validation
             
-            NotificationResponse response = new()
+            NotificationOrderResponse response = new()
             {
-                NotificationId = Guid.NewGuid(),
-                SendersReference = notification.SendersReference,
-                Reminders = notification.Reminders.Select(r => new BaseNotificationResponse()
+                
+                NotificationOrderId = Guid.NewGuid(),
+                NotificationResponse = new NotificationResponse()
                 {
                     NotificationId = Guid.NewGuid(),
-                    SendersReference = r.SendersReference
-                }).ToList()
+                    SendersReference = notification.SendersReference,
+                    Reminders = notification.Reminders.ConvertAll(r => new BaseNotificationResponse()
+                    {
+                        NotificationId = Guid.NewGuid(),
+                        SendersReference = r.SendersReference
+                    }).ToList()
+                }
             };
+
+            DateTime plannedSendTime = notification.RequestedSendTime ?? DateTime.Now;
+
+            Console.Out.WriteLine("Planning notification {0} for {1}", notification.SendersReference, plannedSendTime); 
+            
+            notification.Reminders.ForEach(r => Console.Out.WriteLine("Planning reminder {0} for {1}", r.SendersReference, plannedSendTime.AddDays(r.RequestedSendTimeDelayDays ?? 0)));
+                
             
             return Results.Ok(response);
         })
     //.Accepts<Notification>("application/json") //json is default
-    .Produces<NotificationResponse>(StatusCodes.Status200OK)
+    .Produces<NotificationOrderResponse>(StatusCodes.Status200OK)
     .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
     .WithName("CreateNotification")
     .WithSummary("Create a notification")
