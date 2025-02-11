@@ -1,72 +1,72 @@
 ﻿namespace Altinn.Notifications.Core.Enums;
 
 /// <summary>
-/// Enum describing sms notification result types
+/// Enum representing the result types for SMS notifications.
 /// </summary>
 public enum SmsNotificationResultType
 {
     /// <summary>
-    /// Default result for new notifications
+    /// The default result for new notifications.
     /// </summary>
     New,
 
     /// <summary>
-    /// Sms notification being sent
+    /// The SMS notification is currently being sent.
     /// </summary>
     Sending,
 
     /// <summary>
-    /// Sms notification sent to service provider
+    /// The SMS notification has been sent to the service provider.
     /// </summary>
     Accepted,
 
     /// <summary>
-    /// Sms notification was successfully delivered to destination.
+    /// The SMS notification was successfully delivered to the recipient.
     /// </summary>
     Delivered,
 
     /// <summary>
-    /// Sms notification send operation failed
+    /// The SMS notification send operation failed.
     /// </summary>
     Failed,
 
     /// <summary>
-    /// Sms notification send operation failed due to invalid recipient
+    /// The SMS notification send operation failed due to an invalid recipient.
     /// </summary>
     Failed_InvalidRecipient,
 
     /// <summary>
-    /// Failed, recipient is reserved in KRR
+    /// The SMS notification send operation failed because the recipient is reserved in KRR.
     /// </summary>
     Failed_RecipientReserved,
 
     /// <summary>
-    /// Sms notification send operation failed because the receiver number is barred/blocked/not in use. 
+    /// The SMS notification send operation failed because the recipient's number is barred, blocked, or not in use.
     /// </summary>
     Failed_BarredReceiver,
 
     /// <summary>
-    /// Sms notification send operation failed because the message has been deleted.
+    /// The SMS notification send operation failed because the message has been deleted.
     /// </summary>
     Failed_Deleted,
 
     /// <summary>
-    /// Sms notification send operation failed because the message validity period has expired.
+    /// The SMS notification send operation failed because the message validity period has expired.
     /// </summary>
     Failed_Expired,
 
     /// <summary>
-    /// Sms notification send operation failed due to the SMS being undeliverable.
+    /// The SMS notification send operation failed because the SMS was undeliverable.
     /// </summary>
     Failed_Undelivered,
 
     /// <summary>
-    /// Recipient mobile number was not identified
+    /// The SMS notification send operation failed because the recipient's mobile number was not identified.
     /// </summary>
     Failed_RecipientNotIdentified,
 
     /// <summary>
-    /// Message was rejected.
+    /// The SMS notification send operation failed because the message was rejected.
     /// </summary>
     Failed_Rejected
 }
