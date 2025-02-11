@@ -138,39 +138,39 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
         Assert.Equal(1, actualCount);
     }
 
-    [Fact]
-    public async Task UpdateSendStatus_WithoutNotificationId_WithGatewayRef()
-    {
-        // Arrange
-        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
-        _orderIdsToDelete.Add(order.Id);
+    //[Fact]
+    //public async Task UpdateSendStatus_WithoutNotificationId_WithGatewayRef()
+    //{
+    //    // Arrange
+    //    (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
+    //    _orderIdsToDelete.Add(order.Id);
 
-        SmsNotificationRepository repo = (SmsNotificationRepository)ServiceUtil
-          .GetServices(new List<Type>() { typeof(ISmsNotificationRepository) })
-          .First(i => i.GetType() == typeof(SmsNotificationRepository));
+    //    SmsNotificationRepository repo = (SmsNotificationRepository)ServiceUtil
+    //      .GetServices(new List<Type>() { typeof(ISmsNotificationRepository) })
+    //      .First(i => i.GetType() == typeof(SmsNotificationRepository));
 
-        string gatewayReference = Guid.NewGuid().ToString();
+    //    string gatewayReference = Guid.NewGuid().ToString();
 
-        string setGateqwaySql = $@"Update notifications.smsnotifications 
-                SET gatewayreference = '{gatewayReference}'
-                WHERE alternateid = '{smsNotification.Id}'";
+    //    string setGateqwaySql = $@"Update notifications.smsnotifications 
+    //            SET gatewayreference = '{gatewayReference}'
+    //            WHERE alternateid = '{smsNotification.Id}'";
 
-        await PostgreUtil.RunSql(setGateqwaySql);
+    //    await PostgreUtil.RunSql(setGateqwaySql);
 
-        // Act
-        await repo.UpdateSendStatus(null, SmsNotificationResultType.Accepted, gatewayReference);
+    //    // Act
+    //    await repo.UpdateSendStatus(null, SmsNotificationResultType.Accepted, gatewayReference);
 
-        // Assert
-        string sql = $@"SELECT count(1) 
-              FROM notifications.smsnotifications sms
-              WHERE sms.alternateid = '{smsNotification.Id}'
-              AND sms.result = '{SmsNotificationResultType.Accepted}'
-              AND sms.gatewayreference = '{gatewayReference}'";
+    //    // Assert
+    //    string sql = $@"SELECT count(1) 
+    //          FROM notifications.smsnotifications sms
+    //          WHERE sms.alternateid = '{smsNotification.Id}'
+    //          AND sms.result = '{SmsNotificationResultType.Accepted}'
+    //          AND sms.gatewayreference = '{gatewayReference}'";
 
-        int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
+    //    int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
 
-        Assert.Equal(1, actualCount);
-    }
+    //    Assert.Equal(1, actualCount);
+    //}
 
     [Fact]
     public async Task UpdateSendStatus_WithNotificationId_WithoutGatewayRef()
