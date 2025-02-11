@@ -14,7 +14,7 @@ using NpgsqlTypes;
 namespace Altinn.Notifications.Persistence.Repository;
 
 /// <summary>
-/// Implementation of sms repository logic
+/// Implements the repository logic for SMS notifications.
 /// </summary>
 public class SmsNotificationRepository : ISmsNotificationRepository
 {
@@ -27,16 +27,16 @@ public class SmsNotificationRepository : ISmsNotificationRepository
 
     private const string _updateSmsNotificationStatus =
         @"UPDATE notifications.smsnotifications 
-        SET result = $1::smsnotificationresulttype, 
-            resulttime = now(), 
-            gatewayreference = $2
-        WHERE alternateid = $3 OR gatewayreference = $2;"; // (_result, _gatewayreference, _alternateid)
+            SET result = $1::smsnotificationresulttype, 
+                resulttime = now(), 
+                gatewayreference = $2
+            WHERE alternateid = $3"; // (_result, _gatewayreference, _alternateid)
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsNotificationRepository"/> class.
     /// </summary>
-    /// <param name="dataSource">The npgsql data source.</param>
-    /// <param name="telemetryClient">Telemetry client</param>
+    /// <param name="dataSource">The Npgsql data source.</param>
+    /// <param name="telemetryClient">The telemetry client.</param>
     public SmsNotificationRepository(NpgsqlDataSource dataSource, TelemetryClient? telemetryClient = null)
     {
         _dataSource = dataSource;
@@ -67,7 +67,7 @@ public class SmsNotificationRepository : ISmsNotificationRepository
     /// <inheritdoc/>
     public async Task<List<SmsRecipient>> GetRecipients(Guid orderId)
     {
-        List<SmsRecipient> searchResult = new();
+        List<SmsRecipient> searchResult = [];
 
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getSmsRecipients);
         using TelemetryTracker tracker = new(_telemetryClient, pgcom);
@@ -92,7 +92,7 @@ public class SmsNotificationRepository : ISmsNotificationRepository
     /// <inheritdoc/>
     public async Task<List<Sms>> GetNewNotifications()
     {
-        List<Sms> searchResult = new();
+        List<Sms> searchResult = [];
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getSmsNotificationsSql);
         using TelemetryTracker tracker = new(_telemetryClient, pgcom);
 
@@ -115,13 +115,18 @@ public class SmsNotificationRepository : ISmsNotificationRepository
     }
 
     /// <inheritdoc/>
-    public async Task UpdateSendStatus(Guid? notificationId, SmsNotificationResultType result, string? gatewayReference = null)
+    public async Task UpdateSendStatus(Guid id, SmsNotificationResultType result, string? gatewayReference = null)
     {
+        if (id == Guid.Empty)
+        {
+            throw new ArgumentException("The provided SMS order identifier is invalid.");
+        }
+
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_updateSmsNotificationStatus);
         using TelemetryTracker tracker = new(_telemetryClient, pgcom);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, result.ToString());
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, gatewayReference ?? (object)DBNull.Value);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId ?? (object)DBNull.Value);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(gatewayReference) ? DBNull.Value : gatewayReference);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, id);
 
         await pgcom.ExecuteNonQueryAsync();
         tracker.Track();
