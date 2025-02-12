@@ -3,7 +3,7 @@
 namespace Altinn.Notifications.Core.Models;
 
 /// <summary>
-/// Represents an SMS notification.
+/// Represents an SMS.
 /// </summary>
 public class Sms
 {
@@ -13,7 +13,7 @@ public class Sms
     public Guid Id { get; set; }
 
     /// <summary>
-    /// Gets or sets the sender of the SMS message.
+    /// Gets or sets the sender.
     /// </summary>
     /// <remarks>
     /// The sender can be a literal string or a phone number.
@@ -21,9 +21,9 @@ public class Sms
     public string Sender { get; set; }
 
     /// <summary>
-    /// Gets or sets the recipient of the SMS message.
+    /// Gets or sets the recipient phone number.
     /// </summary>
-    public string Recipient { get; set; }
+    public string RecipientNumber { get; set; }
 
     /// <summary>
     /// Gets or sets the content of the SMS message.
@@ -35,14 +35,14 @@ public class Sms
     /// </summary>
     /// <param name="id">The unique identifier of the SMS.</param>
     /// <param name="sender">The sender of the SMS message.</param>
-    /// <param name="recipient">The recipient of the SMS message.</param>
+    /// <param name="recipientNumber">The recipient of the SMS message.</param>
     /// <param name="message">The content of the SMS message.</param>
-    public Sms(Guid id, string sender, string recipient, string message)
+    public Sms(Guid id, string sender, string recipientNumber, string message)
     {
         Id = id;
         Sender = sender;
         Message = message;
-        Recipient = recipient;
+        RecipientNumber = recipientNumber;
     }
 
     /// <summary>
