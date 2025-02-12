@@ -43,13 +43,13 @@ if (app.Environment.IsDevelopment())
 {
     
     app.MapOpenApi("/openapi/v2.json");
-    /*
+    
     app.UseSwaggerUI(options =>
     {
         options.SwaggerEndpoint("/openapi/v2.json", "v2");
         
     });
-    */
+    
     app.MapScalarApiReference();
 }
 
