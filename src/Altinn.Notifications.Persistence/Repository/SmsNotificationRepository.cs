@@ -117,6 +117,7 @@ public class SmsNotificationRepository : ISmsNotificationRepository
     }
 
     /// <inheritdoc/>
+    /// <exception cref="ArgumentException">Throws if the provided SMS identifier is empty.</exception>
     public async Task UpdateSendStatus(Guid id, SmsNotificationResultType result, string? gatewayReference = null)
     {
         if (id == Guid.Empty)
