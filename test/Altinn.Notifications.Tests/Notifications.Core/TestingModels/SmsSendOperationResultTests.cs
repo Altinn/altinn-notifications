@@ -61,10 +61,10 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingModels
         }
 
         [Fact]
-        public void TryParse_NullIdAndEmptyGatewayReference_ReturnsFalse()
+        public void TryParse_NullIdWithGatewayReference_ReturnsFalse()
         {
             // Arrange
-            string input = "{\"id\":\"00000000-0000-0000-0000-000000000000\",\"gatewayReference\":\"\",\"sendResult\":3}";
+            string input = "{\"id\":\"00000000-0000-0000-0000-000000000000\",\"gatewayReference\":\"123456789\",\"sendResult\":3}";
 
             // Act
             bool result = SmsSendOperationResult.TryParse(input, out var parsedResult);
@@ -73,7 +73,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingModels
             Assert.False(result);
             Assert.NotNull(parsedResult);
             Assert.Equal(Guid.Empty, parsedResult.Id);
-            Assert.Equal(string.Empty, parsedResult.GatewayReference);
+            Assert.Equal("123456789", parsedResult.GatewayReference);
             Assert.Equal(SmsNotificationResultType.Delivered, parsedResult.SendResult);
         }
 

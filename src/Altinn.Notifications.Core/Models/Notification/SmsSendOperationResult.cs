@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 
 using Altinn.Notifications.Core.Enums;
+using Microsoft.Extensions.Logging;
 
 namespace Altinn.Notifications.Core.Models.Notification;
 
@@ -47,24 +48,26 @@ public class SmsSendOperationResult
     /// Tries to parse a JSON string into an <see cref="SmsSendOperationResult"/> object.
     /// </summary>
     /// <param name="jsonString">The JSON string to parse.</param>
-    /// <param name="result">When this method returns, contains the parsed <see cref="SmsSendOperationResult"/> object, if the parsing succeeded, or a new instance of <see cref="SmsSendOperationResult"/> if the parsing failed.</param>
+    /// <param name="result">
+    /// When this method returns, contains the parsed <see cref="SmsSendOperationResult"/> object if the parsing succeeded; 
+    /// otherwise, a new instance of <see cref="SmsSendOperationResult"/>.
+    /// </param>
     /// <returns><c>true</c> if the JSON string was parsed successfully; otherwise, <c>false</c>.</returns>
     public static bool TryParse(string jsonString, out SmsSendOperationResult result)
     {
         result = new SmsSendOperationResult();
 
-        if (string.IsNullOrEmpty(jsonString))
+        if (string.IsNullOrWhiteSpace(jsonString))
         {
             return false;
         }
 
         try
         {
-            var parsedOutput = Deserialize(jsonString);
-            if (parsedOutput != null)
+            var parsedResult = Deserialize(jsonString);
+            if (parsedResult != null)
             {
-                result = parsedOutput;
-                return result.Id != Guid.Empty || !string.IsNullOrEmpty(result.GatewayReference);
+                result = parsedResult;
             }
         }
         catch
@@ -72,6 +75,6 @@ public class SmsSendOperationResult
             // Ignore exceptions and return false
         }
 
-        return false;
+        return result.Id != Guid.Empty;
     }
 }
