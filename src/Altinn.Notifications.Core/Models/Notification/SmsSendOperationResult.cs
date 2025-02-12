@@ -1,4 +1,6 @@
-﻿using System.Text.Json;
+﻿#nullable enable
+
+using System.Text.Json;
 
 using Altinn.Notifications.Core.Enums;
 
@@ -17,7 +19,7 @@ public class SmsSendOperationResult
     /// <summary>
     /// Gets or sets the reference to the delivery in the SMS gateway.
     /// </summary>
-    public string GatewayReference { get; set; } = string.Empty;
+    public string? GatewayReference { get; set; } = null;
 
     /// <summary>
     /// Gets or sets the result of the SMS send operation.
@@ -46,25 +48,25 @@ public class SmsSendOperationResult
     /// <summary>
     /// Tries to parse a JSON string into an <see cref="SmsSendOperationResult"/> object.
     /// </summary>
-    /// <param name="input">The JSON string to parse.</param>
-    /// <param name="value">When this method returns, contains the parsed <see cref="SmsSendOperationResult"/> object, if the parsing succeeded, or a new instance of <see cref="SmsSendOperationResult"/> if the parsing failed.</param>
+    /// <param name="jsonString">The JSON string to parse.</param>
+    /// <param name="result">When this method returns, contains the parsed <see cref="SmsSendOperationResult"/> object, if the parsing succeeded, or a new instance of <see cref="SmsSendOperationResult"/> if the parsing failed.</param>
     /// <returns><c>true</c> if the JSON string was parsed successfully; otherwise, <c>false</c>.</returns>
-    public static bool TryParse(string input, out SmsSendOperationResult value)
+    public static bool TryParse(string jsonString, out SmsSendOperationResult result)
     {
-        value = new SmsSendOperationResult();
+        result = new SmsSendOperationResult();
 
-        if (string.IsNullOrEmpty(input))
+        if (string.IsNullOrEmpty(jsonString))
         {
             return false;
         }
 
         try
         {
-            var parsedOutput = Deserialize(input);
+            var parsedOutput = Deserialize(jsonString);
             if (parsedOutput != null)
             {
-                value = parsedOutput;
-                return value.Id != Guid.Empty || !string.IsNullOrEmpty(value.GatewayReference);
+                result = parsedOutput;
+                return result.Id != Guid.Empty || !string.IsNullOrEmpty(result.GatewayReference);
             }
         }
         catch
