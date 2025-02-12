@@ -1,13 +1,11 @@
-﻿using System;
-
-using Altinn.Notifications.Core.Enums;
+﻿using Altinn.Notifications.Core.Enums;
 
 namespace Altinn.Notifications.Core.Models.Notification;
 
 /// <summary>
 /// Defines the contract for a base notification.
 /// </summary>
-/// <typeparam name="TEnum">The type of the enumeration used for the notification result.</typeparam>
+/// <typeparam name="TEnum">The type of the enumeration used to represent the notification status.</typeparam>
 public interface INotification<TEnum>
     where TEnum : struct, Enum
 {
@@ -27,7 +25,7 @@ public interface INotification<TEnum>
     DateTime RequestedSendTime { get; }
 
     /// <summary>
-    /// Gets the channel through which the notification will be sent.
+    /// Gets the communication channel through which the notification will be sent.
     /// </summary>
     NotificationChannel NotificationChannel { get; }
 
