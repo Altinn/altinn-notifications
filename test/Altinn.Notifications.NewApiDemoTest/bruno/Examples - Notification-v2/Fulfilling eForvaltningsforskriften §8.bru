@@ -1,0 +1,61 @@
+meta {
+  name: Fulfilling eForvaltningsforskriften §8
+  type: http
+  seq: 4
+}
+
+post {
+  url: http://localhost:5151/order
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "te-123-123",
+    "associationDialogporten": {
+      "dialogueId": "{{dialog-guid}}",
+      "transmissionId": "{{transmissionId-utsending-1}}"
+    },
+    "recipient": {
+      "recipientType": "ssn",
+      "ssn": "11122233300",
+      "resourceId": "urn:altinn:resource:te_svc123",
+      "DisregardKrrReservationFlag": false,
+      "channelScheme": "EmailPreferred",
+      "smsSettings": {
+        "notificationScheme": "Daytime_Workingdays_v1",
+        "message": "Du har en ny melding fra TE. Logg inn i Altinn for å gjøre deg kjent med innholdet."
+      },
+      "emailSettings": {
+        "notificationScheme": "Unrestricted_v1",
+        "subject": "Ny melding fra TE",
+        "body": "Du har en ny melding fra TE. Logg inn i Altinn for å gjøre deg kjent med innholdet."
+      }
+    },
+    "reminders": [
+      {
+        "conditionEndpoint": "https://api.te.no/altinn/te-123-123/?seen=true",
+        "sendersReference": "te-123-123",
+        "delayDays": 7,
+        "recipient": {
+          "recipientType": "ssn",
+          "ssn": "11122233300",
+          "resourceId": "urn:altinn:resource:te_svc123",
+          "DisregardKrrReservationFlag": false,
+          "channelScheme": "SmsPreferred",
+          "smsSettings": {
+            "notificationScheme": "Daytime_Workingdays_v1",
+            "message": "Du har en melding fra TE som krever handling. Logg inn i Altinn for å gjøre deg kjent med innholdet."
+          },
+          "emailSettings": {
+            "notificationScheme": "Unrestricted_v1",
+            "subject": "Påminnelse: Melding fra TE",
+            "body": "Du har en melding fra TE som krever handling. Logg inn i Altinn for å gjøre deg kjent med innholdet."
+          }
+        }
+      }
+    ]
+  }
+}
