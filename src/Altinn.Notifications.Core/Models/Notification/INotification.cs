@@ -15,7 +15,7 @@ public interface INotification<TEnum>
     Guid Id { get; }
 
     /// <summary>
-    /// Gets the unique identifier of the order associated with the notification.
+    /// Gets the unique identifier of the order associated with this notification.
     /// </summary>
     Guid OrderId { get; }
 
