@@ -13,7 +13,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingModels
         public void TryParse_ValidInput_ReturnsTrue()
         {
             // Arrange
-            string input = "{\"Id\":\"d3b3f3e3-3e3b-3b3b-3b3b-3b3b3b3b3b3b\",\"GatewayReference\":\"123456789\",\"SendResult\":3}";
+            string input = "{\"id\":\"d3b3f3e3-3e3b-3b3b-3b3b-3b3b3b3b3b3b\",\"gatewayReference\":\"123456789\",\"sendResult\":3}";
 
             // Act
             bool result = SmsSendOperationResult.TryParse(input, out var parsedResult);
@@ -30,7 +30,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingModels
         public void TryParse_InvalidInput_ReturnsFalse()
         {
             // Arrange
-            string input = "{\"InvalidJson\":\"value\"}";
+            string input = "{\"invalidJson\":\"value\"}";
 
             // Act
             bool result = SmsSendOperationResult.TryParse(input, out var parsedResult);
@@ -64,7 +64,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingModels
         public void TryParse_NullIdAndEmptyGatewayReference_ReturnsFalse()
         {
             // Arrange
-            string input = "{\"Id\":\"00000000-0000-0000-0000-000000000000\",\"GatewayReference\":\"\",\"SendResult\":3}";
+            string input = "{\"id\":\"00000000-0000-0000-0000-000000000000\",\"gatewayReference\":\"\",\"sendResult\":3}";
 
             // Act
             bool result = SmsSendOperationResult.TryParse(input, out var parsedResult);
@@ -101,7 +101,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingModels
         public void Deserialize_ValidJsonString_ReturnsObject()
         {
             // Arrange
-            string jsonString = "{\"Id\":\"d3b3f3e3-3e3b-3b3b-3b3b-3b3b3b3b3b3b\",\"GatewayReference\":\"123456789\",\"SendResult\":2}";
+            string jsonString = "{\"id\":\"d3b3f3e3-3e3b-3b3b-3b3b-3b3b3b3b3b3b\",\"gatewayReference\":\"123456789\",\"sendResult\":2}";
 
             // Act
             var result = SmsSendOperationResult.Deserialize(jsonString);
