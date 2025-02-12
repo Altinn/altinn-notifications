@@ -8,6 +8,6 @@ public class NotificationResponse : BaseNotificationResponse
     
     [JsonPropertyOrder(3)]
     [JsonPropertyName("reminders")]
-    public List<BaseNotificationResponse> Reminders { get; set; }
+    public List<BaseNotificationResponse>? Reminders { get; set; }
 
 }

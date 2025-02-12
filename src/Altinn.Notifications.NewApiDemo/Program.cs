@@ -69,11 +69,14 @@ app.MapPost("/order",
                 {
                     NotificationId = Guid.NewGuid(),
                     SendersReference = notification.SendersReference,
-                    Reminders = notification.Reminders.ConvertAll(r => new BaseNotificationResponse()
+                    
+                    Reminders = (notification.Reminders ?? new List<Reminder>()).ConvertAll(r => new BaseNotificationResponse()
                     {
                         NotificationId = Guid.NewGuid(),
                         SendersReference = r.SendersReference
                     }).ToList()
+                    
+                
                 }
             };
 
@@ -81,7 +84,7 @@ app.MapPost("/order",
 
             Console.Out.WriteLine("Planning notification {0} for {1}", notification.SendersReference, plannedSendTime); 
             
-            notification.Reminders.ForEach(r => Console.Out.WriteLine("Planning reminder {0} for {1}", r.SendersReference, plannedSendTime.AddDays(r.RequestedSendTimeDelayDays ?? 0)));
+            (notification.Reminders ?? new List<Reminder>()).ForEach(r => Console.Out.WriteLine("Planning reminder {0} for {1}", r.SendersReference, plannedSendTime.AddDays(r.RequestedSendTimeDelayDays ?? 0)));
                 
             
             return Results.Ok(response);
