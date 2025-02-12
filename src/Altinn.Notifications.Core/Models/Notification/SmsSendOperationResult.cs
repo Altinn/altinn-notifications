@@ -1,7 +1,6 @@
 ﻿using System.Text.Json;
 
 using Altinn.Notifications.Core.Enums;
-using Microsoft.Extensions.Logging;
 
 namespace Altinn.Notifications.Core.Models.Notification;
 
