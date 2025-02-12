@@ -1,37 +1,36 @@
-﻿using System;
-
-using Altinn.Notifications.Core.Enums;
+﻿using Altinn.Notifications.Core.Enums;
 
 namespace Altinn.Notifications.Core.Models.Notification;
 
 /// <summary>
-/// Interface describing a base notification.
+/// Defines the contract for a base notification.
 /// </summary>
+/// <typeparam name="TEnum">The type of the enumeration used to represent the notification status.</typeparam>
 public interface INotification<TEnum>
     where TEnum : struct, Enum
 {
     /// <summary>
-    /// Gets the id of the notification.
+    /// Gets the unique identifier of the notification.
     /// </summary>
-    public Guid Id { get; }
+    Guid Id { get; }
 
     /// <summary>
-    /// Gets the order id of the notification.
+    /// Gets the unique identifier of the order associated with this notification.
     /// </summary>
-    public Guid OrderId { get; }
+    Guid OrderId { get; }
 
     /// <summary>
-    /// Gets the requested send time of the notification.
+    /// Gets the date and time when the notification is requested to be sent.
     /// </summary>
-    public DateTime RequestedSendTime { get; }
+    DateTime RequestedSendTime { get; }
 
     /// <summary>
-    /// Gets the notifiction channel for the notification.
+    /// Gets the communication channel through which the notification will be sent.
     /// </summary>
-    public NotificationChannel NotificationChannel { get; }
+    NotificationChannel NotificationChannel { get; }
 
     /// <summary>
-    /// Gets the send result of the notification.
+    /// Gets the result of the notification send operation.
     /// </summary>
-    public NotificationResult<TEnum> SendResult { get; }
+    NotificationResult<TEnum> SendResult { get; }
 }
