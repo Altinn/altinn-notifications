@@ -25,18 +25,18 @@ public class SmsNotificationRepository : ISmsNotificationRepository
     private const string _getSmsNotificationRecipientsSql = "select * from notifications.getsmsrecipients_v2($1)"; // (_orderid)
     private const string _insertNewSmsNotificationSql = "call notifications.insertsmsnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _customizedbody, _result, _smscount, _resulttime, _expirytime)
 
-    private const string _updateSmsNotificationBasedOnGatewayReferenceSql =
-        @"UPDATE notifications.smsnotifications 
-            SET result = $1::smsnotificationresulttype, 
-                resulttime = now() 
-            WHERE gatewayreference = $2"; // (_result, _gatewayreference)
-
     private const string _updateSmsNotificationBasedOnIdentifierSql =
         @"UPDATE notifications.smsnotifications 
             SET result = $1::smsnotificationresulttype, 
                 resulttime = now(), 
                 gatewayreference = $2 
             WHERE alternateid = $3"; // (_result, _gatewayreference, _alternateid)
+
+    private const string _updateSmsNotificationBasedOnGatewayReferenceSql =
+        @"UPDATE notifications.smsnotifications 
+            SET result = $1::smsnotificationresulttype, 
+                resulttime = now() 
+            WHERE gatewayreference = $2"; // (_result, _gatewayreference)
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsNotificationRepository"/> class.
@@ -123,7 +123,7 @@ public class SmsNotificationRepository : ISmsNotificationRepository
     }
 
     /// <inheritdoc/>
-    /// <exception cref="ArgumentException">Throws if the provided SMS identifier is empty.</exception>
+    /// <exception cref="ArgumentException">Throws if the provided SMS identifier is invalid.</exception>
     public async Task UpdateSendStatus(Guid id, SmsNotificationResultType result, string? gatewayReference = null)
     {
         if (id == Guid.Empty && string.IsNullOrWhiteSpace(gatewayReference))
@@ -131,26 +131,31 @@ public class SmsNotificationRepository : ISmsNotificationRepository
             throw new ArgumentException("The provided SMS identifier is invalid.");
         }
 
-        if (id != Guid.Empty && !string.IsNullOrWhiteSpace(gatewayReference))
+        if (id != Guid.Empty)
         {
             await UpdateSendStatusById(id, result, gatewayReference);
         }
-        else if (id == Guid.Empty && !string.IsNullOrWhiteSpace(gatewayReference))
+        else if (!string.IsNullOrWhiteSpace(gatewayReference))
         {
             await UpdateSendStatusByGatewayReference(gatewayReference, result);
         }
     }
 
     /// <summary>
-    /// Updates the send status of an SMS notification based on its identifier and sets the operation identifier.
+    /// Updates the send status of an SMS notification based on its identifier and sets the gateway reference.
     /// </summary>
     /// <param name="id">The unique identifier of the SMS notification.</param>
-    /// <param name="result">The result status of the SMS notification.</param>
-    /// <param name="gatewayReference">The gateway reference (optional).</param>
+    /// <param name="result">The result status of sending the SMS notification.</param>
+    /// <param name="gatewayReference">The gateway reference (optional). If provided, it will be updated in the database.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Throws if the provided SMS identifier is empty.</exception>
+    /// <exception cref="ArgumentException">Thrown when the provided SMS identifier is invalid.</exception>
     public async Task UpdateSendStatusById(Guid id, SmsNotificationResultType result, string? gatewayReference = null)
     {
+        if (id == Guid.Empty)
+        {
+            throw new ArgumentException("The provided SMS identifier is invalid.");
+        }
+
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_updateSmsNotificationBasedOnIdentifierSql);
         using TelemetryTracker tracker = new(_telemetryClient, pgcom);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, result.ToString());
@@ -165,11 +170,16 @@ public class SmsNotificationRepository : ISmsNotificationRepository
     /// Updates the send status of an SMS notification based on its gateway reference.
     /// </summary>
     /// <param name="gatewayReference">The gateway reference of the SMS notification.</param>
-    /// <param name="result">The result status of the SMS notification.</param>
+    /// <param name="result">The result status of sending the SMS notification.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Throws if the provided gateway reference is empty.</exception>
+    /// <exception cref="ArgumentException">Thrown when the provided gateway reference is invalid.</exception>
     public async Task UpdateSendStatusByGatewayReference(string gatewayReference, SmsNotificationResultType result)
     {
+        if (string.IsNullOrWhiteSpace(gatewayReference))
+        {
+            throw new ArgumentException("The provided gateway reference is invalid.");
+        }
+
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_updateSmsNotificationBasedOnGatewayReferenceSql);
         using TelemetryTracker tracker = new(_telemetryClient, pgcom);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, result.ToString());
