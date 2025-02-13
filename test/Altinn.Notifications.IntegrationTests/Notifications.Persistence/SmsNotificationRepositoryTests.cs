@@ -88,7 +88,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
         List<Sms> smsToBeSent = await repo.GetNewNotifications();
 
         // Assert
-        Assert.Contains(smsToBeSent, s => s.Id == smsNotification.Id);
+        Assert.Contains(smsToBeSent, s => s.NotificationId == smsNotification.Id);
     }
 
     [Fact]
