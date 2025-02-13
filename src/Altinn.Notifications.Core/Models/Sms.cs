@@ -3,46 +3,46 @@
 namespace Altinn.Notifications.Core.Models;
 
 /// <summary>
-/// Represents an SMS message.
+/// Represents an SMS.
 /// </summary>
 public class Sms
 {
     /// <summary>
-    /// Gets or sets the ID of the SMS.
+    /// Gets or sets the unique identifier of the SMS.
     /// </summary>
-    public Guid NotificationId { get; set; }
+    public Guid Id { get; set; }
 
     /// <summary>
-    /// Gets or sets the sender of the SMS message.
+    /// Gets or sets the sender.
     /// </summary>
     /// <remarks>
-    /// Can be a literal string or a phone number.
+    /// The sender can be a literal string or a phone number.
     /// </remarks>
     public string Sender { get; set; }
 
     /// <summary>
-    /// Gets or sets the recipient of the SMS message.
+    /// Gets or sets the recipient phone number.
     /// </summary>
-    public string Recipient { get; set; }
+    public string RecipientNumber { get; set; }
 
     /// <summary>
-    /// Gets or sets the contents of the SMS message.
+    /// Gets or sets the content of the SMS message.
     /// </summary>
     public string Message { get; set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Sms"/> class with the specified parameters.
     /// </summary>
-    /// <param name="notificationId">The ID of the SMS.</param>
+    /// <param name="id">The unique identifier of the SMS.</param>
     /// <param name="sender">The sender of the SMS message.</param>
-    /// <param name="recipient">The recipient of the SMS message.</param>
-    /// <param name="message">The contents of the SMS message.</param>
-    public Sms(Guid notificationId, string sender, string recipient, string message)
+    /// <param name="recipientNumber">The recipient of the SMS message.</param>
+    /// <param name="message">The content of the SMS message.</param>
+    public Sms(Guid id, string sender, string recipientNumber, string message)
     {
-        NotificationId = notificationId;
-        Recipient = recipient;
+        Id = id;
         Sender = sender;
         Message = message;
+        RecipientNumber = recipientNumber;
     }
 
     /// <summary>
