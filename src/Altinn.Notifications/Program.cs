@@ -72,6 +72,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseAuthorization();
 
+app.UseTelemetryEnricher();
+
 app.MapControllers();
 
 app.MapHealthChecks("/health");
