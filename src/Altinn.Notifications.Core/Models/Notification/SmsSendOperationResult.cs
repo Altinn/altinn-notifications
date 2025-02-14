@@ -12,7 +12,7 @@ public class SmsSendOperationResult
     /// <summary>
     /// Gets or sets the unique identifier of the SMS notification.
     /// </summary>
-    public Guid Id { get; set; }
+    public Guid NotificationId { get; set; }
 
     /// <summary>
     /// Gets or sets the reference to the delivery in the SMS gateway.
@@ -74,6 +74,6 @@ public class SmsSendOperationResult
             // Ignore exceptions and return false
         }
 
-        return result.Id != Guid.Empty;
+        return result.NotificationId != Guid.Empty;
     }
 }

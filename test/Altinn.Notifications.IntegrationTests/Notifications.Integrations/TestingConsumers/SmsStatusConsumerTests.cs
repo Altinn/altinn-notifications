@@ -31,7 +31,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
 
         SmsSendOperationResult sendOperationResult = new()
         {
-            Id = notification.Id,
+            NotificationId = notification.Id,
             SendResult = SmsNotificationResultType.Accepted,
             GatewayReference = Guid.NewGuid().ToString()
         };

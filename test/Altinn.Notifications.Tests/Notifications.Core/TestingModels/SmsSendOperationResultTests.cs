@@ -21,7 +21,7 @@ public class SmsSendOperationResultTests
         // Assert
         Assert.NotNull(result);
         Assert.False(parseResult);
-        Assert.Equal(Guid.Empty, result.Id);
+        Assert.Equal(Guid.Empty, result.NotificationId);
         Assert.Null(result.GatewayReference);
         Assert.Equal(SmsNotificationResultType.New, result.SendResult);
     }
@@ -38,7 +38,7 @@ public class SmsSendOperationResultTests
         // Assert
         Assert.NotNull(result);
         Assert.False(parseResult);
-        Assert.Equal(Guid.Empty, result.Id);
+        Assert.Equal(Guid.Empty, result.NotificationId);
         Assert.Null(result.GatewayReference);
         Assert.Equal(SmsNotificationResultType.New, result.SendResult);
     }
@@ -57,7 +57,7 @@ public class SmsSendOperationResultTests
         Assert.True(parseResult);
         Assert.Equal("123456789", result.GatewayReference);
         Assert.Equal(SmsNotificationResultType.Delivered, result.SendResult);
-        Assert.Equal(Guid.Parse("d3b3f3e3-3e3b-3b3b-3b3b-3b3b3b3b3b3b"), result.Id);
+        Assert.Equal(Guid.Parse("d3b3f3e3-3e3b-3b3b-3b3b-3b3b3b3b3b3b"), result.NotificationId);
     }
 
     [Fact]
@@ -72,7 +72,7 @@ public class SmsSendOperationResultTests
         // Assert
         Assert.NotNull(result);
         Assert.False(parseResult);
-        Assert.Equal(Guid.Empty, result.Id);
+        Assert.Equal(Guid.Empty, result.NotificationId);
         Assert.Null(result.GatewayReference);
         Assert.Equal(SmsNotificationResultType.New, result.SendResult);
     }
@@ -89,7 +89,7 @@ public class SmsSendOperationResultTests
         // Assert
         Assert.NotNull(result);
         Assert.False(parseResult);
-        Assert.Equal(Guid.Empty, result.Id);
+        Assert.Equal(Guid.Empty, result.NotificationId);
         Assert.Equal("123456789", result.GatewayReference);
         Assert.Equal(SmsNotificationResultType.Delivered, result.SendResult);
     }
@@ -107,7 +107,7 @@ public class SmsSendOperationResultTests
         // Exception is caught, so TryParse returns false and result is a new instance with default values.
         Assert.NotNull(result);
         Assert.False(parseResult);
-        Assert.Equal(Guid.Empty, result.Id);
+        Assert.Equal(Guid.Empty, result.NotificationId);
         Assert.Null(result.GatewayReference);
         Assert.Equal(SmsNotificationResultType.New, result.SendResult);
     }
@@ -120,7 +120,7 @@ public class SmsSendOperationResultTests
         {
             GatewayReference = "123456789",
             SendResult = SmsNotificationResultType.Delivered,
-            Id = Guid.Parse("d3b3f3e3-3e3b-3b3b-3b3b-3b3b3b3b3b3b")
+            NotificationId = Guid.Parse("d3b3f3e3-3e3b-3b3b-3b3b-3b3b3b3b3b3b")
         };
 
         // Act
@@ -145,6 +145,6 @@ public class SmsSendOperationResultTests
         Assert.NotNull(result);
         Assert.Equal("123456789", result.GatewayReference);
         Assert.Equal(SmsNotificationResultType.Accepted, result.SendResult);
-        Assert.Equal(Guid.Parse("d3b3f3e3-3e3b-3b3b-3b3b-3b3b3b3b3b3b"), result.Id);
+        Assert.Equal(Guid.Parse("d3b3f3e3-3e3b-3b3b-3b3b-3b3b3b3b3b3b"), result.NotificationId);
     }
 }
