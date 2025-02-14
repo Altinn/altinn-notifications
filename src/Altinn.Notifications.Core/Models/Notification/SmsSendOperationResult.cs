@@ -5,67 +5,75 @@ using Altinn.Notifications.Core.Enums;
 namespace Altinn.Notifications.Core.Models.Notification;
 
 /// <summary>
-/// A class representing a sms send operation update object
-/// </summary>    
+/// Represents the result of an SMS send operation.
+/// </summary>
 public class SmsSendOperationResult
 {
     /// <summary>
-    /// The notification id
+    /// Gets or sets the unique identifier of the SMS notification.
     /// </summary>
-    public Guid? NotificationId { get; set; }
+    public Guid Id { get; set; }
 
     /// <summary>
-    /// The reference to the delivery in sms gateway
+    /// Gets or sets the reference to the delivery in the SMS gateway.
     /// </summary>
-    public string GatewayReference { get; set; } = string.Empty;
+    public string? GatewayReference { get; set; } = null;
 
     /// <summary>
-    /// The sms send result
+    /// Gets or sets the result of the SMS send operation.
     /// </summary>
     public SmsNotificationResultType SendResult { get; set; }
 
     /// <summary>
-    /// Json serializes the <see cref="SmsSendOperationResult"/>
+    /// Serializes the <see cref="SmsSendOperationResult"/> object to a JSON string.
     /// </summary>
+    /// <returns>A JSON string representation of the <see cref="SmsSendOperationResult"/> object.</returns>
     public string Serialize()
     {
         return JsonSerializer.Serialize(this, JsonSerializerOptionsProvider.Options);
     }
 
     /// <summary>
-    /// Deserialize a json string into the <see cref="SmsSendOperationResult"/>
+    /// Deserializes a JSON string into an <see cref="SmsSendOperationResult"/> object.
     /// </summary>
+    /// <param name="serializedString">The JSON string to deserialize.</param>
+    /// <returns>An <see cref="SmsSendOperationResult"/> object.</returns>
     public static SmsSendOperationResult? Deserialize(string serializedString)
     {
-        return JsonSerializer.Deserialize<SmsSendOperationResult>(
-            serializedString, JsonSerializerOptionsProvider.Options);
+        return JsonSerializer.Deserialize<SmsSendOperationResult>(serializedString, JsonSerializerOptionsProvider.Options);
     }
 
     /// <summary>
-    /// Try to parse a json string into a<see cref="SmsSendOperationResult"/>
+    /// Tries to parse a JSON string into an <see cref="SmsSendOperationResult"/> object.
     /// </summary>
-    public static bool TryParse(string input, out SmsSendOperationResult value)
+    /// <param name="jsonString">The JSON string to parse.</param>
+    /// <param name="result">
+    /// When this method returns, contains the parsed <see cref="SmsSendOperationResult"/> object if the parsing succeeded; 
+    /// otherwise, a new instance of <see cref="SmsSendOperationResult"/>.
+    /// </param>
+    /// <returns><c>true</c> if the JSON string was parsed successfully; otherwise, <c>false</c>.</returns>
+    public static bool TryParse(string jsonString, out SmsSendOperationResult result)
     {
-        SmsSendOperationResult? parsedOutput;
-        value = new SmsSendOperationResult();
+        result = new SmsSendOperationResult();
 
-        if (string.IsNullOrEmpty(input))
+        if (string.IsNullOrWhiteSpace(jsonString))
         {
             return false;
         }
 
         try
         {
-            parsedOutput = Deserialize(input!);
-
-            value = parsedOutput!;
-            return value.NotificationId != Guid.Empty || value.GatewayReference != string.Empty;
+            var parsedResult = Deserialize(jsonString);
+            if (parsedResult != null)
+            {
+                result = parsedResult;
+            }
         }
         catch
         {
-            // try parse, we simply return false if fails
+            // Ignore exceptions and return false
         }
 
-        return false;
+        return result.Id != Guid.Empty;
     }
 }

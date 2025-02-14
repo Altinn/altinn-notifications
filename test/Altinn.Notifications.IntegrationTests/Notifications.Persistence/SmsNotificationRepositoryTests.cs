@@ -27,6 +27,11 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
 
     public async Task DisposeAsync()
     {
+        if (_orderIdsToDelete.Count == 0)
+        {
+            return;
+        }
+
         string deleteSql = $@"DELETE from notifications.orders o where o.alternateid in ('{string.Join("','", _orderIdsToDelete)}')";
         await PostgreUtil.RunSql(deleteSql);
     }
@@ -83,7 +88,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
         List<Sms> smsToBeSent = await repo.GetNewNotifications();
 
         // Assert
-        Assert.Contains(smsToBeSent, s => s.NotificationId == smsNotification.Id);
+        Assert.Contains(smsToBeSent, s => s.Id == smsNotification.Id);
     }
 
     [Fact]
@@ -131,40 +136,6 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
               FROM notifications.smsnotifications sms
               WHERE sms.alternateid = '{smsNotification.Id}' 
               AND sms.result  = '{SmsNotificationResultType.Accepted}' 
-              AND sms.gatewayreference = '{gatewayReference}'";
-
-        int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
-
-        Assert.Equal(1, actualCount);
-    }
-
-    [Fact]
-    public async Task UpdateSendStatus_WithoutNotificationId_WithGatewayRef()
-    {
-        // Arrange
-        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
-        _orderIdsToDelete.Add(order.Id);
-
-        SmsNotificationRepository repo = (SmsNotificationRepository)ServiceUtil
-          .GetServices(new List<Type>() { typeof(ISmsNotificationRepository) })
-          .First(i => i.GetType() == typeof(SmsNotificationRepository));
-
-        string gatewayReference = Guid.NewGuid().ToString();
-
-        string setGateqwaySql = $@"Update notifications.smsnotifications 
-                SET gatewayreference = '{gatewayReference}'
-                WHERE alternateid = '{smsNotification.Id}'";
-
-        await PostgreUtil.RunSql(setGateqwaySql);
-
-        // Act
-        await repo.UpdateSendStatus(null, SmsNotificationResultType.Accepted, gatewayReference);
-
-        // Assert
-        string sql = $@"SELECT count(1) 
-              FROM notifications.smsnotifications sms
-              WHERE sms.alternateid = '{smsNotification.Id}'
-              AND sms.result = '{SmsNotificationResultType.Accepted}'
               AND sms.gatewayreference = '{gatewayReference}'";
 
         int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
@@ -221,5 +192,25 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
                 Assert.Fail($"Exception thrown for SmsNotificationResultType: {resultType}. Exception: {ex.Message}");
             }
         }
+    }
+
+    [Fact]
+    public async Task UpdateSendStatus_WithEmptyGuid_ThrowsArgumentException()
+    {
+        // Arrange
+        SmsNotificationRepository repo = (SmsNotificationRepository)ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .First(i => i.GetType() == typeof(SmsNotificationRepository));
+
+        Guid emptyGuid = Guid.Empty;
+        SmsNotificationResultType resultType = SmsNotificationResultType.Failed;
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<ArgumentException>(async () =>
+        {
+            await repo.UpdateSendStatus(emptyGuid, resultType);
+        });
+
+        Assert.Equal("The provided SMS identifier is invalid.", exception.Message);
     }
 }
