@@ -71,7 +71,7 @@ public class SmsNotificationService : ISmsNotificationService
             bool success = await _producer.ProduceAsync(_smsQueueTopicName, sms.Serialize());
             if (!success)
             {
-                await _repository.UpdateSendStatus(sms.Id, SmsNotificationResultType.New);
+                await _repository.UpdateSendStatus(sms.NotificationId, SmsNotificationResultType.New);
             }
         }
     }

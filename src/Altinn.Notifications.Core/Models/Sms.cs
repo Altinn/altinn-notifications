@@ -10,7 +10,7 @@ public class Sms
     /// <summary>
     /// Gets or sets the unique identifier of the SMS.
     /// </summary>
-    public Guid Id { get; set; }
+    public Guid NotificationId { get; set; }
 
     /// <summary>
     /// Gets or sets the sender.
@@ -23,7 +23,7 @@ public class Sms
     /// <summary>
     /// Gets or sets the recipient phone number.
     /// </summary>
-    public string RecipientNumber { get; set; }
+    public string Recipient { get; set; }
 
     /// <summary>
     /// Gets or sets the content of the SMS message.
@@ -33,16 +33,16 @@ public class Sms
     /// <summary>
     /// Initializes a new instance of the <see cref="Sms"/> class with the specified parameters.
     /// </summary>
-    /// <param name="id">The unique identifier of the SMS.</param>
+    /// <param name="notificationId">The unique identifier of the SMS.</param>
     /// <param name="sender">The sender of the SMS message.</param>
-    /// <param name="recipientNumber">The recipient of the SMS message.</param>
+    /// <param name="recipient">The recipient of the SMS message.</param>
     /// <param name="message">The content of the SMS message.</param>
-    public Sms(Guid id, string sender, string recipientNumber, string message)
+    public Sms(Guid notificationId, string sender, string recipient, string message)
     {
-        Id = id;
         Sender = sender;
         Message = message;
-        RecipientNumber = recipientNumber;
+        Recipient = recipient;
+        NotificationId = notificationId;
     }
 
     /// <summary>

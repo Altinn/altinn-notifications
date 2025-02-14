@@ -20,7 +20,7 @@ public interface ISmsNotificationRepository
     Task AddNotification(SmsNotification notification, DateTime expiry, int count);
 
     /// <summary>
-    /// Retrieves all SMS notifications with a status 'New'.
+    /// Retrieves all SMS notifications that have the status 'New'.
     /// </summary>
     /// <returns>A task that represents the asynchronous operation. The task result contains a list of new SMS notifications.</returns>
     Task<List<Sms>> GetNewNotifications();
