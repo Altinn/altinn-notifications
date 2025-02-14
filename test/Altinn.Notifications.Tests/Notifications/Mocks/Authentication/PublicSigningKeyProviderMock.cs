@@ -21,7 +21,7 @@ namespace Altinn.Notifications.Tests.Notifications.Mocks.Authentication
         {
             List<SecurityKey> signingKeys = new();
 
-            X509Certificate2 cert = new($"{issuer}-org.pem");
+            X509Certificate2 cert = X509CertificateLoader.LoadCertificateFromFile($"{issuer}-org.pem");
             SecurityKey key = new X509SecurityKey(cert);
 
             signingKeys.Add(key);
