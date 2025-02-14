@@ -24,7 +24,7 @@
 
 import { check, sleep } from "k6";
 import { stopIterationOnFail } from "../errorhandler.js";
-import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
+import { randomString, uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 
 import * as setupToken from "../setup.js";
 import * as ordersApi from "../api/notifications/orders.js";
@@ -56,8 +56,15 @@ export function setup() {
 
     const emailOrderRequest = { ...emailOrderRequestJson, sendersReference, resourceId, recipients: [] };
 
+    const smsOrderRequest = {
+        senderNumber: "Altinn",
+        body: "This is an automated test: " + randomString(30) + " " + randomString(30),
+        recipients: [],
+        sendersReference: sendersReference
+    };
     if (orgNoRecipient) {
         emailOrderRequest.recipients.push({ organizationNumber: orgNoRecipient });
+        smsOrderRequest.recipients.push({ organizationNumber: orgNoRecipient })
     }
 
     const runFullTestSet = __ENV.runFullTestSet
@@ -69,6 +76,7 @@ export function setup() {
         runFullTestSet,
         sendersReference,
         emailOrderRequest,
+        smsOrderRequest,
     };
 }
 
@@ -94,6 +102,33 @@ function postEmailNotificationOrderRequest(data) {
     check(response, {
         "POST email notification order request. Location header provided": (r) => selfLink,
         "POST email notification order request. Recipient lookup was successful": (r) => JSON.parse(r.body).recipientLookup.status == 'Success',
+    });
+
+    return selfLink;
+}
+
+/**
+ * Posts an SMS notification order request.
+ * @param {Object} data - The data object containing smsOrderRequest and token.
+ * @returns {string} The selfLink of the created order.
+ */
+function postSmsNotificationOrderRequest(data) {
+    const response = ordersApi.postSmsNotificationOrder(
+        JSON.stringify(data.smsOrderRequest),
+        data.token
+    );
+
+    const success = check(response, {
+        "POST SMS notification order request. Status is 202 Accepted": (r) => r.status === 202
+    });
+
+    stopIterationOnFail("POST SMS notification order request failed", success);
+
+    const selfLink = response.headers["Location"];
+
+    check(response, {
+        "POST SMS notification order request. Location header provided": (_) => selfLink,
+        "POST SMS notification order request. Response body is not an empty string": (r) => r.body
     });
 
     return selfLink;
@@ -140,6 +175,23 @@ function getEmailNotificationSummaryAgainAfterOneMinuteForVerification(data, ord
 }
 
 /**
+ * Gets the SMS notification summary.
+ * @param {Object} data - The data object containing token.
+ * @param {string} orderId - The ID of the order.
+ */
+function getSmsNotificationSummary(data, orderId) {
+    const response = notificationsApi.getSmsNotifications(orderId, data.token);
+
+    check(response, {
+        "GET SMS notifications. Status is 200 OK": (r) => r.status === 200,
+    });
+
+    check(JSON.parse(response.body), {
+        "GET SMS notifications. OrderId property is a match": (notificationSummary) => notificationSummary.orderId === orderId,
+    });
+}
+
+/**
  * The main function to run the test.
  * @param {Object} data - The data object containing runFullTestSet and other test data.
  */
@@ -147,7 +199,11 @@ export default function (data) {
     const selfLink = postEmailNotificationOrderRequest(data);
     const id = selfLink.split("/").pop();
 
+    const smsSelfLink = postSmsNotificationOrderRequest(data);
+    const smsId = smsSelfLink.split("/").pop();
+
     getEmailNotificationSummary(data, id);
+    getSmsNotificationSummary(data, smsId);
 
     if (data.runFullTestSet) {
         getEmailNotificationSummaryAgainAfterOneMinuteForVerification(data, id);
