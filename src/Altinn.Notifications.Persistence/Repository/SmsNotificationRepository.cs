@@ -149,7 +149,7 @@ public class SmsNotificationRepository : ISmsNotificationRepository
     /// <param name="gatewayReference">The gateway reference (optional). If provided, it will be updated in the database.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     /// <exception cref="ArgumentException">Thrown when the provided SMS identifier is invalid.</exception>
-    public async Task UpdateSendStatusById(Guid id, SmsNotificationResultType result, string? gatewayReference = null)
+    private async Task UpdateSendStatusById(Guid id, SmsNotificationResultType result, string? gatewayReference = null)
     {
         if (id == Guid.Empty)
         {
@@ -173,7 +173,7 @@ public class SmsNotificationRepository : ISmsNotificationRepository
     /// <param name="result">The result status of sending the SMS notification.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     /// <exception cref="ArgumentException">Thrown when the provided gateway reference is invalid.</exception>
-    public async Task UpdateSendStatusByGatewayReference(string gatewayReference, SmsNotificationResultType result)
+    private async Task UpdateSendStatusByGatewayReference(string gatewayReference, SmsNotificationResultType result)
     {
         if (string.IsNullOrWhiteSpace(gatewayReference))
         {
