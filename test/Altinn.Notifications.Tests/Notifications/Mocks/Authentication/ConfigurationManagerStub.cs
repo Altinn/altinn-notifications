@@ -46,7 +46,7 @@ public class ConfigurationManagerStub : IConfigurationManager<OpenIdConnectConfi
     {
         List<SecurityKey> signingKeys = new();
 
-        X509Certificate2 cert = new("JWTValidationCert.cer");
+        X509Certificate2 cert = X509CertificateLoader.LoadCertificateFromFile("JWTValidationCert.cer");
         SecurityKey key = new X509SecurityKey(cert);
 
         signingKeys.Add(key);
