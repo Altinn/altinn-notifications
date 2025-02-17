@@ -234,19 +234,19 @@ public class SmsNotificationServiceTests
     public async Task UpdateSendStatus_SendResultDefined_Succeeded()
     {
         // Arrange
-        Guid id = Guid.NewGuid();
+        Guid notificationId = Guid.NewGuid();
         string gatewayReference = Guid.NewGuid().ToString();
 
         SmsSendOperationResult sendOperationResult = new()
         {
-            Id = id,
+            NotificationId = notificationId,
             SendResult = SmsNotificationResultType.Accepted,
             GatewayReference = gatewayReference
         };
 
         var repoMock = new Mock<ISmsNotificationRepository>();
         repoMock.Setup(r => r.UpdateSendStatus(
-            It.Is<Guid>(n => n == id),
+            It.Is<Guid>(n => n == notificationId),
             It.Is<SmsNotificationResultType>(e => e == SmsNotificationResultType.Accepted),
             It.Is<string>(s => s.Equals(gatewayReference))));
 
