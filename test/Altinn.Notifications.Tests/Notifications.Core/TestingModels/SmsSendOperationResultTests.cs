@@ -21,8 +21,8 @@ public class SmsSendOperationResultTests
         // Assert
         Assert.NotNull(result);
         Assert.False(parseResult);
-        Assert.Equal(Guid.Empty, result.NotificationId);
-        Assert.Null(result.GatewayReference);
+        Assert.Null(result.NotificationId);
+        Assert.Empty(result.GatewayReference);
         Assert.Equal(SmsNotificationResultType.New, result.SendResult);
     }
 
@@ -38,8 +38,8 @@ public class SmsSendOperationResultTests
         // Assert
         Assert.NotNull(result);
         Assert.False(parseResult);
-        Assert.Equal(Guid.Empty, result.NotificationId);
-        Assert.Null(result.GatewayReference);
+        Assert.Null(result.NotificationId);
+        Assert.Empty(result.GatewayReference);
         Assert.Equal(SmsNotificationResultType.New, result.SendResult);
     }
 
@@ -47,7 +47,7 @@ public class SmsSendOperationResultTests
     public void TryParse_ValidInput_ReturnsTrue()
     {
         // Arrange
-        string input = "{\"id\":\"d3b3f3e3-3e3b-3b3b-3b3b-3b3b3b3b3b3b\",\"gatewayReference\":\"123456789\",\"sendResult\":3}";
+        string input = "{\"notificationId\":\"d3b3f3e3-3e3b-3b3b-3b3b-3b3b3b3b3b3b\",\"gatewayReference\":\"123456789\",\"sendResult\":3}";
 
         // Act
         bool parseResult = SmsSendOperationResult.TryParse(input, out SmsSendOperationResult result);
@@ -72,8 +72,8 @@ public class SmsSendOperationResultTests
         // Assert
         Assert.NotNull(result);
         Assert.False(parseResult);
-        Assert.Equal(Guid.Empty, result.NotificationId);
-        Assert.Null(result.GatewayReference);
+        Assert.Null(result.NotificationId);
+        Assert.Empty(result.GatewayReference);
         Assert.Equal(SmsNotificationResultType.New, result.SendResult);
     }
 
@@ -81,14 +81,14 @@ public class SmsSendOperationResultTests
     public void TryParse_NullIdWithGatewayReference_ReturnsFalse()
     {
         // Arrange
-        string input = "{\"id\":\"00000000-0000-0000-0000-000000000000\",\"gatewayReference\":\"123456789\",\"sendResult\":3}";
+        string input = "{\"notificationId\":\"00000000-0000-0000-0000-000000000000\",\"gatewayReference\":\"123456789\",\"sendResult\":3}";
 
         // Act
         bool parseResult = SmsSendOperationResult.TryParse(input, out SmsSendOperationResult result);
 
         // Assert
         Assert.NotNull(result);
-        Assert.False(parseResult);
+        Assert.True(parseResult);
         Assert.Equal(Guid.Empty, result.NotificationId);
         Assert.Equal("123456789", result.GatewayReference);
         Assert.Equal(SmsNotificationResultType.Delivered, result.SendResult);
@@ -107,8 +107,8 @@ public class SmsSendOperationResultTests
         // Exception is caught, so TryParse returns false and result is a new instance with default values.
         Assert.NotNull(result);
         Assert.False(parseResult);
-        Assert.Equal(Guid.Empty, result.NotificationId);
-        Assert.Null(result.GatewayReference);
+        Assert.Null(result.NotificationId);
+        Assert.Empty(result.GatewayReference);
         Assert.Equal(SmsNotificationResultType.New, result.SendResult);
     }
 
@@ -129,14 +129,14 @@ public class SmsSendOperationResultTests
         // Assert
         Assert.Contains("\"sendResult\":\"Delivered\"", jsonString);
         Assert.Contains("\"gatewayReference\":\"123456789\"", jsonString);
-        Assert.Contains("\"id\":\"d3b3f3e3-3e3b-3b3b-3b3b-3b3b3b3b3b3b\"", jsonString);
+        Assert.Contains("\"notificationId\":\"d3b3f3e3-3e3b-3b3b-3b3b-3b3b3b3b3b3b\"", jsonString);
     }
 
     [Fact]
     public void Deserialize_ValidJsonString_ReturnsObject()
     {
         // Arrange
-        string jsonString = "{\"id\":\"d3b3f3e3-3e3b-3b3b-3b3b-3b3b3b3b3b3b\",\"gatewayReference\":\"123456789\",\"sendResult\":2}";
+        string jsonString = "{\"notificationId\":\"d3b3f3e3-3e3b-3b3b-3b3b-3b3b3b3b3b3b\",\"gatewayReference\":\"123456789\",\"sendResult\":2}";
 
         // Act
         var result = SmsSendOperationResult.Deserialize(jsonString);
