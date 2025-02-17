@@ -74,6 +74,6 @@ public class SmsSendOperationResult
             // Ignore exceptions and return false
         }
 
-        return (result.NotificationId.HasValue && result.NotificationId.Value != Guid.Empty) || string.IsNullOrWhiteSpace(result.GatewayReference);
+        return (result.NotificationId.HasValue && result.NotificationId.Value != Guid.Empty) || !string.IsNullOrWhiteSpace(result.GatewayReference);
     }
 }
