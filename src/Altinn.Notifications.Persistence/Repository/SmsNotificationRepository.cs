@@ -124,16 +124,16 @@ public class SmsNotificationRepository : ISmsNotificationRepository
 
     /// <inheritdoc/>
     /// <exception cref="ArgumentException">Throws if the provided SMS identifier is invalid.</exception>
-    public async Task UpdateSendStatus(Guid id, SmsNotificationResultType result, string? gatewayReference = null)
+    public async Task UpdateSendStatus(Guid? notificationId, SmsNotificationResultType result, string? gatewayReference = null)
     {
-        if (id == Guid.Empty && string.IsNullOrWhiteSpace(gatewayReference))
+        if ((!notificationId.HasValue || notificationId.Value == Guid.Empty) && string.IsNullOrWhiteSpace(gatewayReference))
         {
             throw new ArgumentException("The provided SMS identifier is invalid.");
         }
 
-        if (id != Guid.Empty)
+        if (notificationId.HasValue && notificationId.Value != Guid.Empty)
         {
-            await UpdateSendStatusById(id, result, gatewayReference);
+            await UpdateSendStatusById(notificationId.Value, result, gatewayReference);
         }
         else if (!string.IsNullOrWhiteSpace(gatewayReference))
         {
