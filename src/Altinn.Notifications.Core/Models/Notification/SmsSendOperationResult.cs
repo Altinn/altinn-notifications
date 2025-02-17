@@ -17,7 +17,7 @@ public class SmsSendOperationResult
     /// <summary>
     /// Gets or sets the reference to the delivery in the SMS gateway.
     /// </summary>
-    public string? GatewayReference { get; set; } = null;
+    public string GatewayReference { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the result of the SMS send operation.
@@ -74,6 +74,6 @@ public class SmsSendOperationResult
             // Ignore exceptions and return false
         }
 
-        return result.NotificationId.HasValue && result.NotificationId.Value != Guid.Empty;
+        return (result.NotificationId.HasValue && result.NotificationId.Value != Guid.Empty) || string.IsNullOrWhiteSpace(result.GatewayReference);
     }
 }
