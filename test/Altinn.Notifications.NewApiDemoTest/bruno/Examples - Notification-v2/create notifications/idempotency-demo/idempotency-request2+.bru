@@ -1,0 +1,30 @@
+meta {
+  name: idempotency-request2+
+  type: http
+  seq: 2
+}
+
+post {
+  url: http://localhost:5151/order
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "idempotencyId": "1",
+    "sendersReference": "te-123-123_some-other-ref-than-original",
+    "recipient": {
+      "recipientType": "sms",
+      "phoneNumber": "55555555",
+      "smsSettings": {
+        "notificationScheme": "TimeCritical_v1",
+        "message": "Enda en engangskode fra TE: 999"
+      }
+    }
+  }
+}
+
+docs {
+  Notice how this just references the original request and ignores the new content!
+}
