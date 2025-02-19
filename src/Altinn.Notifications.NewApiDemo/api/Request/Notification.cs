@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Components;
+﻿using Altinn.Notifications.NewApiDemo.logic;
+using Microsoft.AspNetCore.Components;
 
 namespace WebApplication1;
 
@@ -27,7 +28,8 @@ public class Notification
     public Uri? ConditionEndpoint { get; set; }
     
     [JsonPropertyName("recipient")]
-    public required Altinn.Notifications.NewApiDemo.api.Recipient.Notification.Recipient NotificationRecipient {get;set;}
+    [JsonConverter(typeof(RecipientConverter))]
+    public required Object NotificationRecipient {get;set;}
     
     [JsonPropertyName("reminders")]
     public List<Reminder>? Reminders {get;set;}

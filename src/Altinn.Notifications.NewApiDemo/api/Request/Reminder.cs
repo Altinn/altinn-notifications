@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel;
 using System.Text.Json.Serialization;
+using Altinn.Notifications.NewApiDemo.logic;
 
 namespace WebApplication1
 {
@@ -18,8 +19,13 @@ namespace WebApplication1
         
         //TODO: FInd a way to add this without getting 'System.ArgumentException: An item with the same key has already been added. Key: RecipientRecipientEmail
                 
+        //[JsonPropertyName("recipient")]
+        //public required Altinn.Notifications.NewApiDemo.api.Recipient.Reminder.Recipient ReminderRecipient {get;set;}
+        
+        
         [JsonPropertyName("recipient")]
-        public required Altinn.Notifications.NewApiDemo.api.Recipient.Reminder.Recipient ReminderRecipient {get;set;}
+        [JsonConverter(typeof(RecipientConverter))]
+        public required Object ReminderRecipient {get;set;}
         
     }
 }
