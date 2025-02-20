@@ -10,7 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Altinn.Common.AccessToken" Version="5.0.0" />
+    <PackageReference Include="Altinn.Common.AccessToken" Version="5.0.1" />
     <PackageReference Include="FluentValidation" Version="11.11.0" />
 
     <PackageReference Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.3.0" />
