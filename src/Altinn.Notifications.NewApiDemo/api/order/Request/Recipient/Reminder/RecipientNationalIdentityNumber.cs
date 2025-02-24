@@ -3,10 +3,10 @@ using System.Text.Json.Serialization;
 
 namespace Altinn.Notifications.NewApiDemo.api.Recipient.Reminder;
 
-public class RecipientSSN: Recipient
+public class RecipientNationalIdentityNumber: Recipient
 {
     
-    public string? SSN { get; set; }
+    public string? NationalIdentityNumber { get; set; }
     
     [Description("The resource that the notification is related to, and that recipient elegebility will be evaluated on (e.g. when sending to an org. no will result in a notification to the official contact and only individuals with custom notifications AND access to the resource")]
     [JsonPropertyName("resourceId")]

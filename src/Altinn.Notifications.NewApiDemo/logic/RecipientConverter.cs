@@ -29,7 +29,7 @@ public class RecipientConverter : JsonConverter<Object>
         {
             "email" => JsonSerializer.Deserialize<RecipientEmail>(json, options)!,
             "sms" => JsonSerializer.Deserialize<RecipientSms>(json, options)!,
-            "ssn" => JsonSerializer.Deserialize<RecipientSSN>(json, options)!,
+            "nationalIdentityNumber" => JsonSerializer.Deserialize<RecipientNationalIdentityNumber>(json, options)!,
             "org" => JsonSerializer.Deserialize<RecipientOrg>(json, options)!,
             _ => throw new JsonException($"Invalid recipient type: {recipientType}")
         };

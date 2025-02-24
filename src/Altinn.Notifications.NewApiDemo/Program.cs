@@ -98,12 +98,12 @@ app.MapPost("/order",
             }
             
             //various validation - only simulated for now
-            if (notification.NotificationRecipient.GetType().Equals(typeof(RecipientSSN)) && ((RecipientSSN)notification.NotificationRecipient).SSN.Equals("00000000000"))
+            if (notification.NotificationRecipient.GetType().Equals(typeof(RecipientNationalIdentityNumber)) && ((RecipientNationalIdentityNumber)notification.NotificationRecipient).NationalIdentityNumber.Equals("00000000000"))
             {
                 ProblemDetails validationProblem = new ProblemDetails();
                 validationProblem.Title = "Validation failed";
                 validationProblem.Status = StatusCodes.Status422UnprocessableEntity;
-                validationProblem.Detail = "SSN cannot be 00000000000";
+                validationProblem.Detail = "NationalIdentityNumber cannot be 00000000000";
                 return Results.UnprocessableEntity(validationProblem);
             }
             

@@ -8,7 +8,7 @@ using System.ComponentModel;
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "recipientType", UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FailSerialization)]
 [JsonDerivedType(typeof(RecipientEmail), "email")]
 [JsonDerivedType(typeof(RecipientSms), "sms")]
-[JsonDerivedType(typeof(RecipientSSN), "ssn")]
+[JsonDerivedType(typeof(RecipientNationalIdentityNumber), "nationalIdentityNumber")]
 [JsonDerivedType(typeof(RecipientOrg), "org")]
 public abstract class Recipient
 {
@@ -21,7 +21,7 @@ public enum RecipientType
 {
     sms,
     email,
-    ssn,
+    nationalIdentityNumber,
     org
 }
 
