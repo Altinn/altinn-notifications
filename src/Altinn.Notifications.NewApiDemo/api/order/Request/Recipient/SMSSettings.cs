@@ -2,12 +2,12 @@
 
 using System.Text.Json.Serialization;
 
-public class EmailSettings
+public class SMSSettings
 {
     [JsonPropertyName("notificationScheme")]
     public required TransmissionScheme Scheme {get;set;}
     
-    public string Subject { get; set; }
+    public string? Sender { get; set; }
     
-    public string Body { get; set; }
+    public string? message { get; set; }
 }

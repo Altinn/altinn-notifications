@@ -14,5 +14,6 @@ namespace WebApplication1
         [JsonPropertyName("sendersReference")]
         [JsonPropertyOrder(2)]
         public string? SendersReference { get; set; }
+        
     }
 }

@@ -3,6 +3,7 @@ using WebApplication1;
 using Scalar.AspNetCore;
 using System.ComponentModel;
 using System.Runtime.InteropServices.JavaScript;
+using Altinn.Notifications.NewApiDemo.api.Recipient.Notification;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi.Models;
@@ -58,7 +59,7 @@ app.UseHttpsRedirection();
 
 Dictionary<string, Guid> idempotencyToOrderRepo = new Dictionary<string, Guid>();
 Dictionary<Guid, NotificationOrderResponse> orderRepo = new Dictionary<Guid, NotificationOrderResponse>();
-//Dictionary<Guid, Object> outboundMessageRepo = new Dictionary<Guid, Object>();
+Dictionary<Guid, Object> outboundMessageRepo = new Dictionary<Guid, Object>();
 
 app.MapGet("/order/{notificationOrderId}",
     ([FromRoute] Guid notificationOrderId) =>
@@ -94,7 +95,19 @@ app.MapPost("/order",
                 }
             }
             
+            //various validation - only simulated for now
+            if (notification.NotificationRecipient.GetType().Equals(typeof(RecipientSSN)) && ((RecipientSSN)notification.NotificationRecipient).SSN.Equals("00000000000"))
+            {
+                ProblemDetails validationProblem = new ProblemDetails();
+                validationProblem.Title = "Validation failed";
+                validationProblem.Status = StatusCodes.Status422UnprocessableEntity;
+                validationProblem.Detail = "SSN cannot be 00000000000";
+                return Results.UnprocessableEntity(validationProblem);
+            }
+            
             //TODO: convert/normalize to outbound message
+            
+            //make 
             
             NotificationOrderResponse response = new()
             {
@@ -133,6 +146,7 @@ app.MapPost("/order",
     .Produces<NotificationOrderResponse>(StatusCodes.Status200OK)
     .Produces<NotificationOrderResponse>(StatusCodes.Status201Created)
     .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
+    .Produces<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)
     .WithName("CreateNotification")
     .WithSummary("Create a notification")
     .WithDescription(
@@ -158,7 +172,20 @@ app.MapPost("/order",
     );
 
 
+/*
+app.MapGet("/status/shipment/{notificationId}",
+    ([FromRoute] Guid notificationId) =>
+    {
+        NotificationOrderResponse response;
 
+        if (orderRepo.TryGetValue(notificationOrderId, out response))
+        {
+            return Results.Ok(response);
+        }
+
+        return Results.NotFound();
+    });
+*/
 
 app.Run();
 
