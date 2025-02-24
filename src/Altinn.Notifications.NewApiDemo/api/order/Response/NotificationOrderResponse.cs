@@ -1,7 +1,8 @@
 ﻿using System.ComponentModel;
 using System.Text.Json.Serialization;
+using WebApplication1;
 
-namespace WebApplication1
+namespace Altinn.Notifications.NewApiDemo.api.order.Response
 {
     public class NotificationOrderResponse
     {
@@ -13,6 +14,6 @@ namespace WebApplication1
         [Description("The notification contained in the order")]
         [JsonPropertyName("notification")]
         [JsonPropertyOrder(1)]
-        public required NotificationResponse NotificationResponse { get; set; }
+        public required NotificationStatus NotificationStatus { get; set; }
     }
 }

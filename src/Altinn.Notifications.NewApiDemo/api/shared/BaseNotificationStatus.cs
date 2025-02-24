@@ -1,9 +1,9 @@
 ﻿using System.ComponentModel;
 using System.Text.Json.Serialization;
 
-namespace WebApplication1
+namespace Altinn.Notifications.NewApiDemo.api.shared
 {
-    public class BaseNotificationResponse
+    public class BaseNotificationStatus
     {
         [Description("The uuid of the notification")]
         [JsonPropertyName("notificationId")]

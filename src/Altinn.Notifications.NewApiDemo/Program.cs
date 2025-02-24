@@ -3,7 +3,9 @@ using WebApplication1;
 using Scalar.AspNetCore;
 using System.ComponentModel;
 using System.Runtime.InteropServices.JavaScript;
+using Altinn.Notifications.NewApiDemo.api.order.Response;
 using Altinn.Notifications.NewApiDemo.api.Recipient.Notification;
+using Altinn.Notifications.NewApiDemo.api.shared;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi.Models;
@@ -113,12 +115,12 @@ app.MapPost("/order",
             {
                 
                 NotificationOrderId = Guid.NewGuid(),
-                NotificationResponse = new NotificationResponse()
+                NotificationStatus = new NotificationStatus()
                 {
                     NotificationId = Guid.NewGuid(),
                     SendersReference = notification.SendersReference,
                     
-                    Reminders = (notification.Reminders ?? new List<Reminder>()).ConvertAll(r => new BaseNotificationResponse()
+                    Reminders = (notification.Reminders ?? new List<Reminder>()).ConvertAll(r => new BaseNotificationStatus()
                     {
                         NotificationId = Guid.NewGuid(),
                         SendersReference = r.SendersReference
