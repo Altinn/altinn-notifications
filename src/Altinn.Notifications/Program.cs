@@ -69,7 +69,7 @@ builder.Services.AddSwaggerGen(options =>
             {
                 Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "bearerAuth" }
             },
-            new string[] { }
+            Array.Empty<string>()
         }
     });
     IncludeXmlComments(options);
