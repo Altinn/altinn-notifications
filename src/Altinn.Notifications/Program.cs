@@ -28,6 +28,7 @@ using FluentValidation;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -52,11 +53,28 @@ ConfigureApplicationLogging(builder.Logging);
 ConfigureServices(builder.Services, builder.Configuration);
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
+builder.Services.AddSwaggerGen(options =>
 {
-    IncludeXmlComments(c);
-    c.EnableAnnotations();
-    c.OperationFilter<AddResponseHeadersFilter>();
+    options.AddSecurityDefinition("bearerAuth", new OpenApiSecurityScheme
+    {
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        Description = "JWT Authorization header using the Bearer scheme."
+    });
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "bearerAuth" }
+            },
+            new string[] { }
+        }
+    });
+    IncludeXmlComments(options);
+    options.EnableAnnotations();
+    options.OperationFilter<AddResponseHeadersFilter>();
 });
 
 var app = builder.Build();
