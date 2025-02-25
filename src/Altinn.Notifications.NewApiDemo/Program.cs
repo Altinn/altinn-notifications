@@ -2,10 +2,12 @@ using Microsoft.AspNetCore.Mvc;
 using WebApplication1;
 using Scalar.AspNetCore;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices.JavaScript;
 using Altinn.Notifications.NewApiDemo.api.order.Response;
 using Altinn.Notifications.NewApiDemo.api.Recipient.Notification;
 using Altinn.Notifications.NewApiDemo.api.shared;
+using Altinn.Notifications.NewApiDemo.api.status;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi.Models;
@@ -115,15 +117,19 @@ app.MapPost("/order",
             {
                 
                 NotificationOrderId = Guid.NewGuid(),
+                Status = "Accepted",
                 NotificationStatus = new NotificationStatus()
                 {
                     NotificationId = Guid.NewGuid(),
                     SendersReference = notification.SendersReference,
-                    
+                    Status = "Scheduled",
+                    LastUpdated = DateTime.Now.ToString(),
                     Reminders = (notification.Reminders ?? new List<Reminder>()).ConvertAll(r => new BaseNotificationStatus()
                     {
                         NotificationId = Guid.NewGuid(),
-                        SendersReference = r.SendersReference
+                        SendersReference = r.SendersReference,
+                        Status = "Scheduled",
+                        LastUpdated = DateTime.Now.ToString(),
                     }).ToList()
                     
                 
@@ -174,20 +180,51 @@ app.MapPost("/order",
     );
 
 
-/*
+
 app.MapGet("/status/shipment/{notificationId}",
     ([FromRoute] Guid notificationId) =>
     {
-        NotificationOrderResponse response;
-
-        if (orderRepo.TryGetValue(notificationOrderId, out response))
-        {
-            return Results.Ok(response);
-        }
-
-        return Results.NotFound();
+        return Results.NoContent();
     });
-*/
+
+
+app.MapGet("/status/shipment/feed",
+    ([FromQuery] int seq) =>
+    {
+        List<ShipmentStatus> statuses = new List<ShipmentStatus>();
+        
+        //for a random number of iterations between 10 and 1000
+        Random rnd = new Random();
+        int iterations = rnd.Next(10, 1000);
+
+        for (int i = 0; i < iterations; i++)
+        {
+            ShipmentStatus status = new()
+            {
+                ShipmentType = rnd.Next(0, 2) == 0? ShipmentType.Notification : ShipmentType.Reminder,
+                
+                NotificationId = Guid.NewGuid(),
+                SendersReference = "Random-Senders-Reference-" + rnd.Next(1, 100000),
+                Status = "Delivered",
+                LastUpdated = DateTime.Now.ToString(),
+                
+                Recipients = [new()
+                {
+                    Type = ShipmentRecipientType.Email,
+                    Destintion = "navn.navnesen@example.com"
+                }, new(){
+                    Type = ShipmentRecipientType.SMS,
+                    Destintion = "99999999"
+                }],
+            };
+                
+            statuses.Add(status);
+        }
+       
+        
+        return Results.Ok(statuses);
+    });
+
 
 app.Run();
 

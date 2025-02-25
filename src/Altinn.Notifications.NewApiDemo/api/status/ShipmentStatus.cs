@@ -12,7 +12,7 @@ namespace Altinn.Notifications.NewApiDemo.api.status
         public ShipmentType ShipmentType { get; set; }
         
         [Description("List of recipients for the shipment. This attribute is not populated until the shipment is sent OK.")]
-        [JsonPropertyName("notification")]
+        [JsonPropertyName("recipients")]
         public List<ShipmentRecipient>? Recipients { get; set; }
     }
 }
