@@ -1,7 +1,7 @@
 meta {
-  name: Fulfilling eForvaltningsforskriften §8
+  name: Fulfilling eForv. §8 - custom sender
   type: http
-  seq: 1
+  seq: 6
 }
 
 post {
@@ -26,10 +26,13 @@ body:json {
       "channelScheme": "EmailPreferred",
       "smsSettings": {
         "notificationScheme": "Daytime_Workingdays_v1",
+        "sender": "1234 TE",
         "message": "Du har en ny melding fra TE. Logg inn i Altinn for å gjøre deg kjent med innholdet."
       },
       "emailSettings": {
-        "notificationScheme": "Unrestricted_v1",
+        "notificationScheme": "Unrestricted_v1",      
+        "emailSender": "noreply-te@example.com",
+        "emailSenderName": "Tjenesteeier",
         "subject": "Ny melding fra TE",
         "body": "Du har en ny melding fra TE. Logg inn i Altinn for å gjøre deg kjent med innholdet."
       }
@@ -47,10 +50,13 @@ body:json {
           "channelScheme": "SmsPreferred",
           "smsSettings": {
             "notificationScheme": "Daytime_Workingdays_v1",
+            "sender": "1234 TE",
             "message": "Du har en melding fra TE som krever handling. Logg inn i Altinn for å gjøre deg kjent med innholdet."
           },
           "emailSettings": {
             "notificationScheme": "Unrestricted_v1",
+            "emailSender": "noreply-te@example.com",
+            "emailSenderName": "Tjenesteeier",
             "subject": "Påminnelse: Melding fra TE",
             "body": "Du har en melding fra TE som krever handling. Logg inn i Altinn for å gjøre deg kjent med innholdet."
           }
