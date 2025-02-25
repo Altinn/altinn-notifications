@@ -34,13 +34,22 @@ const emailOrderRequestJson = JSON.parse(
     open("../data/orders/01-email-request.json")
 );
 
+const environment = __ENV.env ? __ENV.env.toLowerCase() : __ENV.API_ENVIRONMENT;
 const scopes = "altinn:serviceowner/notifications.create";
 
 const resourceId = __ENV.resourceId;
-const orgNoRecipient = __ENV.orgNoRecipient ? __ENV.orgNoRecipient.toLowerCase() : null;
+const orgNoRecipient = (__ENV.orgNoRecipient ?? environment == "yt01" ? "713431400" : "991825827");
 
 export const options = {
     thresholds: {
+        "http_req_duration{name:post_mail_order}": [],
+        "http_req_duration{name:get_mail_notifications}": [],
+        "http_reqs{name:post_mail_order}": [],
+        "http_reqs{name:get_mail_notifications}": [],
+        "http_req_duration{name:post_sms_order}": [],
+        "http_req_duration{name:get_sms_notifications}": [],
+        "http_reqs{name:post_sms_order}": [],
+        "http_reqs{name:get_sms_notifications}": [],
         // Checks rate should be 100%. Raise error if any check has failed.
         checks: ['rate>=1']
     }

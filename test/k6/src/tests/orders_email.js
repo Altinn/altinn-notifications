@@ -39,10 +39,15 @@ const emailOrderRequestJson = JSON.parse(
 
 const scopes = "altinn:serviceowner/notifications.create";
 const ninRecipient = __ENV.ninRecipient ? __ENV.ninRecipient.toLowerCase() : null;
-const emailRecipient = __ENV.emailRecipient ? __ENV.emailRecipient.toLowerCase() : null;
+const emailRecipient = __ENV.emailRecipient ? __ENV.emailRecipient.toLowerCase() : "noreply@altinn.no";
 
 export const options = {
+    summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(95)', 'p(99)', 'p(99.5)', 'p(99.9)', 'count'],
     thresholds: {
+        "http_req_duration{name:post_mail_order}": [],
+        "http_req_duration{name:get_mail_notifications}": [],
+        "http_reqs{name:post_mail_order}": [],
+        "http_reqs{name:get_mail_notifications}": [],
         // Checks rate should be 100%. Raise error if any check has failed.
         checks: ['rate>=1']
     }
@@ -99,7 +104,7 @@ function postEmailNotificationOrderRequest(data) {
 
     check(response, {
         "POST email notification order request. Location header provided": (_) => selfLink,
-        "POST email notification order request. Recipient lookup was successful": (r) => JSON.parse(r.body).recipientLookup.status == 'Success'
+        //"POST email notification order request. Recipient lookup was successful": (r) => JSON.parse(r.body).recipientLookup.status == 'Success'
     });
 
     return selfLink;

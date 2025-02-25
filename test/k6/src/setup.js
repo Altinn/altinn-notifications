@@ -3,7 +3,7 @@ import { stopIterationOnFail } from "./errorhandler.js";
 import * as authentication from "./api/authentication.js";
 import * as tokenGenerator from "./api/token-generator.js";
 
-const environment = __ENV.env ? __ENV.env.toLowerCase() : null;
+const environment = __ENV.env ? __ENV.env.toLowerCase() : __ENV.API_ENVIRONMENT;
 
 /*
  * Generates an Altinn token for an organization based on the specified environment using AltinnTestTools.

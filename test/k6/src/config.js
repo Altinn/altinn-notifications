@@ -4,6 +4,7 @@ import { stopIterationOnFail } from "./errorhandler.js";
 const baseUrls = {
     prod: "altinn.no",
     tt02: "tt02.altinn.no",
+    yt01: "yt01.altinn.cloud",
     at22: "at22.altinn.cloud",
     at23: "at23.altinn.cloud",
     at24: "at24.altinn.cloud"
@@ -15,7 +16,7 @@ const maskinportenBaseUrls = {
     tt02: "https://test.maskinporten.no/"
 };
 
-const environment = __ENV.env ? __ENV.env.toLowerCase() : null;
+const environment = __ENV.env ? __ENV.env.toLowerCase() : __ENV.API_ENVIRONMENT;
 if (!environment) {
     stopIterationOnFail("Environment variable 'env' is not set", false);
 }

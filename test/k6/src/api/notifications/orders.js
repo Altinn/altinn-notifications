@@ -6,6 +6,7 @@ export function postEmailNotificationOrder(serializedOrder, token) {
   const endpoint = config.notifications.orders_email;
 
   const params = apiHelpers.buildHeaderWithBearerAndContentType(token);
+  params.tags = { name: "post_mail_order" };
 
   return http.post(endpoint, serializedOrder, params);
 }
@@ -14,6 +15,7 @@ export function postSmsNotificationOrder(serializedOrder, token) {
   const endpoint = config.notifications.orders_sms;
 
   const params = apiHelpers.buildHeaderWithBearerAndContentType(token);
+  params.tags = { name: "post_sms_order" };
 
   return http.post(endpoint, serializedOrder, params);
 }

@@ -31,10 +31,16 @@ import * as notificationsApi from "../api/notifications/notifications.js";
 
 const scopes = "altinn:serviceowner/notifications.create";
 
-const smsRecipient = __ENV.smsRecipient ? __ENV.smsRecipient.toLowerCase() : null;
+const smsRecipient = __ENV.smsRecipient ? __ENV.smsRecipient.toLowerCase() : "+4799999999";
 
 export const options = {
+    summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(95)', 'p(99)', 'p(99.5)', 'p(99.9)', 'count'],
     thresholds: {
+        "http_req_duration{name:post_sms_order}": [],
+        "http_req_duration{name:get_sms_notifications}": [],
+        "http_reqs{name:post_sms_order}": [],
+        "http_reqs{name:get_sms_notifications}": [],
+        
         // Checks rate should be 100%. Raise error if any check has failed.
         checks: ['rate>=1']
     }
