@@ -53,7 +53,7 @@ run-name: ${{ inputs.tag }} ${{ inputs.vus }}/${{ inputs.duration }}/${{ inputs.
 jobs:
   k6-performance:
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
+    environment: dev
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
