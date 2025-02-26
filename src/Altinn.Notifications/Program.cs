@@ -55,22 +55,15 @@ ConfigureServices(builder.Services, builder.Configuration);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
-    options.AddSecurityDefinition("bearerAuth", new OpenApiSecurityScheme
+    bool includeUnauthorizedAndForbiddenResponses = true; 
+    string bearerSecuritySchemaName = "bearerAuth";
+    options.OperationFilter<SecurityRequirementsOperationFilter>(includeUnauthorizedAndForbiddenResponses, bearerSecuritySchemaName);
+    options.AddSecurityDefinition(bearerSecuritySchemaName, new OpenApiSecurityScheme
     {
         Type = SecuritySchemeType.Http,
         Scheme = "bearer",
         BearerFormat = "JWT",
         Description = "JWT Authorization header using the Bearer scheme."
-    });
-    options.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
-        {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "bearerAuth" }
-            },
-            Array.Empty<string>()
-        }
     });
     IncludeXmlComments(options);
     options.EnableAnnotations();
