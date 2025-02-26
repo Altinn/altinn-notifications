@@ -15,9 +15,7 @@ namespace Altinn.Notifications.NewApiDemo.api.shared
         [JsonPropertyOrder(2)]
         public string? SendersReference { get; set; }
         
-        public string Status { get; set; }
-        
-        public string LastUpdated { get; set; }
+
         
     }
 }

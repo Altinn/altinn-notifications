@@ -122,14 +122,12 @@ app.MapPost("/order",
                 {
                     NotificationId = Guid.NewGuid(),
                     SendersReference = notification.SendersReference,
-                    Status = "Scheduled",
-                    LastUpdated = DateTime.Now.ToString(),
+                    
                     Reminders = (notification.Reminders ?? new List<Reminder>()).ConvertAll(r => new BaseNotificationStatus()
                     {
                         NotificationId = Guid.NewGuid(),
                         SendersReference = r.SendersReference,
-                        Status = "Scheduled",
-                        LastUpdated = DateTime.Now.ToString(),
+                       
                     }).ToList()
                     
                 

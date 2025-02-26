@@ -7,6 +7,11 @@ namespace Altinn.Notifications.NewApiDemo.api.status
 {
     public class ShipmentStatus: BaseNotificationStatus
     {
+        
+        public string Status { get; set; }
+        
+        public string LastUpdated { get; set; }
+        
         [Description("Type-identifier to determine if the shipment is a notification or a reminder")]
         [JsonPropertyName("shipmentType")]
         public ShipmentType ShipmentType { get; set; }
