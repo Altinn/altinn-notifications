@@ -13,7 +13,8 @@ public class RecipientNationalIdentityNumber: Recipient
     string? ResourceId { get; set; }
 
     [Description("If set to true, the reservation-flag in KRR will not be respected, and the message is sent even to persons actively objecting to the use of digital channels. Default: false")] 
-    public bool DisregardKrrReservationFlag { get; set; } = false;
+    [JsonPropertyName("ignoreReservation")]
+    public bool IgnoreReservation { get; set; } = false;
     
     public ChannelScheme ChannelScheme { get; set; }
     
