@@ -199,12 +199,13 @@ app.MapGet("/status/shipment/feed",
         {
             ShipmentStatus status = new()
             {
+                SequenceNumber = seq + i,
                 ShipmentType = rnd.Next(0, 2) == 0? ShipmentType.Notification : ShipmentType.Reminder,
                 
                 NotificationId = Guid.NewGuid(),
                 SendersReference = "Random-Senders-Reference-" + rnd.Next(1, 100000),
-                Status = "Delivered",
-                LastUpdated = DateTime.Now.ToString(),
+                Status = Enum.GetValues<ShipmentStatusType>()[rnd.Next(0, Enum.GetNames<ShipmentStatusType>().Length)],
+                LastUpdated = DateTime.Now,
                 
                 Recipients = [new()
                 {
