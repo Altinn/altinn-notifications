@@ -91,7 +91,7 @@ app.MapHealthChecks("/health");
 
 app.UseOrgExtractor();
 
-app.Run();
+await app.RunAsync();
 
 void ConfigureWebHostCreationLogging()
 {
