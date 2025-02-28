@@ -21,7 +21,9 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="api\order\" />
+      <Folder Include="api\order\notification\" />
+      <Folder Include="api\order\smscode\" />
+      <Folder Include="api\status\order\" />
     </ItemGroup>
 
 </Project>

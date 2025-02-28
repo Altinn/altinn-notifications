@@ -11,8 +11,6 @@ namespace Altinn.Notifications.NewApiDemo.api.order.Response
         [JsonPropertyOrder(0)]
         public required Guid NotificationOrderId { get; set; }
         
-        public string Status { get; set; }
-        
         [Description("The notification contained in the order")]
         [JsonPropertyName("notification")]
         [JsonPropertyOrder(1)]

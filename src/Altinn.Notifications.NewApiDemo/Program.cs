@@ -117,7 +117,6 @@ app.MapPost("/order",
             {
                 
                 NotificationOrderId = Guid.NewGuid(),
-                Status = "Accepted",
                 NotificationStatus = new NotificationStatus()
                 {
                     NotificationId = Guid.NewGuid(),
@@ -225,5 +224,14 @@ app.MapGet("/status/shipment/feed",
     });
 
 
+app.MapGet("/dummy/contracts/recipient",
+        () =>
+        {
+            return Results.NoContent();
+        })
+    .Produces<RecipientEmail>(StatusCodes.Status200OK)
+    .Produces<RecipientSms>(StatusCodes.Status201Created)
+    .Produces<RecipientNationalIdentityNumber>(StatusCodes.Status202Accepted)
+    .Produces<RecipientOrg>(StatusCodes.Status204NoContent);
+    
 app.Run();
-

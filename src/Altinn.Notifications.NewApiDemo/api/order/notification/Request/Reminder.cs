@@ -22,7 +22,7 @@ namespace WebApplication1
         //[JsonPropertyName("recipient")]
         //public required Altinn.Notifications.NewApiDemo.api.Recipient.Reminder.Recipient ReminderRecipient {get;set;}
         
-        
+        [Description("Recipient-object. One of the following: RecipientEmail, RecipientNationalIdentityNumber, RecipientOrd or RecipientSMS. See /dummy/contracts/recipient for schemas.")]
         [JsonPropertyName("recipient")]
         [JsonConverter(typeof(RecipientConverter))]
         public required Object ReminderRecipient {get;set;}

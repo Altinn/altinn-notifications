@@ -27,6 +27,7 @@ public class Notification
     [JsonPropertyName("conditionEndpoint")]
     public Uri? ConditionEndpoint { get; set; }
     
+    [Description("Recipient-object. One of the following: RecipientEmail, RecipientNationalIdentityNumber, RecipientOrd or RecipientSMS. See /dummy/contracts/recipient for schemas.")]
     [JsonPropertyName("recipient")]
     [JsonConverter(typeof(RecipientConverter))]
     public required Object NotificationRecipient {get;set;}
