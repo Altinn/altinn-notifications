@@ -6,6 +6,7 @@ using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
+using Altinn.Notifications.Models.Examples;
 using Altinn.Notifications.Validators;
 
 using FluentValidation;
@@ -139,6 +140,7 @@ public class OrdersController : ControllerBase
     [HttpPost]
     [Consumes("application/json")]
     [Produces("application/json")]
+    [SwaggerRequestExample(typeof(NotificationOrderRequestExt), typeof(NotificationOrderRequestExtExampleProvider))]
     [SwaggerResponse(202, "The notification order was accepted", typeof(NotificationOrderRequestResponseExt))]
     [SwaggerResponse(400, "The notification order is invalid", typeof(ValidationProblemDetails))]
     [SwaggerResponseHeader(202, "Location", "string", "Link to access the newly created notification order.")]

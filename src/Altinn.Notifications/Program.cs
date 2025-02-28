@@ -68,7 +68,9 @@ builder.Services.AddSwaggerGen(options =>
     IncludeXmlComments(options);
     options.EnableAnnotations();
     options.OperationFilter<AddResponseHeadersFilter>();
+    options.ExampleFilters();
 });
+builder.Services.AddSwaggerExamplesFromAssemblies(Assembly.GetEntryAssembly());
 
 var app = builder.Build();
 
