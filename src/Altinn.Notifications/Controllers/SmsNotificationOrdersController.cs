@@ -43,7 +43,7 @@ public class SmsNotificationOrdersController : ControllerBase
     /// Add an SMS notification order.
     /// </summary>
     /// <remarks>
-    /// The API will accept the request after som basic validation of the request.
+    /// The API will accept the request after some basic validation of the request.
     /// The system will also attempt to verify that it will be possible to fulfill the order.
     /// </remarks>
     /// <returns>The notification order request response</returns>
