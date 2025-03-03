@@ -4,16 +4,17 @@ using Altinn.Notifications.Email.Configuration;
 using Altinn.Notifications.Email.Core.Configuration;
 using Altinn.Notifications.Email.Health;
 using Altinn.Notifications.Email.Integrations.Configuration;
-using Altinn.Notifications.Email.Startup;
+using Altinn.Notifications.Email.Telemetry;
 
 using Azure.Identity;
+using Azure.Monitor.OpenTelemetry.Exporter;
 using Azure.Security.KeyVault.Secrets;
 
-using Microsoft.ApplicationInsights.AspNetCore.Extensions;
-using Microsoft.ApplicationInsights.Channel;
-using Microsoft.ApplicationInsights.Extensibility;
-using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel;
 using Microsoft.Extensions.FileProviders;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using Swashbuckle.AspNetCore.Filters;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
@@ -27,7 +28,7 @@ ConfigureWebHostCreationLogging();
 
 await SetConfigurationProviders(appBuilder.Configuration);
 
-appBuilder.Logging.ConfigureApplicationLogging(applicationInsightsConnectionString);
+ConfigureApplicationLogging(appBuilder.Logging);
 
 ConfigureServices(appBuilder.Services, appBuilder.Configuration);
 
@@ -49,7 +50,7 @@ if (app.Environment.IsDevelopment())
 
 Configure();
 
-app.Run();
+await app.RunAsync();
 
 void ConfigureWebHostCreationLogging()
 {
@@ -104,25 +105,73 @@ async Task ConnectToKeyVaultAndSetApplicationInsights(ConfigurationManager confi
     }
 }
 
+void ConfigureApplicationLogging(ILoggingBuilder logging)
+{
+    logging.AddOpenTelemetry(builder =>
+    {
+       builder.IncludeFormattedMessage = true;
+       builder.IncludeScopes = true; 
+    });
+}
+
 void ConfigureServices(IServiceCollection services, ConfigurationManager configuration)
 {
+    var attributes = new List<KeyValuePair<string, object>>(2)
+    {
+        KeyValuePair.Create("service.name", (object)"platform-notifications-email"),
+    };
+
+    services.AddOpenTelemetry()
+        .ConfigureResource(resourceBuilder => resourceBuilder.AddAttributes(attributes))
+        .WithMetrics(metrics => 
+        {
+            metrics.AddAspNetCoreInstrumentation();
+            metrics.AddMeter(
+                "Microsoft.AspNetCore.Hosting",
+                "Microsoft.AspNetCore.Server.Kestrel",
+                "System.Net.Http");
+        })
+        .WithTracing(tracing => 
+        {
+            if (appBuilder.Environment.IsDevelopment())
+            {
+                tracing.SetSampler(new AlwaysOnSampler());
+            }
+
+            tracing.AddAspNetCoreInstrumentation(configOptions =>
+            {
+                configOptions.Filter = (httpContext) => !TelemetryHelpers.ShouldExclude(httpContext.Request.Path);
+            });
+
+            tracing.AddHttpClientInstrumentation();
+        });
+
+    if (!string.IsNullOrEmpty(applicationInsightsConnectionString))
+    {
+        AddAzureMonitorTelemetryExporters(services, applicationInsightsConnectionString);
+    }
+
     services.AddControllers();
     services.AddHealthChecks().AddCheck<HealthCheck>("notifications_emails_health_check");
 
     services.AddCoreServices(configuration);
     services.AddIntegrationServices(configuration);
-        
-    if (!string.IsNullOrEmpty(applicationInsightsConnectionString))
-    {
-        services.AddSingleton(typeof(ITelemetryChannel), new ServerTelemetryChannel { StorageFolder = "/tmp/logtelemetry" });
-        services.AddApplicationInsightsTelemetry(new ApplicationInsightsServiceOptions
-        {
-            ConnectionString = applicationInsightsConnectionString
-        });
+}
 
-        services.AddApplicationInsightsTelemetryProcessor<HealthTelemetryFilter>();
-        services.AddSingleton<ITelemetryInitializer, CustomTelemetryInitializer>();
-    }
+static void AddAzureMonitorTelemetryExporters(IServiceCollection services, string applicationInsightsConnectionString)
+{
+    services.Configure<OpenTelemetryLoggerOptions>(logging => logging.AddAzureMonitorLogExporter(o =>
+    {
+        o.ConnectionString = applicationInsightsConnectionString;
+    }));
+    services.ConfigureOpenTelemetryMeterProvider(metrics => metrics.AddAzureMonitorMetricExporter(o =>
+    {
+        o.ConnectionString = applicationInsightsConnectionString;
+    }));
+    services.ConfigureOpenTelemetryTracerProvider(tracing => tracing.AddAzureMonitorTraceExporter(o =>
+    {
+        o.ConnectionString = applicationInsightsConnectionString;
+    }));
 }
 
 void Configure()
