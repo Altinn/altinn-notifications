@@ -5,8 +5,6 @@ using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Extensions;
 
-using Microsoft.ApplicationInsights;
-
 using Npgsql;
 
 using NpgsqlTypes;
@@ -19,7 +17,6 @@ namespace Altinn.Notifications.Persistence.Repository;
 public class SmsNotificationRepository : ISmsNotificationRepository
 {
     private readonly NpgsqlDataSource _dataSource;
-    private readonly TelemetryClient? _telemetryClient;
 
     private const string _getNewSmsNotificationsSql = "select * from notifications.getsms_statusnew_updatestatus()";
     private const string _getSmsNotificationRecipientsSql = "select * from notifications.getsmsrecipients_v2($1)"; // (_orderid)
@@ -42,18 +39,15 @@ public class SmsNotificationRepository : ISmsNotificationRepository
     /// Initializes a new instance of the <see cref="SmsNotificationRepository"/> class.
     /// </summary>
     /// <param name="dataSource">The Npgsql data source.</param>
-    /// <param name="telemetryClient">The telemetry client.</param>
-    public SmsNotificationRepository(NpgsqlDataSource dataSource, TelemetryClient? telemetryClient = null)
+    public SmsNotificationRepository(NpgsqlDataSource dataSource)
     {
         _dataSource = dataSource;
-        _telemetryClient = telemetryClient;
     }
 
     /// <inheritdoc/>
     public async Task AddNotification(SmsNotification notification, DateTime expiry, int count)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_insertNewSmsNotificationSql);
-        using TelemetryTracker tracker = new(_telemetryClient, pgcom);
 
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notification.OrderId);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notification.Id);
@@ -67,7 +61,6 @@ public class SmsNotificationRepository : ISmsNotificationRepository
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, expiry);
 
         await pgcom.ExecuteNonQueryAsync();
-        tracker.Track();
     }
 
     /// <inheritdoc/>
@@ -76,7 +69,6 @@ public class SmsNotificationRepository : ISmsNotificationRepository
         List<SmsRecipient> recipients = [];
 
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getSmsNotificationRecipientsSql);
-        using TelemetryTracker tracker = new(_telemetryClient, pgcom);
 
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, orderId);
 
@@ -93,7 +85,6 @@ public class SmsNotificationRepository : ISmsNotificationRepository
             }
         }
 
-        tracker.Track();
         return recipients;
     }
 
@@ -102,7 +93,6 @@ public class SmsNotificationRepository : ISmsNotificationRepository
     {
         List<Sms> readyToSendSMS = [];
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getNewSmsNotificationsSql);
-        using TelemetryTracker tracker = new(_telemetryClient, pgcom);
 
         await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync())
         {
@@ -118,7 +108,6 @@ public class SmsNotificationRepository : ISmsNotificationRepository
             }
         }
 
-        tracker.Track();
         return readyToSendSMS;
     }
 
@@ -157,13 +146,11 @@ public class SmsNotificationRepository : ISmsNotificationRepository
         }
 
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_updateSmsNotificationBasedOnIdentifierSql);
-        using TelemetryTracker tracker = new(_telemetryClient, pgcom);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, result.ToString());
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(gatewayReference) ? DBNull.Value : gatewayReference);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, id);
 
         await pgcom.ExecuteNonQueryAsync();
-        tracker.Track();
     }
 
     /// <summary>
@@ -181,11 +168,9 @@ public class SmsNotificationRepository : ISmsNotificationRepository
         }
 
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_updateSmsNotificationBasedOnGatewayReferenceSql);
-        using TelemetryTracker tracker = new(_telemetryClient, pgcom);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, result.ToString());
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, gatewayReference);
 
         await pgcom.ExecuteNonQueryAsync();
-        tracker.Track();
     }
 }
