@@ -2,7 +2,6 @@
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-
 using Altinn.Common.AccessToken;
 using Altinn.Common.AccessToken.Services;
 using Altinn.Common.PEP.Authorization;
@@ -17,18 +16,16 @@ using Altinn.Notifications.Models;
 using Altinn.Notifications.Persistence.Extensions;
 using Altinn.Notifications.Telemetry;
 using Altinn.Notifications.Validators;
-
 using AltinnCore.Authentication.JwtCookie;
 
 using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.Exporter;
 using Azure.Security.KeyVault.Secrets;
-
 using FluentValidation;
-
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Npgsql;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -82,8 +79,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseAuthorization();
-
-app.UseTelemetryEnricher();
 
 app.MapControllers();
 
@@ -146,6 +141,8 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
             });
 
             tracing.AddHttpClientInstrumentation();
+
+            tracing.AddNpgsql();
         });
 
     if (!string.IsNullOrEmpty(applicationInsightsConnectionString))
