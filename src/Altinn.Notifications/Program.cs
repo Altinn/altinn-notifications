@@ -142,6 +142,8 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
 
             tracing.AddHttpClientInstrumentation();
 
+            tracing.AddProcessor(new RequestFilterProcessor(new HttpContextAccessor())); // todo: check if this needs to be injected
+
             tracing.AddNpgsql();
         });
 
