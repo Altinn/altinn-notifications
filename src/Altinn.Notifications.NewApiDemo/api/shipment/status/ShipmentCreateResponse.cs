@@ -5,7 +5,7 @@ using WebApplication1;
 
 namespace Altinn.Notifications.NewApiDemo.api.status
 {
-    public class ShipmentStatus: BaseNotificationStatus
+    public class ShipmentCreateResponse: BaseNotificationCreateResponse
     {
         
         public long SequenceNumber { get; set; }

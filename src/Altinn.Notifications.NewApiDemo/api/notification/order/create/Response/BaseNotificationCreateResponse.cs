@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace Altinn.Notifications.NewApiDemo.api.shared
 {
-    public class BaseNotificationStatus
+    public class BaseNotificationCreateResponse
     {
         [Description("The uuid of the notification")]
         [JsonPropertyName("notificationId")]

@@ -5,11 +5,11 @@ namespace WebApplication1;
 using System.Text.Json.Serialization;
 using System.ComponentModel;
 
-public class NotificationStatus : BaseNotificationStatus
+public class NotificationCreateResponse : BaseNotificationCreateResponse
 {
     
     [JsonPropertyOrder(3)]
     [JsonPropertyName("reminders")]
-    public List<BaseNotificationStatus>? Reminders { get; set; }
+    public List<BaseNotificationCreateResponse>? Reminders { get; set; }
 
 }

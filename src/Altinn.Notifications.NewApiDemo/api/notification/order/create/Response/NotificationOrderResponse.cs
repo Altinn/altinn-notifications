@@ -14,6 +14,6 @@ namespace Altinn.Notifications.NewApiDemo.api.order.Response
         [Description("The notification contained in the order")]
         [JsonPropertyName("notification")]
         [JsonPropertyOrder(1)]
-        public required NotificationStatus NotificationStatus { get; set; }
+        public required NotificationCreateResponse NotificationCreateResponse { get; set; }
     }
 }

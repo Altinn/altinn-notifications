@@ -124,12 +124,12 @@ app.MapPost("/order",
             {
                 
                 NotificationOrderId = Guid.NewGuid(),
-                NotificationStatus = new NotificationStatus()
+                NotificationCreateResponse = new NotificationCreateResponse()
                 {
                     NotificationId = Guid.NewGuid(),
                     SendersReference = notification.SendersReference,
                     
-                    Reminders = (notification.Reminders ?? new List<Reminder>()).ConvertAll(r => new BaseNotificationStatus()
+                    Reminders = (notification.Reminders ?? new List<Reminder>()).ConvertAll(r => new BaseNotificationCreateResponse()
                     {
                         NotificationId = Guid.NewGuid(),
                         SendersReference = r.SendersReference,
@@ -221,7 +221,7 @@ app.MapGet("/shipment/{notificationId}",
 app.MapGet("/status/shipment/feed",
     ([FromQuery] int seq) =>
     {
-        List<ShipmentStatus> statuses = new List<ShipmentStatus>();
+        List<ShipmentCreateResponse> statuses = new List<ShipmentCreateResponse>();
         
         //for a random number of iterations between 10 and 1000
         Random rnd = new Random();
@@ -229,7 +229,7 @@ app.MapGet("/status/shipment/feed",
 
         for (int i = 0; i < iterations; i++)
         {
-            ShipmentStatus status = new()
+            ShipmentCreateResponse createResponse = new()
             {
                 SequenceNumber = seq + i,
                 ShipmentType = rnd.Next(0, 2) == 0? ShipmentType.Notification : ShipmentType.Reminder,
@@ -249,7 +249,7 @@ app.MapGet("/status/shipment/feed",
                 }],
             };
                 
-            statuses.Add(status);
+            statuses.Add(createResponse);
         }
        
         
