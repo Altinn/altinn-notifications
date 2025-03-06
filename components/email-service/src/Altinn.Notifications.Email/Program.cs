@@ -138,11 +138,8 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
                 tracing.SetSampler(new AlwaysOnSampler());
             }
 
-            tracing.AddAspNetCoreInstrumentation(configOptions =>
-            {
-                configOptions.Filter = (httpContext) => !TelemetryHelpers.ShouldExclude(httpContext.Request.Path);
-            });
-
+            tracing.AddAspNetCoreInstrumentation();
+            tracing.AddProcessor(new RequestFilterProcessor(new HttpContextAccessor()));
             tracing.AddHttpClientInstrumentation();
         });
 
