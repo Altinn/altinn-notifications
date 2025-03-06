@@ -1,9 +1,10 @@
 ﻿using System.ComponentModel;
 using System.Text.Json.Serialization;
-using Altinn.Notifications.NewApiDemo.logic;
+using Altinn.Notifications.NewApiDemo.api.Recipient;
 
-namespace WebApplication1
-{
+
+namespace Altinn.Notifications.NewApiDemo.api.order.Request;
+
     public class Reminder
     {
         [Description("Reference determined bt the sender. May be unique or non-unique")]
@@ -22,10 +23,11 @@ namespace WebApplication1
         //[JsonPropertyName("recipient")]
         //public required Altinn.Notifications.NewApiDemo.api.Recipient.Reminder.Recipient ReminderRecipient {get;set;}
         
-        [Description("Recipient-object. One of the following: RecipientEmail, RecipientNationalIdentityNumber, RecipientOrd or RecipientSMS. See /dummy/contracts/recipient for schemas.")]
+        [Description("Recipient container-object. Must be only one of the following: RecipientEmail, RecipientNationalIdentityNumber, RecipientOrd or RecipientSMS. /n" +
+                     "Workaround for poor polymorphism-support in client tooling - see e.g.: https://github.com/OpenAPITools/openapi-generator/issues/10514.")]
         [JsonPropertyName("recipient")]
-        [JsonConverter(typeof(RecipientConverter))]
-        public required Object ReminderRecipient {get;set;}
+        //[JsonConverter(typeof(RecipientConverter))]
+        public required RecipientContainer ReminderRecipient {get;set;}
         
     }
-}
+

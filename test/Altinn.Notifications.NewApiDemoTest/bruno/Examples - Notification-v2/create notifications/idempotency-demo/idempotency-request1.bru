@@ -15,12 +15,12 @@ body:json {
     "idempotencyId": "1",
     "sendersReference": "te-123-123",
     "recipient": {
-      "recipientType": "sms",
-      "new param": "abc",
-      "phoneNumber": "55555555",
-      "smsSettings": {
-        "notificationScheme": "TimeCritical_v1",
-        "message": "Engangskode fra TE: 123456"
+      "recipientSms": {      
+        "phoneNumber": "99999999",
+        "smsSettings": {
+          "notificationScheme": "Daytime_v1",
+          "message": "Husk å levere"
+        }
       }
     }
   }

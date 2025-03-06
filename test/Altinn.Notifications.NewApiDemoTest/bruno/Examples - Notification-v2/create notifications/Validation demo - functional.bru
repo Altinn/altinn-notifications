@@ -1,7 +1,7 @@
 meta {
   name: Validation demo - functional
   type: http
-  seq: 4
+  seq: 3
 }
 
 post {
@@ -19,19 +19,23 @@ body:json {
       "transmissionId": "{{transmissionId-utsending-1}}"
     },
     "recipient": {
-      "recipientType": "nationalIdentityNumber",
-      "nationalIdentityNumber": "00000000000",
-      "resourceId": "urn:altinn:resource:te_svc123",
-      "DisregardKrrReservationFlag": false,
-      "channelScheme": "EmailPreferred",
-      "smsSettings": {
-        "notificationScheme": "Daytime_Workingdays_v1",
-        "message": "Du har en ny melding fra TE. Logg inn i Altinn for å gjøre deg kjent med innholdet."
-      },
-      "emailSettings": {
-        "notificationScheme": "Unrestricted_v1",
-        "subject": "Ny melding fra TE",
-        "body": "Du har en ny melding fra TE. Logg inn i Altinn for å gjøre deg kjent med innholdet."
+      "recipientNationalIdentityNumber": {
+        "nationalIdentityNumber": "00000000000",
+        "resourceId": "urn:altinn:resource:te_svc123",
+        "ignoreReservation": false,
+        "channelScheme": "EmailPreferred",
+        "smsSettings": {
+          "notificationScheme": "Daytime_Workingdays_v1",
+          "sender": "1234 TE",
+          "message": "Du har en ny melding fra TE. Logg inn i Altinn for å gjøre deg kjent med innholdet."
+        },
+        "emailSettings": {
+          "notificationScheme": "Unrestricted_v1",
+          "emailSender": "noreply-te@example.com",
+          "emailSenderName": "Tjenesteeier",
+          "subject": "Ny melding fra TE",
+          "body": "Du har en ny melding fra TE. Logg inn i Altinn for å gjøre deg kjent med innholdet."
+        }
       }
     }
   }

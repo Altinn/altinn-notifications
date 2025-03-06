@@ -4,8 +4,11 @@ using Scalar.AspNetCore;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices.JavaScript;
+using System.Text.Json;
+using Altinn.Notifications.NewApiDemo.api;
+using Altinn.Notifications.NewApiDemo.api.order.Request;
 using Altinn.Notifications.NewApiDemo.api.order.Response;
-using Altinn.Notifications.NewApiDemo.api.Recipient.Notification;
+using Altinn.Notifications.NewApiDemo.api.Recipient;
 using Altinn.Notifications.NewApiDemo.api.shared;
 using Altinn.Notifications.NewApiDemo.api.status;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -83,6 +86,10 @@ app.MapPost("/order",
         {
             //validation
             
+            //log input object as pretty-printed json
+            var options = new JsonSerializerOptions { WriteIndented = true };
+            Console.Out.WriteLine("Received notification: {0}", JsonSerializer.Serialize(notification, options));
+            
             //known idempotencyId?
             
             Guid orderId;
@@ -100,7 +107,7 @@ app.MapPost("/order",
             }
             
             //various validation - only simulated for now
-            if (notification.NotificationRecipient.GetType().Equals(typeof(RecipientNationalIdentityNumber)) && ((RecipientNationalIdentityNumber)notification.NotificationRecipient).NationalIdentityNumber.Equals("00000000000"))
+            if (notification.NotificationRecipient.RecipientNationalIdentityNumber != null && notification.NotificationRecipient.RecipientNationalIdentityNumber.NationalIdentityNumber.Equals("00000000000"))
             {
                 ProblemDetails validationProblem = new ProblemDetails();
                 validationProblem.Title = "Validation failed";
@@ -178,7 +185,7 @@ app.MapPost("/order",
 
 
 
-app.MapGet("/status/shipment/{notificationId}",
+app.MapGet("/shipment/{notificationId}",
     ([FromRoute] Guid notificationId) =>
     {
         return Results.NoContent();
@@ -222,16 +229,5 @@ app.MapGet("/status/shipment/feed",
         
         return Results.Ok(statuses);
     });
-
-
-app.MapGet("/dummy/contracts/recipient",
-        () =>
-        {
-            return Results.NoContent();
-        })
-    .Produces<RecipientEmail>(StatusCodes.Status200OK)
-    .Produces<RecipientSms>(StatusCodes.Status201Created)
-    .Produces<RecipientNationalIdentityNumber>(StatusCodes.Status202Accepted)
-    .Produces<RecipientOrg>(StatusCodes.Status204NoContent);
     
 app.Run();

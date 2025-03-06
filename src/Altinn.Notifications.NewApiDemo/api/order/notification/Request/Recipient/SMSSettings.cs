@@ -9,5 +9,5 @@ public class SMSSettings
     
     public string? Sender { get; set; }
     
-    public string? message { get; set; }
+    public string message { get; set; }
 }

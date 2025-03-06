@@ -1,7 +1,8 @@
-﻿using Altinn.Notifications.NewApiDemo.logic;
+﻿using Altinn.Notifications.NewApiDemo.api.Recipient;
+
 using Microsoft.AspNetCore.Components;
 
-namespace WebApplication1;
+namespace Altinn.Notifications.NewApiDemo.api.order.Request;
 
 using System.Text.Json.Serialization;
 using System.ComponentModel;
@@ -27,10 +28,11 @@ public class Notification
     [JsonPropertyName("conditionEndpoint")]
     public Uri? ConditionEndpoint { get; set; }
     
-    [Description("Recipient-object. One of the following: RecipientEmail, RecipientNationalIdentityNumber, RecipientOrd or RecipientSMS. See /dummy/contracts/recipient for schemas.")]
+    [Description("Recipient container-object. Must be only one of the following: RecipientEmail, RecipientNationalIdentityNumber, RecipientOrd or RecipientSMS. /n" +
+                 "Workaround for poor polymorphism-support in client tooling - see e.g.: https://github.com/OpenAPITools/openapi-generator/issues/10514.")]
     [JsonPropertyName("recipient")]
-    [JsonConverter(typeof(RecipientConverter))]
-    public required Object NotificationRecipient {get;set;}
+    //[JsonConverter(typeof(RecipientConverter))]
+    public required RecipientContainer NotificationRecipient {get;set;}
     
     [JsonPropertyName("reminders")]
     public List<Reminder>? Reminders {get;set;}

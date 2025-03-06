@@ -1,8 +1,8 @@
 ﻿using System.ComponentModel;
 using System.Text.Json.Serialization;
 
-namespace WebApplication1
-{
+namespace Altinn.Notifications.NewApiDemo.api.order.Request;
+
     public class AssociationDialogporten
     {
         
@@ -14,4 +14,4 @@ namespace WebApplication1
         [JsonPropertyName("transmissionId")]
         public string? TransmissionId { get; set; }
     }
-}
+

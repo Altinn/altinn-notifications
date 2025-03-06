@@ -1,12 +1,12 @@
 ﻿using System.ComponentModel;
 using System.Text.Json.Serialization;
 
-namespace Altinn.Notifications.NewApiDemo.api.Recipient.Reminder;
+namespace Altinn.Notifications.NewApiDemo.api.Recipient;
 
-public class RecipientNationalIdentityNumber: Recipient
+public class RecipientNationalIdentityNumber
 {
     
-    public string? NationalIdentityNumber { get; set; }
+    public required string NationalIdentityNumber { get; set; }
     
     [Description("The resource that the notification is related to, and that recipient elegebility will be evaluated on (e.g. when sending to an org. no will result in a notification to the official contact and only individuals with custom notifications AND access to the resource")]
     [JsonPropertyName("resourceId")]
@@ -14,11 +14,11 @@ public class RecipientNationalIdentityNumber: Recipient
 
     [Description("If set to true, the reservation-flag in KRR will not be respected, and the message is sent even to persons actively objecting to the use of digital channels. Default: false")] 
     [JsonPropertyName("ignoreReservation")]
-    public bool IgnoreReservation { get; set; } = false;
+    public bool? IgnoreReservation { get; set; } = false;
     
-    public ChannelScheme ChannelScheme { get; set; }
+    public required ChannelScheme ChannelScheme { get; set; }
     
-    public EmailSettings EmailSettings { get; set; }
+    public EmailSettings? EmailSettings { get; set; }
     
-    public SMSSettings SMSSettings { get; set; }
+    public SMSSettings? SmsSettings { get; set; }
 }
