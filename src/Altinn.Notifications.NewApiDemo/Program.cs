@@ -184,6 +184,32 @@ app.MapPost("/order",
     );
 
 
+app.MapPost("/otp",
+        () =>
+        {
+            //validation
+            
+            //log input object as pretty-printed json
+           
+            
+            //known idempotencyId?
+            
+            return Results.UnprocessableEntity("Cannot process request since this API is not fully implemented.");
+        })
+    //.Accepts<Notification>("application/json") //json is default
+    .Produces<NotificationOrderResponse>(StatusCodes.Status200OK)
+    .Produces<NotificationOrderResponse>(StatusCodes.Status204NoContent)
+    .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
+    .Produces<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)
+    .WithName("CreateOTP")
+    .WithSummary("Create a OTP sms")
+    .WithDescription(
+        """
+        Description of operation goes here
+        
+        Response 400 - Bad Request: The ProblemDetail will most likely change to a custom contract with less details exposed externally
+        """
+    );
 
 app.MapGet("/shipment/{notificationId}",
     ([FromRoute] Guid notificationId) =>

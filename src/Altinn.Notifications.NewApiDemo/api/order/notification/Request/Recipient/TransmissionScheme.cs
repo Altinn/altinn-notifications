@@ -16,9 +16,6 @@ public enum TransmissionScheme
     Daytime_v1,
     
     [Description("Schedules the message to on, or as soon as possible after, the not-before time.")]
-    Unrestricted_v1,
-    
-    [Description("Sends the message immediately (bypass scheduling). Only applicable for SMS, and typically only for SMS MFA-codes.")]
-    TimeCritical_v1
+    Unrestricted_v1
     
 }
