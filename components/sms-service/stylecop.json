@@ -8,6 +8,12 @@
       "usingDirectivesPlacement": "outsideNamespace",
       "systemUsingDirectivesFirst": true,
       "blankLinesBetweenUsingGroups": "allow"
+    },
+    "namingRules": {
+      "allowCommonHungarianPrefixes": true,
+      "allowedHungarianPrefixes": [
+        "ip"
+      ]
     }
   }
 }
