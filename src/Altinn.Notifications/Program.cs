@@ -137,16 +137,11 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
                 tracing.SetSampler(new AlwaysOnSampler());
             }
 
-            tracing.AddAspNetCoreInstrumentation(configOptions =>
-            {
-                configOptions.Filter = (httpContext) => !TelemetryHelpers.ShouldExclude(httpContext.Request.Path);
-            });
+            tracing.AddAspNetCoreInstrumentation();
 
             tracing.AddHttpClientInstrumentation();
             
-            services.AddSingleton<RequestFilterProcessor>();
-
-            tracing.AddProcessor<RequestFilterProcessor>();
+            tracing.AddProcessor(new RequestFilterProcessor(new HttpContextAccessor()));
 
             tracing.AddNpgsql();
         });
