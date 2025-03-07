@@ -1,5 +1,6 @@
 ﻿using Altinn.Notifications.Models;
 using Microsoft.AspNetCore.Mvc;
+
 using Swashbuckle.AspNetCore.Annotations;
 using Swashbuckle.AspNetCore.Filters;
 
