@@ -14,7 +14,7 @@ public class OrderWithRemindersStatusController : ControllerBase
     /// </summary>
     /// <param name="notificationOrderId">The notification order identifier.</param>
     [HttpGet]
-    [Route("notifications/api/v1/orderswithremindersstatus/{id}/status/shipment")]
+    [Route("notifications/api/v1/orderswithremindersstatus/{notificationOrderId}/status/shipment")]
     [Produces("application/json")]
     [SwaggerResponse(200, "The notification order matching the provided id was retrieved successfully")]
     [SwaggerResponse(404, "No order with the provided id was found")]
