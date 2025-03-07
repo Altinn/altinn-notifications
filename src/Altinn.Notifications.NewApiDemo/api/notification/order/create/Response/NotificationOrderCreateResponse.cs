@@ -1,10 +1,9 @@
 ﻿using System.ComponentModel;
 using System.Text.Json.Serialization;
-using WebApplication1;
 
-namespace Altinn.Notifications.NewApiDemo.api.order.Response
+namespace Altinn.Notifications.NewApiDemo.api.notification.order.create.Response
 {
-    public class NotificationOrderResponse
+    public class NotificationOrderCreateResponse
     {
         [Description("The uuid of the order")]
         [JsonPropertyName("notificationOrderId")]
@@ -14,6 +13,6 @@ namespace Altinn.Notifications.NewApiDemo.api.order.Response
         [Description("The notification contained in the order")]
         [JsonPropertyName("notification")]
         [JsonPropertyOrder(1)]
-        public required NotificationCreateResponse NotificationCreateResponse { get; set; }
+        public required NotificationOrderCreateShipmentResponseFragment NotificationOrderCreateShipmentResponseFragment { get; set; }
     }
 }

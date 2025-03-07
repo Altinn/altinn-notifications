@@ -23,7 +23,6 @@
     <ItemGroup>
       <Folder Include="api\notification\order\create\" />
       <Folder Include="api\otp\" />
-      <Folder Include="api\shipment\feed\" />
       <Folder Include="logic\" />
     </ItemGroup>
 

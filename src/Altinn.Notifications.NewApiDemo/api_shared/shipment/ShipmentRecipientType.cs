@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Altinn.Notifications.NewApiDemo.api.status
+namespace Altinn.Notifications.NewApiDemo.api_shared.shipment
 {
     [JsonConverter(typeof(JsonStringEnumConverter<ShipmentRecipientType>))]
     public enum ShipmentRecipientType

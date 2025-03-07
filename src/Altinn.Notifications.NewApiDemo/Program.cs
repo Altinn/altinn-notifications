@@ -1,16 +1,16 @@
 using Microsoft.AspNetCore.Mvc;
-using WebApplication1;
 using Scalar.AspNetCore;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices.JavaScript;
 using System.Text.Json;
+using Altinn.Notifications.NewApiDemo.api_shared.shipment;
 using Altinn.Notifications.NewApiDemo.api;
+using Altinn.Notifications.NewApiDemo.api.notification.order.create.Response;
+using Altinn.Notifications.NewApiDemo.api.notification.order.status;
 using Altinn.Notifications.NewApiDemo.api.order.Request;
-using Altinn.Notifications.NewApiDemo.api.order.Response;
 using Altinn.Notifications.NewApiDemo.api.Recipient;
-using Altinn.Notifications.NewApiDemo.api.shared;
-using Altinn.Notifications.NewApiDemo.api.status;
+using Altinn.Notifications.NewApiDemo.api.shipment.status;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi.Models;
@@ -65,21 +65,47 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 Dictionary<string, Guid> idempotencyToOrderRepo = new Dictionary<string, Guid>();
-Dictionary<Guid, NotificationOrderResponse> orderRepo = new Dictionary<Guid, NotificationOrderResponse>();
+Dictionary<Guid, NotificationOrderCreateResponse> orderRepo = new Dictionary<Guid, NotificationOrderCreateResponse>();
 Dictionary<Guid, Object> outboundMessageRepo = new Dictionary<Guid, Object>();
 
 app.MapGet("/order/{notificationOrderId}",
     ([FromRoute] Guid notificationOrderId) =>
     {
-        NotificationOrderResponse response;
+        NotificationOrderCreateResponse createResponse;
 
-        if (orderRepo.TryGetValue(notificationOrderId, out response))
+        if (orderRepo.TryGetValue(notificationOrderId, out createResponse))
         {
-            return Results.Ok(response);
+            NotificationOrderStatusResponse statusResponse = new()
+            {
+                NotificationOrderId = createResponse.NotificationOrderId,
+                OrderStatus = "Created",
+                ShipmentStatus = new List<ShipmentStatus>
+                {
+                    new ShipmentStatus
+                    {
+                        ShipmentId = Guid.NewGuid(),
+                        Status = ShipmentStatusType.Accepted,
+                        LastUpdated = DateTime.Now,
+                        ShipmentType = ShipmentType.Notification,
+                        Recipients = new List<ShipmentRecipient>
+                        {
+                            new ShipmentRecipient
+                            {
+                                Type = ShipmentRecipientType.Email,
+                                Destination = "",
+                                ShipmentRecipientStatus = ShipmentStatusType.New
+                            }
+                        }
+                    }
+                }
+            };
+
+            return Results.Ok(statusResponse);
         }
 
         return Results.NotFound();
     });
+
 
 app.MapPost("/order",
         ([FromBody] Notification notification) =>
@@ -95,9 +121,9 @@ app.MapPost("/order",
             Guid orderId;
             if (idempotencyToOrderRepo.TryGetValue(notification.IdempotencyId, out orderId))
             {
-                NotificationOrderResponse existingResponse;
-                if (orderRepo.TryGetValue(orderId, out existingResponse)){
-                    return Results.Ok(existingResponse);
+                NotificationOrderCreateResponse existingCreateResponse;
+                if (orderRepo.TryGetValue(orderId, out existingCreateResponse)){
+                    return Results.Ok(existingCreateResponse);
                 }
                 else
                 {
@@ -120,18 +146,18 @@ app.MapPost("/order",
             
             //make 
             
-            NotificationOrderResponse response = new()
+            NotificationOrderCreateResponse createResponse = new()
             {
                 
                 NotificationOrderId = Guid.NewGuid(),
-                NotificationCreateResponse = new NotificationCreateResponse()
+                NotificationOrderCreateShipmentResponseFragment = new NotificationOrderCreateShipmentResponseFragment()
                 {
-                    NotificationId = Guid.NewGuid(),
+                    ShipmentId = Guid.NewGuid(),
                     SendersReference = notification.SendersReference,
                     
                     Reminders = (notification.Reminders ?? new List<Reminder>()).ConvertAll(r => new BaseNotificationCreateResponse()
                     {
-                        NotificationId = Guid.NewGuid(),
+                        ShipmentId = Guid.NewGuid(),
                         SendersReference = r.SendersReference,
                        
                     }).ToList()
@@ -140,8 +166,8 @@ app.MapPost("/order",
                 }
             };
             
-            idempotencyToOrderRepo.Add(notification.IdempotencyId, response.NotificationOrderId);
-            orderRepo.Add(response.NotificationOrderId, response);
+            idempotencyToOrderRepo.Add(notification.IdempotencyId, createResponse.NotificationOrderId);
+            orderRepo.Add(createResponse.NotificationOrderId, createResponse);
            //TODO: add outbound messages to repo
             
 
@@ -152,15 +178,15 @@ app.MapPost("/order",
             (notification.Reminders ?? new List<Reminder>()).ForEach(r => Console.Out.WriteLine("Planning reminder {0} for {1}", r.SendersReference, plannedSendTime.AddDays(r.RequestedSendTimeDelayDays ?? 0)));
                 
             
-            return Results.Created(string.Format("/order/{0}", response.NotificationOrderId ), response);
+            return Results.Created(string.Format("/order/{0}", createResponse.NotificationOrderId ), createResponse);
         })
     //.Accepts<Notification>("application/json") //json is default
-    .Produces<NotificationOrderResponse>(StatusCodes.Status200OK)
-    .Produces<NotificationOrderResponse>(StatusCodes.Status201Created)
+    .Produces<NotificationOrderCreateResponse>(StatusCodes.Status200OK)
+    .Produces<NotificationOrderCreateResponse>(StatusCodes.Status201Created)
     .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
     .Produces<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)
     .WithName("CreateNotification")
-    .WithSummary("Create a notification")
+    //.WithSummary("Create a notification")
     .WithDescription(
         """
         Description of operation goes here
@@ -197,12 +223,12 @@ app.MapPost("/otp",
             return Results.UnprocessableEntity("Cannot process request since this API is not fully implemented.");
         })
     //.Accepts<Notification>("application/json") //json is default
-    .Produces<NotificationOrderResponse>(StatusCodes.Status200OK)
-    .Produces<NotificationOrderResponse>(StatusCodes.Status204NoContent)
+    .Produces<NotificationOrderCreateResponse>(StatusCodes.Status200OK)
+    .Produces<NotificationOrderCreateResponse>(StatusCodes.Status204NoContent)
     .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
     .Produces<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)
     .WithName("CreateOTP")
-    .WithSummary("Create a OTP sms")
+    //.WithSummary("Create a OTP sms")
     .WithDescription(
         """
         Description of operation goes here
@@ -214,46 +240,66 @@ app.MapPost("/otp",
 app.MapGet("/shipment/{notificationId}",
     ([FromRoute] Guid notificationId) =>
     {
-        return Results.NoContent();
+        //return dummy shipment
+        return Results.Ok(new ShipmentStatus
+        {
+            ShipmentId = notificationId,
+            SendersReference = "Dummy-Senders-Reference",
+            Status = ShipmentStatusType.Sending,
+            LastUpdated = DateTime.Now,
+            ShipmentType = ShipmentType.Notification,
+            Recipients = new List<ShipmentRecipient>
+            {
+                new ShipmentRecipient
+                {
+                    Type = ShipmentRecipientType.Email,
+                    Destination = "navn.navnesen@example.com",
+                    ShipmentRecipientStatus = ShipmentStatusType.New
+                }
+            }
+        });
     });
-
 
 app.MapGet("/status/shipment/feed",
     ([FromQuery] int seq) =>
     {
-        List<ShipmentCreateResponse> statuses = new List<ShipmentCreateResponse>();
-        
-        //for a random number of iterations between 10 and 1000
+        List<ShipmentStatusResponse> statuses = new List<ShipmentStatusResponse>();
+
         Random rnd = new Random();
         int iterations = rnd.Next(10, 1000);
 
         for (int i = 0; i < iterations; i++)
         {
-            ShipmentCreateResponse createResponse = new()
+            ShipmentStatusResponse statusResponse = new()
             {
                 SequenceNumber = seq + i,
-                ShipmentType = rnd.Next(0, 2) == 0? ShipmentType.Notification : ShipmentType.Reminder,
-                
-                NotificationId = Guid.NewGuid(),
+                ShipmentType = rnd.Next(0, 2) == 0 ? ShipmentType.Notification : ShipmentType.Reminder,
+                ShipmentId = Guid.NewGuid(),
                 SendersReference = "Random-Senders-Reference-" + rnd.Next(1, 100000),
                 Status = Enum.GetValues<ShipmentStatusType>()[rnd.Next(0, Enum.GetNames<ShipmentStatusType>().Length)],
                 LastUpdated = DateTime.Now,
-                
-                Recipients = [new()
+                Recipients = new List<ShipmentRecipient>
                 {
-                    Type = ShipmentRecipientType.Email,
-                    Destintion = "navn.navnesen@example.com"
-                }, new(){
-                    Type = ShipmentRecipientType.SMS,
-                    Destintion = "99999999"
-                }],
+                    new ShipmentRecipient
+                    {
+                        Type = ShipmentRecipientType.Email,
+                        Destination = "navn.navnesen@example.com",
+                        ShipmentRecipientStatus = ShipmentStatusType.Delivered
+                    },
+                    new ShipmentRecipient
+                    {
+                        Type = ShipmentRecipientType.SMS,
+                        Destination = "99999999",
+                        ShipmentRecipientStatus = ShipmentStatusType.Delivered
+                    }
+                }
             };
-                
-            statuses.Add(createResponse);
+
+            statuses.Add(statusResponse);
         }
-       
-        
+
         return Results.Ok(statuses);
     });
+
     
 app.Run();
