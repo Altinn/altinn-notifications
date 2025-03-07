@@ -12,10 +12,13 @@ namespace Altinn.Notifications.Telemetry
     /// <summary>
     /// Filter for requests (and child dependencies) that should not be logged.
     /// </summary>
-    public class RequestFilterProcessor : BaseProcessor<Activity>
+    /// <remarks>
+    /// Initializes a new instance of the <see cref="RequestFilterProcessor"/> class.
+    /// </remarks>
+    public class RequestFilterProcessor(IHttpContextAccessor httpContextAccessor = null) : BaseProcessor<Activity>()
     {
         private const string RequestKind = "Microsoft.AspNetCore.Hosting.HttpRequestIn";
-        private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
         private static readonly FrozenDictionary<string, Action<Claim, Activity>> _claimActions = InitClaimActions();
 
         private static FrozenDictionary<string, Action<Claim, Activity>> InitClaimActions()
@@ -69,14 +72,6 @@ namespace Altinn.Notifications.Telemetry
             };
 
             return actions.ToFrozenDictionary();
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RequestFilterProcessor"/> class.
-        /// </summary>
-        public RequestFilterProcessor(IHttpContextAccessor httpContextAccessor = null) : base()
-        {
-            _httpContextAccessor = httpContextAccessor;
         }
 
         /// <summary>

@@ -143,8 +143,10 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
             });
 
             tracing.AddHttpClientInstrumentation();
+            
+            services.AddSingleton<RequestFilterProcessor>();
 
-            tracing.AddProcessor(new RequestFilterProcessor(new HttpContextAccessor()));
+            tracing.AddProcessor<RequestFilterProcessor>();
 
             tracing.AddNpgsql();
         });
