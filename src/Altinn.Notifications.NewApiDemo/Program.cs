@@ -92,7 +92,23 @@ app.MapGet("/order/{notificationOrderId}",
                             new ShipmentRecipient
                             {
                                 Type = ShipmentRecipientType.Email,
-                                Destination = "",
+                                Destination = "navn.navnesen@example.com",
+                                ShipmentRecipientStatus = ShipmentStatusType.New
+                            }
+                        }
+                    },
+                    new ShipmentStatus
+                    {
+                        ShipmentId = Guid.NewGuid(),
+                        Status = ShipmentStatusType.Accepted,
+                        LastUpdated = DateTime.Now,
+                        ShipmentType = ShipmentType.Reminder,
+                        Recipients = new List<ShipmentRecipient>
+                        {
+                            new ShipmentRecipient
+                            {
+                                Type = ShipmentRecipientType.SMS,
+                                Destination = "99999999",
                                 ShipmentRecipientStatus = ShipmentStatusType.New
                             }
                         }
