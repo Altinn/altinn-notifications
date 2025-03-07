@@ -2,8 +2,6 @@
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Extensions;
 
-using Microsoft.ApplicationInsights;
-
 using Npgsql;
 
 using NpgsqlTypes;
@@ -16,7 +14,6 @@ namespace Altinn.Notifications.Persistence.Repository
     public class MetricsRepository : IMetricsRepository
     {
         private readonly NpgsqlDataSource _dataSource;
-        private readonly TelemetryClient? _telemetryClient;
 
         private const string _getMonthlytMetric = "SELECT * FROM notifications.getmetrics($1, $2);";  // month, year
 
@@ -24,11 +21,9 @@ namespace Altinn.Notifications.Persistence.Repository
         /// Initializes a new instance of the <see cref="MetricsRepository"/> class.
         /// </summary>
         /// <param name="dataSource">The npgsql data source.</param>
-        /// <param name="telemetryClient">Telemetry client</param>
-        public MetricsRepository(NpgsqlDataSource dataSource, TelemetryClient? telemetryClient = null)
+        public MetricsRepository(NpgsqlDataSource dataSource)
         {
             _dataSource = dataSource;
-            _telemetryClient = telemetryClient;
         }
 
         /// <inheritdoc/>
@@ -41,7 +36,6 @@ namespace Altinn.Notifications.Persistence.Repository
             };
 
             await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getMonthlytMetric);
-            using TelemetryTracker tracker = new(_telemetryClient, pgcom);
 
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Integer, month);
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Integer, year);
@@ -63,7 +57,6 @@ namespace Altinn.Notifications.Persistence.Repository
                 }
             }
 
-            tracker.Track();
             return metrics;
         }
     }
