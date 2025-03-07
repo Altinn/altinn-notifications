@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.ComponentModel;
+using System.Text.Json.Serialization;
 
 namespace Altinn.Notifications.Models;
 
@@ -6,6 +7,7 @@ namespace Altinn.Notifications.Models;
 /// Represents an SMS notification template with an associated sending time policy.
 /// This class extends <see cref="SmsTemplateExt"/> by adding a policy that determines when the SMS should be sent.
 /// </summary>
+[Description("Defines settings for SMS.")]
 [JsonDerivedType(typeof(SmsTemplateWithSendingTimePolicyExt), "smsSettings")]
 public class SmsTemplateWithSendingTimePolicyExt : SmsTemplateExt
 {

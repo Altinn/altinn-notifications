@@ -15,7 +15,7 @@ public enum SendingTimePolicyExt
     /// Email and SMS are sent between 08:00 and 17:00 CET.
     /// </summary>
     [Description("Schedules the message for delivery during daytime on working days (08:00 - 17:00 CET, Mon-Fri).")]
-    WorkingDaysDaytimeOnly,
+    WorkingDaysDaytime,
 
     /// <summary>
     /// The message will be sent as soon as possible within the next available daytime slot (08:00 - 17:00 CET).
