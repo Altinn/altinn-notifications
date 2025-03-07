@@ -118,6 +118,8 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
         KeyValuePair.Create("service.name", (object)"platform-notifications"),
     };
 
+    services.AddHttpContextAccessor();
+
     services.AddOpenTelemetry()
         .ConfigureResource(resourceBuilder => resourceBuilder.AddAttributes(attributes))
         .WithMetrics(metrics => 
@@ -142,7 +144,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
 
             tracing.AddHttpClientInstrumentation();
 
-            tracing.AddProcessor(new RequestFilterProcessor(new HttpContextAccessor())); // todo: check if this needs to be injected
+            tracing.AddProcessor(new RequestFilterProcessor(new HttpContextAccessor()));
 
             tracing.AddNpgsql();
         });

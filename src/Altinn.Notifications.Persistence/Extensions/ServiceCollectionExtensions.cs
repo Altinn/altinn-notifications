@@ -6,8 +6,6 @@ using Altinn.Notifications.Persistence.Repository;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-using Npgsql;
-
 namespace Altinn.Notifications.Persistence.Extensions;
 
 /// <summary>
@@ -37,7 +35,11 @@ public static class ServiceCollectionExtensions
         .AddSingleton<IMetricsRepository, MetricsRepository>()
         .AddNpgsqlDataSource(connectionString, builder =>
             builder.EnableParameterLogging(settings.LogParameters)
-                   .EnableDynamicJson());
+                   .EnableDynamicJson()
+                   .ConfigureTracing(o => o
+                       .ConfigureCommandSpanNameProvider(cmd => cmd.CommandText)
+                       .ConfigureCommandFilter(cmd => true)
+                       .ConfigureCommandEnrichmentCallback(DbEnricher.Enrich)));
     }
 
     /// <summary>
