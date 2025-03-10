@@ -104,6 +104,7 @@ function postEmailNotificationOrderRequest(data) {
 
     check(response, {
         "POST email notification order request. Location header provided": (_) => selfLink,
+        // No recipient lookup is performed for postEmailNotificationOrder?
         //"POST email notification order request. Recipient lookup was successful": (r) => JSON.parse(r.body).recipientLookup.status == 'Success'
     });
 
