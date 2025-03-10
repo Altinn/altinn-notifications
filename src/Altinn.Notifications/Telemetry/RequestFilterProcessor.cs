@@ -15,7 +15,7 @@ namespace Altinn.Notifications.Telemetry
     /// <remarks>
     /// Initializes a new instance of the <see cref="RequestFilterProcessor"/> class.
     /// </remarks>
-    public class RequestFilterProcessor(IHttpContextAccessor httpContextAccessor = null) : BaseProcessor<Activity>()
+    public class RequestFilterProcessor(IHttpContextAccessor httpContextAccessor) : BaseProcessor<Activity>()
     {
         private const string RequestKind = "Microsoft.AspNetCore.Hosting.HttpRequestIn";
         private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
@@ -24,52 +24,52 @@ namespace Altinn.Notifications.Telemetry
         private static FrozenDictionary<string, Action<Claim, Activity>> InitClaimActions()
         {
             var actions = new Dictionary<string, Action<Claim, Activity>>(StringComparer.OrdinalIgnoreCase)
-            {
                 {
-                    AltinnCoreClaimTypes.UserId,
-                    static (claim, activity) =>
                     {
-                        activity.SetTag("user.id", claim.Value);
-                    }
-                },
-                {
-                    AltinnCoreClaimTypes.PartyID,
-                    static (claim, activity) =>
+                        AltinnCoreClaimTypes.UserId,
+                        static (claim, activity) =>
+                        {
+                            activity.SetTag("user.id", claim.Value);
+                        }
+                    },
                     {
-                        activity.SetTag("user.party.id", claim.Value);
-                    }
-                },
-                {
-                    AltinnCoreClaimTypes.AuthenticationLevel,
-                    static (claim, activity) =>
+                        AltinnCoreClaimTypes.PartyID,
+                        static (claim, activity) =>
+                        {
+                            activity.SetTag("user.party.id", claim.Value);
+                        }
+                    },
                     {
-                        activity.SetTag("user.authentication.level", claim.Value);
-                    }
-                },
-                {
-                    AltinnCoreClaimTypes.Org,
-                    static (claim, activity) =>
+                        AltinnCoreClaimTypes.AuthenticationLevel,
+                        static (claim, activity) =>
+                        {
+                            activity.SetTag("user.authentication.level", claim.Value);
+                        }
+                    },
                     {
-                        activity.SetTag("user.application.owner.id", claim.Value);
-                    }
-                },
-                {
-                    AltinnCoreClaimTypes.OrgNumber,
-                    static (claim, activity) =>
+                        AltinnCoreClaimTypes.Org,
+                        static (claim, activity) =>
+                        {
+                            activity.SetTag("user.application.owner.id", claim.Value);
+                        }
+                    },
                     {
-                        activity.SetTag("user.organization.number", claim.Value);
-                    }
-                },
-                {
-                    "authorization_details",
-                    static (claim, activity) =>
+                        AltinnCoreClaimTypes.OrgNumber,
+                        static (claim, activity) =>
+                        {
+                            activity.SetTag("user.organization.number", claim.Value);
+                        }
+                    },
                     {
-                        SystemUserClaim claimValue = JsonSerializer.Deserialize<SystemUserClaim>(claim.Value);
-                        activity.SetTag("user.system.id", claimValue?.Systemuser_id[0] ?? null);
-                        activity.SetTag("user.system.owner.number", claimValue?.Systemuser_org.ID ?? null);
-                    }
-                },
-            };
+                        "authorization_details",
+                        static (claim, activity) =>
+                        {
+                            SystemUserClaim? claimValue = JsonSerializer.Deserialize<SystemUserClaim>(claim.Value);
+                            activity.SetTag("user.system.id", claimValue?.Systemuser_id[0] ?? null);
+                            activity.SetTag("user.system.owner.number", claimValue?.Systemuser_org.ID ?? null);
+                        }
+                    },
+                };
 
             return actions.ToFrozenDictionary();
         }
@@ -82,7 +82,11 @@ namespace Altinn.Notifications.Telemetry
             bool skip = false;
             if (activity.OperationName == RequestKind)
             {
-                skip = ExcludeRequest(_httpContextAccessor.HttpContext.Request.Path.Value);
+                var path = _httpContextAccessor.HttpContext?.Request.Path.Value;
+                if (path != null)
+                {
+                    skip = ExcludeRequest(path);
+                }
             }
             else if (!(activity.Parent?.ActivityTraceFlags.HasFlag(ActivityTraceFlags.Recorded) ?? true))
             {
@@ -118,7 +122,7 @@ namespace Altinn.Notifications.Telemetry
             }
         }
 
-        private bool ExcludeRequest(string localpath)
+        private static bool ExcludeRequest(string localpath)
         {
             return localpath switch
             {
