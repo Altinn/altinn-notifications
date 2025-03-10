@@ -61,4 +61,12 @@ public class NotificationOrderWithRemindersRequestExt
     /// </value>
     [JsonPropertyName("recipient")]
     public RecipientTypeExt Recipient { get; set; } = new RecipientTypeExt();
+
+    /// <summary>
+    /// Gets or sets the reminders.
+    /// </summary>
+    /// <value>
+    /// The reminders.
+    /// </value>
+    public List<ReminderExt>? Reminders { get; set; }
 }

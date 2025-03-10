@@ -31,7 +31,7 @@ public class RecipientTypeExt
     /// <value>
     /// An object that contains all the information needed to deliver an SMS or E-mail to a specific person identified by a national identity number.
     /// </value>
-    public RecipientPersonExt? RecipientNationalIdentityNumber { get; set; }
+    public RecipientPersonExt? RecipientPerson { get; set; }
 
     /// <summary>
     /// Gets or sets a type where the recipient is identified by an organization number.
