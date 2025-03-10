@@ -60,5 +60,5 @@ public class NotificationOrderWithRemindersRequestExt
     /// An object containing information about the recipient.
     /// </value>
     [JsonPropertyName("recipient")]
-    public RecipientTypelExt Recipient { get; set; } = new RecipientTypelExt();
+    public RecipientTypeExt Recipient { get; set; } = new RecipientTypeExt();
 }

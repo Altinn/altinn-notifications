@@ -5,7 +5,7 @@ namespace Altinn.Notifications.Models;
 /// <summary>
 /// Represents a recipient container.
 /// </summary>
-public class RecipientTypelExt
+public class RecipientTypeExt
 {
     /// <summary>
     /// Gets or sets a type where the recipient is identified by a phone number.
