@@ -4,8 +4,6 @@ using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Extensions;
 
-using Microsoft.ApplicationInsights;
-
 using Npgsql;
 
 using NpgsqlTypes;
@@ -18,7 +16,6 @@ namespace Altinn.Notifications.Persistence.Repository;
 public class NotificationSummaryRepository : INotificationSummaryRepository
 {
     private readonly NpgsqlDataSource _dataSource;
-    private readonly TelemetryClient? _telemetryClient;
 
     private const string _getEmailNotificationsByOrderIdSql = "select * from notifications.getemailsummary_v2($1, $2)"; // (_alternateorderid, creatorname)
     private const string _getSmsNotificationsByOrderIdSql = "select * from notifications.getsmssummary_v2($1, $2)"; // (_alternateorderid, creatorname)
@@ -27,11 +24,9 @@ public class NotificationSummaryRepository : INotificationSummaryRepository
     /// Initializes a new instance of the <see cref="EmailNotificationRepository"/> class.
     /// </summary>
     /// <param name="dataSource">The npgsql data source.</param>
-    /// <param name="telemetryClient">Telemetry client</param>
-    public NotificationSummaryRepository(NpgsqlDataSource dataSource, TelemetryClient? telemetryClient = null)
+    public NotificationSummaryRepository(NpgsqlDataSource dataSource)
     {
         _dataSource = dataSource;
-        _telemetryClient = telemetryClient;
     }
 
     /// <inheritdoc/>
@@ -103,7 +98,6 @@ public class NotificationSummaryRepository : INotificationSummaryRepository
         string sendersReference = string.Empty;
 
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(sqlCommand);
-        using TelemetryTracker tracker = new(_telemetryClient, pgcom);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, orderId);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, creator);
 
@@ -125,8 +119,6 @@ public class NotificationSummaryRepository : INotificationSummaryRepository
                 }
             }
         }
-
-        tracker.Track();
 
         return (matchFound, sendersReference, notificationList);
     }

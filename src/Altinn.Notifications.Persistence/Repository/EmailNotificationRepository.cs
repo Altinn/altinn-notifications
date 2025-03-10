@@ -5,8 +5,6 @@ using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Extensions;
 
-using Microsoft.ApplicationInsights;
-
 using Npgsql;
 
 using NpgsqlTypes;
@@ -19,7 +17,6 @@ namespace Altinn.Notifications.Persistence.Repository;
 public class EmailNotificationRepository : IEmailNotificationRepository
 {
     private readonly NpgsqlDataSource _dataSource;
-    private readonly TelemetryClient? _telemetryClient;
 
     private const string _insertEmailNotificationSql = "call notifications.insertemailnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _toaddress, _customizedbody, _customizedsubject, _result, _resulttime, _expirytime)
     private const string _getEmailNotificationsSql = "select * from notifications.getemails_statusnew_updatestatus()";
@@ -35,18 +32,15 @@ public class EmailNotificationRepository : IEmailNotificationRepository
     /// Initializes a new instance of the <see cref="EmailNotificationRepository"/> class.
     /// </summary>
     /// <param name="dataSource">The npgsql data source.</param>
-    /// <param name="telemetryClient">Telemetry client</param>
-    public EmailNotificationRepository(NpgsqlDataSource dataSource, TelemetryClient? telemetryClient = null)
+    public EmailNotificationRepository(NpgsqlDataSource dataSource)
     {
         _dataSource = dataSource;
-        _telemetryClient = telemetryClient;
     }
 
     /// <inheritdoc/>
     public async Task AddNotification(EmailNotification notification, DateTime expiry)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_insertEmailNotificationSql);
-        using TelemetryTracker tracker = new(_telemetryClient, pgcom);
 
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notification.OrderId);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notification.Id);
@@ -60,7 +54,6 @@ public class EmailNotificationRepository : IEmailNotificationRepository
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, expiry);
 
         await pgcom.ExecuteNonQueryAsync();
-        tracker.Track();
     }
 
     /// <inheritdoc/>
@@ -68,7 +61,6 @@ public class EmailNotificationRepository : IEmailNotificationRepository
     {
         List<Email> searchResult = new();
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getEmailNotificationsSql);
-        using TelemetryTracker tracker = new(_telemetryClient, pgcom);
 
         await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync())
         {
@@ -88,7 +80,6 @@ public class EmailNotificationRepository : IEmailNotificationRepository
             }
         }
 
-        tracker.Track();
         return searchResult;
     }
 
@@ -96,12 +87,10 @@ public class EmailNotificationRepository : IEmailNotificationRepository
     public async Task UpdateSendStatus(Guid? notificationId, EmailNotificationResultType status, string? operationId = null)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_updateEmailStatus);
-        using TelemetryTracker tracker = new(_telemetryClient, pgcom);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, operationId ?? (object)DBNull.Value);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId ?? (object)DBNull.Value);
         await pgcom.ExecuteNonQueryAsync();
-        tracker.Track();
     }
 
     /// <inheritdoc/>
@@ -110,7 +99,6 @@ public class EmailNotificationRepository : IEmailNotificationRepository
         List<EmailRecipient> searchResult = [];
 
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getEmailRecipients);
-        using TelemetryTracker tracker = new(_telemetryClient, pgcom);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, orderId);
         await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync())
         {
@@ -125,7 +113,6 @@ public class EmailNotificationRepository : IEmailNotificationRepository
             }
         }
 
-        tracker.Track();
         return searchResult;
     }
 }
