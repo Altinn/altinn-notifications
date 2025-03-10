@@ -1,23 +1,17 @@
 ﻿namespace Altinn.Notifications.Models;
 
 /// <summary>
-/// Represents identifiers for one or more dialogs and/or transmissions in the Dialogporten.
+/// Represents identifiers for dialogs and transmissions in the Dialogporten system.
 /// </summary>
 public class DialogportenAssociationExt
 {
     /// <summary>
-    /// Gets or sets the identifier which points to a corresponding dialog in Dialogporten.
+    /// Gets or sets the identifier for a specific dialog within Dialogporten.
     /// </summary>
-    /// <value>
-    /// The identifier that identifies a specific dialog within Dialogporten.
-    /// </value>
     public string? DialogId { get; set; }
 
     /// <summary>
-    /// Gets or sets the identifier which points to a corresponding dialog in Dialogporten.
+    /// Gets or sets the identifier for a specific transmission within Dialogporten.
     /// </summary>
-    /// <value>
-    /// The identifier that identifies a specific transmission within Dialogporten.
-    /// </value>
     public string? TransmissionId { get; set; }
 }
