@@ -119,6 +119,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     };
 
     services.AddHttpContextAccessor();
+    services.AddSingleton<RequestFilterProcessor>();
 
     services.AddOpenTelemetry()
         .ConfigureResource(resourceBuilder => resourceBuilder.AddAttributes(attributes))
@@ -141,7 +142,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
 
             tracing.AddHttpClientInstrumentation();
             
-            tracing.AddProcessor(new RequestFilterProcessor(new HttpContextAccessor()));
+            tracing.AddProcessor<RequestFilterProcessor>();
 
             tracing.AddNpgsql();
         });

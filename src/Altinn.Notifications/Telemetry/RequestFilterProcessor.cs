@@ -15,7 +15,7 @@ namespace Altinn.Notifications.Telemetry
     /// <remarks>
     /// Initializes a new instance of the <see cref="RequestFilterProcessor"/> class.
     /// </remarks>
-    public class RequestFilterProcessor(IHttpContextAccessor httpContextAccessor = null) : BaseProcessor<Activity>()
+    public class RequestFilterProcessor(IHttpContextAccessor httpContextAccessor) : BaseProcessor<Activity>()
     {
         private const string RequestKind = "Microsoft.AspNetCore.Hosting.HttpRequestIn";
         private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
