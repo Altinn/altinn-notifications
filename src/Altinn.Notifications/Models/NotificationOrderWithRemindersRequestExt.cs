@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace Altinn.Notifications.Models;
 
@@ -13,15 +14,15 @@ public class NotificationOrderWithRemindersRequestExt
     /// <value>
     /// A unique key defined by the sender to ensure idempotency.
     /// </value>
+    [Required]
     [JsonPropertyName("idempotencyId")]
-    public required string IdempotencyId { get; set; }
+    public string IdempotencyId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the identifiers for one or more dialogs and/or transmissions in the Dialogporten.
     /// </summary>
     /// <value>
     /// An object that links one or more dialogs and/or transmissions in the Dialogporten.
-    /// This association helps in tracking the dialogs and transmissions related to the notification order.
     /// </value>
     [JsonPropertyName("dialogportenAssociation")]
     public DialogportenAssociationExt? DialogportenAssociation { get; set; }
@@ -30,7 +31,7 @@ public class NotificationOrderWithRemindersRequestExt
     /// Gets or sets the sender's reference.
     /// </summary>
     /// <value>
-    /// A reference string used to identify the notification order in the sender's system.
+    /// A reference used to identify the notification order in the sender's system.
     /// </value>
     [JsonPropertyName("sendersReference")]
     public string? SendersReference { get; set; }
@@ -59,14 +60,12 @@ public class NotificationOrderWithRemindersRequestExt
     /// <value>
     /// An object containing information about the recipient.
     /// </value>
+    [Required]
     [JsonPropertyName("recipient")]
     public RecipientTypeExt Recipient { get; set; } = new RecipientTypeExt();
 
     /// <summary>
-    /// Gets or sets the reminders.
+    /// Gets or sets the reminders associated with the notification order.
     /// </summary>
-    /// <value>
-    /// The reminders.
-    /// </value>
     public List<ReminderExt>? Reminders { get; set; }
 }
