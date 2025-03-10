@@ -16,7 +16,6 @@ export function postSmsNotificationOrder(serializedOrder, token) {
 
   const params = apiHelpers.buildHeaderWithBearerAndContentType(token);
   params.tags = { name: "post_sms_order" };
-
   return http.post(endpoint, serializedOrder, params);
 }
 

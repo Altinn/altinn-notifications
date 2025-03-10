@@ -24,21 +24,21 @@
 
 import { check, sleep } from "k6";
 import { stopIterationOnFail } from "../errorhandler.js";
-import { randomString, uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
+import { randomString, randomItem, uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 
 import * as setupToken from "../setup.js";
 import * as ordersApi from "../api/notifications/orders.js";
 import * as notificationsApi from "../api/notifications/notifications.js";
+import { orgNos } from "../data/orgnos.js";
 
 const emailOrderRequestJson = JSON.parse(
     open("../data/orders/01-email-request.json")
 );
 
-const environment = __ENV.env ? __ENV.env.toLowerCase() : __ENV.API_ENVIRONMENT;
 const scopes = "altinn:serviceowner/notifications.create";
 
 const resourceId = __ENV.resourceId;
-const orgNoRecipient = (__ENV.orgNoRecipient ?? environment == "yt01" ? "713431400" : "991825827");
+const orgNoRecipient = randomItem(orgNos);
 
 export const options = {
     thresholds: {
@@ -107,10 +107,9 @@ function postEmailNotificationOrderRequest(data) {
     stopIterationOnFail("POST email notification order request failed", success);
 
     const selfLink = response.headers["Location"];
-
     check(response, {
         "POST email notification order request. Location header provided": (r) => selfLink,
-        "POST email notification order request. Recipient lookup was successful": (r) => JSON.parse(r.body).recipientLookup.status == 'Success',
+        "POST email notification order request. Recipient lookup was successful or no recipients found": (r) => JSON.parse(r.body).recipientLookup.status == 'Success' || (JSON.parse(r.body).recipientLookup.status == 'Failed' && JSON.parse(r.body).recipientLookup.missingContact.length > 0)
     });
 
     return selfLink;
