@@ -1,29 +1,21 @@
-﻿using System.ComponentModel;
-using System.ComponentModel.DataAnnotations;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
-namespace Altinn.Notifications.Models
+namespace Altinn.Notifications.Models;
+
+/// <summary>
+/// Represents an SMS template that contains all the information needed to deliver a text message to a specific mobile number.
+/// </summary>
+public class RecipientSmsExt
 {
     /// <summary>
-    /// Represents an SMS that should be sent to a specific recipient.
+    /// Gets or sets the phone number to which the SMS should be sent.
     /// </summary>
-    [Description("Defines settings for SMS.")]
-    public class RecipientSmsExt
-    {
-        /// <summary>
-        /// Gets or sets the phone number to which the SMS should be sent.
-        /// </summary>
-        [JsonPropertyName("phoneNumber")]
-        public required string PhoneNumber { get; set; }
+    [JsonPropertyName("phoneNumber")]
+    public required string PhoneNumber { get; set; }
 
-        /// <summary>
-        /// Gets or sets the SMS settings.
-        /// </summary>
-        /// <value>
-        /// The SMS settings.
-        /// </value>
-        [Required]
-        [JsonPropertyName("smsSettings")]
-        public SmsTemplateWithSendingTimePolicyExt? SmsSettings { get; set; }
-    }
+    /// <summary>
+    /// Gets or sets the SMS settings, including the payload and sending time policy.
+    /// </summary>
+    [JsonPropertyName("smsSettings")]
+    public ScheduledSmsTemplateExt SmsSettings { get; set; } = new ScheduledSmsTemplateExt();
 }

@@ -42,7 +42,7 @@ public class OrderWithRemindersController
     [SwaggerResponse(202, "The notification order was accepted")]
     [SwaggerResponse(400, "The notification order is invalid")]
     [SwaggerResponseHeader(202, "Location", "string", "Link to access the newly created notification order.")]
-    public async Task<IActionResult> Post(dynamic notificationOrderRequest)
+    public async Task<IActionResult> Post(NotificationOrderWithRemindersRequestExt notificationOrderRequest)
     {
         throw new NotImplementedException();
     }
