@@ -23,7 +23,7 @@ public class RecipientTypesAssociatedWithRequestExt
     /// An object that contains all the information needed to deliver an email to a specific address.
     /// </value>
     [JsonPropertyName("recipientEmail")]
-    public EmailRequestTemplateExt? RecipientEmail { get; set; }
+    public RecipientEmailRequestExt? RecipientEmail { get; set; }
 
     /// <summary>
     /// Gets or sets a type where the recipient is identified by a national identity number.

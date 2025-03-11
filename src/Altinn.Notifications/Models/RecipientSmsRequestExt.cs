@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 namespace Altinn.Notifications.Models;
 
 /// <summary>
-/// Represents the request model for sending an SMS notification to a specific recipient.
+/// Represents the request model for sending an SMS to a specific recipient.
 /// </summary>
 public class RecipientSmsRequestExt
 {

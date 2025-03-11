@@ -32,7 +32,7 @@ namespace Altinn.Notifications.Models
         /// Gets or sets the email template settings for the notification.
         /// </summary>
         [JsonPropertyName("emailSettings")]
-        public EmailRequestSettingsExt? EmailSettings { get; set; }
+        public RecipientEmailSettingsRequestExt? EmailSettings { get; set; }
 
         /// <summary>
         /// Gets or sets the SMS template settings for the notification.

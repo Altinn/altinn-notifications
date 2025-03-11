@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 namespace Altinn.Notifications.Models;
 
 /// <summary>
-/// Represents configuration settings that are associated with the request model for sending an SMS message to a specific recipient.
+/// Represents configuration settings that are associated with the request model for sending an SMS to a specific recipient.
 /// </summary>
 public class RecipientSmsSettingsRequestExt
 {
@@ -26,6 +26,7 @@ public class RecipientSmsSettingsRequestExt
 
     /// <summary>
     /// Gets or sets the sending time policy, indicating when the SMS should be dispatched.
+    /// Defaults to <see cref="SendingTimePolicyExt.WorkingDaysDaytime"/>.
     /// </summary>
     [JsonPropertyOrder(3)]
     [JsonPropertyName("sendingTimePolicy")]
