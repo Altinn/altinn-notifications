@@ -1,47 +1,41 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Altinn.Notifications.Models;
 
 /// <summary>
 /// Represents a request to create a notification order with one or more reminders.
+/// Inherits from <see cref="NotificationOrderRequestBasePropertiesExt"/> for common properties.
 /// </summary>
 public class NotificationOrderWithRemindersRequestExt : NotificationOrderRequestBasePropertiesExt
 {
     /// <summary>
     /// Gets or sets the idempotency identifier defined by the sender.
     /// </summary>
-    /// <value>
-    /// A unique key defined by the sender to ensure idempotency.
-    /// </value>
     [Required]
+    [JsonPropertyOrder(1)]
     [JsonPropertyName("idempotencyId")]
-    public required string IdempotencyId { get; set; } = string.Empty;
+    public required string IdempotencyId { get; set; }
 
     /// <summary>
-    /// Gets or sets the identifiers for one or more dialogs and/or transmissions within Dialogporten.
+    /// Gets or sets optional identifiers for one or more dialogs or transmissions in Dialogporten.
     /// </summary>
+    [JsonPropertyOrder(2)]
     [JsonPropertyName("dialogportenAssociation")]
     public DialogportenAssociationExt? DialogportenAssociation { get; set; }
 
     /// <summary>
-    /// Gets or sets the associated recipient information.
+    /// Gets or sets the required recipient information, whether for mobile number, email-address, national identity, or organization number.
     /// </summary>
     [Required]
+    [JsonPropertyOrder(3)]
     [JsonPropertyName("recipient")]
-    public required RecipientTypesAssociatedWithRequestExt Recipient { get; set; } = new RecipientTypesAssociatedWithRequestExt();
+    public required RecipientTypesAssociatedWithRequestExt Recipient { get; set; }
 
     /// <summary>
-    /// Gets or sets the reminders associated with the notification order.
+    /// Gets or sets a list of reminders that may be triggered under certain conditions after the initial notification has been processed.
     /// </summary>
+    [JsonPropertyOrder(4)]
+    [JsonPropertyName("reminders")]
     public List<NotificationOrderReminderRequestExt>? Reminders { get; set; }
-
-    /// <summary>
-    /// Json serialized the <see cref="EmailNotificationOrderRequestExt"/>
-    /// </summary>
-    public string Serialize()
-    {
-        return JsonSerializer.Serialize(this);
-    }
 }

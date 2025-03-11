@@ -1,26 +1,26 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace Altinn.Notifications.Models;
 
 /// <summary>
-/// Represent a notification reminder.
+/// Represents a reminder that can be sent following an initial notification order,
+/// inheriting common properties from <see cref="NotificationOrderRequestBasePropertiesExt"/>.
 /// </summary>
 public class NotificationOrderReminderRequestExt : NotificationOrderRequestBasePropertiesExt
 {
     /// <summary>
-    /// Gets or sets the delay days.
+    /// Gets or sets the optional number of days to delay.
+    /// The reminder will be processed on or after (RequestedSendTime + DelayDays).
     /// </summary>
-    /// <value>
-    /// The  Reminder will be processed on or as soon as possible after the Notification RequestedSendTime + this number of 24-hour increments, in accordance with the selected policy..
-    /// </value>
+    [JsonPropertyOrder(1)]
     public int? DelayDays { get; set; }
 
     /// <summary>
-    /// Gets or sets the recipient information.
+    /// Gets or sets the required recipient information, whether for mobile number, email-address, national identity, or organization number.
     /// </summary>
-    /// <value>
-    /// An object containing information about the recipient.
-    /// </value>
+    [Required]
+    [JsonPropertyOrder(2)]
     [JsonPropertyName("recipient")]
-    public RecipientTypesAssociatedWithRequestExt Recipient { get; set; } = new RecipientTypesAssociatedWithRequestExt();
+    public required RecipientTypesAssociatedWithRequestExt Recipient { get; set; } = new();
 }
