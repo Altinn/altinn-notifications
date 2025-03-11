@@ -41,5 +41,5 @@ public class RecipientTypesAssociatedWithRequestExt
     /// An object that contains all the information needed to deliver an SMS or E-mail to a specific person identified by an organization number.
     /// </value>
     [JsonPropertyName("recipientOrganization")]
-    public OrganizationRequestSettingsExt? RecipientOrganization { get; set; }
+    public RecipientOrganizationRequestExt? RecipientOrganization { get; set; }
 }

@@ -4,19 +4,18 @@ using System.Text.Json.Serialization;
 namespace Altinn.Notifications.Models;
 
 /// <summary>
-/// Represents a request containing all the information needed to deliver either
-/// an email or SMS to a specific person identified by their national identity number.
+/// Represents a request for sending an email or SMS to a contact person
+/// identified by an organization number, including configuration details.
 /// </summary>
-public class RecipientPersonRequestExt
+public class RecipientOrganizationRequestExt
 {
     /// <summary>
-    /// Gets or sets the national identity number of the recipient.
-    /// It is used to look up recipient information in the KRR registry.
+    /// Gets or sets the organization number required to identify the contact person.
     /// </summary>
     [Required]
     [JsonPropertyOrder(1)]
-    [JsonPropertyName("nationalIdentityNumber")]
-    public required string NationalIdentityNumber { get; set; }
+    [JsonPropertyName("orgNumber")]
+    public required string OrgNumber { get; set; }
 
     /// <summary>
     /// Gets or sets an optional resource identifier used for referencing additional details.
@@ -26,20 +25,11 @@ public class RecipientPersonRequestExt
     public string? ResourceId { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether to ignore the reservation flag
-    /// for electronic communication (as defined in KRR).
-    /// Defaults to <c>false</c>.
-    /// </summary>
-    [JsonPropertyOrder(3)]
-    [JsonPropertyName("ignoreReservation")]
-    public bool IgnoreReservation { get; set; } = false;
-
-    /// <summary>
-    /// Gets or sets the required channel scheme for sending the notification
-    /// (e.g., email, SMS, email preferred, or SMS preferred).
+    /// Gets or sets the required channel scheme indicating how the notification
+    /// should be delivered (e.g., email, SMS, email preferred, or SMS preferred)..
     /// </summary>
     [Required]
-    [JsonPropertyOrder(4)]
+    [JsonPropertyOrder(3)]
     [JsonPropertyName("channelScheme")]
     public required NotificationChannelExt ChannelScheme { get; set; }
 
