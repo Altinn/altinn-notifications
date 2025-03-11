@@ -204,9 +204,14 @@ function getSmsNotificationSummary(data, orderId) {
  * @param {Object} data - The data object containing runFullTestSet and other test data.
  */
 export default function (data) {
+    // Get a random organization number from the list.
+    // For all other envs than yt01, the list only contains one number
+    let orgNoRecipient = randomItem(orgNos);
+    data.emailOrderRequest.recipients[0].organizationNumber = orgNoRecipient;
     const selfLink = postEmailNotificationOrderRequest(data);
     const id = selfLink.split("/").pop();
 
+    data.smsOrderRequest.recipients[0].organizationNumber = orgNoRecipient; 
     const smsSelfLink = postSmsNotificationOrderRequest(data);
     const smsId = smsSelfLink.split("/").pop();
 
