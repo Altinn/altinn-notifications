@@ -32,7 +32,7 @@ public class RecipientTypesAssociatedWithRequestExt
     /// An object that contains all the information needed to deliver an SMS or E-mail to a specific person identified by a national identity number.
     /// </value>
     [JsonPropertyName("recipientPerson")]
-    public PersonRequestSettingsExt? RecipientPerson { get; set; }
+    public RecipientPersonRequestExt? RecipientPerson { get; set; }
 
     /// <summary>
     /// Gets or sets a type where the recipient is identified by an organization number.
