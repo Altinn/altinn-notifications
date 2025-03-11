@@ -3,43 +3,39 @@
 namespace Altinn.Notifications.Models;
 
 /// <summary>
-/// Represents a container that holds recipient information associated with a request to create a notification order.
+/// Represents a container that holds recipient-specific data for creating a notification order.
 /// </summary>
 public class RecipientTypesAssociatedWithRequestExt
 {
     /// <summary>
-    /// Gets or sets a type where the recipient is identified by a phone number.
+    /// Gets or sets an object capturing all the information needed
+    /// to send an SMS to a specific phone number.
     /// </summary>
-    /// <value>
-    /// An object that contains all the information needed to deliver a text message to a specific mobile number.
-    /// </value>
+    [JsonPropertyOrder(1)]
     [JsonPropertyName("recipientSms")]
     public RecipientSmsRequestExt? RecipientSms { get; set; }
 
     /// <summary>
-    /// Gets or sets a type where the recipient is identified by an email address.
+    /// Gets or sets an object capturing all the information needed
+    /// to send an email to a specific address.
     /// </summary>
-    /// <value>
-    /// An object that contains all the information needed to deliver an email to a specific address.
-    /// </value>
+    [JsonPropertyOrder(2)]
     [JsonPropertyName("recipientEmail")]
     public RecipientEmailRequestExt? RecipientEmail { get; set; }
 
     /// <summary>
-    /// Gets or sets a type where the recipient is identified by a national identity number.
+    /// Gets or sets an object capturing all the information needed
+    /// to send an email or SMS to a person identified by a national identity number.
     /// </summary>
-    /// <value>
-    /// An object that contains all the information needed to deliver an SMS or E-mail to a specific person identified by a national identity number.
-    /// </value>
+    [JsonPropertyOrder(3)]
     [JsonPropertyName("recipientPerson")]
     public RecipientPersonRequestExt? RecipientPerson { get; set; }
 
     /// <summary>
-    /// Gets or sets a type where the recipient is identified by an organization number.
+    /// Gets or sets an object capturing all the information needed
+    /// to deliver notifications to a contact person identified by an organization number.
     /// </summary>
-    /// <value>
-    /// An object that contains all the information needed to deliver an SMS or E-mail to a specific person identified by an organization number.
-    /// </value>
+    [JsonPropertyOrder(4)]
     [JsonPropertyName("recipientOrganization")]
     public RecipientOrganizationRequestExt? RecipientOrganization { get; set; }
 }
