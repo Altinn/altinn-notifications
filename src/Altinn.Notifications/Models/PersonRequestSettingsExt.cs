@@ -1,15 +1,17 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace Altinn.Notifications.Models;
 
 /// <summary>
 /// Represents a type that contains all the information needed to deliver either an email or SMS to a person identified by a national identity number.
 /// </summary>
-public class RecipientPersonExt
+public class PersonRequestSettingsExt
 {
     /// <summary>
     /// Gets or sets the national identity number of the recipient.
     /// </summary>
+    [Required]
     [JsonPropertyName("nationalIdentityNumber")]
     public required string NationalIdentityNumber { get; set; }
 
@@ -31,6 +33,7 @@ public class RecipientPersonExt
     /// <summary>
     /// Gets or sets the communication channel scheme for the notification.
     /// </summary>
+    [Required]
     [JsonPropertyName("channelScheme")]
     public required NotificationChannelExt ChannelScheme { get; set; }
 
@@ -38,11 +41,11 @@ public class RecipientPersonExt
     /// Gets or sets the email template settings for the notification.
     /// </summary>
     [JsonPropertyName("emailSettings")]
-    public ScheduledEmailTemplateExt? EmailSettings { get; set; }
+    public EmailRequestSettingsExt? EmailSettings { get; set; }
 
     /// <summary>
     /// Gets or sets the SMS template settings for the notification.
     /// </summary>
     [JsonPropertyName("smsSettings")]
-    public ScheduledSmsTemplateExt? SmsSettings { get; set; }
+    public SmsRequestSettingsExt? SmsSettings { get; set; }
 }

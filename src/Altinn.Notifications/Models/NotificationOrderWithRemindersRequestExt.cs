@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Altinn.Notifications.Models;
@@ -6,7 +7,7 @@ namespace Altinn.Notifications.Models;
 /// <summary>
 /// Represents a request to create a notification order with one or more reminders.
 /// </summary>
-public class NotificationOrderWithRemindersRequestExt
+public class NotificationOrderWithRemindersRequestExt : NotificationOrderRequestBasePropertiesExt
 {
     /// <summary>
     /// Gets or sets the idempotency identifier defined by the sender.
@@ -16,56 +17,31 @@ public class NotificationOrderWithRemindersRequestExt
     /// </value>
     [Required]
     [JsonPropertyName("idempotencyId")]
-    public string IdempotencyId { get; set; } = string.Empty;
+    public required string IdempotencyId { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the identifiers for one or more dialogs and/or transmissions in the Dialogporten.
+    /// Gets or sets the identifiers for one or more dialogs and/or transmissions within Dialogporten.
     /// </summary>
-    /// <value>
-    /// An object that links one or more dialogs and/or transmissions in the Dialogporten.
-    /// </value>
     [JsonPropertyName("dialogportenAssociation")]
     public DialogportenAssociationExt? DialogportenAssociation { get; set; }
 
     /// <summary>
-    /// Gets or sets the sender's reference.
+    /// Gets or sets the associated recipient information.
     /// </summary>
-    /// <value>
-    /// A reference used to identify the notification order in the sender's system.
-    /// </value>
-    [JsonPropertyName("sendersReference")]
-    public string? SendersReference { get; set; }
-
-    /// <summary>
-    /// Gets or sets the date and time when the associated notifications can be sent at the earliest.
-    /// </summary>
-    /// <value>
-    /// The requested send time, which can be null and defaults to the current date and time.
-    /// </value>
-    [JsonPropertyName("requestedSendTime")]
-    public DateTime? RequestedSendTime { get; set; } = DateTime.UtcNow;
-
-    /// <summary>
-    /// Gets or sets the condition endpoint used to check the sending condition.
-    /// </summary>
-    /// <value>
-    /// A URI that determines if the associated notifications should be sent based on certain conditions.
-    /// </value>
-    [JsonPropertyName("conditionEndpoint")]
-    public Uri? ConditionEndpoint { get; set; }
-
-    /// <summary>
-    /// Gets or sets the recipient information.
-    /// </summary>
-    /// <value>
-    /// An object containing information about the recipient.
-    /// </value>
     [Required]
     [JsonPropertyName("recipient")]
-    public RecipientTypeExt Recipient { get; set; } = new RecipientTypeExt();
+    public required RecipientTypesAssociatedWithRequestExt Recipient { get; set; } = new RecipientTypesAssociatedWithRequestExt();
 
     /// <summary>
     /// Gets or sets the reminders associated with the notification order.
     /// </summary>
-    public List<ReminderExt>? Reminders { get; set; }
+    public List<NotificationOrderReminderRequestExt>? Reminders { get; set; }
+
+    /// <summary>
+    /// Json serialized the <see cref="EmailNotificationOrderRequestExt"/>
+    /// </summary>
+    public string Serialize()
+    {
+        return JsonSerializer.Serialize(this);
+    }
 }

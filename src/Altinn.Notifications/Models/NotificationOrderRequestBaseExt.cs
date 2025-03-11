@@ -5,20 +5,8 @@ namespace Altinn.Notifications.Models;
 /// <summary>
 /// Base class for common properties of notification order requests.
 /// </summary>
-public class NotificationOrderRequestBaseExt
+public class NotificationOrderRequestBaseExt : NotificationOrderRequestBasePropertiesExt
 {
-    /// <summary>
-    /// Gets or sets the send time of the email. Defaults to UtcNow.
-    /// </summary>
-    [JsonPropertyName("requestedSendTime")]
-    public DateTime RequestedSendTime { get; set; } = DateTime.UtcNow;
-
-    /// <summary>
-    /// Gets or sets the sender's reference on the notification.
-    /// </summary>
-    [JsonPropertyName("sendersReference")]
-    public string? SendersReference { get; set; }
-
     /// <summary>
     /// Gets or sets the list of recipients.
     /// </summary>
@@ -36,10 +24,4 @@ public class NotificationOrderRequestBaseExt
     /// </summary>
     [JsonPropertyName("resourceId")]
     public string? ResourceId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the condition endpoint used to check the send condition.
-    /// </summary>
-    [JsonPropertyName("conditionEndpoint")]
-    public Uri? ConditionEndpoint { get; set; }
 }
