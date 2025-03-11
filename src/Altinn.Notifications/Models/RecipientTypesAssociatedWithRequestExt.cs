@@ -14,7 +14,7 @@ public class RecipientTypesAssociatedWithRequestExt
     /// An object that contains all the information needed to deliver a text message to a specific mobile number.
     /// </value>
     [JsonPropertyName("recipientSms")]
-    public SmsRequestTemplateExt? RecipientSms { get; set; }
+    public RecipientSmsRequestExt? RecipientSms { get; set; }
 
     /// <summary>
     /// Gets or sets a type where the recipient is identified by an email address.

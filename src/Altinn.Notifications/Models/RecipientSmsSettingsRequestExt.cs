@@ -4,12 +4,12 @@ using System.Text.Json.Serialization;
 namespace Altinn.Notifications.Models;
 
 /// <summary>
-/// Represents an SMS template with an associated sending time policy.
+/// Represents configuration settings that are associated with the request model for sending an SMS message to a specific recipient.
 /// </summary>
-public class SmsRequestSettingsExt
+public class RecipientSmsSettingsRequestExt
 {
     /// <summary>
-    /// Gets the number from which the SMS is created by the template    
+    /// Gets or sets the phone number used as the sender in the SMS message.
     /// </summary>
     [Required]
     [JsonPropertyOrder(1)]
@@ -17,7 +17,7 @@ public class SmsRequestSettingsExt
     public required string SenderNumber { get; set; }
 
     /// <summary>
-    /// Gets the body of SMSs created by the template    
+    /// Gets or sets the text body of the SMS message.
     /// </summary>
     [Required]
     [JsonPropertyOrder(2)]
@@ -25,11 +25,8 @@ public class SmsRequestSettingsExt
     public required string Body { get; set; }
 
     /// <summary>
-    /// Gets or sets the sending time policy for when the SMS should be sent.
+    /// Gets or sets the sending time policy, indicating when the SMS should be dispatched.
     /// </summary>
-    /// <value>
-    /// The sending time policy, which determines the schedule for sending the SMS.
-    /// </value>
     [JsonPropertyOrder(3)]
     [JsonPropertyName("sendingTimePolicy")]
     public SendingTimePolicyExt SendingTimePolicy { get; set; } = SendingTimePolicyExt.WorkingDaysDaytime;
