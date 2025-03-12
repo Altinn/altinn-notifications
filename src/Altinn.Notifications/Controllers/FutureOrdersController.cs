@@ -23,7 +23,7 @@ public class FutureOrdersController
     [Produces("application/json")]
     [SwaggerResponse(404, "No order with the provided id was not found")]
     [SwaggerResponse(200, "The notification order matching the provided id was retrieved successfully")]
-    public async Task<ActionResult<NotificationOrderReminderResponseExt>> GetById(Guid notificationOrderId)
+    public Task<ActionResult<NotificationOrderReminderResponseExt>> GetById(Guid notificationOrderId)
     {
         throw new NotImplementedException();
     }
@@ -44,7 +44,7 @@ public class FutureOrdersController
     [SwaggerResponse(422, "The notification order is invalid", typeof(ValidationProblemDetails))]
     [SwaggerResponse(200, "The notification order was created.", typeof(NotificationOrderReminderResponseExt))]
     [SwaggerResponse(201, "The notification order was created.", typeof(NotificationOrderReminderResponseExt))]
-    public async Task<ActionResult<NotificationOrderReminderResponseExt>> Post(NotificationOrderWithRemindersRequestExt notificationOrderRequest)
+    public Task<ActionResult<NotificationOrderReminderResponseExt>> Post(NotificationOrderWithRemindersRequestExt notificationOrderRequest)
     {
         throw new NotImplementedException();
     }
