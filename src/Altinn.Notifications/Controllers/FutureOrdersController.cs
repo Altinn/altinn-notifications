@@ -9,6 +9,7 @@ namespace Altinn.Notifications.Controllers;
 /// Controller to handle notification orders that has one or more reminders.
 /// </summary>
 [ApiController]
+[ApiExplorerSettings(IgnoreApi = true)]
 [Route("notifications/api/v1/future/orders")]
 public class FutureOrdersController
 {
