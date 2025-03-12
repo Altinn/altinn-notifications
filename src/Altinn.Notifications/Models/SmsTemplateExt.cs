@@ -11,13 +11,11 @@ public class SmsTemplateExt
     /// Gets the number from which the SMS is created by the template    
     /// </summary>
     [JsonPropertyName("senderNumber")]
-    [JsonPropertyOrder(1)]
     public string SenderNumber { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets the body of SMSs created by the template    
     /// </summary>
     [JsonPropertyName("body")]
-    [JsonPropertyOrder(2)]
     public string Body { get; set; } = string.Empty;
 }
