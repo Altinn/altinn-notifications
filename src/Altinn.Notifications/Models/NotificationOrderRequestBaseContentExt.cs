@@ -3,9 +3,9 @@
 namespace Altinn.Notifications.Models;
 
 /// <summary>
-/// Base class for common properties of notification order requests.
+/// Represents the common properties of notification order request.
 /// </summary>
-public class NotificationOrderRequestBasePropertiesExt
+public class NotificationOrderRequestBaseContentExt
 {
     /// <summary>
     /// Gets or sets the sender's reference.

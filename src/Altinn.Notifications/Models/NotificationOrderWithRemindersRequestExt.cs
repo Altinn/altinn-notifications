@@ -5,24 +5,24 @@ namespace Altinn.Notifications.Models;
 
 /// <summary>
 /// Represents a request to create a notification order with one or more reminders.
-/// Inherits from <see cref="NotificationOrderRequestBasePropertiesExt"/> for common properties.
+/// Inherits the common data fragment from <see cref="NotificationOrderRequestBaseContentExt"/>.
 /// </summary>
-public class NotificationOrderWithRemindersRequestExt : NotificationOrderRequestBasePropertiesExt
+public class NotificationOrderWithRemindersRequestExt : NotificationOrderRequestBaseContentExt
 {
+    /// <summary>
+    /// Gets or sets optional identifiers for one or more dialogs or transmissions in Dialogporten.
+    /// </summary>
+    [JsonPropertyOrder(1)]
+    [JsonPropertyName("dialogportenAssociation")]
+    public DialogportenAssociationExt? DialogportenAssociation { get; set; }
+
     /// <summary>
     /// Gets or sets the idempotency identifier defined by the sender.
     /// </summary>
     [Required]
-    [JsonPropertyOrder(1)]
+    [JsonPropertyOrder(2)]
     [JsonPropertyName("idempotencyId")]
     public required string IdempotencyId { get; set; }
-
-    /// <summary>
-    /// Gets or sets optional identifiers for one or more dialogs or transmissions in Dialogporten.
-    /// </summary>
-    [JsonPropertyOrder(2)]
-    [JsonPropertyName("dialogportenAssociation")]
-    public DialogportenAssociationExt? DialogportenAssociation { get; set; }
 
     /// <summary>
     /// Gets or sets the required recipient information, whether for mobile number, email-address, national identity, or organization number.
