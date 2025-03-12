@@ -11,7 +11,6 @@ public class NotificationOrderResponseBaseContentExt
     /// <summary>
     /// Gets or sets the shipment identifier.
     /// </summary>
-    [Required]
     [JsonPropertyOrder(1)]
     [JsonPropertyName("shipmentId")]
     public required Guid ShipmentId { get; set; }
