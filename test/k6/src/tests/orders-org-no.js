@@ -43,6 +43,7 @@ const resourceId = __ENV.resourceId;
 const orgNoRecipient = randomItem(orgNos);
 
 export const options = {
+    summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(95)', 'p(99)', 'p(99.5)', 'p(99.9)', 'count'],
     thresholds: {
         "http_req_duration{name:post_mail_order}": [],
         "http_req_duration{name:get_mail_notifications}": [],
