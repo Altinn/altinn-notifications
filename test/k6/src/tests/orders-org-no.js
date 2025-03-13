@@ -31,6 +31,8 @@ import * as ordersApi from "../api/notifications/orders.js";
 import * as notificationsApi from "../api/notifications/notifications.js";
 import { orgNos } from "../data/orgnos.js";
 
+const environment = __ENV.API_ENVIRONMENT;
+
 const emailOrderRequestJson = JSON.parse(
     open("../data/orders/01-email-request.json")
 );
@@ -107,10 +109,21 @@ function postEmailNotificationOrderRequest(data) {
     stopIterationOnFail("POST email notification order request failed", success);
 
     const selfLink = response.headers["Location"];
-    check(response, {
-        "POST email notification order request. Location header provided": (r) => selfLink,
-        "POST email notification order request. Recipient lookup was successful or no recipients found": (r) => JSON.parse(r.body).recipientLookup.status == 'Success' || (JSON.parse(r.body).recipientLookup.status == 'Failed' && JSON.parse(r.body).recipientLookup.missingContact.length > 0)
-    });
+    if (environment !== "yt01") {
+        console.log("not yt01");
+        check(response, {
+            "POST email notification order request. Location header provided": (r) => selfLink,
+            "POST email notification order request. Recipient lookup was successful": (r) => JSON.parse(r.body).recipientLookup.status == 'Success' 
+        });
+    }
+    else {
+        console.log("yt01");
+        check(response, {
+            "POST email notification order request. Location header provided": (r) => selfLink,
+            "POST email notification order request. Recipient lookup was successful or no recipients found": (r) => JSON.parse(r.body).recipientLookup.status == 'Success' 
+            || (JSON.parse(r.body).recipientLookup.status == 'Failed' && JSON.parse(r.body).recipientLookup.missingContact.length > 0)
+        });
+    }   
 
     return selfLink;
 }

@@ -1,4 +1,5 @@
-import * as ordersApi from "./api/notifications/orders.js";
+import { check } from "k6";
+import * as ordersApi from "../api/notifications/orders.js";
 
 /**
  * Gets a notification order by its ID.
@@ -32,7 +33,7 @@ export function getNotificationOrderBySendersReference(data) {
 
     check(JSON.parse(response.body), {
         "GET notification order by senders reference. Count is equal to 1": (orderList) => orderList.count === 1,
-        "GET notification order by senders reference. Orderlist contains one element": (orderList) => Array.isArray(orderList.orders) && orderList.orders.length == 1,
+        "GET notification order by senders reference. Order list contains one element": (orderList) => Array.isArray(orderList.orders) && orderList.orders.length == 1,
     });
 }
 
@@ -40,8 +41,9 @@ export function getNotificationOrderBySendersReference(data) {
  * Gets a notification order with its status.
  * @param {Object} data - The data object containing token.
  * @param {string} orderId - The ID of the order.
+ * @param {string} expectedNotificationChannel - The expected notification channel. (Email or Sms)
  */
-export function getNotificationOrderWithStatus(data, orderId) {
+export function getNotificationOrderWithStatus(data, orderId, expectedNotificationChannel) {
     const response = ordersApi.getWithStatus(orderId, data.token);
 
     check(response, {
@@ -50,7 +52,7 @@ export function getNotificationOrderWithStatus(data, orderId) {
 
     check(JSON.parse(response.body), {
         "GET notification order with status. Id property is a match": (order) => order.id === orderId,
-        "GET notification order with status. NotificationChannel is email": (order) => order.notificationChannel === "Email",
+        [`GET notification order with status. NotificationChannel is ${expectedNotificationChannel.toLowerCase()}`]: (order) => order.notificationChannel === expectedNotificationChannel,
         "GET notification order with status. ProcessingStatus is defined": (order) => order.processingStatus,
     });
 }

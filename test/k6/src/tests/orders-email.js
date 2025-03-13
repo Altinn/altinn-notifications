@@ -32,7 +32,7 @@ import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 import * as setupToken from "../setup.js";
 import * as ordersApi from "../api/notifications/orders.js";
 import * as notificationsApi from "../api/notifications/notifications.js";
-import { getNotificationOrderById, getNotificationOrderBySendersReference, getNotificationOrderWithStatus } from "../notification-orders.js";
+import { getNotificationOrderById, getNotificationOrderBySendersReference, getNotificationOrderWithStatus } from "./get-notification-orders.js";
 
 const emailOrderRequestJson = JSON.parse(
     open("../data/orders/01-email-request.json")
@@ -173,7 +173,7 @@ export default function (data) {
     if (data.runFullTestSet) {
         getNotificationOrderById(data, selfLink, id);
         getNotificationOrderBySendersReference(data);
-        getNotificationOrderWithStatus(data, id);
+        getNotificationOrderWithStatus(data, id, "Email");
         getEmailNotificationSummary(data, id);
         postEmailNotificationOrderWithNegativeConditionCheck(data);
     } else {
