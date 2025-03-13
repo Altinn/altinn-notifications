@@ -29,24 +29,23 @@ import * as setupToken from "../setup.js";
 import * as ordersApi from "../api/notifications/orders.js";
 import * as notificationsApi from "../api/notifications/notifications.js";
 import { getNotificationOrderById, getNotificationOrderBySendersReference, getNotificationOrderWithStatus } from "./get-notification-orders.js";
+import { post_sms_order, get_sms_notifications, setEmptyThresholds } from "./threshold-labels.js";
 
+const labels = [post_sms_order, get_sms_notifications];
 
+const environment = __ENV.env;
 const scopes = "altinn:serviceowner/notifications.create";
 
-const smsRecipient = __ENV.smsRecipient ? __ENV.smsRecipient.toLowerCase() : "+4799999999";
+const smsRecipient = __ENV.smsRecipient ? __ENV.smsRecipient.toLowerCase() : environment === "yt01" ? "+4799999999" : null;
 
 export const options = {
     summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(95)', 'p(99)', 'p(99.5)', 'p(99.9)', 'count'],
     thresholds: {
-        "http_req_duration{name:post_sms_order}": [],
-        "http_req_duration{name:get_sms_notifications}": [],
-        "http_reqs{name:post_sms_order}": [],
-        "http_reqs{name:get_sms_notifications}": [],
-        
         // Checks rate should be 100%. Raise error if any check has failed.
         checks: ['rate>=1']
     }
 };
+setEmptyThresholds(labels, options);
 
 /**
  * Initialize test data.
@@ -87,7 +86,8 @@ export function setup() {
 function postSmsNotificationOrderRequest(data) {
     const response = ordersApi.postSmsNotificationOrder(
         JSON.stringify(data.smsOrderRequest),
-        data.token
+        data.token,
+        post_sms_order
     );
 
     const success = check(response, {
@@ -112,7 +112,7 @@ function postSmsNotificationOrderRequest(data) {
  * @param {string} orderId - The ID of the order.
  */
 function getSmsNotificationSummary(data, orderId) {
-    const response = notificationsApi.getSmsNotifications(orderId, data.token);
+    const response = notificationsApi.getSmsNotifications(orderId, data.token, get_sms_notifications);
 
     check(response, {
         "GET SMS notifications. Status is 200 OK": (r) => r.status === 200,

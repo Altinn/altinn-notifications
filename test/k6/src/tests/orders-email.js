@@ -33,6 +33,9 @@ import * as setupToken from "../setup.js";
 import * as ordersApi from "../api/notifications/orders.js";
 import * as notificationsApi from "../api/notifications/notifications.js";
 import { getNotificationOrderById, getNotificationOrderBySendersReference, getNotificationOrderWithStatus } from "./get-notification-orders.js";
+import { post_mail_order, get_mail_notifications, setEmptyThresholds } from "./threshold-labels.js";
+
+const labels = [post_mail_order, get_mail_notifications];
 
 const emailOrderRequestJson = JSON.parse(
     open("../data/orders/01-email-request.json")
@@ -45,14 +48,11 @@ const emailRecipient = __ENV.emailRecipient ? __ENV.emailRecipient.toLowerCase()
 export const options = {
     summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(95)', 'p(99)', 'p(99.5)', 'p(99.9)', 'count'],
     thresholds: {
-        "http_req_duration{name:post_mail_order}": [],
-        "http_req_duration{name:get_mail_notifications}": [],
-        "http_reqs{name:post_mail_order}": [],
-        "http_reqs{name:get_mail_notifications}": [],
         // Checks rate should be 100%. Raise error if any check has failed.
         checks: ['rate>=1']
     }
 };
+setEmptyThresholds(labels, options);
 
 /**
  * Initialize test data.
@@ -92,7 +92,8 @@ export function setup() {
 function postEmailNotificationOrderRequest(data) {
     const response = ordersApi.postEmailNotificationOrder(
         JSON.stringify(data.emailOrderRequest),
-        data.token
+        data.token,
+        post_mail_order
     );
 
     const success = check(response, {
@@ -103,12 +104,17 @@ function postEmailNotificationOrderRequest(data) {
 
     const selfLink = response.headers["Location"];
 
-    check(response, {
-        "POST email notification order request. Location header provided": (_) => selfLink,
-        // No recipient lookup is performed for postEmailNotificationOrder?
-        //"POST email notification order request. Recipient lookup was successful": (r) => JSON.parse(r.body).recipientLookup.status == 'Success'
-    });
-
+    if (ninRecipient) {
+        check(response, {
+            "POST email notification order request. Location header provided": (_) => selfLink,
+            "POST email notification order request. Recipient lookup was successful": (r) => JSON.parse(r.body).recipientLookup.status == 'Success'
+        });
+    }
+    else {
+        check(response, {
+            "POST email notification order request. Location header provided": (_) => selfLink,
+        });
+    }
     return selfLink;
 }
 
@@ -119,7 +125,7 @@ function postEmailNotificationOrderRequest(data) {
  * @param {string} orderId - The ID of the order.
  */
 function getEmailNotificationSummary(data, orderId) {
-    const response = notificationsApi.getEmailNotifications(orderId, data.token);
+    const response = notificationsApi.getEmailNotifications(orderId, data.token, get_mail_notifications);
 
     check(response, {
         "GET email notifications. Status is 200 OK": (r) => r.status === 200,
@@ -139,7 +145,8 @@ function postEmailNotificationOrderWithNegativeConditionCheck(data) {
 
     let response = ordersApi.postEmailNotificationOrder(
         JSON.stringify(emailOrderRequest),
-        data.token
+        data.token, 
+        post_mail_order
     );
 
     let success = check(response, {

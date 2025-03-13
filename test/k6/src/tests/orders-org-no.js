@@ -30,8 +30,9 @@ import * as setupToken from "../setup.js";
 import * as ordersApi from "../api/notifications/orders.js";
 import * as notificationsApi from "../api/notifications/notifications.js";
 import { orgNos } from "../data/orgnos.js";
+import { post_mail_order, get_mail_notifications, post_sms_order, get_sms_notifications, setEmptyThresholds } from "./threshold-labels.js";
 
-const environment = __ENV.API_ENVIRONMENT;
+const environment = __ENV.env;
 
 const emailOrderRequestJson = JSON.parse(
     open("../data/orders/01-email-request.json")
@@ -42,21 +43,16 @@ const scopes = "altinn:serviceowner/notifications.create";
 const resourceId = __ENV.resourceId;
 const orgNoRecipient = randomItem(orgNos);
 
+const labels = [post_mail_order, get_mail_notifications, post_sms_order, get_sms_notifications];
+
 export const options = {
     summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(95)', 'p(99)', 'p(99.5)', 'p(99.9)', 'count'],
     thresholds: {
-        "http_req_duration{name:post_mail_order}": [],
-        "http_req_duration{name:get_mail_notifications}": [],
-        "http_reqs{name:post_mail_order}": [],
-        "http_reqs{name:get_mail_notifications}": [],
-        "http_req_duration{name:post_sms_order}": [],
-        "http_req_duration{name:get_sms_notifications}": [],
-        "http_reqs{name:post_sms_order}": [],
-        "http_reqs{name:get_sms_notifications}": [],
         // Checks rate should be 100%. Raise error if any check has failed.
         checks: ['rate>=1']
     }
 };
+setEmptyThresholds(labels, options);
 
 /**
  * Initialize test data.
@@ -100,7 +96,8 @@ export function setup() {
 function postEmailNotificationOrderRequest(data) {
     const response = ordersApi.postEmailNotificationOrder(
         JSON.stringify(data.emailOrderRequest),
-        data.token
+        data.token,
+        post_mail_order
     );
 
     const success = check(response, {
@@ -135,7 +132,8 @@ function postEmailNotificationOrderRequest(data) {
 function postSmsNotificationOrderRequest(data) {
     const response = ordersApi.postSmsNotificationOrder(
         JSON.stringify(data.smsOrderRequest),
-        data.token
+        data.token,
+        post_sms_order
     );
 
     const success = check(response, {
@@ -160,7 +158,7 @@ function postSmsNotificationOrderRequest(data) {
  * @param {string} orderId - The ID of the order.
  */
 function getEmailNotificationSummary(data, orderId) {
-    const response = notificationsApi.getEmailNotifications(orderId, data.token);
+    const response = notificationsApi.getEmailNotifications(orderId, data.token, get_mail_notifications);
 
     check(response, {
         "GET email notifications. Status is 200 OK": (r) => r.status === 200,
@@ -179,7 +177,7 @@ function getEmailNotificationSummary(data, orderId) {
 function getEmailNotificationSummaryAgainAfterOneMinuteForVerification(data, orderId) {
     sleep(60); // Waiting 1 minute for the notifications to be generated
 
-    const response = notificationsApi.getEmailNotifications(orderId, data.token);
+    const response = notificationsApi.getEmailNotifications(orderId, data.token, get_mail_notifications);
 
     check(response, {
         "GET email notifications summary again after one minute for verification. Status is 200 OK": (r) => r.status === 200,
@@ -200,7 +198,7 @@ function getEmailNotificationSummaryAgainAfterOneMinuteForVerification(data, ord
  * @param {string} orderId - The ID of the order.
  */
 function getSmsNotificationSummary(data, orderId) {
-    const response = notificationsApi.getSmsNotifications(orderId, data.token);
+    const response = notificationsApi.getSmsNotifications(orderId, data.token, get_sms_notifications);
 
     check(response, {
         "GET SMS notifications. Status is 200 OK": (r) => r.status === 200,

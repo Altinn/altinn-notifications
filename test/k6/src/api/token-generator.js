@@ -4,8 +4,8 @@ import * as config from "../config.js";
 import * as apiHelpers from "../apiHelpers.js";
 import { stopIterationOnFail } from "../errorhandler.js";
 
-const tokenGeneratorUserPwd = __ENV.TOKEN_GENERATOR_PASSWORD;
-const tokenGeneratorUserName = __ENV.TOKEN_GENERATOR_USERNAME;
+const tokenGeneratorUserPwd = __ENV.tokenGeneratorUserPwd;
+const tokenGeneratorUserName = __ENV.tokenGeneratorUserName;
 
 /*
  * Generate enterprise token for test environment.

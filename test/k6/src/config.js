@@ -16,9 +16,9 @@ const maskinportenBaseUrls = {
     tt02: "https://test.maskinporten.no/"
 };
 
-const environment = __ENV.API_ENVIRONMENT;
+const environment = __ENV.env ? __ENV.env.toLowerCase() : null;
 if (!environment) {
-    stopIterationOnFail("Environment variable 'API_ENVIRONMENT' is not set", false);
+    stopIterationOnFail("Environment variable 'env' is not set", false);
 }
 
 const baseUrl = baseUrls[environment];

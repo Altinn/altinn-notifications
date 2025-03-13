@@ -1,6 +1,7 @@
 const environment = __ENV.env ? __ENV.env.toLowerCase() : __ENV.API_ENVIRONMENT;
+const orgNoRecipient = __ENV.orgNoRecipient ? __ENV.orgNoRecipient.toLowerCase() : null;
 
-const orgnosAllEnvs = ["991825827"];
+const orgnosAllEnvs = [orgNoRecipient];
 const orgNosYt01 = [
     "000522783",
     "000552771",
