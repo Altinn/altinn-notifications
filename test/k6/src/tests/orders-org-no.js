@@ -110,14 +110,12 @@ function postEmailNotificationOrderRequest(data) {
 
     const selfLink = response.headers["Location"];
     if (environment !== "yt01") {
-        console.log("not yt01");
         check(response, {
             "POST email notification order request. Location header provided": (r) => selfLink,
             "POST email notification order request. Recipient lookup was successful": (r) => JSON.parse(r.body).recipientLookup.status == 'Success' 
         });
     }
     else {
-        console.log("yt01");
         check(response, {
             "POST email notification order request. Location header provided": (r) => selfLink,
             "POST email notification order request. Recipient lookup was successful or no recipients found": (r) => JSON.parse(r.body).recipientLookup.status == 'Success' 
