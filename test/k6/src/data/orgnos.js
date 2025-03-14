@@ -1,4 +1,4 @@
-const environment = __ENV.env ? __ENV.env.toLowerCase() : __ENV.API_ENVIRONMENT;
+const environment = __ENV.env ? __ENV.env.toLowerCase() : null;
 const orgNoRecipient = __ENV.orgNoRecipient ? __ENV.orgNoRecipient.toLowerCase() : null;
 
 const orgnosAllEnvs = [orgNoRecipient];
@@ -3105,4 +3105,4 @@ const orgNosYt01 = [
     "211752122"
 ]
 
-export const orgNos = environment === 'yt01' ? orgNosYt01 : orgnosAllEnvs;
+export const orgNos = environment === 'yt01' && !orgNoRecipient ? orgNosYt01 : orgnosAllEnvs;

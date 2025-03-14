@@ -41,9 +41,11 @@ const emailOrderRequestJson = JSON.parse(
     open("../data/orders/01-email-request.json")
 );
 
+const environment = __ENV.env;
+
 const scopes = "altinn:serviceowner/notifications.create";
 const ninRecipient = __ENV.ninRecipient ? __ENV.ninRecipient.toLowerCase() : null;
-const emailRecipient = __ENV.emailRecipient ? __ENV.emailRecipient.toLowerCase() : "noreply@altinn.no";
+const emailRecipient = __ENV.emailRecipient ? __ENV.emailRecipient.toLowerCase() : environment === "yt01"? "noreply@altinn.no" : null;
 
 export const options = {
     summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(95)', 'p(99)', 'p(99.5)', 'p(99.9)', 'count'],
@@ -104,15 +106,13 @@ function postEmailNotificationOrderRequest(data) {
 
     const selfLink = response.headers["Location"];
 
+    check(response, {
+        "POST email notification order request. Location header provided": (_) => selfLink,
+    });
+
     if (ninRecipient) {
         check(response, {
-            "POST email notification order request. Location header provided": (_) => selfLink,
             "POST email notification order request. Recipient lookup was successful": (r) => JSON.parse(r.body).recipientLookup.status == 'Success'
-        });
-    }
-    else {
-        check(response, {
-            "POST email notification order request. Location header provided": (_) => selfLink,
         });
     }
     return selfLink;
