@@ -56,3 +56,28 @@ The last part is all script parameters provided as environment variables for the
  -e ninRecipient=***
  -e runFullTestSet=true
 ````
+
+## Load tests
+
+The same tests will be used to run load and performance tests. Can be run a described above, just expand the commands using --vus, --duration/--iterations. Also run without runFullTestSet (or set to false).
+Example command running directly on your machine, using 10 virtual users (vus) for 5 minutes:
+```
+ $> k6 run /src/tests/orders_email.js `
+    -e tokenGeneratorUserName=*** `
+    -e tokenGeneratorUserPwd=*** `
+    -e env=*** `
+    --vus=10
+    --duration=5m
+```
+The `orders-org-no.js` is changed to use a list of different organization numbers when running the test in `yt01`. For all other environments, the list has only one element, to run as before for functional tests.
+
+### Running load tests from github actions
+A workflow_dispatch action is created in github. To run, follow these steps: .github/workflows/performance-test.yaml
+1. Go to the [GitHub Actions](https://github.com/altinn/altinn-notifications/actions/workflows/performance-test.yml) page.
+2. Select "Run workflow" and fill in the required parameters.
+3. Tag the performance test with a descriptive name. 
+
+The test will be executed in a k8s cluster with k6 operator, in a designated namespace.
+
+### Load test results
+Test results from github actions load test runs can be found in GitHub action run logs and grafana

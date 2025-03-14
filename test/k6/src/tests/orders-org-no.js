@@ -24,11 +24,15 @@
 
 import { check, sleep } from "k6";
 import { stopIterationOnFail } from "../errorhandler.js";
-import { randomString, uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
+import { randomString, randomItem, uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 
 import * as setupToken from "../setup.js";
 import * as ordersApi from "../api/notifications/orders.js";
 import * as notificationsApi from "../api/notifications/notifications.js";
+import { orgNos } from "../data/orgnos.js";
+import { post_mail_order, get_mail_notifications, post_sms_order, get_sms_notifications, setEmptyThresholds } from "./threshold-labels.js";
+
+const environment = __ENV.env;
 
 const emailOrderRequestJson = JSON.parse(
     open("../data/orders/01-email-request.json")
@@ -37,14 +41,18 @@ const emailOrderRequestJson = JSON.parse(
 const scopes = "altinn:serviceowner/notifications.create";
 
 const resourceId = __ENV.resourceId;
-const orgNoRecipient = __ENV.orgNoRecipient ? __ENV.orgNoRecipient.toLowerCase() : null;
+const orgNoRecipient = randomItem(orgNos);
+
+const labels = [post_mail_order, get_mail_notifications, post_sms_order, get_sms_notifications];
 
 export const options = {
+    summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(95)', 'p(99)', 'p(99.5)', 'p(99.9)', 'count'],
     thresholds: {
         // Checks rate should be 100%. Raise error if any check has failed.
         checks: ['rate>=1']
     }
 };
+setEmptyThresholds(labels, options);
 
 /**
  * Initialize test data.
@@ -88,7 +96,8 @@ export function setup() {
 function postEmailNotificationOrderRequest(data) {
     const response = ordersApi.postEmailNotificationOrder(
         JSON.stringify(data.emailOrderRequest),
-        data.token
+        data.token,
+        post_mail_order
     );
 
     const success = check(response, {
@@ -98,11 +107,19 @@ function postEmailNotificationOrderRequest(data) {
     stopIterationOnFail("POST email notification order request failed", success);
 
     const selfLink = response.headers["Location"];
-
-    check(response, {
-        "POST email notification order request. Location header provided": (r) => selfLink,
-        "POST email notification order request. Recipient lookup was successful": (r) => JSON.parse(r.body).recipientLookup.status == 'Success',
-    });
+    if (environment !== "yt01") {
+        check(response, {
+            "POST email notification order request. Location header provided": (r) => selfLink,
+            "POST email notification order request. Recipient lookup was successful": (r) => JSON.parse(r.body).recipientLookup.status == 'Success' 
+        });
+    }
+    else {
+        check(response, {
+            "POST email notification order request. Location header provided": (r) => selfLink,
+            "POST email notification order request. Recipient lookup was successful or no recipients found": (r) => JSON.parse(r.body).recipientLookup.status == 'Success' 
+            || (JSON.parse(r.body).recipientLookup.status == 'Failed' && JSON.parse(r.body).recipientLookup.missingContact.length > 0)
+        });
+    }   
 
     return selfLink;
 }
@@ -115,7 +132,8 @@ function postEmailNotificationOrderRequest(data) {
 function postSmsNotificationOrderRequest(data) {
     const response = ordersApi.postSmsNotificationOrder(
         JSON.stringify(data.smsOrderRequest),
-        data.token
+        data.token,
+        post_sms_order
     );
 
     const success = check(response, {
@@ -140,7 +158,7 @@ function postSmsNotificationOrderRequest(data) {
  * @param {string} orderId - The ID of the order.
  */
 function getEmailNotificationSummary(data, orderId) {
-    const response = notificationsApi.getEmailNotifications(orderId, data.token);
+    const response = notificationsApi.getEmailNotifications(orderId, data.token, get_mail_notifications);
 
     check(response, {
         "GET email notifications. Status is 200 OK": (r) => r.status === 200,
@@ -159,7 +177,7 @@ function getEmailNotificationSummary(data, orderId) {
 function getEmailNotificationSummaryAgainAfterOneMinuteForVerification(data, orderId) {
     sleep(60); // Waiting 1 minute for the notifications to be generated
 
-    const response = notificationsApi.getEmailNotifications(orderId, data.token);
+    const response = notificationsApi.getEmailNotifications(orderId, data.token, get_mail_notifications);
 
     check(response, {
         "GET email notifications summary again after one minute for verification. Status is 200 OK": (r) => r.status === 200,
@@ -180,7 +198,7 @@ function getEmailNotificationSummaryAgainAfterOneMinuteForVerification(data, ord
  * @param {string} orderId - The ID of the order.
  */
 function getSmsNotificationSummary(data, orderId) {
-    const response = notificationsApi.getSmsNotifications(orderId, data.token);
+    const response = notificationsApi.getSmsNotifications(orderId, data.token, get_sms_notifications);
 
     check(response, {
         "GET SMS notifications. Status is 200 OK": (r) => r.status === 200,
@@ -196,9 +214,14 @@ function getSmsNotificationSummary(data, orderId) {
  * @param {Object} data - The data object containing runFullTestSet and other test data.
  */
 export default function (data) {
+    // Get a random organization number from the list.
+    // For all other envs than yt01, the list only contains one number
+    let orgNoRecipient = randomItem(orgNos);
+    data.emailOrderRequest.recipients[0].organizationNumber = orgNoRecipient;
     const selfLink = postEmailNotificationOrderRequest(data);
     const id = selfLink.split("/").pop();
 
+    data.smsOrderRequest.recipients[0].organizationNumber = orgNoRecipient; 
     const smsSelfLink = postSmsNotificationOrderRequest(data);
     const smsId = smsSelfLink.split("/").pop();
 
