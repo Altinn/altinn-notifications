@@ -3,6 +3,7 @@ using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Models;
 
@@ -140,6 +141,32 @@ public static class OrderMapper
             extRequest.IgnoreReservation,
             extRequest.ResourceId,
             extRequest.ConditionEndpoint);
+    }
+
+    /// <summary>
+    /// Maps a <see cref="NotificationOrderWithRemindersRequestExt"/> to a <see cref="NotificationOrderWithRemindersRequest"/>
+    /// </summary>
+    public static NotificationOrderWithRemindersRequest MapToOrderRequest(this NotificationOrderWithRemindersRequestExt extRequest)
+    {
+        return new NotificationOrderWithRemindersRequest
+        {
+            IdempotencyId = extRequest.IdempotencyId,
+            SendersReference = extRequest.SendersReference,
+            ConditionEndpoint = extRequest.ConditionEndpoint,
+            RequestedSendTime = extRequest.RequestedSendTime.ToUniversalTime(),
+
+            DialogportenAssociation = MapDialogportenAssociation(extRequest.DialogportenAssociation),
+            
+            Recipient = new AssociatedRecipients
+            {
+                RecipientSms = MapSmsRecipientPayload(extRequest.Recipient.RecipientSms),
+                RecipientEmail = MapEmailRecipientPayload(extRequest.Recipient.RecipientEmail),
+                RecipientPerson = MapPersonRecipientPayload(extRequest.Recipient.RecipientPerson),
+                RecipientOrganization = MapOrganizationRecipientPayload(extRequest.Recipient.RecipientOrganization)
+            },
+            
+            Reminders = extRequest.Reminders?.Select(MapNotificationReminder).ToList()
+        };
     }
 
     /// <summary>
@@ -330,4 +357,114 @@ public static class OrderMapper
 
         return smsAddressPoint?.MobileNumber;
     }
+
+    private static DialogportenAssociation? MapDialogportenAssociation(DialogportenAssociationExt? source) =>
+        source is null ? null : new DialogportenAssociation
+        {
+            DialogId = source.DialogId,
+            TransmissionId = source.TransmissionId
+        };
+
+    private static SmsRecipientPayload? MapSmsRecipientPayload(RecipientSmsRequestExt? source) =>
+        source?.Settings is null ? null : new SmsRecipientPayload
+        {
+            PhoneNumber = source.PhoneNumber,
+            Settings = new SmsRecipientPayloadSettings
+            {
+                Body = source.Settings.Body,
+                SenderNumber = source.Settings.SenderNumber,
+                SendingTimePolicy = (SendingTimePolicy)source.Settings.SendingTimePolicy
+            }
+        };
+
+    private static EmailRecipientPayload? MapEmailRecipientPayload(RecipientEmailRequestExt? source) =>
+        source?.Settings is null ? null : new EmailRecipientPayload
+        {
+            EmailAddress = source.EmailAddress,
+            Settings = new EmailRecipientPayloadSettings
+            {
+                Body = source.Settings.Body,
+                Subject = source.Settings.Subject,
+                SenderName = source.Settings.SenderName,
+                SenderEmailAddress = source.Settings.SenderEmailAddress,
+                ContentType = (EmailContentType)source.Settings.ContentType,
+                SendingTimePolicy = (SendingTimePolicy)source.Settings.SendingTimePolicy
+            }
+        };
+
+    private static PersonRecipientPayload? MapPersonRecipientPayload(RecipientPersonRequestExt? source)
+    {
+        if (source is null)
+        {
+            return null;
+        }
+
+        var smsSettings = MapSmsRecipientPayloadSettings(source.SmsSettings);
+        var emailSettings = MapEmailRecipientPayloadSettings(source.EmailSettings);
+
+        return (smsSettings is null && emailSettings is null) ? null : new PersonRecipientPayload
+        {
+            SmsSettings = smsSettings,
+            EmailSettings = emailSettings,
+            ResourceId = source.ResourceId,
+            IgnoreReservation = source.IgnoreReservation,
+            NationalIdentityNumber = source.NationalIdentityNumber,
+            ChannelScheme = (NotificationChannel)source.ChannelScheme
+        };
+    }
+
+    private static OrganizationRecipientPayload? MapOrganizationRecipientPayload(RecipientOrganizationRequestExt? source)
+    {
+        if (source is null)
+        {
+            return null;
+        }
+
+        var smsSettings = MapSmsRecipientPayloadSettings(source.SmsSettings);
+        var emailSettings = MapEmailRecipientPayloadSettings(source.EmailSettings);
+
+        return (smsSettings is null && emailSettings is null) ? null : new OrganizationRecipientPayload
+        {
+            SmsSettings = smsSettings,
+            EmailSettings = emailSettings,
+            OrgNumber = source.OrgNumber,
+            ResourceId = source.ResourceId,
+            ChannelScheme = (NotificationChannel)source.ChannelScheme
+        };
+    }
+
+    private static SmsRecipientPayloadSettings? MapSmsRecipientPayloadSettings(RecipientSmsSettingsRequestExt? source) =>
+        source is null ? null : new SmsRecipientPayloadSettings
+        {
+            Body = source.Body,
+            SenderNumber = source.SenderNumber,
+            SendingTimePolicy = (SendingTimePolicy)source.SendingTimePolicy
+        };
+
+    private static EmailRecipientPayloadSettings? MapEmailRecipientPayloadSettings(RecipientEmailSettingsRequestExt? source) =>
+        source is null ? null : new EmailRecipientPayloadSettings
+        {
+            Body = source.Body,
+            Subject = source.Subject,
+            SenderName = source.SenderName,
+            SenderEmailAddress = source.SenderEmailAddress,
+            ContentType = (EmailContentType)source.ContentType,
+            SendingTimePolicy = (SendingTimePolicy)source.SendingTimePolicy
+        };
+
+    private static NotificationReminder MapNotificationReminder(NotificationOrderReminderRequestExt source) =>
+        new()
+        {
+            Recipient = new AssociatedRecipients
+            {
+                RecipientSms = MapSmsRecipientPayload(source.Recipient.RecipientSms),
+                RecipientEmail = MapEmailRecipientPayload(source.Recipient.RecipientEmail),
+                RecipientPerson = MapPersonRecipientPayload(source.Recipient.RecipientPerson),
+                RecipientOrganization = MapOrganizationRecipientPayload(source.Recipient.RecipientOrganization)
+            },
+            ConditionEndpoint = source.ConditionEndpoint,
+            DelayDays = source.DelayDays,
+            SendersReference = source.SendersReference
+        };
+
 }

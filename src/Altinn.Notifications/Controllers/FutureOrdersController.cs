@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Models;
+﻿using Altinn.Notifications.Mappers;
+using Altinn.Notifications.Models;
 using Microsoft.AspNetCore.Mvc;
 
 using Swashbuckle.AspNetCore.Annotations;
@@ -46,6 +47,8 @@ public class FutureOrdersController
     [SwaggerResponse(201, "The notification order was created.", typeof(NotificationOrderReminderResponseExt))]
     public Task<ActionResult<NotificationOrderReminderResponseExt>> Post(NotificationOrderWithRemindersRequestExt notificationOrderRequest)
     {
+        var orderRequest = notificationOrderRequest.MapToOrderRequest();
+
         throw new NotImplementedException();
     }
 }
