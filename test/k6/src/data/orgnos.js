@@ -1,8 +1,4 @@
-const environment = __ENV.env ? __ENV.env.toLowerCase() : null;
-const orgNoRecipient = __ENV.orgNoRecipient ? __ENV.orgNoRecipient.toLowerCase() : null;
-
-const orgnosAllEnvs = [orgNoRecipient];
-const orgNosYt01 = [
+export const orgNosYt01 = [
     "000522783",
     "000552771",
     "000552798",
@@ -3104,5 +3100,3 @@ const orgNosYt01 = [
     "211751762",
     "211752122"
 ]
-
-export const orgNos = environment === 'yt01' && !orgNoRecipient ? orgNosYt01 : orgnosAllEnvs;

@@ -29,19 +29,17 @@ import { randomString, randomItem, uuidv4 } from "https://jslib.k6.io/k6-utils/1
 import * as setupToken from "../setup.js";
 import * as ordersApi from "../api/notifications/orders.js";
 import * as notificationsApi from "../api/notifications/notifications.js";
-import { orgNos } from "../data/orgnos.js";
+import { orgNosYt01 } from "../data/orgnos.js";
 import { post_mail_order, get_mail_notifications, post_sms_order, get_sms_notifications, setEmptyThresholds } from "./threshold-labels.js";
 
+const resourceId = __ENV.resourceId;
 const environment = __ENV.env;
+const yt01Environment = "yt01";
+const scopes = "altinn:serviceowner/notifications.create";
 
 const emailOrderRequestJson = JSON.parse(
     open("../data/orders/01-email-request.json")
 );
-
-const scopes = "altinn:serviceowner/notifications.create";
-
-const resourceId = __ENV.resourceId;
-const orgNoRecipient = randomItem(orgNos);
 
 const labels = [post_mail_order, get_mail_notifications, post_sms_order, get_sms_notifications];
 
@@ -53,6 +51,20 @@ export const options = {
     }
 };
 setEmptyThresholds(labels, options);
+
+/**
+ * Gets the recipient based on environment variables
+ */
+function getOrgNoRecipient() {
+   
+
+    if (!__ENV.orgNoRecipient && environment === yt01Environment) {
+        return randomItem(orgNosYt01);
+    }
+    else {
+        return __ENV.orgNoRecipient ? __ENV.orgNoRecipient.toLowerCase() : null;
+    }
+}
 
 /**
  * Initialize test data.
@@ -70,6 +82,9 @@ export function setup() {
         recipients: [],
         sendersReference: sendersReference
     };
+
+    const orgNoRecipient = getOrgNoRecipient();
+
     if (orgNoRecipient) {
         emailOrderRequest.recipients.push({ organizationNumber: orgNoRecipient });
         smsOrderRequest.recipients.push({ organizationNumber: orgNoRecipient })
@@ -107,7 +122,7 @@ function postEmailNotificationOrderRequest(data) {
     stopIterationOnFail("POST email notification order request failed", success);
 
     const selfLink = response.headers["Location"];
-    if (environment !== "yt01") {
+    if (environment !== yt01Environment) {
         check(response, {
             "POST email notification order request. Location header provided": (r) => selfLink,
             "POST email notification order request. Recipient lookup was successful": (r) => JSON.parse(r.body).recipientLookup.status == 'Success' 
@@ -216,7 +231,7 @@ function getSmsNotificationSummary(data, orderId) {
 export default function (data) {
     // Get a random organization number from the list.
     // For all other envs than yt01, the list only contains one number
-    let orgNoRecipient = randomItem(orgNos);
+    const orgNoRecipient = getOrgNoRecipient();
     data.emailOrderRequest.recipients[0].organizationNumber = orgNoRecipient;
     const selfLink = postEmailNotificationOrderRequest(data);
     const id = selfLink.split("/").pop();
