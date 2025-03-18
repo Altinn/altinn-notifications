@@ -8,9 +8,9 @@ namespace Altinn.Notifications.Core.Models.Recipients;
 public class SmsRecipientPayloadSettings
 {
     /// <summary>
-    /// Gets or sets the phone number used as the sender in the SMS message.
+    /// Gets or sets either the phone number or the name used as the sender in the SMS message.
     /// </summary>
-    public required string SenderNumber { get; set; }
+    public required string Sender { get; set; }
 
     /// <summary>
     /// Gets or sets the text body of the SMS message.

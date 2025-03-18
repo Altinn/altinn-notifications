@@ -80,9 +80,49 @@ public class OrderRequestService : IOrderRequestService
     {
         Guid orderId = _guid.NewGuid();
         DateTime currentime = _dateTime.UtcNow();
-        await GetMissingContactRecipientList(orderRequest);
+        
+        await GetRecipientLookupResult(orderRequest);
+
+
+
 
         return null;
+    }
+
+    private async Task<List<RecipientLookupResult?>> GetRecipientLookupResult(NotificationOrderWithRemindersRequest orderRequest)
+    {
+        var recipientsByChannel = new Dictionary<NotificationChannel, List<ResourceBoundRecipients>>
+        {
+            { NotificationChannel.Sms, new List<ResourceBoundRecipients>() },
+            { NotificationChannel.Email, new List<ResourceBoundRecipients>() },
+            { NotificationChannel.SmsPreferred, new List<ResourceBoundRecipients>() },
+            { NotificationChannel.EmailPreferred, new List<ResourceBoundRecipients>() }
+        };
+
+        // Organize the contacts  from the main order based on communication channel and resource identifier.
+        OrganizeRecipientsByChannelAndResource(orderRequest.Recipient, recipientsByChannel);
+
+        // Organize the contacts from associated reminders order based on communication channel and resource identifier.
+        if (orderRequest.Reminders?.Count > 0)
+        {
+            foreach (var reminder in orderRequest.Reminders)
+            {
+                OrganizeRecipientsByChannelAndResource(reminder.Recipient, recipientsByChannel);
+            }
+        }
+
+        // Get the contact points for the recipients and return the list of recipients that are missing contact points.
+        var recipientLookupResults = new List<RecipientLookupResult?>();
+        foreach (var (channel, resourceBoundRecipientsList) in recipientsByChannel)
+        {
+            foreach (var resourceBoundRecipients in resourceBoundRecipientsList)
+            {
+                var lookupResult = await GetRecipientLookupResult(resourceBoundRecipients.Recipients, channel, resourceBoundRecipients.ResourceId);
+                recipientLookupResults.Add(lookupResult);
+            }
+        }
+
+        return recipientLookupResults;
     }
 
     private async Task<RecipientLookupResult?> GetRecipientLookupResult(List<Recipient> originalRecipients, NotificationChannel channel, string? resourceId)
@@ -180,41 +220,6 @@ public class OrderRequestService : IOrderRequestService
         }
 
         return templates;
-    }
-
-    private async Task<List<Recipient>> GetMissingContactRecipientList(NotificationOrderWithRemindersRequest orderRequest)
-    {
-        var recipientsByChannel = new Dictionary<NotificationChannel, List<ResourceBoundRecipients>>
-        {
-            { NotificationChannel.Sms, new List<ResourceBoundRecipients>() },
-            { NotificationChannel.Email, new List<ResourceBoundRecipients>() },
-            { NotificationChannel.SmsPreferred, new List<ResourceBoundRecipients>() },
-            { NotificationChannel.EmailPreferred, new List<ResourceBoundRecipients>() }
-        };
-
-        // Organize the contacts  from the main order based on communication channel and resource identifier.
-        OrganizeRecipientsByChannelAndResource(orderRequest.Recipient, recipientsByChannel);
-
-        // Organize the contacts from associated reminders order based on communication channel and resource identifier.
-        if (orderRequest.Reminders?.Count > 0)
-        {
-            foreach (var reminder in orderRequest.Reminders)
-            {
-                OrganizeRecipientsByChannelAndResource(reminder.Recipient, recipientsByChannel);
-            }
-        }
-
-        // Get the contact points for the recipients and return the list of recipients that are missing contact points.
-        var recipientLookupResults = new List<RecipientLookupResult?>();
-        foreach (var channel in recipientsByChannel.Keys)
-        {
-            foreach (var resourceBoundRecipients in recipientsByChannel[channel])
-            {
-                recipientLookupResults.Add(await GetRecipientLookupResult(resourceBoundRecipients.Recipients, channel, resourceBoundRecipients.ResourceId));
-            }
-        }
-
-        return recipientsByChannel[NotificationChannel.Sms][0].Recipients;
     }
 
     /// <summary>

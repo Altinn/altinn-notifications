@@ -13,8 +13,8 @@ public class RecipientSmsSettingsRequestExt
     /// </summary>
     [Required]
     [JsonPropertyOrder(1)]
-    [JsonPropertyName("senderNumber")]
-    public required string SenderNumber { get; set; }
+    [JsonPropertyName("sender")]
+    public required string Sender { get; set; }
 
     /// <summary>
     /// Gets or sets the text body of the SMS message.
