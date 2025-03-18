@@ -78,10 +78,11 @@ public class OrderRequestService : IOrderRequestService
     /// <inheritdoc/>
     public async Task<NotificationOrderRequestResponse> RegisterNotificationOrder(NotificationOrderWithRemindersRequest orderRequest)
     {
-        Guid orderId = _guid.NewGuid();
-        DateTime currentime = _dateTime.UtcNow();
-
         var lookupResult = await GetRecipientLookupResult(orderRequest);
+        if (lookupResult?.Any(e => e?.MissingContact?.Count > 0) == true)
+        {
+            throw new ArgumentException("Missing contact points for some recipients");
+        }
 
         return null;
     }

@@ -1,6 +1,10 @@
 ﻿using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
+using Altinn.Notifications.Validators;
+
+using FluentValidation;
 
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,16 +18,19 @@ namespace Altinn.Notifications.Controllers;
 [ApiController]
 [ApiExplorerSettings(IgnoreApi = true)]
 [Route("notifications/api/v1/future/orders")]
-public class FutureOrdersController
+public class FutureOrdersController : ControllerBase
 {
     private readonly IOrderRequestService _orderRequestService;
+    private readonly IValidator<NotificationOrderWithRemindersRequestExt> _validator;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FutureOrdersController"/> class.
     /// </summary>
     /// <param name="orderRequestService">The order request service.</param>
-    public FutureOrdersController(IOrderRequestService orderRequestService)
+    /// <param name="validator">The object that contains validation logic.</param>
+    public FutureOrdersController(IOrderRequestService orderRequestService, IValidator<NotificationOrderWithRemindersRequestExt> validator)
     {
+        _validator = validator;
         _orderRequestService = orderRequestService;
     }
 
@@ -45,10 +52,23 @@ public class FutureOrdersController
     [SwaggerResponse(201, "The notification order was created.", typeof(NotificationOrderReminderResponseExt))]
     public async Task<ActionResult<NotificationOrderReminderResponseExt>> Post(NotificationOrderWithRemindersRequestExt notificationOrderRequest)
     {
-        var orderRequest = notificationOrderRequest.MapToOrderWithRemindersRequest();
+        var validationResult = _validator.Validate(notificationOrderRequest);
+        if (!validationResult.IsValid)
+        {
+            validationResult.AddToModelState(this.ModelState);
+            return ValidationProblem(ModelState);
+        }
 
+        string? creator = HttpContext.GetOrg();
+
+        if (creator == null)
+        {
+            return Forbid();
+        }
+
+        var orderRequest = notificationOrderRequest.MapToOrderWithRemindersRequest();
         NotificationOrderRequestResponse result = await _orderRequestService.RegisterNotificationOrder(orderRequest);
 
-        throw new NotImplementedException();
+        return Accepted(result.OrderId!.GetSelfLinkFromOrderId(), result.MapToExternal());
     }
 }
