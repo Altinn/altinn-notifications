@@ -24,7 +24,7 @@ public class SmsRecipientPayloadSettings
 
     /// <summary>
     /// Gets or sets the sending time policy, indicating when the SMS should be dispatched.
-    /// Defaults to <see cref="SendingTimePolicy.WorkingDaysDaytime"/>.
+    /// Defaults to <see cref="SendingTimePolicy.Daytime"/>.
     /// </summary>
-    public SendingTimePolicy SendingTimePolicy { get; set; } = SendingTimePolicy.WorkingDaysDaytime;
+    public SendingTimePolicy SendingTimePolicy { get; set; } = SendingTimePolicy.Daytime;
 }

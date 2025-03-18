@@ -6,8 +6,12 @@
 public enum SendingTimePolicy : uint
 {
     /// <summary>
-    /// The message will be scheduled for sending during daytime on working days.
-    /// The messages are sent between 08:00 and 17:00 CET from Monday to Friday.
+    /// The message can be sent at any time.
     /// </summary>
-    WorkingDaysDaytime = 1
+    Anytime = 1,
+
+    /// <summary>
+    /// The messages will be scheduled for sending between 08:00 and 17:00 CET.
+    /// </summary>
+    Daytime = 2
 }

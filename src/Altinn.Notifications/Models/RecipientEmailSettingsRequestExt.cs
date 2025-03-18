@@ -46,7 +46,7 @@ public class RecipientEmailSettingsRequestExt
     /// </summary>
     [JsonPropertyOrder(5)]
     [JsonPropertyName("sendingTimePolicy")]
-    public SendingTimePolicyExt SendingTimePolicy { get; set; } = SendingTimePolicyExt.WorkingDaysDaytime;
+    public SendingTimePolicyExt SendingTimePolicy { get; set; } = SendingTimePolicyExt.Anytime;
 
     /// <summary>
     /// Gets or sets the subject line of the email.

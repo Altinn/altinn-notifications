@@ -42,9 +42,9 @@ public class EmailRecipientPayloadSettings
 
     /// <summary>
     /// Gets or sets the policy defining when the email should be sent.
-    /// Defaults to <see cref="SendingTimePolicy.WorkingDaysDaytime"/>.
+    /// Defaults to <see cref="SendingTimePolicy.Anytime"/>.
     /// </summary>
-    public SendingTimePolicy SendingTimePolicy { get; set; } = SendingTimePolicy.WorkingDaysDaytime;
+    public SendingTimePolicy SendingTimePolicy { get; set; } = SendingTimePolicy.Anytime;
 
     /// <summary>
     /// Gets or sets the subject line of the email.

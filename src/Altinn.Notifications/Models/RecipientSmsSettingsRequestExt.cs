@@ -30,5 +30,5 @@ public class RecipientSmsSettingsRequestExt
     /// </summary>
     [JsonPropertyOrder(3)]
     [JsonPropertyName("sendingTimePolicy")]
-    public SendingTimePolicyExt SendingTimePolicy { get; set; } = SendingTimePolicyExt.WorkingDaysDaytime;
+    public SendingTimePolicyExt SendingTimePolicy { get; set; } = SendingTimePolicyExt.Daytime;
 }
