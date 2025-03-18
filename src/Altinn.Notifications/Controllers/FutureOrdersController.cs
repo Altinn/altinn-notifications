@@ -1,5 +1,7 @@
-﻿using Altinn.Notifications.Mappers;
+﻿using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
+
 using Microsoft.AspNetCore.Mvc;
 
 using Swashbuckle.AspNetCore.Annotations;
@@ -14,6 +16,17 @@ namespace Altinn.Notifications.Controllers;
 [Route("notifications/api/v1/future/orders")]
 public class FutureOrdersController
 {
+    private readonly IOrderRequestService _orderRequestService;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FutureOrdersController"/> class.
+    /// </summary>
+    /// <param name="orderRequestService">The order request service.</param>
+    public FutureOrdersController(IOrderRequestService orderRequestService)
+    {
+        _orderRequestService = orderRequestService;
+    }
+
     /// <summary>
     /// Retrieves notification order.
     /// </summary>
@@ -45,9 +58,10 @@ public class FutureOrdersController
     [SwaggerResponse(422, "The notification order is invalid", typeof(ValidationProblemDetails))]
     [SwaggerResponse(200, "The notification order was created.", typeof(NotificationOrderReminderResponseExt))]
     [SwaggerResponse(201, "The notification order was created.", typeof(NotificationOrderReminderResponseExt))]
-    public Task<ActionResult<NotificationOrderReminderResponseExt>> Post(NotificationOrderWithRemindersRequestExt notificationOrderRequest)
+    public async Task<ActionResult<NotificationOrderReminderResponseExt>> Post(NotificationOrderWithRemindersRequestExt notificationOrderRequest)
     {
-        var orderRequest = notificationOrderRequest.MapToOrderRequest();
+        var orderRequest = notificationOrderRequest.MapToOrderWithRemindersRequest();
+        NotificationOrderRequestResponse result = await _orderRequestService.RegisterNotificationOrder(orderRequest);
 
         throw new NotImplementedException();
     }

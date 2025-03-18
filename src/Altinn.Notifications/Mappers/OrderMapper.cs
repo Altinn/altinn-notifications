@@ -146,7 +146,7 @@ public static class OrderMapper
     /// <summary>
     /// Maps a <see cref="NotificationOrderWithRemindersRequestExt"/> to a <see cref="NotificationOrderWithRemindersRequest"/>
     /// </summary>
-    public static NotificationOrderWithRemindersRequest MapToOrderRequest(this NotificationOrderWithRemindersRequestExt extRequest)
+    public static NotificationOrderWithRemindersRequest MapToOrderWithRemindersRequest(this NotificationOrderWithRemindersRequestExt extRequest)
     {
         return new NotificationOrderWithRemindersRequest
         {
@@ -156,7 +156,7 @@ public static class OrderMapper
             RequestedSendTime = extRequest.RequestedSendTime.ToUniversalTime(),
 
             DialogportenAssociation = MapDialogportenAssociation(extRequest.DialogportenAssociation),
-            
+
             Recipient = new AssociatedRecipients
             {
                 RecipientSms = MapSmsRecipientPayload(extRequest.Recipient.RecipientSms),
@@ -164,8 +164,8 @@ public static class OrderMapper
                 RecipientPerson = MapPersonRecipientPayload(extRequest.Recipient.RecipientPerson),
                 RecipientOrganization = MapOrganizationRecipientPayload(extRequest.Recipient.RecipientOrganization)
             },
-            
-            Reminders = extRequest.Reminders?.Select(MapNotificationReminder).ToList()
+
+            Reminders = extRequest.Reminders?.Select(MapNotificationReminders).ToList()
         };
     }
 
@@ -358,15 +358,18 @@ public static class OrderMapper
         return smsAddressPoint?.MobileNumber;
     }
 
-    private static DialogportenAssociation? MapDialogportenAssociation(DialogportenAssociationExt? source) =>
-        source is null ? null : new DialogportenAssociation
+    private static DialogportenAssociation? MapDialogportenAssociation(DialogportenAssociationExt? source)
+    {
+        return source is null ? null : new DialogportenAssociation
         {
             DialogId = source.DialogId,
             TransmissionId = source.TransmissionId
         };
+    }
 
-    private static SmsRecipientPayload? MapSmsRecipientPayload(RecipientSmsRequestExt? source) =>
-        source?.Settings is null ? null : new SmsRecipientPayload
+    private static SmsRecipientPayload? MapSmsRecipientPayload(RecipientSmsRequestExt? source)
+    {
+        return source?.Settings is null ? null : new SmsRecipientPayload
         {
             PhoneNumber = source.PhoneNumber,
             Settings = new SmsRecipientPayloadSettings
@@ -376,9 +379,11 @@ public static class OrderMapper
                 SendingTimePolicy = (SendingTimePolicy)source.Settings.SendingTimePolicy
             }
         };
+    }
 
-    private static EmailRecipientPayload? MapEmailRecipientPayload(RecipientEmailRequestExt? source) =>
-        source?.Settings is null ? null : new EmailRecipientPayload
+    private static EmailRecipientPayload? MapEmailRecipientPayload(RecipientEmailRequestExt? source)
+    {
+        return source?.Settings is null ? null : new EmailRecipientPayload
         {
             EmailAddress = source.EmailAddress,
             Settings = new EmailRecipientPayloadSettings
@@ -391,6 +396,7 @@ public static class OrderMapper
                 SendingTimePolicy = (SendingTimePolicy)source.Settings.SendingTimePolicy
             }
         };
+    }
 
     private static PersonRecipientPayload? MapPersonRecipientPayload(RecipientPersonRequestExt? source)
     {
@@ -433,16 +439,19 @@ public static class OrderMapper
         };
     }
 
-    private static SmsRecipientPayloadSettings? MapSmsRecipientPayloadSettings(RecipientSmsSettingsRequestExt? source) =>
-        source is null ? null : new SmsRecipientPayloadSettings
+    private static SmsRecipientPayloadSettings? MapSmsRecipientPayloadSettings(RecipientSmsSettingsRequestExt? source)
+    {
+        return source is null ? null : new SmsRecipientPayloadSettings
         {
             Body = source.Body,
             SenderNumber = source.SenderNumber,
             SendingTimePolicy = (SendingTimePolicy)source.SendingTimePolicy
         };
+    }
 
-    private static EmailRecipientPayloadSettings? MapEmailRecipientPayloadSettings(RecipientEmailSettingsRequestExt? source) =>
-        source is null ? null : new EmailRecipientPayloadSettings
+    private static EmailRecipientPayloadSettings? MapEmailRecipientPayloadSettings(RecipientEmailSettingsRequestExt? source)
+    {
+        return source is null ? null : new EmailRecipientPayloadSettings
         {
             Body = source.Body,
             Subject = source.Subject,
@@ -451,9 +460,11 @@ public static class OrderMapper
             ContentType = (EmailContentType)source.ContentType,
             SendingTimePolicy = (SendingTimePolicy)source.SendingTimePolicy
         };
+    }
 
-    private static NotificationReminder MapNotificationReminder(NotificationOrderReminderRequestExt source) =>
-        new()
+    private static NotificationReminder MapNotificationReminders(NotificationOrderReminderRequestExt source)
+    {
+        return new()
         {
             Recipient = new AssociatedRecipients
             {
@@ -462,9 +473,9 @@ public static class OrderMapper
                 RecipientPerson = MapPersonRecipientPayload(source.Recipient.RecipientPerson),
                 RecipientOrganization = MapOrganizationRecipientPayload(source.Recipient.RecipientOrganization)
             },
-            ConditionEndpoint = source.ConditionEndpoint,
             DelayDays = source.DelayDays,
-            SendersReference = source.SendersReference
+            SendersReference = source.SendersReference,
+            ConditionEndpoint = source.ConditionEndpoint
         };
-
+    }
 }
