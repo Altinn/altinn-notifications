@@ -80,8 +80,8 @@ public class OrderRequestService : IOrderRequestService
     {
         Guid orderId = _guid.NewGuid();
         DateTime currentime = _dateTime.UtcNow();
-        
-        await GetRecipientLookupResult(orderRequest);
+
+        var lookupResult = await GetRecipientLookupResult(orderRequest);
 
         return null;
     }

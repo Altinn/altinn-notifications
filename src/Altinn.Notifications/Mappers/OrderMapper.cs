@@ -148,7 +148,7 @@ public static class OrderMapper
     /// </summary>
     public static NotificationOrderWithRemindersRequest MapToOrderWithRemindersRequest(this NotificationOrderWithRemindersRequestExt extRequest)
     {
-        return new NotificationOrderWithRemindersRequest
+        return new()
         {
             IdempotencyId = extRequest.IdempotencyId,
             SendersReference = extRequest.SendersReference,
@@ -372,12 +372,7 @@ public static class OrderMapper
         return source?.Settings is null ? null : new SmsRecipientPayload
         {
             PhoneNumber = source.PhoneNumber,
-            Settings = new SmsRecipientPayloadSettings
-            {
-                Body = source.Settings.Body,
-                Sender = source.Settings.Sender,
-                SendingTimePolicy = (SendingTimePolicy)source.Settings.SendingTimePolicy
-            }
+            Settings = MapSmsRecipientPayloadSettings(source.Settings)!
         };
     }
 
@@ -386,15 +381,7 @@ public static class OrderMapper
         return source?.Settings is null ? null : new EmailRecipientPayload
         {
             EmailAddress = source.EmailAddress,
-            Settings = new EmailRecipientPayloadSettings
-            {
-                Body = source.Settings.Body,
-                Subject = source.Settings.Subject,
-                SenderName = source.Settings.SenderName,
-                SenderEmailAddress = source.Settings.SenderEmailAddress,
-                ContentType = (EmailContentType)source.Settings.ContentType,
-                SendingTimePolicy = (SendingTimePolicy)source.Settings.SendingTimePolicy
-            }
+            Settings = MapEmailRecipientPayloadSettings(source.Settings)!
         };
     }
 
@@ -473,6 +460,7 @@ public static class OrderMapper
                 RecipientPerson = MapPersonRecipientPayload(source.Recipient.RecipientPerson),
                 RecipientOrganization = MapOrganizationRecipientPayload(source.Recipient.RecipientOrganization)
             },
+
             DelayDays = source.DelayDays,
             SendersReference = source.SendersReference,
             ConditionEndpoint = source.ConditionEndpoint
