@@ -375,7 +375,7 @@ public static class OrderMapper
             Settings = new SmsRecipientPayloadSettings
             {
                 Body = source.Settings.Body,
-                SenderNumber = source.Settings.SenderNumber,
+                Sender = source.Settings.Sender,
                 SendingTimePolicy = (SendingTimePolicy)source.Settings.SendingTimePolicy
             }
         };
@@ -444,7 +444,7 @@ public static class OrderMapper
         return source is null ? null : new SmsRecipientPayloadSettings
         {
             Body = source.Body,
-            SenderNumber = source.SenderNumber,
+            Sender = source.Sender,
             SendingTimePolicy = (SendingTimePolicy)source.SendingTimePolicy
         };
     }
