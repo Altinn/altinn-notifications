@@ -28,21 +28,6 @@ public class FutureOrdersController
     }
 
     /// <summary>
-    /// Retrieves notification order.
-    /// </summary>
-    /// <param name="notificationOrderId">The notification order identifier.</param>
-    /// <returns></returns>
-    [HttpGet]
-    [Route("{notificationOrderId}")]
-    [Produces("application/json")]
-    [SwaggerResponse(404, "No order with the provided id was not found")]
-    [SwaggerResponse(200, "The notification order matching the provided id was retrieved successfully")]
-    public Task<ActionResult<NotificationOrderReminderResponseExt>> GetById(Guid notificationOrderId)
-    {
-        throw new NotImplementedException();
-    }
-
-    /// <summary>
     /// Creates a new notification order that has one or more reminders.
     /// </summary>
     /// <remarks>
@@ -61,6 +46,7 @@ public class FutureOrdersController
     public async Task<ActionResult<NotificationOrderReminderResponseExt>> Post(NotificationOrderWithRemindersRequestExt notificationOrderRequest)
     {
         var orderRequest = notificationOrderRequest.MapToOrderWithRemindersRequest();
+
         NotificationOrderRequestResponse result = await _orderRequestService.RegisterNotificationOrder(orderRequest);
 
         throw new NotImplementedException();
