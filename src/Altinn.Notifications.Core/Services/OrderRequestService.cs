@@ -78,7 +78,12 @@ public class OrderRequestService : IOrderRequestService
     /// <inheritdoc/>
     public async Task<NotificationOrderRequestResponse> RegisterNotificationOrder(NotificationOrderWithRemindersRequest orderRequest)
     {
-        var lookupResult = await GetRecipientLookupResult(orderRequest);
+        Guid orderId = _guid.NewGuid();
+        DateTime currentime = _dateTime.UtcNow();
+
+        var modifiedOrderRequest = SetSenderIfNotDefined(orderRequest);
+
+        var lookupResult = await GetRecipientLookupResult(modifiedOrderRequest);
         if (lookupResult?.Any(e => e?.MissingContact?.Count > 0) == true)
         {
             throw new ArgumentException("Missing contact points for some recipients");
@@ -218,6 +223,69 @@ public class OrderRequestService : IOrderRequestService
         }
 
         return templates;
+    }
+
+    private NotificationOrderWithRemindersRequest SetSenderIfNotDefined(NotificationOrderWithRemindersRequest orderRequest)
+    {
+        // Apply sender defaults to main recipient
+        ApplyDefaultSender(orderRequest.Recipient);
+
+        // Apply sender defaults to reminders
+        if (orderRequest.Reminders != null)
+        {
+            foreach (var reminder in orderRequest.Reminders)
+            {
+                ApplyDefaultSender(reminder.Recipient);
+
+                reminder.RequestedSendTime = orderRequest.RequestedSendTime.AddDays(reminder.DelayDays ?? 0);
+            }
+        }
+
+        return orderRequest;
+    }
+
+    /// <summary>
+    /// Applies default sender values if they are not set.
+    /// </summary>
+    private void ApplyDefaultSender(AssociatedRecipients recipients)
+    {
+        if (recipients == null)
+        {
+            return;
+        }
+
+        ApplyDefaultSenderToPerson(recipients.RecipientPerson);
+        ApplyDefaultSenderToOrganization(recipients.RecipientOrganization);
+    }
+
+    /// <summary>
+    /// Sets default sender values for a person recipient if the settings exist but values are null.
+    /// </summary>
+    private void ApplyDefaultSenderToPerson(PersonRecipientPayload? person)
+    {
+        if (person?.SmsSettings != null && string.IsNullOrEmpty(person.SmsSettings.Sender))
+        {
+            person.SmsSettings.Sender = _defaultSmsSender;
+        }
+        else if (person?.EmailSettings != null && string.IsNullOrEmpty(person.EmailSettings.SenderEmailAddress))
+        {
+            person.EmailSettings.SenderEmailAddress = _defaultEmailFromAddress;
+        }
+    }
+
+    /// <summary>
+    /// Sets default sender values for an organization recipient if the settings exist but values are null.
+    /// </summary>
+    private void ApplyDefaultSenderToOrganization(OrganizationRecipientPayload? organization)
+    {
+        if (organization?.SmsSettings != null && string.IsNullOrEmpty(organization.SmsSettings.Sender))
+        {
+            organization.SmsSettings.Sender = _defaultSmsSender;
+        }
+        else if (organization?.EmailSettings != null && string.IsNullOrEmpty(organization.EmailSettings.SenderEmailAddress))
+        {
+            organization.EmailSettings.SenderEmailAddress = _defaultEmailFromAddress;
+        }
     }
 
     /// <summary>
