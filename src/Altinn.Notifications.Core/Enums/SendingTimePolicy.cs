@@ -1,9 +1,9 @@
-﻿namespace Altinn.Notifications.Models;
+﻿namespace Altinn.Notifications.Core.Enums;
 
 /// <summary>
 /// Represents the policies for scheduling the sending time of a message.
 /// </summary>
-public enum SendingTimePolicyExt : uint
+public enum SendingTimePolicy : uint
 {
     /// <summary>
     /// The message can be sent at any time.

@@ -1,4 +1,11 @@
-﻿using Altinn.Notifications.Models;
+﻿using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Extensions;
+using Altinn.Notifications.Mappers;
+using Altinn.Notifications.Models;
+using Altinn.Notifications.Validators;
+
+using FluentValidation;
+
 using Microsoft.AspNetCore.Mvc;
 
 using Swashbuckle.AspNetCore.Annotations;
@@ -11,21 +18,20 @@ namespace Altinn.Notifications.Controllers;
 [ApiController]
 [ApiExplorerSettings(IgnoreApi = true)]
 [Route("notifications/api/v1/future/orders")]
-public class FutureOrdersController
+public class FutureOrdersController : ControllerBase
 {
+    private readonly IOrderRequestService _orderRequestService;
+    private readonly IValidator<NotificationOrderWithRemindersRequestExt> _validator;
+
     /// <summary>
-    /// Retrieves notification order.
+    /// Initializes a new instance of the <see cref="FutureOrdersController"/> class.
     /// </summary>
-    /// <param name="notificationOrderId">The notification order identifier.</param>
-    /// <returns></returns>
-    [HttpGet]
-    [Route("{notificationOrderId}")]
-    [Produces("application/json")]
-    [SwaggerResponse(404, "No order with the provided id was not found")]
-    [SwaggerResponse(200, "The notification order matching the provided id was retrieved successfully")]
-    public Task<ActionResult<NotificationOrderReminderResponseExt>> GetById(Guid notificationOrderId)
+    /// <param name="orderRequestService">The order request service.</param>
+    /// <param name="validator">The object that contains validation logic.</param>
+    public FutureOrdersController(IOrderRequestService orderRequestService, IValidator<NotificationOrderWithRemindersRequestExt> validator)
     {
-        throw new NotImplementedException();
+        _validator = validator;
+        _orderRequestService = orderRequestService;
     }
 
     /// <summary>
@@ -44,8 +50,25 @@ public class FutureOrdersController
     [SwaggerResponse(422, "The notification order is invalid", typeof(ValidationProblemDetails))]
     [SwaggerResponse(200, "The notification order was created.", typeof(NotificationOrderReminderResponseExt))]
     [SwaggerResponse(201, "The notification order was created.", typeof(NotificationOrderReminderResponseExt))]
-    public Task<ActionResult<NotificationOrderReminderResponseExt>> Post(NotificationOrderWithRemindersRequestExt notificationOrderRequest)
+    public async Task<ActionResult<NotificationOrderReminderResponseExt>> Post(NotificationOrderWithRemindersRequestExt notificationOrderRequest)
     {
-        throw new NotImplementedException();
+        var validationResult = _validator.Validate(notificationOrderRequest);
+        if (!validationResult.IsValid)
+        {
+            validationResult.AddToModelState(this.ModelState);
+            return ValidationProblem(ModelState);
+        }
+
+        string? creator = HttpContext.GetOrg();
+
+        if (creator == null)
+        {
+            return Forbid();
+        }
+
+        var orderRequest = notificationOrderRequest.MapToOrderWithRemindersRequest(creator);
+        NotificationOrderRequestResponse result = await _orderRequestService.RegisterNotificationOrder(orderRequest);
+
+        return Accepted(result.OrderId!.GetSelfLinkFromOrderId(), result.MapToExternal());
     }
 }
