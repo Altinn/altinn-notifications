@@ -48,7 +48,7 @@ public class RecipientPersonRequestExt
     /// </summary>
     [JsonPropertyOrder(5)]
     [JsonPropertyName("emailSettings")]
-    public RecipientEmailSettingsRequestExt? EmailSettings { get; set; }
+    public EmailSendingOptionsRequestExt? EmailSettings { get; set; }
 
     /// <summary>
     /// Gets or sets optional SMS-specific template settings, if the chosen channel scheme includes SMS.

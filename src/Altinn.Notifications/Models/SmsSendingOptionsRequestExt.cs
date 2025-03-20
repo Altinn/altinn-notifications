@@ -6,9 +6,6 @@ namespace Altinn.Notifications.Models;
 /// <summary>
 /// Defines SMS configuration settings used in notification requests.
 /// </summary>
-/// <remarks>
-/// This class contains the configurable parameters needed to send an SMS message.
-/// </remarks>
 public class SmsSendingOptionsRequestExt
 {
     /// <summary>

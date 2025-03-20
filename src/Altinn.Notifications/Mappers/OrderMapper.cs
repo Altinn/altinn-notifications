@@ -442,7 +442,7 @@ public static class OrderMapper
         };
     }
 
-    private static EmailRecipientPayloadSettings? MapEmailRecipientPayloadSettings(RecipientEmailSettingsRequestExt? source)
+    private static EmailRecipientPayloadSettings? MapEmailRecipientPayloadSettings(EmailSendingOptionsRequestExt? source)
     {
         return source is null ? null : new EmailRecipientPayloadSettings
         {
