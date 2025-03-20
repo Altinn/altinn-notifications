@@ -432,7 +432,7 @@ public static class OrderMapper
         };
     }
 
-    private static SmsRecipientPayloadSettings? MapSmsRecipientPayloadSettings(RecipientSmsSettingsRequestExt? source)
+    private static SmsRecipientPayloadSettings? MapSmsRecipientPayloadSettings(SmsSendingOptionsRequestExt? source)
     {
         return source is null ? null : new SmsRecipientPayloadSettings
         {
