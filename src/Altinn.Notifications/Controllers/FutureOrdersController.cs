@@ -66,7 +66,7 @@ public class FutureOrdersController : ControllerBase
             return Forbid();
         }
 
-        var orderRequest = notificationOrderRequest.MapToOrderWithRemindersRequest();
+        var orderRequest = notificationOrderRequest.MapToOrderWithRemindersRequest(creator);
         NotificationOrderRequestResponse result = await _orderRequestService.RegisterNotificationOrder(orderRequest);
 
         return Accepted(result.OrderId!.GetSelfLinkFromOrderId(), result.MapToExternal());

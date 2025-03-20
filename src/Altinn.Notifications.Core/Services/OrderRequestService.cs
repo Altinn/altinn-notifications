@@ -80,16 +80,40 @@ public class OrderRequestService : IOrderRequestService
     {
         Guid orderId = _guid.NewGuid();
         DateTime currentime = _dateTime.UtcNow();
+        List<RecipientLookupResult?> lookupResults = [];
 
-        var modifiedOrderRequest = SetSenderIfNotDefined(orderRequest);
+        int loopIndex = 0;
+        orderRequest.OrderId = orderId;
+        orderRequest.Created = currentime;
 
-        var lookupResult = await GetRecipientLookupResult(modifiedOrderRequest);
-        if (lookupResult?.Any(e => e?.MissingContact?.Count > 0) == true)
+        if (orderRequest.NotificationOrders != null)
         {
-            throw new ArgumentException("Missing contact points for some recipients");
+            foreach (var notificationOrder in orderRequest.NotificationOrders)
+            {
+                if (loopIndex == 0)
+                {
+                    notificationOrder.SetOrderIdentifier(orderId);
+                }
+
+                notificationOrder.SetOrderCreationDate(currentime);
+
+                var lookupResult = await GetRecipientLookupResult(notificationOrder.Recipients, notificationOrder.NotificationChannel, notificationOrder.ResourceId);
+                lookupResults.Add(lookupResult);
+
+                notificationOrder.UpdateTemplates(SetSenderIfNotDefined(notificationOrder.Templates));
+
+                loopIndex++;
+            }
+
+
         }
 
-        return null;
+        NotificationOrderWithRemindersRequest savedOrder = await _repository.Create(orderRequest);
+        return new NotificationOrderRequestResponse()
+        {
+            OrderId = savedOrder.OrderId,
+            RecipientLookup = null
+        };
     }
 
     private async Task<List<RecipientLookupResult?>> GetRecipientLookupResult(NotificationOrderWithRemindersRequest orderRequest)

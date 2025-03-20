@@ -8,6 +8,14 @@ namespace Altinn.Notifications.Core.Models.Orders;
 public class NotificationReminder
 {
     /// <summary>
+    /// Gets the order identifier.
+    /// </summary>
+    /// <value>
+    /// The order identifier.
+    /// </value>
+    public Guid OrderId { get; set; } = Guid.Empty;
+
+    /// <summary>
     /// Gets or sets the condition endpoint used to check the sending condition.
     /// </summary>
     /// <value>

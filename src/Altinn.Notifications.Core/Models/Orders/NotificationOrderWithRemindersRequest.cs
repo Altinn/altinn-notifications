@@ -19,6 +19,30 @@ public class NotificationOrderWithRemindersRequest : NotificationOrderWithRemind
     public required string IdempotencyId { get; set; }
 
     /// <summary>
+    /// Gets the order identifier.
+    /// </summary>
+    /// <value>
+    /// The order identifier.
+    /// </value>
+    public Guid OrderId { get; set; } = Guid.Empty;
+
+    /// <summary>
+    /// Gets the creator.
+    /// </summary>
+    /// <value>
+    /// The creator.
+    /// </value>
+    public Creator Creator { get; set; }
+
+    /// <summary>
+    /// Gets the created.
+    /// </summary>
+    /// <value>
+    /// The created.
+    /// </value>
+    public DateTime Created { get; internal set; }
+
+    /// <summary>
     /// Gets or sets the required recipient information, whether for mobile number, email-address, national identity, or organization number.
     /// </summary>
     public required AssociatedRecipients Recipient { get; set; }
@@ -27,4 +51,12 @@ public class NotificationOrderWithRemindersRequest : NotificationOrderWithRemind
     /// Gets or sets a list of reminders that may be triggered under certain conditions after the initial notification has been processed.
     /// </summary>
     public List<NotificationReminder>? Reminders { get; set; }
+
+    /// <summary>
+    /// Gets or sets the notification order.
+    /// </summary>
+    /// <value>
+    /// The notification order.
+    /// </value>
+    public IEnumerable<NotificationOrder>? NotificationOrders { get; set; }
 }

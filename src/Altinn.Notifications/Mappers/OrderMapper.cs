@@ -6,6 +6,7 @@ using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Models;
+using Azure.Core;
 
 namespace Altinn.Notifications.Mappers;
 
@@ -146,10 +147,11 @@ public static class OrderMapper
     /// <summary>
     /// Maps a <see cref="NotificationOrderWithRemindersRequestExt"/> to a <see cref="NotificationOrderWithRemindersRequest"/>
     /// </summary>
-    public static NotificationOrderWithRemindersRequest MapToOrderWithRemindersRequest(this NotificationOrderWithRemindersRequestExt extRequest)
+    public static NotificationOrderWithRemindersRequest MapToOrderWithRemindersRequest(this NotificationOrderWithRemindersRequestExt extRequest, string creator)
     {
-        return new()
+        NotificationOrderWithRemindersRequest notificationOrderWithRemindersRequest = new()
         {
+            Creator = new Creator(creator),
             IdempotencyId = extRequest.IdempotencyId,
             SendersReference = extRequest.SendersReference,
             ConditionEndpoint = extRequest.ConditionEndpoint,
@@ -167,6 +169,10 @@ public static class OrderMapper
 
             Reminders = extRequest.Reminders?.Select(MapNotificationReminders).ToList()
         };
+
+        notificationOrderWithRemindersRequest.NotificationOrders = [MapToSmsNotificationOrder(notificationOrderWithRemindersRequest, creator), .. MapRemindersToSmsNotificationOrder(notificationOrderWithRemindersRequest, creator)];
+
+        return notificationOrderWithRemindersRequest;
     }
 
     /// <summary>
@@ -465,5 +471,210 @@ public static class OrderMapper
             SendersReference = source.SendersReference,
             ConditionEndpoint = source.ConditionEndpoint
         };
+    }
+
+    private static EmailTemplate MapToEmailTemplate(EmailRecipientPayload emailRecipientPayload)
+    {
+        return new EmailTemplate(
+            emailRecipientPayload.Settings.SenderEmailAddress,
+            emailRecipientPayload.Settings.Subject,
+            emailRecipientPayload.Settings.Body,
+            emailRecipientPayload.Settings.ContentType);
+    }
+
+    private static EmailTemplate MapToEmailTemplate(PersonRecipientPayload personRecipientPayload)
+    {
+        return new EmailTemplate(
+            personRecipientPayload.EmailSettings.SenderEmailAddress,
+            personRecipientPayload.EmailSettings.Subject,
+            personRecipientPayload.EmailSettings.Body,
+            personRecipientPayload.EmailSettings.ContentType);
+    }
+
+    private static EmailTemplate MapToEmailTemplate(OrganizationRecipientPayload organizationRecipientPayload)
+    {
+        return new EmailTemplate(
+            organizationRecipientPayload.EmailSettings.SenderEmailAddress,
+            organizationRecipientPayload.EmailSettings.Subject,
+            organizationRecipientPayload.EmailSettings.Body,
+            organizationRecipientPayload.EmailSettings.ContentType);
+    }
+
+    private static SmsTemplate MapToSmsTemplate(SmsRecipientPayload smsRecipientPayload)
+    {
+        return new SmsTemplate(
+            smsRecipientPayload.Settings.Sender,
+            smsRecipientPayload.Settings.Body);
+    }
+
+    private static SmsTemplate MapToSmsTemplate(PersonRecipientPayload personRecipientPayload)
+    {
+        return new SmsTemplate(
+            personRecipientPayload.SmsSettings.Sender,
+            personRecipientPayload.SmsSettings.Body);
+    }
+
+    private static SmsTemplate MapToSmsTemplate(OrganizationRecipientPayload organizationRecipientPayload)
+    {
+        return new SmsTemplate(
+            organizationRecipientPayload.SmsSettings.Sender,
+            organizationRecipientPayload.SmsSettings.Body);
+    }
+
+    private static Recipient MapToRecipient(AssociatedRecipients recipient)
+    {
+        if (recipient.RecipientSms != null)
+        {
+            return new Recipient([new SmsAddressPoint(recipient.RecipientSms.PhoneNumber)]);
+        }
+        else if (recipient.RecipientEmail != null)
+        {
+            return new Recipient([new EmailAddressPoint(recipient.RecipientEmail.EmailAddress)]);
+        }
+        else if (recipient.RecipientPerson != null)
+        {
+            return new Recipient([], nationalIdentityNumber: recipient.RecipientPerson.NationalIdentityNumber);
+        }
+        else if (recipient.RecipientOrganization != null)
+        {
+            return new Recipient([], organizationNumber: recipient.RecipientOrganization.OrgNumber);
+        }
+
+        return new Recipient();
+    }
+
+    private static NotificationOrder MapToSmsNotificationOrder(NotificationOrderWithRemindersRequest request, string creator)
+    {
+        bool? ignoreReservation = null;
+        string? resouceIdentifier = null;
+        List<INotificationTemplate> templates = [];
+        NotificationChannel notificationChannel = NotificationChannel.Sms;
+
+        if (request.Recipient.RecipientSms != null)
+        {
+            notificationChannel = NotificationChannel.Sms;
+            templates.Add(MapToSmsTemplate(request.Recipient.RecipientSms));
+        }
+        else if (request.Recipient.RecipientEmail != null)
+        {
+            notificationChannel = NotificationChannel.Email;
+            templates.Add(MapToEmailTemplate(request.Recipient.RecipientEmail));
+        }
+        else if (request.Recipient.RecipientPerson != null)
+        {
+            resouceIdentifier = request.Recipient.RecipientPerson.ResourceId;
+            notificationChannel = request.Recipient.RecipientPerson.ChannelScheme;
+            ignoreReservation = request.Recipient.RecipientPerson.IgnoreReservation;
+
+            switch (request.Recipient.RecipientPerson.ChannelScheme)
+            {
+                case NotificationChannel.Sms:
+                case NotificationChannel.SmsPreferred:
+                    templates.Add(MapToSmsTemplate(request.Recipient.RecipientPerson));
+                    break;
+
+                case NotificationChannel.Email:
+                case NotificationChannel.EmailPreferred:
+                    templates.Add(MapToEmailTemplate(request.Recipient.RecipientPerson));
+                    break;
+            }
+        }
+        else if (request.Recipient.RecipientOrganization != null)
+        {
+            resouceIdentifier = request.Recipient.RecipientOrganization.ResourceId;
+            notificationChannel = request.Recipient.RecipientOrganization.ChannelScheme;
+
+            switch (request.Recipient.RecipientOrganization.ChannelScheme)
+            {
+                case NotificationChannel.Sms:
+                case NotificationChannel.SmsPreferred:
+                    templates.Add(MapToSmsTemplate(request.Recipient.RecipientOrganization));
+                    break;
+
+                case NotificationChannel.Email:
+                case NotificationChannel.EmailPreferred:
+                    templates.Add(MapToEmailTemplate(request.Recipient.RecipientOrganization));
+                    break;
+            }
+        }
+
+        Recipient? recipient = MapToRecipient(request.Recipient);
+
+        return new NotificationOrder(Guid.Empty, request.SendersReference, templates, request.RequestedSendTime, notificationChannel, new Creator(creator), DateTime.Now, [recipient], ignoreReservation, resouceIdentifier, request.ConditionEndpoint);
+    }
+
+    private static List<NotificationOrder> MapRemindersToSmsNotificationOrder(NotificationOrderWithRemindersRequest request, string creator)
+    {
+        List<NotificationOrder> notificationOrders = [];
+
+        if (request.Reminders == null || request.Reminders.Count == 0)
+        {
+            return notificationOrders;
+        }
+
+        foreach (var reminder in request.Reminders)
+        {
+            Recipient? recipient = null;
+            bool? ignoreReservation = null;
+            string? resouceIdentifier = null;
+            List<INotificationTemplate> templates = [];
+            NotificationChannel notificationChannel = NotificationChannel.Sms;
+
+            reminder.OrderId = Guid.NewGuid();
+
+            if (reminder.Recipient.RecipientSms != null)
+            {
+                notificationChannel = NotificationChannel.Sms;
+                templates.Add(MapToSmsTemplate(reminder.Recipient.RecipientSms));
+            }
+            else if (reminder.Recipient.RecipientEmail != null)
+            {
+                notificationChannel = NotificationChannel.Email;
+                templates.Add(MapToEmailTemplate(reminder.Recipient.RecipientEmail));
+            }
+            else if (reminder.Recipient.RecipientPerson != null)
+            {
+                resouceIdentifier = reminder.Recipient.RecipientPerson.ResourceId;
+                notificationChannel = reminder.Recipient.RecipientPerson.ChannelScheme;
+                ignoreReservation = reminder.Recipient.RecipientPerson.IgnoreReservation;
+
+                switch (reminder.Recipient.RecipientPerson.ChannelScheme)
+                {
+                    case NotificationChannel.Sms:
+                    case NotificationChannel.SmsPreferred:
+                        templates.Add(MapToSmsTemplate(reminder.Recipient.RecipientPerson));
+                        break;
+
+                    case NotificationChannel.Email:
+                    case NotificationChannel.EmailPreferred:
+                        templates.Add(MapToEmailTemplate(reminder.Recipient.RecipientPerson));
+                        break;
+                }
+            }
+            else if (reminder.Recipient.RecipientOrganization != null)
+            {
+                resouceIdentifier = reminder.Recipient.RecipientOrganization.ResourceId;
+                notificationChannel = reminder.Recipient.RecipientOrganization.ChannelScheme;
+
+                switch (reminder.Recipient.RecipientOrganization.ChannelScheme)
+                {
+                    case NotificationChannel.Sms:
+                    case NotificationChannel.SmsPreferred:
+                        templates.Add(MapToSmsTemplate(reminder.Recipient.RecipientOrganization));
+                        break;
+
+                    case NotificationChannel.Email:
+                    case NotificationChannel.EmailPreferred:
+                        templates.Add(MapToEmailTemplate(reminder.Recipient.RecipientOrganization));
+                        break;
+                }
+            }
+
+            recipient = MapToRecipient(reminder.Recipient);
+
+            notificationOrders.Add(new NotificationOrder(reminder.OrderId, reminder.SendersReference, templates, request.RequestedSendTime.AddDays(reminder.DelayDays ?? 0), notificationChannel, new Creator(creator), DateTime.Now, [recipient], ignoreReservation, resouceIdentifier, reminder.ConditionEndpoint));
+        }
+
+        return notificationOrders;
     }
 }
