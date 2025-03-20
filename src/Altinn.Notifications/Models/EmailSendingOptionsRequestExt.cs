@@ -16,7 +16,7 @@ public class EmailSendingOptionsRequestExt
     /// May include plain text or HTML markup depending on the ContentType setting.
     /// </remarks>
     [Required]
-    [JsonPropertyOrder(1)]
+    [JsonPropertyOrder(4)]
     [JsonPropertyName("body")]
     public required string Body { get; set; }
 
@@ -27,7 +27,7 @@ public class EmailSendingOptionsRequestExt
     /// Defaults to <see cref="EmailContentTypeExt.Plain"/>.
     /// Determines how email clients will render the body content.
     /// </remarks>
-    [JsonPropertyOrder(2)]
+    [JsonPropertyOrder(5)]
     [JsonPropertyName("contentType")]
     public EmailContentTypeExt ContentType { get; set; } = EmailContentTypeExt.Plain;
 
@@ -38,7 +38,7 @@ public class EmailSendingOptionsRequestExt
     /// This value determines which address will appear as the sender in the recipient's mailbox.
     /// Must be a valid email address format if specified.
     /// </remarks>
-    [JsonPropertyOrder(3)]
+    [JsonPropertyOrder(2)]
     [JsonPropertyName("senderEmailAddress")]
     public string? SenderEmailAddress { get; set; }
 
@@ -49,7 +49,7 @@ public class EmailSendingOptionsRequestExt
     /// Can only be used if <see cref="SenderEmailAddress"/> is set.
     /// Appears alongside the email address in the recipient's email client.
     /// </remarks>
-    [JsonPropertyOrder(4)]
+    [JsonPropertyOrder(1)]
     [JsonPropertyName("senderName")]
     public string? SenderName { get; set; }
 
@@ -59,7 +59,7 @@ public class EmailSendingOptionsRequestExt
     /// <remarks>
     /// Defaults to <see cref="SendingTimePolicyExt.Anytime"/> allowing delivery at any time.
     /// </remarks>
-    [JsonPropertyOrder(5)]
+    [JsonPropertyOrder(6)]
     [JsonPropertyName("sendingTimePolicy")]
     public SendingTimePolicyExt SendingTimePolicy { get; set; } = SendingTimePolicyExt.Anytime;
 
@@ -70,7 +70,7 @@ public class EmailSendingOptionsRequestExt
     /// Displayed as the email headline in the recipient's inbox.
     /// </remarks>
     [Required]
-    [JsonPropertyOrder(6)]
+    [JsonPropertyOrder(3)]
     [JsonPropertyName("subject")]
     public required string Subject { get; set; }
 }

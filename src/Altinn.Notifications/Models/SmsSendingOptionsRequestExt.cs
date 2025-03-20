@@ -15,7 +15,7 @@ public class SmsSendingOptionsRequestExt
     /// Plain text content with length constraints determined by carrier limitations and character encoding.
     /// </remarks>
     [Required]
-    [JsonPropertyOrder(1)]
+    [JsonPropertyOrder(2)]
     [JsonPropertyName("body")]
     public required string Body { get; set; }
 
@@ -26,7 +26,7 @@ public class SmsSendingOptionsRequestExt
     /// Can be either a phone number or an alphanumeric sender ID, subject to carrier and regional restrictions.
     /// </remarks>
     [Required]
-    [JsonPropertyOrder(2)]
+    [JsonPropertyOrder(1)]
     [JsonPropertyName("sender")]
     public required string Sender { get; set; }
 
