@@ -30,7 +30,7 @@ public class NotificationOrderWithRemindersRequestExt : NotificationOrderRequest
     [Required]
     [JsonPropertyOrder(3)]
     [JsonPropertyName("recipient")]
-    public required RecipientTypesAssociatedWithRequestExt Recipient { get; set; }
+    public required RecipientSpecificationRequestExt Recipient { get; set; }
 
     /// <summary>
     /// Gets or sets a list of reminders that may be triggered under certain conditions after the initial notification has been processed.

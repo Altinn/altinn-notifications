@@ -31,7 +31,7 @@ public class NotificationOrderReminderRequestExt
     [Required]
     [JsonPropertyOrder(3)]
     [JsonPropertyName("recipient")]
-    public required RecipientTypesAssociatedWithRequestExt Recipient { get; set; } = new();
+    public required RecipientSpecificationRequestExt Recipient { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the sender's reference.
