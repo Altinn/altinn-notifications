@@ -14,27 +14,6 @@ namespace Altinn.Notifications.Models;
 public class RecipientOrganizationRequestExt
 {
     /// <summary>
-    /// Gets or sets the required channel scheme for delivering the notification.
-    /// </summary>
-    /// <remarks>
-    /// Determines which communication channel(s) to use and their priority.
-    /// </remarks>
-    [Required]
-    [JsonPropertyOrder(3)]
-    [JsonPropertyName("channelScheme")]
-    public required NotificationChannelExt ChannelScheme { get; set; }
-
-    /// <summary>
-    /// Gets or sets the email-specific configuration, used when the channel scheme includes email.
-    /// </summary>
-    /// <remarks>
-    /// Required when <see cref="ChannelScheme"/> is set to <see cref="NotificationChannelExt.Email"/> or <see cref="NotificationChannelExt.EmailPreferred"/>.
-    /// </remarks>
-    [JsonPropertyOrder(4)]
-    [JsonPropertyName("emailSettings")]
-    public EmailSendingOptionsRequestExt? EmailSettings { get; set; }
-
-    /// <summary>
     /// Gets or sets the organization number that identifies the recipient.
     /// </summary>
     /// <remarks>
@@ -58,10 +37,33 @@ public class RecipientOrganizationRequestExt
     public string? ResourceId { get; set; }
 
     /// <summary>
+    /// Gets or sets the required channel scheme for delivering the notification.
+    /// </summary>
+    /// <remarks>
+    /// Determines which communication channel(s) to use and their priority.
+    /// </remarks>
+    [Required]
+    [JsonPropertyOrder(3)]
+    [JsonPropertyName("channelScheme")]
+    public required NotificationChannelExt ChannelScheme { get; set; }
+
+    /// <summary>
+    /// Gets or sets the email-specific configuration, used when the channel scheme includes email.
+    /// </summary>
+    /// <remarks>
+    /// Required when <see cref="ChannelScheme"/> is set to <see cref="NotificationChannelExt.Email"/>
+    /// or <see cref="NotificationChannelExt.EmailPreferred"/>.
+    /// </remarks>
+    [JsonPropertyOrder(4)]
+    [JsonPropertyName("emailSettings")]
+    public EmailSendingOptionsRequestExt? EmailSettings { get; set; }
+
+    /// <summary>
     /// Gets or sets the SMS-specific configuration, used when the channel scheme includes SMS.
     /// </summary>
     /// <remarks>
-    /// Required when <see cref="ChannelScheme"/> is set to <see cref="NotificationChannelExt.Sms"/> or <see cref="NotificationChannelExt.SmsPreferred"/>.
+    /// Required when <see cref="ChannelScheme"/> is set to <see cref="NotificationChannelExt.Sms"/>
+    /// or <see cref="NotificationChannelExt.SmsPreferred"/>.
     /// </remarks>
     [JsonPropertyOrder(5)]
     [JsonPropertyName("smsSettings")]

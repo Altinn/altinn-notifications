@@ -9,17 +9,6 @@ namespace Altinn.Notifications.Models;
 public class SmsSendingOptionsRequestExt
 {
     /// <summary>
-    /// Gets or sets the text content of the SMS message.
-    /// </summary>
-    /// <remarks>
-    /// Plain text content with length constraints determined by carrier limitations and character encoding.
-    /// </remarks>
-    [Required]
-    [JsonPropertyOrder(2)]
-    [JsonPropertyName("body")]
-    public required string Body { get; set; }
-
-    /// <summary>
     /// Gets or sets the sender identifier displayed in the recipient's SMS message.
     /// </summary>
     /// <remarks>
@@ -29,6 +18,17 @@ public class SmsSendingOptionsRequestExt
     [JsonPropertyOrder(1)]
     [JsonPropertyName("sender")]
     public required string Sender { get; set; }
+
+    /// <summary>
+    /// Gets or sets the text content of the SMS message.
+    /// </summary>
+    /// <remarks>
+    /// Plain text content with length constraints determined by carrier limitations and character encoding.
+    /// </remarks>
+    [Required]
+    [JsonPropertyOrder(2)]
+    [JsonPropertyName("body")]
+    public required string Body { get; set; }
 
     /// <summary>
     /// Gets or sets the policy controlling when the SMS should be delivered.
