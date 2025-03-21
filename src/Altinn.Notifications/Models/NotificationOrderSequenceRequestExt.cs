@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 namespace Altinn.Notifications.Models;
 
 /// <summary>
-/// Represents a request to create a notification order with one or more reminders.
+/// Represents a request to create a notification order with non or more reminders.
 /// Inherits the scheduling options from <see cref="NotificationOrderRequestSchedulingExt"/>.
 /// </summary>
 public class NotificationOrderSequenceRequestExt : NotificationOrderRequestSchedulingExt

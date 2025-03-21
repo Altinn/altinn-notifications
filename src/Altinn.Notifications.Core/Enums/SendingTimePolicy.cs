@@ -1,17 +1,17 @@
 ﻿namespace Altinn.Notifications.Core.Enums;
 
 /// <summary>
-/// Represents the policies for scheduling the sending time of a message.
+/// Defines policies that govern when a notification message is scheduled for delivery.
 /// </summary>
 public enum SendingTimePolicy : uint
 {
     /// <summary>
-    /// The message can be sent at any time.
+    /// Allows message delivery at any time of day.
     /// </summary>
     Anytime = 1,
 
     /// <summary>
-    /// The messages will be scheduled for sending between 08:00 and 17:00 CET.
+    /// Restricts message delivery to business hours (08:00-17:00 CET).
     /// </summary>
     Daytime = 2
 }

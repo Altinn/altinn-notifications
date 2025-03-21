@@ -32,7 +32,7 @@ public class NotificationReminder
     /// <summary>
     /// Gets or sets the required recipient information, whether for mobile number, email-address, national identity, or organization number.
     /// </summary>
-    public required AssociatedRecipients Recipient { get; set; } = new();
+    public required RecipientSpecificationRequest Recipient { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the date and time when the associated Email or SMS can be sent at the earliest.

@@ -78,76 +78,45 @@ public class OrderRequestService : IOrderRequestService
     /// <inheritdoc/>
     public async Task<NotificationOrderRequestResponse> RegisterNotificationOrder(NotificationOrderSequenceRequest orderRequest)
     {
-        Guid orderId = _guid.NewGuid();
-        DateTime currentime = _dateTime.UtcNow();
-        List<RecipientLookupResult?> lookupResults = [];
-
-        int loopIndex = 0;
-        orderRequest.OrderId = orderId;
-        orderRequest.Created = currentime;
-
-        if (orderRequest.NotificationOrders != null)
-        {
-            foreach (var notificationOrder in orderRequest.NotificationOrders)
-            {
-                if (loopIndex == 0)
-                {
-                    notificationOrder.SetOrderIdentifier(orderId);
-                }
-
-                notificationOrder.SetOrderCreationDate(currentime);
-
-                var lookupResult = await GetRecipientLookupResult(notificationOrder.Recipients, notificationOrder.NotificationChannel, notificationOrder.ResourceId);
-                lookupResults.Add(lookupResult);
-
-                notificationOrder.UpdateTemplates(SetSenderIfNotDefined(notificationOrder.Templates));
-
-                loopIndex++;
-            }
-        }
-
-        NotificationOrderSequenceRequest savedOrder = await _repository.Create(orderRequest);
-        return new NotificationOrderRequestResponse()
-        {
-            OrderId = savedOrder.OrderId,
-            RecipientLookup = null
-        };
+        throw new NotImplementedException();
     }
 
     private async Task<List<RecipientLookupResult?>> GetRecipientLookupResult(NotificationOrderSequenceRequest orderRequest)
     {
-        var recipientsByChannel = new Dictionary<NotificationChannel, List<ResourceBoundRecipients>>
-        {
-            { NotificationChannel.Sms, new List<ResourceBoundRecipients>() },
-            { NotificationChannel.Email, new List<ResourceBoundRecipients>() },
-            { NotificationChannel.SmsPreferred, new List<ResourceBoundRecipients>() },
-            { NotificationChannel.EmailPreferred, new List<ResourceBoundRecipients>() }
-        };
+        throw new NotImplementedException();
+        
+        //var recipientsByChannel = new Dictionary<NotificationChannel, List<ResourceBoundRecipients>>
+        //{
+        //    { NotificationChannel.Sms, new List<ResourceBoundRecipients>() },
+        //    { NotificationChannel.Email, new List<ResourceBoundRecipients>() },
+        //    { NotificationChannel.SmsPreferred, new List<ResourceBoundRecipients>() },
+        //    { NotificationChannel.EmailPreferred, new List<ResourceBoundRecipients>() }
+        //};
 
-        // Organize the contacts  from the main order based on communication channel and resource identifier.
-        OrganizeRecipientsByChannelAndResource(orderRequest.Recipient, recipientsByChannel);
+        //// Organize the contacts  from the main order based on communication channel and resource identifier.
+        //OrganizeRecipientsByChannelAndResource(orderRequest.Recipient, recipientsByChannel);
 
-        // Organize the contacts from associated reminders order based on communication channel and resource identifier.
-        if (orderRequest.Reminders?.Count > 0)
-        {
-            foreach (var reminder in orderRequest.Reminders)
-            {
-                OrganizeRecipientsByChannelAndResource(reminder.Recipient, recipientsByChannel);
-            }
-        }
+        //// Organize the contacts from associated reminders order based on communication channel and resource identifier.
+        //if (orderRequest.Reminders?.Count > 0)
+        //{
+        //    foreach (var reminder in orderRequest.Reminders)
+        //    {
+        //        OrganizeRecipientsByChannelAndResource(reminder.Recipient, recipientsByChannel);
+        //    }
+        //}
 
-        // Get the contact points for the recipients and return the list of recipients that are missing contact points.
-        var recipientLookupResults = new List<RecipientLookupResult?>();
-        foreach (var (channel, resourceBoundRecipientsList) in recipientsByChannel)
-        {
-            foreach (var resourceBoundRecipients in resourceBoundRecipientsList)
-            {
-                var lookupResult = await GetRecipientLookupResult(resourceBoundRecipients.Recipients, channel, resourceBoundRecipients.ResourceId);
-                recipientLookupResults.Add(lookupResult);
-            }
-        }
+        //// Get the contact points for the recipients and return the list of recipients that are missing contact points.
+        //var recipientLookupResults = new List<RecipientLookupResult?>();
+        //foreach (var (channel, resourceBoundRecipientsList) in recipientsByChannel)
+        //{
+        //    foreach (var resourceBoundRecipients in resourceBoundRecipientsList)
+        //    {
+        //        var lookupResult = await GetRecipientLookupResult(resourceBoundRecipients.Recipients, channel, resourceBoundRecipients.ResourceId);
+        //        recipientLookupResults.Add(lookupResult);
+        //    }
+        //}
 
-        return recipientLookupResults;
+        //return recipientLookupResults;
     }
 
     private async Task<RecipientLookupResult?> GetRecipientLookupResult(List<Recipient> originalRecipients, NotificationChannel channel, string? resourceId)
@@ -249,27 +218,29 @@ public class OrderRequestService : IOrderRequestService
 
     private NotificationOrderSequenceRequest SetSenderIfNotDefined(NotificationOrderSequenceRequest orderRequest)
     {
-        // Apply sender defaults to main recipient
-        ApplyDefaultSender(orderRequest.Recipient);
+        throw new NotImplementedException();
 
-        // Apply sender defaults to reminders
-        if (orderRequest.Reminders != null)
-        {
-            foreach (var reminder in orderRequest.Reminders)
-            {
-                ApplyDefaultSender(reminder.Recipient);
+        //// Apply sender defaults to main recipient
+        //ApplyDefaultSender(orderRequest.Recipient);
 
-                reminder.RequestedSendTime = orderRequest.RequestedSendTime.AddDays(reminder.DelayDays ?? 0);
-            }
-        }
+        //// Apply sender defaults to reminders
+        //if (orderRequest.Reminders != null)
+        //{
+        //    foreach (var reminder in orderRequest.Reminders)
+        //    {
+        //        ApplyDefaultSender(reminder.Recipient);
 
-        return orderRequest;
+        //        reminder.RequestedSendTime = orderRequest.RequestedSendTime.AddDays(reminder.DelayDays ?? 0);
+        //    }
+        //}
+
+        //return orderRequest;
     }
 
     /// <summary>
     /// Applies default sender values if they are not set.
     /// </summary>
-    private void ApplyDefaultSender(AssociatedRecipients recipients)
+    private void ApplyDefaultSender(RecipientSpecificationRequest recipients)
     {
         if (recipients == null)
         {
@@ -283,7 +254,7 @@ public class OrderRequestService : IOrderRequestService
     /// <summary>
     /// Sets default sender values for a person recipient if the settings exist but values are null.
     /// </summary>
-    private void ApplyDefaultSenderToPerson(PersonRecipientPayload? person)
+    private void ApplyDefaultSenderToPerson(RecipientPersonRequest? person)
     {
         if (person?.SmsSettings != null && string.IsNullOrEmpty(person.SmsSettings.Sender))
         {
@@ -298,7 +269,7 @@ public class OrderRequestService : IOrderRequestService
     /// <summary>
     /// Sets default sender values for an organization recipient if the settings exist but values are null.
     /// </summary>
-    private void ApplyDefaultSenderToOrganization(OrganizationRecipientPayload? organization)
+    private void ApplyDefaultSenderToOrganization(RecipientOrganizationRequest? organization)
     {
         if (organization?.SmsSettings != null && string.IsNullOrEmpty(organization.SmsSettings.Sender))
         {
@@ -311,7 +282,7 @@ public class OrderRequestService : IOrderRequestService
     }
 
     /// <summary>
-    /// Organizes recipients from an <see cref="AssociatedRecipients"/> container into appropriate notification channels while preserving their resource context.
+    /// Organizes recipients from an <see cref="RecipientSpecificationRequest"/> container into appropriate notification channels while preserving their resource context.
     /// </summary>
     /// <param name="recipientDetails">Container with recipient information, which may include person and/or organization recipients.</param>
     /// <param name="recipientsByChannel">Dictionary that categorizes recipients by notification channel and resource identifier.</param>
@@ -319,17 +290,17 @@ public class OrderRequestService : IOrderRequestService
     /// This method extracts recipients from the provided container and organizes them into channel-specific collections:
     /// <list type="bullet">
     ///   <item>
-    ///     <description>Processes <see cref="PersonRecipientPayload"/> recipients, mapping them to their specified channel.</description>
+    ///     <description>Processes <see cref="RecipientPersonRequest"/> recipients, mapping them to their specified channel.</description>
     ///   </item>
     ///   <item>
-    ///     <description>Processes <see cref="OrganizationRecipientPayload"/> recipients, mapping them to their specified channel.</description>
+    ///     <description>Processes <see cref="RecipientOrganizationRequest"/> recipients, mapping them to their specified channel.</description>
     ///   </item>
     /// </list>
     /// Recipients are grouped by both notification channel and resource identifier, enabling efficient channel-specific 
     /// processing while maintaining their association with resources. Each recipient is wrapped in a 
     /// <see cref="ResourceBoundRecipients"/> container before being added to the appropriate channel collection.
     /// </remarks>
-    private static void OrganizeRecipientsByChannelAndResource(AssociatedRecipients? recipientDetails, Dictionary<NotificationChannel, List<ResourceBoundRecipients>> recipientsByChannel)
+    private static void OrganizeRecipientsByChannelAndResource(RecipientSpecificationRequest? recipientDetails, Dictionary<NotificationChannel, List<ResourceBoundRecipients>> recipientsByChannel)
     {
         if (recipientDetails is null)
         {
