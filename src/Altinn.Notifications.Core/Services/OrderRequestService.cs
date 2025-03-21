@@ -76,12 +76,12 @@ public class OrderRequestService : IOrderRequestService
     }
 
     /// <inheritdoc/>
-    public async Task<NotificationOrderRequestResponse> RegisterNotificationOrder(NotificationOrderSequenceRequest orderRequest)
+    public async Task<NotificationOrderRequestResponse> RegisterNotificationOrder(NotificationOrderSequence orderRequest)
     {
         throw new NotImplementedException();
     }
 
-    private async Task<List<RecipientLookupResult?>> GetRecipientLookupResult(NotificationOrderSequenceRequest orderRequest)
+    private async Task<List<RecipientLookupResult?>> GetRecipientLookupResult(NotificationOrderSequence orderRequest)
     {
         throw new NotImplementedException();
         
@@ -216,7 +216,7 @@ public class OrderRequestService : IOrderRequestService
         return templates;
     }
 
-    private NotificationOrderSequenceRequest SetSenderIfNotDefined(NotificationOrderSequenceRequest orderRequest)
+    private NotificationOrderSequence SetSenderIfNotDefined(NotificationOrderSequence orderRequest)
     {
         throw new NotImplementedException();
 
@@ -310,7 +310,7 @@ public class OrderRequestService : IOrderRequestService
         if (recipientDetails.RecipientPerson is not null)
         {
             AddResourceBoundRecipientsToChannel(
-                recipientDetails.RecipientPerson.ChannelScheme,
+                recipientDetails.RecipientPerson.ChannelSchema,
                 new ResourceBoundRecipients { Recipients = [new Recipient() { NationalIdentityNumber = recipientDetails.RecipientPerson.NationalIdentityNumber }], ResourceId = recipientDetails.RecipientPerson.ResourceId },
                 recipientsByChannel);
         }
@@ -318,7 +318,7 @@ public class OrderRequestService : IOrderRequestService
         if (recipientDetails.RecipientOrganization is not null)
         {
             AddResourceBoundRecipientsToChannel(
-                recipientDetails.RecipientOrganization.ChannelScheme,
+                recipientDetails.RecipientOrganization.ChannelSchema,
                 new ResourceBoundRecipients { Recipients = [new Recipient() { NationalIdentityNumber = recipientDetails.RecipientOrganization.OrgNumber }], ResourceId = recipientDetails.RecipientOrganization.ResourceId },
                 recipientsByChannel);
         }

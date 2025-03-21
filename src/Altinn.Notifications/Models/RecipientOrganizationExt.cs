@@ -43,14 +43,14 @@ public class RecipientOrganizationExt
     /// </list>
     /// </remarks>
     [Required]
-    [JsonPropertyName("channelScheme")]
-    public required NotificationChannelExt ChannelScheme { get; set; }
+    [JsonPropertyName("channelSchema")]
+    public required NotificationChannelExt ChannelSchema { get; set; }
 
     /// <summary>
     /// Gets or sets the email-specific configuration, used when the channel scheme includes email.
     /// </summary>
     /// <remarks>
-    /// Required when <see cref="ChannelScheme"/> is set to <see cref="NotificationChannelExt.Email"/> 
+    /// Required when <see cref="ChannelSchema"/> is set to <see cref="NotificationChannelExt.Email"/> 
     /// or <see cref="NotificationChannelExt.EmailPreferred"/>.
     /// Contains email content, subject, sender information, and delivery preferences.
     /// </remarks>
@@ -61,7 +61,7 @@ public class RecipientOrganizationExt
     /// Gets or sets the SMS-specific configuration, used when the channel scheme includes SMS.
     /// </summary>
     /// <remarks>
-    /// Required when <see cref="ChannelScheme"/> is set to <see cref="NotificationChannelExt.Sms"/> 
+    /// Required when <see cref="ChannelSchema"/> is set to <see cref="NotificationChannelExt.Sms"/> 
     /// or <see cref="NotificationChannelExt.SmsPreferred"/>.
     /// Contains SMS content, sender information, and delivery preferences.
     /// </remarks>

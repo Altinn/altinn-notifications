@@ -34,7 +34,7 @@ public class RecipientPerson
     /// <item><description><see cref="NotificationChannel.SmsPreferred"/> - Try SMS first, fall back to email if SMS unavailable</description></item>
     /// </list>
     /// </remarks>
-    public required NotificationChannel ChannelScheme { get; set; }
+    public required NotificationChannel ChannelSchema { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether to bypass the recipient's reservation against electronic communication.
@@ -50,7 +50,7 @@ public class RecipientPerson
     /// Gets or sets the email-specific configuration, used when the channel scheme includes email.
     /// </summary>
     /// <remarks>
-    /// Required when <see cref="ChannelScheme"/> is set to <see cref="NotificationChannel.Email"/> 
+    /// Required when <see cref="ChannelSchema"/> is set to <see cref="NotificationChannel.Email"/> 
     /// or <see cref="NotificationChannel.EmailPreferred"/>.
     /// Contains email content, subject, sender information, and delivery preferences.
     /// </remarks>
@@ -60,7 +60,7 @@ public class RecipientPerson
     /// Gets or sets the SMS-specific configuration, used when the channel scheme includes SMS.
     /// </summary>
     /// <remarks>
-    /// Required when <see cref="ChannelScheme"/> is set to <see cref="NotificationChannel.Sms"/> 
+    /// Required when <see cref="ChannelSchema"/> is set to <see cref="NotificationChannel.Sms"/> 
     /// or <see cref="NotificationChannel.SmsPreferred"/>.
     /// Contains SMS content, sender information, and delivery preferences.
     /// </remarks>
