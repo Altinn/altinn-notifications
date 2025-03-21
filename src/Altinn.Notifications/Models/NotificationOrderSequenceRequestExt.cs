@@ -45,5 +45,5 @@ public class NotificationOrderSequenceRequestExt : NotificationOrderSchedulingEx
     /// Each reminder can have its own recipient settings, delay period, and triggering conditions.
     /// </remarks>
     [JsonPropertyName("reminders")]
-    public List<NotificationReminderRequestExt>? Reminders { get; set; }
+    public List<NotificationReminderExt>? Reminders { get; set; }
 }

@@ -8,31 +8,37 @@ namespace Altinn.Notifications.Core.Models.Orders;
 public class NotificationReminder
 {
     /// <summary>
-    /// Gets the order identifier.
+    /// Gets or sets the sender's reference for this reminder.
     /// </summary>
-    /// <value>
-    /// The order identifier.
-    /// </value>
-    public Guid OrderId { get; set; } = Guid.Empty;
+    /// <remarks>
+    /// A unique identifier used by the sender to correlate this reminder with their internal systems.
+    /// </remarks>
+    public string? SendersReference { get; set; }
 
     /// <summary>
-    /// Gets or sets the condition endpoint used to check the sending condition.
+    /// Gets or sets the condition endpoint used to determine if the reminder should be sent.
     /// </summary>
-    /// <value>
-    /// A URI that determines if the associated notifications should be sent based on certain conditions.
-    /// </value>
+    /// <remarks>
+    /// When specified, the system will call this endpoint before sending the reminder.
+    /// The reminder will only be sent if the endpoint returns a positive response.
+    /// This allows for dynamic decision-making about whether the reminder is still relevant.
+    /// </remarks>
     public Uri? ConditionEndpoint { get; set; }
 
     /// <summary>
-    /// Gets or sets the optional number of days to delay.
-    /// The reminder will be processed on or after (RequestedSendTime + DelayDays).
+    /// Gets or sets the number of days to delay this reminder.
     /// </summary>
-    public int? DelayDays { get; set; }
+    public required int DelayDays { get; set; } = 1;
 
     /// <summary>
-    /// Gets or sets the required recipient information, whether for mobile number, email-address, national identity, or organization number.
+    /// Gets or sets the recipient information for this reminder.
     /// </summary>
-    public required RecipientSpecification Recipient { get; set; } = new();
+    /// <remarks>
+    /// Specifies the target recipient through one of the supported channels:
+    /// email address, SMS number, national identity number, or organization number.
+    /// The reminder can be directed to a different recipient than the initial notification.
+    /// </remarks>
+    public required RecipientSpecification Recipient { get; set; }
 
     /// <summary>
     /// Gets or sets the date and time when the associated Email or SMS can be sent at the earliest.
@@ -41,12 +47,4 @@ public class NotificationReminder
     /// The requested send time, which can be null and defaults to the current date and time.
     /// </value>
     public DateTime? RequestedSendTime { get; set; }
-
-    /// <summary>
-    /// Gets or sets the sender's reference.
-    /// </summary>
-    /// <value>
-    /// A reference used to identify the notification order in the sender's system.
-    /// </value>
-    public string? SendersReference { get; set; }
 }
