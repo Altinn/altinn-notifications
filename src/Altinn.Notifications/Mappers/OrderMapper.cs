@@ -522,27 +522,6 @@ public static class OrderMapper
     }
 
     /// <summary>
-    /// Maps a <see cref="NotificationReminderExt"/> to a <see cref="NotificationReminder"/>.
-    /// </summary>
-    public static NotificationReminder MapToNotificationReminder(this NotificationReminderExt notificationReminderExt)
-    {
-        return new()
-        {
-            Recipient = new RecipientSpecification
-            {
-                RecipientSms = notificationReminderExt.Recipient.RecipientSms?.MapToRecipientSms(),
-                RecipientEmail = notificationReminderExt.Recipient.RecipientEmail?.MapToRecipientEmail(),
-                RecipientPerson = notificationReminderExt.Recipient.RecipientPerson?.MapToRecipientPerson(),
-                RecipientOrganization = notificationReminderExt.Recipient.RecipientOrganization?.MapToRecipientOrganization()
-            },
-
-            DelayDays = notificationReminderExt.DelayDays,
-            SendersReference = notificationReminderExt.SendersReference,
-            ConditionEndpoint = notificationReminderExt.ConditionEndpoint
-        };
-    }
-
-    /// <summary>
     /// Maps a List of <see cref="Recipient"/> to a List of <see cref="RecipientExt"/>
     /// </summary>
     internal static List<RecipientExt> MapToRecipientExt(this List<Recipient> recipients)
@@ -560,6 +539,27 @@ public static class OrderMapper
             }));
 
         return recipientExt;
+    }
+
+    /// <summary>
+    /// Maps a <see cref="NotificationReminderExt"/> to a <see cref="NotificationReminder"/>.
+    /// </summary>
+    private static NotificationReminder MapToNotificationReminder(this NotificationReminderExt notificationReminderExt)
+    {
+        return new()
+        {
+            Recipient = new RecipientSpecification
+            {
+                RecipientSms = notificationReminderExt.Recipient.RecipientSms?.MapToRecipientSms(),
+                RecipientEmail = notificationReminderExt.Recipient.RecipientEmail?.MapToRecipientEmail(),
+                RecipientPerson = notificationReminderExt.Recipient.RecipientPerson?.MapToRecipientPerson(),
+                RecipientOrganization = notificationReminderExt.Recipient.RecipientOrganization?.MapToRecipientOrganization()
+            },
+
+            DelayDays = notificationReminderExt.DelayDays,
+            SendersReference = notificationReminderExt.SendersReference,
+            ConditionEndpoint = notificationReminderExt.ConditionEndpoint
+        };
     }
 
     /// <summary>
@@ -698,7 +698,7 @@ public static class OrderMapper
     /// <summary>
     /// Maps a <see cref="SmsSendingOptionsExt"/> to a <see cref="SmsSendingOptions"/>.
     /// </summary>
-    public static SmsSendingOptions MapToSmsSendingOptions(this SmsSendingOptionsExt smsSendingOptionsExt)
+    private static SmsSendingOptions MapToSmsSendingOptions(this SmsSendingOptionsExt smsSendingOptionsExt)
     {
         return new SmsSendingOptions
         {
@@ -738,7 +738,7 @@ public static class OrderMapper
     /// <summary>
     /// Maps a <see cref="RecipientEmailExt"/> to a <see cref="RecipientEmail"/>.
     /// </summary>
-    public static RecipientEmail? MapToRecipientEmail(this RecipientEmailExt recipientEmailExt)
+    private static RecipientEmail? MapToRecipientEmail(this RecipientEmailExt recipientEmailExt)
     {
         if (recipientEmailExt.Settings == null)
         {
@@ -755,7 +755,7 @@ public static class OrderMapper
     /// <summary>
     /// Maps a <see cref="RecipientPersonExt"/> to a <see cref="RecipientPerson"/>.
     /// </summary>
-    public static RecipientPerson? MapToRecipientPerson(this RecipientPersonExt recipientPersonExt)
+    private static RecipientPerson? MapToRecipientPerson(this RecipientPersonExt recipientPersonExt)
     {
         var smsSettings = recipientPersonExt.SmsSettings?.MapToSmsSendingOptions();
         var emailSettings = recipientPersonExt.EmailSettings?.MapToEmailSendingOptions();
@@ -774,7 +774,7 @@ public static class OrderMapper
     /// <summary>
     /// Maps a <see cref="RecipientOrganizationExt"/> to a <see cref="RecipientOrganization"/>.
     /// </summary>
-    public static RecipientOrganization? MapToRecipientOrganization(this RecipientOrganizationExt recipientOrganizationExt)
+    private static RecipientOrganization? MapToRecipientOrganization(this RecipientOrganizationExt recipientOrganizationExt)
     {
         var smsSettings = recipientOrganizationExt.SmsSettings?.MapToSmsSendingOptions();
         var emailSettings = recipientOrganizationExt.EmailSettings?.MapToEmailSendingOptions();
