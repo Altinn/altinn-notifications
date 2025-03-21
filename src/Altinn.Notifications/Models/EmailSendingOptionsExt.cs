@@ -7,7 +7,7 @@ namespace Altinn.Notifications.Models;
 /// <summary>
 /// Defines email configuration settings used in notification requests.
 /// </summary>
-public class EmailSendingOptionsRequestExt
+public class EmailSendingOptionsExt
 {
     /// <summary>
     /// Gets or sets the display name of the sender.

@@ -10,7 +10,7 @@ namespace Altinn.Notifications.Models;
 /// This class is used in the API for configuring email notification delivery to a single recipient
 /// with specific content and delivery preferences.
 /// </remarks>
-public class RecipientEmailRequestExt
+public class RecipientEmailExt
 {
     /// <summary>
     /// Gets or sets the email address of the intended recipient.
@@ -30,5 +30,5 @@ public class RecipientEmailRequestExt
     /// </remarks>
     [Required]
     [JsonPropertyName("emailSettings")]
-    public required EmailSendingOptionsRequestExt Settings { get; set; }
+    public required EmailSendingOptionsExt Settings { get; set; }
 }

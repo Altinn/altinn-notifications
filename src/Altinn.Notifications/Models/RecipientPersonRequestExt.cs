@@ -65,7 +65,7 @@ public class RecipientPersonRequestExt
     /// Contains email content, subject, sender information, and delivery preferences.
     /// </remarks>
     [JsonPropertyName("emailSettings")]
-    public EmailSendingOptionsRequestExt? EmailSettings { get; set; }
+    public EmailSendingOptionsExt? EmailSettings { get; set; }
 
     /// <summary>
     /// Gets or sets the SMS-specific configuration, used when the channel scheme includes SMS.

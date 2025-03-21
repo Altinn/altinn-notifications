@@ -18,7 +18,7 @@ public class RecipientSpecificationRequestExt
     /// Use when you have the recipient's email address and want to send an email notification directly.
     /// </remarks>
     [JsonPropertyName("recipientEmail")]
-    public RecipientEmailRequestExt? RecipientEmail { get; set; }
+    public RecipientEmailExt? RecipientEmail { get; set; }
 
     /// <summary>
     /// Gets or sets the configuration for delivering a notification directly to a phone number.

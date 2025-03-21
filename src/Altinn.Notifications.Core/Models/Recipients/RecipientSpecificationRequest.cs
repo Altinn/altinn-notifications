@@ -9,7 +9,7 @@ public class RecipientSpecificationRequest
     /// Gets or sets an object capturing all the information needed
     /// to send an email to a specific address.
     /// </summary>
-    public RecipientEmailRequest? RecipientEmail { get; set; }
+    public RecipientEmail? RecipientEmail { get; set; }
 
     /// <summary>
     /// Gets or sets an object capturing all the information needed

@@ -5,7 +5,7 @@ using Altinn.Notifications.Core.Enums;
 namespace Altinn.Notifications.Core.Models.Recipients;
 
 /// <summary>
-/// Represents configuration settings that are associated with the request model for sending an E-mail to a specific recipient.
+/// Defines email configuration settings used in notification requests.
 /// </summary>
 public class EmailSendingOptions
 {

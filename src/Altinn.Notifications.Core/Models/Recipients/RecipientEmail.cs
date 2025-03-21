@@ -1,9 +1,9 @@
 ﻿namespace Altinn.Notifications.Core.Models.Recipients;
 
 /// <summary>
-/// Represents a request for sending an email to a specific recipient.
+/// Defines a request for sending an email notification to a specific email address.
 /// </summary>
-public class RecipientEmailRequest
+public class RecipientEmail
 {
     /// <summary>
     /// Gets or sets the email address of the intended recipient.
