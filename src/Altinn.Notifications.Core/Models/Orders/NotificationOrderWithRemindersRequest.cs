@@ -4,9 +4,9 @@ namespace Altinn.Notifications.Core.Models.Orders;
 
 /// <summary>
 /// Represents a request to create a notification order with one or more reminders.
-/// Inherits the common data fragment from <see cref="NotificationOrderWithRemindersBase"/>.
+/// Inherits the common data fragment from <see cref="NotificationOrderRequestScheduling"/>.
 /// </summary>
-public class NotificationOrderWithRemindersRequest : NotificationOrderWithRemindersBase
+public class NotificationOrderWithRemindersRequest : NotificationOrderRequestScheduling
 {
     /// <summary>
     /// Gets or sets optional identifiers for one or more dialogs or transmissions in Dialogporten.

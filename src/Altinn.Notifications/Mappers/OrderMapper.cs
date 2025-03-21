@@ -145,9 +145,9 @@ public static class OrderMapper
     }
 
     /// <summary>
-    /// Maps a <see cref="NotificationOrdersSequenceRequestExt"/> to a <see cref="NotificationOrderWithRemindersRequest"/>
+    /// Maps a <see cref="NotificationOrderSequenceRequestExt"/> to a <see cref="NotificationOrderWithRemindersRequest"/>
     /// </summary>
-    public static NotificationOrderWithRemindersRequest MapToOrderWithRemindersRequest(this NotificationOrderSequenceRequestExt extRequest, string creator)
+    public static NotificationOrderWithRemindersRequest MapToNotificationOrderSequenceRequest(this NotificationOrderSequenceRequestExt extRequest, string creator)
     {
         NotificationOrderWithRemindersRequest notificationOrderWithRemindersRequest = new()
         {

@@ -10,6 +10,16 @@ namespace Altinn.Notifications.Models;
 public class NotificationOrderSequenceRequestExt : NotificationOrderRequestSchedulingExt
 {
     /// <summary>
+    /// Gets or sets optional identifiers for one or more dialogs or transmissions in Dialogporten.
+    /// </summary>
+    /// <remarks>
+    /// When specified, this associates the notification with specific dialogs or transmissions
+    /// in the Dialogporten service, enabling integration between notifications and Dialogporten.
+    /// </remarks>
+    [JsonPropertyName("dialogportenAssociation")]
+    public DialogportenReferenceRequestExt? DialogportenAssociation { get; set; }
+
+    /// <summary>
     /// Gets or sets the idempotency identifier defined by the sender.
     /// </summary>
     [Required]
@@ -36,14 +46,4 @@ public class NotificationOrderSequenceRequestExt : NotificationOrderRequestSched
     /// </remarks>
     [JsonPropertyName("reminders")]
     public List<NotificationReminderRequestExt>? Reminders { get; set; }
-
-    /// <summary>
-    /// Gets or sets optional identifiers for one or more dialogs or transmissions in Dialogporten.
-    /// </summary>
-    /// <remarks>
-    /// When specified, this associates the notification with specific dialogs or transmissions
-    /// in the Dialogporten service, enabling integration between notifications and Dialogporten.
-    /// </remarks>
-    [JsonPropertyName("dialogportenAssociation")]
-    public DialogportenReferenceRequestExt? DialogportenAssociation { get; set; }
 }
