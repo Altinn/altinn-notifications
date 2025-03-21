@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 namespace Altinn.Notifications.Models;
@@ -14,23 +15,13 @@ namespace Altinn.Notifications.Models;
 public class NotificationReminderRequestExt
 {
     /// <summary>
-    /// Gets or sets the recipient information for this reminder.
+    /// Gets or sets the sender's reference for this reminder.
     /// </summary>
     /// <remarks>
-    /// Specifies the target recipient through one of the supported channels:
-    /// email address, SMS number, national identity number, or organization number.
-    /// The reminder can be directed to a different recipient than the initial notification.
+    /// A unique identifier used by the sender to correlate this reminder with their internal systems.
     /// </remarks>
-    [Required]
-    [JsonPropertyName("recipient")]
-    public required RecipientSpecificationRequestExt Recipient { get; set; }
-
-    /// <summary>
-    /// Gets or sets the number of days to delay this reminder.
-    /// </summary>
-    [Required]
-    [JsonPropertyName("delayDays")]
-    public required int DelayDays { get; set; }
+    [JsonPropertyName("sendersReference")]
+    public string? SendersReference { get; set; }
 
     /// <summary>
     /// Gets or sets the condition endpoint used to determine if the reminder should be sent.
@@ -44,11 +35,22 @@ public class NotificationReminderRequestExt
     public Uri? ConditionEndpoint { get; set; }
 
     /// <summary>
-    /// Gets or sets the sender's reference for this reminder.
+    /// Gets or sets the number of days to delay this reminder.
+    /// </summary>
+    [Required]
+    [DefaultValue(1)]
+    [JsonPropertyName("delayDays")]
+    public required int DelayDays { get; set; } = 1;
+
+    /// <summary>
+    /// Gets or sets the recipient information for this reminder.
     /// </summary>
     /// <remarks>
-    /// A unique identifier used by the sender to correlate this reminder with their internal systems.
+    /// Specifies the target recipient through one of the supported channels:
+    /// email address, SMS number, national identity number, or organization number.
+    /// The reminder can be directed to a different recipient than the initial notification.
     /// </remarks>
-    [JsonPropertyName("sendersReference")]
-    public string? SendersReference { get; set; }
+    [Required]
+    [JsonPropertyName("recipient")]
+    public required RecipientSpecificationRequestExt Recipient { get; set; }
 }

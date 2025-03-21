@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 namespace Altinn.Notifications.Models;
@@ -56,6 +57,7 @@ public class EmailSendingOptionsRequestExt
     /// Determines how email clients will render the body content.
     /// </remarks>
     [JsonPropertyName("contentType")]
+    [DefaultValue(EmailContentTypeExt.Plain)]
     public EmailContentTypeExt ContentType { get; set; } = EmailContentTypeExt.Plain;
 
     /// <summary>
@@ -65,5 +67,6 @@ public class EmailSendingOptionsRequestExt
     /// Defaults to <see cref="SendingTimePolicyExt.Anytime"/> allowing delivery at any time.
     /// </remarks>
     [JsonPropertyName("sendingTimePolicy")]
+    [DefaultValue(SendingTimePolicyExt.Anytime)]
     public SendingTimePolicyExt SendingTimePolicy { get; set; } = SendingTimePolicyExt.Anytime;
 }

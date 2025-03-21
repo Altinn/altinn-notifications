@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 namespace Altinn.Notifications.Models;
@@ -35,5 +36,6 @@ public class SmsSendingOptionsRequestExt
     /// Defaults to <see cref="SendingTimePolicyExt.Daytime"/> to respect standard business hours (08:00-17:00 CET).
     /// </remarks>
     [JsonPropertyName("sendingTimePolicy")]
+    [DefaultValue(SendingTimePolicyExt.Daytime)]
     public SendingTimePolicyExt SendingTimePolicy { get; set; } = SendingTimePolicyExt.Daytime;
 }
