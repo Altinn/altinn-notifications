@@ -7,7 +7,7 @@ namespace Altinn.Notifications.Models;
 /// <summary>
 /// Defines SMS configuration settings used in notification requests.
 /// </summary>
-public class SmsSendingOptionsRequestExt
+public class SmsSendingOptionsExt
 {
     /// <summary>
     /// Gets or sets the sender identifier displayed in the recipient's SMS message.

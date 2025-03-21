@@ -76,5 +76,5 @@ public class RecipientPersonRequestExt
     /// Contains SMS content, sender information, and delivery preferences.
     /// </remarks>
     [JsonPropertyName("smsSettings")]
-    public SmsSendingOptionsRequestExt? SmsSettings { get; set; }
+    public SmsSendingOptionsExt? SmsSettings { get; set; }
 }

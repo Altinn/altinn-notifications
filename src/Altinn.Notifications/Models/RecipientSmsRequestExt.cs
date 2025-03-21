@@ -30,5 +30,5 @@ public class RecipientSmsRequestExt
     /// </remarks>
     [Required]
     [JsonPropertyName("smsSettings")]
-    public required SmsSendingOptionsRequestExt Settings { get; set; }
+    public required SmsSendingOptionsExt Settings { get; set; }
 }
