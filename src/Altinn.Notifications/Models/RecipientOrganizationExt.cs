@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 namespace Altinn.Notifications.Models;
 
 /// <summary>
-/// Defines a request for sending notifications to an organization's contact person.
+/// Defines a model for sending notifications to an organization's contact person.
 /// </summary>
 /// <remarks>
 /// This class enables notifications to be sent to organizations through their registered

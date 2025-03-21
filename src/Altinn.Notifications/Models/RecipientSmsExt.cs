@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 namespace Altinn.Notifications.Models;
 
 /// <summary>
-/// Represents the model for sending an SMS to a specific recipient.
+/// Represents the model for sending an SMS to a specific mobile number.
 /// </summary>
 /// <remarks>
 /// This class is used in the API for configuring SMS notification delivery to a single recipient with specific content and delivery preferences.

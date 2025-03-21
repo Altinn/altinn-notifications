@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 namespace Altinn.Notifications.Models;
 
 /// <summary>
-/// Defines email configuration settings used in notification requests.
+/// Defines email configuration settings used in notification order requests.
 /// </summary>
 public class EmailSendingOptionsExt
 {

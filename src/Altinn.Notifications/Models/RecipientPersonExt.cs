@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 namespace Altinn.Notifications.Models;
 
 /// <summary>
-/// Defines a request for sending notifications to a person identified by their national identity number.
+/// Defines a model for sending notifications to a person identified by their national identity number.
 /// </summary>
 /// <remarks>
 /// This class enables notifications to be sent to citizens through the Common Contact Register (KRR) integration,

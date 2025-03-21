@@ -3,7 +3,7 @@
 namespace Altinn.Notifications.Core.Models.Recipients;
 
 /// <summary>
-/// Represents a request for sending an email or SMS to a contact person
+/// Represents a model for sending an email or SMS to a contact person
 /// identified by an organization number, including configuration details.
 /// </summary>
 public class RecipientOrganization

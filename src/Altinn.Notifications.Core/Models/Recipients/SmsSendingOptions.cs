@@ -3,7 +3,7 @@
 namespace Altinn.Notifications.Core.Models.Recipients;
 
 /// <summary>
-/// Defines SMS configuration settings used in notification requests.
+/// Defines SMS configuration settings used in notification orders.
 /// </summary>
 public class SmsSendingOptions
 {

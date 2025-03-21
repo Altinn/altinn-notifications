@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 namespace Altinn.Notifications.Models;
 
 /// <summary>
-/// Defines SMS configuration settings used in notification requests.
+/// Defines SMS configuration settings used in notification order requests.
 /// </summary>
 public class SmsSendingOptionsExt
 {

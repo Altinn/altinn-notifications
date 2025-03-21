@@ -1,7 +1,7 @@
 ﻿namespace Altinn.Notifications.Core.Models.Recipients;
 
 /// <summary>
-/// Represents the model for sending an SMS to a specific recipient.
+/// Represents the model for sending an SMS to a specific mobile number.
 /// </summary>
 public class RecipientSms
 {

@@ -3,7 +3,7 @@
 namespace Altinn.Notifications.Core.Models.Recipients;
 
 /// <summary>
-/// Represents a request containing all the information needed to deliver either
+/// Represents a model containing all the information needed to deliver either
 /// an email or SMS to a specific person identified by their national identity number.
 /// </summary>
 public class RecipientPerson
