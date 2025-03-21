@@ -36,7 +36,7 @@ public class NotificationOrderSequenceRequestExt : NotificationOrderRequestSched
     /// </remarks>
     [Required]
     [JsonPropertyName("recipient")]
-    public required RecipientSpecificationRequestExt Recipient { get; set; }
+    public required RecipientSpecificationExt Recipient { get; set; }
 
     /// <summary>
     /// Gets or sets a list of reminders that may be triggered under certain conditions after the initial notification has been processed.

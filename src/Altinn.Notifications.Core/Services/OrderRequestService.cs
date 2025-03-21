@@ -240,7 +240,7 @@ public class OrderRequestService : IOrderRequestService
     /// <summary>
     /// Applies default sender values if they are not set.
     /// </summary>
-    private void ApplyDefaultSender(RecipientSpecificationRequest recipients)
+    private void ApplyDefaultSender(RecipientSpecification recipients)
     {
         if (recipients == null)
         {
@@ -282,7 +282,7 @@ public class OrderRequestService : IOrderRequestService
     }
 
     /// <summary>
-    /// Organizes recipients from an <see cref="RecipientSpecificationRequest"/> container into appropriate notification channels while preserving their resource context.
+    /// Organizes recipients from an <see cref="RecipientSpecification"/> container into appropriate notification channels while preserving their resource context.
     /// </summary>
     /// <param name="recipientDetails">Container with recipient information, which may include person and/or organization recipients.</param>
     /// <param name="recipientsByChannel">Dictionary that categorizes recipients by notification channel and resource identifier.</param>
@@ -300,7 +300,7 @@ public class OrderRequestService : IOrderRequestService
     /// processing while maintaining their association with resources. Each recipient is wrapped in a 
     /// <see cref="ResourceBoundRecipients"/> container before being added to the appropriate channel collection.
     /// </remarks>
-    private static void OrganizeRecipientsByChannelAndResource(RecipientSpecificationRequest? recipientDetails, Dictionary<NotificationChannel, List<ResourceBoundRecipients>> recipientsByChannel)
+    private static void OrganizeRecipientsByChannelAndResource(RecipientSpecification? recipientDetails, Dictionary<NotificationChannel, List<ResourceBoundRecipients>> recipientsByChannel)
     {
         if (recipientDetails is null)
         {
