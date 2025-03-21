@@ -5,9 +5,9 @@ namespace Altinn.Notifications.Models;
 
 /// <summary>
 /// Represents a request to create a notification order with non or more reminders.
-/// Inherits the scheduling options from <see cref="NotificationOrderRequestSchedulingExt"/>.
+/// Inherits the scheduling options from <see cref="NotificationOrderSchedulingExt"/>.
 /// </summary>
-public class NotificationOrderSequenceRequestExt : NotificationOrderRequestSchedulingExt
+public class NotificationOrderSequenceRequestExt : NotificationOrderSchedulingExt
 {
     /// <summary>
     /// Gets or sets optional identifiers for one or more dialogs or transmissions in Dialogporten.

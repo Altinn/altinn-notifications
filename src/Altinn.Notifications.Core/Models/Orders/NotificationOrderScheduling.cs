@@ -1,6 +1,4 @@
-﻿using System.Text.Json.Serialization;
-
-namespace Altinn.Notifications.Models;
+﻿namespace Altinn.Notifications.Core.Models.Orders;
 
 /// <summary>
 /// Defines common scheduling and conditional execution parameters for notification requests.
@@ -9,7 +7,7 @@ namespace Altinn.Notifications.Models;
 /// This base class provides fundamental parameters that control when and under what conditions
 /// notifications should be delivered. It serves as a foundation for more specialized notification request types.
 /// </remarks>
-public class NotificationOrderRequestSchedulingExt
+public class NotificationOrderScheduling
 {
     /// <summary>
     /// Gets or sets the sender's reference identifier.
@@ -17,7 +15,6 @@ public class NotificationOrderRequestSchedulingExt
     /// <remarks>
     /// An optional identifier used to correlate the notification with records in the sender's system.
     /// </remarks>
-    [JsonPropertyName("sendersReference")]
     public string? SendersReference { get; set; }
 
     /// <summary>
@@ -28,7 +25,6 @@ public class NotificationOrderRequestSchedulingExt
     /// before this time, but may deliver it later depending on system load and availability.
     /// Defaults to the current UTC time if not specified.
     /// </remarks>
-    [JsonPropertyName("requestedSendTime")]
     public DateTime RequestedSendTime { get; set; } = DateTime.UtcNow;
 
     /// <summary>
@@ -39,6 +35,5 @@ public class NotificationOrderRequestSchedulingExt
     /// The notification will only be sent if the endpoint returns a positive response.
     /// This enables conditional delivery based on external business rules or state.
     /// </remarks>
-    [JsonPropertyName("conditionEndpoint")]
     public Uri? ConditionEndpoint { get; set; }
 }
