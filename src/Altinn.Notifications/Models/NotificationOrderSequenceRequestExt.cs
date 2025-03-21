@@ -17,7 +17,7 @@ public class NotificationOrderSequenceRequestExt : NotificationOrderRequestSched
     /// in the Dialogporten service, enabling integration between notifications and Dialogporten.
     /// </remarks>
     [JsonPropertyName("dialogportenAssociation")]
-    public DialogportenReferenceRequestExt? DialogportenAssociation { get; set; }
+    public DialogportenReferenceExt? DialogportenAssociation { get; set; }
 
     /// <summary>
     /// Gets or sets the idempotency identifier defined by the sender.
