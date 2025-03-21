@@ -19,7 +19,6 @@ public class RecipientEmailRequestExt
     /// This is the destination address where the email will be delivered.
     /// </remarks>
     [Required]
-    [JsonPropertyOrder(1)]
     [JsonPropertyName("emailAddress")]
     public required string EmailAddress { get; set; }
 
@@ -30,7 +29,6 @@ public class RecipientEmailRequestExt
     /// These settings control how and when the email will be composed and delivered to the recipient.
     /// </remarks>
     [Required]
-    [JsonPropertyOrder(2)]
     [JsonPropertyName("emailSettings")]
     public required EmailSendingOptionsRequestExt Settings { get; set; }
 }

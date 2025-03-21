@@ -17,7 +17,6 @@ public class RecipientSpecificationRequestExt
     /// <remarks>
     /// Use when you have the recipient's email address and want to send an email notification directly.
     /// </remarks>
-    [JsonPropertyOrder(2)]
     [JsonPropertyName("recipientEmail")]
     public RecipientEmailRequestExt? RecipientEmail { get; set; }
 
@@ -26,9 +25,8 @@ public class RecipientSpecificationRequestExt
     /// </summary>
     /// <remarks>
     /// Use when targeting an organization by its organization number, where contact information
-    /// will be retrieved from the Central Coordinating Register for Legal Entities.
+    /// will be retrieved from the Norwegian Central Coordinating Register for Legal Entities (Einingsregisteret).
     /// </remarks>
-    [JsonPropertyOrder(4)]
     [JsonPropertyName("recipientOrganization")]
     public RecipientOrganizationRequestExt? RecipientOrganization { get; set; }
 
@@ -37,9 +35,8 @@ public class RecipientSpecificationRequestExt
     /// </summary>
     /// <remarks>
     /// Use when targeting an individual by their national identity number, where contact information
-    /// will be retrieved from the Contact Registry (KRR).
+    /// will be retrieved from the the Common Contact Register (KRR).
     /// </remarks>
-    [JsonPropertyOrder(3)]
     [JsonPropertyName("recipientPerson")]
     public RecipientPersonRequestExt? RecipientPerson { get; set; }
 
@@ -49,7 +46,6 @@ public class RecipientSpecificationRequestExt
     /// <remarks>
     /// Use when you have the recipient's phone number and want to send an SMS notification directly.
     /// </remarks>
-    [JsonPropertyOrder(1)]
     [JsonPropertyName("recipientSms")]
     public RecipientSmsRequestExt? RecipientSms { get; set; }
 }

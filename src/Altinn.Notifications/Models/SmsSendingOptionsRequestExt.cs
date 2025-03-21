@@ -12,10 +12,9 @@ public class SmsSendingOptionsRequestExt
     /// Gets or sets the sender identifier displayed in the recipient's SMS message.
     /// </summary>
     /// <remarks>
-    /// Can be either a phone number or an alphanumeric sender ID, subject to carrier and regional restrictions.
+    /// Can be either a phone number or an alphanumeric sender identifier, subject to carrier and regional restrictions.
     /// </remarks>
     [Required]
-    [JsonPropertyOrder(1)]
     [JsonPropertyName("sender")]
     public required string Sender { get; set; }
 
@@ -26,7 +25,6 @@ public class SmsSendingOptionsRequestExt
     /// Plain text content with length constraints determined by carrier limitations and character encoding.
     /// </remarks>
     [Required]
-    [JsonPropertyOrder(2)]
     [JsonPropertyName("body")]
     public required string Body { get; set; }
 
@@ -36,7 +34,6 @@ public class SmsSendingOptionsRequestExt
     /// <remarks>
     /// Defaults to <see cref="SendingTimePolicyExt.Daytime"/> to respect standard business hours (08:00-17:00 CET).
     /// </remarks>
-    [JsonPropertyOrder(3)]
     [JsonPropertyName("sendingTimePolicy")]
     public SendingTimePolicyExt SendingTimePolicy { get; set; } = SendingTimePolicyExt.Daytime;
 }

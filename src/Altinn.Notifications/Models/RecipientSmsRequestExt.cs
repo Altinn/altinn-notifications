@@ -16,10 +16,9 @@ public class RecipientSmsRequestExt
     /// </summary>
     /// <remarks>
     /// This is the destination number where the SMS will be delivered.
-    /// The phone number should include the country code with a leading plus sign (e.g., +4799999999).
+    /// The phone number should include the country code (e.g., +4799999999).
     /// </remarks>
     [Required]
-    [JsonPropertyOrder(1)]
     [JsonPropertyName("phoneNumber")]
     public required string PhoneNumber { get; set; }
 
@@ -28,10 +27,8 @@ public class RecipientSmsRequestExt
     /// </summary>
     /// <remarks>
     /// Contains sender information, message content, and delivery timing preferences.
-    /// These settings control how and when the SMS will be delivered to the recipient.
     /// </remarks>
     [Required]
-    [JsonPropertyOrder(2)]
     [JsonPropertyName("smsSettings")]
     public required SmsSendingOptionsRequestExt Settings { get; set; }
 }

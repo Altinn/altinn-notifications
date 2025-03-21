@@ -15,7 +15,6 @@ public class EmailSendingOptionsRequestExt
     /// Can only be used if <see cref="SenderEmailAddress"/> is set.
     /// Appears alongside the email address in the recipient's email client.
     /// </remarks>
-    [JsonPropertyOrder(1)]
     [JsonPropertyName("senderName")]
     public string? SenderName { get; set; }
 
@@ -25,7 +24,6 @@ public class EmailSendingOptionsRequestExt
     /// <remarks>
     /// This value determines which address will appear as the sender in the recipient's mailbox.
     /// </remarks>
-    [JsonPropertyOrder(2)]
     [JsonPropertyName("senderEmailAddress")]
     public string? SenderEmailAddress { get; set; }
 
@@ -36,7 +34,6 @@ public class EmailSendingOptionsRequestExt
     /// Displayed as the email headline in the recipient's inbox.
     /// </remarks>
     [Required]
-    [JsonPropertyOrder(3)]
     [JsonPropertyName("subject")]
     public required string Subject { get; set; }
 
@@ -45,10 +42,9 @@ public class EmailSendingOptionsRequestExt
     /// </summary>
     /// <remarks>
     /// Contains the primary message content to be delivered to the recipient.
-    /// May include plain text or HTML markup depending on the ContentType setting.
+    /// May include plain text or HTML markup depending on the <see cref="ContentType"/> setting.
     /// </remarks>
     [Required]
-    [JsonPropertyOrder(4)]
     [JsonPropertyName("body")]
     public required string Body { get; set; }
 
@@ -59,7 +55,6 @@ public class EmailSendingOptionsRequestExt
     /// Defaults to <see cref="EmailContentTypeExt.Plain"/>.
     /// Determines how email clients will render the body content.
     /// </remarks>
-    [JsonPropertyOrder(5)]
     [JsonPropertyName("contentType")]
     public EmailContentTypeExt ContentType { get; set; } = EmailContentTypeExt.Plain;
 
@@ -69,7 +64,6 @@ public class EmailSendingOptionsRequestExt
     /// <remarks>
     /// Defaults to <see cref="SendingTimePolicyExt.Anytime"/> allowing delivery at any time.
     /// </remarks>
-    [JsonPropertyOrder(6)]
     [JsonPropertyName("sendingTimePolicy")]
     public SendingTimePolicyExt SendingTimePolicy { get; set; } = SendingTimePolicyExt.Anytime;
 }
