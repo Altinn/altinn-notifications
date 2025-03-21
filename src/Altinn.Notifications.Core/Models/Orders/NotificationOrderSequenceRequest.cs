@@ -11,7 +11,14 @@ public class NotificationOrderSequenceRequest : NotificationOrderRequestScheduli
     /// <summary>
     /// Gets or sets optional identifiers for one or more dialogs or transmissions in Dialogporten.
     /// </summary>
-    public DialogportenAssociation? DialogportenAssociation { get; set; }
+    public DialogportenReferenceRequest? DialogportenAssociation { get; set; }
+
+
+
+
+
+
+
 
     /// <summary>
     /// Gets or sets the idempotency identifier defined by the sender.

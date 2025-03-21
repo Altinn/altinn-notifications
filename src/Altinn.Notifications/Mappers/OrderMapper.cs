@@ -364,9 +364,9 @@ public static class OrderMapper
         return smsAddressPoint?.MobileNumber;
     }
 
-    private static DialogportenAssociation? MapDialogportenAssociation(DialogportenReferenceRequestExt? source)
+    private static DialogportenReferenceRequest? MapDialogportenAssociation(DialogportenReferenceRequestExt? source)
     {
-        return source is null ? null : new DialogportenAssociation
+        return source is null ? null : new DialogportenReferenceRequest
         {
             DialogId = source.DialogId,
             TransmissionId = source.TransmissionId
