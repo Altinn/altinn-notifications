@@ -104,8 +104,6 @@ public class OrderRequestService : IOrderRequestService
 
                 loopIndex++;
             }
-
-
         }
 
         NotificationOrderWithRemindersRequest savedOrder = await _repository.Create(orderRequest);

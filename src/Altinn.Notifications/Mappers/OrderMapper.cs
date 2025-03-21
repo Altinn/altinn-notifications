@@ -145,9 +145,9 @@ public static class OrderMapper
     }
 
     /// <summary>
-    /// Maps a <see cref="NotificationOrderWithRemindersRequestExt"/> to a <see cref="NotificationOrderWithRemindersRequest"/>
+    /// Maps a <see cref="NotificationOrdersSequenceRequestExt"/> to a <see cref="NotificationOrderWithRemindersRequest"/>
     /// </summary>
-    public static NotificationOrderWithRemindersRequest MapToOrderWithRemindersRequest(this NotificationOrderWithRemindersRequestExt extRequest, string creator)
+    public static NotificationOrderWithRemindersRequest MapToOrderWithRemindersRequest(this NotificationOrderSequenceRequestExt extRequest, string creator)
     {
         NotificationOrderWithRemindersRequest notificationOrderWithRemindersRequest = new()
         {
@@ -364,7 +364,7 @@ public static class OrderMapper
         return smsAddressPoint?.MobileNumber;
     }
 
-    private static DialogportenAssociation? MapDialogportenAssociation(DialogportenAssociationExt? source)
+    private static DialogportenAssociation? MapDialogportenAssociation(DialogportenReferenceRequestExt? source)
     {
         return source is null ? null : new DialogportenAssociation
         {
@@ -432,7 +432,7 @@ public static class OrderMapper
         };
     }
 
-    private static SmsRecipientPayloadSettings? MapSmsRecipientPayloadSettings(RecipientSmsSettingsRequestExt? source)
+    private static SmsRecipientPayloadSettings? MapSmsRecipientPayloadSettings(SmsSendingOptionsRequestExt? source)
     {
         return source is null ? null : new SmsRecipientPayloadSettings
         {
@@ -442,7 +442,7 @@ public static class OrderMapper
         };
     }
 
-    private static EmailRecipientPayloadSettings? MapEmailRecipientPayloadSettings(RecipientEmailSettingsRequestExt? source)
+    private static EmailRecipientPayloadSettings? MapEmailRecipientPayloadSettings(EmailSendingOptionsRequestExt? source)
     {
         return source is null ? null : new EmailRecipientPayloadSettings
         {
@@ -455,7 +455,7 @@ public static class OrderMapper
         };
     }
 
-    private static NotificationReminder MapNotificationReminders(NotificationOrderReminderRequestExt source)
+    private static NotificationReminder MapNotificationReminders(NotificationReminderRequestExt source)
     {
         return new()
         {

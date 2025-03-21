@@ -5,14 +5,14 @@ using FluentValidation;
 namespace Altinn.Notifications.Validators
 {
     /// <summary>
-    /// Represents validation logic for the dialogporten association model.
+    /// Represents validation logic for the dialogporten reference request.
     /// </summary>
-    public class DialogportenAssociationValidator : AbstractValidator<DialogportenAssociationExt?>
+    public class DialogportenReferenceRequestValidator : AbstractValidator<DialogportenReferenceRequestExt?>
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="DialogportenAssociationValidator"/> class.
+        /// Initializes a new instance of the <see cref="DialogportenReferenceRequestValidator"/> class.
         /// </summary>
-        public DialogportenAssociationValidator()
+        public DialogportenReferenceRequestValidator()
         {
             RuleFor(association => association)
                 .NotNull()

@@ -14,22 +14,29 @@ using Altinn.Notifications.Integrations.Extensions;
 using Altinn.Notifications.Middleware;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Persistence.Extensions;
+using Altinn.Notifications.Swagger;
 using Altinn.Notifications.Telemetry;
 using Altinn.Notifications.Validators;
+
 using AltinnCore.Authentication.JwtCookie;
 
 using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.Exporter;
 using Azure.Security.KeyVault.Secrets;
+
 using FluentValidation;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+
 using Npgsql;
+
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+
 using Swashbuckle.AspNetCore.Filters;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
@@ -52,9 +59,11 @@ ConfigureServices(builder.Services, builder.Configuration);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
-    bool includeUnauthorizedAndForbiddenResponses = true; 
     string bearerSecuritySchemaName = "bearerAuth";
+    bool includeUnauthorizedAndForbiddenResponses = true;
+
     options.OperationFilter<SecurityRequirementsOperationFilter>(includeUnauthorizedAndForbiddenResponses, bearerSecuritySchemaName);
+
     options.AddSecurityDefinition(bearerSecuritySchemaName, new OpenApiSecurityScheme
     {
         Type = SecuritySchemeType.Http,
@@ -62,8 +71,12 @@ builder.Services.AddSwaggerGen(options =>
         BearerFormat = "JWT",
         Description = "JWT Authorization header using the Bearer scheme."
     });
+
     IncludeXmlComments(options);
+    
     options.EnableAnnotations();
+    options.UseInlineDefinitionsForEnums();
+    options.SchemaFilter<SwaggerDefaultValues>();
     options.OperationFilter<AddResponseHeadersFilter>();
 });
 
@@ -104,8 +117,8 @@ void ConfigureApplicationLogging(ILoggingBuilder logging)
 {
     logging.AddOpenTelemetry(builder =>
     {
-       builder.IncludeFormattedMessage = true;
-       builder.IncludeScopes = true; 
+        builder.IncludeFormattedMessage = true;
+        builder.IncludeScopes = true;
     });
 }
 
@@ -122,7 +135,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
 
     services.AddOpenTelemetry()
         .ConfigureResource(resourceBuilder => resourceBuilder.AddAttributes(attributes))
-        .WithMetrics(metrics => 
+        .WithMetrics(metrics =>
         {
             metrics.AddAspNetCoreInstrumentation();
             metrics.AddMeter(
@@ -130,7 +143,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
                 "Microsoft.AspNetCore.Server.Kestrel",
                 "System.Net.Http");
         })
-        .WithTracing(tracing => 
+        .WithTracing(tracing =>
         {
             if (builder.Environment.IsDevelopment())
             {
@@ -140,7 +153,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
             tracing.AddAspNetCoreInstrumentation();
 
             tracing.AddHttpClientInstrumentation();
-            
+
             tracing.AddProcessor<RequestFilterProcessor>();
 
             tracing.AddNpgsql();
@@ -278,10 +291,10 @@ void AddInputModelValidators(IServiceCollection services)
     services.AddSingleton<IValidator<EmailNotificationOrderRequestExt>, EmailNotificationOrderRequestValidator>();
     services.AddSingleton<IValidator<SmsNotificationOrderRequestExt>, SmsNotificationOrderRequestValidator>();
     services.AddSingleton<IValidator<NotificationOrderRequestExt>, NotificationOrderRequestValidator>();
-    services.AddSingleton<IValidator<NotificationOrderWithRemindersRequestExt>, NotificationOrderWithRemindersRequestValidator>();
-    services.AddSingleton<IValidator<DialogportenAssociationExt>, DialogportenAssociationValidator>();
-    services.AddSingleton<IValidator<RecipientTypesAssociatedWithRequestExt>, RecipientTypesAssociatedWithRequestValidator>();
-    services.AddSingleton<IValidator<NotificationOrderReminderRequestExt>, NotificationOrderReminderRequestValidator>();
+    services.AddSingleton<IValidator<NotificationOrderSequenceRequestExt>, NotificationOrderSequenceRequestValidator>();
+    services.AddSingleton<IValidator<DialogportenReferenceRequestExt>, DialogportenReferenceRequestValidator>();
+    services.AddSingleton<IValidator<RecipientSpecificationRequestExt>, RecipientSpecificationRequestValidator>();
+    services.AddSingleton<IValidator<NotificationReminderRequestExt>, NotificationReminderRequestValidator>();
 }
 
 void IncludeXmlComments(SwaggerGenOptions swaggerGenOptions)
