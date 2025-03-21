@@ -7,12 +7,12 @@ namespace Altinn.Notifications.Validators
     /// <summary>
     /// Represents validation logic for the dialogporten reference request.
     /// </summary>
-    public class DialogportenReferenceRequestValidator : AbstractValidator<DialogportenReferenceRequestExt?>
+    public class DialogportenRefrenceValidator : AbstractValidator<DialogportenReferenceExt?>
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="DialogportenReferenceRequestValidator"/> class.
+        /// Initializes a new instance of the <see cref="DialogportenRefrenceValidator"/> class.
         /// </summary>
-        public DialogportenReferenceRequestValidator()
+        public DialogportenRefrenceValidator()
         {
             RuleFor(association => association)
                 .NotNull()

@@ -12,7 +12,7 @@ namespace Altinn.Notifications.Models;
 /// specific conditions or time delays after the initial notification. Each reminder can be
 /// customized with its own recipient details and timing parameters.
 /// </remarks>
-public class NotificationReminderRequestExt
+public class NotificationReminderExt
 {
     /// <summary>
     /// Gets or sets the sender's reference for this reminder.
@@ -52,5 +52,5 @@ public class NotificationReminderRequestExt
     /// </remarks>
     [Required]
     [JsonPropertyName("recipient")]
-    public required RecipientSpecificationRequestExt Recipient { get; set; }
+    public required RecipientSpecificationExt Recipient { get; set; }
 }

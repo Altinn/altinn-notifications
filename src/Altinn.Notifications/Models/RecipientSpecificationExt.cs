@@ -9,7 +9,7 @@ namespace Altinn.Notifications.Models;
 /// This class serves as a request wrapper that supports multiple targeting methods for notifications,
 /// allowing clients to specify exactly one recipient type per request.
 /// </remarks>
-public class RecipientSpecificationRequestExt
+public class RecipientSpecificationExt
 {
     /// <summary>
     /// Gets or sets the configuration for delivering a notification directly to an email address.
@@ -18,7 +18,7 @@ public class RecipientSpecificationRequestExt
     /// Use when you have the recipient's email address and want to send an email notification directly.
     /// </remarks>
     [JsonPropertyName("recipientEmail")]
-    public RecipientEmailRequestExt? RecipientEmail { get; set; }
+    public RecipientEmailExt? RecipientEmail { get; set; }
 
     /// <summary>
     /// Gets or sets the configuration for delivering a notification directly to a phone number.
@@ -27,7 +27,7 @@ public class RecipientSpecificationRequestExt
     /// Use when you have the recipient's phone number and want to send an SMS notification directly.
     /// </remarks>
     [JsonPropertyName("recipientSms")]
-    public RecipientSmsRequestExt? RecipientSms { get; set; }
+    public RecipientSmsExt? RecipientSms { get; set; }
 
     /// <summary>
     /// Gets or sets the configuration for delivering a notification to a person.
@@ -37,7 +37,7 @@ public class RecipientSpecificationRequestExt
     /// will be retrieved from the the Common Contact Register (KRR).
     /// </remarks>
     [JsonPropertyName("recipientPerson")]
-    public RecipientPersonRequestExt? RecipientPerson { get; set; }
+    public RecipientPersonExt? RecipientPerson { get; set; }
 
     /// <summary>
     /// Gets or sets the configuration for delivering a notification to an organization.
@@ -47,5 +47,5 @@ public class RecipientSpecificationRequestExt
     /// will be retrieved from the Norwegian Central Coordinating Register for Legal Entities (Einingsregisteret).
     /// </remarks>
     [JsonPropertyName("recipientOrganization")]
-    public RecipientOrganizationRequestExt? RecipientOrganization { get; set; }
+    public RecipientOrganizationExt? RecipientOrganization { get; set; }
 }

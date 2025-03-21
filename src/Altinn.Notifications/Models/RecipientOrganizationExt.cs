@@ -4,13 +4,13 @@ using System.Text.Json.Serialization;
 namespace Altinn.Notifications.Models;
 
 /// <summary>
-/// Defines a request for sending notifications to an organization's contact person.
+/// Defines a model for sending notifications to an organization's contact person.
 /// </summary>
 /// <remarks>
 /// This class enables notifications to be sent to organizations through their registered
 /// contact information in the Norwegian Central Coordinating Register for Legal Entities (Enhetsregisteret).
 /// </remarks>
-public class RecipientOrganizationRequestExt
+public class RecipientOrganizationExt
 {
     /// <summary>
     /// Gets or sets the organization number that identifies the recipient.
@@ -55,7 +55,7 @@ public class RecipientOrganizationRequestExt
     /// Contains email content, subject, sender information, and delivery preferences.
     /// </remarks>
     [JsonPropertyName("emailSettings")]
-    public EmailSendingOptionsRequestExt? EmailSettings { get; set; }
+    public EmailSendingOptionsExt? EmailSettings { get; set; }
 
     /// <summary>
     /// Gets or sets the SMS-specific configuration, used when the channel scheme includes SMS.
@@ -66,5 +66,5 @@ public class RecipientOrganizationRequestExt
     /// Contains SMS content, sender information, and delivery preferences.
     /// </remarks>
     [JsonPropertyName("smsSettings")]
-    public SmsSendingOptionsRequestExt? SmsSettings { get; set; }
+    public SmsSendingOptionsExt? SmsSettings { get; set; }
 }

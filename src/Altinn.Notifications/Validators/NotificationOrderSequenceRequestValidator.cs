@@ -18,17 +18,17 @@ namespace Altinn.Notifications.Validators
             When(order => order.DialogportenAssociation != null, () =>
             {
                 RuleFor(order => order.DialogportenAssociation)
-                    .SetValidator(validator: new DialogportenReferenceRequestValidator());
+                    .SetValidator(validator: new DialogportenRefrenceValidator());
             });
 
             RuleFor(order => order.DialogportenAssociation)
-                .SetValidator(validator: new DialogportenReferenceRequestValidator());
+                .SetValidator(validator: new DialogportenRefrenceValidator());
 
             RuleFor(order => order.Recipient)
-                .SetValidator(validator: new RecipientSpecificationRequestValidator());
+                .SetValidator(validator: new RecipientSpecificationValidator());
 
             RuleForEach(order => order.Reminders)
-                .SetValidator(validator: new NotificationReminderRequestValidator());
+                .SetValidator(validator: new NotificationReminderValidator());
         }
     }
 }

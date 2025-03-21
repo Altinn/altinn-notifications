@@ -4,12 +4,12 @@ using System.Text.Json.Serialization;
 namespace Altinn.Notifications.Models;
 
 /// <summary>
-/// Defines a request for sending an SMS notification to a specific phone number.
+/// Represents the model for sending an SMS to a specific mobile number.
 /// </summary>
 /// <remarks>
 /// This class is used in the API for configuring SMS notification delivery to a single recipient with specific content and delivery preferences.
 /// </remarks>
-public class RecipientSmsRequestExt
+public class RecipientSmsExt
 {
     /// <summary>
     /// Gets or sets the recipient's phone number in international format.
@@ -30,5 +30,5 @@ public class RecipientSmsRequestExt
     /// </remarks>
     [Required]
     [JsonPropertyName("smsSettings")]
-    public required SmsSendingOptionsRequestExt Settings { get; set; }
+    public required SmsSendingOptionsExt Settings { get; set; }
 }

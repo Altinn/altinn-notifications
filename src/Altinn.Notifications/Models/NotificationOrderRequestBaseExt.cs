@@ -5,7 +5,7 @@ namespace Altinn.Notifications.Models;
 /// <summary>
 /// Base class for common properties of notification order requests.
 /// </summary>
-public class NotificationOrderRequestBaseExt : NotificationOrderRequestSchedulingExt
+public class NotificationOrderRequestBaseExt : NotificationOrderSchedulingExt
 {
     /// <summary>
     /// Gets or sets the list of recipients.

@@ -4,13 +4,13 @@ using System.Text.Json.Serialization;
 namespace Altinn.Notifications.Models;
 
 /// <summary>
-/// Defines a request for sending notifications to a person identified by their national identity number.
+/// Defines a model for sending notifications to a person identified by their national identity number.
 /// </summary>
 /// <remarks>
 /// This class enables notifications to be sent to citizens through the Common Contact Register (KRR) integration,
 /// supporting both email and SMS delivery channels based on the recipient's registered contact information.
 /// </remarks>
-public class RecipientPersonRequestExt
+public class RecipientPersonExt
 {
     /// <summary>
     /// Gets or sets the national identity number of the recipient.
@@ -65,7 +65,7 @@ public class RecipientPersonRequestExt
     /// Contains email content, subject, sender information, and delivery preferences.
     /// </remarks>
     [JsonPropertyName("emailSettings")]
-    public EmailSendingOptionsRequestExt? EmailSettings { get; set; }
+    public EmailSendingOptionsExt? EmailSettings { get; set; }
 
     /// <summary>
     /// Gets or sets the SMS-specific configuration, used when the channel scheme includes SMS.
@@ -76,5 +76,5 @@ public class RecipientPersonRequestExt
     /// Contains SMS content, sender information, and delivery preferences.
     /// </remarks>
     [JsonPropertyName("smsSettings")]
-    public SmsSendingOptionsRequestExt? SmsSettings { get; set; }
+    public SmsSendingOptionsExt? SmsSettings { get; set; }
 }

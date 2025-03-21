@@ -9,7 +9,7 @@ namespace Altinn.Notifications.Models;
 /// This base class provides fundamental parameters that control when and under what conditions
 /// notifications should be delivered. It serves as a foundation for more specialized notification request types.
 /// </remarks>
-public class NotificationOrderRequestSchedulingExt
+public class NotificationOrderSchedulingExt
 {
     /// <summary>
     /// Gets or sets the sender's reference identifier.
