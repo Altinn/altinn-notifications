@@ -109,7 +109,7 @@ public class OrderRepository : IOrderRepository
     }
 
     /// <inheritdoc/>
-    public async Task<NotificationOrderSequence> Create(NotificationOrderSequence order)
+    public async Task<NotificationOrderSequenceRequest> Create(NotificationOrderSequenceRequest order)
     {
         throw new NotImplementedException();
     }

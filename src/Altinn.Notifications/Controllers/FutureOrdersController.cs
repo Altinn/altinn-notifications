@@ -66,12 +66,11 @@ public class FutureOrdersController : ControllerBase
             return Forbid();
         }
 
-        throw new NotImplementedException();
+        var notificationOrderSequenceRequest = notificationOrderRequest.MapToNotificationOrderSequenceRequest(creator);
+        var mainNotificationOrder = notificationOrderSequenceRequest.MapToNotificationOrder(creator);
+        var reminderNotificationOrders = notificationOrderSequenceRequest.MapToNotificationOrders(creator);
 
-        //var orderRequest = notificationOrderRequest.MapToNotificationOrderSequenceRequest(creator);
 
-        //NotificationOrderRequestResponse result = await _orderRequestService.RegisterNotificationOrder(orderRequest);
 
-        //return Accepted(result.OrderId!.GetSelfLinkFromOrderId(), result.MapToExternal());
     }
 }

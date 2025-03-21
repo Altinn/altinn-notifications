@@ -76,12 +76,12 @@ public class OrderRequestService : IOrderRequestService
     }
 
     /// <inheritdoc/>
-    public async Task<NotificationOrderRequestResponse> RegisterNotificationOrder(NotificationOrderSequence orderRequest)
+    public async Task<NotificationOrderRequestResponse> RegisterNotificationOrder(NotificationOrderSequenceRequest orderRequest)
     {
         throw new NotImplementedException();
     }
 
-    private async Task<List<RecipientLookupResult?>> GetRecipientLookupResult(NotificationOrderSequence orderRequest)
+    private async Task<List<RecipientLookupResult?>> GetRecipientLookupResult(NotificationOrderSequenceRequest orderRequest)
     {
         throw new NotImplementedException();
         
@@ -216,7 +216,7 @@ public class OrderRequestService : IOrderRequestService
         return templates;
     }
 
-    private NotificationOrderSequence SetSenderIfNotDefined(NotificationOrderSequence orderRequest)
+    private NotificationOrderSequenceRequest SetSenderIfNotDefined(NotificationOrderSequenceRequest orderRequest)
     {
         throw new NotImplementedException();
 
