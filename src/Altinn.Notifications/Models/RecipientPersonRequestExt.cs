@@ -16,14 +16,14 @@ public class RecipientPersonRequestExt
     /// Gets or sets the national identity number of the recipient.
     /// </summary>
     /// <remarks>
-    /// Used to identify the person in the Common Contact Register (KRR) to obtain their registered contact information.
+    /// Used to identify the person in the Common Contact Register (KRR) to retrieve their registered contact information.
     /// </remarks>
     [Required]
     [JsonPropertyName("nationalIdentityNumber")]
     public required string NationalIdentityNumber { get; set; }
 
     /// <summary>
-    /// Gets or sets an optional resource identifier for auditing purposes.
+    /// Gets or sets an optional resource identifier for authorization and auditing purposes.
     /// </summary>
     [JsonPropertyName("resourceId")]
     public string? ResourceId { get; set; }
@@ -33,6 +33,13 @@ public class RecipientPersonRequestExt
     /// </summary>
     /// <remarks>
     /// Determines which communication channel(s) to use and their priority.
+    /// Options include:
+    /// <list type="bullet">
+    /// <item><description><see cref="NotificationChannelExt.Email"/> - Use email only</description></item>
+    /// <item><description><see cref="NotificationChannelExt.Sms"/> - Use SMS only</description></item>
+    /// <item><description><see cref="NotificationChannelExt.EmailPreferred"/> - Try email first, fall back to SMS if email unavailable</description></item>
+    /// <item><description><see cref="NotificationChannelExt.SmsPreferred"/> - Try SMS first, fall back to email if SMS unavailable</description></item>
+    /// </list>
     /// </remarks>
     [Required]
     [JsonPropertyName("channelScheme")]
@@ -42,8 +49,9 @@ public class RecipientPersonRequestExt
     /// Gets or sets a value indicating whether to bypass the recipient's reservation against electronic communication.
     /// </summary>
     /// <remarks>
-    /// When set to <c>true</c>, notifications will be sent even if the recipient has reserved 
-    /// themselves against electronic communication in the Common Contact Register (KRR). Defaults to <c>false</c>.
+    /// When set to <c>true</c>, notifications will be sent even if the recipient has registered a reservation
+    /// against electronic communication in the Common Contact Register (KRR).
+    /// Defaults to <c>false</c>.
     /// </remarks>
     [JsonPropertyName("ignoreReservation")]
     public bool IgnoreReservation { get; set; } = false;
@@ -52,8 +60,9 @@ public class RecipientPersonRequestExt
     /// Gets or sets the email-specific configuration, used when the channel scheme includes email.
     /// </summary>
     /// <remarks>
-    /// Required when <see cref="ChannelScheme"/> is set to <see cref="NotificationChannelExt.Email"/> or <see cref="NotificationChannelExt.EmailPreferred"/>.
-    /// Contains email content, subject, and delivery preferences.
+    /// Required when <see cref="ChannelScheme"/> is set to <see cref="NotificationChannelExt.Email"/> 
+    /// or <see cref="NotificationChannelExt.EmailPreferred"/>.
+    /// Contains email content, subject, sender information, and delivery preferences.
     /// </remarks>
     [JsonPropertyName("emailSettings")]
     public EmailSendingOptionsRequestExt? EmailSettings { get; set; }
@@ -62,7 +71,8 @@ public class RecipientPersonRequestExt
     /// Gets or sets the SMS-specific configuration, used when the channel scheme includes SMS.
     /// </summary>
     /// <remarks>
-    /// Required when <see cref="ChannelScheme"/> is set to <see cref="NotificationChannelExt.Sms"/> or <see cref="NotificationChannelExt.SmsPreferred"/>.
+    /// Required when <see cref="ChannelScheme"/> is set to <see cref="NotificationChannelExt.Sms"/> 
+    /// or <see cref="NotificationChannelExt.SmsPreferred"/>.
     /// Contains SMS content, sender information, and delivery preferences.
     /// </remarks>
     [JsonPropertyName("smsSettings")]
