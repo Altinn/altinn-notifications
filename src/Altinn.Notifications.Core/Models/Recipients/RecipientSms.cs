@@ -1,9 +1,9 @@
 ﻿namespace Altinn.Notifications.Core.Models.Recipients;
 
 /// <summary>
-/// Represents the request model for sending an SMS to a specific recipient.
+/// Represents the model for sending an SMS to a specific recipient.
 /// </summary>
-public class RecipientSmsRequest
+public class RecipientSms
 {
     /// <summary>
     /// Gets or sets the recipient's phone number in international format.

@@ -27,7 +27,7 @@ public class RecipientSpecificationRequestExt
     /// Use when you have the recipient's phone number and want to send an SMS notification directly.
     /// </remarks>
     [JsonPropertyName("recipientSms")]
-    public RecipientSmsRequestExt? RecipientSms { get; set; }
+    public RecipientSmsExt? RecipientSms { get; set; }
 
     /// <summary>
     /// Gets or sets the configuration for delivering a notification to a person.

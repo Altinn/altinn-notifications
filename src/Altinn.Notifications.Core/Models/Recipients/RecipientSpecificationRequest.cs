@@ -15,7 +15,7 @@ public class RecipientSpecificationRequest
     /// Gets or sets an object capturing all the information needed
     /// to send an SMS to a specific phone number.
     /// </summary>
-    public RecipientSmsRequest? RecipientSms { get; set; }
+    public RecipientSms? RecipientSms { get; set; }
 
     /// <summary>
     /// Gets or sets an object capturing all the information needed
