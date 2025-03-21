@@ -3,19 +3,18 @@
 namespace Altinn.Notifications.Core.Models.Recipients;
 
 /// <summary>
-/// Represents a request for sending an email or SMS to a contact person
-/// identified by an organization number, including configuration details.
+/// Represents a request containing all the information needed to deliver either
+/// an email or SMS to a specific person identified by their national identity number.
 /// </summary>
-public class RecipientOrganizationRequest
+public class RecipientPerson
 {
     /// <summary>
-    /// Gets or sets the organization number that identifies the recipient.
+    /// Gets or sets the national identity number of the recipient.
     /// </summary>
     /// <remarks>
-    /// Used to identify the organization in the Norwegian Central Coordinating
-    /// Register for Legal Entities (Enhetsregisteret) to retrieve their registered contact information.
+    /// Used to identify the person in the Common Contact Register (KRR) to retrieve their registered contact information.
     /// </remarks>
-    public required string OrgNumber { get; set; }
+    public required string NationalIdentityNumber { get; set; }
 
     /// <summary>
     /// Gets or sets an optional resource identifier for authorization and auditing purposes.
@@ -36,6 +35,16 @@ public class RecipientOrganizationRequest
     /// </list>
     /// </remarks>
     public required NotificationChannel ChannelScheme { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to bypass the recipient's reservation against electronic communication.
+    /// </summary>
+    /// <remarks>
+    /// When set to <c>true</c>, notifications will be sent even if the recipient has registered a reservation
+    /// against electronic communication in the Common Contact Register (KRR).
+    /// Defaults to <c>false</c>.
+    /// </remarks>
+    public bool IgnoreReservation { get; set; } = false;
 
     /// <summary>
     /// Gets or sets the email-specific configuration, used when the channel scheme includes email.

@@ -254,7 +254,7 @@ public class OrderRequestService : IOrderRequestService
     /// <summary>
     /// Sets default sender values for a person recipient if the settings exist but values are null.
     /// </summary>
-    private void ApplyDefaultSenderToPerson(RecipientPersonRequest? person)
+    private void ApplyDefaultSenderToPerson(RecipientPerson? person)
     {
         if (person?.SmsSettings != null && string.IsNullOrEmpty(person.SmsSettings.Sender))
         {
@@ -269,7 +269,7 @@ public class OrderRequestService : IOrderRequestService
     /// <summary>
     /// Sets default sender values for an organization recipient if the settings exist but values are null.
     /// </summary>
-    private void ApplyDefaultSenderToOrganization(RecipientOrganizationRequest? organization)
+    private void ApplyDefaultSenderToOrganization(RecipientOrganization? organization)
     {
         if (organization?.SmsSettings != null && string.IsNullOrEmpty(organization.SmsSettings.Sender))
         {
@@ -290,10 +290,10 @@ public class OrderRequestService : IOrderRequestService
     /// This method extracts recipients from the provided container and organizes them into channel-specific collections:
     /// <list type="bullet">
     ///   <item>
-    ///     <description>Processes <see cref="RecipientPersonRequest"/> recipients, mapping them to their specified channel.</description>
+    ///     <description>Processes <see cref="RecipientPerson"/> recipients, mapping them to their specified channel.</description>
     ///   </item>
     ///   <item>
-    ///     <description>Processes <see cref="RecipientOrganizationRequest"/> recipients, mapping them to their specified channel.</description>
+    ///     <description>Processes <see cref="RecipientOrganization"/> recipients, mapping them to their specified channel.</description>
     ///   </item>
     /// </list>
     /// Recipients are grouped by both notification channel and resource identifier, enabling efficient channel-specific 

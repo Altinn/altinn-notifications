@@ -4,24 +4,23 @@ using System.Text.Json.Serialization;
 namespace Altinn.Notifications.Models;
 
 /// <summary>
-/// Defines a request for sending notifications to an organization's contact person.
+/// Defines a request for sending notifications to a person identified by their national identity number.
 /// </summary>
 /// <remarks>
-/// This class enables notifications to be sent to organizations through their registered
-/// contact information in the Norwegian Central Coordinating Register for Legal Entities (Enhetsregisteret).
+/// This class enables notifications to be sent to citizens through the Common Contact Register (KRR) integration,
+/// supporting both email and SMS delivery channels based on the recipient's registered contact information.
 /// </remarks>
-public class RecipientOrganizationRequestExt
+public class RecipientPersonExt
 {
     /// <summary>
-    /// Gets or sets the organization number that identifies the recipient.
+    /// Gets or sets the national identity number of the recipient.
     /// </summary>
     /// <remarks>
-    /// Used to identify the organization in the Norwegian Central Coordinating
-    /// Register for Legal Entities (Enhetsregisteret) to retrieve their registered contact information.
+    /// Used to identify the person in the Common Contact Register (KRR) to retrieve their registered contact information.
     /// </remarks>
     [Required]
-    [JsonPropertyName("orgNumber")]
-    public required string OrgNumber { get; set; }
+    [JsonPropertyName("nationalIdentityNumber")]
+    public required string NationalIdentityNumber { get; set; }
 
     /// <summary>
     /// Gets or sets an optional resource identifier for authorization and auditing purposes.
@@ -45,6 +44,17 @@ public class RecipientOrganizationRequestExt
     [Required]
     [JsonPropertyName("channelScheme")]
     public required NotificationChannelExt ChannelScheme { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to bypass the recipient's reservation against electronic communication.
+    /// </summary>
+    /// <remarks>
+    /// When set to <c>true</c>, notifications will be sent even if the recipient has registered a reservation
+    /// against electronic communication in the Common Contact Register (KRR).
+    /// Defaults to <c>false</c>.
+    /// </remarks>
+    [JsonPropertyName("ignoreReservation")]
+    public bool IgnoreReservation { get; set; } = false;
 
     /// <summary>
     /// Gets or sets the email-specific configuration, used when the channel scheme includes email.

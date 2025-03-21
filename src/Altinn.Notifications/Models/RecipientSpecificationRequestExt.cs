@@ -37,7 +37,7 @@ public class RecipientSpecificationRequestExt
     /// will be retrieved from the the Common Contact Register (KRR).
     /// </remarks>
     [JsonPropertyName("recipientPerson")]
-    public RecipientPersonRequestExt? RecipientPerson { get; set; }
+    public RecipientPersonExt? RecipientPerson { get; set; }
 
     /// <summary>
     /// Gets or sets the configuration for delivering a notification to an organization.
@@ -47,5 +47,5 @@ public class RecipientSpecificationRequestExt
     /// will be retrieved from the Norwegian Central Coordinating Register for Legal Entities (Einingsregisteret).
     /// </remarks>
     [JsonPropertyName("recipientOrganization")]
-    public RecipientOrganizationRequestExt? RecipientOrganization { get; set; }
+    public RecipientOrganizationExt? RecipientOrganization { get; set; }
 }

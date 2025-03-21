@@ -21,11 +21,11 @@ public class RecipientSpecificationRequest
     /// Gets or sets an object capturing all the information needed
     /// to send an email or SMS to a person identified by a national identity number.
     /// </summary>
-    public RecipientPersonRequest? RecipientPerson { get; set; }
+    public RecipientPerson? RecipientPerson { get; set; }
 
     /// <summary>
     /// Gets or sets an object capturing all the information needed
     /// to deliver notifications to a contact person identified by an organization number.
     /// </summary>
-    public RecipientOrganizationRequest? RecipientOrganization { get; set; }
+    public RecipientOrganization? RecipientOrganization { get; set; }
 }
