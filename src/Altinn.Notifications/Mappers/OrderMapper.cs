@@ -455,7 +455,7 @@ public static class OrderMapper
         };
     }
 
-    private static NotificationReminder MapNotificationReminders(NotificationOrderReminderRequestExt source)
+    private static NotificationReminder MapNotificationReminders(NotificationReminderRequestExt source)
     {
         return new()
         {

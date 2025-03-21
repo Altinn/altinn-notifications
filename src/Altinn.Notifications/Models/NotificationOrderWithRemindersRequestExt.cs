@@ -17,11 +17,12 @@ public class NotificationOrderWithRemindersRequestExt : NotificationOrderRequest
     public required string IdempotencyId { get; set; }
 
     /// <summary>
-    /// Gets or sets the required recipient information, whether for mobile number, email-address, national identity, or organization number.
+    /// Gets or sets the required recipient information for this reminder.
     /// </summary>
     /// <remarks>
-    /// Specifies exactly one recipient type for the notification. The recipient information
-    /// determines the delivery channel and addressing details.
+    /// Specifies the target recipient through one of the supported channels:
+    /// email address, SMS number, national identity number, or organization number.
+    /// The reminder can be directed to a different recipient than the initial notification.
     /// </remarks>
     [Required]
     [JsonPropertyName("recipient")]
@@ -34,7 +35,7 @@ public class NotificationOrderWithRemindersRequestExt : NotificationOrderRequest
     /// Each reminder can have its own recipient settings, delay period, and triggering conditions.
     /// </remarks>
     [JsonPropertyName("reminders")]
-    public List<NotificationOrderReminderRequestExt>? Reminders { get; set; }
+    public List<NotificationReminderRequestExt>? Reminders { get; set; }
 
     /// <summary>
     /// Gets or sets optional identifiers for one or more dialogs or transmissions in Dialogporten.
