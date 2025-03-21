@@ -8,7 +8,7 @@ namespace Altinn.Notifications.Validators;
 /// <summary>
 /// Represents validation logic for the notification order with reminders request model.
 /// </summary>
-public class NotificationOrderWithRemindersRequestValidator : AbstractValidator<NotificationOrderWithRemindersRequestExt>
+public class NotificationOrderWithRemindersRequestValidator : AbstractValidator<NotificationOrderSequenceRequestExt>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationOrderWithRemindersRequestValidator"/> class.

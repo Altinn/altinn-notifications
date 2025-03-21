@@ -21,14 +21,13 @@ public class RecipientSpecificationRequestExt
     public RecipientEmailRequestExt? RecipientEmail { get; set; }
 
     /// <summary>
-    /// Gets or sets the configuration for delivering a notification to an organization.
+    /// Gets or sets the configuration for delivering a notification directly to a phone number.
     /// </summary>
     /// <remarks>
-    /// Use when targeting an organization by its organization number, where contact information
-    /// will be retrieved from the Norwegian Central Coordinating Register for Legal Entities (Einingsregisteret).
+    /// Use when you have the recipient's phone number and want to send an SMS notification directly.
     /// </remarks>
-    [JsonPropertyName("recipientOrganization")]
-    public RecipientOrganizationRequestExt? RecipientOrganization { get; set; }
+    [JsonPropertyName("recipientSms")]
+    public RecipientSmsRequestExt? RecipientSms { get; set; }
 
     /// <summary>
     /// Gets or sets the configuration for delivering a notification to a person.
@@ -41,11 +40,12 @@ public class RecipientSpecificationRequestExt
     public RecipientPersonRequestExt? RecipientPerson { get; set; }
 
     /// <summary>
-    /// Gets or sets the configuration for delivering a notification directly to a phone number.
+    /// Gets or sets the configuration for delivering a notification to an organization.
     /// </summary>
     /// <remarks>
-    /// Use when you have the recipient's phone number and want to send an SMS notification directly.
+    /// Use when targeting an organization by its organization number, where contact information
+    /// will be retrieved from the Norwegian Central Coordinating Register for Legal Entities (Einingsregisteret).
     /// </remarks>
-    [JsonPropertyName("recipientSms")]
-    public RecipientSmsRequestExt? RecipientSms { get; set; }
+    [JsonPropertyName("recipientOrganization")]
+    public RecipientOrganizationRequestExt? RecipientOrganization { get; set; }
 }

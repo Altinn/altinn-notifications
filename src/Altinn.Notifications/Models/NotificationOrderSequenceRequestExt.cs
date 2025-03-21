@@ -7,7 +7,7 @@ namespace Altinn.Notifications.Models;
 /// Represents a request to create a notification order with one or more reminders.
 /// Inherits the scheduling options from <see cref="NotificationOrderRequestSchedulingExt"/>.
 /// </summary>
-public class NotificationOrderWithRemindersRequestExt : NotificationOrderRequestSchedulingExt
+public class NotificationOrderSequenceRequestExt : NotificationOrderRequestSchedulingExt
 {
     /// <summary>
     /// Gets or sets the idempotency identifier defined by the sender.
