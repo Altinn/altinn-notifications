@@ -1,5 +1,6 @@
 ﻿using Altinn.Notifications.Models;
 using Altinn.Notifications.Validators.Email;
+using Altinn.Notifications.Validators.Sms;
 using FluentValidation;
 
 namespace Altinn.Notifications.Validators
@@ -20,6 +21,15 @@ namespace Altinn.Notifications.Validators
 
             RuleFor(specification => specification.RecipientEmail)
                .SetValidator(validator: new EmailRecipientValidator());
+
+            RuleFor(specification => specification.RecipientSms)
+                .SetValidator(validator: new RecipientSmsValidator());
+
+            RuleFor(specification => specification.RecipientPerson)
+                .SetValidator(validator: new RecipientPersonValidator());
+
+            RuleFor(specification => specification.RecipientOrganization)
+                .SetValidator(validator: new RecipientOrganizationValidator());
         }
     }
 }

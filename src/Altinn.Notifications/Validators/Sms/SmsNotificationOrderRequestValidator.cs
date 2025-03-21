@@ -1,9 +1,8 @@
 ﻿using Altinn.Notifications.Models;
 using Altinn.Notifications.Validators.Rules;
-
 using FluentValidation;
 
-namespace Altinn.Notifications.Validators;
+namespace Altinn.Notifications.Validators.Sms;
 
 /// <summary>
 /// Class containing validation logic for the <see cref="SmsNotificationOrderRequestExt"/> model

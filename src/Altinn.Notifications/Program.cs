@@ -12,12 +12,9 @@ using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Health;
 using Altinn.Notifications.Integrations.Extensions;
 using Altinn.Notifications.Middleware;
-using Altinn.Notifications.Models;
 using Altinn.Notifications.Persistence.Extensions;
 using Altinn.Notifications.Swagger;
 using Altinn.Notifications.Telemetry;
-using Altinn.Notifications.Validators;
-using Altinn.Notifications.Validators.Email;
 using AltinnCore.Authentication.JwtCookie;
 
 using Azure.Identity;
@@ -73,7 +70,7 @@ builder.Services.AddSwaggerGen(options =>
     });
 
     IncludeXmlComments(options);
-    
+
     options.EnableAnnotations();
     options.UseInlineDefinitionsForEnums();
     options.SchemaFilter<SwaggerDefaultValues>();

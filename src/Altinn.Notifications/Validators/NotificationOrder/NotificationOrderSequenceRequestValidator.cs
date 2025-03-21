@@ -1,8 +1,7 @@
 ﻿using Altinn.Notifications.Models;
-
 using FluentValidation;
 
-namespace Altinn.Notifications.Validators
+namespace Altinn.Notifications.Validators.NotificationOrder
 {
     /// <summary>
     /// Class containing validation logic for the <see cref="NotificationOrderSequenceRequestExt"/> model
