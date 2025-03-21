@@ -109,7 +109,7 @@ public class OrderRepository : IOrderRepository
     }
 
     /// <inheritdoc/>
-    public async Task<NotificationOrderWithRemindersRequest> Create(NotificationOrderWithRemindersRequest order)
+    public async Task<NotificationOrderSequenceRequest> Create(NotificationOrderSequenceRequest order)
     {
         await using var connection = await _dataSource.OpenConnectionAsync();
         await using var transaction = await connection.BeginTransactionAsync();
@@ -308,7 +308,7 @@ public class OrderRepository : IOrderRepository
         }
     }
 
-    private async Task InsertOrder(NotificationOrderWithRemindersRequest order, NpgsqlConnection connection, NpgsqlTransaction transaction)
+    private async Task InsertOrder(NotificationOrderSequenceRequest order, NpgsqlConnection connection, NpgsqlTransaction transaction)
     {
         await using NpgsqlCommand pgcom = new NpgsqlCommand(_insertOrderV2Sql, connection, transaction);
 

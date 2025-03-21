@@ -21,7 +21,7 @@ public interface IOrderRepository
     /// </summary>
     /// <param name="order">The order to save</param>
     /// <returns>The saved notification order</returns>
-    public Task<NotificationOrderWithRemindersRequest> Create(NotificationOrderWithRemindersRequest order);
+    public Task<NotificationOrderSequenceRequest> Create(NotificationOrderSequenceRequest order);
 
     /// <summary>
     /// Gets a list of notification orders where requestedSendTime has passed

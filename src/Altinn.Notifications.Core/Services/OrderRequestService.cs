@@ -76,7 +76,7 @@ public class OrderRequestService : IOrderRequestService
     }
 
     /// <inheritdoc/>
-    public async Task<NotificationOrderRequestResponse> RegisterNotificationOrder(NotificationOrderWithRemindersRequest orderRequest)
+    public async Task<NotificationOrderRequestResponse> RegisterNotificationOrder(NotificationOrderSequenceRequest orderRequest)
     {
         Guid orderId = _guid.NewGuid();
         DateTime currentime = _dateTime.UtcNow();
@@ -106,7 +106,7 @@ public class OrderRequestService : IOrderRequestService
             }
         }
 
-        NotificationOrderWithRemindersRequest savedOrder = await _repository.Create(orderRequest);
+        NotificationOrderSequenceRequest savedOrder = await _repository.Create(orderRequest);
         return new NotificationOrderRequestResponse()
         {
             OrderId = savedOrder.OrderId,
@@ -114,7 +114,7 @@ public class OrderRequestService : IOrderRequestService
         };
     }
 
-    private async Task<List<RecipientLookupResult?>> GetRecipientLookupResult(NotificationOrderWithRemindersRequest orderRequest)
+    private async Task<List<RecipientLookupResult?>> GetRecipientLookupResult(NotificationOrderSequenceRequest orderRequest)
     {
         var recipientsByChannel = new Dictionary<NotificationChannel, List<ResourceBoundRecipients>>
         {
@@ -247,7 +247,7 @@ public class OrderRequestService : IOrderRequestService
         return templates;
     }
 
-    private NotificationOrderWithRemindersRequest SetSenderIfNotDefined(NotificationOrderWithRemindersRequest orderRequest)
+    private NotificationOrderSequenceRequest SetSenderIfNotDefined(NotificationOrderSequenceRequest orderRequest)
     {
         // Apply sender defaults to main recipient
         ApplyDefaultSender(orderRequest.Recipient);

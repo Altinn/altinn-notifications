@@ -145,11 +145,11 @@ public static class OrderMapper
     }
 
     /// <summary>
-    /// Maps a <see cref="NotificationOrderSequenceRequestExt"/> to a <see cref="NotificationOrderWithRemindersRequest"/>
+    /// Maps a <see cref="NotificationOrderSequenceRequestExt"/> to a <see cref="NotificationOrderSequenceRequest"/>
     /// </summary>
-    public static NotificationOrderWithRemindersRequest MapToNotificationOrderSequenceRequest(this NotificationOrderSequenceRequestExt extRequest, string creator)
+    public static NotificationOrderSequenceRequest MapToNotificationOrderSequenceRequest(this NotificationOrderSequenceRequestExt extRequest, string creator)
     {
-        NotificationOrderWithRemindersRequest notificationOrderWithRemindersRequest = new()
+        NotificationOrderSequenceRequest notificationOrderWithRemindersRequest = new()
         {
             Creator = new Creator(creator),
             IdempotencyId = extRequest.IdempotencyId,
@@ -543,7 +543,7 @@ public static class OrderMapper
         return new Recipient();
     }
 
-    private static NotificationOrder MapToSmsNotificationOrder(NotificationOrderWithRemindersRequest request, string creator)
+    private static NotificationOrder MapToSmsNotificationOrder(NotificationOrderSequenceRequest request, string creator)
     {
         bool? ignoreReservation = null;
         string? resouceIdentifier = null;
@@ -603,7 +603,7 @@ public static class OrderMapper
         return new NotificationOrder(Guid.Empty, request.SendersReference, templates, request.RequestedSendTime, notificationChannel, new Creator(creator), DateTime.Now, [recipient], ignoreReservation, resouceIdentifier, request.ConditionEndpoint);
     }
 
-    private static List<NotificationOrder> MapRemindersToSmsNotificationOrder(NotificationOrderWithRemindersRequest request, string creator)
+    private static List<NotificationOrder> MapRemindersToSmsNotificationOrder(NotificationOrderSequenceRequest request, string creator)
     {
         List<NotificationOrder> notificationOrders = [];
 
