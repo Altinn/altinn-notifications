@@ -17,7 +17,7 @@ using Altinn.Notifications.Persistence.Extensions;
 using Altinn.Notifications.Swagger;
 using Altinn.Notifications.Telemetry;
 using Altinn.Notifications.Validators;
-
+using Altinn.Notifications.Validators.Email;
 using AltinnCore.Authentication.JwtCookie;
 
 using Azure.Identity;
@@ -288,13 +288,7 @@ async Task ConnectToKeyVaultAndSetApplicationInsights(ConfigurationManager confi
 void AddInputModelValidators(IServiceCollection services)
 {
     ValidatorOptions.Global.LanguageManager.Enabled = false;
-    services.AddSingleton<IValidator<EmailNotificationOrderRequestExt>, EmailNotificationOrderRequestValidator>();
-    services.AddSingleton<IValidator<SmsNotificationOrderRequestExt>, SmsNotificationOrderRequestValidator>();
-    services.AddSingleton<IValidator<NotificationOrderRequestExt>, NotificationOrderRequestValidator>();
-    services.AddSingleton<IValidator<NotificationOrderSequenceRequestExt>, NotificationOrderSequenceRequestValidator>();
-    services.AddSingleton<IValidator<DialogportenReferenceExt>, DialogportenRefrenceValidator>();
-    services.AddSingleton<IValidator<RecipientSpecificationExt>, RecipientSpecificationValidator>();
-    services.AddSingleton<IValidator<NotificationReminderExt>, NotificationReminderValidator>();
+    services.AddValidatorsFromAssembly(typeof(Program).Assembly, includeInternalTypes: true);
 }
 
 void IncludeXmlComments(SwaggerGenOptions swaggerGenOptions)

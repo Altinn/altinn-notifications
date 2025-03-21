@@ -3,7 +3,7 @@ using Altinn.Notifications.Validators.Rules;
 
 using FluentValidation;
 
-namespace Altinn.Notifications.Validators;
+namespace Altinn.Notifications.Validators.Email;
 
 /// <summary>
 /// Class containing validation logic for the <see cref="EmailNotificationOrderRequestExt"/> model

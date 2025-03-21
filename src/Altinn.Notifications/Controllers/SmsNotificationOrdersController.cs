@@ -3,8 +3,7 @@ using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
-using Altinn.Notifications.Validators;
-
+using Altinn.Notifications.Validators.Extensions;
 using FluentValidation;
 using FluentValidation.Results;
 
