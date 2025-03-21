@@ -31,5 +31,21 @@ public class NotificationOrderWithRemindersRequestValidator : AbstractValidator<
         RuleFor(order => order.IdempotencyId)
             .NotEmpty()
             .WithMessage("Idempotency identifier is required.");
+
+        // should not run if DialogportenAssociation is null
+        When(order => order.DialogportenAssociation != null, () =>
+        {
+            RuleFor(order => order.DialogportenAssociation)
+                .SetValidator(validator: new DialogportenAssociationValidator());
+        });
+
+        RuleFor(order => order.DialogportenAssociation)
+            .SetValidator(validator: new DialogportenAssociationValidator());
+
+        RuleFor(order => order.Recipient)
+            .SetValidator(validator: new RecipientTypesAssociatedWithRequestValidator());
+
+        RuleForEach(order => order.Reminders)
+            .SetValidator(validator: new NotificationOrderReminderRequestValidator());
     }
 }

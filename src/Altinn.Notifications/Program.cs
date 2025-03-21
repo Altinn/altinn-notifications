@@ -279,6 +279,9 @@ void AddInputModelValidators(IServiceCollection services)
     services.AddSingleton<IValidator<SmsNotificationOrderRequestExt>, SmsNotificationOrderRequestValidator>();
     services.AddSingleton<IValidator<NotificationOrderRequestExt>, NotificationOrderRequestValidator>();
     services.AddSingleton<IValidator<NotificationOrderWithRemindersRequestExt>, NotificationOrderWithRemindersRequestValidator>();
+    services.AddSingleton<IValidator<DialogportenAssociationExt>, DialogportenAssociationValidator>();
+    services.AddSingleton<IValidator<RecipientTypesAssociatedWithRequestExt>, RecipientTypesAssociatedWithRequestValidator>();
+    services.AddSingleton<IValidator<NotificationOrderReminderRequestExt>, NotificationOrderReminderRequestValidator>();
 }
 
 void IncludeXmlComments(SwaggerGenOptions swaggerGenOptions)
