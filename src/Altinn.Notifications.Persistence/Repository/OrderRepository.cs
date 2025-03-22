@@ -30,7 +30,6 @@ public class OrderRepository : IOrderRepository
     private const string _getOrdersPastSendTimeUpdateStatus = "select notifications.getorders_pastsendtime_updatestatus()";
     private const string _getOrderIncludeStatus = "select * from notifications.getorder_includestatus_v4($1, $2)"; // _alternateid,  creator
     private const string _cancelAndReturnOrder = "select * from notifications.cancelorder($1, $2)"; // _alternateid,  creator
-    private const string _insertOrderV2Sql = "call notifications.insertorder_v2($1, $2, $3, $4, $5, $6, $7)"; // (_orderid, _idempotencyid, _creatorname, _sendersreference, _created, _requestedsendtime, _orderwithreminder)
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderRepository"/> class.
@@ -106,12 +105,6 @@ public class OrderRepository : IOrderRepository
         }
 
         return order;
-    }
-
-    /// <inheritdoc/>
-    public async Task<NotificationOrderSequenceRequest> Create(NotificationOrderSequenceRequest order)
-    {
-        throw new NotImplementedException();
     }
 
     /// <inheritdoc/>
@@ -274,5 +267,4 @@ public class OrderRepository : IOrderRepository
             await pgcom.ExecuteNonQueryAsync();
         }
     }
-
 }
