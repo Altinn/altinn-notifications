@@ -8,14 +8,6 @@ namespace Altinn.Notifications.Core.Models.Orders;
 public class NotificationReminder
 {
     /// <summary>
-    /// Gets or sets the sender's reference for this reminder.
-    /// </summary>
-    /// <remarks>
-    /// A unique identifier used by the sender to correlate this reminder with their internal systems.
-    /// </remarks>
-    public string? SendersReference { get; set; }
-
-    /// <summary>
     /// Gets or sets the condition endpoint used to determine if the reminder should be sent.
     /// </summary>
     /// <remarks>
@@ -28,7 +20,18 @@ public class NotificationReminder
     /// <summary>
     /// Gets or sets the number of days to delay this reminder.
     /// </summary>
+    /// <value>
+    /// The number of days to delay the reminder.
+    /// </value>
     public required int DelayDays { get; set; } = 1;
+
+    /// <summary>
+    /// Gets the unique identifier for the associated notification order.
+    /// </summary>
+    /// <value>
+    /// A <see cref="Guid"/> representing the unique identifier of the associated notification order.
+    /// </value>
+    public Guid OrderId { get; set; }
 
     /// <summary>
     /// Gets or sets the recipient information for this reminder.
@@ -46,5 +49,13 @@ public class NotificationReminder
     /// <value>
     /// The requested send time, which can be null and defaults to the current date and time.
     /// </value>
-    public DateTime? RequestedSendTime { get; set; }
+    public DateTime RequestedSendTime { get; set; }
+
+    /// <summary>
+    /// Gets or sets the sender's reference for this reminder.
+    /// </summary>
+    /// <remarks>
+    /// A unique identifier used by the sender to correlate this reminder with their internal systems.
+    /// </remarks>
+    public string? SendersReference { get; set; }
 }

@@ -10,6 +10,7 @@ public class NotificationOrderSequenceRequest
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationOrderSequenceRequest"/> class.
     /// </summary>
+    /// <param name="orderId">The unique identifier for the main notification order in this sequence.</param>
     /// <param name="creator">The creator of the notification request.</param>
     /// <param name="idempotencyId">The idempotency identifier defined by the sender.</param>
     /// <param name="recipient">The recipient information for this notification.</param>
@@ -19,6 +20,7 @@ public class NotificationOrderSequenceRequest
     /// <param name="requestedSendTime">The earliest date and time when the notification should be delivered.</param>
     /// <param name="sendersReference">The sender's reference identifier.</param>
     public NotificationOrderSequenceRequest(
+        Guid orderId,
         Creator creator,
         string idempotencyId,
         RecipientSpecification recipient,
@@ -28,6 +30,7 @@ public class NotificationOrderSequenceRequest
         DateTime? requestedSendTime = null,
         string? sendersReference = null)
     {
+        OrderId = orderId;
         Creator = creator;
         IdempotencyId = idempotencyId;
         Recipient = recipient;
@@ -49,7 +52,7 @@ public class NotificationOrderSequenceRequest
     public Uri? ConditionEndpoint { get; internal set; }
 
     /// <summary>
-    /// Gets the creator of the notification request
+    /// Gets the creator of the notification order sequence request.
     /// </summary>
     public Creator Creator { get; internal set; }
 
@@ -68,7 +71,15 @@ public class NotificationOrderSequenceRequest
     public string IdempotencyId { get; internal set; }
 
     /// <summary>
-    /// Gets the recipient information for this reminder.
+    /// Gets the unique identifier for the main notification order in the sequence.
+    /// </summary>
+    /// <value>
+    /// A <see cref="Guid"/> representing the unique identifier of the main notification order.
+    /// </value>
+    public Guid OrderId { get; internal set; }
+
+    /// <summary>
+    /// Gets the recipient information for this notification.
     /// </summary>
     /// <remarks>
     /// Specifies the target recipient through one of the supported channels:
