@@ -14,11 +14,4 @@ public interface IOrderRequestService
     /// <param name="orderRequest">The notification order request</param>
     /// <returns>The order request response object</returns>
     public Task<NotificationOrderRequestResponse> RegisterNotificationOrder(NotificationOrderRequest orderRequest);
-
-    /// <summary>
-    /// Registers a new order
-    /// </summary>
-    /// <param name="ordersRequest">The notification order request</param>
-    /// <returns>The order request response object</returns>
-    public Task<NotificationOrderRequestResponse> RegisterNotificationOrder(NotificationOrderSequenceRequest ordersRequest);
 }
