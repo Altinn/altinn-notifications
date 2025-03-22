@@ -6,12 +6,23 @@
 public class DialogportenReference
 {
     /// <summary>
-    /// Gets or sets the identifier for a specific dialog within Dialogporten.
+    /// Initializes a new instance of the <see cref="DialogportenReference"/> class.
     /// </summary>
-    public string? DialogId { get; set; }
+    /// <param name="dialogId">The identifier for a specific dialog within Dialogporten.</param>
+    /// <param name="transmissionId">The identifier for a specific transmission within Dialogporten.</param>
+    public DialogportenReference(string? dialogId = null, string? transmissionId = null)
+    {
+        DialogId = dialogId;
+        TransmissionId = transmissionId;
+    }
 
     /// <summary>
-    /// Gets or sets the identifier for a specific transmission within Dialogporten.
+    /// Gets the identifier for a specific dialog within Dialogporten.
     /// </summary>
-    public string? TransmissionId { get; set; }
+    public string? DialogId { get; }
+
+    /// <summary>
+    /// Gets the identifier for a specific transmission within Dialogporten.
+    /// </summary>
+    public string? TransmissionId { get; }
 }
