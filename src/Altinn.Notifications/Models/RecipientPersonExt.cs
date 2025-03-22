@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 namespace Altinn.Notifications.Models;
@@ -43,7 +44,8 @@ public class RecipientPersonExt
     /// </remarks>
     [Required]
     [JsonPropertyName("channelSchema")]
-    public required NotificationChannelExt ChannelSchema { get; set; }
+    [DefaultValue(NotificationChannelExt.EmailPreferred)]
+    public required NotificationChannelExt ChannelSchema { get; set; } = NotificationChannelExt.EmailPreferred;
 
     /// <summary>
     /// Gets or sets a value indicating whether to bypass the recipient's reservation against electronic communication.

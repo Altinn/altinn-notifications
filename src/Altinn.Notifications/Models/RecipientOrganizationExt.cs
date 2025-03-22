@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 namespace Altinn.Notifications.Models;
@@ -44,7 +45,8 @@ public class RecipientOrganizationExt
     /// </remarks>
     [Required]
     [JsonPropertyName("channelSchema")]
-    public required NotificationChannelExt ChannelSchema { get; set; }
+    [DefaultValue(NotificationChannelExt.SmsPreferred)]
+    public required NotificationChannelExt ChannelSchema { get; set; } = NotificationChannelExt.SmsPreferred;
 
     /// <summary>
     /// Gets or sets the email-specific configuration, used when the channel scheme includes email.

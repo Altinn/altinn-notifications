@@ -3,7 +3,7 @@
 namespace Altinn.Notifications.Core.Models.Orders;
 
 /// <summary>
-/// Represents a request to create a notification order with non or more reminders.
+/// Represents the core business entity of a notification order request with reminders.
 /// </summary>
 public class NotificationOrderSequenceRequest
 {

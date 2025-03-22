@@ -70,7 +70,6 @@ public class FutureOrdersController : ControllerBase
         var mainNotificationOrder = notificationOrderSequenceRequest.MapToNotificationOrder(creator);
         var reminderNotificationOrders = notificationOrderSequenceRequest.MapToNotificationOrders(creator);
 
-
-
+        throw new NotImplementedException();
     }
 }
