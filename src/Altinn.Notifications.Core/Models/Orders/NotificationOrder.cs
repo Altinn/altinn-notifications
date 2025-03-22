@@ -85,24 +85,6 @@ public class NotificationOrder : IBaseNotificationOrder
     }
 
     /// <summary>
-    /// Updates the order information.
-    /// </summary>
-    /// <param name="id">The identifier.</param>
-    public void SetOrderIdentifier(Guid id)
-    {
-        Id = id;
-    }
-
-    /// <summary>
-    /// Sets the order creation date.
-    /// </summary>
-    /// <param name="created">The created.</param>
-    public void SetOrderCreationDate(DateTime created)
-    {
-        Created = created.ToUniversalTime();
-    }
-
-    /// <summary>
     /// Updates the templates.
     /// </summary>
     /// <param name="templates">The templates.</param>
