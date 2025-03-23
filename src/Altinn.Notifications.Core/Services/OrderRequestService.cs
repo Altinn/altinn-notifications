@@ -73,6 +73,43 @@ public class OrderRequestService : IOrderRequestService
         };
     }
 
+    /// <inheritdoc/>
+    public async Task<NotificationOrderRequestResponse> RegisterNotificationOrderSequence(NotificationOrderSequenceRequest orderRequest, NotificationOrder mainNotificationOrder, List<NotificationOrder> reminders)
+    {
+        if (mainNotificationOrder != null)
+        {
+            var lookupResult = await GetRecipientLookupResult(mainNotificationOrder.Recipients, mainNotificationOrder.NotificationChannel, mainNotificationOrder.ResourceId);
+            if (lookupResult != null && lookupResult.MissingContact != null && lookupResult.MissingContact.Count > 0)
+            {
+                // ToDo break
+            }
+
+            mainNotificationOrder.UpdateTemplates(SetSenderIfNotDefined(mainNotificationOrder.Templates));
+        }
+
+        if (reminders != null)
+        {
+            foreach (var reminder in reminders)
+            {
+                var lookupResult = await GetRecipientLookupResult(reminder.Recipients, reminder.NotificationChannel, reminder.ResourceId);
+                if (lookupResult != null && lookupResult.MissingContact != null && lookupResult.MissingContact.Count > 0)
+                {
+                    // ToDo break
+                }
+
+                reminder.UpdateTemplates(SetSenderIfNotDefined(reminder.Templates));
+            }
+        }
+
+        List<NotificationOrder> savedOrders = await _repository.Create(orderRequest, mainNotificationOrder, reminders);
+
+        return new NotificationOrderRequestResponse()
+        {
+            //OrderId = savedOrder.Id,
+            //RecipientLookup = lookupResults
+        };
+    }
+
     private async Task<RecipientLookupResult?> GetRecipientLookupResult(List<Recipient> originalRecipients, NotificationChannel channel, string? resourceId)
     {
         List<Recipient> recipientsWithoutContactPoint = GetMissingContactRecipientList(channel, originalRecipients);

@@ -13,5 +13,14 @@ public interface IOrderRequestService
     /// </summary>
     /// <param name="orderRequest">The notification order request</param>
     /// <returns>The order request response object</returns>
-    public Task<NotificationOrderRequestResponse> RegisterNotificationOrder(NotificationOrderRequest orderRequest);
+    Task<NotificationOrderRequestResponse> RegisterNotificationOrder(NotificationOrderRequest orderRequest);
+
+    /// <summary>
+    /// Registers the notification order sequence.
+    /// </summary>
+    /// <param name="orderRequest">The order request.</param>
+    /// <param name="mainNotificationOrder">The main notification order.</param>
+    /// <param name="reminders">The reminders.</param>
+    /// <returns></returns>
+    Task<NotificationOrderRequestResponse> RegisterNotificationOrderSequence(NotificationOrderSequenceRequest orderRequest, NotificationOrder mainNotificationOrder, List<NotificationOrder> reminders);
 }

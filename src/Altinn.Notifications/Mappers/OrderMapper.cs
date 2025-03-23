@@ -300,7 +300,7 @@ public static class OrderMapper
         {
             notificationChannel = NotificationChannel.Email;
             templates.Add(request.Recipient.RecipientEmail.MapToEmailTemplate());
-            recipients = [new Recipient([new SmsAddressPoint(request.Recipient.RecipientEmail.EmailAddress)])];
+            recipients = [new Recipient([new EmailAddressPoint(request.Recipient.RecipientEmail.EmailAddress)])];
         }
         else if (request.Recipient.RecipientPerson != null)
         {
@@ -427,7 +427,7 @@ public static class OrderMapper
             {
                 notificationChannel = NotificationChannel.Email;
                 templates.Add(reminder.Recipient.RecipientEmail.MapToEmailTemplate());
-                recipients = [new Recipient([new SmsAddressPoint(reminder.Recipient.RecipientEmail.EmailAddress)])];
+                recipients = [new Recipient([new EmailAddressPoint(reminder.Recipient.RecipientEmail.EmailAddress)])];
             }
             else if (reminder.Recipient.RecipientPerson != null)
             {

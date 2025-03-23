@@ -17,6 +17,15 @@ public interface IOrderRepository
     public Task<NotificationOrder> Create(NotificationOrder order);
 
     /// <summary>
+    /// Creates a new notification order sequence in the database
+    /// </summary>
+    /// <param name="orderRequest">The notification order sequence request.</param>
+    /// <param name="mainNotificationOrder">The main notification order.</param>
+    /// <param name="reminders">The reminders.</param>
+    /// <returns>The saved notification order</returns>
+    public Task<List<NotificationOrder>> Create(NotificationOrderSequenceRequest orderRequest, NotificationOrder mainNotificationOrder, List<NotificationOrder> reminders);
+
+    /// <summary>
     /// Gets a list of notification orders where requestedSendTime has passed
     /// </summary>
     /// <returns>A list of notification orders</returns>

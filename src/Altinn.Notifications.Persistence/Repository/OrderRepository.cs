@@ -30,6 +30,7 @@ public class OrderRepository : IOrderRepository
     private const string _getOrdersPastSendTimeUpdateStatus = "select notifications.getorders_pastsendtime_updatestatus()";
     private const string _getOrderIncludeStatus = "select * from notifications.getorder_includestatus_v4($1, $2)"; // _alternateid,  creator
     private const string _cancelAndReturnOrder = "select * from notifications.cancelorder($1, $2)"; // _alternateid,  creator
+    private const string _insertOrderV2Sql = "call notifications.insertorder_v2($1, $2, $3, $4, $5, $6, $7)"; // (_orderid, _idempotencyid, _creatorname, _sendersreference, _created, _requestedsendtime, _orderwithreminder)
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderRepository"/> class.
@@ -182,6 +183,51 @@ public class OrderRepository : IOrderRepository
         return order!;
     }
 
+    /// <inheritdoc/>
+    public async Task<List<NotificationOrder>> Create(NotificationOrderSequenceRequest orderRequest, NotificationOrder mainNotificationOrder, List<NotificationOrder> reminders)
+    {
+        await using var connection = await _dataSource.OpenConnectionAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+        try
+        {
+            await InsertOrderSequence(orderRequest, connection, transaction);
+
+            if (mainNotificationOrder != null)
+            {
+                long dbOrderId = await InsertOrder(mainNotificationOrder, connection, transaction);
+
+                EmailTemplate? emailTemplate = mainNotificationOrder.Templates.Find(t => t.Type == NotificationTemplateType.Email) as EmailTemplate;
+                await InsertEmailTextAsync(dbOrderId, emailTemplate, connection, transaction);
+
+                SmsTemplate? smsTemplate = mainNotificationOrder.Templates.Find(t => t.Type == NotificationTemplateType.Sms) as SmsTemplate;
+                await InsertSmsTextAsync(dbOrderId, smsTemplate, connection, transaction);
+            }
+
+            if (reminders != null)
+            {
+                foreach (var notificationOrder in reminders)
+                {
+                    long dbOrderId = await InsertOrder(notificationOrder, connection, transaction);
+
+                    EmailTemplate? emailTemplate = notificationOrder.Templates.Find(t => t.Type == NotificationTemplateType.Email) as EmailTemplate;
+                    await InsertEmailTextAsync(dbOrderId, emailTemplate, connection, transaction);
+
+                    SmsTemplate? smsTemplate = notificationOrder.Templates.Find(t => t.Type == NotificationTemplateType.Sms) as SmsTemplate;
+                    await InsertSmsTextAsync(dbOrderId, smsTemplate, connection, transaction);
+                }
+            }
+
+            await transaction.CommitAsync();
+        }
+        catch (Exception)
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+
+        return reminders == null ? [mainNotificationOrder] : [mainNotificationOrder, .. reminders];
+    }
+
     private static NotificationOrderWithStatus? ReadNotificationOrderWithStatus(NpgsqlDataReader reader)
     {
         string? conditionEndpointString = reader.GetValue<string>("conditionendpoint");
@@ -266,5 +312,20 @@ public class OrderRepository : IOrderRepository
 
             await pgcom.ExecuteNonQueryAsync();
         }
+    }
+
+    private async Task InsertOrderSequence(NotificationOrderSequenceRequest order, NpgsqlConnection connection, NpgsqlTransaction transaction)
+    {
+        await using NpgsqlCommand pgcom = new NpgsqlCommand(_insertOrderV2Sql, connection, transaction);
+
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, order.OrderId);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, order.IdempotencyId);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, order.Creator.ShortName);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, order.SendersReference ?? (object)DBNull.Value);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, DateTime.UtcNow);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, order.RequestedSendTime);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Jsonb, order);
+
+        await pgcom.ExecuteNonQueryAsync();
     }
 }
