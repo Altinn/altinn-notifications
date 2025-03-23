@@ -7,9 +7,9 @@ namespace Altinn.Notifications.Models;
 /// </summary>
 /// <remarks>
 /// This class serves as a request wrapper that supports multiple targeting methods for notifications,
-/// allowing clients to specify exactly one recipient type per request.
+/// allowing clients to specify exactly one recipient type per notification order request.
 /// </remarks>
-public class RecipientSpecificationExt
+public class NotificationRecipientExt
 {
     /// <summary>
     /// Gets or sets the configuration for delivering a notification directly to an email address.
@@ -34,7 +34,7 @@ public class RecipientSpecificationExt
     /// </summary>
     /// <remarks>
     /// Use when targeting an individual by their national identity number, where contact information
-    /// will be retrieved from the the Common Contact Register (KRR).
+    /// will be retrieved from the Common Contact Register (KRR).
     /// </remarks>
     [JsonPropertyName("recipientPerson")]
     public RecipientPersonExt? RecipientPerson { get; set; }

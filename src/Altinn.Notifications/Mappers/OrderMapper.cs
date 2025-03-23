@@ -631,9 +631,9 @@ public static class OrderMapper
     }
 
     /// <summary>
-    /// Maps a <see cref="DialogportenReferenceExt"/> to a <see cref="DialogportenReference"/>.
+    /// Maps a <see cref="DialogportenIdentifiersExt"/> to a <see cref="DialogportenReference"/>.
     /// </summary>
-    private static DialogportenReference? MapToDialogportenReference(this DialogportenReferenceExt dialogportenReferenceExt)
+    private static DialogportenReference? MapToDialogportenReference(this DialogportenIdentifiersExt dialogportenReferenceExt)
     {
         return new DialogportenReference
         {

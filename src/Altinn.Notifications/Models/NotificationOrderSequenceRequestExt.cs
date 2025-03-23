@@ -18,7 +18,7 @@ public class NotificationOrderSequenceRequestExt : NotificationOrderSchedulingEx
     /// in the Dialogporten service, enabling integration between notifications and Dialogporten.
     /// </remarks>
     [JsonPropertyName("dialogportenAssociation")]
-    public DialogportenReferenceExt? DialogportenAssociation { get; set; }
+    public DialogportenIdentifiersExt? DialogportenAssociation { get; set; }
 
     /// <summary>
     /// Gets or sets the idempotency identifier defined by the sender.
@@ -37,7 +37,7 @@ public class NotificationOrderSequenceRequestExt : NotificationOrderSchedulingEx
     /// </remarks>
     [Required]
     [JsonPropertyName("recipient")]
-    public required RecipientSpecificationExt Recipient { get; set; }
+    public required NotificationRecipientExt Recipient { get; set; }
 
     /// <summary>
     /// Gets or sets a list of reminders that may be triggered under certain conditions after the initial notification has been processed.
