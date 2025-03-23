@@ -16,11 +16,20 @@ public interface IOrderRequestService
     Task<NotificationOrderRequestResponse> RegisterNotificationOrder(NotificationOrderRequest orderRequest);
 
     /// <summary>
-    /// Registers the notification order sequence.
+    /// Registers a notification order chain with optional reminders for delayed delivery.
     /// </summary>
-    /// <param name="orderRequest">The order request.</param>
-    /// <param name="mainNotificationOrder">The main notification order.</param>
-    /// <param name="reminders">The reminders.</param>
-    /// <returns></returns>
-    Task<NotificationOrderRequestResponse> RegisterNotificationOrderSequence(NotificationOrderChainRequest orderRequest, NotificationOrder mainNotificationOrder, List<NotificationOrder> reminders);
+    /// <param name="orderRequest">
+    /// The notification order chain request containing the primary notification details and any associated reminders with their delivery schedules.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task{TResult}"/> containing a <see cref="NotificationOrderRequestResponse"/> with 
+    /// the generated order ID and any lookup results for recipients whose contact information
+    /// needed resolution.
+    /// </returns>
+    /// <remarks>
+    /// This method processes a chain of notifications, consisting of an initial notification and
+    /// optional follow-up reminders. It handles template configuration, recipient lookup, and
+    /// validation before storing the entire sequence for processing.
+    /// </remarks>
+    Task<NotificationOrderRequestResponse> RegisterNotificationOrderChain(NotificationOrderChainRequest orderRequest);
 }

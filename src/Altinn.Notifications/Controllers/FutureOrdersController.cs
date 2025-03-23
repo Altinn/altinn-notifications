@@ -67,10 +67,7 @@ public class FutureOrdersController : ControllerBase
         }
 
         var notificationOrderChainRequest = notificationOrderRequest.MapToNotificationOrderChainRequest(creator);
-        var mainNotificationOrder = notificationOrderChainRequest.MapToNotificationOrder(creator);
-        var reminderNotificationOrders = notificationOrderChainRequest.MapToNotificationOrders(creator);
-
-        NotificationOrderRequestResponse result = await _orderRequestService.RegisterNotificationOrderSequence(notificationOrderChainRequest, mainNotificationOrder, reminderNotificationOrders);
+        NotificationOrderRequestResponse result = await _orderRequestService.RegisterNotificationOrderChain(notificationOrderChainRequest);
 
         return Accepted(result.OrderId!.GetSelfLinkFromOrderId(), result.MapToExternal());
     }

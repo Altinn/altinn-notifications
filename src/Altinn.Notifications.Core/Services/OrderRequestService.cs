@@ -1,8 +1,10 @@
 ﻿using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Models;
@@ -74,40 +76,83 @@ public class OrderRequestService : IOrderRequestService
     }
 
     /// <inheritdoc/>
-    public async Task<NotificationOrderRequestResponse> RegisterNotificationOrderSequence(NotificationOrderChainRequest orderRequest, NotificationOrder mainNotificationOrder, List<NotificationOrder> reminders)
+    public async Task<NotificationOrderRequestResponse> RegisterNotificationOrderChain(NotificationOrderChainRequest orderRequest)
     {
-        if (mainNotificationOrder != null)
+        DateTime currentTime = _dateTime.UtcNow();
+
+        var mainOrder = await CreateNotificationOrder(
+            orderRequest.Recipient,
+            orderRequest.OrderId,
+            orderRequest.SendersReference,
+            orderRequest.RequestedSendTime,
+            orderRequest.Creator,
+            currentTime,
+            orderRequest.ConditionEndpoint);
+
+        List<NotificationOrder> reminderOrders = await CreateReminderOrders(orderRequest.Reminders, orderRequest.Creator, currentTime);
+
+        List<NotificationOrder> savedOrders = await _repository.Create(orderRequest, mainOrder, reminderOrders);
+
+        return new NotificationOrderRequestResponse
         {
-            var lookupResult = await GetRecipientLookupResult(mainNotificationOrder.Recipients, mainNotificationOrder.NotificationChannel, mainNotificationOrder.ResourceId);
-            if (lookupResult != null && lookupResult.MissingContact != null && lookupResult.MissingContact.Count > 0)
-            {
-                // ToDo break
-            }
-
-            mainNotificationOrder.UpdateTemplates(SetSenderIfNotDefined(mainNotificationOrder.Templates));
-        }
-
-        if (reminders != null)
-        {
-            foreach (var reminder in reminders)
-            {
-                var lookupResult = await GetRecipientLookupResult(reminder.Recipients, reminder.NotificationChannel, reminder.ResourceId);
-                if (lookupResult != null && lookupResult.MissingContact != null && lookupResult.MissingContact.Count > 0)
-                {
-                    // ToDo break
-                }
-
-                reminder.UpdateTemplates(SetSenderIfNotDefined(reminder.Templates));
-            }
-        }
-
-        List<NotificationOrder> savedOrders = await _repository.Create(orderRequest, mainNotificationOrder, reminders);
-
-        return new NotificationOrderRequestResponse()
-        {
-            //OrderId = savedOrder.Id,
-            //RecipientLookup = lookupResults
         };
+    }
+
+    /// <summary>
+    /// Creates a notification order based on passed information.
+    /// </summary>
+    private async Task<NotificationOrder> CreateNotificationOrder(NotificationRecipient recipient, Guid orderId, string? sendersReference, DateTime requestedSendTime, Creator creator, DateTime currentTime, Uri? conditionEndpoint)
+    {
+        var (recipients, templates, notificationChannel, ignoreReservation, resourceIdentifier) = ExtractDeliveryComponents(recipient);
+
+        var lookupResult = await GetRecipientLookupResult(recipients, notificationChannel, resourceIdentifier);
+        if (lookupResult?.MissingContact?.Count > 0)
+        {
+            // TODO: Reject order due to missing contact information
+        }
+
+        templates = SetSenderIfNotDefined(templates);
+
+        return new NotificationOrder(
+            orderId,
+            sendersReference,
+            templates,
+            requestedSendTime,
+            notificationChannel,
+            creator,
+            currentTime,
+            recipients,
+            ignoreReservation,
+            resourceIdentifier,
+            conditionEndpoint);
+    }
+
+    /// <summary>
+    /// Creates notification orders for reminders if any exist.
+    /// </summary>
+    private async Task<List<NotificationOrder>> CreateReminderOrders(List<NotificationReminder>? reminders, Creator creator, DateTime currentTime)
+    {
+        List<NotificationOrder> reminderOrders = [];
+        if (reminders == null || reminders.Count == 0)
+        {
+            return reminderOrders;
+        }
+
+        foreach (var reminder in reminders)
+        {
+            var reminderOrder = await CreateNotificationOrder(
+                reminder.Recipient,
+                reminder.OrderId,
+                reminder.SendersReference,
+                reminder.RequestedSendTime,
+                creator,
+                currentTime,
+                reminder.ConditionEndpoint);
+
+            reminderOrders.Add(reminderOrder);
+        }
+
+        return reminderOrders;
     }
 
     private async Task<RecipientLookupResult?> GetRecipientLookupResult(List<Recipient> originalRecipients, NotificationChannel channel, string? resourceId)
@@ -208,5 +253,118 @@ public class OrderRequestService : IOrderRequestService
         }
 
         return templates;
+    }
+
+    /// <summary>
+    /// Adds templates for person notifications based on available settings.
+    /// </summary>
+    private static void AddTemplatesForPerson(RecipientPerson person, List<INotificationTemplate> templates)
+    {
+        if (person.SmsSettings != null)
+        {
+            templates.Add(CreateSmsTemplate(person.SmsSettings));
+        }
+
+        if (person.EmailSettings != null)
+        {
+            templates.Add(CreateEmailTemplate(person.EmailSettings));
+        }
+    }
+
+    /// <summary>
+    /// Adds templates for organization notifications based on available settings.
+    /// </summary>
+    private static void AddTemplatesForOrganization(RecipientOrganization organization, List<INotificationTemplate> templates)
+    {
+        if (organization.SmsSettings != null)
+        {
+            templates.Add(CreateSmsTemplate(organization.SmsSettings));
+        }
+
+        if (organization.EmailSettings != null)
+        {
+            templates.Add(CreateEmailTemplate(organization.EmailSettings));
+        }
+    }
+
+    /// <summary>
+    /// Creates an Email template from Email settings.
+    /// </summary>
+    private static EmailTemplate CreateEmailTemplate(EmailSendingOptions emailSettings)
+    {
+        return new EmailTemplate(
+            emailSettings.SenderEmailAddress,
+            emailSettings.Subject,
+            emailSettings.Body,
+            emailSettings.ContentType);
+    }
+
+    /// <summary>
+    /// Creates an SMS template from SMS settings.
+    /// </summary>
+    private static SmsTemplate CreateSmsTemplate(SmsSendingOptions smsSettings)
+    {
+        return new SmsTemplate(smsSettings.Sender, smsSettings.Body);
+    }
+
+    /// <summary>
+    /// Extracts information from a <see cref="NotificationRecipient"/> into notification delivery components.
+    /// </summary>
+    /// <param name="recipient">The notification recipient containing targeting and messaging preferences.</param>
+    /// <returns>
+    /// A tuple containing:
+    /// <list type="bullet">
+    /// <item><description>Recipients - A list of recipients with proper addressing information</description></item>
+    /// <item><description>Templates - Notification templates based on the recipient's configuration</description></item>
+    /// <item><description>NotificationChannel - The determined notification channel based on recipient type</description></item>
+    /// <item><description>IgnoreReservation - Flag indicating whether to bypass KRR reservations</description></item>
+    /// <item><description>ResourceIdentifier - Optional resource ID for authorization and tracking</description></item>
+    /// </list>
+    /// </returns>
+    /// <remarks>
+    /// This method processes different recipient types (SMS, Email, Person, Organization) and creates
+    /// the appropriate templates and addressing information based on the recipient's configuration.
+    /// The default channel is SMS if the recipient type cannot be determined.
+    /// </remarks>
+    private static (List<Recipient> Recipients, List<INotificationTemplate> Templates, NotificationChannel NotificationChannel, bool? IgnoreReservation, string? ResourceIdentifier) ExtractDeliveryComponents(NotificationRecipient recipient)
+    {
+        // Initialize default values
+        bool? ignoreReservation = null;
+        List<Recipient> recipients = [];
+        string? resourceIdentifier = null;
+        List<INotificationTemplate> templates = [];
+        NotificationChannel notificationChannel = NotificationChannel.Sms;
+
+        if (recipient.RecipientSms?.Settings != null)
+        {
+            notificationChannel = NotificationChannel.Sms;
+            templates.Add(CreateSmsTemplate(recipient.RecipientSms.Settings));
+            recipients.Add(new Recipient([new SmsAddressPoint(recipient.RecipientSms.PhoneNumber)]));
+        }
+        else if (recipient.RecipientEmail?.Settings != null)
+        {
+            notificationChannel = NotificationChannel.Email;
+            templates.Add(CreateEmailTemplate(recipient.RecipientEmail.Settings));
+            recipients.Add(new Recipient([new EmailAddressPoint(recipient.RecipientEmail.EmailAddress)]));
+        }
+        else if (recipient.RecipientPerson != null)
+        {
+            notificationChannel = recipient.RecipientPerson.ChannelSchema;
+            resourceIdentifier = recipient.RecipientPerson.ResourceId;
+            ignoreReservation = recipient.RecipientPerson.IgnoreReservation;
+            recipients.Add(new Recipient([], nationalIdentityNumber: recipient.RecipientPerson.NationalIdentityNumber));
+
+            AddTemplatesForPerson(recipient.RecipientPerson, templates);
+        }
+        else if (recipient.RecipientOrganization != null)
+        {
+            notificationChannel = recipient.RecipientOrganization.ChannelSchema;
+            resourceIdentifier = recipient.RecipientOrganization.ResourceId;
+            recipients.Add(new Recipient([], organizationNumber: recipient.RecipientOrganization.OrgNumber));
+
+            AddTemplatesForOrganization(recipient.RecipientOrganization, templates);
+        }
+
+        return (recipients, templates, notificationChannel, ignoreReservation, resourceIdentifier);
     }
 }
