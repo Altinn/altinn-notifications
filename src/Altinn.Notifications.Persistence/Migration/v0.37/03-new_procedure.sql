@@ -1,23 +1,23 @@
-﻿-- insertorder_v2.sql:
-CREATE OR REPLACE PROCEDURE notifications.insertorder_v2(
+﻿CREATE OR REPLACE PROCEDURE notifications.insertorderchain(
     _orderid UUID,
     _idempotencyid TEXT,
     _creatorname TEXT,
     _sendersreference TEXT,
     _created TIMESTAMPTZ,
     _requestedsendtime TIMESTAMPTZ,
-    _orderwithreminder JSONB
+    _orderchain JSONB
 )
 LANGUAGE 'plpgsql'
 AS $BODY$
 BEGIN
-    INSERT INTO notifications.orders_v2(
+    INSERT INTO notifications.orderschain(
         orderid,
         idempotencyid,
         creatorname,
         created,
         processed,
-        orderwithreminder
+        processedstatus,
+        orderchain
     )
     VALUES (
         _orderid,
@@ -25,7 +25,8 @@ BEGIN
         _creatorname,
         _created,
         _created,
-        _orderwithreminder
+        'Registered',
+        _orderchain
     );
 END;
 $BODY$;
