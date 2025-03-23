@@ -280,107 +280,11 @@ public static class OrderMapper
     }
 
     /// <summary>
-    /// Maps a <see cref="NotificationOrderChainRequestExt"/> to a <see cref="NotificationOrder"/>.
+    /// Maps the main notification order defined in a <see cref="NotificationOrderChainRequestExt"/> to a <see cref="NotificationOrder"/>.
     /// </summary>
     public static NotificationOrder MapToNotificationOrder(this NotificationOrderChainRequest request, string creator)
     {
-        bool? ignoreReservation = null;
-        List<Recipient> recipients = [];
-        string? resouceIdentifier = null;
-        List<INotificationTemplate> templates = [];
-        NotificationChannel notificationChannel = NotificationChannel.Sms;
-
-        if (request.Recipient.RecipientSms != null)
-        {
-            notificationChannel = NotificationChannel.Sms;
-            templates.Add(request.Recipient.RecipientSms.MapToSmsTemplate());
-            recipients = [new Recipient([new SmsAddressPoint(request.Recipient.RecipientSms.PhoneNumber)])];
-        }
-        else if (request.Recipient.RecipientEmail != null)
-        {
-            notificationChannel = NotificationChannel.Email;
-            templates.Add(request.Recipient.RecipientEmail.MapToEmailTemplate());
-            recipients = [new Recipient([new EmailAddressPoint(request.Recipient.RecipientEmail.EmailAddress)])];
-        }
-        else if (request.Recipient.RecipientPerson != null)
-        {
-            resouceIdentifier = request.Recipient.RecipientPerson.ResourceId;
-            notificationChannel = request.Recipient.RecipientPerson.ChannelSchema;
-            ignoreReservation = request.Recipient.RecipientPerson.IgnoreReservation;
-            recipients = [new Recipient([], nationalIdentityNumber: request.Recipient.RecipientPerson.NationalIdentityNumber)];
-
-            switch (request.Recipient.RecipientPerson.ChannelSchema)
-            {
-                case NotificationChannel.Sms:
-                    if (request.Recipient.RecipientPerson.SmsSettings != null)
-                    {
-                        templates.Add(request.Recipient.RecipientPerson.MapToSmsTemplate());
-                    }
-
-                    break;
-
-                case NotificationChannel.Email:
-                    if (request.Recipient.RecipientPerson.EmailSettings != null)
-                    {
-                        templates.Add(request.Recipient.RecipientPerson.MapToEmailTemplate());
-                    }
-
-                    break;
-
-                case NotificationChannel.SmsPreferred:
-                case NotificationChannel.EmailPreferred:
-                    if (request.Recipient.RecipientPerson.SmsSettings != null)
-                    {
-                        templates.Add(request.Recipient.RecipientPerson.MapToSmsTemplate());
-                    }
-
-                    if (request.Recipient.RecipientPerson.EmailSettings != null)
-                    {
-                        templates.Add(request.Recipient.RecipientPerson.MapToEmailTemplate());
-                    }
-
-                    break;
-            }
-        }
-        else if (request.Recipient.RecipientOrganization != null)
-        {
-            resouceIdentifier = request.Recipient.RecipientOrganization.ResourceId;
-            notificationChannel = request.Recipient.RecipientOrganization.ChannelSchema;
-            recipients = [new Recipient([], nationalIdentityNumber: request.Recipient.RecipientOrganization.OrgNumber)];
-
-            switch (request.Recipient.RecipientOrganization.ChannelSchema)
-            {
-                case NotificationChannel.Sms:
-                    if (request.Recipient.RecipientOrganization.SmsSettings != null)
-                    {
-                        templates.Add(request.Recipient.RecipientOrganization.MapToSmsTemplate());
-                    }
-
-                    break;
-
-                case NotificationChannel.Email:
-                    if (request.Recipient.RecipientOrganization.EmailSettings != null)
-                    {
-                        templates.Add(request.Recipient.RecipientOrganization.MapToEmailTemplate());
-                    }
-
-                    break;
-
-                case NotificationChannel.SmsPreferred:
-                case NotificationChannel.EmailPreferred:
-                    if (request.Recipient.RecipientOrganization.SmsSettings != null)
-                    {
-                        templates.Add(request.Recipient.RecipientOrganization.MapToSmsTemplate());
-                    }
-
-                    if (request.Recipient.RecipientOrganization.EmailSettings != null)
-                    {
-                        templates.Add(request.Recipient.RecipientOrganization.MapToEmailTemplate());
-                    }
-
-                    break;
-            }
-        }
+        var (recipients, templates, notificationChannel, ignoreReservation, resourceIdentifier) = MapRecipientAndTemplates(request.Recipient);
 
         return new NotificationOrder(
             request.OrderId,
@@ -392,123 +296,25 @@ public static class OrderMapper
             DateTime.UtcNow,
             recipients,
             ignoreReservation,
-            resouceIdentifier,
+            resourceIdentifier,
             request.ConditionEndpoint);
     }
 
     /// <summary>
-    /// Maps reminders in a <see cref="NotificationOrderChainRequest"/> to a list of <see cref="NotificationOrder"/> objects.
+    /// Maps reminders defined in a <see cref="NotificationOrderChainRequest"/> to a list of <see cref="NotificationOrder"/> objects.
     /// </summary>
     public static List<NotificationOrder> MapToNotificationOrders(this NotificationOrderChainRequest request, string creator)
     {
-        List<NotificationOrder> notificationOrders = [];
-
         if (request.Reminders == null || request.Reminders.Count == 0)
         {
-            return notificationOrders;
+            return [];
         }
 
-        List<Recipient> recipients = [];
+        List<NotificationOrder> notificationOrders = [];
 
         foreach (var reminder in request.Reminders)
         {
-            bool? ignoreReservation = null;
-            string? resouceIdentifier = null;
-            List<INotificationTemplate> templates = [];
-            NotificationChannel notificationChannel = NotificationChannel.Sms;
-
-            if (reminder.Recipient.RecipientSms != null)
-            {
-                notificationChannel = NotificationChannel.Sms;
-                templates.Add(reminder.Recipient.RecipientSms.MapToSmsTemplate());
-                recipients = [new Recipient([new SmsAddressPoint(reminder.Recipient.RecipientSms.PhoneNumber)])];
-            }
-            else if (reminder.Recipient.RecipientEmail != null)
-            {
-                notificationChannel = NotificationChannel.Email;
-                templates.Add(reminder.Recipient.RecipientEmail.MapToEmailTemplate());
-                recipients = [new Recipient([new EmailAddressPoint(reminder.Recipient.RecipientEmail.EmailAddress)])];
-            }
-            else if (reminder.Recipient.RecipientPerson != null)
-            {
-                resouceIdentifier = reminder.Recipient.RecipientPerson.ResourceId;
-                notificationChannel = reminder.Recipient.RecipientPerson.ChannelSchema;
-                ignoreReservation = reminder.Recipient.RecipientPerson.IgnoreReservation;
-                recipients = [new Recipient([], nationalIdentityNumber: reminder.Recipient.RecipientPerson.NationalIdentityNumber)];
-
-                switch (reminder.Recipient.RecipientPerson.ChannelSchema)
-                {
-                    case NotificationChannel.Sms:
-                        if (reminder.Recipient.RecipientPerson.SmsSettings != null)
-                        {
-                            templates.Add(reminder.Recipient.RecipientPerson.MapToSmsTemplate());
-                        }
-
-                        break;
-
-                    case NotificationChannel.Email:
-                        if (reminder.Recipient.RecipientPerson.EmailSettings != null)
-                        {
-                            templates.Add(reminder.Recipient.RecipientPerson.MapToEmailTemplate());
-                        }
-
-                        break;
-
-                    case NotificationChannel.SmsPreferred:
-                    case NotificationChannel.EmailPreferred:
-                        if (reminder.Recipient.RecipientPerson.SmsSettings != null)
-                        {
-                            templates.Add(reminder.Recipient.RecipientPerson.MapToSmsTemplate());
-                        }
-
-                        if (reminder.Recipient.RecipientPerson.EmailSettings != null)
-                        {
-                            templates.Add(reminder.Recipient.RecipientPerson.MapToEmailTemplate());
-                        }
-
-                        break;
-                }
-
-            }
-            else if (reminder.Recipient.RecipientOrganization != null)
-            {
-                resouceIdentifier = reminder.Recipient.RecipientOrganization.ResourceId;
-                notificationChannel = reminder.Recipient.RecipientOrganization.ChannelSchema;
-                recipients = [new Recipient([], nationalIdentityNumber: reminder.Recipient.RecipientOrganization.OrgNumber)];
-
-                switch (reminder.Recipient.RecipientOrganization.ChannelSchema)
-                {
-                    case NotificationChannel.Sms:
-                        if (reminder.Recipient.RecipientOrganization.SmsSettings != null)
-                        {
-                            templates.Add(reminder.Recipient.RecipientOrganization.MapToSmsTemplate());
-                        }
-
-                        break;
-
-                    case NotificationChannel.Email:
-                        if (reminder.Recipient.RecipientOrganization.EmailSettings != null)
-                        {
-                            templates.Add(reminder.Recipient.RecipientOrganization.MapToEmailTemplate());
-                        }
-
-                        break;
-
-                    case NotificationChannel.SmsPreferred:
-                    case NotificationChannel.EmailPreferred:
-                        if (reminder.Recipient.RecipientOrganization.SmsSettings != null)
-                        {
-                            templates.Add(reminder.Recipient.RecipientOrganization.MapToSmsTemplate());
-                        }
-
-                        if (reminder.Recipient.RecipientOrganization.EmailSettings != null)
-                        {
-                            templates.Add(reminder.Recipient.RecipientOrganization.MapToEmailTemplate());
-                        }
-
-                        break;
-                }
-            }
+            var (recipients, templates, notificationChannel, ignoreReservation, resourceIdentifier) = MapRecipientAndTemplates(reminder.Recipient);
 
             notificationOrders.Add(
                 new NotificationOrder(
@@ -521,7 +327,7 @@ public static class OrderMapper
                     DateTime.UtcNow,
                     recipients,
                     ignoreReservation,
-                    resouceIdentifier,
+                    resourceIdentifier,
                     reminder.ConditionEndpoint));
         }
 
@@ -531,43 +337,45 @@ public static class OrderMapper
     /// <summary>
     /// Maps a <see cref="NotificationOrderChainRequestExt"/> to a <see cref="NotificationOrderChainRequest"/>.
     /// </summary>
-    /// <param name="notificationOrderSequenceRequestExt">The request that contains a notification order and zero or more reminders.</param>
-    /// <param name="creatorName">The creator of the notification request.</param>
-    /// <returns>A notification order sequence request.</returns>
-    public static NotificationOrderChainRequest MapToNotificationOrderSequenceRequest(this NotificationOrderChainRequestExt notificationOrderSequenceRequestExt, string creatorName)
+    /// <param name="notificationOrderChainRequestExt">The request that contains a notification order and zero or more reminders.</param>
+    /// <param name="creatorName">The name of the person or entity who created the notification request.</param>
+    /// <returns>A <see cref="NotificationOrderChainRequest"/> object mapped from the provided notification order chain request.</returns>
+    public static NotificationOrderChainRequest MapToNotificationOrderChainRequest(this NotificationOrderChainRequestExt notificationOrderChainRequestExt, string creatorName)
     {
         // Map the recipient.
         var recipient = new NotificationRecipient
         {
-            RecipientSms = notificationOrderSequenceRequestExt.Recipient.RecipientSms?.MapToRecipientSms(),
-            RecipientEmail = notificationOrderSequenceRequestExt.Recipient.RecipientEmail?.MapToRecipientEmail(),
-            RecipientPerson = notificationOrderSequenceRequestExt.Recipient.RecipientPerson?.MapToRecipientPerson(),
-            RecipientOrganization = notificationOrderSequenceRequestExt.Recipient.RecipientOrganization?.MapToRecipientOrganization()
+            RecipientSms = notificationOrderChainRequestExt.Recipient.RecipientSms?.MapToRecipientSms(),
+            RecipientEmail = notificationOrderChainRequestExt.Recipient.RecipientEmail?.MapToRecipientEmail(),
+            RecipientPerson = notificationOrderChainRequestExt.Recipient.RecipientPerson?.MapToRecipientPerson(),
+            RecipientOrganization = notificationOrderChainRequestExt.Recipient.RecipientOrganization?.MapToRecipientOrganization()
         };
 
-        // Map the reminders and set their RequestedSendTime based on the main notification's requested time plus delay.
-        var reminders = notificationOrderSequenceRequestExt.Reminders?
+        // Map the reminders and set their RequestedSendTime based on the main notification's requested time plus the delay.
+        var reminders = notificationOrderChainRequestExt.Reminders?
             .Select(reminder =>
             {
-                // First map the reminder
-                NotificationReminder mappedReminder = MapToNotificationReminder(reminder);
-                mappedReminder.RequestedSendTime = notificationOrderSequenceRequestExt.RequestedSendTime.AddDays(mappedReminder.DelayDays).ToUniversalTime();
+                // Calculate the send time for each reminder.
+                var requestedSendTime = notificationOrderChainRequestExt.RequestedSendTime.AddDays(reminder.DelayDays).ToUniversalTime();
 
-                return mappedReminder;
-            }).ToList();
+                // Map the reminder with the calculated send time.
+                return reminder.MapToNotificationReminder(requestedSendTime);
+            })
+            .ToList();
 
-        DialogportenIdentifiers? dialogportenAssociation = notificationOrderSequenceRequestExt.DialogportenAssociation?.MapToDialogportenReference();
+        DialogportenIdentifiers? dialogportenAssociation = notificationOrderChainRequestExt.DialogportenAssociation?.MapToDialogportenReference();
 
         return new NotificationOrderChainRequest(
-            orderId: Guid.NewGuid(),
-            creator: new Creator(creatorName),
-            idempotencyId: notificationOrderSequenceRequestExt.IdempotencyId,
-            recipient: recipient,
-            conditionEndpoint: notificationOrderSequenceRequestExt.ConditionEndpoint,
-            dialogportenAssociation: dialogportenAssociation,
-            reminders: reminders,
-            requestedSendTime: notificationOrderSequenceRequestExt.RequestedSendTime.ToUniversalTime(),
-            sendersReference: notificationOrderSequenceRequestExt.SendersReference);
+            Guid.NewGuid(),
+            new Creator(creatorName),
+            notificationOrderChainRequestExt.IdempotencyId,
+            recipient,
+            notificationOrderChainRequestExt.ConditionEndpoint,
+            dialogportenAssociation,
+            reminders,
+            notificationOrderChainRequestExt.RequestedSendTime.ToUniversalTime(),
+            notificationOrderChainRequestExt.SendersReference);
+
     }
 
     /// <summary>
@@ -591,9 +399,142 @@ public static class OrderMapper
     }
 
     /// <summary>
+    /// Maps recipient and templates from the given notification recipient.
+    /// </summary>
+    private static (List<Recipient> Recipients, List<INotificationTemplate> Templates, NotificationChannel NotificationChannel, bool? IgnoreReservation, string? ResourceIdentifier) MapRecipientAndTemplates(NotificationRecipient recipient)
+    {
+        // Initialize default values
+        bool? ignoreReservation = null;
+        List<Recipient> recipients = [];
+        string? resourceIdentifier = null;
+        List<INotificationTemplate> templates = [];
+        NotificationChannel notificationChannel = NotificationChannel.Sms;
+
+        // Handle different recipient types
+        if (recipient.RecipientSms?.Settings != null)
+        {
+            notificationChannel = NotificationChannel.Sms;
+            recipients.Add(CreateSmsRecipient(recipient.RecipientSms));
+            templates.Add(CreateSmsTemplate(recipient.RecipientSms.Settings));
+        }
+        else if (recipient.RecipientEmail?.Settings != null)
+        {
+            notificationChannel = NotificationChannel.Email;
+            recipients.Add(CreateEmailRecipient(recipient.RecipientEmail));
+            templates.Add(CreateEmailTemplate(recipient.RecipientEmail.Settings));
+        }
+        else if (recipient.RecipientPerson != null)
+        {
+            notificationChannel = recipient.RecipientPerson.ChannelSchema;
+            resourceIdentifier = recipient.RecipientPerson.ResourceId;
+            ignoreReservation = recipient.RecipientPerson.IgnoreReservation;
+            recipients.Add(CreatePersonRecipient(recipient.RecipientPerson));
+
+            AddTemplatesForPerson(recipient.RecipientPerson, templates);
+        }
+        else if (recipient.RecipientOrganization != null)
+        {
+            notificationChannel = recipient.RecipientOrganization.ChannelSchema;
+            resourceIdentifier = recipient.RecipientOrganization.ResourceId;
+            recipients.Add(CreateOrganizationRecipient(recipient.RecipientOrganization));
+
+            AddTemplatesForOrganization(recipient.RecipientOrganization, templates);
+        }
+
+        return (recipients, templates, notificationChannel, ignoreReservation, resourceIdentifier);
+    }
+
+    /// <summary>
+    /// Creates a recipient for SMS notifications.
+    /// </summary>
+    private static Recipient CreateSmsRecipient(RecipientSms recipientSms)
+    {
+        return new Recipient([new SmsAddressPoint(recipientSms.PhoneNumber)]);
+    }
+
+    /// <summary>
+    /// Creates a recipient for Email notifications.
+    /// </summary>
+    private static Recipient CreateEmailRecipient(RecipientEmail recipientEmail)
+    {
+        return new Recipient([new EmailAddressPoint(recipientEmail.EmailAddress)]);
+    }
+
+    /// <summary>
+    /// Creates a recipient for sending notifications to a person identified by their national identity number.
+    /// </summary>
+    private static Recipient CreatePersonRecipient(RecipientPerson recipientPerson)
+    {
+        return new Recipient([], nationalIdentityNumber: recipientPerson.NationalIdentityNumber);
+    }
+
+    /// <summary>
+    /// Creates a recipient for sending notifications to an organization's contact person.
+    /// </summary>
+    private static Recipient CreateOrganizationRecipient(RecipientOrganization recipientOrganization)
+    {
+        return new Recipient([], organizationNumber: recipientOrganization.OrgNumber);
+    }
+
+    /// <summary>
+    /// Creates an SMS template from SMS settings.
+    /// </summary>
+    private static SmsTemplate CreateSmsTemplate(SmsSendingOptions smsSettings)
+    {
+        return new SmsTemplate(smsSettings.Sender, smsSettings.Body);
+    }
+
+    /// <summary>
+    /// Creates an Email template from Email settings.
+    /// </summary>
+    private static EmailTemplate CreateEmailTemplate(EmailSendingOptions emailSettings)
+    {
+        return new EmailTemplate(
+            emailSettings.SenderEmailAddress,
+            emailSettings.Subject,
+            emailSettings.Body,
+            emailSettings.ContentType);
+    }
+
+    /// <summary>
+    /// Adds templates for person notifications based on available settings.
+    /// </summary>
+    private static void AddTemplatesForPerson(RecipientPerson person, List<INotificationTemplate> templates)
+    {
+        if (person.SmsSettings != null)
+        {
+            templates.Add(CreateSmsTemplate(person.SmsSettings));
+        }
+
+        if (person.EmailSettings != null)
+        {
+            templates.Add(CreateEmailTemplate(person.EmailSettings));
+        }
+    }
+
+    /// <summary>
+    /// Adds templates for organization notifications based on available settings.
+    /// </summary>
+    private static void AddTemplatesForOrganization(RecipientOrganization organization, List<INotificationTemplate> templates)
+    {
+        if (organization.SmsSettings != null)
+        {
+            templates.Add(CreateSmsTemplate(organization.SmsSettings));
+        }
+
+        if (organization.EmailSettings != null)
+        {
+            templates.Add(CreateEmailTemplate(organization.EmailSettings));
+        }
+    }
+
+    /// <summary>
     /// Maps a <see cref="NotificationReminderExt"/> to a <see cref="NotificationReminder"/>.
     /// </summary>
-    private static NotificationReminder MapToNotificationReminder(this NotificationReminderExt notificationReminderExt)
+    /// <param name="notificationReminderExt">The extended notification reminder object to map from.</param>
+    /// <param name="requestedSendTime">The requested send time for the reminder.</param>
+    /// <returns>A <see cref="NotificationReminder"/> object mapped from the provided notification reminder.</returns>
+    private static NotificationReminder MapToNotificationReminder(this NotificationReminderExt notificationReminderExt, DateTime requestedSendTime)
     {
         return new()
         {
@@ -606,6 +547,7 @@ public static class OrderMapper
             },
 
             OrderId = Guid.NewGuid(),
+            RequestedSendTime = requestedSendTime,
             DelayDays = notificationReminderExt.DelayDays,
             SendersReference = notificationReminderExt.SendersReference,
             ConditionEndpoint = notificationReminderExt.ConditionEndpoint
@@ -643,42 +585,6 @@ public static class OrderMapper
     }
 
     /// <summary>
-    /// Maps a <see cref="RecipientEmail"/> to a <see cref="EmailTemplate"/>.
-    /// </summary>
-    private static EmailTemplate MapToEmailTemplate(this RecipientEmail recipientEmail)
-    {
-        return new EmailTemplate(
-            recipientEmail.Settings.SenderEmailAddress,
-            recipientEmail.Settings.Subject,
-            recipientEmail.Settings.Body,
-            recipientEmail.Settings.ContentType);
-    }
-
-    /// <summary>
-    /// Maps a <see cref="RecipientPerson"/> to a <see cref="EmailTemplate"/>.
-    /// </summary>
-    private static EmailTemplate MapToEmailTemplate(this RecipientPerson recipientPerson)
-    {
-        return new EmailTemplate(
-            recipientPerson.EmailSettings!.SenderEmailAddress,
-            recipientPerson.EmailSettings!.Subject,
-            recipientPerson.EmailSettings!.Body,
-            recipientPerson.EmailSettings!.ContentType);
-    }
-
-    /// <summary>
-    /// Maps a <see cref="RecipientOrganization"/> to a <see cref="EmailTemplate"/>.
-    /// </summary>
-    private static EmailTemplate MapToEmailTemplate(this RecipientOrganization recipientOrganization)
-    {
-        return new EmailTemplate(
-            recipientOrganization.EmailSettings!.SenderEmailAddress,
-            recipientOrganization.EmailSettings!.Subject,
-            recipientOrganization.EmailSettings!.Body,
-            recipientOrganization.EmailSettings!.ContentType);
-    }
-
-    /// <summary>
     /// Maps a <see cref="EmailSendingOptionsExt"/> to a <see cref="EmailSendingOptions"/>.
     /// </summary>
     private static EmailSendingOptions MapToEmailSendingOptions(this EmailSendingOptionsExt emailSendingOptionsExt)
@@ -692,30 +598,6 @@ public static class OrderMapper
             ContentType = (EmailContentType)emailSendingOptionsExt.ContentType,
             SendingTimePolicy = (SendingTimePolicy)emailSendingOptionsExt.SendingTimePolicy
         };
-    }
-
-    /// <summary>
-    /// Maps a <see cref="RecipientSms"/> to a <see cref="SmsTemplate"/>.
-    /// </summary>
-    private static SmsTemplate MapToSmsTemplate(this RecipientSms recipientSms)
-    {
-        return new SmsTemplate(recipientSms.Settings.Sender, recipientSms.Settings.Body);
-    }
-
-    /// <summary>
-    /// Maps a <see cref="RecipientPerson"/> to a <see cref="SmsTemplate"/>.
-    /// </summary>
-    private static SmsTemplate MapToSmsTemplate(this RecipientPerson recipientPerson)
-    {
-        return new SmsTemplate(recipientPerson.SmsSettings!.Sender, recipientPerson.SmsSettings!.Body);
-    }
-
-    /// <summary>
-    /// Maps a <see cref="RecipientOrganization"/> to a <see cref="SmsTemplate"/>.
-    /// </summary>
-    private static SmsTemplate MapToSmsTemplate(this RecipientOrganization recipientOrganization)
-    {
-        return new SmsTemplate(recipientOrganization.SmsSettings!.Sender, recipientOrganization.SmsSettings!.Body);
     }
 
     /// <summary>
