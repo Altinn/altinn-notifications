@@ -280,7 +280,7 @@ public static class OrderMapper
     }
 
     /// <summary>
-    /// Maps a <see cref="NotificationOrderSequenceRequestExt"/> to a <see cref="NotificationOrder"/>.
+    /// Maps a <see cref="NotificationOrderChainRequestExt"/> to a <see cref="NotificationOrder"/>.
     /// </summary>
     public static NotificationOrder MapToNotificationOrder(this NotificationOrderSequenceRequest request, string creator)
     {
@@ -529,12 +529,12 @@ public static class OrderMapper
     }
 
     /// <summary>
-    /// Maps a <see cref="NotificationOrderSequenceRequestExt"/> to a <see cref="NotificationOrderSequenceRequest"/>.
+    /// Maps a <see cref="NotificationOrderChainRequestExt"/> to a <see cref="NotificationOrderSequenceRequest"/>.
     /// </summary>
     /// <param name="notificationOrderSequenceRequestExt">The request that contains a notification order and zero or more reminders.</param>
     /// <param name="creatorName">The creator of the notification request.</param>
     /// <returns>A notification order sequence request.</returns>
-    public static NotificationOrderSequenceRequest MapToNotificationOrderSequenceRequest(this NotificationOrderSequenceRequestExt notificationOrderSequenceRequestExt, string creatorName)
+    public static NotificationOrderSequenceRequest MapToNotificationOrderSequenceRequest(this NotificationOrderChainRequestExt notificationOrderSequenceRequestExt, string creatorName)
     {
         // Map the recipient.
         var recipient = new RecipientSpecification

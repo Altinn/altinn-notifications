@@ -3,7 +3,7 @@
 namespace Altinn.Notifications.Models;
 
 /// <summary>
-/// Represents the result of creating a notification order using <see cref="NotificationOrderSequenceRequestExt"/>.
+/// Represents the result of creating a notification order using <see cref="NotificationOrderChainRequestExt"/>.
 /// </summary>
 public class NotificationOrderCreationResultExt : NotificationOrderResponseBaseContentExt
 {
