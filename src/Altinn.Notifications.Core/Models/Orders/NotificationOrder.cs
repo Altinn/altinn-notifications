@@ -85,15 +85,6 @@ public class NotificationOrder : IBaseNotificationOrder
     }
 
     /// <summary>
-    /// Updates the templates.
-    /// </summary>
-    /// <param name="templates">The templates.</param>
-    public void UpdateTemplates(List<INotificationTemplate> templates)
-    {
-        Templates = templates;
-    }
-
-    /// <summary>
     /// Json serializes the <see cref="NotificationOrder"/>
     /// </summary>
     public string Serialize()

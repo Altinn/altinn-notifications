@@ -65,6 +65,6 @@ public interface IOrderRepository
     /// </summary>
     /// <param name="id">The order id</param>
     /// <param name="creator">The short name of the order creator</param>
-    /// <returns>If successful the cancelled notification order with status info. If error a cancellation error type.</returns>
+    /// <returns>If successful the canceled notification order with status info. If error a cancellation error type.</returns>
     public Task<Result<NotificationOrderWithStatus, CancellationError>> CancelOrder(Guid id, string creator);
 }
