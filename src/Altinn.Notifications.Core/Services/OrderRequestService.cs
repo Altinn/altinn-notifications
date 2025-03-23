@@ -74,7 +74,7 @@ public class OrderRequestService : IOrderRequestService
     }
 
     /// <inheritdoc/>
-    public async Task<NotificationOrderRequestResponse> RegisterNotificationOrderSequence(NotificationOrderSequenceRequest orderRequest, NotificationOrder mainNotificationOrder, List<NotificationOrder> reminders)
+    public async Task<NotificationOrderRequestResponse> RegisterNotificationOrderSequence(NotificationOrderChainRequest orderRequest, NotificationOrder mainNotificationOrder, List<NotificationOrder> reminders)
     {
         if (mainNotificationOrder != null)
         {

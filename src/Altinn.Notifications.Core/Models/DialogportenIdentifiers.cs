@@ -3,7 +3,7 @@
 /// <summary>
 /// Represents identifiers for dialogs and transmissions in the Dialogporten API.
 /// </summary>
-public class DialogportenReference
+public class DialogportenIdentifiers
 {
     /// <summary>
     /// Gets or sets the identifier for a specific dialog within Dialogporten.

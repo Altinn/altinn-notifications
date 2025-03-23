@@ -22,5 +22,5 @@ public interface IOrderRequestService
     /// <param name="mainNotificationOrder">The main notification order.</param>
     /// <param name="reminders">The reminders.</param>
     /// <returns></returns>
-    Task<NotificationOrderRequestResponse> RegisterNotificationOrderSequence(NotificationOrderSequenceRequest orderRequest, NotificationOrder mainNotificationOrder, List<NotificationOrder> reminders);
+    Task<NotificationOrderRequestResponse> RegisterNotificationOrderSequence(NotificationOrderChainRequest orderRequest, NotificationOrder mainNotificationOrder, List<NotificationOrder> reminders);
 }

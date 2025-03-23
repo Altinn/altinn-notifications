@@ -5,10 +5,10 @@ namespace Altinn.Notifications.Core.Models.Orders;
 /// <summary>
 /// Represents the core business entity of a notification order request with reminders.
 /// </summary>
-public class NotificationOrderSequenceRequest
+public class NotificationOrderChainRequest
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="NotificationOrderSequenceRequest"/> class.
+    /// Initializes a new instance of the <see cref="NotificationOrderChainRequest"/> class.
     /// </summary>
     /// <param name="orderId">The unique identifier for the main notification order in this sequence.</param>
     /// <param name="creator">The creator of the notification request.</param>
@@ -19,13 +19,13 @@ public class NotificationOrderSequenceRequest
     /// <param name="reminders">A list of reminders that may be triggered after the initial notification has been processed.</param>
     /// <param name="requestedSendTime">The earliest date and time when the notification should be delivered.</param>
     /// <param name="sendersReference">The sender's reference identifier.</param>
-    public NotificationOrderSequenceRequest(
+    public NotificationOrderChainRequest(
         Guid orderId,
         Creator creator,
         string idempotencyId,
-        RecipientSpecification recipient,
+        NotificationRecipient recipient,
         Uri? conditionEndpoint = null,
-        DialogportenReference? dialogportenAssociation = null,
+        DialogportenIdentifiers? dialogportenAssociation = null,
         List<NotificationReminder>? reminders = null,
         DateTime? requestedSendTime = null,
         string? sendersReference = null)
@@ -63,7 +63,7 @@ public class NotificationOrderSequenceRequest
     /// When specified, this associates the notification with specific dialogs or transmissions
     /// in the Dialogporten service, enabling integration between notifications and Dialogporten.
     /// </remarks>
-    public DialogportenReference? DialogportenAssociation { get; internal set; }
+    public DialogportenIdentifiers? DialogportenAssociation { get; internal set; }
 
     /// <summary>
     /// Gets the idempotency identifier defined by the sender.
@@ -86,7 +86,7 @@ public class NotificationOrderSequenceRequest
     /// email address, SMS number, national identity number, or organization number.
     /// The reminder can be directed to a different recipient than the initial notification.
     /// </remarks>
-    public RecipientSpecification Recipient { get; internal set; }
+    public NotificationRecipient Recipient { get; internal set; }
 
     /// <summary>
     /// Gets a list of reminders that may be triggered under certain conditions after the initial notification has been processed.

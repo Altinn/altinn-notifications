@@ -41,7 +41,7 @@ public class NotificationReminder
     /// email address, SMS number, national identity number, or organization number.
     /// The reminder can be directed to a different recipient than the initial notification.
     /// </remarks>
-    public required RecipientSpecification Recipient { get; set; }
+    public required NotificationRecipient Recipient { get; set; }
 
     /// <summary>
     /// Gets or sets the date and time when the associated Email or SMS can be sent at the earliest.

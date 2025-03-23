@@ -282,7 +282,7 @@ public static class OrderMapper
     /// <summary>
     /// Maps a <see cref="NotificationOrderChainRequestExt"/> to a <see cref="NotificationOrder"/>.
     /// </summary>
-    public static NotificationOrder MapToNotificationOrder(this NotificationOrderSequenceRequest request, string creator)
+    public static NotificationOrder MapToNotificationOrder(this NotificationOrderChainRequest request, string creator)
     {
         bool? ignoreReservation = null;
         List<Recipient> recipients = [];
@@ -397,9 +397,9 @@ public static class OrderMapper
     }
 
     /// <summary>
-    /// Maps reminders in a <see cref="NotificationOrderSequenceRequest"/> to a list of <see cref="NotificationOrder"/> objects.
+    /// Maps reminders in a <see cref="NotificationOrderChainRequest"/> to a list of <see cref="NotificationOrder"/> objects.
     /// </summary>
-    public static List<NotificationOrder> MapToNotificationOrders(this NotificationOrderSequenceRequest request, string creator)
+    public static List<NotificationOrder> MapToNotificationOrders(this NotificationOrderChainRequest request, string creator)
     {
         List<NotificationOrder> notificationOrders = [];
 
@@ -529,15 +529,15 @@ public static class OrderMapper
     }
 
     /// <summary>
-    /// Maps a <see cref="NotificationOrderChainRequestExt"/> to a <see cref="NotificationOrderSequenceRequest"/>.
+    /// Maps a <see cref="NotificationOrderChainRequestExt"/> to a <see cref="NotificationOrderChainRequest"/>.
     /// </summary>
     /// <param name="notificationOrderSequenceRequestExt">The request that contains a notification order and zero or more reminders.</param>
     /// <param name="creatorName">The creator of the notification request.</param>
     /// <returns>A notification order sequence request.</returns>
-    public static NotificationOrderSequenceRequest MapToNotificationOrderSequenceRequest(this NotificationOrderChainRequestExt notificationOrderSequenceRequestExt, string creatorName)
+    public static NotificationOrderChainRequest MapToNotificationOrderSequenceRequest(this NotificationOrderChainRequestExt notificationOrderSequenceRequestExt, string creatorName)
     {
         // Map the recipient.
-        var recipient = new RecipientSpecification
+        var recipient = new NotificationRecipient
         {
             RecipientSms = notificationOrderSequenceRequestExt.Recipient.RecipientSms?.MapToRecipientSms(),
             RecipientEmail = notificationOrderSequenceRequestExt.Recipient.RecipientEmail?.MapToRecipientEmail(),
@@ -556,9 +556,9 @@ public static class OrderMapper
                 return mappedReminder;
             }).ToList();
 
-        DialogportenReference? dialogportenAssociation = notificationOrderSequenceRequestExt.DialogportenAssociation?.MapToDialogportenReference();
+        DialogportenIdentifiers? dialogportenAssociation = notificationOrderSequenceRequestExt.DialogportenAssociation?.MapToDialogportenReference();
 
-        return new NotificationOrderSequenceRequest(
+        return new NotificationOrderChainRequest(
             orderId: Guid.NewGuid(),
             creator: new Creator(creatorName),
             idempotencyId: notificationOrderSequenceRequestExt.IdempotencyId,
@@ -597,7 +597,7 @@ public static class OrderMapper
     {
         return new()
         {
-            Recipient = new RecipientSpecification
+            Recipient = new NotificationRecipient
             {
                 RecipientSms = notificationReminderExt.Recipient.RecipientSms?.MapToRecipientSms(),
                 RecipientEmail = notificationReminderExt.Recipient.RecipientEmail?.MapToRecipientEmail(),
@@ -631,11 +631,11 @@ public static class OrderMapper
     }
 
     /// <summary>
-    /// Maps a <see cref="DialogportenIdentifiersExt"/> to a <see cref="DialogportenReference"/>.
+    /// Maps a <see cref="DialogportenIdentifiersExt"/> to a <see cref="DialogportenIdentifiers"/>.
     /// </summary>
-    private static DialogportenReference? MapToDialogportenReference(this DialogportenIdentifiersExt dialogportenReferenceExt)
+    private static DialogportenIdentifiers? MapToDialogportenReference(this DialogportenIdentifiersExt dialogportenReferenceExt)
     {
-        return new DialogportenReference
+        return new DialogportenIdentifiers
         {
             DialogId = dialogportenReferenceExt.DialogId,
             TransmissionId = dialogportenReferenceExt.TransmissionId
