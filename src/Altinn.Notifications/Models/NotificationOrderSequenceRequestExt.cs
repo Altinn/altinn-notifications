@@ -6,9 +6,9 @@ namespace Altinn.Notifications.Models;
 /// <summary>
 /// Represents a contract between API clients and the server, defining the structure of notification order
 /// requests with reminders that can be submitted to the system.
-/// Inherits the scheduling options from <see cref="NotificationOrderSchedulingExt"/>.
+/// Inherits the scheduling options from <see cref="NotificationOrderBaseExt"/>.
 /// </summary>
-public class NotificationOrderSequenceRequestExt : NotificationOrderSchedulingExt
+public class NotificationOrderSequenceRequestExt : NotificationOrderBaseExt
 {
     /// <summary>
     /// Gets or sets optional identifiers for one or more dialogs or transmissions in Dialogporten.
