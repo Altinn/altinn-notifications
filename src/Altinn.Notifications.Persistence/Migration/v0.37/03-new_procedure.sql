@@ -2,9 +2,7 @@
     _orderid UUID,
     _idempotencyid TEXT,
     _creatorname TEXT,
-    _sendersreference TEXT,
-    _created TIMESTAMPTZ,
-    _requestedsendtime TIMESTAMPTZ,
+    _created TIMESTAMP with time zone,
     _orderchain JSONB
 )
 LANGUAGE 'plpgsql'
@@ -16,7 +14,6 @@ BEGIN
         creatorname,
         created,
         processed,
-        processedstatus,
         orderchain
     )
     VALUES (
@@ -25,7 +22,6 @@ BEGIN
         _creatorname,
         _created,
         _created,
-        'Registered',
         _orderchain
     );
 END;
