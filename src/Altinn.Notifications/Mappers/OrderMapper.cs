@@ -310,28 +310,27 @@ public static class OrderMapper
             return [];
         }
 
-        List<NotificationOrder> notificationOrders = [];
+        var now = DateTime.UtcNow;
+        var creatorObject = new Creator(creator);
 
-        foreach (var reminder in request.Reminders)
-        {
-            var (recipients, templates, notificationChannel, ignoreReservation, resourceIdentifier) = MapRecipientAndTemplates(reminder.Recipient);
+        return [.. request.Reminders
+            .Select(reminder =>
+            {
+                var (recipients, templates, notificationChannel, ignoreReservation, resourceIdentifier) = MapRecipientAndTemplates(reminder.Recipient);
 
-            notificationOrders.Add(
-                new NotificationOrder(
+                return new NotificationOrder(
                     reminder.OrderId,
                     reminder.SendersReference,
                     templates,
                     reminder.RequestedSendTime,
                     notificationChannel,
-                    new Creator(creator),
-                    DateTime.UtcNow,
+                    creatorObject,
+                    now,
                     recipients,
                     ignoreReservation,
                     resourceIdentifier,
-                    reminder.ConditionEndpoint));
-        }
-
-        return notificationOrders;
+                    reminder.ConditionEndpoint);
+            })];
     }
 
     /// <summary>
