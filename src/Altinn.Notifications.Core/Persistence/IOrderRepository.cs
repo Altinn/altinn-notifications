@@ -17,12 +17,17 @@ public interface IOrderRepository
     public Task<NotificationOrder> Create(NotificationOrder order);
 
     /// <summary>
-    /// Creates a new notification order sequence in the database
+    /// Creates a new notification order chain in the database, consisting of a main notification and optional reminders.
     /// </summary>
-    /// <param name="orderRequest">The notification order sequence request.</param>
-    /// <param name="mainNotificationOrder">The main notification order.</param>
-    /// <param name="reminders">The reminders.</param>
-    /// <returns>The saved notification order</returns>
+    /// <param name="orderRequest">The chain containing settings for the notification sequence.</param>
+    /// <param name="mainNotificationOrder">The primary notification order that will be sent first.</param>
+    /// <param name="reminders">A list of follow-up notification orders that will be sent after the main notification conditions.</param>
+    /// <returns>A list of <see cref="NotificationOrder"/> objects containing both the main notification order and any scheduled reminders, in the order they were persisted.</returns>
+    /// <remarks>
+    /// This method persists an entire notification chain as an atomic operation. The chain consists of:
+    /// - A main notification order that will be processed first.
+    /// - Zero or more reminder notifications that will be processed after their respective delays.
+    /// </remarks>
     public Task<List<NotificationOrder>> Create(NotificationOrderChainRequest orderRequest, NotificationOrder mainNotificationOrder, List<NotificationOrder> reminders);
 
     /// <summary>
@@ -65,6 +70,6 @@ public interface IOrderRepository
     /// </summary>
     /// <param name="id">The order id</param>
     /// <param name="creator">The short name of the order creator</param>
-    /// <returns>If successful the canceled notification order with status info. If error a cancellation error type.</returns>
+    /// <returns>If successful the cancelled notification order with status info. If error a cancellation error type.</returns>
     public Task<Result<NotificationOrderWithStatus, CancellationError>> CancelOrder(Guid id, string creator);
 }
