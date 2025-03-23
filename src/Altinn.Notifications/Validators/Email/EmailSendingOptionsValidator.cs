@@ -7,7 +7,7 @@ namespace Altinn.Notifications.Validators.Email
     /// <summary>
     /// Represents validation logic for the email sending options.
     /// </summary>
-    internal sealed class EmailSendingOptionsValidator : AbstractValidator<EmailSendingOptionsExt>
+    internal sealed class EmailSendingOptionsValidator : AbstractValidator<EmailSendingOptionsExt?>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="EmailSendingOptionsValidator"/> class.

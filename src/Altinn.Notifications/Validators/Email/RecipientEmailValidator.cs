@@ -7,12 +7,12 @@ namespace Altinn.Notifications.Validators.Email
     /// <summary>
     /// Represents validation logic for the recipient email associated with request model.
     /// </summary>
-    public sealed class EmailRecipientValidator : AbstractValidator<RecipientEmailExt?>
+    public sealed class RecipientEmailValidator : AbstractValidator<RecipientEmailExt?>
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="EmailRecipientValidator"/> class.
+        /// Initializes a new instance of the <see cref="RecipientEmailValidator"/> class.
         /// </summary>
-        public EmailRecipientValidator()
+        public RecipientEmailValidator()
         {
             RuleFor(recipient => recipient)
                 .NotNull()

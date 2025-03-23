@@ -55,4 +55,8 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Validators\NotificationOrder\" />
+  </ItemGroup>
 </Project>

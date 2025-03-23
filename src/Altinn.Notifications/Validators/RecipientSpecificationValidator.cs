@@ -17,10 +17,12 @@ namespace Altinn.Notifications.Validators
         {
             RuleFor(specification => specification)
                 .NotNull()
+                .Must(HaveOneSetRecipientOnly)
                 .WithMessage("Recipient specification cannot be null.");
-
+                
+            // todo: do i need to null check before setting a validator?
             RuleFor(specification => specification.RecipientEmail)
-               .SetValidator(validator: new EmailRecipientValidator());
+               .SetValidator(validator: new RecipientEmailValidator());
 
             RuleFor(specification => specification.RecipientSms)
                 .SetValidator(validator: new RecipientSmsValidator());
@@ -30,6 +32,22 @@ namespace Altinn.Notifications.Validators
 
             RuleFor(specification => specification.RecipientOrganization)
                 .SetValidator(validator: new RecipientOrganizationValidator());
+        }
+
+        /// <summary>
+        /// Checks if only one recipient is set.
+        /// </summary>
+        /// <param name="specification">Object containing four possible recipient types</param>
+        /// <returns></returns>
+        private static bool HaveOneSetRecipientOnly(RecipientSpecificationExt specification)
+        {
+            var numberOfSetRecipients = 0;
+            numberOfSetRecipients += specification.RecipientEmail != null ? 1 : 0;
+            numberOfSetRecipients += specification.RecipientSms != null ? 1 : 0;
+            numberOfSetRecipients += specification.RecipientPerson != null ? 1 : 0;
+            numberOfSetRecipients += specification.RecipientOrganization != null ? 1 : 0;
+
+            return numberOfSetRecipients == 1;
         }
     }
 }

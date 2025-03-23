@@ -1,5 +1,4 @@
-﻿using Altinn.Notifications.Core.Models;
-using Altinn.Notifications.Models;
+﻿using Altinn.Notifications.Models;
 using FluentValidation;
 
 namespace Altinn.Notifications.Validators
