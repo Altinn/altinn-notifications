@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Models.Orders;
+﻿using Altinn.Notifications.Configuration;
+using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
@@ -7,6 +8,7 @@ using Altinn.Notifications.Validators;
 
 using FluentValidation;
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 using Swashbuckle.AspNetCore.Annotations;
@@ -17,8 +19,10 @@ namespace Altinn.Notifications.Controllers;
 /// Controller to handle notification orders that has one or more reminders.
 /// </summary>
 [ApiController]
-[ApiExplorerSettings(IgnoreApi = true)]
-[Route("notifications/api/v1/orders/chain")]
+[Route("notifications/api/v1/future/orders")]
+[SwaggerResponse(401, "Caller is unauthorized")]
+[SwaggerResponse(403, "Caller is not authorized to access the requested resource")]
+[Authorize(Policy = AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS)]
 public class OrdersChainController : ControllerBase
 {
     private readonly IOrderRequestService _orderRequestService;
