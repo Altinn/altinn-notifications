@@ -10,8 +10,8 @@
 
   <ItemGroup>
     <PackageReference Include="libphonenumber-csharp" Version="8.13.55" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.2" />
-    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="9.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="9.0.3" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(Configuration)'=='Debug'">
