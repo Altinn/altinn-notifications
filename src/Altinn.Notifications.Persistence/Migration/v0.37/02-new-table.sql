@@ -7,8 +7,7 @@
     created TIMESTAMPTZ NOT NULL,
     processed TIMESTAMPTZ,
     processedstatus orderprocessingstate DEFAULT 'Registered',
-    orderchain JSONB NOT NULL,
-    CONSTRAINT orderschain_unique_idempotencyid_creatorname UNIQUE (idempotencyid, creatorname)
+    orderchain JSONB NOT NULL
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_orderschain_orderid ON notifications.orderschain(orderid);
