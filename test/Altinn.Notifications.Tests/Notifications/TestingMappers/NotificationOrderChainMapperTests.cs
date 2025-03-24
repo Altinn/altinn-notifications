@@ -1,7 +1,6 @@
 ﻿using System;
 
 using Altinn.Notifications.Core.Enums;
-using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
 
@@ -641,6 +640,277 @@ public class NotificationOrderChainMapperTests
 
         // Email settings should be null when using SMS channel
         Assert.Null(secondReminder.Recipient.RecipientPerson.EmailSettings);
+
+        // Verify reminder has a unique OrderId
+        Assert.NotEqual(Guid.Empty, secondReminder.OrderId);
+        Assert.NotEqual(result.OrderId, secondReminder.OrderId);
+
+        // Verify reminders have unique OrderIds
+        Assert.NotEqual(firstReminder.OrderId, secondReminder.OrderId);
+    }
+
+    [Fact]
+    public void MapToNotificationOrderChainRequest_WithOrganizationRecipientEmailChannel_MapsCorrectly()
+    {
+        // Arrange
+        var creatorName = "ttd";
+        var requestExt = new NotificationOrderChainRequestExt
+        {
+            RequestedSendTime = DateTime.UtcNow,
+            ConditionEndpoint = new Uri("https://vg.no/condition"),
+            IdempotencyId = "2F3A4B5C-6D7E-8F9A-0B1C-2D3E4F5A6B7C",
+            SendersReference = "CF537A1B-43E0-4917-9D61-83F28C8667C8",
+            Recipient = new NotificationRecipientExt
+            {
+                RecipientOrganization = new RecipientOrganizationExt
+                {
+                    OrgNumber = "910150804",
+                    ResourceId = "urn:altinn:resource:7890",
+                    ChannelSchema = NotificationChannelExt.Email,
+                    EmailSettings = new EmailSendingOptionsExt
+                    {
+                        Body = "Organization email body",
+                        Subject = "Organization email subject",
+                        ContentType = EmailContentTypeExt.Plain,
+                        SenderName = "Organization email sender",
+                        SenderEmailAddress = "org-sender@example.com",
+                        SendingTimePolicy = SendingTimePolicyExt.Anytime
+                    }
+                }
+            }
+        };
+
+        // Act
+        var result = requestExt.MapToNotificationOrderChainRequest(creatorName);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.NotEqual(Guid.Empty, result.OrderId);
+        Assert.Equal(creatorName, result.Creator.ShortName);
+        Assert.Equal(requestExt.ConditionEndpoint, result.ConditionEndpoint);
+        Assert.Equal("2F3A4B5C-6D7E-8F9A-0B1C-2D3E4F5A6B7C", result.IdempotencyId);
+        Assert.Equal("CF537A1B-43E0-4917-9D61-83F28C8667C8", result.SendersReference);
+        Assert.Equal(requestExt.RequestedSendTime.ToUniversalTime(), result.RequestedSendTime);
+
+        // Organization recipient validation
+        Assert.NotNull(result.Recipient.RecipientOrganization);
+        Assert.Equal("910150804", result.Recipient.RecipientOrganization.OrgNumber);
+        Assert.Equal("urn:altinn:resource:7890", result.Recipient.RecipientOrganization.ResourceId);
+        Assert.Equal(NotificationChannel.Email, result.Recipient.RecipientOrganization.ChannelSchema);
+
+        // Email settings validation
+        Assert.NotNull(result.Recipient.RecipientOrganization.EmailSettings);
+        Assert.Equal("Organization email body", result.Recipient.RecipientOrganization.EmailSettings.Body);
+        Assert.Equal(EmailContentType.Plain, result.Recipient.RecipientOrganization.EmailSettings.ContentType);
+        Assert.Equal("Organization email subject", result.Recipient.RecipientOrganization.EmailSettings.Subject);
+        Assert.Equal("Organization email sender", result.Recipient.RecipientOrganization.EmailSettings.SenderName);
+        Assert.Equal("org-sender@example.com", result.Recipient.RecipientOrganization.EmailSettings.SenderEmailAddress);
+        Assert.Equal(SendingTimePolicy.Anytime, result.Recipient.RecipientOrganization.EmailSettings.SendingTimePolicy);
+
+        // SMS settings should be null when using Email channel
+        Assert.Null(result.Recipient.RecipientOrganization.SmsSettings);
+
+        // All other recipients should be null
+        Assert.Null(result.Recipient.RecipientSms);
+        Assert.Null(result.Recipient.RecipientEmail);
+        Assert.Null(result.Recipient.RecipientPerson);
+
+        // Unused objects should be null
+        Assert.Null(result.Reminders);
+        Assert.Null(result.DialogportenAssociation);
+    }
+
+    [Fact]
+    public void MapToNotificationOrderChainRequest_WithOrganizationRecipientEmailPreferredAndReminders_MapsCorrectly()
+    {
+        // Arrange
+        var creatorName = "ttd";
+        var baseTime = DateTime.UtcNow;
+        var requestExt = new NotificationOrderChainRequestExt
+        {
+            RequestedSendTime = baseTime,
+            IdempotencyId = "7A8B9C0D-1E2F-3A4B-5C6D-7E8F9A0B1C2D",
+            SendersReference = "4567890A-BCDE-F123-4567-89ABCDEF1234",
+            Recipient = new NotificationRecipientExt
+            {
+                RecipientOrganization = new RecipientOrganizationExt
+                {
+                    OrgNumber = "987654321",
+                    ResourceId = "urn:altinn:resource:5678",
+                    ChannelSchema = NotificationChannelExt.EmailPreferred,
+                    EmailSettings = new EmailSendingOptionsExt
+                    {
+                        Body = "Organization email body",
+                        Subject = "Organization email subject",
+                        SenderName = "Organization email sender",
+                        SenderEmailAddress = "org-sender@example.com",
+                        ContentType = EmailContentTypeExt.Plain,
+                        SendingTimePolicy = SendingTimePolicyExt.Anytime
+                    },
+                    SmsSettings = new SmsSendingOptionsExt
+                    {
+                        Body = "Organization SMS body",
+                        Sender = "Organization SMS sender",
+                        SendingTimePolicy = SendingTimePolicyExt.Daytime
+                    }
+                }
+            },
+            Reminders =
+            [
+                new NotificationReminderExt
+                {
+                    DelayDays = 3,
+                    Recipient = new NotificationRecipientExt
+                    {
+                        RecipientOrganization = new RecipientOrganizationExt
+                        {
+                            OrgNumber = "987654321",
+                            ResourceId = "urn:altinn:resource:5678",
+                            ChannelSchema = NotificationChannelExt.EmailPreferred,
+                            EmailSettings = new EmailSendingOptionsExt
+                            {
+                                Body = "Reminder 1 org email body",
+                                Subject = "Reminder 1 org email subject",
+                                SenderName = "Reminder 1 org email sender",
+                                SenderEmailAddress = "reminder-org-sender@example.com",
+                                ContentType = EmailContentTypeExt.Html,
+                                SendingTimePolicy = SendingTimePolicyExt.Anytime
+                            },
+                            SmsSettings = new SmsSendingOptionsExt
+                            {
+                                Body = "Reminder 1 org SMS body",
+                                Sender = "Reminder 1 org SMS sender",
+                                SendingTimePolicy = SendingTimePolicyExt.Daytime
+                            }
+                        }
+                    },
+                    SendersReference = "5C6D7E8F-9A0B-1C2D-3E4F-5A6B7C8D9E0F",
+                    ConditionEndpoint = new Uri("https://vg.no/first-org-reminder-condition")
+                },
+                new NotificationReminderExt
+                {
+                    DelayDays = 7,
+                    Recipient = new NotificationRecipientExt
+                    {
+                        RecipientOrganization = new RecipientOrganizationExt
+                        {
+                            OrgNumber = "987654321",
+                            ResourceId = "urn:altinn:resource:5678",
+                            ChannelSchema = NotificationChannelExt.Email,
+                            EmailSettings = new EmailSendingOptionsExt
+                            {
+                                Body = "Reminder 2 org email body",
+                                Subject = "Reminder 2 org email subject",
+                                SenderName = "Reminder 2 org email sender",
+                                SenderEmailAddress = "reminder2-org-sender@example.com",
+                                ContentType = EmailContentTypeExt.Plain,
+                                SendingTimePolicy = SendingTimePolicyExt.Anytime
+                            }
+                        }
+                    },
+                    SendersReference = "1C2D3E4F-5A6B-7C8D-9E0F-1A2B3C4D5E6F",
+                    ConditionEndpoint = new Uri("https://vg.no/second-org-reminder-condition")
+                }
+            ]
+        };
+
+        // Act
+        var result = requestExt.MapToNotificationOrderChainRequest(creatorName);
+
+        // Assert
+        Assert.NotNull(result);
+
+        // Main order verification
+        Assert.Equal(baseTime.ToUniversalTime(), result.RequestedSendTime);
+        Assert.Equal("4567890A-BCDE-F123-4567-89ABCDEF1234", result.SendersReference);
+
+        // Organization recipient validation
+        Assert.NotNull(result.Recipient.RecipientOrganization);
+        Assert.Equal("987654321", result.Recipient.RecipientOrganization.OrgNumber);
+        Assert.Equal("urn:altinn:resource:5678", result.Recipient.RecipientOrganization.ResourceId);
+        Assert.Equal(NotificationChannel.EmailPreferred, result.Recipient.RecipientOrganization.ChannelSchema);
+
+        // Email settings validation for main notification
+        Assert.NotNull(result.Recipient.RecipientOrganization.EmailSettings);
+        Assert.Equal("Organization email body", result.Recipient.RecipientOrganization.EmailSettings.Body);
+        Assert.Equal(EmailContentType.Plain, result.Recipient.RecipientOrganization.EmailSettings.ContentType);
+        Assert.Equal("Organization email subject", result.Recipient.RecipientOrganization.EmailSettings.Subject);
+        Assert.Equal("Organization email sender", result.Recipient.RecipientOrganization.EmailSettings.SenderName);
+        Assert.Equal("org-sender@example.com", result.Recipient.RecipientOrganization.EmailSettings.SenderEmailAddress);
+        Assert.Equal(SendingTimePolicy.Anytime, result.Recipient.RecipientOrganization.EmailSettings.SendingTimePolicy);
+
+        // SMS settings validation for main notification
+        Assert.NotNull(result.Recipient.RecipientOrganization.SmsSettings);
+        Assert.Equal("Organization SMS body", result.Recipient.RecipientOrganization.SmsSettings.Body);
+        Assert.Equal("Organization SMS sender", result.Recipient.RecipientOrganization.SmsSettings.Sender);
+        Assert.Equal(SendingTimePolicy.Daytime, result.Recipient.RecipientOrganization.SmsSettings.SendingTimePolicy);
+
+        // Reminders verification
+        Assert.NotNull(result.Reminders);
+        Assert.Equal(2, result.Reminders.Count);
+
+        // First reminder verification
+        var firstReminder = result.Reminders[0];
+        Assert.Equal(3, firstReminder.DelayDays);
+        Assert.Equal("5C6D7E8F-9A0B-1C2D-3E4F-5A6B7C8D9E0F", firstReminder.SendersReference);
+        Assert.Equal(requestExt.Reminders[0].ConditionEndpoint, firstReminder.ConditionEndpoint);
+
+        // Verify delivery time for the first reminder
+        var expectedFirstReminderDeliveryTime = baseTime.AddDays(3).ToUniversalTime();
+        Assert.Equal(expectedFirstReminderDeliveryTime, firstReminder.RequestedSendTime);
+
+        // Organization recipient validation for first reminder
+        Assert.NotNull(firstReminder.Recipient.RecipientOrganization);
+        Assert.Equal("987654321", firstReminder.Recipient.RecipientOrganization.OrgNumber);
+        Assert.Equal("urn:altinn:resource:5678", firstReminder.Recipient.RecipientOrganization.ResourceId);
+        Assert.Equal(NotificationChannel.EmailPreferred, firstReminder.Recipient.RecipientOrganization.ChannelSchema);
+
+        // Email settings validation for first reminder
+        Assert.NotNull(firstReminder.Recipient.RecipientOrganization.EmailSettings);
+        Assert.Equal("Reminder 1 org email body", firstReminder.Recipient.RecipientOrganization.EmailSettings.Body);
+        Assert.Equal("Reminder 1 org email subject", firstReminder.Recipient.RecipientOrganization.EmailSettings.Subject);
+        Assert.Equal("Reminder 1 org email sender", firstReminder.Recipient.RecipientOrganization.EmailSettings.SenderName);
+        Assert.Equal("reminder-org-sender@example.com", firstReminder.Recipient.RecipientOrganization.EmailSettings.SenderEmailAddress);
+        Assert.Equal(EmailContentType.Html, firstReminder.Recipient.RecipientOrganization.EmailSettings.ContentType);
+        Assert.Equal(SendingTimePolicy.Anytime, firstReminder.Recipient.RecipientOrganization.EmailSettings.SendingTimePolicy);
+
+        // SMS settings validation for first reminder
+        Assert.NotNull(firstReminder.Recipient.RecipientOrganization.SmsSettings);
+        Assert.Equal("Reminder 1 org SMS body", firstReminder.Recipient.RecipientOrganization.SmsSettings.Body);
+        Assert.Equal("Reminder 1 org SMS sender", firstReminder.Recipient.RecipientOrganization.SmsSettings.Sender);
+        Assert.Equal(SendingTimePolicy.Daytime, firstReminder.Recipient.RecipientOrganization.SmsSettings.SendingTimePolicy);
+
+        // Verify first reminder has a unique OrderId
+        Assert.NotEqual(Guid.Empty, firstReminder.OrderId);
+        Assert.NotEqual(result.OrderId, firstReminder.OrderId);
+
+        // Second reminder verification
+        var secondReminder = result.Reminders[1];
+        Assert.Equal(7, secondReminder.DelayDays);
+        Assert.Equal("1C2D3E4F-5A6B-7C8D-9E0F-1A2B3C4D5E6F", secondReminder.SendersReference);
+        Assert.Equal(requestExt.Reminders[1].ConditionEndpoint, secondReminder.ConditionEndpoint);
+
+        // Verify delivery time for the second reminder
+        var expectedSecondReminderDeliveryTime = baseTime.AddDays(7).ToUniversalTime();
+        Assert.Equal(expectedSecondReminderDeliveryTime, secondReminder.RequestedSendTime);
+
+        // Organization recipient validation for second reminder
+        Assert.NotNull(secondReminder.Recipient.RecipientOrganization);
+        Assert.Equal("987654321", secondReminder.Recipient.RecipientOrganization.OrgNumber);
+        Assert.Equal("urn:altinn:resource:5678", secondReminder.Recipient.RecipientOrganization.ResourceId);
+        Assert.Equal(NotificationChannel.Email, secondReminder.Recipient.RecipientOrganization.ChannelSchema);
+
+        // Email settings validation for second reminder
+        Assert.NotNull(secondReminder.Recipient.RecipientOrganization.EmailSettings);
+        Assert.Equal("Reminder 2 org email body", secondReminder.Recipient.RecipientOrganization.EmailSettings.Body);
+        Assert.Equal("Reminder 2 org email subject", secondReminder.Recipient.RecipientOrganization.EmailSettings.Subject);
+        Assert.Equal("Reminder 2 org email sender", secondReminder.Recipient.RecipientOrganization.EmailSettings.SenderName);
+        Assert.Equal("reminder2-org-sender@example.com", secondReminder.Recipient.RecipientOrganization.EmailSettings.SenderEmailAddress);
+        Assert.Equal(EmailContentType.Plain, secondReminder.Recipient.RecipientOrganization.EmailSettings.ContentType);
+        Assert.Equal(SendingTimePolicy.Anytime, secondReminder.Recipient.RecipientOrganization.EmailSettings.SendingTimePolicy);
+
+        // SMS settings should be null when using Email channel
+        Assert.Null(secondReminder.Recipient.RecipientOrganization.SmsSettings);
 
         // Verify reminder has a unique OrderId
         Assert.NotEqual(Guid.Empty, secondReminder.OrderId);
