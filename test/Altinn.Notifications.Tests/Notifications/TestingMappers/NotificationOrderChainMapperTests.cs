@@ -11,6 +11,44 @@ namespace Altinn.Notifications.Tests.Notifications.TestingMappers;
 public class NotificationOrderChainMapperTests
 {
     [Fact]
+    public void MapToNotificationOrderChainRequest_WithDialogportenAssociation_MapsCorrectly()
+    {
+        // Arrange
+        var creatorName = "ttd";
+        var requestExt = new NotificationOrderChainRequestExt
+        {
+            RequestedSendTime = DateTime.UtcNow,
+            IdempotencyId = "63404F51-2079-4598-BD23-8F4467590FB4",
+            Recipient = new NotificationRecipientExt
+            {
+                RecipientEmail = new RecipientEmailExt
+                {
+                    EmailAddress = "recipient@example.com",
+                    Settings = new EmailSendingOptionsExt
+                    {
+                        Body = "Test body",
+                        Subject = "Test subject"
+                    }
+                }
+            },
+            DialogportenAssociation = new DialogportenIdentifiersExt
+            {
+                DialogId = "dialog-50E18947",
+                TransmissionId = "transmission-9B0B2781"
+            }
+        };
+
+        // Act
+        var result = requestExt.MapToNotificationOrderChainRequest(creatorName);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.NotNull(result.DialogportenAssociation);
+        Assert.Equal("dialog-50E18947", result.DialogportenAssociation.DialogId);
+        Assert.Equal("transmission-9B0B278II", result.DialogportenAssociation.TransmissionId);
+    }
+
+    [Fact]
     public void MapToNotificationOrderChainRequest_WithEmailRecipient_MapsCorrectly()
     {
         // Arrange
