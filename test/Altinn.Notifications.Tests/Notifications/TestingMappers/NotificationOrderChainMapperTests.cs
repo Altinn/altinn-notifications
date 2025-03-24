@@ -283,5 +283,4 @@ public class NotificationOrderChainMapperTests
         // Verify have unique OrderIds
         Assert.NotEqual(result.OrderId, secondReminder.OrderId);
     }
-
 }
