@@ -11,9 +11,9 @@ namespace Altinn.Notifications.Tests.Notifications.TestingValidators
 
         [Theory]
         [InlineData("12345678", false)]
-        [InlineData("+4790926292", true)]
-        [InlineData("004790926292", true)]
-        [InlineData("90926292", false)]
+        [InlineData("+4740000000", true)]
+        [InlineData("004740000000", true)]
+        [InlineData("40000000", false)]
         public void ValidateRecipient_MobileNumber(string mobileNumber, bool isValidatedSuccessfully)
         {
             // arrange

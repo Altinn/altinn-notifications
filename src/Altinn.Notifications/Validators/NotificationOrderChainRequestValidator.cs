@@ -13,7 +13,7 @@ public class NotificationOrderChainRequestValidator : AbstractValidator<Notifica
     /// </summary>
     public NotificationOrderChainRequestValidator()
     {
-        RuleFor(order => order.IdempotencyId) // todo: check type
+        RuleFor(order => order.IdempotencyId)
             .NotNull()
             .NotEmpty()
             .WithMessage("IdempotencyId cannot be null or empty.");

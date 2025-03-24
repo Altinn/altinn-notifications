@@ -10,29 +10,31 @@ public class EmailSendingOptionsValidatorTests
     private readonly EmailSendingOptionsValidator _validator = new();
 
     [Fact]
-    public void EmailSendingOptionsValidator_ValidateEmailSendingOptions_ValidEmailSendingOptions()
+    public void Should_Validate_To_True_When_SenderEmailAddress_And_SenderName_Are_Null()
     {
         // Arrange
         var emailSendingOptions = new EmailSendingOptionsExt
         {
             Subject = "Test subject",
             Body = "Test body",
+            SenderEmailAddress = null,
+            SenderName = null
         };
 
         // Act
         var actual = _validator.TestValidate(emailSendingOptions);
 
         // Assert
-        actual.ShouldNotHaveValidationErrorFor(options => options.Subject);
-        actual.ShouldNotHaveValidationErrorFor(options => options.Body);
-        actual.ShouldHaveValidationErrorFor(options => options.SenderEmailAddress);
+        actual.ShouldNotHaveValidationErrorFor(options => options.SenderEmailAddress);
+        actual.ShouldNotHaveValidationErrorFor(options => options.SenderName);
     }
 
     [Theory]
     [InlineData("thisisinvalid", false)]
     [InlineData("noreply@altinn.no", true)]
     [InlineData("", false)]
-    public void ValidateEmailSendingOptionsValidator_ValidateEmailSendingOptions_(string email, bool shouldValidateSuccessfully)
+    [InlineData(null, true)]
+    public void Should_ValidateSenderEmailAddress_When_PropertyIsSet(string? email, bool shouldValidateSuccessfully)
     {
         // Arrange
         var emailSendingOptions = new EmailSendingOptionsExt
@@ -54,5 +56,26 @@ public class EmailSendingOptionsValidatorTests
         {
             actual.ShouldHaveValidationErrorFor(options => options.SenderEmailAddress);
         }
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(null)]
+    public void Should_Validate_Null_Or_Empty_SenderNameToFalse_When_SenderEmailAddress_Is_Set(string? senderName)
+    {
+        // Arrange
+        var emailSendingOptions = new EmailSendingOptionsExt
+        {
+            Subject = "Test subject",
+            Body = "Test body",
+            SenderEmailAddress = "noreply@digdir.no",
+            SenderName = senderName
+        };
+
+        // Act
+        var actual = _validator.TestValidate(emailSendingOptions);
+
+        // Assert
+        actual.ShouldHaveValidationErrorFor(options => options.SenderName);
     }
 }

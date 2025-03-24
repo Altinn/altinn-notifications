@@ -13,9 +13,6 @@ namespace Altinn.Notifications.Validators
         /// </summary>
         public DialogportenIdentifiersValidator()
         {
-            RuleFor(association => association)
-                .NotNull()
-                .WithMessage("Association cannot be null.");
         }
     }
 }

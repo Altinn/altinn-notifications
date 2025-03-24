@@ -14,12 +14,8 @@ public sealed class RecipientPersonValidator : AbstractValidator<RecipientPerson
     /// <summary>
     /// Initializes a new instance of the <see cref="RecipientPersonValidator"/> class.
     /// </summary>
-    public RecipientPersonValidator()
+    public RecipientPersonValidator() 
     {
-        RuleFor(recipient => recipient)
-            .NotNull()
-            .WithMessage("Recipient person object cannot be null.");
-
         When(recipient => recipient != null, () =>
         {
             RuleFor(recipient => recipient!.NationalIdentityNumber)
@@ -31,10 +27,41 @@ public sealed class RecipientPersonValidator : AbstractValidator<RecipientPerson
             .IsInEnum()
             .WithMessage("Invalid channel scheme value.");
 
-        RuleFor(recipient => recipient!.EmailSettings)
-            .SetValidator(new EmailSendingOptionsValidator());
+        When(options => options!.ChannelScheme == NotificationChannelExt.SmsPreferred || options!.ChannelScheme == NotificationChannelExt.EmailPreferred, () =>
+        {
+            RuleFor(options => options!.EmailSettings)
+                .NotNull()
+                .WithMessage("EmailSettings must be set when ChannelScheme is SmsPreffered or EmailPreferred");
 
-        RuleFor(recipient => recipient!.SmsSettings)
-            .SetValidator(new SmsSendingOptionsValidator());
+            RuleFor(options => options!.SmsSettings)
+                .NotNull()
+                .WithMessage("SmsSettings must be set when ChannelScheme is SmsPreffered or EmailPreferred");
+        });
+
+        When(options => options!.ChannelScheme == NotificationChannelExt.Sms, () =>
+        {
+            RuleFor(options => options!.SmsSettings)
+                .NotNull()
+                .WithMessage("SmsSettings must be set when ChannelScheme is Sms");
+        });
+
+        When(options => options!.ChannelScheme == NotificationChannelExt.Email, () =>
+        {
+            RuleFor(options => options!.EmailSettings)
+                .NotNull()
+                .WithMessage("EmailSettings must be set when ChannelScheme is Email");
+        });
+
+        When(options => options!.EmailSettings != null, () =>
+        {
+            RuleFor(options => options!.EmailSettings)
+                .SetValidator(new EmailSendingOptionsValidator());
+        });
+
+        When(options => options!.SmsSettings != null, () =>
+        {
+            RuleFor(options => options!.SmsSettings)
+                .SetValidator(new SmsSendingOptionsValidator());
+        });
     }
 }

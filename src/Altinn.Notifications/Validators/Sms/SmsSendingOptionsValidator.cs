@@ -6,7 +6,7 @@ namespace Altinn.Notifications.Validators.Sms
     /// <summary>
     /// Represents validation logic for the SMS sending options model.
     /// </summary>
-    public sealed class SmsSendingOptionsValidator : AbstractValidator<SmsSendingOptionsExt?>
+    internal sealed class SmsSendingOptionsValidator : AbstractValidator<SmsSendingOptionsExt?>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="SmsSendingOptionsValidator"/> class.

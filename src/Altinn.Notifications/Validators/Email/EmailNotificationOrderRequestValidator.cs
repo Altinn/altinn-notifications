@@ -8,7 +8,7 @@ namespace Altinn.Notifications.Validators.Email;
 /// <summary>
 /// Class containing validation logic for the <see cref="EmailNotificationOrderRequestExt"/> model
 /// </summary>
-public class EmailNotificationOrderRequestValidator : AbstractValidator<EmailNotificationOrderRequestExt>
+internal sealed class EmailNotificationOrderRequestValidator : AbstractValidator<EmailNotificationOrderRequestExt>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotificationOrderRequestValidator"/> class.

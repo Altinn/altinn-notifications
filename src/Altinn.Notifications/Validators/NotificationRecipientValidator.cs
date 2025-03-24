@@ -16,11 +16,13 @@ namespace Altinn.Notifications.Validators
         public NotificationRecipientValidator()
         {
             RuleFor(specification => specification)
-                .NotNull()
                 .Must(HaveOneSetRecipientOnly)
-                .WithMessage("Recipient specification cannot be null.");
+                .WithMessage("Must have exactly one recipient.");
                 
-            // todo: do i need to null check before setting a validator?
+            RuleFor(specification => specification)
+                .NotNull()
+                .WithMessage("Recipient specification cannot be null.");
+
             RuleFor(specification => specification.RecipientEmail)
                .SetValidator(validator: new RecipientEmailValidator());
 

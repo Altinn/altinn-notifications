@@ -2,34 +2,33 @@
 using Altinn.Notifications.Validators.Rules;
 using FluentValidation;
 
-namespace Altinn.Notifications.Validators.Email
+namespace Altinn.Notifications.Validators.Email;
+
+/// <summary>
+/// Represents validation logic for the recipient email associated with request model.
+/// </summary>
+internal sealed class RecipientEmailValidator : AbstractValidator<RecipientEmailExt?>
 {
     /// <summary>
-    /// Represents validation logic for the recipient email associated with request model.
+    /// Initializes a new instance of the <see cref="RecipientEmailValidator"/> class.
     /// </summary>
-    public sealed class RecipientEmailValidator : AbstractValidator<RecipientEmailExt?>
+    public RecipientEmailValidator()
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RecipientEmailValidator"/> class.
-        /// </summary>
-        public RecipientEmailValidator()
+        RuleFor(recipient => recipient)
+            .NotNull()
+            .WithMessage("Recipient email object cannot be null.");
+
+        When(recipient => recipient != null, () =>
         {
-            RuleFor(recipient => recipient)
+            RuleFor(recipient => recipient!.EmailAddress)
                 .NotNull()
-                .WithMessage("Recipient email object cannot be null.");
+                .Must(RecipientRules.IsValidEmail)
+                .WithMessage("Invalid email address format.");
 
-            When(recipient => recipient != null, () =>
-            {
-                RuleFor(recipient => recipient!.EmailAddress)
-                    .NotNull()
-                    .Must(RecipientRules.IsValidEmail)
-                    .WithMessage("Invalid email address format.");
-
-                RuleFor(recipient => recipient!.Settings)
-                    .NotNull()
-                    .WithMessage("Recipient email settings cannot be null.")
-                    .SetValidator(new EmailSendingOptionsValidator());
-            });
-        }
+            RuleFor(recipient => recipient!.Settings)
+                .NotNull()
+                .WithMessage("Recipient email settings cannot be null.")
+                .SetValidator(new EmailSendingOptionsValidator());
+        });
     }
 }

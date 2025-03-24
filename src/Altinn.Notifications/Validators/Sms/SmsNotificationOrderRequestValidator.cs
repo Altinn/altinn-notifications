@@ -7,7 +7,7 @@ namespace Altinn.Notifications.Validators.Sms;
 /// <summary>
 /// Class containing validation logic for the <see cref="SmsNotificationOrderRequestExt"/> model
 /// </summary>
-public class SmsNotificationOrderRequestValidator : AbstractValidator<SmsNotificationOrderRequestExt>
+internal sealed class SmsNotificationOrderRequestValidator : AbstractValidator<SmsNotificationOrderRequestExt>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsNotificationOrderRequestValidator"/> class.
