@@ -370,6 +370,74 @@ public class NotificationOrderChainMapperTests
     }
 
     [Fact]
+    public void MapToNotificationOrderChainRequest_WithEmptyPhoneNumber_ReturnsNullRecipientSms()
+    {
+        // Arrange
+        var creatorName = "ttd";
+        var requestExt = new NotificationOrderChainRequestExt
+        {
+            RequestedSendTime = DateTime.UtcNow,
+            SendersReference = "ref-9B8D303243B6",
+            IdempotencyId = "47B9AF3D-1E5A-4127-9B43-78FD3450C3A1",
+            Recipient = new NotificationRecipientExt
+            {
+                RecipientSms = new RecipientSmsExt
+                {
+                    PhoneNumber = "   ",
+                    Settings = new SmsSendingOptionsExt
+                    {
+                        Body = "SMS test body with empty phone number",
+                        Sender = "Test sender"
+                    }
+                }
+            }
+        };
+
+        // Act
+        var result = requestExt.MapToNotificationOrderChainRequest(creatorName);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Null(result.Recipient.RecipientSms);
+
+        Assert.Equal(creatorName, result.Creator.ShortName);
+        Assert.Equal("ref-9B8D303243B6", result.SendersReference);
+        Assert.Equal("47B9AF3D-1E5A-4127-9B43-78FD3450C3A1", result.IdempotencyId);
+    }
+
+    [Fact]
+    public void MapToNotificationOrderChainRequest_WithNullSmsSettings_ReturnsNullRecipientSms()
+    {
+        // Arrange
+        var creatorName = "ttd";
+        var requestExt = new NotificationOrderChainRequestExt
+        {
+            RequestedSendTime = DateTime.UtcNow,
+            SendersReference = "ref-58EF54C3D6CB",
+            IdempotencyId = "56CAB402-D1F3-4285-8BB2-9A123B45C6D7",
+            Recipient = new NotificationRecipientExt
+            {
+                RecipientSms = new RecipientSmsExt
+                {
+                    Settings = null!,
+                    PhoneNumber = "+4799999999",
+                }
+            }
+        };
+
+        // Act
+        var result = requestExt.MapToNotificationOrderChainRequest(creatorName);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Null(result.Recipient.RecipientSms);
+
+        Assert.Equal(creatorName, result.Creator.ShortName);
+        Assert.Equal("ref-58EF54C3D6CB", result.SendersReference);
+        Assert.Equal("56CAB402-D1F3-4285-8BB2-9A123B45C6D7", result.IdempotencyId);
+    }
+
+    [Fact]
     public void MapToNotificationOrderChainRequest_WithNoRecipientEmail_ProcessesCorrectly()
     {
         // Arrange
