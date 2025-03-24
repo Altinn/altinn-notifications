@@ -26,8 +26,6 @@ public class FutureOrdersController : ControllerBase
     /// <summary>
     /// Initializes a new instance of the <see cref="FutureOrdersController"/> class.
     /// </summary>
-    /// <param name="orderRequestService">The order request service.</param>
-    /// <param name="validator">The object that contains validation logic.</param>
     public FutureOrdersController(IOrderRequestService orderRequestService, IValidator<NotificationOrderChainRequestExt> validator)
     {
         _validator = validator;
@@ -48,9 +46,9 @@ public class FutureOrdersController : ControllerBase
     [Produces("application/json")]
     [SwaggerResponse(400, "The notification order is invalid", typeof(ValidationProblemDetails))]
     [SwaggerResponse(422, "The notification order is invalid", typeof(ValidationProblemDetails))]
-    [SwaggerResponse(200, "The notification order was created.", typeof(NotificationOrderReminderResponseExt))]
-    [SwaggerResponse(201, "The notification order was created.", typeof(NotificationOrderReminderResponseExt))]
-    public async Task<ActionResult<NotificationOrderReminderResponseExt>> Post(NotificationOrderChainRequestExt notificationOrderRequest)
+    [SwaggerResponse(200, "The notification order was created.", typeof(NotificationOrderChainResponseExt))]
+    [SwaggerResponse(201, "The notification order was created.", typeof(NotificationOrderChainResponseExt))]
+    public async Task<ActionResult<NotificationOrderChainResponseExt>> Post(NotificationOrderChainRequestExt notificationOrderRequest)
     {
         var validationResult = _validator.Validate(notificationOrderRequest);
         if (!validationResult.IsValid)

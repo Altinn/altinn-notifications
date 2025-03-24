@@ -89,7 +89,7 @@ public class OrderRequestService : IOrderRequestService
             currentTime,
             orderRequest.ConditionEndpoint);
 
-        var reminderOrders = await CreateReminderNotificationOrders(
+        var reminderOrders = await CreateNotificationOrders(
             orderRequest.Reminders,
             orderRequest.Creator,
             currentTime);
@@ -178,7 +178,7 @@ public class OrderRequestService : IOrderRequestService
     /// This method iterates through the provided reminders and, for each reminder, invokes 
     /// <see cref="CreateNotificationOrder"/> to generate a corresponding reminder order using the reminder's details.
     /// </remarks>
-    private async Task<List<NotificationOrder>> CreateReminderNotificationOrders(List<NotificationReminder>? reminders, Creator creator, DateTime currentTime)
+    private async Task<List<NotificationOrder>> CreateNotificationOrders(List<NotificationReminder>? reminders, Creator creator, DateTime currentTime)
     {
         var reminderOrders = new List<NotificationOrder>();
 
