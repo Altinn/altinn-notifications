@@ -240,6 +240,104 @@ public class NotificationOrderChainMapperTests
     }
 
     [Fact]
+    public void MapToNotificationOrderChainRequest_WithEmailRecipientAndNullSenderName_MapsCorrectly()
+    {
+        // Arrange
+        var creatorName = "ttd";
+        var requestExt = new NotificationOrderChainRequestExt
+        {
+            SendersReference = "ref-E2F5A6B7",
+            RequestedSendTime = DateTime.UtcNow,
+            ConditionEndpoint = new Uri("https://vg.no/condition"),
+            IdempotencyId = "9C0D1E2F-3A4B-5C6D-7E8F-9A0B1C2D3E4F",
+            Recipient = new NotificationRecipientExt
+            {
+                RecipientEmail = new RecipientEmailExt
+                {
+                    EmailAddress = "recipient@example.com",
+                    Settings = new EmailSendingOptionsExt
+                    {
+                        SenderName = null,
+                        Body = "Email body",
+                        Subject = "Email subject",
+                        SenderEmailAddress = "sender@example.com",
+                        ContentType = EmailContentTypeExt.Plain,
+                        SendingTimePolicy = SendingTimePolicyExt.Anytime
+                    }
+                }
+            }
+        };
+
+        // Act
+        var result = requestExt.MapToNotificationOrderChainRequest(creatorName);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.NotNull(result.Recipient.RecipientEmail);
+
+        // Verify SenderName is null
+        Assert.Null(result.Recipient.RecipientEmail.Settings.SenderName);
+
+        // Verify SenderEmailAddress is set to empty string when SenderName is null
+        Assert.Equal(string.Empty, result.Recipient.RecipientEmail.Settings.SenderEmailAddress);
+
+        // Verify other properties are correctly mapped
+        Assert.Equal("Email body", result.Recipient.RecipientEmail.Settings.Body);
+        Assert.Equal("Email subject", result.Recipient.RecipientEmail.Settings.Subject);
+        Assert.Equal(EmailContentType.Plain, result.Recipient.RecipientEmail.Settings.ContentType);
+        Assert.Equal(SendingTimePolicy.Anytime, result.Recipient.RecipientEmail.Settings.SendingTimePolicy);
+    }
+
+    [Fact]
+    public void MapToNotificationOrderChainRequest_WithEmailRecipientAndNullSenderEmailAddress_MapsCorrectly()
+    {
+        // Arrange
+        var creatorName = "ttd";
+        var requestExt = new NotificationOrderChainRequestExt
+        {
+            SendersReference = "ref-C8D9E0F1",
+            RequestedSendTime = DateTime.UtcNow,
+            ConditionEndpoint = new Uri("https://vg.no/condition"),
+            IdempotencyId = "2D3E4F5A-6B7C-8D9E-0F1A-2B3C4D5E6F7A",
+            Recipient = new NotificationRecipientExt
+            {
+                RecipientEmail = new RecipientEmailExt
+                {
+                    EmailAddress = "recipient@example.com",
+                    Settings = new EmailSendingOptionsExt
+                    {
+                        Body = "Email body",
+                        Subject = "Email subject",
+                        SenderName = "Email sender name",
+                        SenderEmailAddress = null,
+                        ContentType = EmailContentTypeExt.Html,
+                        SendingTimePolicy = SendingTimePolicyExt.Anytime
+                    }
+                }
+            }
+        };
+
+        // Act
+        var result = requestExt.MapToNotificationOrderChainRequest(creatorName);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.NotNull(result.Recipient.RecipientEmail);
+
+        // Verify SenderName is preserved
+        Assert.Equal("Email sender name", result.Recipient.RecipientEmail.Settings.SenderName);
+
+        // Verify SenderEmailAddress is set to empty string when it's null
+        Assert.Equal(string.Empty, result.Recipient.RecipientEmail.Settings.SenderEmailAddress);
+
+        // Verify other properties are correctly mapped
+        Assert.Equal("Email body", result.Recipient.RecipientEmail.Settings.Body);
+        Assert.Equal("Email subject", result.Recipient.RecipientEmail.Settings.Subject);
+        Assert.Equal(EmailContentType.Html, result.Recipient.RecipientEmail.Settings.ContentType);
+        Assert.Equal(SendingTimePolicy.Anytime, result.Recipient.RecipientEmail.Settings.SendingTimePolicy);
+    }
+
+    [Fact]
     public void MapToNotificationOrderChainRequest_WithSmsRecipient_MapsCorrectly()
     {
         // Arrange
@@ -957,4 +1055,5 @@ public class NotificationOrderChainMapperTests
         // Verify reminders have unique OrderIds
         Assert.NotEqual(firstReminder.OrderId, secondReminder.OrderId);
     }
+
 }
