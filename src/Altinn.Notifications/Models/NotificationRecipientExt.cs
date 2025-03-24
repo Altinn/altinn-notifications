@@ -9,7 +9,7 @@ namespace Altinn.Notifications.Models;
 /// This class serves as a request wrapper that supports multiple targeting methods for notifications,
 /// allowing clients to specify exactly one recipient type per request.
 /// </remarks>
-public class RecipientSpecificationExt
+public class NotificationRecipientExt
 {
     /// <summary>
     /// Gets or sets the configuration for delivering a notification directly to an email address.

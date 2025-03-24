@@ -4,14 +4,14 @@ using FluentValidation;
 namespace Altinn.Notifications.Validators;
 
 /// <summary>
-/// Class containing validation logic for the <see cref="NotificationOrderSequenceRequestExt"/> model
+/// Class containing validation logic for the <see cref="NotificationOrderChainRequestExt"/> model
 /// </summary>
-public class NotificationOrderSequenceRequestValidator : AbstractValidator<NotificationOrderSequenceRequestExt>
+public class NotificationOrderChainRequestValidator : AbstractValidator<NotificationOrderChainRequestExt>
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="NotificationOrderSequenceRequestValidator"/> class.
+    /// Initializes a new instance of the <see cref="NotificationOrderChainRequestValidator"/> class.
     /// </summary>
-    public NotificationOrderSequenceRequestValidator()
+    public NotificationOrderChainRequestValidator()
     {
         RuleFor(order => order.IdempotencyId) // todo: check type
             .NotNull()
@@ -21,13 +21,13 @@ public class NotificationOrderSequenceRequestValidator : AbstractValidator<Notif
         // required
         RuleFor(order => order.Recipient)
             .NotNull()
-            .SetValidator(validator: new RecipientSpecificationValidator());
+            .SetValidator(validator: new NotificationRecipientValidator());
 
         // should not run if DialogportenAssociation is null
         When(order => order.DialogportenAssociation != null, () =>
         {
             RuleFor(order => order.DialogportenAssociation)
-                .SetValidator(validator: new DialogportenRefrenceValidator());
+                .SetValidator(validator: new DialogportenIdentifiersValidator());
         });
 
         When(order => order.Reminders != null, () =>

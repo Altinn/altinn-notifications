@@ -5,9 +5,9 @@ namespace Altinn.Notifications.Models;
 
 /// <summary>
 /// Represents a request to create a notification order with non or more reminders.
-/// Inherits the scheduling options from <see cref="NotificationOrderSchedulingExt"/>.
+/// Inherits the scheduling options from <see cref="NotificationOrderBaseExt"/>.
 /// </summary>
-public class NotificationOrderSequenceRequestExt : NotificationOrderSchedulingExt
+public class NotificationOrderChainRequestExt : NotificationOrderBaseExt
 {
     /// <summary>
     /// Gets or sets optional identifiers for one or more dialogs or transmissions in Dialogporten.
@@ -17,7 +17,7 @@ public class NotificationOrderSequenceRequestExt : NotificationOrderSchedulingEx
     /// in the Dialogporten service, enabling integration between notifications and Dialogporten.
     /// </remarks>
     [JsonPropertyName("dialogportenAssociation")]
-    public DialogportenReferenceExt? DialogportenAssociation { get; set; }
+    public DialogportenIdentifiersExt? DialogportenAssociation { get; set; }
 
     /// <summary>
     /// Gets or sets the idempotency identifier defined by the sender.
@@ -36,7 +36,7 @@ public class NotificationOrderSequenceRequestExt : NotificationOrderSchedulingEx
     /// </remarks>
     [Required]
     [JsonPropertyName("recipient")]
-    public required RecipientSpecificationExt Recipient { get; set; }
+    public required NotificationRecipientExt Recipient { get; set; }
 
     /// <summary>
     /// Gets or sets a list of reminders that may be triggered under certain conditions after the initial notification has been processed.

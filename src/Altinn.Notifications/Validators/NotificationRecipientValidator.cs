@@ -8,12 +8,12 @@ namespace Altinn.Notifications.Validators
     /// <summary>
     /// Represents validation logic for the recipient types associated with request model.
     /// </summary>
-    public class RecipientSpecificationValidator : AbstractValidator<RecipientSpecificationExt>
+    public class NotificationRecipientValidator : AbstractValidator<NotificationRecipientExt>
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="RecipientSpecificationValidator"/> class.
+        /// Initializes a new instance of the <see cref="NotificationRecipientValidator"/> class.
         /// </summary>
-        public RecipientSpecificationValidator()
+        public NotificationRecipientValidator()
         {
             RuleFor(specification => specification)
                 .NotNull()
@@ -39,7 +39,7 @@ namespace Altinn.Notifications.Validators
         /// </summary>
         /// <param name="specification">Object containing four possible recipient types</param>
         /// <returns></returns>
-        private static bool HaveOneSetRecipientOnly(RecipientSpecificationExt specification)
+        private static bool HaveOneSetRecipientOnly(NotificationRecipientExt specification)
         {
             var numberOfSetRecipients = 0;
             numberOfSetRecipients += specification.RecipientEmail != null ? 1 : 0;

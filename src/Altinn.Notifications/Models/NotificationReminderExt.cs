@@ -52,5 +52,5 @@ public class NotificationReminderExt
     /// </remarks>
     [Required]
     [JsonPropertyName("recipient")]
-    public required RecipientSpecificationExt Recipient { get; set; }
+    public required NotificationRecipientExt Recipient { get; set; }
 }

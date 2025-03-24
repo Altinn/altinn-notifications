@@ -19,14 +19,14 @@ namespace Altinn.Notifications.Controllers;
 public class FutureOrdersController : ControllerBase
 {
     private readonly IOrderRequestService _orderRequestService;
-    private readonly IValidator<NotificationOrderSequenceRequestExt> _validator;
+    private readonly IValidator<NotificationOrderChainRequestExt> _validator;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FutureOrdersController"/> class.
     /// </summary>
     /// <param name="orderRequestService">The order request service.</param>
     /// <param name="validator">The object that contains validation logic.</param>
-    public FutureOrdersController(IOrderRequestService orderRequestService, IValidator<NotificationOrderSequenceRequestExt> validator)
+    public FutureOrdersController(IOrderRequestService orderRequestService, IValidator<NotificationOrderChainRequestExt> validator)
     {
         _validator = validator;
         _orderRequestService = orderRequestService;
@@ -48,7 +48,7 @@ public class FutureOrdersController : ControllerBase
     [SwaggerResponse(422, "The notification order is invalid", typeof(ValidationProblemDetails))]
     [SwaggerResponse(200, "The notification order was created.", typeof(NotificationOrderReminderResponseExt))]
     [SwaggerResponse(201, "The notification order was created.", typeof(NotificationOrderReminderResponseExt))]
-    public async Task<ActionResult<NotificationOrderReminderResponseExt>> Post(NotificationOrderSequenceRequestExt notificationOrderRequest)
+    public async Task<ActionResult<NotificationOrderReminderResponseExt>> Post(NotificationOrderChainRequestExt notificationOrderRequest)
     {
         var validationResult = _validator.Validate(notificationOrderRequest);
         if (!validationResult.IsValid)
