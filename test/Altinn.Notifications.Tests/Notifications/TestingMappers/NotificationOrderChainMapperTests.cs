@@ -338,6 +338,71 @@ public class NotificationOrderChainMapperTests
     }
 
     [Fact]
+    public void MapToNotificationOrderChainRequest_WithEmptyEmailAddress_ReturnsNullRecipientEmail()
+    {
+        // Arrange
+        var creatorName = "ttd";
+        var requestExt = new NotificationOrderChainRequestExt
+        {
+            RequestedSendTime = DateTime.UtcNow,
+            SendersReference = "ref-69374817FCF3",
+            IdempotencyId = "AABBCC00-1234-5678-9ABC-DEF01234567",
+            Recipient = new NotificationRecipientExt
+            {
+                RecipientEmail = new RecipientEmailExt
+                {
+                    EmailAddress = "   ",
+                    Settings = new EmailSendingOptionsExt
+                    {
+                        Body = "Test body",
+                        Subject = "Test subject"
+                    }
+                }
+            }
+        };
+
+        // Act
+        var result = requestExt.MapToNotificationOrderChainRequest(creatorName);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Null(result.Recipient.RecipientEmail);
+    }
+
+    [Fact]
+    public void MapToNotificationOrderChainRequest_WithNoRecipientEmail_ProcessesCorrectly()
+    {
+        // Arrange
+        var creatorName = "ttd";
+        var requestExt = new NotificationOrderChainRequestExt
+        {
+            RequestedSendTime = DateTime.UtcNow,
+            SendersReference = "ref-4617F6FFBE7D",
+            IdempotencyId = "CCDDEE22-3456-7890-ABCD-EF0123456789",
+            Recipient = new NotificationRecipientExt
+            {
+                RecipientSms = new RecipientSmsExt
+                {
+                    PhoneNumber = "+4799999999",
+                    Settings = new SmsSendingOptionsExt
+                    {
+                        Body = "SMS test body",
+                        Sender = "Test sender"
+                    }
+                }
+            }
+        };
+
+        // Act
+        var result = requestExt.MapToNotificationOrderChainRequest(creatorName);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Null(result.Recipient.RecipientEmail);
+        Assert.NotNull(result.Recipient.RecipientSms);
+    }
+
+    [Fact]
     public void MapToNotificationOrderChainRequest_WithSmsRecipient_MapsCorrectly()
     {
         // Arrange
