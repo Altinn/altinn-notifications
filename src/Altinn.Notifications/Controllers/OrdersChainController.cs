@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Services.Interfaces;
+﻿using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
@@ -17,16 +18,16 @@ namespace Altinn.Notifications.Controllers;
 /// </summary>
 [ApiController]
 [ApiExplorerSettings(IgnoreApi = true)]
-[Route("notifications/api/v1/future/orders")]
-public class FutureOrdersController : ControllerBase
+[Route("notifications/api/v1/orders/chain")]
+public class OrdersChainController : ControllerBase
 {
     private readonly IOrderRequestService _orderRequestService;
     private readonly IValidator<NotificationOrderChainRequestExt> _validator;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="FutureOrdersController"/> class.
+    /// Initializes a new instance of the <see cref="OrdersChainController"/> class.
     /// </summary>
-    public FutureOrdersController(IOrderRequestService orderRequestService, IValidator<NotificationOrderChainRequestExt> validator)
+    public OrdersChainController(IOrderRequestService orderRequestService, IValidator<NotificationOrderChainRequestExt> validator)
     {
         _validator = validator;
         _orderRequestService = orderRequestService;
@@ -65,8 +66,8 @@ public class FutureOrdersController : ControllerBase
         }
 
         var notificationOrderChainRequest = notificationOrderRequest.MapToNotificationOrderChainRequest(creator);
-        NotificationOrderRequestResponse result = await _orderRequestService.RegisterNotificationOrderChain(notificationOrderChainRequest);
+        NotificationOrderChainResponse result = await _orderRequestService.RegisterNotificationOrderChain(notificationOrderChainRequest);
 
-        return Accepted(result.OrderId!.GetSelfLinkFromOrderId(), result.MapToExternal());
+        return Accepted(result.Id!.GetSelfLinkFromOrderId(), result.MapToNotificationOrderChainResponseExt());
     }
 }
