@@ -23,15 +23,15 @@ namespace Altinn.Notifications.Controllers;
 [SwaggerResponse(401, "Caller is unauthorized")]
 [SwaggerResponse(403, "Caller is not authorized to access the requested resource")]
 [Authorize(Policy = AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS)]
-public class OrdersChainController : ControllerBase
+public class FutureOrdersController : ControllerBase
 {
     private readonly IOrderRequestService _orderRequestService;
     private readonly IValidator<NotificationOrderChainRequestExt> _validator;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="OrdersChainController"/> class.
+    /// Initializes a new instance of the <see cref="FutureOrdersController"/> class.
     /// </summary>
-    public OrdersChainController(IOrderRequestService orderRequestService, IValidator<NotificationOrderChainRequestExt> validator)
+    public FutureOrdersController(IOrderRequestService orderRequestService, IValidator<NotificationOrderChainRequestExt> validator)
     {
         _validator = validator;
         _orderRequestService = orderRequestService;
