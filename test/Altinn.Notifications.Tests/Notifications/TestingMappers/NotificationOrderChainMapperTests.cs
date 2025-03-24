@@ -1120,4 +1120,94 @@ public class NotificationOrderChainMapperTests
         // Verify reminders have unique OrderIds
         Assert.NotEqual(firstReminder.OrderId, secondReminder.OrderId);
     }
+
+    [Fact]
+    public void MapToNotificationOrderChainRequest_WithOrganizationRecipientNullEmailSettings_MapsCorrectly()
+    {
+        // Arrange
+        var creatorName = "ttd";
+        var requestExt = new NotificationOrderChainRequestExt
+        {
+            RequestedSendTime = DateTime.UtcNow,
+            ConditionEndpoint = new Uri("https://vg.no/condition"),
+            IdempotencyId = "1B2C3D4E-5F6G-7H8I-9J0K-1L2M3N4O5P6Q",
+            SendersReference = "F8279B58-C907-409A-9270-FC45BE36EBD1",
+            Recipient = new NotificationRecipientExt
+            {
+                RecipientOrganization = new RecipientOrganizationExt
+                {
+                    OrgNumber = "987654321",
+                    ResourceId = "urn:altinn:resource:F8279B58",
+                    ChannelSchema = NotificationChannelExt.SmsPreferred,
+                    SmsSettings = new SmsSendingOptionsExt
+                    {
+                        Sender = "Test SMS sender",
+                        Body = "SMS body with null email settings",
+                        SendingTimePolicy = SendingTimePolicyExt.Daytime
+                    }
+                }
+            }
+        };
+
+        // Act
+        var result = requestExt.MapToNotificationOrderChainRequest(creatorName);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.NotNull(result.Recipient.RecipientOrganization);
+
+        // Verify OrgNumber, ResourceId and ChannelSchema are mapped correctly
+        Assert.Equal("987654321", result.Recipient.RecipientOrganization.OrgNumber);
+        Assert.Equal("urn:altinn:resource:F8279B58", result.Recipient.RecipientOrganization.ResourceId);
+        Assert.Equal(NotificationChannel.SmsPreferred, result.Recipient.RecipientOrganization.ChannelSchema);
+
+        // Verify EmailSettings is null
+        Assert.Null(result.Recipient.RecipientOrganization.EmailSettings);
+
+        // Verify SmsSettings is mapped correctly
+        Assert.NotNull(result.Recipient.RecipientOrganization.SmsSettings);
+        Assert.Equal("Test SMS sender", result.Recipient.RecipientOrganization.SmsSettings.Sender);
+        Assert.Equal("SMS body with null email settings", result.Recipient.RecipientOrganization.SmsSettings.Body);
+        Assert.Equal(SendingTimePolicy.Daytime, result.Recipient.RecipientOrganization.SmsSettings.SendingTimePolicy);
+    }
+
+    [Fact]
+    public void MapToNotificationOrderChainRequest_WithOrganizationRecipientNullSettings_ReturnsNullOrganization()
+    {
+        // Arrange
+        var creatorName = "ttd";
+        var requestExt = new NotificationOrderChainRequestExt
+        {
+            RequestedSendTime = DateTime.UtcNow,
+            ConditionEndpoint = new Uri("https://vg.no/condition"),
+            IdempotencyId = "5P6Q7R8S-9T0U-1V2W-3X4Y-5Z6A7B8C9D0E",
+            SendersReference = "C739EA53-C635-4115-BC93-37901C9E54C6",
+            Recipient = new NotificationRecipientExt
+            {
+                RecipientOrganization = new RecipientOrganizationExt
+                {
+                    OrgNumber = "987654321",
+                    ResourceId = "urn:altinn:resource:3X4Y",
+                    ChannelSchema = NotificationChannelExt.SmsPreferred,
+                    EmailSettings = null,
+                    SmsSettings = null
+                }
+            }
+        };
+
+        // Act
+        var result = requestExt.MapToNotificationOrderChainRequest(creatorName);
+
+        // Assert
+        Assert.NotNull(result);
+
+        // The RecipientOrganization should be null because both settings are null
+        Assert.Null(result.Recipient.RecipientOrganization);
+
+        // Verify other properties mapped correctly
+        Assert.Equal(creatorName, result.Creator.ShortName);
+        Assert.Equal(requestExt.ConditionEndpoint, result.ConditionEndpoint);
+        Assert.Equal("5P6Q7R8S-9T0U-1V2W-3X4Y-5Z6A7B8C9D0E", result.IdempotencyId);
+        Assert.Equal("C739EA53-C635-4115-BC93-37901C9E54C6", result.SendersReference);
+    }
 }
