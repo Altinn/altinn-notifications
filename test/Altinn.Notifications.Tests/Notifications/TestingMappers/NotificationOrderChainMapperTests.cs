@@ -45,7 +45,7 @@ public class NotificationOrderChainMapperTests
         Assert.NotNull(result);
         Assert.NotNull(result.DialogportenAssociation);
         Assert.Equal("dialog-50E18947", result.DialogportenAssociation.DialogId);
-        Assert.Equal("transmission-9B0B278II", result.DialogportenAssociation.TransmissionId);
+        Assert.Equal("transmission-9B0B2781", result.DialogportenAssociation.TransmissionId);
     }
 
     [Fact]
