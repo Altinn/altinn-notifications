@@ -76,7 +76,7 @@ public class OrderRequestService : IOrderRequestService
     }
 
     /// <inheritdoc/>
-    public async Task<NotificationOrderRequestResponse> RegisterNotificationOrderChain(NotificationOrderChainRequest orderRequest)
+    public async Task<NotificationOrderChainResponse> RegisterNotificationOrderChain(NotificationOrderChainRequest orderRequest)
     {
         DateTime currentTime = _dateTime.UtcNow();
 
@@ -96,7 +96,32 @@ public class OrderRequestService : IOrderRequestService
 
         List<NotificationOrder> savedOrders = await _repository.Create(orderRequest, mainOrder, reminderOrders);
 
-        return new NotificationOrderRequestResponse();
+        if (savedOrders == null || savedOrders.Count == 0)
+        {
+            throw new InvalidOperationException("Failed to create notification order chain.");
+        }
+
+        // Get the main order (first in the list)
+        var savedMainOrder = savedOrders[0];
+
+        // Create and return the response
+        return new NotificationOrderChainResponse
+        {
+            Id = savedMainOrder.Id,
+            CreationResult = new NotificationOrderChainReceipt
+            {
+                ShipmentId = savedMainOrder.Id,
+                SendersReference = savedMainOrder.SendersReference,
+                Reminders = savedOrders.Count > 1
+                    ? [.. savedOrders.Skip(1)
+                        .Select(order => new NotificationOrderChainShipment
+                        {
+                            ShipmentId = order.Id,
+                            SendersReference = order.SendersReference
+                        })]
+                    : null
+            }
+        };
     }
 
     /// <summary>

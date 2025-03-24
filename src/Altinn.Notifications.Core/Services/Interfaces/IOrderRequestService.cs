@@ -31,5 +31,5 @@ public interface IOrderRequestService
     /// optional follow-up reminders. It handles template configuration, recipient lookup, and
     /// validation before storing the entire sequence for processing.
     /// </remarks>
-    Task<NotificationOrderRequestResponse> RegisterNotificationOrderChain(NotificationOrderChainRequest orderRequest);
+    Task<NotificationOrderChainResponse> RegisterNotificationOrderChain(NotificationOrderChainRequest orderRequest);
 }
