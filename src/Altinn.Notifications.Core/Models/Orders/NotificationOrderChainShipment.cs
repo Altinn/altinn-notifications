@@ -1,6 +1,4 @@
-﻿using System.Text.Json.Serialization;
-
-namespace Altinn.Notifications.Models;
+﻿namespace Altinn.Notifications.Core.Models.Orders;
 
 /// <summary>
 /// Represents the base information for a shipment in a notification order chain.
@@ -10,12 +8,11 @@ namespace Altinn.Notifications.Models;
 /// essential identifiers to correlate shipments across systems. It is used both for
 /// primary notifications and their associated reminders in notification chains.
 /// </remarks>
-public class NotificationOrderChainShipmentExt
+public class NotificationOrderChainShipment
 {
     /// <summary>
     /// Gets or sets the unique identifier for this shipment.
     /// </summary>
-    [JsonPropertyName("shipmentId")]
     public required Guid ShipmentId { get; set; }
 
     /// <summary>
@@ -24,6 +21,5 @@ public class NotificationOrderChainShipmentExt
     /// <remarks>
     /// An optional identifier provided by the sender to correlate this notification shipment with records in their system.
     /// </remarks>
-    [JsonPropertyName("sendersReference")]
     public string? SendersReference { get; set; }
 }
