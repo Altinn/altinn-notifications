@@ -8,6 +8,7 @@ using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
@@ -552,6 +553,54 @@ public class OrderRequestServiceTests
         Assert.Equal(0, actual.RecipientLookup!.MissingContact?.Count);
         repoMock.VerifyAll();
         contactPointMock.VerifyAll();
+    }
+
+    [Fact]
+    public async Task RegisterNotificationOrderChain_WithReminders_OrderChainCreated()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        DateTime currentTime = DateTime.UtcNow;
+        var orderRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId)
+            .SetCreator(new Creator("ttd"))
+            .SetSendersReference("senders-reference")
+            .SetRequestedSendTime(currentTime.AddMinutes(5))
+            .SetIdempotencyId("84CD3017-92E3-4C3D-80DE-C10338F30813")
+            .SetRecipient(new NotificationRecipient { RecipientEmail = new RecipientEmail { EmailAddress = "recipient@example.com", Settings = new EmailSendingOptions { Body = "Email body", Subject = "Email subject" } } })
+            .SetReminders(
+            [
+                    new NotificationReminder
+                    {
+                        DelayDays = 1,
+                        Recipient = new NotificationRecipient { RecipientEmail = new RecipientEmail { EmailAddress = "reminder@example.com", Settings = new EmailSendingOptions { Body = "Reminder body", Subject = "Reminder subject" } } },
+                        RequestedSendTime = currentTime.AddMinutes(20),
+                        SendersReference = "reminder-senders-reference"
+                    }
+            ])
+            .Build();
+
+        var expectedMainOrder = new NotificationOrder(orderId, "43F2C14A-62E4-4258-8887-3414296E7D82", [], currentTime.AddMinutes(5), NotificationChannel.Email, new Creator("ttd"), currentTime, [], null, null, null);
+        var expectedReminderOrder = new NotificationOrder(Guid.NewGuid(), "DAFBD9F5-7CCA-468B-AD20-793BF44D9C44", [], currentTime.AddMinutes(20), NotificationChannel.Email, new Creator("ttd"), currentTime, [], null, null, null);
+
+        var repoMock = new Mock<IOrderRepository>();
+        repoMock.Setup(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), It.IsAny<List<NotificationOrder>>()))
+            .ReturnsAsync([expectedMainOrder, expectedReminderOrder]);
+
+        var service = GetTestService(repoMock.Object, null, orderId, currentTime);
+
+        // Act
+        var response = await service.RegisterNotificationOrderChain(orderRequest);
+
+        // Assert
+        Assert.Equal(orderId, response.Id);
+        Assert.Equal("43F2C14A-62E4-4258-8887-3414296E7D82", response.CreationResult.SendersReference);
+
+        Assert.NotNull(response.CreationResult.Reminders);
+        Assert.Single(response.CreationResult.Reminders);
+        Assert.Equal("DAFBD9F5-7CCA-468B-AD20-793BF44D9C44", response.CreationResult.Reminders[0].SendersReference);
+
+        repoMock.VerifyAll();
     }
 
     public static OrderRequestService GetTestService(IOrderRepository? repository = null, IContactPointService? contactPointService = null, Guid? guid = null, DateTime? dateTime = null)
