@@ -1,5 +1,4 @@
-﻿using Altinn.Notifications.Core.Models.Orders;
-using Altinn.Notifications.Models;
+﻿using Altinn.Notifications.Models;
 
 namespace Altinn.Notifications.Extensions;
 
