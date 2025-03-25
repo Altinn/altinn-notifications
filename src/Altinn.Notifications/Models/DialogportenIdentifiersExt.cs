@@ -10,12 +10,12 @@ public class DialogportenIdentifiersExt
     /// <summary>
     /// Gets or sets the identifier for a specific dialog within Dialogporten.
     /// </summary>
-    [JsonPropertyName("dialogId")] 
+    [JsonPropertyName("dialogId")]
     public string? DialogId { get; set; }
 
     /// <summary>
     /// Gets or sets the identifier for a specific transmission within Dialogporten.
     /// </summary>
-    [JsonPropertyName("transmissionId")] 
+    [JsonPropertyName("transmissionId")]
     public string? TransmissionId { get; set; }
 }
