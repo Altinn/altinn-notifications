@@ -1,5 +1,7 @@
-﻿using System.Net;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Net;
 using System.Net.Http.Headers;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -8,13 +10,17 @@ using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Controllers;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using Altinn.Notifications.Tests.Notifications.Utils;
 
 using AltinnCore.Authentication.JwtCookie;
-
+using FluentValidation;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -560,7 +566,57 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         HttpResponseMessage response = await client.SendAsync(request);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
-        
+
+    [Fact]
+    public async Task Post_WithMissingCreatorName_ReturnsForbidden()
+    {
+        // Arrange
+        var requestExt = new NotificationOrderChainRequestExt
+        {
+            IdempotencyId = Guid.NewGuid().ToString(),
+            RequestedSendTime = DateTime.UtcNow.AddHours(2),
+            Recipient = new NotificationRecipientExt
+            {
+                RecipientEmail = new RecipientEmailExt
+                {
+                    EmailAddress = "recipient@example.com",
+                    Settings = new EmailSendingOptionsExt
+                    {
+                        Body = "Test email body",
+                        Subject = "Test email subject",
+                        SenderName = "Test sender name",
+                        SenderEmailAddress = "sender@example.com",
+                        ContentType = EmailContentTypeExt.Plain,
+                        SendingTimePolicy = SendingTimePolicyExt.Anytime
+                    }
+                }
+            }
+        };
+
+        var orderRequestServiceMock = new Mock<IOrderRequestService>();
+        var validatorMock = new Mock<IValidator<NotificationOrderChainRequestExt>>();
+        validatorMock.Setup(v => v.Validate(It.IsAny<NotificationOrderChainRequestExt>())).Returns(new FluentValidation.Results.ValidationResult());
+
+        var httpContextMock = new Mock<HttpContext>();
+        httpContextMock.Setup(ctx => ctx.Items).Returns(new Dictionary<object, object?> { { "Org", null } });
+
+        var controllerContext = new ControllerContext
+        {
+            HttpContext = httpContextMock.Object
+        };
+
+        var controller = new FutureOrdersController(orderRequestServiceMock.Object, validatorMock.Object)
+        {
+            ControllerContext = controllerContext
+        };
+
+        // Act
+        var result = await controller.Post(requestExt);
+
+        // Assert
+        Assert.IsType<ForbidResult>(result.Result);
+    }
+
     /// <summary>
     /// Sends a POST request with a notification order to the specified API endpoint.
     /// </summary>
@@ -647,13 +703,15 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
             };
 
             var orderRequestServiceMock = new Mock<IOrderRequestService>();
+
             orderRequestServiceMock
                 .Setup(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>()))
                 .ReturnsAsync(response);
+
             orderRequestService = orderRequestServiceMock.Object;
         }
 
-        HttpClient client = _factory.WithWebHostBuilder(builder =>
+        return _factory.WithWebHostBuilder(builder =>
         {
             IdentityModelEventSource.ShowPII = true;
             builder.ConfigureTestServices(services =>
@@ -664,7 +722,5 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
                 services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
             });
         }).CreateClient();
-
-        return client;
     }
 }
