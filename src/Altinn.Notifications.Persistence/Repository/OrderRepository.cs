@@ -109,6 +109,48 @@ public class OrderRepository : IOrderRepository
     }
 
     /// <inheritdoc/>
+    public async Task<List<NotificationOrder>> Create(NotificationOrderChainRequest orderRequest, NotificationOrder mainNotificationOrder, List<NotificationOrder> reminders)
+    {
+        await using var connection = await _dataSource.OpenConnectionAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+        try
+        {
+            await InsertOrderChain(orderRequest, mainNotificationOrder.Created, connection, transaction);
+
+            long mainOrderId = await InsertOrder(mainNotificationOrder, connection, transaction);
+
+            EmailTemplate? mainEmailTemplate = mainNotificationOrder.Templates.Find(t => t.Type == NotificationTemplateType.Email) as EmailTemplate;
+            await InsertEmailTextAsync(mainOrderId, mainEmailTemplate, connection, transaction);
+
+            SmsTemplate? mainSmsTemplate = mainNotificationOrder.Templates.Find(t => t.Type == NotificationTemplateType.Sms) as SmsTemplate;
+            await InsertSmsTextAsync(mainOrderId, mainSmsTemplate, connection, transaction);
+
+            if (reminders != null)
+            {
+                foreach (var notificationOrder in reminders)
+                {
+                    long reminderOrderId = await InsertOrder(notificationOrder, connection, transaction);
+
+                    EmailTemplate? reminderEmailTemplate = notificationOrder.Templates.Find(t => t.Type == NotificationTemplateType.Email) as EmailTemplate;
+                    await InsertEmailTextAsync(reminderOrderId, reminderEmailTemplate, connection, transaction);
+
+                    SmsTemplate? reminderSmsTemplate = notificationOrder.Templates.Find(t => t.Type == NotificationTemplateType.Sms) as SmsTemplate;
+                    await InsertSmsTextAsync(reminderOrderId, reminderSmsTemplate, connection, transaction);
+                }
+            }
+
+            await transaction.CommitAsync();
+        }
+        catch (Exception)
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+
+        return reminders == null ? [mainNotificationOrder] : [mainNotificationOrder, .. reminders];
+    }
+
+    /// <inheritdoc/>
     public async Task SetProcessingStatus(Guid orderId, OrderProcessingStatus status)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_setProcessCompleted);
@@ -181,48 +223,6 @@ public class OrderRepository : IOrderRepository
 
         NotificationOrderWithStatus? order = ReadNotificationOrderWithStatus(reader);
         return order!;
-    }
-
-    /// <inheritdoc/>
-    public async Task<List<NotificationOrder>> Create(NotificationOrderChainRequest orderRequest, NotificationOrder mainNotificationOrder, List<NotificationOrder> reminders)
-    {
-        await using var connection = await _dataSource.OpenConnectionAsync();
-        await using var transaction = await connection.BeginTransactionAsync();
-        try
-        {
-            await InsertOrderChain(orderRequest, mainNotificationOrder.Created, connection, transaction);
-
-            long mainOrderId = await InsertOrder(mainNotificationOrder, connection, transaction);
-
-            EmailTemplate? mainEmailTemplate = mainNotificationOrder.Templates.Find(t => t.Type == NotificationTemplateType.Email) as EmailTemplate;
-            await InsertEmailTextAsync(mainOrderId, mainEmailTemplate, connection, transaction);
-
-            SmsTemplate? mainSmsTemplate = mainNotificationOrder.Templates.Find(t => t.Type == NotificationTemplateType.Sms) as SmsTemplate;
-            await InsertSmsTextAsync(mainOrderId, mainSmsTemplate, connection, transaction);
-
-            if (reminders != null)
-            {
-                foreach (var notificationOrder in reminders)
-                {
-                    long reminderOrderId = await InsertOrder(notificationOrder, connection, transaction);
-
-                    EmailTemplate? reminderEmailTemplate = notificationOrder.Templates.Find(t => t.Type == NotificationTemplateType.Email) as EmailTemplate;
-                    await InsertEmailTextAsync(reminderOrderId, reminderEmailTemplate, connection, transaction);
-
-                    SmsTemplate? reminderSmsTemplate = notificationOrder.Templates.Find(t => t.Type == NotificationTemplateType.Sms) as SmsTemplate;
-                    await InsertSmsTextAsync(reminderOrderId, reminderSmsTemplate, connection, transaction);
-                }
-            }
-
-            await transaction.CommitAsync();
-        }
-        catch (Exception)
-        {
-            await transaction.RollbackAsync();
-            throw;
-        }
-
-        return reminders == null ? [mainNotificationOrder] : [mainNotificationOrder, .. reminders];
     }
 
     private static NotificationOrderWithStatus? ReadNotificationOrderWithStatus(NpgsqlDataReader reader)
