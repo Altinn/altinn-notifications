@@ -556,7 +556,7 @@ public class OrderRequestServiceTests
     }
 
     [Fact]
-    public async Task RegisterNotificationOrderChain_WithMultipleReminders_OrderChainCreated()
+    public async Task RegisterNotificationOrderChain_RecipientPerson_WithMultipleReminders_OrderChainCreated()
     {
         // Arrange
         Guid orderId = Guid.NewGuid();
@@ -771,6 +771,104 @@ public class OrderRequestServiceTests
             It.Is<List<Recipient>>(r => r.Any(e => e.NationalIdentityNumber == "29105573746")),
             It.Is<string?>(s => s == "urn:altinn:resource:tax-filing-2025")),
             Times.Exactly(3));
+    }
+
+    [Fact]
+    public async Task RegisterNotificationOrderChain_RecipientOrganization_WithNoReminders_OrderChainCreated()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        DateTime currentTime = DateTime.UtcNow;
+
+        var orderRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId)
+            .SetCreator(new Creator("brg"))
+            .SetRequestedSendTime(currentTime.AddHours(2))
+            .SetSendersReference("ANNUAL-REPORT-REMINDER-2025")
+            .SetIdempotencyId("65698F3A-7B27-478C-9E76-A190C34A8099")
+            .SetRecipient(new NotificationRecipient
+            {
+                RecipientOrganization = new RecipientOrganization
+                {
+                    OrgNumber = "910150804",
+                    ChannelSchema = NotificationChannel.Email,
+                    ResourceId = "urn:altinn:resource:annual-report-2025",
+                    EmailSettings = new EmailSendingOptions
+                    {
+                        Body = "<p>Your organization's annual report is due by March 31, 2025. Log in to Altinn to complete it.</p>",
+                        Subject = "Annual Report Reminder 2025",
+                        ContentType = EmailContentType.Html,
+                        SenderName = "Brønnøysundregistrene",
+                        SenderEmailAddress = "no-reply@brreg.no"
+                    }
+                }
+            })
+            .Build();
+
+        var expectedOrder = new NotificationOrder(
+            orderId,
+            "ANNUAL-REPORT-REMINDER-2025",
+            [
+                new EmailTemplate("no-reply@brreg.no", "Annual Report Reminder 2025", "<p>Your organization's annual report is due by March 31, 2025. Log in to Altinn to complete it.</p>", EmailContentType.Html)
+            ],
+            currentTime.AddHours(2),
+            NotificationChannel.Email,
+            new Creator("brg"),
+            currentTime,
+            [new([], organizationNumber: "910150804")],
+            null,
+            "urn:altinn:resource:annual-report-2025",
+            null);
+
+        // Setup repository mock
+        var repoMock = new Mock<IOrderRepository>(MockBehavior.Strict);
+        repoMock.Setup(r => r.Create(
+            It.Is<NotificationOrderChainRequest>(req => req.OrderId == orderId && req.SendersReference == "ANNUAL-REPORT-REMINDER-2025"),
+            It.Is<NotificationOrder>(o => o.NotificationChannel == NotificationChannel.Email && o.Recipients.Any(r => r.OrganizationNumber == "910150804")),
+            It.Is<List<NotificationOrder>>(list => list.Count == 0)))
+            .ReturnsAsync([expectedOrder]);
+
+        // Setup contact point service mock
+        var contactPointMock = new Mock<IContactPointService>();
+        contactPointMock
+            .Setup(cp => cp.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>()))
+            .Callback<List<Recipient>, string?>((recipients, _) =>
+            {
+                foreach (var recipient in recipients)
+                {
+                    if (recipient.OrganizationNumber == "910150804")
+                    {
+                        recipient.AddressInfo.Add(new EmailAddressPoint("contact@company.no"));
+                    }
+                }
+            });
+
+        var service = GetTestService(repoMock.Object, contactPointMock.Object, orderId, currentTime);
+
+        // Act
+        var response = await service.RegisterNotificationOrderChain(orderRequest);
+
+        // Assert
+        Assert.NotNull(response);
+        Assert.Equal(orderId, response.Id);
+        Assert.Equal("ANNUAL-REPORT-REMINDER-2025", response.CreationResult.SendersReference);
+        Assert.Null(response.CreationResult.Reminders);
+
+        // Verify repository interactions
+        repoMock.Verify(r => r.Create(
+            It.IsAny<NotificationOrderChainRequest>(),
+            It.Is<NotificationOrder>(o =>
+                o.SendersReference == "ANNUAL-REPORT-REMINDER-2025" &&
+                o.NotificationChannel == NotificationChannel.Email &&
+                o.Recipients.Any(r => r.OrganizationNumber == "910150804")),
+            It.Is<List<NotificationOrder>>(list => list.Count == 0)),
+            Times.Once);
+
+        // Verify contact point interactions
+        contactPointMock.Verify(cp => cp.AddEmailContactPoints(
+            It.Is<List<Recipient>>(r => r.Any(rec => rec.OrganizationNumber == "910150804")),
+            It.Is<string?>(s => s == "urn:altinn:resource:annual-report-2025")),
+            Times.Once);
     }
 
     public static OrderRequestService GetTestService(IOrderRepository? repository = null, IContactPointService? contactPointService = null, Guid? guid = null, DateTime? dateTime = null)
