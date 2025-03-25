@@ -9,6 +9,7 @@ namespace Altinn.Notifications.Extensions;
 public static class ResourceLinkExtensions
 {
     private static string? _baseUri;
+    private const string BaseUriNotInitializedMessage = "ResourceLinkExtensions has not been initialized with the base URI.";
 
     /// <summary>
     /// Initializes the ResourceLinkExtensions with the base URI from settings.
@@ -29,7 +30,7 @@ public static class ResourceLinkExtensions
     {
         if (_baseUri == null)
         {
-            throw new InvalidOperationException("ResourceLinkExtensions has not been initialized with the base URI.");
+            throw new InvalidOperationException(BaseUriNotInitializedMessage);
         }
 
         string self = _baseUri + "/notifications/api/v1/orders/" + order.Id;
@@ -49,7 +50,7 @@ public static class ResourceLinkExtensions
     {
         if (_baseUri == null)
         {
-            throw new InvalidOperationException("ResourceLinkExtensions has not been initialized with the base URI.");
+            throw new InvalidOperationException(BaseUriNotInitializedMessage);
         }
 
         string baseUri = $"{_baseUri}/notifications/api/v1/orders/{order!.Id}/notifications/";
@@ -81,7 +82,7 @@ public static class ResourceLinkExtensions
     {
         if (_baseUri == null)
         {
-            throw new InvalidOperationException("ResourceLinkExtensions has not been initialized with the base URI.");
+            throw new InvalidOperationException(BaseUriNotInitializedMessage);
         }
 
         if (orderId == null)
@@ -100,7 +101,7 @@ public static class ResourceLinkExtensions
     {
         if (_baseUri == null)
         {
-            throw new InvalidOperationException("ResourceLinkExtensions has not been initialized with the base URI.");
+            throw new InvalidOperationException(BaseUriNotInitializedMessage);
         }
 
         if (orderId == Guid.Empty)
