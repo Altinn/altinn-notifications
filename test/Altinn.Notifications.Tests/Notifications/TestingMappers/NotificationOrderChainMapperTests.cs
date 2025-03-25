@@ -1355,9 +1355,9 @@ public class NotificationOrderChainMapperTests
         Assert.Equal(string.Empty, result.Recipient.RecipientSms.Settings.Sender);
 
         // Verify other properties are correctly mapped
+        Assert.Equal("+4799999999", result.Recipient.RecipientSms.PhoneNumber);
         Assert.Equal("SMS test body with null sender", result.Recipient.RecipientSms.Settings.Body);
         Assert.Equal(SendingTimePolicy.Anytime, result.Recipient.RecipientSms.Settings.SendingTimePolicy);
-        Assert.Equal("+4799999999", result.Recipient.RecipientSms.PhoneNumber);
 
         // Verify order properties
         Assert.Equal(creatorName, result.Creator.ShortName);
@@ -1405,7 +1405,7 @@ public class NotificationOrderChainMapperTests
         Assert.Equal(creatorName, result.Creator.ShortName);
         Assert.Equal("BC47D9EA-3CD5-48A6-B5B7-CF5B95D53F9B", result.IdempotencyId);
 
-        // Email recipient validation
+        // Verify Email recipient properties
         Assert.NotNull(result.Recipient.RecipientEmail);
         Assert.Equal("Test body", result.Recipient.RecipientEmail.Settings.Body);
         Assert.Equal("Test subject", result.Recipient.RecipientEmail.Settings.Subject);
