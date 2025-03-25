@@ -770,7 +770,7 @@ public class OrderRequestServiceTests
             It.Is<NotificationChannel>(c => c == NotificationChannel.EmailPreferred),
             It.Is<List<Recipient>>(r => r.Any(e => e.NationalIdentityNumber == "29105573746")),
             It.Is<string?>(s => s == "urn:altinn:resource:tax-filing-2025")),
-            Times.Once);
+            Times.Exactly(3));
     }
 
     public static OrderRequestService GetTestService(IOrderRepository? repository = null, IContactPointService? contactPointService = null, Guid? guid = null, DateTime? dateTime = null)
