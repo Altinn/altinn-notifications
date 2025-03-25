@@ -1,6 +1,5 @@
 ﻿using System.Net;
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -561,7 +560,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         HttpResponseMessage response = await client.SendAsync(request);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
-
+        
     /// <summary>
     /// Sends a POST request with a notification order to the specified API endpoint.
     /// </summary>
