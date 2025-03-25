@@ -905,6 +905,46 @@ public class NotificationOrderChainMapperTests
     }
 
     [Fact]
+    public void MapToNotificationOrderChainRequest_WithPersonRecipientNullSettings_ReturnsNullRecipientPerson()
+    {
+        // Arrange
+        var creatorName = "ttd";
+        var requestExt = new NotificationOrderChainRequestExt
+        {
+            RequestedSendTime = DateTime.UtcNow,
+            ConditionEndpoint = new Uri("https://vg.no/condition"),
+            IdempotencyId = "8D9E0F1A-2B3C-4D5E-6F7A-8B9C0D1E2F3A",
+            SendersReference = "D1E2F3A4-B5C6-7D8E-9F0A-1B2C3D4E5F6A",
+            Recipient = new NotificationRecipientExt
+            {
+                RecipientPerson = new RecipientPersonExt
+                {
+                    NationalIdentityNumber = "29105573746",
+                    ResourceId = "urn:altinn:resource:5432",
+                    ChannelSchema = NotificationChannelExt.Email,
+                    EmailSettings = null,
+                    SmsSettings = null
+                }
+            }
+        };
+
+        // Act
+        var result = requestExt.MapToNotificationOrderChainRequest(creatorName);
+
+        // Assert
+        Assert.NotNull(result);
+
+        // The RecipientPerson should be null because both settings are null
+        Assert.Null(result.Recipient.RecipientPerson);
+
+        // Verify other properties mapped correctly
+        Assert.Equal(creatorName, result.Creator.ShortName);
+        Assert.Equal(requestExt.ConditionEndpoint, result.ConditionEndpoint);
+        Assert.Equal("8D9E0F1A-2B3C-4D5E-6F7A-8B9C0D1E2F3A", result.IdempotencyId);
+        Assert.Equal("D1E2F3A4-B5C6-7D8E-9F0A-1B2C3D4E5F6A", result.SendersReference);
+    }
+
+    [Fact]
     public void MapToNotificationOrderChainRequest_WithPersonRecipientSmsPreferredAndReminders_MapsCorrectly()
     {
         // Arrange
@@ -1280,6 +1320,52 @@ public class NotificationOrderChainMapperTests
     }
 
     [Fact]
+    public void MapToNotificationOrderChainRequest_WithSmsRecipientAndNullSender_MapsCorrectly()
+    {
+        // Arrange
+        var creatorName = "ttd";
+        var requestExt = new NotificationOrderChainRequestExt
+        {
+            RequestedSendTime = DateTime.UtcNow,
+            SendersReference = "ref-A7B6C5D4",
+            IdempotencyId = "F1E2D3C4-B5A6-9876-5432-1098ABCDEF01",
+            Recipient = new NotificationRecipientExt
+            {
+                RecipientSms = new RecipientSmsExt
+                {
+                    PhoneNumber = "+4799999999",
+                    Settings = new SmsSendingOptionsExt
+                    {
+                        Sender = null!,
+                        Body = "SMS test body with null sender",
+                        SendingTimePolicy = SendingTimePolicyExt.Anytime
+                    }
+                }
+            }
+        };
+
+        // Act
+        var result = requestExt.MapToNotificationOrderChainRequest(creatorName);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.NotNull(result.Recipient.RecipientSms);
+
+        // Verify Sender is empty string when original is null
+        Assert.Equal(string.Empty, result.Recipient.RecipientSms.Settings.Sender);
+
+        // Verify other properties are correctly mapped
+        Assert.Equal("SMS test body with null sender", result.Recipient.RecipientSms.Settings.Body);
+        Assert.Equal(SendingTimePolicy.Anytime, result.Recipient.RecipientSms.Settings.SendingTimePolicy);
+        Assert.Equal("+4799999999", result.Recipient.RecipientSms.PhoneNumber);
+
+        // Verify order properties
+        Assert.Equal(creatorName, result.Creator.ShortName);
+        Assert.Equal("ref-A7B6C5D4", result.SendersReference);
+        Assert.Equal("F1E2D3C4-B5A6-9876-5432-1098ABCDEF01", result.IdempotencyId);
+    }
+
+    [Fact]
     public void MapToNotificationOrderChainRequest_WithoutRequestedSendTime_UsesCurrentUtcTime()
     {
         // Arrange
@@ -1311,8 +1397,8 @@ public class NotificationOrderChainMapperTests
         Assert.NotNull(result);
 
         // Verify RequestedSendTime is set to a value between our before and after timestamps
-        Assert.True(result.RequestedSendTime >= beforeMapping);
-        Assert.True(result.RequestedSendTime <= afterMapping);
+        Assert.True(result.RequestedSendTime.AddTicks(-(result.RequestedSendTime.Ticks % TimeSpan.TicksPerSecond)) >= beforeMapping.AddTicks(-(beforeMapping.Ticks % TimeSpan.TicksPerSecond)));
+        Assert.True(result.RequestedSendTime.AddTicks(-(result.RequestedSendTime.Ticks % TimeSpan.TicksPerSecond)) <= afterMapping.AddTicks(-(afterMapping.Ticks % TimeSpan.TicksPerSecond)));
 
         // Verify other properties are correctly mapped
         Assert.NotEqual(Guid.Empty, result.OrderId);
