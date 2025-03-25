@@ -192,28 +192,25 @@ public class OrderRepository : IOrderRepository
         {
             await InsertOrderChain(orderRequest, mainNotificationOrder.Created, connection, transaction);
 
-            if (mainNotificationOrder != null)
-            {
-                long dbOrderId = await InsertOrder(mainNotificationOrder, connection, transaction);
+            long mainOrderId = await InsertOrder(mainNotificationOrder, connection, transaction);
 
-                EmailTemplate? emailTemplate = mainNotificationOrder.Templates.Find(t => t.Type == NotificationTemplateType.Email) as EmailTemplate;
-                await InsertEmailTextAsync(dbOrderId, emailTemplate, connection, transaction);
+            EmailTemplate? mainEmailTemplate = mainNotificationOrder.Templates.Find(t => t.Type == NotificationTemplateType.Email) as EmailTemplate;
+            await InsertEmailTextAsync(mainOrderId, mainEmailTemplate, connection, transaction);
 
-                SmsTemplate? smsTemplate = mainNotificationOrder.Templates.Find(t => t.Type == NotificationTemplateType.Sms) as SmsTemplate;
-                await InsertSmsTextAsync(dbOrderId, smsTemplate, connection, transaction);
-            }
+            SmsTemplate? mainSmsTemplate = mainNotificationOrder.Templates.Find(t => t.Type == NotificationTemplateType.Sms) as SmsTemplate;
+            await InsertSmsTextAsync(mainOrderId, mainSmsTemplate, connection, transaction);
 
             if (reminders != null)
             {
                 foreach (var notificationOrder in reminders)
                 {
-                    long dbOrderId = await InsertOrder(notificationOrder, connection, transaction);
+                    long reminderOrderId = await InsertOrder(notificationOrder, connection, transaction);
 
-                    EmailTemplate? emailTemplate = notificationOrder.Templates.Find(t => t.Type == NotificationTemplateType.Email) as EmailTemplate;
-                    await InsertEmailTextAsync(dbOrderId, emailTemplate, connection, transaction);
+                    EmailTemplate? reminderEmailTemplate = notificationOrder.Templates.Find(t => t.Type == NotificationTemplateType.Email) as EmailTemplate;
+                    await InsertEmailTextAsync(reminderOrderId, reminderEmailTemplate, connection, transaction);
 
-                    SmsTemplate? smsTemplate = notificationOrder.Templates.Find(t => t.Type == NotificationTemplateType.Sms) as SmsTemplate;
-                    await InsertSmsTextAsync(dbOrderId, smsTemplate, connection, transaction);
+                    SmsTemplate? reminderSmsTemplate = notificationOrder.Templates.Find(t => t.Type == NotificationTemplateType.Sms) as SmsTemplate;
+                    await InsertSmsTextAsync(reminderOrderId, reminderSmsTemplate, connection, transaction);
                 }
             }
 
