@@ -873,6 +873,58 @@ public class OrderRequestServiceTests
             Times.Once);
     }
 
+    [Fact]
+    public async Task RegisterNotificationOrderChain_RepositoryReturnsEmptyList_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        DateTime currentTime = DateTime.UtcNow;
+
+        var orderRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId)
+            .SetCreator(new Creator("test"))
+            .SetIdempotencyId("test-idempotency-id")
+            .SetRecipient(new NotificationRecipient
+            {
+                RecipientEmail = new RecipientEmail
+                {
+                    EmailAddress = "recipient@example.com",
+                    Settings = new EmailSendingOptions
+                    {
+                        Body = "Test body",
+                        Subject = "Test subject",
+                        ContentType = EmailContentType.Plain
+                    }
+                }
+            })
+            .Build();
+
+        // Setup repository to return an empty list
+        var repoMock = new Mock<IOrderRepository>();
+        repoMock
+            .Setup(r => r.Create(
+                It.IsAny<NotificationOrderChainRequest>(),
+                It.IsAny<NotificationOrder>(),
+                It.IsAny<List<NotificationOrder>>()))
+            .ReturnsAsync(new List<NotificationOrder>());
+
+        var service = GetTestService(repoMock.Object, null, orderId, currentTime);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await service.RegisterNotificationOrderChain(orderRequest));
+
+        Assert.Equal("Failed to create notification order chain.", exception.Message);
+
+        // Verify the repository was called
+        repoMock.Verify(
+            r => r.Create(
+                It.IsAny<NotificationOrderChainRequest>(),
+                It.IsAny<NotificationOrder>(),
+                It.IsAny<List<NotificationOrder>>()),
+            Times.Once);
+    }
+
     public static OrderRequestService GetTestService(IOrderRepository? repository = null, IContactPointService? contactPointService = null, Guid? guid = null, DateTime? dateTime = null)
     {
         if (repository == null)
