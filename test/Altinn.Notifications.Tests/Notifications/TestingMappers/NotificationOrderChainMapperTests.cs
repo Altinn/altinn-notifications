@@ -646,6 +646,53 @@ public class NotificationOrderChainMapperTests
     }
 
     [Fact]
+    public void MapToNotificationOrderChainRequest_WithoutRequestedSendTime_UsesCurrentUtcTime()
+    {
+        // Arrange
+        var creatorName = "ttd";
+        var requestExt = new NotificationOrderChainRequestExt
+        {
+            // Not setting RequestedSendTime to test default behavior
+            IdempotencyId = "BC47D9EA-3CD5-48A6-B5B7-CF5B95D53F9B",
+            Recipient = new NotificationRecipientExt
+            {
+                RecipientEmail = new RecipientEmailExt
+                {
+                    EmailAddress = "recipient@example.com",
+                    Settings = new EmailSendingOptionsExt
+                    {
+                        Body = "Test body",
+                        Subject = "Test subject"
+                    }
+                }
+            }
+        };
+
+        // Act
+        var beforeMapping = DateTime.UtcNow;
+        var result = requestExt.MapToNotificationOrderChainRequest(creatorName);
+        var afterMapping = DateTime.UtcNow;
+
+        // Assert
+        Assert.NotNull(result);
+
+        // Verify RequestedSendTime is set to a value between our before and after timestamps
+        Assert.True(result.RequestedSendTime >= beforeMapping);
+        Assert.True(result.RequestedSendTime <= afterMapping);
+
+        // Verify other properties are correctly mapped
+        Assert.NotEqual(Guid.Empty, result.OrderId);
+        Assert.Equal(creatorName, result.Creator.ShortName);
+        Assert.Equal("BC47D9EA-3CD5-48A6-B5B7-CF5B95D53F9B", result.IdempotencyId);
+
+        // Email recipient validation
+        Assert.NotNull(result.Recipient.RecipientEmail);
+        Assert.Equal("Test body", result.Recipient.RecipientEmail.Settings.Body);
+        Assert.Equal("Test subject", result.Recipient.RecipientEmail.Settings.Subject);
+        Assert.Equal("recipient@example.com", result.Recipient.RecipientEmail.EmailAddress);
+    }
+
+    [Fact]
     public void MapToNotificationOrderChainRequest_WithPersonRecipientEmailChannel_MapsCorrectly()
     {
         // Arrange
