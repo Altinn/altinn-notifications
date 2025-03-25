@@ -42,16 +42,17 @@ public static class NotificationOrderChainMapper
 
         DialogportenIdentifiers? dialogportenAssociation = notificationOrderChainRequestExt.DialogportenAssociation?.MapToDialogportenReference();
 
-        return new NotificationOrderChainRequest(
-            Guid.NewGuid(),
-            new Creator(creatorName),
-            notificationOrderChainRequestExt.IdempotencyId,
-            recipient,
-            notificationOrderChainRequestExt.ConditionEndpoint,
-            dialogportenAssociation,
-            reminders,
-            notificationOrderChainRequestExt.RequestedSendTime.ToUniversalTime(),
-            notificationOrderChainRequestExt.SendersReference);
+        return new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(Guid.NewGuid())
+            .SetCreator(new Creator(creatorName))
+            .SetIdempotencyId(notificationOrderChainRequestExt.IdempotencyId)
+            .SetRecipient(recipient)
+            .SetConditionEndpoint(notificationOrderChainRequestExt.ConditionEndpoint)
+            .SetDialogportenAssociation(dialogportenAssociation)
+            .SetReminders(reminders)
+            .SetRequestedSendTime(notificationOrderChainRequestExt.RequestedSendTime.ToUniversalTime())
+            .SetSendersReference(notificationOrderChainRequestExt.SendersReference)
+            .Build();
     }
 
     /// <summary>

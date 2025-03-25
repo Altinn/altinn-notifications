@@ -8,37 +8,10 @@ namespace Altinn.Notifications.Core.Models.Orders;
 public class NotificationOrderChainRequest
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="NotificationOrderChainRequest"/> class.
+    /// Prevents a default instance of the <see cref="NotificationOrderChainRequest"/> class from being created.
     /// </summary>
-    /// <param name="orderId">The unique identifier for the main notification order in this sequence.</param>
-    /// <param name="creator">The creator of the notification request.</param>
-    /// <param name="idempotencyId">The idempotency identifier defined by the sender.</param>
-    /// <param name="recipient">The recipient information for this notification.</param>
-    /// <param name="conditionEndpoint">A URI endpoint that can determine whether the notification should be sent.</param>
-    /// <param name="dialogportenAssociation">Optional identifiers for one or more dialogs or transmissions in Dialogporten.</param>
-    /// <param name="reminders">A list of reminders that may be triggered after the initial notification has been processed.</param>
-    /// <param name="requestedSendTime">The earliest date and time when the notification should be delivered.</param>
-    /// <param name="sendersReference">The sender's reference identifier.</param>
-    public NotificationOrderChainRequest(
-        Guid orderId,
-        Creator creator,
-        string idempotencyId,
-        NotificationRecipient recipient,
-        Uri? conditionEndpoint = null,
-        DialogportenIdentifiers? dialogportenAssociation = null,
-        List<NotificationReminder>? reminders = null,
-        DateTime? requestedSendTime = null,
-        string? sendersReference = null)
+    private NotificationOrderChainRequest()
     {
-        OrderId = orderId;
-        Creator = creator;
-        IdempotencyId = idempotencyId;
-        Recipient = recipient;
-        ConditionEndpoint = conditionEndpoint;
-        DialogportenAssociation = dialogportenAssociation;
-        Reminders = reminders;
-        RequestedSendTime = requestedSendTime ?? DateTime.UtcNow;
-        SendersReference = sendersReference;
     }
 
     /// <summary>
@@ -49,12 +22,12 @@ public class NotificationOrderChainRequest
     /// The notification will only be sent if the endpoint returns a positive response.
     /// This enables conditional delivery based on external business rules or state.
     /// </remarks>
-    public Uri? ConditionEndpoint { get; internal set; }
+    public Uri? ConditionEndpoint { get; private set; }
 
     /// <summary>
     /// Gets the creator of the notification order sequence request.
     /// </summary>
-    public Creator Creator { get; internal set; }
+    public Creator Creator { get; private set; } = new Creator(string.Empty);
 
     /// <summary>
     /// Gets the optional identifiers for one or more dialogs or transmissions in Dialogporten.
@@ -63,12 +36,12 @@ public class NotificationOrderChainRequest
     /// When specified, this associates the notification with specific dialogs or transmissions
     /// in the Dialogporten service, enabling integration between notifications and Dialogporten.
     /// </remarks>
-    public DialogportenIdentifiers? DialogportenAssociation { get; internal set; }
+    public DialogportenIdentifiers? DialogportenAssociation { get; private set; }
 
     /// <summary>
     /// Gets the idempotency identifier defined by the sender.
     /// </summary>
-    public string IdempotencyId { get; internal set; }
+    public string IdempotencyId { get; private set; } = string.Empty;
 
     /// <summary>
     /// Gets the unique identifier for the main notification order in the sequence.
@@ -76,7 +49,7 @@ public class NotificationOrderChainRequest
     /// <value>
     /// A <see cref="Guid"/> representing the unique identifier of the main notification order.
     /// </value>
-    public Guid OrderId { get; internal set; }
+    public Guid OrderId { get; private set; }
 
     /// <summary>
     /// Gets the recipient information for this notification.
@@ -86,7 +59,7 @@ public class NotificationOrderChainRequest
     /// email address, SMS number, national identity number, or organization number.
     /// The reminder can be directed to a different recipient than the initial notification.
     /// </remarks>
-    public NotificationRecipient Recipient { get; internal set; }
+    public NotificationRecipient Recipient { get; private set; } = new NotificationRecipient();
 
     /// <summary>
     /// Gets a list of reminders that may be triggered under certain conditions after the initial notification has been processed.
@@ -94,7 +67,7 @@ public class NotificationOrderChainRequest
     /// <remarks>
     /// Each reminder can have its own recipient settings, delay period, and triggering conditions.
     /// </remarks>
-    public List<NotificationReminder>? Reminders { get; internal set; }
+    public List<NotificationReminder>? Reminders { get; private set; }
 
     /// <summary>
     /// Gets the earliest date and time when the notification should be delivered.
@@ -104,7 +77,7 @@ public class NotificationOrderChainRequest
     /// before this time, but may deliver it later depending on system load and availability.
     /// Defaults to the current UTC time if not specified.
     /// </remarks>
-    public DateTime RequestedSendTime { get; internal set; } = DateTime.UtcNow;
+    public DateTime RequestedSendTime { get; private set; } = DateTime.UtcNow;
 
     /// <summary>
     /// Gets the sender's reference identifier.
@@ -112,5 +85,136 @@ public class NotificationOrderChainRequest
     /// <remarks>
     /// An optional identifier used to correlate the notification with records in the sender's system.
     /// </remarks>
-    public string? SendersReference { get; internal set; }
+    public string? SendersReference { get; private set; }
+
+    /// <summary>
+    /// Builder class for <see cref="NotificationOrderChainRequest"/>.
+    /// </summary>
+    public class NotificationOrderChainRequestBuilder
+    {
+        private Guid _orderId;
+        private Uri? _conditionEndpoint;
+        private string? _sendersReference;
+        private Creator _creator = new(string.Empty);
+        private string _idempotencyId = string.Empty;
+        private List<NotificationReminder>? _reminders;
+        private NotificationRecipient _recipient = new();
+        private DateTime _requestedSendTime = DateTime.UtcNow;
+        private DialogportenIdentifiers? _dialogportenAssociation;
+
+        /// <summary>
+        /// Sets the order ID for the notification request.
+        /// </summary>
+        public NotificationOrderChainRequestBuilder SetOrderId(Guid orderId)
+        {
+            _orderId = orderId;
+            return this;
+        }
+
+        /// <summary>
+        /// Sets the creator of the notification request.
+        /// </summary>
+        public NotificationOrderChainRequestBuilder SetCreator(Creator creator)
+        {
+            _creator = creator ?? throw new ArgumentNullException(nameof(creator));
+            return this;
+        }
+
+        /// <summary>
+        /// Sets the idempotency identifier for the notification request.
+        /// </summary>
+        public NotificationOrderChainRequestBuilder SetIdempotencyId(string idempotencyId)
+        {
+            _idempotencyId = idempotencyId ?? throw new ArgumentNullException(nameof(idempotencyId));
+            return this;
+        }
+
+        /// <summary>
+        /// Sets the recipient information for the notification.
+        /// </summary>
+        public NotificationOrderChainRequestBuilder SetRecipient(NotificationRecipient recipient)
+        {
+            _recipient = recipient ?? throw new ArgumentNullException(nameof(recipient));
+            return this;
+        }
+
+        /// <summary>
+        /// Sets the condition endpoint for the notification.
+        /// </summary>
+        public NotificationOrderChainRequestBuilder SetConditionEndpoint(Uri? conditionEndpoint)
+        {
+            _conditionEndpoint = conditionEndpoint;
+            return this;
+        }
+
+        /// <summary>
+        /// Sets the Dialogporten association for the notification.
+        /// </summary>
+        public NotificationOrderChainRequestBuilder SetDialogportenAssociation(DialogportenIdentifiers? dialogportenAssociation)
+        {
+            _dialogportenAssociation = dialogportenAssociation;
+            return this;
+        }
+
+        /// <summary>
+        /// Sets the reminders for the notification.
+        /// </summary>
+        public NotificationOrderChainRequestBuilder SetReminders(List<NotificationReminder>? reminders)
+        {
+            _reminders = reminders;
+            return this;
+        }
+
+        /// <summary>
+        /// Sets the requested send time for the notification.
+        /// </summary>
+        public NotificationOrderChainRequestBuilder SetRequestedSendTime(DateTime? requestedSendTime)
+        {
+            _requestedSendTime = requestedSendTime ?? DateTime.UtcNow;
+            return this;
+        }
+
+        /// <summary>
+        /// Sets the sender's reference for the notification.
+        /// </summary>
+        public NotificationOrderChainRequestBuilder SetSendersReference(string? sendersReference)
+        {
+            _sendersReference = sendersReference;
+            return this;
+        }
+
+        /// <summary>
+        /// Builds and returns a new instance of NotificationOrderChainRequest.
+        /// </summary>
+        public NotificationOrderChainRequest Build()
+        {
+            if (_orderId == Guid.Empty)
+            {
+                throw new InvalidOperationException("OrderId must be set.");
+            }
+
+            if (string.IsNullOrEmpty(_idempotencyId))
+            {
+                throw new InvalidOperationException("IdempotencyId must be set.");
+            }
+
+            if (_creator == null || string.IsNullOrWhiteSpace(_creator.ShortName))
+            {
+                throw new InvalidOperationException("Creator name must be set.");
+            }
+
+            return new NotificationOrderChainRequest
+            {
+                OrderId = _orderId,
+                Creator = _creator,
+                Reminders = _reminders,
+                Recipient = _recipient,
+                IdempotencyId = _idempotencyId,
+                SendersReference = _sendersReference,
+                RequestedSendTime = _requestedSendTime,
+                ConditionEndpoint = _conditionEndpoint,
+                DialogportenAssociation = _dialogportenAssociation
+            };
+        }
+    }
 }
