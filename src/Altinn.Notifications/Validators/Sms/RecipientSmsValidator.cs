@@ -19,7 +19,7 @@ namespace Altinn.Notifications.Validators.Sms
                 RuleFor(recipient => recipient!.PhoneNumber)
                     .NotNull()
                     .NotEmpty()
-                    .WithMessage("Recipient phone number cannot be null, empty, or invalid.");
+                    .WithMessage("Recipient phone number cannot be null or empty.");
 
                 RuleFor(recipient => recipient!.PhoneNumber)
                     .Must(MobileNumberHelper.IsValidMobileNumber)

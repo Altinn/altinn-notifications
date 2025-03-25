@@ -4,7 +4,7 @@ using Altinn.Notifications.Validators.Rules;
 using Altinn.Notifications.Validators.Sms;
 using FluentValidation;
 
-namespace Altinn.Notifications.Validators;
+namespace Altinn.Notifications.Validators.Recipient;
 
 /// <summary>
 /// Represents validation logic for the recipient person model.

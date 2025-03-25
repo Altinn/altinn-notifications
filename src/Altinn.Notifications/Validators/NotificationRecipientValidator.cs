@@ -1,6 +1,8 @@
 ﻿using Altinn.Notifications.Models;
 using Altinn.Notifications.Validators.Email;
+using Altinn.Notifications.Validators.Recipient;
 using Altinn.Notifications.Validators.Sms;
+
 using FluentValidation;
 
 namespace Altinn.Notifications.Validators

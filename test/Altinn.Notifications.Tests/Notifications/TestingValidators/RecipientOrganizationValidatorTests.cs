@@ -1,5 +1,5 @@
 ﻿using Altinn.Notifications.Models;
-using Altinn.Notifications.Validators;
+using Altinn.Notifications.Validators.Recipient;
 using FluentValidation.TestHelper;
 using Xunit;
 

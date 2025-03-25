@@ -4,7 +4,7 @@ using Altinn.Notifications.Validators.Sms;
 
 using FluentValidation;
 
-namespace Altinn.Notifications.Validators
+namespace Altinn.Notifications.Validators.Recipient
 {
     /// <summary>
     /// Validator for the <see cref="RecipientOrganizationExt"/> model.

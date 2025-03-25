@@ -18,7 +18,7 @@ namespace Altinn.Notifications.Validators.Sms
                 RuleFor(option => option!.Body)
                     .NotNull()
                     .NotEmpty()
-                    .WithMessage("SMS sending options cannot be null or empty.");
+                    .WithMessage("SMS body cannot be null or empty.");
                 RuleFor(option => option!.Sender)
                     .NotNull()
                     .NotEmpty()
