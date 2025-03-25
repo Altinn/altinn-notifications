@@ -263,7 +263,7 @@ public class OrderRepository : IOrderRepository
         return order;
     }
 
-    private async Task<long> InsertOrder(NotificationOrder order, NpgsqlConnection connection, NpgsqlTransaction transaction)
+    private static async Task<long> InsertOrder(NotificationOrder order, NpgsqlConnection connection, NpgsqlTransaction transaction)
     {
         await using NpgsqlCommand pgcom = new NpgsqlCommand(_insertOrderSql, connection, transaction);
 
@@ -281,7 +281,7 @@ public class OrderRepository : IOrderRepository
         return orderId;
     }
 
-    private async Task InsertSmsTextAsync(long dbOrderId, SmsTemplate? smsTemplate, NpgsqlConnection connection, NpgsqlTransaction transaction)
+    private static async Task InsertSmsTextAsync(long dbOrderId, SmsTemplate? smsTemplate, NpgsqlConnection connection, NpgsqlTransaction transaction)
     {
         if (smsTemplate != null)
         {
@@ -295,7 +295,7 @@ public class OrderRepository : IOrderRepository
         }
     }
 
-    private async Task InsertEmailTextAsync(long dbOrderId, EmailTemplate? emailTemplate, NpgsqlConnection connection, NpgsqlTransaction transaction)
+    private static async Task InsertEmailTextAsync(long dbOrderId, EmailTemplate? emailTemplate, NpgsqlConnection connection, NpgsqlTransaction transaction)
     {
         if (emailTemplate != null)
         {
@@ -311,7 +311,7 @@ public class OrderRepository : IOrderRepository
         }
     }
 
-    private async Task InsertOrderChain(NotificationOrderChainRequest order, DateTime creationDateTime, NpgsqlConnection connection, NpgsqlTransaction transaction)
+    private static async Task InsertOrderChain(NotificationOrderChainRequest order, DateTime creationDateTime, NpgsqlConnection connection, NpgsqlTransaction transaction)
     {
         await using NpgsqlCommand pgcom = new NpgsqlCommand(_insertorderchainSql, connection, transaction);
 
