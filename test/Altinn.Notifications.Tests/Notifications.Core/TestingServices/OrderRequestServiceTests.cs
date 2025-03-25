@@ -855,7 +855,8 @@ public class OrderRequestServiceTests
         Assert.Null(response.CreationResult.Reminders);
 
         // Verify repository interactions
-        repoMock.Verify(r => r.Create(
+        repoMock.Verify(
+            r => r.Create(
             It.IsAny<NotificationOrderChainRequest>(),
             It.Is<NotificationOrder>(o =>
                 o.SendersReference == "ANNUAL-REPORT-REMINDER-2025" &&
@@ -865,7 +866,8 @@ public class OrderRequestServiceTests
             Times.Once);
 
         // Verify contact point interactions
-        contactPointMock.Verify(cp => cp.AddEmailContactPoints(
+        contactPointMock.Verify(
+            cp => cp.AddEmailContactPoints(
             It.Is<List<Recipient>>(r => r.Any(rec => rec.OrganizationNumber == "910150804")),
             It.Is<string?>(s => s == "urn:altinn:resource:annual-report-2025")),
             Times.Once);
