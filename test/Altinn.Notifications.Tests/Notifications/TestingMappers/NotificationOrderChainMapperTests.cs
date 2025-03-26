@@ -1,6 +1,9 @@
 ﻿using System;
 
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Models.Recipients;
+using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
 
@@ -1667,5 +1670,156 @@ public class NotificationOrderChainMapperTests
         Assert.NotEqual(result.OrderId, firstReminder.OrderId);
         Assert.NotEqual(result.OrderId, secondReminder.OrderId);
         Assert.NotEqual(firstReminder.OrderId, secondReminder.OrderId);
+    }
+
+    [Fact]
+    public void MapToNotificationOrderChainRequest_WithNullCreator_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var requestExt = new NotificationOrderChainRequestExt
+        {
+            IdempotencyId = "63404F51-2079-4598-BD23-8F4467590FB4",
+            Recipient = new NotificationRecipientExt
+            {
+                RecipientEmail = new RecipientEmailExt
+                {
+                    EmailAddress = "recipient@example.com",
+                    Settings = new EmailSendingOptionsExt
+                    {
+                        Body = "Test body",
+                        Subject = "Test subject"
+                    }
+                }
+            }
+        };
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() => requestExt.MapToNotificationOrderChainRequest(null!));
+    }
+
+    [Fact]
+    public void MapToNotificationOrderChainRequest_WithNullIdempotencyId_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var creatorName = "ttd";
+        var requestExt = new NotificationOrderChainRequestExt
+        {
+            IdempotencyId = null!,
+            Recipient = new NotificationRecipientExt
+            {
+                RecipientEmail = new RecipientEmailExt
+                {
+                    EmailAddress = "recipient@example.com",
+                    Settings = new EmailSendingOptionsExt
+                    {
+                        Body = "Test body",
+                        Subject = "Test subject"
+                    }
+                }
+            }
+        };
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() => requestExt.MapToNotificationOrderChainRequest(creatorName));
+    }
+
+    [Fact]
+    public void MapToNotificationOrderChainRequest_WithNullRecipient_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var creatorName = "ttd";
+        var requestExt = new NotificationOrderChainRequestExt
+        {
+            Recipient = null!,
+            IdempotencyId = "63404F51-2079-4598-BD23-8F4467590FB4"
+        };
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() => requestExt.MapToNotificationOrderChainRequest(creatorName));
+    }
+
+    [Fact]
+    public void MapToNotificationOrderChainRequest_WithNullRequestedSendTime_SetsCurrentUtcTime()
+    {
+        // Arrange
+        var creatorName = "ttd";
+        var requestExt = new NotificationOrderChainRequestExt
+        {
+            IdempotencyId = "63404F51-2079-4598-BD23-8F4467590FB4",
+            Recipient = new NotificationRecipientExt
+            {
+                RecipientEmail = new RecipientEmailExt
+                {
+                    EmailAddress = "recipient@example.com",
+                    Settings = new EmailSendingOptionsExt
+                    {
+                        Body = "Test body",
+                        Subject = "Test subject"
+                    }
+                }
+            }
+        };
+
+        // Act
+        var beforeMapping = DateTime.UtcNow;
+        var result = requestExt.MapToNotificationOrderChainRequest(creatorName);
+        var afterMapping = DateTime.UtcNow;
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.True(result.RequestedSendTime >= beforeMapping && result.RequestedSendTime <= afterMapping);
+    }
+
+    [Fact]
+    public void Build_WithEmptyOrderId_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var builder = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetIdempotencyId("63404F51-2079-4598-BD23-8F4467590FB4")
+            .SetCreator(new Creator("ttd"))
+            .SetRecipient(new NotificationRecipient());
+
+        // Act & Assert
+        Assert.Throws<InvalidOperationException>(() => builder.Build());
+    }
+
+    [Fact]
+    public void Build_WithEmptyIdempotencyId_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var builder = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(Guid.NewGuid())
+            .SetCreator(new Creator("ttd"))
+            .SetRecipient(new NotificationRecipient());
+
+        // Act & Assert
+        Assert.Throws<InvalidOperationException>(() => builder.Build());
+    }
+
+    [Fact]
+    public void Build_WithNullCreator_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var builder = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(Guid.NewGuid())
+            .SetIdempotencyId("63404F51-2079-4598-BD23-8F4467590FB4")
+            .SetRecipient(new NotificationRecipient());
+
+        // Act & Assert
+        Assert.Throws<InvalidOperationException>(() => builder.Build());
+    }
+
+    [Fact]
+    public void Build_WithEmptyCreatorName_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var builder = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(Guid.NewGuid())
+            .SetIdempotencyId("63404F51-2079-4598-BD23-8F4467590FB4")
+            .SetCreator(new Creator(string.Empty))
+            .SetRecipient(new NotificationRecipient());
+
+        // Act & Assert
+        Assert.Throws<InvalidOperationException>(() => builder.Build());
     }
 }
