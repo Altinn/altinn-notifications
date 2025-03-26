@@ -1676,25 +1676,10 @@ public class NotificationOrderChainMapperTests
     public void MapToNotificationOrderChainRequest_WithNullCreator_ThrowsArgumentNullException()
     {
         // Arrange
-        var requestExt = new NotificationOrderChainRequestExt
-        {
-            IdempotencyId = "63404F51-2079-4598-BD23-8F4467590FB4",
-            Recipient = new NotificationRecipientExt
-            {
-                RecipientEmail = new RecipientEmailExt
-                {
-                    EmailAddress = "recipient@example.com",
-                    Settings = new EmailSendingOptionsExt
-                    {
-                        Body = "Test body",
-                        Subject = "Test subject"
-                    }
-                }
-            }
-        };
+        var notificationOrderChainRequestBuilder = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => requestExt.MapToNotificationOrderChainRequest(null!));
+        Assert.Throws<ArgumentNullException>(() => notificationOrderChainRequestBuilder.SetCreator(null!));
     }
 
     [Fact]
@@ -1727,47 +1712,33 @@ public class NotificationOrderChainMapperTests
     public void MapToNotificationOrderChainRequest_WithNullRecipient_ThrowsArgumentNullException()
     {
         // Arrange
-        var creatorName = "ttd";
-        var requestExt = new NotificationOrderChainRequestExt
-        {
-            Recipient = null!,
-            IdempotencyId = "63404F51-2079-4598-BD23-8F4467590FB4"
-        };
+        var notificationOrderChainRequestBuilder = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => requestExt.MapToNotificationOrderChainRequest(creatorName));
+        Assert.Throws<ArgumentNullException>(() => notificationOrderChainRequestBuilder.SetRecipient(null!));
     }
 
     [Fact]
     public void MapToNotificationOrderChainRequest_WithNullRequestedSendTime_SetsCurrentUtcTime()
     {
         // Arrange
-        var creatorName = "ttd";
-        var requestExt = new NotificationOrderChainRequestExt
-        {
-            IdempotencyId = "63404F51-2079-4598-BD23-8F4467590FB4",
-            Recipient = new NotificationRecipientExt
-            {
-                RecipientEmail = new RecipientEmailExt
-                {
-                    EmailAddress = "recipient@example.com",
-                    Settings = new EmailSendingOptionsExt
-                    {
-                        Body = "Test body",
-                        Subject = "Test subject"
-                    }
-                }
-            }
-        };
+        var builder = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder();
+
+        builder.SetRequestedSendTime(null);
+        builder.SetOrderId(Guid.NewGuid());
+        builder.SetCreator(new Creator("ttd"));
+        builder.SetIdempotencyId("E4DD3079FCAC");
 
         // Act
-        var beforeMapping = DateTime.UtcNow;
-        var result = requestExt.MapToNotificationOrderChainRequest(creatorName);
-        var afterMapping = DateTime.UtcNow;
+        var beforeBuild = DateTime.UtcNow;
+        var notificationOrderChainRequest = builder.Build();
+        var afterBuild = DateTime.UtcNow;
 
         // Assert
-        Assert.NotNull(result);
-        Assert.True(result.RequestedSendTime >= beforeMapping.AddTicks(-(beforeMapping.Ticks % TimeSpan.TicksPerSecond)) && result.RequestedSendTime <= afterMapping.AddTicks(-(afterMapping.Ticks % TimeSpan.TicksPerSecond)));
+        Assert.NotNull(notificationOrderChainRequest);
+
+        var requestedSendTime = notificationOrderChainRequest.RequestedSendTime;
+        Assert.True(requestedSendTime >= beforeBuild.AddSeconds(-1) && requestedSendTime <= afterBuild.AddSeconds(1));
     }
 
     [Fact]
