@@ -28,7 +28,7 @@ public interface IOrderRepository
     /// - A main notification order that will be processed first.
     /// - Zero or more reminder notifications that will be processed after their respective delays.
     /// </remarks>
-    public Task<List<NotificationOrder>> Create(NotificationOrderChainRequest orderRequest, NotificationOrder mainNotificationOrder, List<NotificationOrder> reminders);
+    public Task<List<NotificationOrder>> Create(NotificationOrderChainRequest orderRequest, NotificationOrder mainNotificationOrder, List<NotificationOrder>? reminders);
 
     /// <summary>
     /// Gets a list of notification orders where requestedSendTime has passed

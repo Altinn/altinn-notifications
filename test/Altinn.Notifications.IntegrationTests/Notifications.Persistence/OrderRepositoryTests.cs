@@ -314,7 +314,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             };
 
             // Act
-            var result = await repo.Create(orderChainRequest, notificationOrder, []);
+            var result = await repo.Create(orderChainRequest, notificationOrder, null);
 
             // Assert
             Assert.NotNull(result);
