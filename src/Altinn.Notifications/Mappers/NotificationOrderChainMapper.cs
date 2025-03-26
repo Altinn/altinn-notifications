@@ -58,7 +58,7 @@ public static class NotificationOrderChainMapper
     /// <summary>
     /// Maps a <see cref="DialogportenIdentifiersExt"/> to a <see cref="DialogportenIdentifiers"/>.
     /// </summary>
-    private static DialogportenIdentifiers? MapToDialogportenReference(this DialogportenIdentifiersExt dialogportenReferenceExt)
+    private static DialogportenIdentifiers MapToDialogportenReference(this DialogportenIdentifiersExt dialogportenReferenceExt)
     {
         return new DialogportenIdentifiers
         {
@@ -78,8 +78,8 @@ public static class NotificationOrderChainMapper
             Subject = emailSendingOptionsExt.Subject,
             SenderName = emailSendingOptionsExt.SenderName,
             ContentType = (EmailContentType)emailSendingOptionsExt.ContentType,
-            SendingTimePolicy = (SendingTimePolicy)emailSendingOptionsExt.SendingTimePolicy,
-            SenderEmailAddress = string.IsNullOrWhiteSpace(emailSendingOptionsExt.SenderName) ? string.Empty : emailSendingOptionsExt.SenderEmailAddress?.Trim() ?? string.Empty,
+            SenderEmailAddress = emailSendingOptionsExt.SenderEmailAddress?.Trim(),
+            SendingTimePolicy = (SendingTimePolicy)emailSendingOptionsExt.SendingTimePolicy
         };
     }
 
@@ -112,13 +112,8 @@ public static class NotificationOrderChainMapper
     /// <summary>
     /// Maps a <see cref="RecipientEmailExt"/> to a <see cref="RecipientEmail"/>.
     /// </summary>
-    private static RecipientEmail? MapToRecipientEmail(this RecipientEmailExt recipientEmailExt)
+    private static RecipientEmail MapToRecipientEmail(this RecipientEmailExt recipientEmailExt)
     {
-        if (string.IsNullOrWhiteSpace(recipientEmailExt.EmailAddress) || recipientEmailExt.Settings == null)
-        {
-            return null;
-        }
-
         return new RecipientEmail
         {
             EmailAddress = recipientEmailExt.EmailAddress,
@@ -129,30 +124,27 @@ public static class NotificationOrderChainMapper
     /// <summary>
     /// Maps a <see cref="RecipientOrganizationExt"/> to a <see cref="RecipientOrganization"/>.
     /// </summary>
-    private static RecipientOrganization? MapToRecipientOrganization(this RecipientOrganizationExt recipientOrganizationExt)
+    private static RecipientOrganization MapToRecipientOrganization(this RecipientOrganizationExt recipientOrganizationExt)
     {
-        var smsSettings = recipientOrganizationExt.SmsSettings?.MapToSmsSendingOptions();
-        var emailSettings = recipientOrganizationExt.EmailSettings?.MapToEmailSendingOptions();
-
-        return (smsSettings is null && emailSettings is null) ? null : new RecipientOrganization
+        return new RecipientOrganization
         {
-            SmsSettings = smsSettings,
-            EmailSettings = emailSettings,
             OrgNumber = recipientOrganizationExt.OrgNumber,
             ResourceId = recipientOrganizationExt.ResourceId,
-            ChannelSchema = (NotificationChannel)recipientOrganizationExt.ChannelSchema
+            ChannelSchema = (NotificationChannel)recipientOrganizationExt.ChannelSchema,
+            SmsSettings = recipientOrganizationExt.SmsSettings?.MapToSmsSendingOptions(),
+            EmailSettings = recipientOrganizationExt.EmailSettings?.MapToEmailSendingOptions()
         };
     }
 
     /// <summary>
     /// Maps a <see cref="RecipientPersonExt"/> to a <see cref="RecipientPerson"/>.
     /// </summary>
-    private static RecipientPerson? MapToRecipientPerson(this RecipientPersonExt recipientPersonExt)
+    private static RecipientPerson MapToRecipientPerson(this RecipientPersonExt recipientPersonExt)
     {
         var smsSettings = recipientPersonExt.SmsSettings?.MapToSmsSendingOptions();
         var emailSettings = recipientPersonExt.EmailSettings?.MapToEmailSendingOptions();
 
-        return (smsSettings is null && emailSettings is null) ? null : new RecipientPerson
+        return new RecipientPerson
         {
             SmsSettings = smsSettings,
             EmailSettings = emailSettings,
@@ -166,13 +158,8 @@ public static class NotificationOrderChainMapper
     /// <summary>
     /// Maps a <see cref="RecipientSmsExt"/> to a <see cref="RecipientSms"/>.
     /// </summary>
-    private static RecipientSms? MapToRecipientSms(this RecipientSmsExt recipientSmsExt)
+    private static RecipientSms MapToRecipientSms(this RecipientSmsExt recipientSmsExt)
     {
-        if (string.IsNullOrWhiteSpace(recipientSmsExt.PhoneNumber) || recipientSmsExt.Settings == null)
-        {
-            return null;
-        }
-
         return new RecipientSms
         {
             PhoneNumber = recipientSmsExt.PhoneNumber,
@@ -188,8 +175,8 @@ public static class NotificationOrderChainMapper
         return new SmsSendingOptions
         {
             Body = smsSendingOptionsExt.Body,
-            SendingTimePolicy = (SendingTimePolicy)smsSendingOptionsExt.SendingTimePolicy,
-            Sender = string.IsNullOrWhiteSpace(smsSendingOptionsExt.Sender) ? string.Empty : smsSendingOptionsExt.Sender
+            Sender = smsSendingOptionsExt.Sender,
+            SendingTimePolicy = (SendingTimePolicy)smsSendingOptionsExt.SendingTimePolicy
         };
     }
 }
