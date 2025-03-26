@@ -1767,7 +1767,7 @@ public class NotificationOrderChainMapperTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.True(result.RequestedSendTime >= beforeMapping && result.RequestedSendTime <= afterMapping);
+        Assert.True(result.RequestedSendTime >= beforeMapping.AddTicks(-(beforeMapping.Ticks % TimeSpan.TicksPerSecond)) && result.RequestedSendTime <= afterMapping.AddTicks(-(afterMapping.Ticks % TimeSpan.TicksPerSecond)));
     }
 
     [Fact]
