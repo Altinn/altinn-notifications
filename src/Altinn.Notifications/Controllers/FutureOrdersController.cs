@@ -1,4 +1,14 @@
-﻿using Altinn.Notifications.Models;
+﻿using Altinn.Notifications.Configuration;
+using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Extensions;
+using Altinn.Notifications.Mappers;
+using Altinn.Notifications.Models;
+using Altinn.Notifications.Validators;
+
+using FluentValidation;
+
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 using Swashbuckle.AspNetCore.Annotations;
@@ -9,23 +19,22 @@ namespace Altinn.Notifications.Controllers;
 /// Controller to handle notification orders that has one or more reminders.
 /// </summary>
 [ApiController]
-[ApiExplorerSettings(IgnoreApi = true)]
 [Route("notifications/api/v1/future/orders")]
-public class FutureOrdersController
+[SwaggerResponse(401, "Caller is unauthorized")]
+[SwaggerResponse(403, "Caller is not authorized to access the requested resource")]
+[Authorize(Policy = AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS)]
+public class FutureOrdersController : ControllerBase
 {
+    private readonly IOrderRequestService _orderRequestService;
+    private readonly IValidator<NotificationOrderChainRequestExt> _validator;
+
     /// <summary>
-    /// Retrieves notification order.
+    /// Initializes a new instance of the <see cref="FutureOrdersController"/> class.
     /// </summary>
-    /// <param name="notificationOrderId">The notification order identifier.</param>
-    /// <returns></returns>
-    [HttpGet]
-    [Route("{notificationOrderId}")]
-    [Produces("application/json")]
-    [SwaggerResponse(404, "No order with the provided id was not found")]
-    [SwaggerResponse(200, "The notification order matching the provided id was retrieved successfully")]
-    public Task<ActionResult<NotificationOrderReminderResponseExt>> GetById(Guid notificationOrderId)
+    public FutureOrdersController(IOrderRequestService orderRequestService, IValidator<NotificationOrderChainRequestExt> validator)
     {
-        throw new NotImplementedException();
+        _validator = validator;
+        _orderRequestService = orderRequestService;
     }
 
     /// <summary>
@@ -42,10 +51,27 @@ public class FutureOrdersController
     [Produces("application/json")]
     [SwaggerResponse(400, "The notification order is invalid", typeof(ValidationProblemDetails))]
     [SwaggerResponse(422, "The notification order is invalid", typeof(ValidationProblemDetails))]
-    [SwaggerResponse(200, "The notification order was created.", typeof(NotificationOrderReminderResponseExt))]
-    [SwaggerResponse(201, "The notification order was created.", typeof(NotificationOrderReminderResponseExt))]
-    public Task<ActionResult<NotificationOrderReminderResponseExt>> Post(NotificationOrderWithRemindersRequestExt notificationOrderRequest)
+    [SwaggerResponse(200, "The notification order was created.", typeof(NotificationOrderChainResponseExt))]
+    [SwaggerResponse(201, "The notification order was created.", typeof(NotificationOrderChainResponseExt))]
+    public async Task<ActionResult<NotificationOrderChainResponseExt>> Post(NotificationOrderChainRequestExt notificationOrderRequest)
     {
-        throw new NotImplementedException();
+        var validationResult = _validator.Validate(notificationOrderRequest);
+        if (!validationResult.IsValid)
+        {
+            validationResult.AddToModelState(this.ModelState);
+            return ValidationProblem(ModelState);
+        }
+
+        string? creator = HttpContext.GetOrg();
+
+        if (creator == null)
+        {
+            return Forbid();
+        }
+
+        var notificationOrderChainRequest = notificationOrderRequest.MapToNotificationOrderChainRequest(creator);
+        NotificationOrderChainResponse result = await _orderRequestService.RegisterNotificationOrderChain(notificationOrderChainRequest);
+
+        return Accepted(result.Id.GetSelfLinkFromOrderChainId(), result.MapToNotificationOrderChainResponseExt());
     }
 }

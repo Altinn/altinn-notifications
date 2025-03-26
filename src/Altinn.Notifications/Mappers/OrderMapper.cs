@@ -9,7 +9,7 @@ using Altinn.Notifications.Models;
 namespace Altinn.Notifications.Mappers;
 
 /// <summary>
-/// Mapper for <see cref="EmailNotificationOrderRequestExt"/>
+/// Provides mapping functionality between external API models and internal domain models.
 /// </summary>
 public static class OrderMapper
 {
@@ -143,47 +143,6 @@ public static class OrderMapper
     }
 
     /// <summary>
-    /// Maps a <see cref="NotificationOrder"/> to a <see cref="NotificationOrderExt"/>
-    /// </summary>
-    public static NotificationOrderExt MapToNotificationOrderExt(this NotificationOrder order)
-    {
-        var orderExt = new NotificationOrderExt();
-
-        orderExt.MapBaseNotificationOrder(order);
-        orderExt.Recipients = order.Recipients.MapToRecipientExt();
-
-        foreach (var template in order.Templates)
-        {
-            switch (template.Type)
-            {
-                case NotificationTemplateType.Email:
-                    var emailTemplate = template! as EmailTemplate;
-
-                    orderExt.EmailTemplate = new()
-                    {
-                        Body = emailTemplate!.Body,
-                        FromAddress = emailTemplate.FromAddress,
-                        ContentType = (EmailContentTypeExt)emailTemplate.ContentType,
-                        Subject = emailTemplate.Subject
-                    };
-
-                    break;
-                case NotificationTemplateType.Sms:
-                    var smsTemplate = template! as SmsTemplate;
-                    orderExt.SmsTemplate = new()
-                    {
-                        Body = smsTemplate!.Body,
-                        SenderNumber = smsTemplate.SenderNumber
-                    };
-                    break;
-            }
-        }
-
-        orderExt.SetResourceLinks();
-        return orderExt;
-    }
-
-    /// <summary>
     /// Maps a <see cref="NotificationOrderWithStatus"/> to a <see cref="NotificationOrderWithStatusExt"/>
     /// </summary>
     public static NotificationOrderWithStatusExt MapToNotificationOrderWithStatusExt(this NotificationOrderWithStatus order)
@@ -232,24 +191,6 @@ public static class OrderMapper
     }
 
     /// <summary>
-    /// Maps a list of <see cref="NotificationOrder"/> to a <see cref="NotificationOrderListExt"/>
-    /// </summary>
-    public static NotificationOrderListExt MapToNotificationOrderListExt(this List<NotificationOrder> orders)
-    {
-        NotificationOrderListExt ordersExt = new()
-        {
-            Count = orders.Count
-        };
-
-        foreach (NotificationOrder order in orders)
-        {
-            ordersExt.Orders.Add(order.MapToNotificationOrderExt());
-        }
-
-        return ordersExt;
-    }
-
-    /// <summary>
     /// Maps an <see cref="EmailNotificationOrderRequestExt"/> to an <see cref="EmailTemplateExt"/>.
     /// </summary>
     /// <param name="request">The email notification order request.</param>
@@ -279,6 +220,65 @@ public static class OrderMapper
     }
 
     /// <summary>
+    /// Maps a list of <see cref="NotificationOrder"/> to a <see cref="NotificationOrderListExt"/>
+    /// </summary>
+    public static NotificationOrderListExt MapToNotificationOrderListExt(this List<NotificationOrder> orders)
+    {
+        NotificationOrderListExt ordersExt = new()
+        {
+            Count = orders.Count
+        };
+
+        foreach (NotificationOrder order in orders)
+        {
+            ordersExt.Orders.Add(order.MapToNotificationOrderExt());
+        }
+
+        return ordersExt;
+    }
+
+    /// <summary>
+    /// Maps a <see cref="NotificationOrder"/> to a <see cref="NotificationOrderExt"/>
+    /// </summary>
+    public static NotificationOrderExt MapToNotificationOrderExt(this NotificationOrder order)
+    {
+        var orderExt = new NotificationOrderExt();
+
+        orderExt.MapBaseNotificationOrder(order);
+        orderExt.Recipients = order.Recipients.MapToRecipientExt();
+
+        foreach (var template in order.Templates)
+        {
+            switch (template.Type)
+            {
+                case NotificationTemplateType.Email:
+                    var emailTemplate = template! as EmailTemplate;
+
+                    orderExt.EmailTemplate = new()
+                    {
+                        Body = emailTemplate!.Body,
+                        FromAddress = emailTemplate.FromAddress,
+                        ContentType = (EmailContentTypeExt)emailTemplate.ContentType,
+                        Subject = emailTemplate.Subject
+                    };
+
+                    break;
+                case NotificationTemplateType.Sms:
+                    var smsTemplate = template! as SmsTemplate;
+                    orderExt.SmsTemplate = new()
+                    {
+                        Body = smsTemplate!.Body,
+                        SenderNumber = smsTemplate.SenderNumber
+                    };
+                    break;
+            }
+        }
+
+        orderExt.SetResourceLinks();
+        return orderExt;
+    }
+
+    /// <summary>
     /// Maps a List of <see cref="Recipient"/> to a List of <see cref="RecipientExt"/>
     /// </summary>
     internal static List<RecipientExt> MapToRecipientExt(this List<Recipient> recipients)
@@ -298,6 +298,9 @@ public static class OrderMapper
         return recipientExt;
     }
 
+    /// <summary>
+    /// Maps a <see cref="BaseNotificationOrderExt"/> to a <see cref="BaseNotificationOrderExt"/>.
+    /// </summary>
     private static BaseNotificationOrderExt MapBaseNotificationOrder(this BaseNotificationOrderExt orderExt, IBaseNotificationOrder order)
     {
         orderExt.Id = order.Id.ToString();

@@ -1,5 +1,4 @@
-﻿using Altinn.Notifications.Core.Models.Orders;
-using Altinn.Notifications.Models;
+﻿using Altinn.Notifications.Models;
 
 namespace Altinn.Notifications.Extensions;
 
@@ -9,6 +8,7 @@ namespace Altinn.Notifications.Extensions;
 public static class ResourceLinkExtensions
 {
     private static string? _baseUri;
+    private const string BaseUriNotInitializedMessage = "ResourceLinkExtensions has not been initialized with the base URI.";
 
     /// <summary>
     /// Initializes the ResourceLinkExtensions with the base URI from settings.
@@ -29,7 +29,7 @@ public static class ResourceLinkExtensions
     {
         if (_baseUri == null)
         {
-            throw new InvalidOperationException("ResourceLinkExtensions has not been initialized with the base URI.");
+            throw new InvalidOperationException(BaseUriNotInitializedMessage);
         }
 
         string self = _baseUri + "/notifications/api/v1/orders/" + order.Id;
@@ -49,7 +49,7 @@ public static class ResourceLinkExtensions
     {
         if (_baseUri == null)
         {
-            throw new InvalidOperationException("ResourceLinkExtensions has not been initialized with the base URI.");
+            throw new InvalidOperationException(BaseUriNotInitializedMessage);
         }
 
         string baseUri = $"{_baseUri}/notifications/api/v1/orders/{order!.Id}/notifications/";
@@ -81,7 +81,7 @@ public static class ResourceLinkExtensions
     {
         if (_baseUri == null)
         {
-            throw new InvalidOperationException("ResourceLinkExtensions has not been initialized with the base URI.");
+            throw new InvalidOperationException(BaseUriNotInitializedMessage);
         }
 
         if (orderId == null)
@@ -90,5 +90,24 @@ public static class ResourceLinkExtensions
         }
 
         return _baseUri + "/notifications/api/v1/orders/" + orderId.ToString();
+    }
+
+    /// <summary>
+    /// Gets the self link for the provided notification order chain.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Exception if class has not been initialized in Program.cs</exception>
+    public static string GetSelfLinkFromOrderChainId(this Guid orderId)
+    {
+        if (_baseUri == null)
+        {
+            throw new InvalidOperationException(BaseUriNotInitializedMessage);
+        }
+
+        if (orderId == Guid.Empty)
+        {
+            return string.Empty;
+        }
+
+        return _baseUri + "/notifications/api/v1/orders/chain/" + Convert.ToString(orderId);
     }
 }

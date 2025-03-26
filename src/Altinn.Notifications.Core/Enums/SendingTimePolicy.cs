@@ -1,9 +1,9 @@
-﻿namespace Altinn.Notifications.Models;
+﻿namespace Altinn.Notifications.Core.Enums;
 
 /// <summary>
 /// Defines policies that govern when a notification message is scheduled for delivery.
 /// </summary>
-public enum SendingTimePolicyExt : uint
+public enum SendingTimePolicy : uint
 {
     /// <summary>
     /// Allows message delivery at any time of day.

@@ -17,6 +17,20 @@ public interface IOrderRepository
     public Task<NotificationOrder> Create(NotificationOrder order);
 
     /// <summary>
+    /// Creates a new notification order chain in the database, consisting of a main notification and optional reminders.
+    /// </summary>
+    /// <param name="orderRequest">The chain containing settings for the notification sequence.</param>
+    /// <param name="mainNotificationOrder">The primary notification order that will be sent first.</param>
+    /// <param name="reminders">A list of follow-up notification orders that will be sent after the main notification conditions.</param>
+    /// <returns>A list of <see cref="NotificationOrder"/> objects containing both the main notification order and any scheduled reminders, in the order they were persisted.</returns>
+    /// <remarks>
+    /// This method persists an entire notification chain as an atomic operation. The chain consists of:
+    /// - A main notification order that will be processed first.
+    /// - Zero or more reminder notifications that will be processed after their respective delays.
+    /// </remarks>
+    public Task<List<NotificationOrder>> Create(NotificationOrderChainRequest orderRequest, NotificationOrder mainNotificationOrder, List<NotificationOrder>? reminders);
+
+    /// <summary>
     /// Gets a list of notification orders where requestedSendTime has passed
     /// </summary>
     /// <returns>A list of notification orders</returns>
