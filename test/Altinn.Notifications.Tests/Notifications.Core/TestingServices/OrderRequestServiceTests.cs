@@ -951,6 +951,61 @@ public class OrderRequestServiceTests
         repoMock.Verify(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), It.IsAny<List<NotificationOrder>>()), Times.Once);
     }
 
+    [Fact]
+    public async Task CreateNotificationOrder_WithMissingContactInformation_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        DateTime currentTime = DateTime.UtcNow;
+
+        var recipient = new NotificationRecipient
+        {
+            RecipientPerson = new RecipientPerson
+            {
+                NationalIdentityNumber = "16069412345",
+                ResourceId = "urn:altinn:resource:test",
+                ChannelSchema = NotificationChannel.Email,
+                EmailSettings = new EmailSendingOptions
+                {
+                    Body = "Test Body",
+                    Subject = "Test Subject",
+                    ContentType = EmailContentType.Plain
+                }
+            }
+        };
+
+        Mock<IContactPointService> contactPointMock = new();
+        contactPointMock
+            .Setup(cp => cp.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>()))
+            .Callback<List<Recipient>, string?>((recipients, _) =>
+            {
+                // Intentionally don't add any address info to simulate missing contact
+            });
+
+        var service = GetTestService(null, contactPointMock.Object, orderId, currentTime);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await service.RegisterNotificationOrderChain(
+                new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+                    .SetOrderId(orderId)
+                    .SetCreator(new Creator("test"))
+                    .SetRequestedSendTime(currentTime.AddHours(1))
+                    .SetIdempotencyId("C0A3FABE-D65F-48A0-8745-5D4CC6EA7968")
+                    .SetRecipient(recipient)
+                    .Build()));
+
+        // Verify the exception message contains information about missing contacts
+        Assert.Contains("Missing contact information for recipient", exception.Message);
+
+        // Verify the contact point service was called
+        contactPointMock.Verify(
+            cp => cp.AddEmailContactPoints(
+                It.Is<List<Recipient>>(r => r.Any(rec => rec.NationalIdentityNumber == "16069412345")),
+                It.Is<string?>(s => s == "urn:altinn:resource:test")),
+            Times.Once);
+    }
+
     public static OrderRequestService GetTestService(IOrderRepository? repository = null, IContactPointService? contactPointService = null, Guid? guid = null, DateTime? dateTime = null)
     {
         if (repository == null)
