@@ -1,9 +1,9 @@
 ﻿using System;
 
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
-using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
 
