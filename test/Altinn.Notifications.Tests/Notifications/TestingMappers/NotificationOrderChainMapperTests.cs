@@ -1,6 +1,9 @@
 ﻿using System;
 
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
 
@@ -1036,7 +1039,7 @@ public class NotificationOrderChainMapperTests
                             {
                                 Body = "Reminder 1 SMS body",
                                 Sender = "Reminder 1 SMS sender",
-                                SendingTimePolicy = SendingTimePolicyExt.Anytime
+                                SendingTimePolicy = SendingTimePolicyExt.Daytime
                             }
                         }
                     }
@@ -1113,7 +1116,7 @@ public class NotificationOrderChainMapperTests
         Assert.NotNull(firstReminder.Recipient.RecipientSms.Settings);
         Assert.Equal("Reminder 1 SMS body", firstReminder.Recipient.RecipientSms.Settings.Body);
         Assert.Equal("Reminder 1 SMS sender", firstReminder.Recipient.RecipientSms.Settings.Sender);
-        Assert.Equal(SendingTimePolicy.Anytime, firstReminder.Recipient.RecipientSms.Settings.SendingTimePolicy);
+        Assert.Equal(SendingTimePolicy.Daytime, firstReminder.Recipient.RecipientSms.Settings.SendingTimePolicy);
 
         // Verify NotificationReminder properties for second reminder
         var secondReminder = result.Reminders[1];
@@ -1268,7 +1271,7 @@ public class NotificationOrderChainMapperTests
                 RecipientPerson = new RecipientPersonExt
                 {
                     IgnoreReservation = true,
-                    NationalIdentityNumber = "12345678901",
+                    NationalIdentityNumber = "18874198354",
                     ResourceId = "urn:altinn:resource:7890",
                     ChannelSchema = NotificationChannelExt.Email,
 
@@ -1299,7 +1302,7 @@ public class NotificationOrderChainMapperTests
 
         // Person recipient validation
         Assert.NotNull(result.Recipient.RecipientPerson);
-        Assert.Equal("12345678901", result.Recipient.RecipientPerson.NationalIdentityNumber);
+        Assert.Equal("18874198354", result.Recipient.RecipientPerson.NationalIdentityNumber);
         Assert.Equal("urn:altinn:resource:7890", result.Recipient.RecipientPerson.ResourceId);
         Assert.Equal(NotificationChannel.Email, result.Recipient.RecipientPerson.ChannelSchema);
         Assert.True(result.Recipient.RecipientPerson.IgnoreReservation);
@@ -1341,7 +1344,7 @@ public class NotificationOrderChainMapperTests
             {
                 RecipientPerson = new RecipientPersonExt
                 {
-                    NationalIdentityNumber = "12345678901",
+                    NationalIdentityNumber = "18874198354",
                     ResourceId = "urn:altinn:resource:4321",
                     ChannelSchema = NotificationChannelExt.Sms,
                     IgnoreReservation = true,
@@ -1370,7 +1373,7 @@ public class NotificationOrderChainMapperTests
         // Person recipient validation
         Assert.NotNull(result.Recipient.RecipientPerson);
         Assert.True(result.Recipient.RecipientPerson.IgnoreReservation);
-        Assert.Equal("12345678901", result.Recipient.RecipientPerson.NationalIdentityNumber);
+        Assert.Equal("18874198354", result.Recipient.RecipientPerson.NationalIdentityNumber);
         Assert.Equal("urn:altinn:resource:4321", result.Recipient.RecipientPerson.ResourceId);
         Assert.Equal(NotificationChannel.Sms, result.Recipient.RecipientPerson.ChannelSchema);
 
@@ -1410,7 +1413,7 @@ public class NotificationOrderChainMapperTests
             {
                 RecipientPerson = new RecipientPersonExt
                 {
-                    NationalIdentityNumber = "12345678901",
+                    NationalIdentityNumber = "18874198354",
                     ResourceId = "urn:altinn:resource:4321",
                     IgnoreReservation = true,
                     ChannelSchema = NotificationChannelExt.EmailPreferred,
@@ -1448,7 +1451,7 @@ public class NotificationOrderChainMapperTests
         // Person recipient validation
         Assert.NotNull(result.Recipient.RecipientPerson);
         Assert.True(result.Recipient.RecipientPerson.IgnoreReservation);
-        Assert.Equal("12345678901", result.Recipient.RecipientPerson.NationalIdentityNumber);
+        Assert.Equal("18874198354", result.Recipient.RecipientPerson.NationalIdentityNumber);
         Assert.Equal("urn:altinn:resource:4321", result.Recipient.RecipientPerson.ResourceId);
         Assert.Equal(NotificationChannel.EmailPreferred, result.Recipient.RecipientPerson.ChannelSchema);
 
@@ -1493,7 +1496,7 @@ public class NotificationOrderChainMapperTests
             {
                 RecipientPerson = new RecipientPersonExt
                 {
-                    NationalIdentityNumber = "12345678901",
+                    NationalIdentityNumber = "18874198354",
                     ResourceId = "urn:altinn:resource:4321",
                     ChannelSchema = NotificationChannelExt.EmailPreferred,
                     IgnoreReservation = true,
@@ -1524,7 +1527,7 @@ public class NotificationOrderChainMapperTests
                 {
                     RecipientPerson = new RecipientPersonExt
                     {
-                        NationalIdentityNumber = "12345678901",
+                        NationalIdentityNumber = "18874198354",
                         ResourceId = "urn:altinn:resource:4321",
                         ChannelSchema = NotificationChannelExt.EmailPreferred,
                         IgnoreReservation = true,
@@ -1555,7 +1558,7 @@ public class NotificationOrderChainMapperTests
                 {
                     RecipientPerson = new RecipientPersonExt
                     {
-                        NationalIdentityNumber = "12345678901",
+                        NationalIdentityNumber = "18874198354",
                         ResourceId = "urn:altinn:resource:4321",
                         ChannelSchema = NotificationChannelExt.Email,
                         IgnoreReservation = false,
@@ -1586,7 +1589,7 @@ public class NotificationOrderChainMapperTests
 
         // Person recipient validation
         Assert.NotNull(result.Recipient.RecipientPerson);
-        Assert.Equal("12345678901", result.Recipient.RecipientPerson.NationalIdentityNumber);
+        Assert.Equal("18874198354", result.Recipient.RecipientPerson.NationalIdentityNumber);
         Assert.Equal("urn:altinn:resource:4321", result.Recipient.RecipientPerson.ResourceId);
         Assert.Equal(NotificationChannel.EmailPreferred, result.Recipient.RecipientPerson.ChannelSchema);
         Assert.True(result.Recipient.RecipientPerson.IgnoreReservation);
@@ -1621,7 +1624,7 @@ public class NotificationOrderChainMapperTests
 
         Assert.NotNull(firstReminder.Recipient.RecipientPerson);
         Assert.True(firstReminder.Recipient.RecipientPerson.IgnoreReservation);
-        Assert.Equal("12345678901", firstReminder.Recipient.RecipientPerson.NationalIdentityNumber);
+        Assert.Equal("18874198354", firstReminder.Recipient.RecipientPerson.NationalIdentityNumber);
         Assert.Equal("urn:altinn:resource:4321", firstReminder.Recipient.RecipientPerson.ResourceId);
         Assert.Equal(NotificationChannel.EmailPreferred, firstReminder.Recipient.RecipientPerson.ChannelSchema);
 
@@ -1649,7 +1652,7 @@ public class NotificationOrderChainMapperTests
 
         Assert.NotNull(secondReminder.Recipient.RecipientPerson);
         Assert.False(secondReminder.Recipient.RecipientPerson.IgnoreReservation);
-        Assert.Equal("12345678901", secondReminder.Recipient.RecipientPerson.NationalIdentityNumber);
+        Assert.Equal("18874198354", secondReminder.Recipient.RecipientPerson.NationalIdentityNumber);
         Assert.Equal("urn:altinn:resource:4321", secondReminder.Recipient.RecipientPerson.ResourceId);
         Assert.Equal(NotificationChannel.Email, secondReminder.Recipient.RecipientPerson.ChannelSchema);
 
@@ -1667,5 +1670,127 @@ public class NotificationOrderChainMapperTests
         Assert.NotEqual(result.OrderId, firstReminder.OrderId);
         Assert.NotEqual(result.OrderId, secondReminder.OrderId);
         Assert.NotEqual(firstReminder.OrderId, secondReminder.OrderId);
+    }
+
+    [Fact]
+    public void MapToNotificationOrderChainRequest_WithNullCreator_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var notificationOrderChainRequestBuilder = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder();
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() => notificationOrderChainRequestBuilder.SetCreator(null!));
+    }
+
+    [Fact]
+    public void MapToNotificationOrderChainRequest_WithNullIdempotencyId_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var creatorName = "ttd";
+        var requestExt = new NotificationOrderChainRequestExt
+        {
+            IdempotencyId = null!,
+            Recipient = new NotificationRecipientExt
+            {
+                RecipientEmail = new RecipientEmailExt
+                {
+                    EmailAddress = "recipient@example.com",
+                    Settings = new EmailSendingOptionsExt
+                    {
+                        Body = "Test body",
+                        Subject = "Test subject"
+                    }
+                }
+            }
+        };
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() => requestExt.MapToNotificationOrderChainRequest(creatorName));
+    }
+
+    [Fact]
+    public void MapToNotificationOrderChainRequest_WithNullRecipient_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var notificationOrderChainRequestBuilder = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder();
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() => notificationOrderChainRequestBuilder.SetRecipient(null!));
+    }
+
+    [Fact]
+    public void MapToNotificationOrderChainRequest_WithNullRequestedSendTime_SetsCurrentUtcTime()
+    {
+        // Arrange
+        var builder = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder();
+
+        builder.SetRequestedSendTime(null);
+        builder.SetOrderId(Guid.NewGuid());
+        builder.SetCreator(new Creator("ttd"));
+        builder.SetIdempotencyId("E4DD3079FCAC");
+
+        // Act
+        var beforeBuild = DateTime.UtcNow;
+        var notificationOrderChainRequest = builder.Build();
+        var afterBuild = DateTime.UtcNow;
+
+        // Assert
+        Assert.NotNull(notificationOrderChainRequest);
+
+        var requestedSendTime = notificationOrderChainRequest.RequestedSendTime;
+        Assert.True(requestedSendTime >= beforeBuild.AddSeconds(-1) && requestedSendTime <= afterBuild.AddSeconds(1));
+    }
+
+    [Fact]
+    public void Build_WithEmptyOrderId_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var builder = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetIdempotencyId("63404F51-2079-4598-BD23-8F4467590FB4")
+            .SetCreator(new Creator("ttd"))
+            .SetRecipient(new NotificationRecipient());
+
+        // Act & Assert
+        Assert.Throws<InvalidOperationException>(() => builder.Build());
+    }
+
+    [Fact]
+    public void Build_WithEmptyIdempotencyId_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var builder = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(Guid.NewGuid())
+            .SetCreator(new Creator("ttd"))
+            .SetRecipient(new NotificationRecipient());
+
+        // Act & Assert
+        Assert.Throws<InvalidOperationException>(() => builder.Build());
+    }
+
+    [Fact]
+    public void Build_WithNullCreator_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var builder = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(Guid.NewGuid())
+            .SetIdempotencyId("63404F51-2079-4598-BD23-8F4467590FB4")
+            .SetRecipient(new NotificationRecipient());
+
+        // Act & Assert
+        Assert.Throws<InvalidOperationException>(() => builder.Build());
+    }
+
+    [Fact]
+    public void Build_WithEmptyCreatorName_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var builder = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(Guid.NewGuid())
+            .SetIdempotencyId("63404F51-2079-4598-BD23-8F4467590FB4")
+            .SetCreator(new Creator(string.Empty))
+            .SetRecipient(new NotificationRecipient());
+
+        // Act & Assert
+        Assert.Throws<InvalidOperationException>(() => builder.Build());
     }
 }
