@@ -16,7 +16,7 @@ public class RecipientOrganizationValidatorTests
         var recipientOrganization = new RecipientOrganizationExt
         {
             OrgNumber = "123456",
-            ChannelScheme = NotificationChannelExt.Sms,
+            ChannelSchema = NotificationChannelExt.Sms,
         };
 
         // act
@@ -33,7 +33,7 @@ public class RecipientOrganizationValidatorTests
         var recipientOrganization = new RecipientOrganizationExt
         {
             OrgNumber = string.Empty,
-            ChannelScheme = NotificationChannelExt.Sms,
+            ChannelSchema = NotificationChannelExt.Sms,
         };
 
         // act
@@ -50,15 +50,15 @@ public class RecipientOrganizationValidatorTests
         var recipientOrganization = new RecipientOrganizationExt
         {
             OrgNumber = "123456789",
-            ChannelScheme = NotificationChannelExt.SmsPreferred
+            ChannelSchema = NotificationChannelExt.SmsPreferred
         };
 
         // act
         var actual = _recipientOrganizationValidator.TestValidate(recipientOrganization);
         
         // assert
-        actual.ShouldHaveValidationErrorFor(recipient => recipient.EmailSettings).WithErrorMessage("EmailSettings must be set when ChannelScheme is SmsPreffered or EmailPreferred");
-        actual.ShouldHaveValidationErrorFor(recipient => recipient.SmsSettings).WithErrorMessage("SmsSettings must be set when ChannelScheme is SmsPreffered or EmailPreferred");
+        actual.ShouldHaveValidationErrorFor(recipient => recipient.EmailSettings).WithErrorMessage("EmailSettings must be set when ChannelSchema is SmsPreffered or EmailPreferred");
+        actual.ShouldHaveValidationErrorFor(recipient => recipient.SmsSettings).WithErrorMessage("SmsSettings must be set when ChannelSchema is SmsPreffered or EmailPreferred");
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public class RecipientOrganizationValidatorTests
         var recipientOrganization = new RecipientOrganizationExt
         {
             OrgNumber = "123456789",
-            ChannelScheme = NotificationChannelExt.SmsPreferred,
+            ChannelSchema = NotificationChannelExt.SmsPreferred,
             SmsSettings = new SmsSendingOptionsExt
             {
                 Sender = "Test sender",
@@ -80,7 +80,7 @@ public class RecipientOrganizationValidatorTests
         var actual = _recipientOrganizationValidator.TestValidate(recipientOrganization);
 
         // assert
-        actual.ShouldHaveValidationErrorFor(recipient => recipient.EmailSettings).WithErrorMessage("EmailSettings must be set when ChannelScheme is SmsPreffered or EmailPreferred");
+        actual.ShouldHaveValidationErrorFor(recipient => recipient.EmailSettings).WithErrorMessage("EmailSettings must be set when ChannelSchema is SmsPreffered or EmailPreferred");
         actual.ShouldNotHaveValidationErrorFor(recipient => recipient.SmsSettings);
     }
 
@@ -91,7 +91,7 @@ public class RecipientOrganizationValidatorTests
         var recipientOrganization = new RecipientOrganizationExt
         {
             OrgNumber = "123456789",
-            ChannelScheme = NotificationChannelExt.Sms,
+            ChannelSchema = NotificationChannelExt.Sms,
             SmsSettings = new SmsSendingOptionsExt
             {
                 Sender = "Test sender",

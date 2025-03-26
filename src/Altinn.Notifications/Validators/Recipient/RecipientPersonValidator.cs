@@ -23,33 +23,33 @@ public sealed class RecipientPersonValidator : AbstractValidator<RecipientPerson
                 .MustBeValidNationalIdentityNumber();
         });
 
-        RuleFor(recipient => recipient!.ChannelScheme)
+        RuleFor(recipient => recipient!.ChannelSchema)
             .IsInEnum()
             .WithMessage("Invalid channel scheme value.");
 
-        When(options => options!.ChannelScheme == NotificationChannelExt.SmsPreferred || options!.ChannelScheme == NotificationChannelExt.EmailPreferred, () =>
+        When(options => options!.ChannelSchema == NotificationChannelExt.SmsPreferred || options!.ChannelSchema == NotificationChannelExt.EmailPreferred, () =>
         {
             RuleFor(options => options!.EmailSettings)
                 .NotNull()
-                .WithMessage("EmailSettings must be set when ChannelScheme is SmsPreffered or EmailPreferred");
+                .WithMessage("EmailSettings must be set when ChannelSchema is SmsPreffered or EmailPreferred");
 
             RuleFor(options => options!.SmsSettings)
                 .NotNull()
-                .WithMessage("SmsSettings must be set when ChannelScheme is SmsPreffered or EmailPreferred");
+                .WithMessage("SmsSettings must be set when ChannelSchema is SmsPreffered or EmailPreferred");
         });
 
-        When(options => options!.ChannelScheme == NotificationChannelExt.Sms, () =>
+        When(options => options!.ChannelSchema == NotificationChannelExt.Sms, () =>
         {
             RuleFor(options => options!.SmsSettings)
                 .NotNull()
-                .WithMessage("SmsSettings must be set when ChannelScheme is Sms");
+                .WithMessage("SmsSettings must be set when ChannelSchema is Sms");
         });
 
-        When(options => options!.ChannelScheme == NotificationChannelExt.Email, () =>
+        When(options => options!.ChannelSchema == NotificationChannelExt.Email, () =>
         {
             RuleFor(options => options!.EmailSettings)
                 .NotNull()
-                .WithMessage("EmailSettings must be set when ChannelScheme is Email");
+                .WithMessage("EmailSettings must be set when ChannelSchema is Email");
         });
 
         When(options => options!.EmailSettings != null, () =>

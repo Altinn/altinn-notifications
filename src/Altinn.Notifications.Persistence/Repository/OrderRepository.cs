@@ -30,7 +30,7 @@ public class OrderRepository : IOrderRepository
     private const string _getOrdersPastSendTimeUpdateStatus = "select notifications.getorders_pastsendtime_updatestatus()";
     private const string _getOrderIncludeStatus = "select * from notifications.getorder_includestatus_v4($1, $2)"; // _alternateid,  creator
     private const string _cancelAndReturnOrder = "select * from notifications.cancelorder($1, $2)"; // _alternateid,  creator
-    private const string _insertOrderV2Sql = "call notifications.insertorder_v2($1, $2, $3, $4, $5, $6, $7)"; // (_orderid, _idempotencyid, _creatorname, _sendersreference, _created, _requestedsendtime, _orderwithreminder)
+    private const string _insertorderchainSql = "call notifications.insertorderchain($1, $2, $3, $4, $5)"; // (_orderid, _idempotencyid, _creatorname, _created, _orderchain)
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderRepository"/> class.
@@ -109,9 +109,45 @@ public class OrderRepository : IOrderRepository
     }
 
     /// <inheritdoc/>
-    public async Task<NotificationOrderSequenceRequest> Create(NotificationOrderSequenceRequest order)
+    public async Task<List<NotificationOrder>> Create(NotificationOrderChainRequest orderRequest, NotificationOrder mainNotificationOrder, List<NotificationOrder> reminders)
     {
-        throw new NotImplementedException();
+        await using var connection = await _dataSource.OpenConnectionAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+        try
+        {
+            await InsertOrderChain(orderRequest, mainNotificationOrder.Created, connection, transaction);
+
+            long mainOrderId = await InsertOrder(mainNotificationOrder, connection, transaction);
+
+            EmailTemplate? mainEmailTemplate = mainNotificationOrder.Templates.Find(t => t.Type == NotificationTemplateType.Email) as EmailTemplate;
+            await InsertEmailTextAsync(mainOrderId, mainEmailTemplate, connection, transaction);
+
+            SmsTemplate? mainSmsTemplate = mainNotificationOrder.Templates.Find(t => t.Type == NotificationTemplateType.Sms) as SmsTemplate;
+            await InsertSmsTextAsync(mainOrderId, mainSmsTemplate, connection, transaction);
+
+            if (reminders != null)
+            {
+                foreach (var notificationOrder in reminders)
+                {
+                    long reminderOrderId = await InsertOrder(notificationOrder, connection, transaction);
+
+                    EmailTemplate? reminderEmailTemplate = notificationOrder.Templates.Find(t => t.Type == NotificationTemplateType.Email) as EmailTemplate;
+                    await InsertEmailTextAsync(reminderOrderId, reminderEmailTemplate, connection, transaction);
+
+                    SmsTemplate? reminderSmsTemplate = notificationOrder.Templates.Find(t => t.Type == NotificationTemplateType.Sms) as SmsTemplate;
+                    await InsertSmsTextAsync(reminderOrderId, reminderSmsTemplate, connection, transaction);
+                }
+            }
+
+            await transaction.CommitAsync();
+        }
+        catch (Exception)
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+
+        return reminders == null ? [mainNotificationOrder] : [mainNotificationOrder, .. reminders];
     }
 
     /// <inheritdoc/>
@@ -227,7 +263,7 @@ public class OrderRepository : IOrderRepository
         return order;
     }
 
-    private async Task<long> InsertOrder(NotificationOrder order, NpgsqlConnection connection, NpgsqlTransaction transaction)
+    private static async Task<long> InsertOrder(NotificationOrder order, NpgsqlConnection connection, NpgsqlTransaction transaction)
     {
         await using NpgsqlCommand pgcom = new NpgsqlCommand(_insertOrderSql, connection, transaction);
 
@@ -245,7 +281,7 @@ public class OrderRepository : IOrderRepository
         return orderId;
     }
 
-    private async Task InsertSmsTextAsync(long dbOrderId, SmsTemplate? smsTemplate, NpgsqlConnection connection, NpgsqlTransaction transaction)
+    private static async Task InsertSmsTextAsync(long dbOrderId, SmsTemplate? smsTemplate, NpgsqlConnection connection, NpgsqlTransaction transaction)
     {
         if (smsTemplate != null)
         {
@@ -259,7 +295,7 @@ public class OrderRepository : IOrderRepository
         }
     }
 
-    private async Task InsertEmailTextAsync(long dbOrderId, EmailTemplate? emailTemplate, NpgsqlConnection connection, NpgsqlTransaction transaction)
+    private static async Task InsertEmailTextAsync(long dbOrderId, EmailTemplate? emailTemplate, NpgsqlConnection connection, NpgsqlTransaction transaction)
     {
         if (emailTemplate != null)
         {
@@ -275,4 +311,16 @@ public class OrderRepository : IOrderRepository
         }
     }
 
+    private static async Task InsertOrderChain(NotificationOrderChainRequest order, DateTime creationDateTime, NpgsqlConnection connection, NpgsqlTransaction transaction)
+    {
+        await using NpgsqlCommand pgcom = new NpgsqlCommand(_insertorderchainSql, connection, transaction);
+
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, order.OrderId);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, order.IdempotencyId);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, order.Creator.ShortName);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, creationDateTime);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Jsonb, order);
+
+        await pgcom.ExecuteNonQueryAsync();
+    }
 }

@@ -1,4 +1,4 @@
-﻿CREATE TABLE IF NOT EXISTS notifications.orders_v2
+﻿CREATE TABLE IF NOT EXISTS notifications.orderschain
 (
     _id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     orderid UUID NOT NULL,
@@ -7,10 +7,9 @@
     created TIMESTAMPTZ NOT NULL,
     processed TIMESTAMPTZ,
     processedstatus orderprocessingstate DEFAULT 'Registered',
-    orderwithreminder JSONB NOT NULL,
-    CONSTRAINT orders_v2_unique_idempotencyid_creatorname UNIQUE (idempotencyid, creatorname)
+    orderchain JSONB NOT NULL
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_v2_orderid ON notifications.orders_v2(orderid);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_orderschain_orderid ON notifications.orderschain(orderid);
 
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE notifications.orders_v2 TO platform_notifications;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE notifications.orderschain TO platform_notifications;

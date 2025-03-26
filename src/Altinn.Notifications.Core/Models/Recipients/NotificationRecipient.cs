@@ -3,7 +3,7 @@
 /// <summary>
 /// Represents a container that holds recipient-specific data for creating a notification order.
 /// </summary>
-public class RecipientSpecification
+public class NotificationRecipient
 {
     /// <summary>
     /// Gets or sets an object capturing all the information needed

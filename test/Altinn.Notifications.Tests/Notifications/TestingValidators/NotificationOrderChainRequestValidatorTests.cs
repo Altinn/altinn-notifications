@@ -78,7 +78,7 @@ public class NotificationOrderChainRequestValidatorTests
                         {
                             OrgNumber = "111222333",
                             ResourceId = "urn:altinn:resource:te_svc123",
-                            ChannelScheme = NotificationChannelExt.SmsPreferred,
+                            ChannelSchema = NotificationChannelExt.SmsPreferred,
                             SmsSettings = new SmsSendingOptionsExt
                             {
                                 Sender = "1234 TE",
@@ -123,7 +123,7 @@ public class NotificationOrderChainRequestValidatorTests
                     NationalIdentityNumber = "00000000000",
                     ResourceId = "urn:altinn:resource:te_svc123",
                     IgnoreReservation = false,
-                    ChannelScheme = NotificationChannelExt.EmailPreferred,
+                    ChannelSchema = NotificationChannelExt.EmailPreferred,
                     SmsSettings = new SmsSendingOptionsExt
                     {
                         Sender = "1234 TE",
@@ -168,7 +168,7 @@ public class NotificationOrderChainRequestValidatorTests
                     NationalIdentityNumber = "11122233300",
                     ResourceId = "urn:altinn:resource:te_svc123",
                     IgnoreReservation = false,
-                    ChannelScheme = NotificationChannelExt.EmailPreferred,
+                    ChannelSchema = NotificationChannelExt.EmailPreferred,
                     SmsSettings = new SmsSendingOptionsExt
                     {
                         SendingTimePolicy = SendingTimePolicyExt.Daytime,
@@ -196,7 +196,7 @@ public class NotificationOrderChainRequestValidatorTests
                             NationalIdentityNumber = "11122233300",
                             ResourceId = "urn:altinn:resource:te_svc123",
                             IgnoreReservation = false,
-                            ChannelScheme = NotificationChannelExt.EmailPreferred,
+                            ChannelSchema = NotificationChannelExt.EmailPreferred,
                             SmsSettings = new SmsSendingOptionsExt
                             {
                                 SendingTimePolicy = SendingTimePolicyExt.Daytime,
@@ -244,7 +244,7 @@ public class NotificationOrderChainRequestValidatorTests
                     NationalIdentityNumber = "11122233300",
                     ResourceId = "urn:altinn:resource:te_svc123",
                     IgnoreReservation = false,
-                    ChannelScheme = NotificationChannelExt.EmailPreferred,
+                    ChannelSchema = NotificationChannelExt.EmailPreferred,
                     SmsSettings = new SmsSendingOptionsExt
                     {
                         Sender = "1234 TE",
@@ -272,7 +272,7 @@ public class NotificationOrderChainRequestValidatorTests
                         NationalIdentityNumber = "11122233300",
                         ResourceId = "urn:altinn:resource:te_svc123",
                         IgnoreReservation = true,
-                        ChannelScheme = NotificationChannelExt.SmsPreferred,
+                        ChannelSchema = NotificationChannelExt.SmsPreferred,
                         SmsSettings = new SmsSendingOptionsExt
                         {
                             SendingTimePolicy = SendingTimePolicyExt.Daytime,

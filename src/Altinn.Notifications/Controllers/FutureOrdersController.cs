@@ -1,9 +1,14 @@
-﻿using Altinn.Notifications.Core.Services.Interfaces;
+﻿using Altinn.Notifications.Configuration;
+using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
+using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
+using Altinn.Notifications.Validators;
 using Altinn.Notifications.Validators.Extensions;
 using FluentValidation;
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 using Swashbuckle.AspNetCore.Annotations;
@@ -14,8 +19,10 @@ namespace Altinn.Notifications.Controllers;
 /// Controller to handle notification orders that has one or more reminders.
 /// </summary>
 [ApiController]
-[ApiExplorerSettings(IgnoreApi = true)]
 [Route("notifications/api/v1/future/orders")]
+[SwaggerResponse(401, "Caller is unauthorized")]
+[SwaggerResponse(403, "Caller is not authorized to access the requested resource")]
+[Authorize(Policy = AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS)]
 public class FutureOrdersController : ControllerBase
 {
     private readonly IOrderRequestService _orderRequestService;
@@ -24,8 +31,6 @@ public class FutureOrdersController : ControllerBase
     /// <summary>
     /// Initializes a new instance of the <see cref="FutureOrdersController"/> class.
     /// </summary>
-    /// <param name="orderRequestService">The order request service.</param>
-    /// <param name="validator">The object that contains validation logic.</param>
     public FutureOrdersController(IOrderRequestService orderRequestService, IValidator<NotificationOrderChainRequestExt> validator)
     {
         _validator = validator;
@@ -46,9 +51,9 @@ public class FutureOrdersController : ControllerBase
     [Produces("application/json")]
     [SwaggerResponse(400, "The notification order is invalid", typeof(ValidationProblemDetails))]
     [SwaggerResponse(422, "The notification order is invalid", typeof(ValidationProblemDetails))]
-    [SwaggerResponse(200, "The notification order was created.", typeof(NotificationOrderReminderResponseExt))]
-    [SwaggerResponse(201, "The notification order was created.", typeof(NotificationOrderReminderResponseExt))]
-    public async Task<ActionResult<NotificationOrderReminderResponseExt>> Post(NotificationOrderChainRequestExt notificationOrderRequest)
+    [SwaggerResponse(200, "The notification order was created.", typeof(NotificationOrderChainResponseExt))]
+    [SwaggerResponse(201, "The notification order was created.", typeof(NotificationOrderChainResponseExt))]
+    public async Task<ActionResult<NotificationOrderChainResponseExt>> Post(NotificationOrderChainRequestExt notificationOrderRequest)
     {
         var validationResult = _validator.Validate(notificationOrderRequest);
         if (!validationResult.IsValid)
@@ -64,12 +69,9 @@ public class FutureOrdersController : ControllerBase
             return Forbid();
         }
 
-        throw new NotImplementedException();
+        var notificationOrderChainRequest = notificationOrderRequest.MapToNotificationOrderChainRequest(creator);
+        NotificationOrderChainResponse result = await _orderRequestService.RegisterNotificationOrderChain(notificationOrderChainRequest);
 
-        //var orderRequest = notificationOrderRequest.MapToNotificationOrderSequenceRequest(creator);
-
-        //NotificationOrderRequestResponse result = await _orderRequestService.RegisterNotificationOrder(orderRequest);
-
-        //return Accepted(result.OrderId!.GetSelfLinkFromOrderId(), result.MapToExternal());
+        return Accepted(result.Id.GetSelfLinkFromOrderChainId(), result.MapToNotificationOrderChainResponseExt());
     }
 }

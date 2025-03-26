@@ -14,7 +14,7 @@ using Microsoft.Extensions.Options;
 namespace Altinn.Notifications.Core.Services;
 
 /// <summary>
-/// Implementation of the <see cref="IOrderRequestService"/>. 
+/// Implementation of the <see cref="IOrderRequestService"/>.
 /// </summary>
 public class OrderRequestService : IOrderRequestService
 {
@@ -76,47 +76,156 @@ public class OrderRequestService : IOrderRequestService
     }
 
     /// <inheritdoc/>
-    public async Task<NotificationOrderRequestResponse> RegisterNotificationOrder(NotificationOrderSequenceRequest orderRequest)
+    public async Task<NotificationOrderChainResponse> RegisterNotificationOrderChain(NotificationOrderChainRequest orderRequest)
     {
-        throw new NotImplementedException();
+        DateTime currentTime = _dateTime.UtcNow();
+
+        var mainOrder = await CreateNotificationOrder(
+            orderRequest.Recipient,
+            orderRequest.OrderId,
+            orderRequest.SendersReference,
+            orderRequest.RequestedSendTime,
+            orderRequest.Creator,
+            currentTime,
+            orderRequest.ConditionEndpoint);
+
+        var reminderOrders = await CreateNotificationOrders(
+            orderRequest.Reminders,
+            orderRequest.Creator,
+            currentTime);
+
+        List<NotificationOrder> savedOrders = await _repository.Create(orderRequest, mainOrder, reminderOrders);
+
+        if (savedOrders == null || savedOrders.Count == 0)
+        {
+            throw new InvalidOperationException("Failed to create notification order chain.");
+        }
+
+        // Get the main order (first in the list)
+        var savedMainOrder = savedOrders[0];
+
+        // Create and return the response
+        return new NotificationOrderChainResponse
+        {
+            Id = savedMainOrder.Id,
+            CreationResult = new NotificationOrderChainReceipt
+            {
+                ShipmentId = savedMainOrder.Id,
+                SendersReference = savedMainOrder.SendersReference,
+                Reminders = savedOrders.Count > 1
+                    ? [.. savedOrders.Skip(1)
+                        .Select(order => new NotificationOrderChainShipment
+                        {
+                            ShipmentId = order.Id,
+                            SendersReference = order.SendersReference
+                        })]
+                    : null
+            }
+        };
     }
 
-    private async Task<List<RecipientLookupResult?>> GetRecipientLookupResult(NotificationOrderSequenceRequest orderRequest)
+    /// <summary>
+    /// Creates a new notification order using the specified recipient details and order parameters.
+    /// </summary>
+    /// <param name="recipient">
+    /// The <see cref="NotificationRecipient"/> that contains all necessary details for delivering the notification.
+    /// </param>
+    /// <param name="orderId">
+    /// A <see cref="Guid"/> that uniquely identifies the notification order.
+    /// </param>
+    /// <param name="sendersReference">
+    /// An optional reference identifier provided by the sender for correlating the order with external systems.
+    /// </param>
+    /// <param name="requestedSendTime">
+    /// The desired date and time for delivering the notification. If not specified, the current UTC date and time is used.
+    /// </param>
+    /// <param name="creator">
+    /// The creator information encapsulated in a <see cref="Creator"/> object that identifies who initiated the order.
+    /// </param>
+    /// <param name="currentTime">
+    /// The current UTC date and time marking when the order is created.
+    /// </param>
+    /// <param name="conditionEndpoint">
+    /// An optional <see cref="Uri"/> that serves as an endpoint to evaluate whether the notification should be sent.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task{NotificationOrder}"/> representing the asynchronous operation that returns the newly created notification order.
+    /// </returns>
+    /// <remarks>
+    /// This method extracts the delivery components (such as the recipient list, notification templates,
+    /// notification channel, reservation flag, and resource identifier) from the provided <paramref name="recipient"/>.
+    /// It performs a recipient lookup to ensure all necessary contact information exists.
+    /// If any required contact data is missing, an <see cref="InvalidOperationException"/> is thrown.
+    /// Additionally, default sender information is applied to any templates that lack sender details.
+    /// </remarks>
+    private async Task<NotificationOrder> CreateNotificationOrder(NotificationRecipient recipient, Guid orderId, string? sendersReference, DateTime requestedSendTime, Creator creator, DateTime currentTime, Uri? conditionEndpoint)
     {
-        throw new NotImplementedException();
-        
-        //var recipientsByChannel = new Dictionary<NotificationChannel, List<ResourceBoundRecipients>>
-        //{
-        //    { NotificationChannel.Sms, new List<ResourceBoundRecipients>() },
-        //    { NotificationChannel.Email, new List<ResourceBoundRecipients>() },
-        //    { NotificationChannel.SmsPreferred, new List<ResourceBoundRecipients>() },
-        //    { NotificationChannel.EmailPreferred, new List<ResourceBoundRecipients>() }
-        //};
+        var (recipients, templates, channel, ignoreReservation, resourceId) = ExtractDeliveryComponents(recipient);
 
-        //// Organize the contacts  from the main order based on communication channel and resource identifier.
-        //OrganizeRecipientsByChannelAndResource(orderRequest.Recipient, recipientsByChannel);
+        var lookupResult = await GetRecipientLookupResult(recipients, channel, resourceId);
+        if (lookupResult?.MissingContact?.Count > 0)
+        {
+            throw new InvalidOperationException($"Missing contact information for recipient(s): {string.Join(", ", lookupResult.MissingContact)}");
+        }
 
-        //// Organize the contacts from associated reminders order based on communication channel and resource identifier.
-        //if (orderRequest.Reminders?.Count > 0)
-        //{
-        //    foreach (var reminder in orderRequest.Reminders)
-        //    {
-        //        OrganizeRecipientsByChannelAndResource(reminder.Recipient, recipientsByChannel);
-        //    }
-        //}
+        templates = SetSenderIfNotDefined(templates);
 
-        //// Get the contact points for the recipients and return the list of recipients that are missing contact points.
-        //var recipientLookupResults = new List<RecipientLookupResult?>();
-        //foreach (var (channel, resourceBoundRecipientsList) in recipientsByChannel)
-        //{
-        //    foreach (var resourceBoundRecipients in resourceBoundRecipientsList)
-        //    {
-        //        var lookupResult = await GetRecipientLookupResult(resourceBoundRecipients.Recipients, channel, resourceBoundRecipients.ResourceId);
-        //        recipientLookupResults.Add(lookupResult);
-        //    }
-        //}
+        return new NotificationOrder(
+            orderId,
+            sendersReference,
+            templates,
+            requestedSendTime,
+            channel,
+            creator,
+            currentTime,
+            recipients,
+            ignoreReservation,
+            resourceId,
+            conditionEndpoint);
+    }
 
-        //return recipientLookupResults;
+    /// <summary>
+    /// Creates notification orders for each reminder provided.
+    /// </summary>
+    /// <param name="reminders">
+    /// A list of <see cref="NotificationReminder"/> objects representing the reminders to be sent after the main notification order.
+    /// </param>
+    /// <param name="creator">
+    /// The <see cref="Creator"/> associated with the reminder orders, indicating the originator of the notifications.
+    /// </param>
+    /// <param name="currentTime">
+    /// The current UTC date and time, used as the reference time for creating the orders.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task"/> representing the asynchronous operation, yielding a <see cref="List{NotificationOrder}"/> objects representing reminder orders.
+    /// </returns>
+    /// <remarks>
+    /// This method iterates through the provided reminders and, for each reminder, invokes 
+    /// <see cref="CreateNotificationOrder"/> to generate a corresponding reminder order using the reminder's details.
+    /// </remarks>
+    private async Task<List<NotificationOrder>> CreateNotificationOrders(List<NotificationReminder>? reminders, Creator creator, DateTime currentTime)
+    {
+        var reminderOrders = new List<NotificationOrder>();
+
+        if (reminders == null || reminders.Count == 0)
+        {
+            return reminderOrders;
+        }
+
+        foreach (var reminder in reminders)
+        {
+            var reminderOrder = await CreateNotificationOrder(
+                reminder.Recipient,
+                reminder.OrderId,
+                reminder.SendersReference,
+                reminder.RequestedSendTime,
+                creator,
+                currentTime,
+                reminder.ConditionEndpoint);
+            reminderOrders.Add(reminderOrder);
+        }
+
+        return reminderOrders;
     }
 
     private async Task<RecipientLookupResult?> GetRecipientLookupResult(List<Recipient> originalRecipients, NotificationChannel channel, string? resourceId)
@@ -188,27 +297,30 @@ public class OrderRequestService : IOrderRequestService
     {
         return channel switch
         {
-            NotificationChannel.Email => [.. recipients
+            NotificationChannel.Email => recipients
                                .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email))
-                               .Select(r => r.DeepCopy())],
-            NotificationChannel.Sms => [.. recipients
-                               .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Sms))
-                               .Select(r => r.DeepCopy())],
-            NotificationChannel.EmailPreferred or NotificationChannel.SmsPreferred => [.. recipients
-                               .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email || ap.AddressType == AddressType.Sms))
-                               .Select(r => r.DeepCopy())],
+                               .Select(r => r.DeepCopy())
+                               .ToList(),
+            NotificationChannel.Sms => recipients
+                                .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Sms))
+                              .Select(r => r.DeepCopy())
+                               .ToList(),
+            NotificationChannel.EmailPreferred or NotificationChannel.SmsPreferred => recipients
+                              .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email || ap.AddressType == AddressType.Sms))
+                             .Select(r => r.DeepCopy())
+                               .ToList(),
             _ => [],
         };
     }
 
     private List<INotificationTemplate> SetSenderIfNotDefined(List<INotificationTemplate> templates)
     {
-        foreach (var template in templates.OfType<EmailTemplate>().Where(template => string.IsNullOrEmpty(template.FromAddress)))
+        foreach (var template in templates.OfType<EmailTemplate>().Where(e => string.IsNullOrEmpty(e.FromAddress)))
         {
             template.FromAddress = _defaultEmailFromAddress;
         }
 
-        foreach (var template in templates.OfType<SmsTemplate>().Where(template => string.IsNullOrEmpty(template.SenderNumber)))
+        foreach (var template in templates.OfType<SmsTemplate>().Where(e => string.IsNullOrEmpty(e.SenderNumber)))
         {
             template.SenderNumber = _defaultSmsSender;
         }
@@ -216,144 +328,103 @@ public class OrderRequestService : IOrderRequestService
         return templates;
     }
 
-    private NotificationOrderSequenceRequest SetSenderIfNotDefined(NotificationOrderSequenceRequest orderRequest)
+    /// <summary>
+    /// Creates an instance of <see cref="EmailTemplate"/> based on the provided Email sending options.
+    /// </summary>
+    private static EmailTemplate CreateEmailTemplate(EmailSendingOptions emailSettings)
     {
-        throw new NotImplementedException();
-
-        //// Apply sender defaults to main recipient
-        //ApplyDefaultSender(orderRequest.Recipient);
-
-        //// Apply sender defaults to reminders
-        //if (orderRequest.Reminders != null)
-        //{
-        //    foreach (var reminder in orderRequest.Reminders)
-        //    {
-        //        ApplyDefaultSender(reminder.Recipient);
-
-        //        reminder.RequestedSendTime = orderRequest.RequestedSendTime.AddDays(reminder.DelayDays ?? 0);
-        //    }
-        //}
-
-        //return orderRequest;
+        return new EmailTemplate(emailSettings.SenderEmailAddress, emailSettings.Subject, emailSettings.Body, emailSettings.ContentType);
     }
 
     /// <summary>
-    /// Applies default sender values if they are not set.
+    /// Creates an instance of <see cref="SmsTemplate"/> based on the provided SMS sending options.
     /// </summary>
-    private void ApplyDefaultSender(RecipientSpecification recipients)
+    private static SmsTemplate CreateSmsTemplate(SmsSendingOptions smsSettings)
     {
-        if (recipients == null)
-        {
-            return;
-        }
-
-        ApplyDefaultSenderToPerson(recipients.RecipientPerson);
-        ApplyDefaultSenderToOrganization(recipients.RecipientOrganization);
+        return new SmsTemplate(smsSettings.Sender, smsSettings.Body);
     }
 
     /// <summary>
-    /// Sets default sender values for a person recipient if the settings exist but values are null.
+    /// Extracts information from a <see cref="NotificationRecipient"/> into notification delivery components.
     /// </summary>
-    private void ApplyDefaultSenderToPerson(RecipientPerson? person)
-    {
-        if (person?.SmsSettings != null && string.IsNullOrEmpty(person.SmsSettings.Sender))
-        {
-            person.SmsSettings.Sender = _defaultSmsSender;
-        }
-        else if (person?.EmailSettings != null && string.IsNullOrEmpty(person.EmailSettings.SenderEmailAddress))
-        {
-            person.EmailSettings.SenderEmailAddress = _defaultEmailFromAddress;
-        }
-    }
-
-    /// <summary>
-    /// Sets default sender values for an organization recipient if the settings exist but values are null.
-    /// </summary>
-    private void ApplyDefaultSenderToOrganization(RecipientOrganization? organization)
-    {
-        if (organization?.SmsSettings != null && string.IsNullOrEmpty(organization.SmsSettings.Sender))
-        {
-            organization.SmsSettings.Sender = _defaultSmsSender;
-        }
-        else if (organization?.EmailSettings != null && string.IsNullOrEmpty(organization.EmailSettings.SenderEmailAddress))
-        {
-            organization.EmailSettings.SenderEmailAddress = _defaultEmailFromAddress;
-        }
-    }
-
-    /// <summary>
-    /// Organizes recipients from an <see cref="RecipientSpecification"/> container into appropriate notification channels while preserving their resource context.
-    /// </summary>
-    /// <param name="recipientDetails">Container with recipient information, which may include person and/or organization recipients.</param>
-    /// <param name="recipientsByChannel">Dictionary that categorizes recipients by notification channel and resource identifier.</param>
-    /// <remarks>
-    /// This method extracts recipients from the provided container and organizes them into channel-specific collections:
+    /// <param name="recipient">The notification recipient containing targeting and messaging preferences.</param>
+    /// <returns>
+    /// A tuple containing:
     /// <list type="bullet">
-    ///   <item>
-    ///     <description>Processes <see cref="RecipientPerson"/> recipients, mapping them to their specified channel.</description>
-    ///   </item>
-    ///   <item>
-    ///     <description>Processes <see cref="RecipientOrganization"/> recipients, mapping them to their specified channel.</description>
-    ///   </item>
+    /// <item><description>Recipients - A list of recipients with proper addressing information</description></item>
+    /// <item><description>Templates - Notification templates based on the recipient's configuration</description></item>
+    /// <item><description>Channel - The determined notification channel based on recipient type</description></item>
+    /// <item><description>IgnoreReservation - Flag indicating whether to bypass KRR reservations</description></item>
+    /// <item><description>ResourceId - Optional resource ID for authorization and tracking</description></item>
     /// </list>
-    /// Recipients are grouped by both notification channel and resource identifier, enabling efficient channel-specific 
-    /// processing while maintaining their association with resources. Each recipient is wrapped in a 
-    /// <see cref="ResourceBoundRecipients"/> container before being added to the appropriate channel collection.
-    /// </remarks>
-    private static void OrganizeRecipientsByChannelAndResource(RecipientSpecification? recipientDetails, Dictionary<NotificationChannel, List<ResourceBoundRecipients>> recipientsByChannel)
-    {
-        if (recipientDetails is null)
-        {
-            return;
-        }
-
-        if (recipientDetails.RecipientPerson is not null)
-        {
-            AddResourceBoundRecipientsToChannel(
-                recipientDetails.RecipientPerson.ChannelScheme,
-                new ResourceBoundRecipients { Recipients = [new Recipient() { NationalIdentityNumber = recipientDetails.RecipientPerson.NationalIdentityNumber }], ResourceId = recipientDetails.RecipientPerson.ResourceId },
-                recipientsByChannel);
-        }
-
-        if (recipientDetails.RecipientOrganization is not null)
-        {
-            AddResourceBoundRecipientsToChannel(
-                recipientDetails.RecipientOrganization.ChannelScheme,
-                new ResourceBoundRecipients { Recipients = [new Recipient() { NationalIdentityNumber = recipientDetails.RecipientOrganization.OrgNumber }], ResourceId = recipientDetails.RecipientOrganization.ResourceId },
-                recipientsByChannel);
-        }
-    }
-
-    /// <summary>
-    /// Adds or merges resource-bound recipients to the appropriate notification channel collection.
-    /// </summary>
-    /// <param name="channel">The notification channel (Email, SMS, EmailPreferred, or SmsPreferred) to which the recipients should be added.</param>
-    /// <param name="resourceBoundRecipient">A group of recipients associated with a specific resource identifier.</param>
-    /// <param name="resourceBoundRecipients">A dictionary organizing recipients by notification channel and resource identifier.</param>
+    /// </returns>
     /// <remarks>
-    /// This method performs one of two operations:
-    /// <list type="bullet">
-    ///   <item>
-    ///     <description>If recipients for the specified resource ID already mapped to the channel, it merges the new recipients with the existing group.</description>
-    ///   </item>
-    ///   <item>
-    ///     <description>If no recipients exist for the resource ID, it maps the new resource-bound recipients group to the channel.</description>
-    ///   </item>
-    /// </list>
-    /// This grouping by resource ID enables efficient lookup and processing of recipients that share the same resource context.
+    /// This method processes different recipient types (SMS, Email, Person, Organization) and creates
+    /// the appropriate templates and addressing information based on the recipient's configuration.
+    /// The default channel is SMS if the recipient type cannot be determined.
     /// </remarks>
-    private static void AddResourceBoundRecipientsToChannel(NotificationChannel channel, ResourceBoundRecipients resourceBoundRecipient, Dictionary<NotificationChannel, List<ResourceBoundRecipients>> resourceBoundRecipients)
+    private static (List<Recipient> Recipients, List<INotificationTemplate> Templates, NotificationChannel Channel, bool? IgnoreReservation, string? ResourceId) ExtractDeliveryComponents(NotificationRecipient recipient)
     {
-        var channelRecipients = resourceBoundRecipients[channel];
+        bool? ignoreReservation = null;
+        string? resourceIdentifier = null;
 
-        var existingRecipientsGroup = channelRecipients.FirstOrDefault(r => r.ResourceId == resourceBoundRecipient.ResourceId);
-        if (existingRecipientsGroup is not null)
+        var recipients = new List<Recipient>();
+        var templates = new List<INotificationTemplate>();
+
+        NotificationChannel notificationChannel = NotificationChannel.Sms;
+
+        if (recipient.RecipientSms?.Settings != null)
         {
-            existingRecipientsGroup.Recipients.AddRange(resourceBoundRecipient.Recipients);
+            notificationChannel = NotificationChannel.Sms;
+
+            templates.Add(CreateSmsTemplate(recipient.RecipientSms.Settings));
+
+            recipients.Add(new Recipient([new SmsAddressPoint(recipient.RecipientSms.PhoneNumber)]));
         }
-        else
+        else if (recipient.RecipientEmail?.Settings != null)
         {
-            channelRecipients.Add(resourceBoundRecipient);
+            notificationChannel = NotificationChannel.Email;
+
+            templates.Add(CreateEmailTemplate(recipient.RecipientEmail.Settings));
+
+            recipients.Add(new Recipient([new EmailAddressPoint(recipient.RecipientEmail.EmailAddress)]));
         }
+        else if (recipient.RecipientPerson != null)
+        {
+            resourceIdentifier = recipient.RecipientPerson.ResourceId;
+            notificationChannel = recipient.RecipientPerson.ChannelSchema;
+            ignoreReservation = recipient.RecipientPerson.IgnoreReservation;
+
+            if (recipient.RecipientPerson.SmsSettings != null)
+            {
+                templates.Add(CreateSmsTemplate(recipient.RecipientPerson.SmsSettings));
+            }
+
+            if (recipient.RecipientPerson.EmailSettings != null)
+            {
+                templates.Add(CreateEmailTemplate(recipient.RecipientPerson.EmailSettings));
+            }
+
+            recipients.Add(new Recipient([], nationalIdentityNumber: recipient.RecipientPerson.NationalIdentityNumber));
+        }
+        else if (recipient.RecipientOrganization != null)
+        {
+            resourceIdentifier = recipient.RecipientOrganization.ResourceId;
+            notificationChannel = recipient.RecipientOrganization.ChannelSchema;
+
+            if (recipient.RecipientOrganization.SmsSettings != null)
+            {
+                templates.Add(CreateSmsTemplate(recipient.RecipientOrganization.SmsSettings));
+            }
+
+            if (recipient.RecipientOrganization.EmailSettings != null)
+            {
+                templates.Add(CreateEmailTemplate(recipient.RecipientOrganization.EmailSettings));
+            }
+
+            recipients.Add(new Recipient([], organizationNumber: recipient.RecipientOrganization.OrgNumber));
+        }
+
+        return (recipients, templates, notificationChannel, ignoreReservation, resourceIdentifier);
     }
 }

@@ -18,7 +18,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingValidators
             var recipientPerson = new RecipientPersonExt
             {
                 NationalIdentityNumber = nin,
-                ChannelScheme = NotificationChannelExt.Sms,
+                ChannelSchema = NotificationChannelExt.Sms,
             };
 
             // act
@@ -35,15 +35,15 @@ namespace Altinn.Notifications.Tests.Notifications.TestingValidators
             var recipientPerson = new RecipientPersonExt
             {
                 NationalIdentityNumber = "12345678910",
-                ChannelScheme = NotificationChannelExt.SmsPreferred
+                ChannelSchema = NotificationChannelExt.SmsPreferred
             };
 
             // act
             var actual = _recipientPersonValidator.TestValidate(recipientPerson);
 
             // assert
-            actual.ShouldHaveValidationErrorFor(recipient => recipient.EmailSettings).WithErrorMessage("EmailSettings must be set when ChannelScheme is SmsPreffered or EmailPreferred");
-            actual.ShouldHaveValidationErrorFor(recipient => recipient.SmsSettings).WithErrorMessage("SmsSettings must be set when ChannelScheme is SmsPreffered or EmailPreferred");
+            actual.ShouldHaveValidationErrorFor(recipient => recipient.EmailSettings).WithErrorMessage("EmailSettings must be set when ChannelSchema is SmsPreffered or EmailPreferred");
+            actual.ShouldHaveValidationErrorFor(recipient => recipient.SmsSettings).WithErrorMessage("SmsSettings must be set when ChannelSchema is SmsPreffered or EmailPreferred");
         }
 
         [Fact]
@@ -53,7 +53,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingValidators
             var recipientPerson = new RecipientPersonExt
             {
                 NationalIdentityNumber = "12345678910",
-                ChannelScheme = NotificationChannelExt.SmsPreferred,
+                ChannelSchema = NotificationChannelExt.SmsPreferred,
                 SmsSettings = new SmsSendingOptionsExt
                 {
                     Sender = "Test sender",
@@ -65,7 +65,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingValidators
             var actual = _recipientPersonValidator.TestValidate(recipientPerson);
 
             // assert
-            actual.ShouldHaveValidationErrorFor(recipient => recipient.EmailSettings).WithErrorMessage("EmailSettings must be set when ChannelScheme is SmsPreffered or EmailPreferred");
+            actual.ShouldHaveValidationErrorFor(recipient => recipient.EmailSettings).WithErrorMessage("EmailSettings must be set when ChannelSchema is SmsPreffered or EmailPreferred");
             actual.ShouldNotHaveValidationErrorFor(recipient => recipient.SmsSettings);
         }
 
@@ -76,7 +76,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingValidators
             var recipientPerson = new RecipientPersonExt
             {
                 NationalIdentityNumber = "12345678910",
-                ChannelScheme = NotificationChannelExt.Sms,
+                ChannelSchema = NotificationChannelExt.Sms,
                 SmsSettings = new SmsSendingOptionsExt
                 {
                     Sender = "Test sender",

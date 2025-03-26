@@ -1,21 +1,17 @@
-﻿using System.Text.Json.Serialization;
-
-namespace Altinn.Notifications.Models;
+﻿namespace Altinn.Notifications.Core.Models;
 
 /// <summary>
-/// Represents unique identifiers for dialogs and transmissions within Dialogporten.
+/// Represents identifiers for dialogs and transmissions in the Dialogporten API.
 /// </summary>
-public class DialogportenIdentifiersExt
+public class DialogportenIdentifiers
 {
     /// <summary>
     /// Gets or sets the identifier for a specific dialog within Dialogporten.
     /// </summary>
-    [JsonPropertyName("dialogId")]
     public string? DialogId { get; set; }
 
     /// <summary>
     /// Gets or sets the identifier for a specific transmission within Dialogporten.
     /// </summary>
-    [JsonPropertyName("transmissionId")]
     public string? TransmissionId { get; set; }
 }
