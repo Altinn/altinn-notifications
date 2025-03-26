@@ -11,6 +11,77 @@ namespace Altinn.Notifications.Tests.Notifications.TestingMappers;
 public class NotificationOrderChainMapperTests
 {
     [Fact]
+    public void MapToNotificationOrderChainRequest_WithEmailRecipientAndDialogportenAssociation_MapsCorrectly()
+    {
+        // Arrange
+        var creatorName = "ttd";
+        var requestExt = new NotificationOrderChainRequestExt
+        {
+            SendersReference = "ref-AB12CD34",
+            RequestedSendTime = DateTime.UtcNow,
+            IdempotencyId = "63404F51-2079-4598-BD23-8F4467590FB4",
+
+            Recipient = new NotificationRecipientExt
+            {
+                RecipientEmail = new RecipientEmailExt
+                {
+                    EmailAddress = "recipient@example.com",
+                    Settings = new EmailSendingOptionsExt
+                    {
+                        Body = "Test body",
+                        Subject = "Test subject",
+                        SenderName = "Test sender name",
+                        SenderEmailAddress = "sender@example.com"
+                    }
+                }
+            },
+
+            DialogportenAssociation = new DialogportenIdentifiersExt
+            {
+                DialogId = "dialog-50E18947",
+                TransmissionId = "transmission-9B0B2781"
+            }
+        };
+
+        // Act
+        var result = requestExt.MapToNotificationOrderChainRequest(creatorName);
+
+        // Assert
+        Assert.NotNull(result);
+
+        // Verify NotificationOrderChainRequest properties
+        Assert.NotEqual(Guid.Empty, result.OrderId);
+        Assert.Equal(creatorName, result.Creator.ShortName);
+        Assert.Equal("ref-AB12CD34", result.SendersReference);
+        Assert.Equal("63404F51-2079-4598-BD23-8F4467590FB4", result.IdempotencyId);
+        Assert.Equal(requestExt.RequestedSendTime.ToUniversalTime(), result.RequestedSendTime);
+
+        // Verify DialogportenAssociation properties
+        Assert.NotNull(result.DialogportenAssociation);
+        Assert.Equal("dialog-50E18947", result.DialogportenAssociation.DialogId);
+        Assert.Equal("transmission-9B0B2781", result.DialogportenAssociation.TransmissionId);
+
+        // Verify RecipientEmail properties
+        Assert.NotNull(result.Recipient);
+        Assert.NotNull(result.Recipient.RecipientEmail);
+        Assert.Equal("Test body", result.Recipient.RecipientEmail.Settings.Body);
+        Assert.Equal("Test subject", result.Recipient.RecipientEmail.Settings.Subject);
+        Assert.Equal("recipient@example.com", result.Recipient.RecipientEmail.EmailAddress);
+        Assert.Equal("Test sender name", result.Recipient.RecipientEmail.Settings.SenderName);
+        Assert.Equal(EmailContentType.Plain, result.Recipient.RecipientEmail.Settings.ContentType);
+        Assert.Equal("sender@example.com", result.Recipient.RecipientEmail.Settings.SenderEmailAddress);
+        Assert.Equal(SendingTimePolicy.Anytime, result.Recipient.RecipientEmail.Settings.SendingTimePolicy);
+
+        // Verify other recipient types are null
+        Assert.Null(result.Recipient.RecipientSms);
+        Assert.Null(result.Recipient.RecipientPerson);
+        Assert.Null(result.Recipient.RecipientOrganization);
+
+        // Verify no reminders
+        Assert.Null(result.Reminders);
+    }
+
+    [Fact]
     public void MapToNotificationOrderChainRequest_WithEmailRecipientAndMultipleReminders_MapsCorrectly()
     {
         // Arrange
