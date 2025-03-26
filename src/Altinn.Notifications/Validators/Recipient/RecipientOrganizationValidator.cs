@@ -1,5 +1,6 @@
 ﻿using Altinn.Notifications.Models;
 using Altinn.Notifications.Validators.Email;
+using Altinn.Notifications.Validators.Extensions;
 using Altinn.Notifications.Validators.Sms;
 
 using FluentValidation;
@@ -35,7 +36,7 @@ namespace Altinn.Notifications.Validators.Recipient
                     .IsInEnum()
                     .WithMessage("ChannelSchema must be a valid value from the NotificationChannelExt enum.");
 
-                When(options => options!.ChannelSchema == NotificationChannelExt.SmsPreferred || options!.ChannelSchema == NotificationChannelExt.EmailPreferred, () =>
+                When(options => options!.ChannelSchema.IsPreferredSchema(), () =>
                 {
                     RuleFor(options => options!.EmailSettings)
                         .NotNull()

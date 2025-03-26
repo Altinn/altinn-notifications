@@ -1,5 +1,6 @@
 ﻿using Altinn.Notifications.Models;
 using Altinn.Notifications.Validators.Email;
+using Altinn.Notifications.Validators.Extensions;
 using Altinn.Notifications.Validators.Rules;
 using Altinn.Notifications.Validators.Sms;
 using FluentValidation;
@@ -27,7 +28,7 @@ public sealed class RecipientPersonValidator : AbstractValidator<RecipientPerson
             .IsInEnum()
             .WithMessage("Invalid channel scheme value.");
 
-        When(options => options!.ChannelSchema == NotificationChannelExt.SmsPreferred || options!.ChannelSchema == NotificationChannelExt.EmailPreferred, () =>
+        When(options => options!.ChannelSchema.IsPreferredSchema(), () =>
         {
             RuleFor(options => options!.EmailSettings)
                 .NotNull()
