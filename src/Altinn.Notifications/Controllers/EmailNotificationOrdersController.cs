@@ -3,6 +3,7 @@ using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
+using Altinn.Notifications.Models.Email;
 using Altinn.Notifications.Validators.Extensions;
 using FluentValidation;
 

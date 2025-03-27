@@ -1,34 +1,15 @@
-﻿using System.ComponentModel;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using Altinn.Notifications.Models.Email;
+using Altinn.Notifications.Models.Sms;
 
-namespace Altinn.Notifications.Models;
+namespace Altinn.Notifications.Models.Recipient;
 
 /// <summary>
-/// Defines a model for sending notifications to a person identified by their national identity number.
+/// Represents the base class for notification recipients.
 /// </summary>
-/// <remarks>
-/// This class enables notifications to be sent to citizens through the Common Contact Register (KRR) integration,
-/// supporting both email and SMS delivery channels based on the recipient's registered contact information.
-/// </remarks>
-public class RecipientPersonExt
+public abstract class RecipientBaseExt
 {
-    /// <summary>
-    /// Gets or sets the national identity number of the recipient.
-    /// </summary>
-    /// <remarks>
-    /// Used to identify the person in the Common Contact Register (KRR) to retrieve their registered contact information.
-    /// </remarks>
-    [Required]
-    [JsonPropertyName("nationalIdentityNumber")]
-    public required string NationalIdentityNumber { get; set; }
-
-    /// <summary>
-    /// Gets or sets an optional resource identifier for authorization and auditing purposes.
-    /// </summary>
-    [JsonPropertyName("resourceId")]
-    public string? ResourceId { get; set; }
-
     /// <summary>
     /// Gets or sets the required channel scheme for delivering the notification.
     /// </summary>
@@ -44,19 +25,7 @@ public class RecipientPersonExt
     /// </remarks>
     [Required]
     [JsonPropertyName("channelSchema")]
-    [DefaultValue(NotificationChannelExt.EmailPreferred)]
-    public required NotificationChannelExt ChannelSchema { get; set; } = NotificationChannelExt.EmailPreferred;
-
-    /// <summary>
-    /// Gets or sets a value indicating whether to bypass the recipient's reservation against electronic communication.
-    /// </summary>
-    /// <remarks>
-    /// When set to <c>true</c>, notifications will be sent even if the recipient has registered a reservation
-    /// against electronic communication in the Common Contact Register (KRR).
-    /// Defaults to <c>false</c>.
-    /// </remarks>
-    [JsonPropertyName("ignoreReservation")]
-    public bool IgnoreReservation { get; set; } = false;
+    public abstract required NotificationChannelExt ChannelSchema { get; set; }
 
     /// <summary>
     /// Gets or sets the email-specific configuration, used when the channel scheme includes email.

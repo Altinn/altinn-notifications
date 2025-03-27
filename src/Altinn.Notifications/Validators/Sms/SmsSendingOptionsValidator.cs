@@ -1,4 +1,4 @@
-﻿using Altinn.Notifications.Models;
+﻿using Altinn.Notifications.Models.Sms;
 using FluentValidation;
 
 namespace Altinn.Notifications.Validators.Sms

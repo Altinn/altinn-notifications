@@ -1,6 +1,7 @@
 using System;
 
 using Altinn.Notifications.Models;
+using Altinn.Notifications.Models.Email;
 using Altinn.Notifications.Validators.Email;
 using Altinn.Notifications.Validators.Rules;
 

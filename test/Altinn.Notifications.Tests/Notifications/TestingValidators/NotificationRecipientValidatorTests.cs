@@ -1,4 +1,6 @@
 ﻿using Altinn.Notifications.Models;
+using Altinn.Notifications.Models.Email;
+using Altinn.Notifications.Models.Sms;
 using Altinn.Notifications.Validators;
 using FluentValidation.TestHelper;
 using Xunit;

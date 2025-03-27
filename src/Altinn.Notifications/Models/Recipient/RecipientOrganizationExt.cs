@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
-namespace Altinn.Notifications.Models;
+namespace Altinn.Notifications.Models.Recipient;
 
 /// <summary>
 /// Defines a model for sending notifications to an organization's contact person.
@@ -11,7 +11,7 @@ namespace Altinn.Notifications.Models;
 /// This class enables notifications to be sent to organizations through their registered
 /// contact information in the Norwegian Central Coordinating Register for Legal Entities (Enhetsregisteret).
 /// </remarks>
-public class RecipientOrganizationExt
+public class RecipientOrganizationExt : RecipientBaseExt
 {
     /// <summary>
     /// Gets or sets the organization number that identifies the recipient.
@@ -46,27 +46,5 @@ public class RecipientOrganizationExt
     [Required]
     [JsonPropertyName("channelSchema")]
     [DefaultValue(NotificationChannelExt.SmsPreferred)]
-    public required NotificationChannelExt ChannelSchema { get; set; } = NotificationChannelExt.SmsPreferred;
-
-    /// <summary>
-    /// Gets or sets the email-specific configuration, used when the channel scheme includes email.
-    /// </summary>
-    /// <remarks>
-    /// Required when <see cref="ChannelSchema"/> is set to <see cref="NotificationChannelExt.Email"/> 
-    /// or <see cref="NotificationChannelExt.EmailPreferred"/>.
-    /// Contains email content, subject, sender information, and delivery preferences.
-    /// </remarks>
-    [JsonPropertyName("emailSettings")]
-    public EmailSendingOptionsExt? EmailSettings { get; set; }
-
-    /// <summary>
-    /// Gets or sets the SMS-specific configuration, used when the channel scheme includes SMS.
-    /// </summary>
-    /// <remarks>
-    /// Required when <see cref="ChannelSchema"/> is set to <see cref="NotificationChannelExt.Sms"/> 
-    /// or <see cref="NotificationChannelExt.SmsPreferred"/>.
-    /// Contains SMS content, sender information, and delivery preferences.
-    /// </remarks>
-    [JsonPropertyName("smsSettings")]
-    public SmsSendingOptionsExt? SmsSettings { get; set; }
+    public override required NotificationChannelExt ChannelSchema { get; set; } = NotificationChannelExt.SmsPreferred;
 }

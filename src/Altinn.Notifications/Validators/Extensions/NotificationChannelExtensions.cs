@@ -1,5 +1,4 @@
-﻿using System.Runtime.CompilerServices;
-using Altinn.Notifications.Models;
+﻿using Altinn.Notifications.Models;
 
 namespace Altinn.Notifications.Validators.Extensions
 {
