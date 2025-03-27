@@ -28,22 +28,22 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
     - name: Run email notification order regression tests
-      uses: grafana/k6-action@v0.3.1
+      uses: grafana/k6-action@e4714b734f2b0afaabeb7b4a69142745548ab9ec # v0.3.1
       with:
         filename: test/k6/src/tests/orders_email.js
         flags: -e runFullTestSet=true -e env=${{ vars.ENV }} -e tokenGeneratorUserName=${{ secrets.TOKENGENERATOR_USERNAME }} -e tokenGeneratorUserPwd=${{ secrets.TOKENGENERATOR_USERPASSWORD }} -e emailRecipient=${{ secrets.AUTOMATEDTEST_EMAILRECIPIENT }} -e ninRecipient=${{ secrets.AUTOMATEDTEST_NINRECIPIENT}} -e subscriptionKey=${{ secrets.AUTOMATEDTEST_APIM_SUBSCRIPTION_KEY}}
 
     - name: Run contact(s) lookup by organization number regression tests with generating an email notification
-      uses: grafana/k6-action@v0.3.1
+      uses: grafana/k6-action@e4714b734f2b0afaabeb7b4a69142745548ab9ec # v0.3.1
       with:
         filename: test/k6/src/tests/orders_org_no.js
         flags: -e runFullTestSet=true -e env=${{ vars.ENV }} -e tokenGeneratorUserName=${{ secrets.TOKENGENERATOR_USERNAME }} -e tokenGeneratorUserPwd=${{ secrets.TOKENGENERATOR_USERPASSWORD }} -e orgNoRecipient=${{ secrets.AUTOMATEDTEST_ORG_NO_RECIPIENT}} -e resourceId=${{ secrets.AUTOMATEDTEST_RESOURCE_ID}}
 
         
     - name: Run sms notification order regression tests
-      uses: grafana/k6-action@v0.3.1
+      uses: grafana/k6-action@e4714b734f2b0afaabeb7b4a69142745548ab9ec # v0.3.1
       with:
         filename: test/k6/src/tests/orders_sms.js
         flags: -e runFullTestSet=true -e env=${{ vars.ENV }} -e tokenGeneratorUserName=${{ secrets.TOKENGENERATOR_USERNAME }} -e tokenGeneratorUserPwd=${{ secrets.TOKENGENERATOR_USERPASSWORD }} -e smsRecipient=${{ secrets.AUTOMATEDTEST_SMSRECIPIENT }}
@@ -57,7 +57,7 @@ jobs:
     - name: Report failure to Slack
       if: failure()
       id: slack
-      uses: slackapi/slack-github-action@v2.0.0
+      uses: slackapi/slack-github-action@485a9d42d3a73031f12ec201c457e2162c45d02d # v2.0.0
       with:
         webhook-type: incoming-webhook
         webhook: ${{ secrets.SLACK_WEBHOOK_URL_TEST }}
