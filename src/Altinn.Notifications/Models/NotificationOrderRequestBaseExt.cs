@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace Altinn.Notifications.Models;
 
@@ -10,6 +11,7 @@ public class NotificationOrderRequestBaseExt : NotificationOrderBaseExt
     /// <summary>
     /// Gets or sets the list of recipients.
     /// </summary>
+    [Required]
     [JsonPropertyName("recipients")]
     public List<RecipientExt> Recipients { get; set; } = [];
 
