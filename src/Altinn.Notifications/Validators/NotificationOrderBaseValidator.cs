@@ -6,7 +6,7 @@ namespace Altinn.Notifications.Validators
     /// <summary>
     /// Validator for <see cref="NotificationOrderBaseExt"/>.
     /// </summary>
-    public class NotificationOrderBaseValidator : AbstractValidator<NotificationOrderBaseExt>
+    internal sealed class NotificationOrderBaseValidator : AbstractValidator<NotificationOrderBaseExt>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="NotificationOrderBaseValidator"/> class.

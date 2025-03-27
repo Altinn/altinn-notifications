@@ -10,7 +10,7 @@ namespace Altinn.Notifications.Validators.Recipient;
 /// <summary>
 /// Represents validation logic for the recipient person model.
 /// </summary>
-public sealed class RecipientPersonValidator : AbstractValidator<RecipientPersonExt?>
+internal sealed class RecipientPersonValidator : AbstractValidator<RecipientPersonExt?>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="RecipientPersonValidator"/> class.

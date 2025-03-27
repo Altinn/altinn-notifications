@@ -1,12 +1,13 @@
 ﻿using Altinn.Notifications.Models;
 using FluentValidation;
+using FluentValidation.Validators;
 
 namespace Altinn.Notifications.Validators
 {
     /// <summary>
-    /// Represents validation logic for the dialogporten reference request.
+    /// Class containing validation logic for the <see cref="DialogportenIdentifiersExt"/> model
     /// </summary>
-    public class DialogportenIdentifiersValidator : AbstractValidator<DialogportenIdentifiersExt?>
+    internal sealed class DialogportenIdentifiersValidator : AbstractValidator<DialogportenIdentifiersExt?>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="DialogportenIdentifiersValidator"/> class.

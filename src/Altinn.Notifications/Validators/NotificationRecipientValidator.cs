@@ -10,7 +10,7 @@ namespace Altinn.Notifications.Validators
     /// <summary>
     /// Represents validation logic for the recipient types associated with request model.
     /// </summary>
-    public class NotificationRecipientValidator : AbstractValidator<NotificationRecipientExt>
+    internal sealed class NotificationRecipientValidator : AbstractValidator<NotificationRecipientExt>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="NotificationRecipientValidator"/> class.

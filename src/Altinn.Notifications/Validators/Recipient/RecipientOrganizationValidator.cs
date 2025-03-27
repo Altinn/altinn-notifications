@@ -10,7 +10,7 @@ namespace Altinn.Notifications.Validators.Recipient
     /// <summary>
     /// Validator for the <see cref="RecipientOrganizationExt"/> model.
     /// </summary>
-    public class RecipientOrganizationValidator : AbstractValidator<RecipientOrganizationExt?>
+    internal sealed class RecipientOrganizationValidator : AbstractValidator<RecipientOrganizationExt?>
     {
         private readonly int _organizationNumberLength = 9;
 

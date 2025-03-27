@@ -6,7 +6,7 @@ namespace Altinn.Notifications.Validators;
 /// <summary>
 /// Class containing validation logic for the <see cref="NotificationOrderChainRequestExt"/> model
 /// </summary>
-public class NotificationOrderChainRequestValidator : AbstractValidator<NotificationOrderChainRequestExt>
+internal sealed class NotificationOrderChainRequestValidator : AbstractValidator<NotificationOrderChainRequestExt>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationOrderChainRequestValidator"/> class.
