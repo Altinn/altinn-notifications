@@ -556,73 +556,78 @@ public class OrderRequestServiceTests
     }
 
     [Fact]
-    public async Task RegisterNotificationOrderChain_RecipientPerson_WithMultipleReminders_OrderChainCreated()
+    public async Task RegisterNotificationOrderChain_RecipientPersonWithMultipleReminders_OrderChainCreated()
     {
         // Arrange
         Guid orderId = Guid.NewGuid();
-        DateTime currentTime = DateTime.UtcNow;
+        Guid firstReminderId = Guid.NewGuid();
+        Guid secondReminderId = Guid.NewGuid();
+        DateTime mainOrderSendTime = DateTime.UtcNow;
 
-        var orderRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+        var order = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
             .SetOrderId(orderId)
             .SetCreator(new Creator("skd"))
-            .SetRequestedSendTime(currentTime.AddDays(1))
-            .SetSendersReference("TAX-FILING-REMINDER-2025")
+            .SetSendersReference("TAX-REMINDER-2025")
+            .SetRequestedSendTime(mainOrderSendTime.AddDays(1))
             .SetIdempotencyId("84CD3017-92E3-4C3D-80DE-C10338F30813")
+            .SetConditionEndpoint(new Uri("https://api.skatteetaten.no/conditions/new"))
+            .SetDialogportenAssociation(new DialogportenIdentifiers { DialogId = "20E3D06D5546", TransmissionId = "F9D34BB1C65F" })
             .SetRecipient(new NotificationRecipient
             {
                 RecipientPerson = new RecipientPerson
                 {
                     IgnoreReservation = true,
                     NationalIdentityNumber = "29105573746",
+                    ResourceId = "urn:altinn:resource:tax-2025",
                     ChannelSchema = NotificationChannel.EmailPreferred,
-                    ResourceId = "urn:altinn:resource:tax-filing-2025",
                     EmailSettings = new EmailSendingOptions
                     {
-                        ContentType = EmailContentType.Html,
                         Subject = "Tax Filing 2025",
-                        SenderName = "Norwegian Tax Administration",
+                        SenderName = "Skatteetaten",
+                        ContentType = EmailContentType.Html,
+                        SendingTimePolicy = SendingTimePolicy.Anytime,
                         SenderEmailAddress = "no-reply@skatteetaten.no",
-                        Body = "<p>Dear taxpayer,</p><p>Please log in to <a href=\"https://skatteetaten.no\">Skatteetaten</a> to complete your filing.</p>",
+                        Body = "<p>Log in to <a href=\"https://skatteetaten.no\">Tax Portal</a> to file your return.</p>"
                     },
                     SmsSettings = new SmsSendingOptions
                     {
-                        SendingTimePolicy = SendingTimePolicy.Daytime,
                         Sender = "Skatteetaten",
-                        Body = "Tax filing: Please visit skatteetaten.no to complete your filing."
+                        Body = "Tax filing due: Visit Skatteetaten.no.",
+                        SendingTimePolicy = SendingTimePolicy.Daytime
                     }
                 }
             })
-            .SetConditionEndpoint(new Uri("https://api.skatteetaten.no/tax/conditions/filing-incomplete"))
             .SetReminders(
             [
                 new NotificationReminder
                 {
                     DelayDays = 7,
-                    OrderId = Guid.NewGuid(),
-                    RequestedSendTime = currentTime.AddDays(8),
-                    SendersReference = "TAX-FILING-REMINDER-2025-FIRST",
-                    ConditionEndpoint = new Uri("https://api.skatteetaten.no/tax/conditions/filing-incomplete"),
+                    OrderId = firstReminderId,
+                    SendersReference = "TAX-REMINDER-2025-FIRST",
+                    RequestedSendTime = mainOrderSendTime.AddDays(7),
+                    ConditionEndpoint = new Uri("https://api.skatteetaten.no/conditions/incomplete"),
                     Recipient = new NotificationRecipient
                     {
                         RecipientPerson = new RecipientPerson
                         {
                             IgnoreReservation = true,
                             NationalIdentityNumber = "29105573746",
+                            ResourceId = "urn:altinn:resource:tax-2025",
                             ChannelSchema = NotificationChannel.EmailPreferred,
-                            ResourceId = "urn:altinn:resource:tax-filing-2025",
                             EmailSettings = new EmailSendingOptions
                             {
+                                SenderName = "Skatteetaten",
+                                Subject = "Reminder: Tax 2025",
                                 ContentType = EmailContentType.Html,
-                                Subject = "REMINDER: Tax Filing 2025",
-                                SenderName = "Norwegian Tax Administration",
+                                SendingTimePolicy = SendingTimePolicy.Anytime,
                                 SenderEmailAddress = "no-reply@skatteetaten.no",
-                                Body = "<p>Dear taxpayer,</p><p><strong>REMINDER:</strong> Please log in to <a href=\"https://skatteetaten.no\">Skatteetaten</a> to complete your filing.</p>"
+                                Body = "<p><strong>Reminder:</strong> File your return at <a href=\"https://skatteetaten.no\">Tax Portal</a>.</p>"
                             },
                             SmsSettings = new SmsSendingOptions
                             {
-                                SendingTimePolicy = SendingTimePolicy.Daytime,
                                 Sender = "Skatteetaten",
-                                Body = "REMINDER: visit skatteetaten.no to complete your filing."
+                                SendingTimePolicy = SendingTimePolicy.Daytime,
+                                Body = "Reminder: File your tax return at Skatteetaten.no."
                             }
                         }
                     }
@@ -630,31 +635,32 @@ public class OrderRequestServiceTests
                 new NotificationReminder
                 {
                     DelayDays = 14,
-                    OrderId = Guid.NewGuid(),
-                    RequestedSendTime = currentTime.AddDays(15),
-                    SendersReference = "TAX-FILING-REMINDER-2025-FINAL",
-                    ConditionEndpoint = new Uri("https://api.skatteetaten.no/tax/conditions/filing-incomplete"),
+                    OrderId = secondReminderId,
+                    SendersReference = "TAX-REMINDER-2025-FINAL",
+                    RequestedSendTime = mainOrderSendTime.AddDays(14),
+                    ConditionEndpoint = new Uri("https://api.Skatteetaten.no/conditions/incomplete"),
                     Recipient = new NotificationRecipient
                     {
                         RecipientPerson = new RecipientPerson
                         {
-                            NationalIdentityNumber = "29105573746",
-                            ChannelSchema = NotificationChannel.EmailPreferred,
-                            ResourceId = "urn:altinn:resource:tax-filing-2025",
                             IgnoreReservation = true,
+                            NationalIdentityNumber = "29105573746",
+                            ResourceId = "urn:altinn:resource:tax-2025",
+                            ChannelSchema = NotificationChannel.SmsPreferred,
                             EmailSettings = new EmailSendingOptions
                             {
+                                SenderName = "Skatteetaten",
                                 ContentType = EmailContentType.Html,
-                                Subject = "FINAL REMINDER: Tax Filing 2025",
-                                SenderName = "Norwegian Tax Administration",
-                                SenderEmailAddress = "no-reply@skatteetaten.no",
-                                Body = "<p>Dear taxpayer,</p><p><strong>FINAL REMINDER:</strong> Please log in to <a href=\"https://skatteetaten.no\">Skatteetaten</a> to complete your filing or you may incur penalties.</p>",
+                                Subject = "Final Reminder: Tax 2025",
+                                SenderEmailAddress = "no-reply@Skatteetaten.no",
+                                SendingTimePolicy = SendingTimePolicy.Anytime,
+                                Body = "<p><strong>Final Reminder:</strong> File now to avoid penalties. <a href=\"https://skatteetaten.no\">Tax Portal</a></p>"
                             },
                             SmsSettings = new SmsSendingOptions
                             {
-                                SendingTimePolicy = SendingTimePolicy.Daytime,
                                 Sender = "Skatteetaten",
-                                Body = "URGENT: You have not completed your filing yet. Complete immediately at skatteetaten.no to avoid penalties."
+                                SendingTimePolicy = SendingTimePolicy.Daytime,
+                                Body = "Urgent: File your tax return now at Skatteetaten.no."
                             }
                         }
                     }
@@ -662,119 +668,142 @@ public class OrderRequestServiceTests
             ])
             .Build();
 
-        // Setup expected orders with appropriate channel, templates, and recipients.
-        var mainOrderId = orderId;
-        var firstReminderId = Guid.NewGuid();
-        var secondReminderId = Guid.NewGuid();
-
+        // Expected orders
         var expectedMainOrder = new NotificationOrder(
-            mainOrderId,
-            "TAX-FILING-REMINDER-2025",
+            orderId,
+            "TAX-REMINDER-2025",
             [
-                new SmsTemplate("Skatteetaten", "Tax filing: Please visit skatteetaten.no to complete your filing."),
-                new EmailTemplate("no-reply@skatteetaten.no", "Tax Filing 2025", "<p>Dear taxpayer,</p><p>Please log in to <a href=\"https://skatteetaten.no\">Skatteetaten</a> to complete your filing.</p>", EmailContentType.Html)
+                new SmsTemplate("Skatteetaten", "Tax filing due: Visit Skatteetaten.no."),
+                new EmailTemplate("no-reply@skatteetaten.no", "Tax Filing 2025", "<p>Log in to <a href=\"https://skatteetaten.no\">Tax Portal</a> to file your return.</p>", EmailContentType.Html)
             ],
-            currentTime.AddDays(1),
+            mainOrderSendTime.AddDays(1),
             NotificationChannel.EmailPreferred,
             new Creator("skd"),
-            currentTime,
-            [new([], nationalIdentityNumber: "29105573746")],
+            DateTime.UtcNow,
+            [new([], "29105573746")],
             true,
-            "urn:altinn:resource:tax-filing-2025",
-            new Uri("https://api.skatteetaten.no/tax/conditions/filing-incomplete"));
+            "urn:altinn:resource:tax-2025",
+            new Uri("https://api.skatteetaten.no/conditions/new"));
 
-        var expectedFirstReminderOrder = new NotificationOrder(
+        var expectedFirstReminder = new NotificationOrder(
             firstReminderId,
-            "TAX-FILING-REMINDER-2025-FIRST",
+            "TAX-REMINDER-2025-FIRST",
             [
-                new SmsTemplate("Skatteetaten", "REMINDER: visit skatteetaten.no to complete your filing."),
-                new EmailTemplate("no-reply@skatteetaten.no", "REMINDER: Tax Filing 2025", "<p>Dear taxpayer,</p><p><strong>REMINDER:</strong> Please log in to <a href=\"https://skatteetaten.no\">Skatteetaten</a> to complete your filing.</p>", EmailContentType.Html)
+                new SmsTemplate("Skatteetaten", "Reminder: File your tax return at Skatteetaten.no."),
+                new EmailTemplate("no-reply@skatteetaten.no", "Reminder: Tax 2025", "<p><strong>Reminder:</strong> File your return at <a href=\"https://skatteetaten.no\">Tax Portal</a>.</p>", EmailContentType.Html)
             ],
-            currentTime.AddDays(8),
+            mainOrderSendTime.AddDays(7),
             NotificationChannel.EmailPreferred,
             new Creator("skd"),
-            currentTime,
-            [new([], nationalIdentityNumber: "29105573746")],
+            DateTime.UtcNow,
+            [new([], "29105573746")],
             true,
-            "urn:altinn:resource:tax-filing-2025",
-            new Uri("https://api.skatteetaten.no/tax/conditions/filing-incomplete"));
+            "urn:altinn:resource:tax-2025",
+            new Uri("https://api.skatteetaten.no/conditions/incomplete"));
 
-        var expectedSecondReminderOrder = new NotificationOrder(
+        var expectedFinalReminder = new NotificationOrder(
             secondReminderId,
-            "TAX-FILING-REMINDER-2025-FINAL",
+            "TAX-REMINDER-2025-FINAL",
             [
-                new SmsTemplate("Skatteetaten", "URGENT: You have not completed your filing yet. Complete immediately at skatteetaten.no to avoid penalties."),
-                new EmailTemplate("no-reply@skatteetaten.no", "FINAL REMINDER: Tax Filing 2025", "<p>Dear taxpayer,</p><p><strong>FINAL REMINDER:</strong> Please log in to <a href=\"https://skatteetaten.no\">Skatteetaten</a> to complete your filing or you may incur penalties.</p>", EmailContentType.Html)
+                new SmsTemplate("Skatteetaten", "Urgent: File your tax return now at Skatteetaten.no."),
+                new EmailTemplate("no-reply@skatteetaten.no", "Final Reminder: Tax 2025", "<p><strong>Final Reminder:</strong> File now to avoid penalties. <a href=\"https://skatteetaten.no\">Tax Portal</a></p>", EmailContentType.Html)
             ],
-            currentTime.AddDays(15),
-            NotificationChannel.EmailPreferred,
+            mainOrderSendTime.AddDays(14),
+            NotificationChannel.SmsPreferred,
             new Creator("skd"),
-            currentTime,
-            [new([], nationalIdentityNumber: "29105573746")],
+            DateTime.UtcNow,
+            [new([], "29105573746")],
             true,
-            "urn:altinn:resource:tax-filing-2025",
-            new Uri("https://api.skatteetaten.no/tax/conditions/filing-incomplete"));
+            "urn:altinn:resource:tax-2025",
+            new Uri("https://api.Skatteetaten.no/conditions/incomplete"));
 
-        var repoMock = new Mock<IOrderRepository>();
-        repoMock.Setup(r => r.Create(
-            It.Is<NotificationOrderChainRequest>(req => req.OrderId == orderId && req.SendersReference == "TAX-FILING-REMINDER-2025"),
-            It.Is<NotificationOrder>(o => o.NotificationChannel == NotificationChannel.EmailPreferred),
-            It.Is<List<NotificationOrder>>(list => list.Count == 2)))
-            .ReturnsAsync(
-            [
-            expectedMainOrder,
-            expectedFirstReminderOrder,
-            expectedSecondReminderOrder
-            ]);
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        var contactPointServiceMock = new Mock<IContactPointService>();
 
-        // Setup service with mocks
-        var contactPointMock = new Mock<IContactPointService>();
-        contactPointMock
+        orderRepositoryMock
+            .Setup(r => r.Create(It.Is<NotificationOrderChainRequest>(req => req.OrderId == orderId), It.IsAny<NotificationOrder>(), It.IsAny<List<NotificationOrder>>()))
+            .ReturnsAsync([expectedMainOrder, expectedFirstReminder, expectedFinalReminder]);
+
+        contactPointServiceMock
             .Setup(cp => cp.AddPreferredContactPoints(It.IsAny<NotificationChannel>(), It.IsAny<List<Recipient>>(), It.IsAny<string?>()))
-            .Callback<NotificationChannel, List<Recipient>, string?>((_, recipients, _) =>
+            .Callback<NotificationChannel, List<Recipient>, string?>((channel, recipients, _) =>
             {
-                // Simulate successful lookup by adding contact points
                 foreach (var recipient in recipients)
                 {
                     if (recipient.NationalIdentityNumber == "29105573746")
                     {
-                        recipient.AddressInfo.Add(new EmailAddressPoint("taxpayer@example.com"));
-                        recipient.IsReserved = false;
+                        switch (channel)
+                        {
+                            case NotificationChannel.Email:
+                            case NotificationChannel.EmailPreferred:
+                                recipient.AddressInfo.Add(new EmailAddressPoint("recipient@example.com"));
+                                break;
+
+                            case NotificationChannel.Sms:
+                            case NotificationChannel.SmsPreferred:
+                                recipient.AddressInfo.Add(new SmsAddressPoint("+4799999999"));
+                                break;
+                        }
+
+                        recipient.IsReserved = true;
                     }
                 }
             });
 
-        var service = GetTestService(repoMock.Object, contactPointMock.Object, orderId, currentTime);
+        var service = GetTestService(orderRepositoryMock.Object, contactPointServiceMock.Object, orderId, mainOrderSendTime);
 
         // Act
-        var response = await service.RegisterNotificationOrderChain(orderRequest);
+        var response = await service.RegisterNotificationOrderChain(order);
 
         // Assert
-        Assert.Equal(mainOrderId, response.Id);
+        Assert.Equal(orderId, response.Id);
+        Assert.Equal(orderId, response.CreationResult.ShipmentId);
+        Assert.Equal("TAX-REMINDER-2025", response.CreationResult.SendersReference);
+
         Assert.NotNull(response.CreationResult.Reminders);
         Assert.Equal(2, response.CreationResult.Reminders.Count);
-        Assert.Equal("TAX-FILING-REMINDER-2025", response.CreationResult.SendersReference);
-        Assert.Equal("TAX-FILING-REMINDER-2025-FIRST", response.CreationResult.Reminders[0].SendersReference);
-        Assert.Equal("TAX-FILING-REMINDER-2025-FINAL", response.CreationResult.Reminders[1].SendersReference);
 
-        // Verify that the mocks were called with the expected parameters
-        repoMock.Verify(
+        Assert.Equal(firstReminderId, response.CreationResult.Reminders[0].ShipmentId);
+        Assert.Equal("TAX-REMINDER-2025-FIRST", response.CreationResult.Reminders[0].SendersReference);
+
+        Assert.Equal(secondReminderId, response.CreationResult.Reminders[1].ShipmentId);
+        Assert.Equal("TAX-REMINDER-2025-FINAL", response.CreationResult.Reminders[1].SendersReference);
+
+        // Verify repository interactions
+        orderRepositoryMock.Verify(
             r => r.Create(
-            It.Is<NotificationOrderChainRequest>(req => req.OrderId == orderId),
-            It.Is<NotificationOrder>(o => o.SendersReference == "TAX-FILING-REMINDER-2025"),
-            It.Is<List<NotificationOrder>>(list => list.Count == 2)),
+                It.Is<NotificationOrderChainRequest>(req => req.OrderId == orderId),
+                It.Is<NotificationOrder>(o =>
+                    o.Id == orderId &&
+                    o.SendersReference == "TAX-REMINDER-2025" &&
+                    o.NotificationChannel == NotificationChannel.EmailPreferred &&
+                    o.Recipients.Any(r => r.NationalIdentityNumber == "29105573746") &&
+                    o.ResourceId == "urn:altinn:resource:tax-2025"),
+                It.Is<List<NotificationOrder>>(list =>
+                    list.Count == 2 &&
+                    list[0].Id == firstReminderId &&
+                    list[1].Id == secondReminderId)),
             Times.Once);
 
-        contactPointMock.Verify(
+        // Verify contact point interactions
+        contactPointServiceMock.Verify(
             cp => cp.AddPreferredContactPoints(
-            It.Is<NotificationChannel>(c => c == NotificationChannel.EmailPreferred),
-            It.Is<List<Recipient>>(r => r.Any(e => e.NationalIdentityNumber == "29105573746")),
-            It.Is<string?>(s => s == "urn:altinn:resource:tax-filing-2025")),
-            Times.Exactly(3));
+                It.Is<NotificationChannel>(ch => ch == NotificationChannel.EmailPreferred),
+                It.Is<List<Recipient>>(r => r.Any(rec => rec.NationalIdentityNumber == "29105573746")),
+                It.Is<string?>(s => s == "urn:altinn:resource:tax-2025")),
+            Times.Exactly(2));
+
+        // Verify contact point added the expected email address
+        contactPointServiceMock.Verify(
+            cp => cp.AddPreferredContactPoints(
+                It.Is<NotificationChannel>(ch => ch == NotificationChannel.SmsPreferred),
+                It.Is<List<Recipient>>(r => r.Any(rec => rec.NationalIdentityNumber == "29105573746")),
+                It.Is<string?>(s => s == "urn:altinn:resource:tax-2025")),
+            Times.Once);
     }
 
     [Fact]
-    public async Task RegisterNotificationOrderChain_RecipientOrganization_WithNoReminders_OrderChainCreated()
+    public async Task RegisterNotificationOrderChain_RecipientOrganizationWithoutReminders_OrderChainCreated()
     {
         // Arrange
         Guid orderId = Guid.NewGuid();
@@ -784,22 +813,25 @@ public class OrderRequestServiceTests
             .SetOrderId(orderId)
             .SetCreator(new Creator("brg"))
             .SetRequestedSendTime(currentTime.AddHours(2))
-            .SetSendersReference("ANNUAL-REPORT-REMINDER-2025")
+            .SetSendersReference("ANNUAL-REPORT-2025")
             .SetIdempotencyId("65698F3A-7B27-478C-9E76-A190C34A8099")
+            .SetConditionEndpoint(new Uri("https://api.brreg.no/conditions/annual-report"))
+            .SetDialogportenAssociation(new DialogportenIdentifiers { DialogId = "20E3D06D5546", TransmissionId = "F9D34BB1C65F" })
             .SetRecipient(new NotificationRecipient
             {
                 RecipientOrganization = new RecipientOrganization
                 {
-                    OrgNumber = "910150804",
+                    OrgNumber = "312508729",
                     ChannelSchema = NotificationChannel.Email,
                     ResourceId = "urn:altinn:resource:annual-report-2025",
                     EmailSettings = new EmailSendingOptions
                     {
-                        Body = "<p>Your organization's annual report is due by March 31, 2025. Log in to Altinn to complete it.</p>",
-                        Subject = "Annual Report Reminder 2025",
+                        Subject = "Annual Report 2025",
                         ContentType = EmailContentType.Html,
                         SenderName = "Brønnøysundregistrene",
-                        SenderEmailAddress = "no-reply@brreg.no"
+                        SenderEmailAddress = "no-reply@brreg.no",
+                        Body = "<p>Your organization's annual report is due by March 31, 2025. Log in to Altinn to complete it.</p>",
+                        SendingTimePolicy = SendingTimePolicy.Anytime
                     }
                 }
             })
@@ -807,43 +839,42 @@ public class OrderRequestServiceTests
 
         var expectedOrder = new NotificationOrder(
             orderId,
-            "ANNUAL-REPORT-REMINDER-2025",
+            "ANNUAL-REPORT-2025",
             [
-                new EmailTemplate("no-reply@brreg.no", "Annual Report Reminder 2025", "<p>Your organization's annual report is due by March 31, 2025. Log in to Altinn to complete it.</p>", EmailContentType.Html)
+                new EmailTemplate("no-reply@brreg.no", "Annual Report 2025", "<p>Your organization's annual report is due by March 31, 2025. Log in to Altinn to complete it.</p>", EmailContentType.Html)
             ],
             currentTime.AddHours(2),
             NotificationChannel.Email,
             new Creator("brg"),
-            currentTime,
-            [new([], organizationNumber: "910150804")],
+            DateTime.UtcNow,
+            [new([], organizationNumber: "312508729")],
             null,
             "urn:altinn:resource:annual-report-2025",
-            null);
+            new Uri("https://api.brreg.no/conditions/annual-report"));
 
-        // Setup repository mock
-        var repoMock = new Mock<IOrderRepository>(MockBehavior.Strict);
-        repoMock.Setup(r => r.Create(
-            It.Is<NotificationOrderChainRequest>(req => req.OrderId == orderId && req.SendersReference == "ANNUAL-REPORT-REMINDER-2025"),
-            It.Is<NotificationOrder>(o => o.NotificationChannel == NotificationChannel.Email && o.Recipients.Any(r => r.OrganizationNumber == "910150804")),
+        // Setup mock
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock.Setup(r => r.Create(
+            It.Is<NotificationOrderChainRequest>(req => req.OrderId == orderId && req.SendersReference == "ANNUAL-REPORT-2025"),
+            It.Is<NotificationOrder>(o => o.NotificationChannel == NotificationChannel.Email && o.Recipients.Any(r => r.OrganizationNumber == "312508729")),
             It.Is<List<NotificationOrder>>(list => list.Count == 0)))
             .ReturnsAsync([expectedOrder]);
 
-        // Setup contact point service mock
-        var contactPointMock = new Mock<IContactPointService>();
-        contactPointMock
+        var contactPointServiceMock = new Mock<IContactPointService>();
+        contactPointServiceMock
             .Setup(cp => cp.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>()))
             .Callback<List<Recipient>, string?>((recipients, _) =>
             {
                 foreach (var recipient in recipients)
                 {
-                    if (recipient.OrganizationNumber == "910150804")
+                    if (recipient.OrganizationNumber == "312508729")
                     {
-                        recipient.AddressInfo.Add(new EmailAddressPoint("contact@company.no"));
+                        recipient.AddressInfo.Add(new EmailAddressPoint("recipient@example.com"));
                     }
                 }
             });
 
-        var service = GetTestService(repoMock.Object, contactPointMock.Object, orderId, currentTime);
+        var service = GetTestService(orderRepositoryMock.Object, contactPointServiceMock.Object, orderId, currentTime);
 
         // Act
         var response = await service.RegisterNotificationOrderChain(orderRequest);
@@ -851,24 +882,28 @@ public class OrderRequestServiceTests
         // Assert
         Assert.NotNull(response);
         Assert.Equal(orderId, response.Id);
-        Assert.Equal("ANNUAL-REPORT-REMINDER-2025", response.CreationResult.SendersReference);
+
+        Assert.NotNull(response.CreationResult);
+        Assert.Equal(orderId, response.CreationResult.ShipmentId);
+        Assert.Equal("ANNUAL-REPORT-2025", response.CreationResult.SendersReference);
+
         Assert.Null(response.CreationResult.Reminders);
 
         // Verify repository interactions
-        repoMock.Verify(
+        orderRepositoryMock.Verify(
             r => r.Create(
             It.IsAny<NotificationOrderChainRequest>(),
             It.Is<NotificationOrder>(o =>
-                o.SendersReference == "ANNUAL-REPORT-REMINDER-2025" &&
+                o.SendersReference == "ANNUAL-REPORT-2025" &&
                 o.NotificationChannel == NotificationChannel.Email &&
-                o.Recipients.Any(r => r.OrganizationNumber == "910150804")),
+                o.Recipients.Any(r => r.OrganizationNumber == "312508729")),
             It.Is<List<NotificationOrder>>(list => list.Count == 0)),
             Times.Once);
 
         // Verify contact point interactions
-        contactPointMock.Verify(
+        contactPointServiceMock.Verify(
             cp => cp.AddEmailContactPoints(
-            It.Is<List<Recipient>>(r => r.Any(rec => rec.OrganizationNumber == "910150804")),
+            It.Is<List<Recipient>>(r => r.Any(rec => rec.OrganizationNumber == "312508729")),
             It.Is<string?>(s => s == "urn:altinn:resource:annual-report-2025")),
             Times.Once);
     }
@@ -902,26 +937,72 @@ public class OrderRequestServiceTests
         // Setup repository to return an empty list
         var repoMock = new Mock<IOrderRepository>();
         repoMock
-            .Setup(r => r.Create(
-                It.IsAny<NotificationOrderChainRequest>(),
-                It.IsAny<NotificationOrder>(),
-                It.IsAny<List<NotificationOrder>>()))
-            .ReturnsAsync(new List<NotificationOrder>());
+            .Setup(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), It.IsAny<List<NotificationOrder>>()))
+            .ReturnsAsync([]);
 
         var service = GetTestService(repoMock.Object, null, orderId, currentTime);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await service.RegisterNotificationOrderChain(orderRequest));
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () => await service.RegisterNotificationOrderChain(orderRequest));
 
         Assert.Equal("Failed to create notification order chain.", exception.Message);
 
         // Verify the repository was called
-        repoMock.Verify(
-            r => r.Create(
-                It.IsAny<NotificationOrderChainRequest>(),
-                It.IsAny<NotificationOrder>(),
-                It.IsAny<List<NotificationOrder>>()),
+        repoMock.Verify(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), It.IsAny<List<NotificationOrder>>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateNotificationOrder_WithMissingContactInformation_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        DateTime currentTime = DateTime.UtcNow;
+
+        var recipient = new NotificationRecipient
+        {
+            RecipientPerson = new RecipientPerson
+            {
+                NationalIdentityNumber = "16069412345",
+                ResourceId = "urn:altinn:resource:test",
+                ChannelSchema = NotificationChannel.Email,
+                EmailSettings = new EmailSendingOptions
+                {
+                    Body = "Test Body",
+                    Subject = "Test Subject",
+                    ContentType = EmailContentType.Plain
+                }
+            }
+        };
+
+        Mock<IContactPointService> contactPointMock = new();
+        contactPointMock
+            .Setup(cp => cp.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>()))
+            .Callback<List<Recipient>, string?>((recipients, _) =>
+            {
+                // Intentionally don't add any address info to simulate missing contact
+            });
+
+        var service = GetTestService(null, contactPointMock.Object, orderId, currentTime);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await service.RegisterNotificationOrderChain(
+                new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+                    .SetOrderId(orderId)
+                    .SetCreator(new Creator("test"))
+                    .SetRequestedSendTime(currentTime.AddHours(1))
+                    .SetIdempotencyId("C0A3FABE-D65F-48A0-8745-5D4CC6EA7968")
+                    .SetRecipient(recipient)
+                    .Build()));
+
+        // Verify the exception message contains information about missing contacts
+        Assert.Contains("Missing contact information for recipient", exception.Message);
+
+        // Verify the contact point service was called
+        contactPointMock.Verify(
+            cp => cp.AddEmailContactPoints(
+                It.Is<List<Recipient>>(r => r.Any(rec => rec.NationalIdentityNumber == "16069412345")),
+                It.Is<string?>(s => s == "urn:altinn:resource:test")),
             Times.Once);
     }
 
@@ -952,6 +1033,7 @@ public class OrderRequestServiceTests
             DefaultEmailFromAddress = "noreply@altinn.no",
             DefaultSmsSenderNumber = "TestDefaultSmsSenderNumberNumber"
         });
+
         return new OrderRequestService(repository, contactPointService, guidMock.Object, dateTimeMock.Object, config);
     }
 }
