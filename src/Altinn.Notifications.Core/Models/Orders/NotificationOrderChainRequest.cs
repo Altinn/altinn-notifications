@@ -52,6 +52,14 @@ public class NotificationOrderChainRequest
     public Guid OrderId { get; private set; }
 
     /// <summary>
+    /// Gets the unique identifier for the entire notification order chain.
+    /// </summary>
+    /// <value>
+    /// A <see cref="Guid"/> representing the unique identifier of the notification order chain.
+    /// </value>
+    public Guid OrderChainId { get; private set; }
+
+    /// <summary>
     /// Gets the recipient information for this notification.
     /// </summary>
     /// <remarks>
@@ -93,6 +101,7 @@ public class NotificationOrderChainRequest
     public class NotificationOrderChainRequestBuilder
     {
         private Guid _orderId;
+        private Guid _orderChainId;
         private Uri? _conditionEndpoint;
         private string? _sendersReference;
         private Creator _creator = new(string.Empty);
@@ -103,11 +112,20 @@ public class NotificationOrderChainRequest
         private DialogportenIdentifiers? _dialogportenAssociation;
 
         /// <summary>
-        /// Sets the order ID for the notification request.
+        /// Sets the order identifier for the notification request.
         /// </summary>
         public NotificationOrderChainRequestBuilder SetOrderId(Guid orderId)
         {
             _orderId = orderId;
+            return this;
+        }
+
+        /// <summary>
+        /// Sets the order chain identifier for the notification request.
+        /// </summary>
+        public NotificationOrderChainRequestBuilder SetOrderChainId(Guid orderChainId)
+        {
+            _orderChainId = orderChainId;
             return this;
         }
 
@@ -193,6 +211,11 @@ public class NotificationOrderChainRequest
                 throw new InvalidOperationException("OrderId must be set.");
             }
 
+            if (_orderChainId == Guid.Empty)
+            {
+                throw new InvalidOperationException("OrderChainId must be set.");
+            }
+
             if (string.IsNullOrEmpty(_idempotencyId))
             {
                 throw new InvalidOperationException("IdempotencyId must be set.");
@@ -209,6 +232,7 @@ public class NotificationOrderChainRequest
                 Creator = _creator,
                 Reminders = _reminders,
                 Recipient = _recipient,
+                OrderChainId = _orderChainId,
                 IdempotencyId = _idempotencyId,
                 SendersReference = _sendersReference,
                 RequestedSendTime = _requestedSendTime,
