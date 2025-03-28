@@ -98,7 +98,7 @@ public class OrderRequestService : IOrderRequestService
 
         if (savedOrders == null || savedOrders.Count == 0)
         {
-            throw new InvalidOperationException("Failed to create notification order chain.");
+            throw new InvalidOperationException("Failed to create the notification order chain.");
         }
 
         // Get the main order (first in the list)
@@ -222,6 +222,7 @@ public class OrderRequestService : IOrderRequestService
                 creator,
                 currentTime,
                 reminder.ConditionEndpoint);
+
             reminderOrders.Add(reminderOrder);
         }
 
