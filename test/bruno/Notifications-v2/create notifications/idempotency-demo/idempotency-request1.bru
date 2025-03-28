@@ -1,0 +1,27 @@
+meta {
+  name: idempotency-request1
+  type: http
+  seq: 1
+}
+
+post {
+  url: http://localhost:5090/notifications/api/v1/future/orders
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "idempotencyId": "1",
+    "sendersReference": "te-123-123",
+    "recipient": {
+      "recipientSms": {      
+        "phoneNumber": "99999999",
+        "smsSettings": {
+          "notificationScheme": "Daytime_v1",
+          "message": "Husk å levere"
+        }
+      }
+    }
+  }
+}
