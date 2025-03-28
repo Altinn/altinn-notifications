@@ -107,7 +107,7 @@ public class OrderRequestService : IOrderRequestService
         // Create and return the response
         return new NotificationOrderChainResponse
         {
-            Id = savedMainOrder.Id,
+            Id = orderRequest.OrderChainId,
             CreationResult = new NotificationOrderChainReceipt
             {
                 ShipmentId = savedMainOrder.Id,
