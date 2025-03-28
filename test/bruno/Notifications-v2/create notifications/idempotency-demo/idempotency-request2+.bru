@@ -5,7 +5,7 @@ meta {
 }
 
 post {
-  url: http://localhost:5151/order
+  url: {{host}}/notifications/api/v1/future/orders
   body: json
   auth: none
 }
@@ -16,10 +16,12 @@ body:json {
     "sendersReference": "te-123-123_some-other-ref-than-original",
     "recipient": {
       "recipientSms": {      
-        "phoneNumber": "99999999",
+        "phoneNumber": "004790926292",
         "smsSettings": {
-          "notificationScheme": "Daytime_v1",
-          "message": "Husk å levere nå!"
+          "sendingTimePolicy": "Daytime",
+          "message": "Husk å levere nå!",
+          "sender": "sendertest",
+          "body": "bodytest"
         }
       }
     }

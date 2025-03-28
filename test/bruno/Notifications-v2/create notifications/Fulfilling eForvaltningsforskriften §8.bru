@@ -5,7 +5,7 @@ meta {
 }
 
 post {
-  url: http://localhost:5151/order
+  url: {{host}}/notifications/api/v1/future/orders
   body: json
   auth: none
 }
@@ -19,14 +19,15 @@ body:json {
       "transmissionId": "{{transmissionId-utsending-1}}"
     },
      "recipient": {
-      "recipientNationalIdentityNumber": {
+      "recipientPerson": {
         "nationalIdentityNumber": "11122233300",
         "resourceId": "urn:altinn:resource:te_svc123",
         "ignoreReservation": false,
-        "channelScheme": "EmailPreferred",
+        "channelSchema": "EmailPreferred",
         "smsSettings": {
           "notificationScheme": "Daytime_Workingdays_v1",
-          "message": "Du har en ny melding fra TE. Logg inn i Altinn for å gjøre deg kjent med innholdet."
+          "body": "Du har en ny melding fra TE. Logg inn i Altinn for å gjøre deg kjent med innholdet.",
+          "sender": "test sender"
         },
         "emailSettings": {
           "notificationScheme": "Unrestricted_v1",
@@ -41,14 +42,15 @@ body:json {
         "sendersReference": "te-123-123",
         "delayDays": 7,
         "recipient": {
-          "recipientNationalIdentityNumber": {
+          "recipientPerson": {
             "nationalIdentityNumber": "11122233300",
             "resourceId": "urn:altinn:resource:te_svc123",
             "ignoreReservation": true,
-            "channelScheme": "SmsPreferred",
+            "channelSchema": "SmsPreferred",
             "smsSettings": {
-              "notificationScheme": "Daytime_Workingdays_v1",
-              "message": "Du har en melding fra TE som krever handling. Logg inn i Altinn for å gjøre deg kjent med innholdet."
+              "notificationSchema": "Daytime",
+              "body": "Du har en melding fra TE som krever handling. Logg inn i Altinn for å gjøre deg kjent med innholdet.",
+              "sender": "test sender"
             },
             "emailSettings": {
               "notificationScheme": "Unrestricted_v1",
