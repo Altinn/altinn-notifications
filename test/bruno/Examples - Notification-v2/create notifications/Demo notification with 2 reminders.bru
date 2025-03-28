@@ -1,0 +1,71 @@
+meta {
+  name: Demo notification with 2 reminders
+  type: http
+  seq: 2
+}
+
+post {
+  url: http://localhost:5151/order
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "te-123-123",
+    "requestedSendTime": "2025-01-31T12:59:08.677Z",
+    "conditionEndpoint": "https://api.te.no/altinn/te-123-123/?seen=true",
+    "associationDialogporten": {
+      "dialogueId": "{{dialog-guid}}",
+      "transmissionId": "{{transmissionId-utsending-1}}"
+    },
+    "recipient": {
+      "recipientEmail": {
+        "emailAddress": "ola.normann@example.com",
+        "emailSettings": {
+          "notificationScheme": "Unrestricted_v1",
+          "subject": "Ny melding fra TE",
+          "body": "Du har fått en ny melding fra TE i Altinn meldingsboks. Logg inn i Altinn for å gjøre deg kjent med innholdet."
+        }
+      }
+    },
+    "reminders": [
+      {
+        "conditionEndpoint": "https://api.te.no/altinn/te-123-123/?seen=true",
+        "sendersReference": "te-123-123-rem-1",
+        "delayDays": 7,
+        "recipient": {
+          "recipientSms": {
+            "phoneNumber": "55555555",
+            "smsSettings": {
+              "notificationScheme": "Daytime_Workingdays_v1",
+              "message": "Du har en melding fra TE som krever handling. Logg inn i Altinn for å gjøre deg kjent med innholdet."
+            }
+          }
+        }
+      },
+      {
+        "conditionEndpoint": "https://api.te.no/altinn/te-123-123/?seen=true",
+        "sendersReference": "te-123-123-rem-2",
+        "delayDays": 14,
+        "recipient": {
+          "recipientOrg": {
+            "orgNumber": "111222333",
+            "resourceId": "urn:altinn:resource:te_svc123",
+            "channelScheme": "SmsPreferred",
+            "smsSettings": {
+              "notificationScheme": "Daytime_Workingdays_v1",
+              "message": "Din bedrift $recipientName$ har en melding fra TE som krever handling. Logg inn i Altinn for å gjøre deg kjent med innholdet."
+            },
+            "emailSettings": {
+              "notificationScheme": "Unrestricted_v1",
+              "subject": "Ny melding fra TE",
+              "body": "Ditt firma $recipientName$ har fått en ny melding fra TE i Altinn meldingsboks. Logg inn i Altinn for å gjøre deg kjent med innholdet."
+            }
+          }
+        }
+      }
+    ]
+  }
+}
