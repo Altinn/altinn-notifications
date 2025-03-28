@@ -1,8 +1,8 @@
 ﻿using System;
 
 using Altinn.Notifications.Models;
-using Altinn.Notifications.Validators;
-
+using Altinn.Notifications.Models.Sms;
+using Altinn.Notifications.Validators.Sms;
 using FluentValidation;
 
 using Xunit;

@@ -1,0 +1,42 @@
+meta {
+  name: Validation demo - functional
+  type: http
+  seq: 3
+}
+
+post {
+  url: http://localhost:5151/order
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "te-123-123",
+    "associationDialogporten": {
+      "dialogueId": "{{dialog-guid}}",
+      "transmissionId": "{{transmissionId-utsending-1}}"
+    },
+    "recipient": {
+      "recipientNationalIdentityNumber": {
+        "nationalIdentityNumber": "00000000000",
+        "resourceId": "urn:altinn:resource:te_svc123",
+        "ignoreReservation": false,
+        "channelScheme": "EmailPreferred",
+        "smsSettings": {
+          "notificationScheme": "Daytime_Workingdays_v1",
+          "sender": "1234 TE",
+          "message": "Du har en ny melding fra TE. Logg inn i Altinn for å gjøre deg kjent med innholdet."
+        },
+        "emailSettings": {
+          "notificationScheme": "Unrestricted_v1",
+          "emailSender": "noreply-te@example.com",
+          "emailSenderName": "Tjenesteeier",
+          "subject": "Ny melding fra TE",
+          "body": "Du har en ny melding fra TE. Logg inn i Altinn for å gjøre deg kjent med innholdet."
+        }
+      }
+    }
+  }
+}

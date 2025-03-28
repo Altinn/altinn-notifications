@@ -1,0 +1,17 @@
+meta {
+  name: Validation demo - contract
+  type: http
+  seq: 4
+}
+
+post {
+  url: http://localhost:5151/order
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "this contract will not work": "I am sure!"
+  }
+}

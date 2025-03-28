@@ -1,0 +1,31 @@
+meta {
+  name: idempotency-request2+
+  type: http
+  seq: 2
+}
+
+post {
+  url: http://localhost:5151/order
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "idempotencyId": "1",
+    "sendersReference": "te-123-123_some-other-ref-than-original",
+    "recipient": {
+      "recipientSms": {      
+        "phoneNumber": "99999999",
+        "smsSettings": {
+          "notificationScheme": "Daytime_v1",
+          "message": "Husk å levere nå!"
+        }
+      }
+    }
+  }
+}
+
+docs {
+  Notice how this just references the original request and ignores the new content!
+}
