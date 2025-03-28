@@ -32,10 +32,8 @@ public static class NotificationOrderChainMapper
         var reminders = notificationOrderChainRequestExt.Reminders?
             .Select(reminder =>
             {
-                // Calculate the send time for each reminder.
                 var requestedSendTime = notificationOrderChainRequestExt.RequestedSendTime.AddDays(reminder.DelayDays).ToUniversalTime();
 
-                // Map the reminder with the calculated send time.
                 return reminder.MapToNotificationReminder(requestedSendTime);
             })
             .ToList();
@@ -44,6 +42,7 @@ public static class NotificationOrderChainMapper
 
         return new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
             .SetOrderId(Guid.NewGuid())
+            .SetOrderChainId(Guid.NewGuid())
             .SetCreator(new Creator(creatorName))
             .SetIdempotencyId(notificationOrderChainRequestExt.IdempotencyId)
             .SetRecipient(recipient)
@@ -86,7 +85,7 @@ public static class NotificationOrderChainMapper
     /// <summary>
     /// Maps a <see cref="NotificationReminderExt"/> to a <see cref="NotificationReminder"/>.
     /// </summary>
-    /// <param name="notificationReminderExt">The extended notification reminder object to map from.</param>
+    /// <param name="notificationReminderExt">The external notification reminder object to map from.</param>
     /// <param name="requestedSendTime">The requested send time for the reminder.</param>
     /// <returns>A <see cref="NotificationReminder"/> object mapped from the provided notification reminder.</returns>
     private static NotificationReminder MapToNotificationReminder(this NotificationReminderExt notificationReminderExt, DateTime requestedSendTime)
