@@ -261,16 +261,18 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
 
             Guid orderId = Guid.NewGuid();
+            Guid orderChainId = Guid.NewGuid();
 
             // Track identifiers for cleanup.
             _orderIdsToDelete.Add(orderId);
-            _ordersChainIdsToDelete.Add(orderId);
+            _ordersChainIdsToDelete.Add(orderChainId);
 
             var creationDateTime = DateTime.UtcNow;
             var requestedSendTime = DateTime.UtcNow.AddMinutes(10);
 
             var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
                 .SetOrderId(orderId)
+                .SetOrderChainId(orderChainId)
                 .SetCreator(new Creator("skd"))
                 .SetRequestedSendTime(requestedSendTime)
                 .SetConditionEndpoint(new Uri("https://vg.no/condition"))
@@ -320,17 +322,18 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             Assert.NotNull(result);
             Assert.Single(result);
             Assert.Equal(orderId, result[0].Id);
+            Assert.NotEqual(orderChainId, result[0].Id);
 
-            string orderChainSql = $@"SELECT count(1) FROM notifications.orderschain WHERE orderid = '{orderId}'";
+            string orderChainSql = $@"SELECT count(*) FROM notifications.orderschain WHERE orderid = '{orderChainId}'";
             int orderChainCount = await PostgreUtil.RunSqlReturnOutput<int>(orderChainSql);
             Assert.Equal(1, orderChainCount);
 
-            string orderSql = $@"SELECT count(1) FROM notifications.orders WHERE alternateid = '{orderId}'";
-            int orderCount = await PostgreUtil.RunSqlReturnOutput<int>(orderSql);
-            Assert.Equal(1, orderCount);
+            string orderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{orderId}'";
+            int ordersCount = await PostgreUtil.RunSqlReturnOutput<int>(orderSql);
+            Assert.Equal(1, ordersCount);
 
-            string emailSql = $@"SELECT count(1) FROM notifications.emailtexts as et JOIN notifications.orders o ON et._orderid = o._id WHERE o.alternateid = '{orderId}'";
-            int emailTextCount = await PostgreUtil.RunSqlReturnOutput<int>(emailSql);
+            string emailTextSql = $@"SELECT count(*) FROM notifications.emailtexts as et JOIN notifications.orders o ON et._orderid = o._id WHERE o.alternateid = '{orderId}'";
+            int emailTextCount = await PostgreUtil.RunSqlReturnOutput<int>(emailTextSql);
             Assert.Equal(1, emailTextCount);
         }
 
@@ -341,10 +344,11 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
 
             Guid mainOrderId = Guid.NewGuid();
+            Guid orderChainId = Guid.NewGuid();
             Guid firstReminderOrderId = Guid.NewGuid();
             Guid secondReminderOrderId = Guid.NewGuid();
 
-            _ordersChainIdsToDelete.AddRange(mainOrderId);
+            _ordersChainIdsToDelete.AddRange(orderChainId);
             _orderIdsToDelete.AddRange([mainOrderId, firstReminderOrderId, secondReminderOrderId]);
 
             var creationDateTime = DateTime.UtcNow;
@@ -352,6 +356,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
 
             var orderRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
                 .SetOrderId(mainOrderId)
+                .SetOrderChainId(orderChainId)
                 .SetCreator(new Creator("ttd"))
                 .SetSendersReference("ref-D3C9BA54")
                 .SetRequestedSendTime(requestedSendTime)
@@ -481,15 +486,18 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             Assert.NotNull(result);
             Assert.Equal(3, result.Count);
             Assert.Equal(mainOrderId, result[0].Id);
+            Assert.NotEqual(orderChainId, result[0].Id);
+            Assert.NotEqual(orderChainId, result[1].Id);
+            Assert.NotEqual(orderChainId, result[2].Id);
             Assert.Equal(firstReminderOrderId, result[1].Id);
             Assert.Equal(secondReminderOrderId, result[2].Id);
 
-            string mainOrderSql = $@"SELECT count(1) FROM notifications.orders WHERE alternateid = '{mainOrderId}'";
-            string mainOrdersChainSql = $@"SELECT count(1) FROM notifications.orderschain WHERE orderid = '{mainOrderId}'";
-            string firstReminderSql = $@"SELECT count(1) FROM notifications.orders WHERE alternateid = '{firstReminderOrderId}'";
-            string secondReminderSql = $@"SELECT count(1) FROM notifications.orders WHERE alternateid = '{secondReminderOrderId}'";
-            string firstSmsTextSql = $@"SELECT count(1) FROM notifications.smstexts as st JOIN notifications.orders o ON st._orderid = o._id WHERE o.alternateid = '{mainOrderId}'";
-            string secondSmsTextSql = $@"SELECT count(1) FROM notifications.smstexts as st JOIN notifications.orders o ON st._orderid = o._id WHERE o.alternateid = '{mainOrderId}'";
+            string mainOrderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{mainOrderId}'";
+            string mainOrdersChainSql = $@"SELECT count(*) FROM notifications.orderschain WHERE orderid = '{orderChainId}'";
+            string firstReminderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{firstReminderOrderId}'";
+            string secondReminderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{secondReminderOrderId}'";
+            string firstSmsTextSql = $@"SELECT count(*) FROM notifications.smstexts as st JOIN notifications.orders o ON st._orderid = o._id WHERE o.alternateid = '{mainOrderId}'";
+            string secondSmsTextSql = $@"SELECT count(*) FROM notifications.smstexts as st JOIN notifications.orders o ON st._orderid = o._id WHERE o.alternateid = '{mainOrderId}'";
 
             int mainOrderCount = await PostgreUtil.RunSqlReturnOutput<int>(mainOrderSql);
             int firstSmsCount = await PostgreUtil.RunSqlReturnOutput<int>(firstSmsTextSql);
@@ -513,10 +521,11 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
 
             Guid mainOrderId = Guid.NewGuid();
+            Guid orderChainId = Guid.NewGuid();
             Guid firstReminderOrderId = Guid.NewGuid();
             Guid secondReminderOrderId = Guid.NewGuid();
 
-            _ordersChainIdsToDelete.AddRange(mainOrderId);
+            _ordersChainIdsToDelete.AddRange(orderChainId);
             _orderIdsToDelete.AddRange([mainOrderId, firstReminderOrderId, secondReminderOrderId]);
 
             var creationDateTime = DateTime.UtcNow;
@@ -524,6 +533,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
 
             var orderRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
                 .SetOrderId(mainOrderId)
+                .SetOrderChainId(orderChainId)
                 .SetCreator(new Creator("ttd"))
                 .SetRequestedSendTime(requestTime)
                 .SetSendersReference("ref-P5Q7R9S1")
@@ -537,6 +547,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                         NationalIdentityNumber = "18874198354",
                         ResourceId = "urn:altinn:resource:D208D0E6E5B4",
                         ChannelSchema = NotificationChannel.EmailPreferred,
+
                         EmailSettings = new EmailSendingOptions
                         {
                             Body = "Main email body",
@@ -567,10 +578,11 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                         {
                             RecipientPerson = new RecipientPerson
                             {
+                                IgnoreReservation = true,
                                 NationalIdentityNumber = "18874198354",
                                 ResourceId = "urn:altinn:resource:D208D0E6E5B4",
                                 ChannelSchema = NotificationChannel.EmailPreferred,
-                                IgnoreReservation = true,
+
                                 EmailSettings = new EmailSendingOptions
                                 {
                                     Body = "First reminder email body",
@@ -600,10 +612,11 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                         {
                             RecipientPerson = new RecipientPerson
                             {
-                                IgnoreReservation = false,
+                                IgnoreReservation = true,
                                 NationalIdentityNumber = "18874198354",
                                 ResourceId = "urn:altinn:resource:D208D0E6E5B4",
                                 ChannelSchema = NotificationChannel.SmsPreferred,
+
                                 SmsSettings = new SmsSendingOptions
                                 {
                                     Body = "Second reminder SMS body",
@@ -700,13 +713,18 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             Assert.NotNull(result);
             Assert.Equal(3, result.Count);
             Assert.Equal(mainOrderId, result[0].Id);
+            Assert.NotEqual(mainOrderId, result[1].Id);
+            Assert.NotEqual(mainOrderId, result[2].Id);
+            Assert.NotEqual(orderChainId, result[0].Id);
+            Assert.NotEqual(orderChainId, result[1].Id);
+            Assert.NotEqual(orderChainId, result[2].Id);
             Assert.Equal(firstReminderOrderId, result[1].Id);
             Assert.Equal(secondReminderOrderId, result[2].Id);
 
-            string mainOrderSql = $@"SELECT count(1) FROM notifications.orders WHERE alternateid = '{mainOrderId}'";
-            string mainOrdersChainSql = $@"SELECT count(1) FROM notifications.orderschain WHERE orderid = '{mainOrderId}'";
-            string firstReminderSql = $@"SELECT count(1) FROM notifications.orders WHERE alternateid = '{firstReminderOrderId}'";
-            string secondReminderSql = $@"SELECT count(1) FROM notifications.orders WHERE alternateid = '{secondReminderOrderId}'";
+            string mainOrderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{mainOrderId}'";
+            string mainOrdersChainSql = $@"SELECT count(*) FROM notifications.orderschain WHERE orderid = '{orderChainId}'";
+            string firstReminderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{firstReminderOrderId}'";
+            string secondReminderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{secondReminderOrderId}'";
 
             int mainOrderCount = await PostgreUtil.RunSqlReturnOutput<int>(mainOrderSql);
             int firstReminderCount = await PostgreUtil.RunSqlReturnOutput<int>(firstReminderSql);
@@ -719,14 +737,14 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             Assert.Equal(1, mainOrdersChainCount);
 
             // Verify email and SMS templates were persisted correctly
-            string mainSmsSql = $@"SELECT count(1) FROM notifications.smstexts as st JOIN notifications.orders o ON st._orderid = o._id WHERE o.alternateid = '{mainOrderId}'";
-            string mainEmailSql = $@"SELECT count(1) FROM notifications.emailtexts as et JOIN notifications.orders o ON et._orderid = o._id WHERE o.alternateid = '{mainOrderId}'";
+            string mainSmsSql = $@"SELECT count(*) FROM notifications.smstexts as st JOIN notifications.orders o ON st._orderid = o._id WHERE o.alternateid = '{mainOrderId}'";
+            string mainEmailSql = $@"SELECT count(*) FROM notifications.emailtexts as et JOIN notifications.orders o ON et._orderid = o._id WHERE o.alternateid = '{mainOrderId}'";
             
-            string firstReminderSmsSql = $@"SELECT count(1) FROM notifications.smstexts as st JOIN notifications.orders o ON st._orderid = o._id WHERE o.alternateid = '{firstReminderOrderId}'";
-            string firstReminderEmailSql = $@"SELECT count(1) FROM notifications.emailtexts as et JOIN notifications.orders o ON et._orderid = o._id WHERE o.alternateid = '{firstReminderOrderId}'";
+            string firstReminderSmsSql = $@"SELECT count(*) FROM notifications.smstexts as st JOIN notifications.orders o ON st._orderid = o._id WHERE o.alternateid = '{firstReminderOrderId}'";
+            string firstReminderEmailSql = $@"SELECT count(*) FROM notifications.emailtexts as et JOIN notifications.orders o ON et._orderid = o._id WHERE o.alternateid = '{firstReminderOrderId}'";
 
-            string secondReminderSmsSql = $@"SELECT count(1) FROM notifications.smstexts as st JOIN notifications.orders o ON st._orderid = o._id WHERE o.alternateid = '{secondReminderOrderId}'";
-            string secondReminderEmailSql = $@"SELECT count(1) FROM notifications.emailtexts as et JOIN notifications.orders o ON et._orderid = o._id WHERE o.alternateid = '{secondReminderOrderId}'";
+            string secondReminderSmsSql = $@"SELECT count(*) FROM notifications.smstexts as st JOIN notifications.orders o ON st._orderid = o._id WHERE o.alternateid = '{secondReminderOrderId}'";
+            string secondReminderEmailSql = $@"SELECT count(*) FROM notifications.emailtexts as et JOIN notifications.orders o ON et._orderid = o._id WHERE o.alternateid = '{secondReminderOrderId}'";
 
             int mainSmsCount = await PostgreUtil.RunSqlReturnOutput<int>(mainSmsSql);
             int mainEmailCount = await PostgreUtil.RunSqlReturnOutput<int>(mainEmailSql);
