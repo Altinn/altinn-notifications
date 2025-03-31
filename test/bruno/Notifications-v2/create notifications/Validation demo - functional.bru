@@ -19,20 +19,20 @@ body:json {
       "transmissionId": "{{transmissionId-utsending-1}}"
     },
     "recipient": {
-      "recipientNationalIdentityNumber": {
+      "recipientPerson": {
         "nationalIdentityNumber": "00000000000",
         "resourceId": "urn:altinn:resource:te_svc123",
         "ignoreReservation": false,
-        "channelScheme": "EmailPreferred",
+        "channelSchema": "EmailPreferred",
         "smsSettings": {
-          "notificationScheme": "Daytime_Workingdays_v1",
+          "sendingTimePolicy": "Daytime",
           "sender": "1234 TE",
-          "message": "Du har en ny melding fra TE. Logg inn i Altinn for å gjøre deg kjent med innholdet."
+          "body": "Du har en ny melding fra TE. Logg inn i Altinn for å gjøre deg kjent med innholdet."
         },
         "emailSettings": {
-          "notificationScheme": "Unrestricted_v1",
-          "emailSender": "noreply-te@example.com",
-          "emailSenderName": "Tjenesteeier",
+          "sendingTimePolicy": "Anytime",
+          "senderEmailAddress": "noreply-te@example.com",
+          "senderName": "Tjenesteeier",
           "subject": "Ny melding fra TE",
           "body": "Du har en ny melding fra TE. Logg inn i Altinn for å gjøre deg kjent med innholdet."
         }
