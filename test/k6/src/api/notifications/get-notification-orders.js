@@ -1,5 +1,5 @@
 import { check } from "k6";
-import * as ordersApi from "../api/notifications/orders.js";
+import * as ordersApi from "../notifications/orders.js";
 
 /**
  * Gets a notification order by its ID.
