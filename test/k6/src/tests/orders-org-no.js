@@ -2,19 +2,21 @@
     Test script for Platform Notifications API using an organization token.
 
     Command:
-    podman compose run k6 run /src/tests/orders_org_no.js \
-        -e tokenGeneratorUserName=autotest \
-        -e tokenGeneratorUserPwd=*** \
-        -e mpClientId=*** \
-        -e mpKid=altinn-usecase-events \
-        -e encodedJwk=*** \
-        -e env=*** \
-        -e orgNoRecipient=*** \
-        -e resourceId=*** \
+    podman compose run k6 run /src/tests/orders-org-no.js \
+        -e tokenGeneratorUserName={the user name to access the token generator} \
+        -e tokenGeneratorUserPwd={the password to access the token generator} \
+        -e mpClientId={the id of an integration defined in maskinporten} \
+        -e mpKid={the key id of the JSON web key used to sign the maskinporten token request} \
+        -e encodedJwk={the encoded JSON web key used to sign the maskinporten token request} \
+        -e env={environment: at22, at23, at24, tt02, prod} \
+        -e orgNoRecipient={an organization number to include as a notification recipient} \
+        -e resourceId={the resource ID associated with the notification order} \
         -e runFullTestSet=true
 
     Notes:
     - To run only use case tests, omit `runFullTestSet` or set it to `false`.
+    - The `resourceId` is required and should be a valid resource identifier.
+    - The `orgNoRecipient` is required for sending notifications to an organization.
 
     Command syntax for different shells:
     - Bash: Use the command as written above.
@@ -27,15 +29,16 @@ import { stopIterationOnFail } from "../errorhandler.js";
 import { randomString, randomItem, uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 
 import * as setupToken from "../setup.js";
+import { orgNosYt01 } from "../data/orgnos.js";
 import * as ordersApi from "../api/notifications/orders.js";
 import * as notificationsApi from "../api/notifications/notifications.js";
-import { orgNosYt01 } from "../data/orgnos.js";
 import { post_mail_order, get_mail_notifications, post_sms_order, get_sms_notifications, setEmptyThresholds } from "./threshold-labels.js";
 
-const resourceId = __ENV.resourceId;
 const environment = __ENV.env;
 const yt01Environment = "yt01";
+const resourceId = __ENV.resourceId;
 const scopes = "altinn:serviceowner/notifications.create";
+
 
 const emailOrderRequestJson = JSON.parse(
     open("../data/orders/01-email-request.json")
@@ -56,8 +59,6 @@ setEmptyThresholds(labels, options);
  * Gets the recipient based on environment variables
  */
 function getOrgNoRecipient() {
-   
-
     if (!__ENV.orgNoRecipient && environment === yt01Environment) {
         return randomItem(orgNosYt01);
     }
@@ -86,8 +87,8 @@ export function setup() {
     const orgNoRecipient = getOrgNoRecipient();
 
     if (orgNoRecipient) {
+        smsOrderRequest.recipients.push({ organizationNumber: orgNoRecipient });
         emailOrderRequest.recipients.push({ organizationNumber: orgNoRecipient });
-        smsOrderRequest.recipients.push({ organizationNumber: orgNoRecipient })
     }
 
     const runFullTestSet = __ENV.runFullTestSet
