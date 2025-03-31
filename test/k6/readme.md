@@ -70,6 +70,7 @@ The same tests can be used to run load and performance tests. These can be execu
 You can also disable the `runFullTestSet` parameter (or set it to `false`).
 
 For example:
+
 Run a test with 10 virtual users (VUs) for 5 minutes:
 
 ```bash
