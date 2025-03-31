@@ -5,7 +5,7 @@ meta {
 }
 
 post {
-  url: http://localhost:5151/order
+  url: {{host}}/notifications/api/v1/future/orders
   body: json
   auth: none
 }
@@ -36,30 +36,19 @@ body:json {
         "sendersReference": "te-123-123-rem-1",
         "delayDays": 7,
         "recipient": {
-          "recipientSms": {
-            "phoneNumber": "55555555",
-            "smsSettings": {
-              "notificationScheme": "Daytime_Workingdays_v1",
-              "message": "Du har en melding fra TE som krever handling. Logg inn i Altinn for å gjøre deg kjent med innholdet."
-            }
-          }
-        }
-      },
-      {
-        "conditionEndpoint": "https://api.te.no/altinn/te-123-123/?seen=true",
-        "sendersReference": "te-123-123-rem-2",
-        "delayDays": 14,
-        "recipient": {
-          "recipientOrg": {
+          "recipientOrganization": {
             "orgNumber": "111222333",
             "resourceId": "urn:altinn:resource:te_svc123",
-            "channelScheme": "SmsPreferred",
+            "channelSchema": "SmsPreferred",
             "smsSettings": {
-              "notificationScheme": "Daytime_Workingdays_v1",
-              "message": "Din bedrift $recipientName$ har en melding fra TE som krever handling. Logg inn i Altinn for å gjøre deg kjent med innholdet."
+              "sendingTimePolicy": "Daytime",
+              "body": "Din bedrift $recipientName$ har en melding fra TE som krever handling. Logg inn i Altinn for å gjøre deg kjent med innholdet.",
+              "sender": "sender test"
             },
             "emailSettings": {
-              "notificationScheme": "Unrestricted_v1",
+              "sendingTimePolicy": "Anytime",
+              "senderEmailAddress": "test@example.com",
+              "senderName": "test Test",
               "subject": "Ny melding fra TE",
               "body": "Ditt firma $recipientName$ har fått en ny melding fra TE i Altinn meldingsboks. Logg inn i Altinn for å gjøre deg kjent med innholdet."
             }
