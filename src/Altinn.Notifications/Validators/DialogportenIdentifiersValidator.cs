@@ -1,6 +1,6 @@
 ﻿using Altinn.Notifications.Models;
+
 using FluentValidation;
-using FluentValidation.Validators;
 
 namespace Altinn.Notifications.Validators
 {

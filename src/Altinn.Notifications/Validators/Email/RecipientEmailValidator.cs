@@ -1,5 +1,6 @@
 ﻿using Altinn.Notifications.Models.Email;
 using Altinn.Notifications.Validators.Rules;
+
 using FluentValidation;
 
 namespace Altinn.Notifications.Validators.Email;

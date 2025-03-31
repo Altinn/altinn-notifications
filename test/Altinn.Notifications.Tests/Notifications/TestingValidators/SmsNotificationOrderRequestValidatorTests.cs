@@ -3,8 +3,8 @@
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Sms;
 using Altinn.Notifications.Validators.Sms;
-using FluentValidation;
 
+using FluentValidation;
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.TestingValidators;

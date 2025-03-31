@@ -5,12 +5,11 @@ using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Sms;
 using Altinn.Notifications.Validators.Extensions;
+
 using FluentValidation;
 using FluentValidation.Results;
-
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-
 using Swashbuckle.AspNetCore.Annotations;
 using Swashbuckle.AspNetCore.Filters;
 
