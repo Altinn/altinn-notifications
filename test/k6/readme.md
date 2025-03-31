@@ -82,9 +82,9 @@ $> k6 run /src/tests/orders-email.js \
     --duration=5m
 ```
 
-### Notes for `orders-org-no.js`
+### Notes
 
-The `orders-org-no.js` test file contains a list of different organization numbers when running the test in the `yt01` environment. For all other environments, the list contains only one element, allowing the test to run as before for functional testing.
+The `orders-org-no.js` script contains a detailed list of organization numbers specifically tailored for the yt01 environment. For all other environments, the script uses the provided organization number, ensuring the test functions correctly for its intended purpose of functional validation.
 
 ---
 
