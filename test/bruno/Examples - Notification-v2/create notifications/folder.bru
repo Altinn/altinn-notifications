@@ -1,8 +1,0 @@
-meta {
-  name: create notifications
-}
-
-script:post-response {
-  let data = res.body;
-  bru.setVar("mostRecentNotificationOrderId", data.notificationOrderId);
-}
