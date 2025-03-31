@@ -32,8 +32,8 @@ import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 import * as setupToken from "../setup.js";
 import * as ordersApi from "../api/notifications/orders.js";
 import * as notificationsApi from "../api/notifications/notifications.js";
-import { getNotificationOrderById, getNotificationOrderBySendersReference, getNotificationOrderWithStatus } from "./get-notification-orders.js";
 import { post_mail_order, get_mail_notifications, setEmptyThresholds } from "./threshold-labels.js";
+import { getNotificationOrderById, getNotificationOrderBySendersReference, getNotificationOrderWithStatus } from "../api/notifications/get-notification-orders.js";
 
 const labels = [post_mail_order, get_mail_notifications];
 
