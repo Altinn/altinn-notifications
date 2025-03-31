@@ -2,18 +2,19 @@
     Test script for Platform Notifications API using an organization token.
 
     Command:
-    podman compose run k6 run /src/tests/orders_sms.js \
-        -e tokenGeneratorUserName=autotest \
-        -e tokenGeneratorUserPwd=*** \
-        -e mpClientId=*** \
-        -e mpKid=altinn-usecase-events \
-        -e encodedJwk=*** \
-        -e env=*** \
-        -e smsRecipient=*** \
+    podman compose run k6 run /src/tests/orders-sms.js \
+        -e tokenGeneratorUserName={the user name to access the token generator} \
+        -e tokenGeneratorUserPwd={the password to access the token generator} \
+        -e mpClientId={the id of an integration defined in maskinporten} \
+        -e mpKid={the key id of the JSON web key used to sign the maskinporten token request} \
+        -e encodedJwk={the encoded JSON web key used to sign the maskinporten token request} \
+        -e env={environment: at22, at23, at24, tt02, prod} \
+        -e smsRecipient={a mobile number to include as a notification recipient} \
         -e runFullTestSet=true
 
     Notes:
     - To run only use case tests, omit `runFullTestSet` or set it to `false`.
+    - The `smsRecipient` is required for sending SMS notifications.
 
     Command syntax for different shells:
     - Bash: Use the command as written above.
