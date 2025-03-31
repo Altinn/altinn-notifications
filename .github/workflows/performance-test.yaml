@@ -39,7 +39,7 @@ on:
             testSuitePath:
                 description: 'Path to test suite to run'
                 required: true
-                default: 'test/k6/src/tests/orders_org_no.js'
+                default: 'test/k6/src/tests/orders-org-no.js'
                 type: choice
                 options:
                 - 'test/k6/src/tests/orders-org-no.js'
