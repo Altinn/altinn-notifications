@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Models.Sms;
+﻿using Altinn.Notifications.Models;
+using Altinn.Notifications.Models.Sms;
 using FluentValidation;
 
 namespace Altinn.Notifications.Validators.Sms
@@ -19,11 +20,21 @@ namespace Altinn.Notifications.Validators.Sms
                     .NotNull()
                     .NotEmpty()
                     .WithMessage("SMS body cannot be null or empty.");
+                
                 RuleFor(option => option!.Sender)
                     .NotNull()
                     .NotEmpty()
                     .WithMessage("SMS sender cannot be null or empty.");
+
+                RuleFor(option => option!.SendingTimePolicy)
+                    .Must(HaveValueDaytime)
+                    .WithMessage("SMS only supports send time daytime");
             });
+        }
+
+        private static bool HaveValueDaytime(SendingTimePolicyExt sendingTime)
+        {
+            return sendingTime == SendingTimePolicyExt.Daytime;
         }
     }
 }
