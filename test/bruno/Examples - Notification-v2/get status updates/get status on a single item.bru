@@ -1,0 +1,15 @@
+meta {
+  name: get status on a single item
+  type: http
+  seq: 1
+}
+
+get {
+  url: http://localhost:5151/shipment/:notificationId
+  body: none
+  auth: none
+}
+
+params:path {
+  notificationId: 5170d00f-81a4-4a4a-abd2-8f198b9d09f3
+}

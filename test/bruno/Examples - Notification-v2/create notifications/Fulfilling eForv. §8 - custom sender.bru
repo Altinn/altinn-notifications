@@ -1,0 +1,69 @@
+meta {
+  name: Fulfilling eForv. §8 - custom sender
+  type: http
+  seq: 5
+}
+
+post {
+  url: http://localhost:5151/order
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "te-123-123",
+    "associationDialogporten": {
+      "dialogueId": "123",
+      "transmissionId": "456"
+    },
+    "recipient": {
+      "recipientNationalIdentityNumber": {
+        "nationalIdentityNumber": "11122233300",
+        "resourceId": "urn:altinn:resource:te_svc123",
+        "ignoreReservation": false,
+        "channelScheme": "EmailPreferred",
+        "smsSettings": {
+          "notificationScheme": "Daytime_Workingdays_v1",
+          "sender": "1234 TE",
+          "message": "Du har en ny melding fra TE. Logg inn i Altinn for å gjøre deg kjent med innholdet."
+        },
+        "emailSettings": {
+          "notificationScheme": "Unrestricted_v1",
+          "emailSender": "noreply-te@example.com",
+          "emailSenderName": "Tjenesteeier",
+          "subject": "Ny melding fra TE",
+          "body": "Du har en ny melding fra TE. Logg inn i Altinn for å gjøre deg kjent med innholdet."
+        }
+      }
+    },
+    "reminders": [
+      {
+        "conditionEndpoint": "https://api.te.no/altinn/te-123-123/?seen=true",
+        "sendersReference": "te-123-123",
+        "delayDays": 7,
+        "recipient": {
+          "recipientNationalIdentityNumber": {
+            "nationalIdentityNumber": "11122233300",
+            "resourceId": "urn:altinn:resource:te_svc123",
+            "ignoreReservation": true,
+            "channelScheme": "SmsPreferred",
+            "smsSettings": {
+              "notificationScheme": "Daytime_Workingdays_v1",
+              "sender": "1234 TE",
+              "message": "Du har en melding fra TE som krever handling. Logg inn i Altinn for å gjøre deg kjent med innholdet."
+            },
+            "emailSettings": {
+              "notificationScheme": "Unrestricted_v1",
+              "emailSender": "noreply-te@example.com",
+              "emailSenderName": "Tjenesteeier",
+              "subject": "Påminnelse: Melding fra TE",
+              "body": "Du har en melding fra TE som krever handling. Logg inn i Altinn for å gjøre deg kjent med innholdet."
+            }
+          }
+        }
+      }
+    ]
+  }
+}
