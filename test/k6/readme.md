@@ -23,7 +23,7 @@ Alternatively, it is possible to run the tests directly on your machine as well.
 All tests are defined in the `src/tests` folder. At the top of each test file, an example command to run the test is provided.
 
 > **Note: Command syntax for different shells**
-> - **Bash**: Use the command as written belom.
+> - **Bash**: Use the command as written below.
 > - **PowerShell**: Replace `\` with a backtick (`` ` ``) at the end of each line.
 > - **Command Prompt (cmd.exe)**: Replace `\` with `^` at the end of each line.
 
