@@ -115,7 +115,7 @@ public class OrderRepository : IOrderRepository
         await using var transaction = await connection.BeginTransactionAsync();
         try
         {
-            await InsertOrderChain(orderRequest, mainNotificationOrder.Created, connection, transaction);
+            await InsertOrderChainAsync(orderRequest, mainNotificationOrder.Created, connection, transaction);
 
             long mainOrderId = await InsertOrder(mainNotificationOrder, connection, transaction);
 
@@ -311,15 +311,15 @@ public class OrderRepository : IOrderRepository
         }
     }
 
-    private static async Task InsertOrderChain(NotificationOrderChainRequest order, DateTime creationDateTime, NpgsqlConnection connection, NpgsqlTransaction transaction)
+    private static async Task InsertOrderChainAsync(NotificationOrderChainRequest orderchain, DateTime creationDateTime, NpgsqlConnection connection, NpgsqlTransaction transaction)
     {
-        await using NpgsqlCommand pgcom = new NpgsqlCommand(_insertorderchainSql, connection, transaction);
+        await using NpgsqlCommand pgcom = new(_insertorderchainSql, connection, transaction);
 
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, order.OrderId);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, order.IdempotencyId);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, order.Creator.ShortName);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, orderchain.OrderChainId);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, orderchain.IdempotencyId);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, orderchain.Creator.ShortName);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, creationDateTime);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Jsonb, order);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Jsonb, orderchain);
 
         await pgcom.ExecuteNonQueryAsync();
     }
