@@ -2,7 +2,7 @@
 
 ## Install prerequisites
 
-*We recommend running the tests through a docker container.*
+*We recommend running the tests through a Docker container.*
 
 From the command line:
 
@@ -10,7 +10,7 @@ From the command line:
 docker pull grafana/k6
 ```
 
-Further information on [installing k6 for running in docker is available here.](https://k6.io/docs/get-started/installation/#docker)
+Further information on [installing k6 for running in Docker is available here.](https://k6.io/docs/get-started/installation/#docker)
 
 Alternatively, it is possible to run the tests directly on your machine as well.
 
@@ -20,7 +20,7 @@ Alternatively, it is possible to run the tests directly on your machine as well.
 
 ## Running tests
 
-All tests are defined in `src/tests`, and at the top of each test file, an example of the command to run the test is available.
+All tests are defined in the `src/tests` folder. At the top of each test file, an example command to run the test is provided.
 
 The command should be run from the `k6` folder:
 
@@ -44,7 +44,7 @@ $> podman compose run k6 run /src/tests/orders-email.js \
 
 ### Command Breakdown
 
-1. **`podman compose run`**: Runs the test in a docker container.
+1. **`podman compose run`**: Runs the test in a Docker container.
 2. **`k6 run {path to test file}`**: Points to the test file you want to run, e.g., `/src/tests/orders-email.js`.
 3. **Script parameters**: Provided as environment variables for the container:
    ```bash
@@ -60,12 +60,11 @@ $> podman compose run k6 run /src/tests/orders-email.js \
 
 ## Load tests
 
-The same tests will be used to run load and performance tests. These can be executed as described above, but with additional parameters like `--vus` (virtual users) and `--duration` or `--iterations`. 
+The same tests can be used to run load and performance tests. These can be executed as described above, but with additional parameters like `--vus` (virtual users) and `--duration` or `--iterations`. 
 
 You can also disable the `runFullTestSet` parameter (or set it to `false`).
 
-### Example: Running load tests directly on your machine
-
+For example:
 Run a test with 10 virtual users (VUs) for 5 minutes:
 
 ```bash
@@ -83,7 +82,7 @@ The `orders-org-no.js` test file contains a list of different organization numbe
 
 ---
 
-### Running load tests from GitHub Actions
+## Running load tests from GitHub Actions
 
 A `workflow_dispatch` action is created in GitHub to run load tests. Follow these steps:
 
@@ -95,7 +94,7 @@ The test will be executed in a Kubernetes (k8s) cluster with the k6 operator, in
 
 ---
 
-### Load test results
+## Load test results
 
 Test results from GitHub Actions load test runs can be found in:
 
