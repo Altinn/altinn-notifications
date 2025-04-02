@@ -17,28 +17,28 @@ namespace Altinn.Notifications.Mappers
         {
             return new NotificationOrderChainResponseExt
             {
-                Id = response.Id,
-                CreationResult = MapCreationResult(response)
+                OrderChainId = response.OrderChainId,
+                OrderChainReceipt = MapOrderChainReceipt(response)
             };
         }
 
         /// <summary>
         /// Maps a <see cref="NotificationOrderChainResponse"/> to a <see cref="NotificationOrderChainReceiptExt"/>
         /// </summary>
-        private static NotificationOrderChainReceiptExt MapCreationResult(NotificationOrderChainResponse response)
+        private static NotificationOrderChainReceiptExt MapOrderChainReceipt(NotificationOrderChainResponse response)
         {
             return new NotificationOrderChainReceiptExt
             {
-                ShipmentId = response.Id,
-                SendersReference = response.CreationResult.SendersReference,
-                Reminders = MapReminders(response.CreationResult.Reminders),
+                ShipmentId = response.OrderChainReceipt.ShipmentId,
+                SendersReference = response.OrderChainReceipt.SendersReference,
+                Reminders = MapOrderChainShipments(response.OrderChainReceipt.Reminders),
             };
         }
 
         /// <summary>
         /// Maps a <see cref="List{NotificationOrderChainShipment}"/> to a <see cref="List{NotificationOrderChainShipmentExt}"/>
         /// </summary>
-        private static List<NotificationOrderChainShipmentExt>? MapReminders(List<NotificationOrderChainShipment>? reminders)
+        private static List<NotificationOrderChainShipmentExt>? MapOrderChainShipments(List<NotificationOrderChainShipment>? reminders)
         {
             return reminders?.Select(e => new NotificationOrderChainShipmentExt
             {

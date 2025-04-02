@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Mappers;
@@ -13,25 +15,29 @@ public class NotificationOrderChainResponseMapperTests
     public void MapToNotificationOrderChainResponseExt_WithCompleteResponse_MapsCorrectly()
     {
         // Arrange
+        var mainSendersReference = "6D3A7540-9F14-485F-9D2D-89E0EB497A18";
+        var orderChainId = Guid.Parse("9C0D1E2F-3A4B-5C6D-7E8F-9A0B1C2D3E4F");
+        var mainShipmentId = Guid.Parse("8D26FF1D-3A77-4A98-983B-8E7958DA9BFE");
+
+        var expectedReminders = new List<(string SendersReference, Guid ShipmentId)>
+        {
+            ("reminder2-reference-2F3A4B5C6D7E", Guid.Parse("2B3C4D5E-6F7A-8B9C-0D1E-2F3A4B5C6D7E")),
+            ("reminder1-reference-1E2F3A4B5C6D", Guid.Parse("1A2B3C4D-5E6F-7A8B-9C0D-1E2F3A4B5C6D"))
+        };
+
         var response = new NotificationOrderChainResponse
         {
-            Id = Guid.Parse("9C0D1E2F-3A4B-5C6D-7E8F-9A0B1C2D3E4F"),
-            CreationResult = new NotificationOrderChainReceipt
+            OrderChainId = orderChainId,
+            OrderChainReceipt = new NotificationOrderChainReceipt
             {
-                SendersReference = "6D3A7540-9F14-485F-9D2D-89E0EB497A18",
-                ShipmentId = Guid.Parse("9C0D1E2F-3A4B-5C6D-7E8F-9A0B1C2D3E4F"),
+                ShipmentId = mainShipmentId,
+                SendersReference = mainSendersReference,
                 Reminders =
-                [
-                    new NotificationOrderChainShipment
+                [.. expectedReminders.Select(e => new NotificationOrderChainShipment
                     {
-                        SendersReference = "reminder1-reference-DE2463C4",
-                        ShipmentId = Guid.Parse("1A2B3C4D-5E6F-7A8B-9C0D-1E2F3A4B5C6D"),
-                    },
-                    new NotificationOrderChainShipment
-                    {
-                        SendersReference = "reminder2-reference-E1EA23B8806A",
-                        ShipmentId = Guid.Parse("2B3C4D5E-6F7A-8B9C-0D1E-2F3A4B5C6D7E"),
-                    }
+                        ShipmentId = e.ShipmentId,
+                        SendersReference = e.SendersReference,
+                    })
                 ]
             }
         };
@@ -41,37 +47,38 @@ public class NotificationOrderChainResponseMapperTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(response.Id, result.Id);
-        Assert.NotNull(result.CreationResult);
+        Assert.Equal(orderChainId, result.OrderChainId);
 
-        // Verify main notification properties
-        Assert.Equal(response.Id, result.CreationResult.ShipmentId);
-        Assert.Equal("6D3A7540-9F14-485F-9D2D-89E0EB497A18", result.CreationResult.SendersReference);
+        Assert.NotNull(result.OrderChainReceipt);
 
-        // Verify reminders
-        Assert.NotNull(result.CreationResult.Reminders);
-        Assert.Equal(2, result.CreationResult.Reminders.Count);
+        Assert.Equal(mainShipmentId, result.OrderChainReceipt.ShipmentId);
+        Assert.Equal(mainSendersReference, result.OrderChainReceipt.SendersReference);
 
-        // Verify first reminder
-        Assert.Equal("reminder1-reference-DE2463C4", result.CreationResult.Reminders[0].SendersReference);
-        Assert.Equal(Guid.Parse("1A2B3C4D-5E6F-7A8B-9C0D-1E2F3A4B5C6D"), result.CreationResult.Reminders[0].ShipmentId);
+        Assert.NotNull(result.OrderChainReceipt.Reminders);
+        Assert.Equal(expectedReminders.Count, result.OrderChainReceipt.Reminders.Count);
 
-        // Verify second reminder
-        Assert.Equal("reminder2-reference-E1EA23B8806A", result.CreationResult.Reminders[1].SendersReference);
-        Assert.Equal(Guid.Parse("2B3C4D5E-6F7A-8B9C-0D1E-2F3A4B5C6D7E"), result.CreationResult.Reminders[1].ShipmentId);
+        for (int i = 0; i < expectedReminders.Count; i++)
+        {
+            Assert.Equal(expectedReminders[i].ShipmentId, result.OrderChainReceipt.Reminders[i].ShipmentId);
+            Assert.Equal(expectedReminders[i].SendersReference, result.OrderChainReceipt.Reminders[i].SendersReference);
+        }
     }
 
     [Fact]
     public void MapToNotificationOrderChainResponseExt_WithNullReminders_MapsCorrectly()
     {
         // Arrange
+        var expectedSendersReference = "A22DE111-9CD7-400A-B2B5-892CB37E6EC7";
+        var expectedShipmentId = Guid.Parse("9C0D1E2F-3A4B-5C6D-7E8F-9A0B1C2D3E4F");
+        var expectedOrderChainId = Guid.Parse("3D8C1088-96CB-4CC7-A38B-FD09A0BBFE0F");
+
         var response = new NotificationOrderChainResponse
         {
-            Id = Guid.Parse("9C0D1E2F-3A4B-5C6D-7E8F-9A0B1C2D3E4F"),
-            CreationResult = new NotificationOrderChainReceipt
+            OrderChainId = expectedOrderChainId,
+            OrderChainReceipt = new NotificationOrderChainReceipt
             {
-                SendersReference = "A22DE111-9CD7-400A-B2B5-892CB37E6EC7",
-                ShipmentId = Guid.Parse("9C0D1E2F-3A4B-5C6D-7E8F-9A0B1C2D3E4F")
+                ShipmentId = expectedShipmentId,
+                SendersReference = expectedSendersReference
             }
         };
 
@@ -80,27 +87,31 @@ public class NotificationOrderChainResponseMapperTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(response.Id, result.Id);
-        Assert.NotNull(result.CreationResult);
+        Assert.Equal(expectedOrderChainId, result.OrderChainId);
 
-        Assert.Equal(response.Id, result.CreationResult.ShipmentId);
-        Assert.Equal("A22DE111-9CD7-400A-B2B5-892CB37E6EC7", result.CreationResult.SendersReference);
+        Assert.NotNull(result.OrderChainReceipt);
+        Assert.Equal(expectedShipmentId, result.OrderChainReceipt.ShipmentId);
+        Assert.Equal(expectedSendersReference, result.OrderChainReceipt.SendersReference);
 
-        Assert.Null(result.CreationResult.Reminders);
+        Assert.Null(result.OrderChainReceipt.Reminders);
     }
 
     [Fact]
     public void MapToNotificationOrderChainResponseExt_WithEmptyReminders_MapsCorrectly()
     {
         // Arrange
+        var sendersReference = "4A88E1EB-D6C1-43FD-B81B-4E4A78585217";
+        var shipmentId = Guid.Parse("8D26FF1D-3A77-4A98-983B-8E7958DA9BFE");
+        var orderChainId = Guid.Parse("9C0D1E2F-3A4B-5C6D-7E8F-9A0B1C2D3E4F");
+
         var response = new NotificationOrderChainResponse
         {
-            Id = Guid.Parse("9C0D1E2F-3A4B-5C6D-7E8F-9A0B1C2D3E4F"),
-            CreationResult = new NotificationOrderChainReceipt
+            OrderChainId = orderChainId,
+            OrderChainReceipt = new NotificationOrderChainReceipt
             {
                 Reminders = [],
-                SendersReference = "4A88E1EB-D6C1-43FD-B81B-4E4A78585217",
-                ShipmentId = Guid.Parse("9C0D1E2F-3A4B-5C6D-7E8F-9A0B1C2D3E4F")
+                ShipmentId = shipmentId,
+                SendersReference = sendersReference
             }
         };
 
@@ -109,34 +120,38 @@ public class NotificationOrderChainResponseMapperTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(response.Id, result.Id);
-        Assert.NotNull(result.CreationResult);
+        Assert.Equal(orderChainId, result.OrderChainId);
 
-        Assert.Equal(response.Id, result.CreationResult.ShipmentId);
-        Assert.Equal("4A88E1EB-D6C1-43FD-B81B-4E4A78585217", result.CreationResult.SendersReference);
+        Assert.NotNull(result.OrderChainReceipt);
+        Assert.Equal(shipmentId, result.OrderChainReceipt.ShipmentId);
+        Assert.Equal(sendersReference, result.OrderChainReceipt.SendersReference);
 
-        Assert.NotNull(result.CreationResult.Reminders);
-        Assert.Empty(result.CreationResult.Reminders);
+        Assert.NotNull(result.OrderChainReceipt.Reminders);
+        Assert.Empty(result.OrderChainReceipt.Reminders);
     }
 
     [Fact]
     public void MapToNotificationOrderChainResponseExt_WithNullSendersReference_MapsCorrectly()
     {
         // Arrange
+        var shipmentId = Guid.Parse("FC6C2D3B-3608-4550-8F67-8C11800410AF");
+        var orderChainId = Guid.Parse("9C0D1E2F-3A4B-5C6D-7E8F-9A0B1C2D3E4F");
+        var reminderShipmentId = Guid.Parse("A7A3AE42-192E-412C-98BE-DD614DFC36D9");
+
         var response = new NotificationOrderChainResponse
         {
-            Id = Guid.Parse("9C0D1E2F-3A4B-5C6D-7E8F-9A0B1C2D3E4F"),
-            CreationResult = new NotificationOrderChainReceipt
+            OrderChainId = orderChainId,
+            OrderChainReceipt = new NotificationOrderChainReceipt
             {
                 SendersReference = null,
-                ShipmentId = Guid.Parse("9C0D1E2F-3A4B-5C6D-7E8F-9A0B1C2D3E4F"),
+                ShipmentId = shipmentId,
                 Reminders =
                 [
                     new NotificationOrderChainShipment
-                    {
-                        SendersReference = null,
-                        ShipmentId = Guid.Parse("1A2B3C4D-5E6F-7A8B-9C0D-1E2F3A4B5C6D")
-                    }
+                {
+                    SendersReference = null,
+                    ShipmentId = reminderShipmentId
+                }
                 ]
             }
         };
@@ -146,19 +161,17 @@ public class NotificationOrderChainResponseMapperTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(response.Id, result.Id);
-        Assert.NotNull(result.CreationResult);
+        Assert.Equal(orderChainId, result.OrderChainId);
 
-        // Verify main notification properties
-        Assert.Equal(response.Id, result.CreationResult.ShipmentId);
-        Assert.Null(result.CreationResult.SendersReference);
+        Assert.NotNull(result.OrderChainReceipt);
+        Assert.Null(result.OrderChainReceipt.SendersReference);
+        Assert.Equal(shipmentId, result.OrderChainReceipt.ShipmentId);
 
-        // Verify reminders
-        Assert.NotNull(result.CreationResult.Reminders);
-        Assert.Single(result.CreationResult.Reminders);
+        Assert.NotNull(result.OrderChainReceipt.Reminders);
+        Assert.Single(result.OrderChainReceipt.Reminders);
 
-        // Verify reminder with null sender's reference
-        Assert.Null(result.CreationResult.Reminders[0].SendersReference);
-        Assert.Equal(Guid.Parse("1A2B3C4D-5E6F-7A8B-9C0D-1E2F3A4B5C6D"), result.CreationResult.Reminders[0].ShipmentId);
+        var mappedReminder = result.OrderChainReceipt.Reminders[0];
+        Assert.Null(mappedReminder.SendersReference);
+        Assert.Equal(reminderShipmentId, mappedReminder.ShipmentId);
     }
 }
