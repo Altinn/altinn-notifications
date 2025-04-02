@@ -765,18 +765,20 @@ public class OrderRequestServiceTests
         var response = await service.RegisterNotificationOrderChain(orderChainRequest);
 
         // Assert
-        Assert.Equal(orderChainId, response.Id);
-        Assert.Equal(mainOrderId, response.CreationResult.ShipmentId);
-        Assert.Equal("TAX-REMINDER-2025", response.CreationResult.SendersReference);
+        Assert.Equal(orderChainId, response.OrderChainId);
+        Assert.Equal(mainOrderId, response.OrderChainReceipt.ShipmentId);
+        Assert.Equal("TAX-REMINDER-2025", response.OrderChainReceipt.SendersReference);
 
-        Assert.NotNull(response.CreationResult.Reminders);
-        Assert.Equal(2, response.CreationResult.Reminders.Count);
+        Assert.NotNull(response.OrderChainReceipt.Reminders);
+        Assert.Equal(2, response.OrderChainReceipt.Reminders.Count);
 
-        Assert.Equal(firstReminderId, response.CreationResult.Reminders[0].ShipmentId);
-        Assert.Equal("TAX-REMINDER-2025-FIRST", response.CreationResult.Reminders[0].SendersReference);
+        Assert.NotEqual(orderChainId, response.OrderChainReceipt.Reminders[0].ShipmentId);
+        Assert.Equal(firstReminderId, response.OrderChainReceipt.Reminders[0].ShipmentId);
+        Assert.Equal("TAX-REMINDER-2025-FIRST", response.OrderChainReceipt.Reminders[0].SendersReference);
 
-        Assert.Equal(secondReminderId, response.CreationResult.Reminders[1].ShipmentId);
-        Assert.Equal("TAX-REMINDER-2025-FINAL", response.CreationResult.Reminders[1].SendersReference);
+        Assert.NotEqual(orderChainId, response.OrderChainReceipt.Reminders[1].ShipmentId);
+        Assert.Equal(secondReminderId, response.OrderChainReceipt.Reminders[1].ShipmentId);
+        Assert.Equal("TAX-REMINDER-2025-FINAL", response.OrderChainReceipt.Reminders[1].SendersReference);
 
         // Verify repository interactions
         orderRepositoryMock.Verify(
@@ -896,13 +898,14 @@ public class OrderRequestServiceTests
 
         // Assert
         Assert.NotNull(response);
-        Assert.Equal(orderChainId, response.Id);
+        Assert.Equal(orderChainId, response.OrderChainId);
 
-        Assert.NotNull(response.CreationResult);
-        Assert.Equal(orderId, response.CreationResult.ShipmentId);
-        Assert.Equal("ANNUAL-REPORT-2025", response.CreationResult.SendersReference);
+        Assert.NotNull(response.OrderChainReceipt);
+        Assert.Equal(orderId, response.OrderChainReceipt.ShipmentId);
+        Assert.NotEqual(orderChainId, response.OrderChainReceipt.ShipmentId);
+        Assert.Equal("ANNUAL-REPORT-2025", response.OrderChainReceipt.SendersReference);
 
-        Assert.Null(response.CreationResult.Reminders);
+        Assert.Null(response.OrderChainReceipt.Reminders);
 
         // Verify repository interactions
         orderRepositoryMock.Verify(
