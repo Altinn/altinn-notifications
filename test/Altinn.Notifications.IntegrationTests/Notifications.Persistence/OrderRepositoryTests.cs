@@ -255,7 +255,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
         }
 
         [Fact]
-        public async Task Create_NotificationOrderChainWithEmailRecipientWithoutReminders_PersistsOrdersChainAndOrderAndEmailTemplate()
+        public async Task Create_NotificationOrderChain_WithEmailRecipient_NoReminders_VerifiesDatabasePersistence()
         {
             // Arrange
             OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
