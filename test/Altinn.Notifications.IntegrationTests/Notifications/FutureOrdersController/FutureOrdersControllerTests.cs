@@ -161,7 +161,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
 
         var orderRequestServiceMock = new Mock<IOrderRequestService>();
         orderRequestServiceMock
-            .Setup(s => s.RegisterNotificationOrderChain(It.Is<NotificationOrderChainRequest>(e => e.IdempotencyId == requestExt.IdempotencyId && e.RequestedSendTime == requestExt.RequestedSendTime)))
+            .Setup(s => s.RegisterNotificationOrderChain(It.Is<NotificationOrderChainRequest>(e => e.IdempotencyId == requestExt.IdempotencyId && e.RequestedSendTime == requestExt.RequestedSendTime), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedResponse);
 
         HttpClient client = GetTestClient(orderRequestService: orderRequestServiceMock.Object);
@@ -224,7 +224,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
 
         var orderRequestServiceMock = new Mock<IOrderRequestService>();
         orderRequestServiceMock
-            .Setup(s => s.RegisterNotificationOrderChain(It.Is<NotificationOrderChainRequest>(e => e.IdempotencyId == requestExt.IdempotencyId && e.RequestedSendTime == requestExt.RequestedSendTime)))
+            .Setup(s => s.RegisterNotificationOrderChain(It.Is<NotificationOrderChainRequest>(e => e.IdempotencyId == requestExt.IdempotencyId && e.RequestedSendTime == requestExt.RequestedSendTime), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedResponse);
 
         HttpClient client = GetTestClient(orderRequestService: orderRequestServiceMock.Object);
@@ -675,7 +675,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
 
         // Assert
         Assert.IsType<ForbidResult>(result.Result);
-        orderRequestServiceMock.Verify(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>()), Times.Never);
+        orderRequestServiceMock.Verify(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     /// <summary>
@@ -766,7 +766,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
             var orderRequestServiceMock = new Mock<IOrderRequestService>();
 
             orderRequestServiceMock
-                .Setup(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>()))
+                .Setup(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(response);
 
             orderRequestService = orderRequestServiceMock.Object;

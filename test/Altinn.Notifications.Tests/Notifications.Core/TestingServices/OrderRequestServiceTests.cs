@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Altinn.Notifications.Core.Configuration;
@@ -730,7 +731,8 @@ public class OrderRequestServiceTests
                 It.Is<List<NotificationOrder>>(reminders =>
                 reminders.Count == 2 &&
                 reminders.Any(o => o.Id == firstReminderId) &&
-                reminders.Any(o => o.Id == secondReminderId))))
+                reminders.Any(o => o.Id == secondReminderId)),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync([expectedMainOrder, expectedFirstReminder, expectedFinalReminder]);
 
         contactPointServiceMock
@@ -797,7 +799,8 @@ public class OrderRequestServiceTests
                 It.Is<List<NotificationOrder>>(list =>
                     list.Count == 2 &&
                     list[0].Id == firstReminderId &&
-                    list[1].Id == secondReminderId)),
+                    list[1].Id == secondReminderId),
+                It.IsAny<CancellationToken>()),
             Times.Once);
 
         // Verify contact point interactions
@@ -874,7 +877,8 @@ public class OrderRequestServiceTests
         orderRepositoryMock.Setup(r => r.Create(
             It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId && e.SendersReference == "ANNUAL-REPORT-2025"),
             It.Is<NotificationOrder>(o => o.NotificationChannel == NotificationChannel.Email && o.Recipients.Any(r => r.OrganizationNumber == "312508729")),
-            It.Is<List<NotificationOrder>>(list => list.Count == 0)))
+            It.Is<List<NotificationOrder>>(list => list.Count == 0),
+            It.IsAny<CancellationToken>()))
             .ReturnsAsync([expectedOrder]);
 
         var contactPointServiceMock = new Mock<IContactPointService>();
@@ -916,7 +920,8 @@ public class OrderRequestServiceTests
                 o.SendersReference == "ANNUAL-REPORT-2025" &&
                 o.NotificationChannel == NotificationChannel.Email &&
                 o.Recipients.Any(r => r.OrganizationNumber == "312508729")),
-            It.Is<List<NotificationOrder>>(list => list.Count == 0)),
+            It.Is<List<NotificationOrder>>(list => list.Count == 0),
+            It.IsAny<CancellationToken>()),
             Times.Once);
 
         // Verify contact point interactions
@@ -958,7 +963,7 @@ public class OrderRequestServiceTests
         // Setup repository to return an empty list
         var repoMock = new Mock<IOrderRepository>();
         repoMock
-            .Setup(r => r.Create(It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId), It.Is<NotificationOrder>(e => e.Id == orderId), It.IsAny<List<NotificationOrder>>()))
+            .Setup(r => r.Create(It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId), It.Is<NotificationOrder>(e => e.Id == orderId), It.IsAny<List<NotificationOrder>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
         var service = GetTestService(repoMock.Object, null, orderId, currentTime);
@@ -969,7 +974,7 @@ public class OrderRequestServiceTests
         Assert.Equal("Failed to create the notification order chain.", exception.Message);
 
         // Verify the repository was called
-        repoMock.Verify(r => r.Create(It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId), It.Is<NotificationOrder>(e => e.Id == orderId), It.IsAny<List<NotificationOrder>>()), Times.Once);
+        repoMock.Verify(r => r.Create(It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId), It.Is<NotificationOrder>(e => e.Id == orderId), It.IsAny<List<NotificationOrder>>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
