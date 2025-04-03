@@ -87,9 +87,9 @@ public class FutureOrdersController : ControllerBase
         {
             return StatusCode(499, "Request terminated - The client disconnected or cancelled the request before the server could complete processing");
         }
-        catch (Exception e)
+        catch (Exception)
         {
-            return StatusCode(500, $"An unexpected error occurred: {e.Message}");
+            return StatusCode(500, $"An unexpected error occurred");
         }
     }
 }
