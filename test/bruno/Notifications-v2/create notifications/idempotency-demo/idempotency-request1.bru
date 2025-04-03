@@ -1,0 +1,29 @@
+meta {
+  name: idempotency-request1
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "1",
+    "sendersReference": "te-123-123",
+    "recipient": {
+      "recipientSms": {      
+        "phoneNumber": "004799999999",
+        "smsSettings": {
+          "sendingTimePolicy": "Daytime",
+          "message": "Husk å levere",
+          "sender": "Test",
+          "body": "This is a test"
+        }
+      }
+    }
+  }
+}

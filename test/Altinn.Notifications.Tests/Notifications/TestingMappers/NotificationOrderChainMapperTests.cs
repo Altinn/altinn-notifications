@@ -6,7 +6,9 @@ using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
-
+using Altinn.Notifications.Models.Email;
+using Altinn.Notifications.Models.Recipient;
+using Altinn.Notifications.Models.Sms;
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.TestingMappers;

@@ -1,0 +1,17 @@
+meta {
+  name: Validation demo - contract
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "this contract will not work": "I am sure!"
+  }
+}

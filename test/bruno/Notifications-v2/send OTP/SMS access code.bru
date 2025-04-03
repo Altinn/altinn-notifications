@@ -1,0 +1,26 @@
+meta {
+  name: SMS access code
+  type: http
+  seq: 1
+}
+
+post {
+  url: http://localhost:5151/otp
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "te-123-123",
+    "recipient": {
+      "recipientType": "sms",
+      "phoneNumber": "55555555",
+      "smsSettings": {
+        "notificationScheme": "TimeCritical_v1",
+        "message": "Engangskode fra TE: 123456"
+      }
+    }
+  }
+}
