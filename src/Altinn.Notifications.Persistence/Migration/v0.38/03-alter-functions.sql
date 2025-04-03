@@ -1,5 +1,5 @@
-﻿-- Retrieves notification order chain shipment data by creator name and idempotency identifier.
-CREATE OR REPLACE FUNCTION notifications.get_orders_chain_shipments
+﻿-- Retrieves tracking information for a notification order chain using the creator's short name and idempotency identifier.
+CREATE OR REPLACE FUNCTION notifications.get_orders_chain_tracking
 (
     _creatorname text,
     _idempotencyid text
@@ -60,20 +60,22 @@ BEGIN
 END;
 $BODY$;
 
--- Add a comment to the function
-COMMENT ON FUNCTION notifications.get_orders_chain_shipments IS 
-'Retrieves notification order chain shipment data by creator name and idempotency identifier.
+COMMENT ON FUNCTION notifications.get_orders_chain_tracking IS 
+'Retrieves tracking information for a notification order chain using the creator''s short name and idempotency identifier.
+
+This function enables idempotent operations by allowing clients to retrieve previously submitted
+notification chain information without creating duplicates.
 
 Parameters:
-- _creatorname: The name of the creator
-- _idempotencyid: The idempotency identifier
+- _creatorname: The short name of the creator that originally submitted the notification order chain
+- _idempotencyid: The idempotency identifier that was defined when the order chain was created
 
-Returns:
-- orderid: The unique identifier for the order chain
-- shipment_id: The ID of the main notification order
-- senders_reference: The sender reference for the main order (may be null)
-- reminders: JSON array of reminder shipments
+Returns a table with the following columns:
+- orders_chain_id: The unique identifier for the entire notification order chain
+- shipment_id: The unique identifier for the main notification order
+- senders_reference: The sender''s reference for the main notification order (may be null)
+- reminders: A JSON array containing tracking information for any reminder notifications
 
-The reminders field contains a JSON array where each object has:
-- shipment_id: UUID of the reminder notification
-- senders_reference: Optional reference for the reminder notification';
+The reminders JSON array contains objects with the following structure:
+- OrderId: The unique identifier for the reminder notification order
+- SendersReference: The sender''s reference for the reminder notification (may be null).';
