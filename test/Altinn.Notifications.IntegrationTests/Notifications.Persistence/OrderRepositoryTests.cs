@@ -1009,5 +1009,71 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             Assert.Equal(1, secondReminderSmsCount);
             Assert.Equal(1, secondReminderEmailCount);
         }
+
+        [Fact]
+        public async Task Create_NotificationOrderChainWithEmailRecipientWithoutReminders_WhenCancellationRequested_ThrowsOperationCanceledException()
+        {
+            // Arrange
+            OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+            Guid orderId = Guid.NewGuid();
+            Guid orderChainId = Guid.NewGuid();
+
+            _orderIdsToDelete.Add(orderId);
+            _ordersChainIdsToDelete.Add(orderChainId);
+
+            var creationDateTime = DateTime.UtcNow;
+            var requestedSendTime = DateTime.UtcNow.AddMinutes(10);
+
+            var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+                .SetOrderId(orderId)
+                .SetOrderChainId(orderChainId)
+                .SetCreator(new Creator("skd"))
+                .SetRequestedSendTime(requestedSendTime)
+                .SetIdempotencyId("CANCELLATION-TEST-ID")
+                .SetSendersReference("CANCELLATION-TEST-REF")
+                .SetRecipient(new NotificationRecipient
+                {
+                    RecipientEmail = new RecipientEmail
+                    {
+                        EmailAddress = "recipient@example.com",
+                        Settings = new EmailSendingOptions
+                        {
+                            Body = "Email body",
+                            Subject = "Email subject",
+                            SenderName = "Email sender name",
+                            SenderEmailAddress = "Email sender address",
+                            ContentType = EmailContentType.Plain,
+                            SendingTimePolicy = SendingTimePolicy.Anytime
+                        }
+                    }
+                })
+                .Build();
+
+            NotificationOrder notificationOrder = new()
+            {
+                Id = orderId,
+                Creator = new("skd"),
+                Created = creationDateTime,
+                RequestedSendTime = requestedSendTime,
+                NotificationChannel = NotificationChannel.Email,
+                SendersReference = "CANCELLATION-TEST-REF",
+                Templates =
+                [
+                    new EmailTemplate("Email sender address", "Email subject", "Email body", EmailContentType.Plain)
+                ],
+                Recipients =
+                [
+                    new Recipient([new EmailAddressPoint("recipient@example.com")])
+                ]
+            };
+
+            // Create a cancellation token that's already cancelled
+            using var cancellationTokenSource = new CancellationTokenSource();
+            await cancellationTokenSource.CancelAsync();
+
+            // Act & Assert
+            await Assert.ThrowsAsync<OperationCanceledException>(async () => await repo.Create(orderChainRequest, notificationOrder, null, cancellationTokenSource.Token));
+        }
     }
 }
