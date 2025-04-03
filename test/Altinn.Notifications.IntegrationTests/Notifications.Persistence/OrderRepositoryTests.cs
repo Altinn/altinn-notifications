@@ -1171,6 +1171,79 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
         }
 
         [Fact]
+        public async Task GetOrderChainTracking_MainOrderWithoutSendersReference_HandlesNullSendersReference()
+        {
+            // Arrange
+            OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+            Guid orderId = Guid.NewGuid();
+            Guid orderChainId = Guid.NewGuid();
+
+            string creator = "creator-A3A0F691111";
+            string idempotencyId = "idempotency-BB8C6E067068";
+
+            DateTime creationDateTime = DateTime.UtcNow;
+            var requestedSendTime = DateTime.UtcNow.AddMinutes(10);
+
+            _orderIdsToDelete.Add(orderId);
+            _ordersChainIdsToDelete.Add(orderChainId);
+
+            // Create the chain request and order without sender's reference
+            var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+                .SetOrderId(orderId)
+                .SetOrderChainId(orderChainId)
+                .SetCreator(new Creator(creator))
+                .SetRequestedSendTime(requestedSendTime)
+                .SetIdempotencyId(idempotencyId)
+                .SetRecipient(new NotificationRecipient
+                {
+                    RecipientEmail = new RecipientEmail
+                    {
+                        EmailAddress = "recipient@example.com",
+                        Settings = new EmailSendingOptions
+                        {
+                            Body = "Email body",
+                            Subject = "Email subject",
+                            SenderName = "Email sender name",
+                            SenderEmailAddress = "Email sender address",
+                            ContentType = EmailContentType.Plain,
+                            SendingTimePolicy = SendingTimePolicy.Anytime
+                        }
+                    }
+                })
+                .Build();
+
+            NotificationOrder notificationOrder = new()
+            {
+                Id = orderId,
+                Creator = new(creator),
+                Created = creationDateTime,
+                RequestedSendTime = requestedSendTime,
+                NotificationChannel = NotificationChannel.Email,
+                Templates =
+                [
+                    new EmailTemplate("Email sender address", "Email subject", "Email body", EmailContentType.Plain)
+                ],
+                Recipients =
+                [
+                    new Recipient([new EmailAddressPoint("recipient@example.com")])
+                ]
+            };
+
+            await repo.Create(orderChainRequest, notificationOrder, null);
+
+            // Act
+            var result = await repo.GetOrderChainTracking(creator, idempotencyId);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(orderChainId, result.OrderChainId);
+            Assert.Null(result.OrderChainReceipt.Reminders);
+            Assert.Null(result.OrderChainReceipt.SendersReference);
+            Assert.Equal(orderId, result.OrderChainReceipt.ShipmentId);
+        }
+
+        [Fact]
         public async Task GetOrderChainTracking_WhenNotificationOrderWithReminderMissingReference_ReturnsNullReferenceForReminder()
         {
             // Arrange
