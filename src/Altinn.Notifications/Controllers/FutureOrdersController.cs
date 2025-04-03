@@ -49,7 +49,7 @@ public class FutureOrdersController : ControllerBase
     [HttpPost]
     [Consumes("application/json")]
     [Produces("application/json")]
-    [SwaggerResponse(202, "The notification order was accepted.", typeof(NotificationOrderChainResponseExt))]
+    [SwaggerResponse(201, "The notification order was created.", typeof(NotificationOrderChainResponseExt))]
     [SwaggerResponse(200, "The notification order was created previously.", typeof(NotificationOrderChainResponseExt))]
     [SwaggerResponse(400, "The notification order is invalid", typeof(ValidationProblemDetails))]
     [SwaggerResponse(422, "The notification order is invalid", typeof(ValidationProblemDetails))]

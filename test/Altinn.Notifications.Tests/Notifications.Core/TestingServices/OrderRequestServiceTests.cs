@@ -978,6 +978,99 @@ public class OrderRequestServiceTests
     }
 
     [Fact]
+    public async Task RegisterNotificationOrderChain_WhenCancellationRequested_ThrowsOperationCanceledException()
+    {
+        // Arrange
+        Guid mainOrderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+        DateTime mainOrderSendTime = DateTime.UtcNow;
+
+        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(mainOrderId)
+            .SetOrderChainId(orderChainId)
+            .SetCreator(new Creator("test"))
+            .SetIdempotencyId("test-cancellation-id")
+            .SetRequestedSendTime(mainOrderSendTime.AddDays(1))
+            .SetRecipient(new NotificationRecipient
+            {
+                RecipientEmail = new RecipientEmail
+                {
+                    EmailAddress = "test@example.com",
+                    Settings = new EmailSendingOptions
+                    {
+                        Body = "Test body",
+                        Subject = "Test subject",
+                        ContentType = EmailContentType.Plain
+                    }
+                }
+            })
+            .Build();
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock
+            .Setup(r => r.Create(
+                It.IsAny<NotificationOrderChainRequest>(),
+                It.IsAny<NotificationOrder>(),
+                It.IsAny<List<NotificationOrder>>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<NotificationOrderChainRequest, NotificationOrder, List<NotificationOrder>, CancellationToken>((_, _, _, token) => token.ThrowIfCancellationRequested())
+            .ReturnsAsync([]);
+
+        var service = GetTestService(orderRepositoryMock.Object, null, mainOrderId, mainOrderSendTime);
+
+        // Create a cancellation token that's already canceled
+        using var cancellationTokenSource = new CancellationTokenSource();
+        await cancellationTokenSource.CancelAsync();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<OperationCanceledException>(async () => await service.RegisterNotificationOrderChain(orderChainRequest, cancellationTokenSource.Token));
+
+        // Verify the repository was called with the cancellation token
+        orderRepositoryMock.Verify(
+            r => r.Create(
+                It.IsAny<NotificationOrderChainRequest>(),
+                It.IsAny<NotificationOrder>(),
+                It.IsAny<List<NotificationOrder>>(),
+                It.Is<CancellationToken>(token => token.IsCancellationRequested)),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task RetrieveOrderChainTracking_WhenCancellationRequested_ThrowsOperationCanceledException()
+    {
+        // Arrange
+        string creatorName = "test-creator";
+        string idempotencyId = "test-idempotency-id";
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock
+            .Setup(r => r.GetOrderChainTracking(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<string, string, CancellationToken>((_, _, token) => token.ThrowIfCancellationRequested())
+            .ReturnsAsync((NotificationOrderChainResponse?)null);
+
+        var service = GetTestService(orderRepositoryMock.Object);
+
+        // Create a cancellation token that's already canceled
+        using var cancellationTokenSource = new CancellationTokenSource();
+        await cancellationTokenSource.CancelAsync();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<OperationCanceledException>(async () =>
+            await service.RetrieveOrderChainTracking(creatorName, idempotencyId, cancellationTokenSource.Token));
+
+        // Verify the repository was called with the cancellation token
+        orderRepositoryMock.Verify(
+            r => r.GetOrderChainTracking(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.Is<CancellationToken>(token => token.IsCancellationRequested)),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task CreateNotificationOrder_WithMissingContactInformation_ThrowsInvalidOperationException()
     {
         // Arrange
