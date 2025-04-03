@@ -1075,5 +1075,66 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             // Act & Assert
             await Assert.ThrowsAsync<OperationCanceledException>(async () => await repo.Create(orderChainRequest, notificationOrder, null, cancellationTokenSource.Token));
         }
+
+        [Fact]
+        public async Task Create_NotificationOrderChainWithEmailRecipientWithoutReminders_WithInvalidReminders_ThrowsNullReferenceException()
+        {
+            // Arrange
+            OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+            Guid orderId = Guid.NewGuid();
+            Guid orderChainId = Guid.NewGuid();
+
+            _orderIdsToDelete.Add(orderId);
+            _ordersChainIdsToDelete.Add(orderChainId);
+
+            var creationDateTime = DateTime.UtcNow;
+            var requestedSendTime = DateTime.UtcNow.AddMinutes(10);
+
+            // Create a valid chain request
+            var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+                .SetOrderId(orderId)
+                .SetOrderChainId(orderChainId)
+                .SetCreator(new Creator("skd"))
+                .SetRequestedSendTime(requestedSendTime)
+                .SetIdempotencyId("EXCEPTION-TEST-ID")
+                .SetSendersReference("EXCEPTION-TEST-REF")
+                .SetRecipient(new NotificationRecipient
+                {
+                    RecipientEmail = new RecipientEmail
+                    {
+                        EmailAddress = "recipient@example.com",
+                        Settings = new EmailSendingOptions
+                        {
+                            Body = "Email body",
+                            Subject = "Email subject",
+                            SenderName = "Email sender name",
+                            SenderEmailAddress = "Email sender address",
+                            ContentType = EmailContentType.Plain,
+                            SendingTimePolicy = SendingTimePolicy.Anytime
+                        }
+                    }
+                })
+                .Build();
+
+            // An invalid order with null Templates to cause an exception.
+            NotificationOrder invalidOrder = new()
+            {
+                Id = orderId,
+                Creator = new("skd"),
+                Created = creationDateTime,
+                RequestedSendTime = requestedSendTime,
+                NotificationChannel = NotificationChannel.Email,
+                SendersReference = "EXCEPTION-TEST-REF",
+                Templates = null!, // This will cause an exception
+                Recipients =
+                [
+                    new Recipient([new EmailAddressPoint("recipient@example.com")])
+                ]
+            };
+
+            // Act & Assert
+            await Assert.ThrowsAsync<NullReferenceException>(async () => await repo.Create(orderChainRequest, invalidOrder, null));
+        }
     }
 }
