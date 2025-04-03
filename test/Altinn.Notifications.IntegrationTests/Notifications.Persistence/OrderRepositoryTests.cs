@@ -1138,6 +1138,22 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
         }
 
         [Fact]
+        public async Task GetOrderChainTracking_WhenNonExistentCreatorAndIdempotencyId_ReturnsNull()
+        {
+            // Arrange
+            OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+            string creatorName = "non-existent-creator";
+            string idempotencyId = "non-existent-id";
+
+            // Act
+            var result = await repo.GetOrderChainTracking(creatorName, idempotencyId);
+
+            // Assert
+            Assert.Null(result);
+        }
+
+        [Fact]
         public async Task GetOrderChainTracking_WhenCancellationRequested_ThrowsOperationCanceledException()
         {
             // Arrange
@@ -1155,23 +1171,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
         }
 
         [Fact]
-        public async Task GetOrderChainTracking_WhenNoRowsReturned_ReturnsNull()
-        {
-            // Arrange
-            OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
-
-            string creatorName = "non-existent-creator";
-            string idempotencyId = "non-existent-id";
-
-            // Act
-            var result = await repo.GetOrderChainTracking(creatorName, idempotencyId);
-
-            // Assert
-            Assert.Null(result);
-        }
-
-        [Fact]
-        public async Task GetOrderChainTracking_WhenNotificationOrderChainWithEmailRecipientWithReminderMissingReference_HandlesMissingReferenceCorrectly()
+        public async Task GetOrderChainTracking_WhenNotificationOrderWithReminderMissingReference_ReturnsNullReferenceForReminder()
         {
             // Arrange
             OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
@@ -1299,7 +1299,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
         }
 
         [Fact]
-        public async Task GetOrderChainTracking_WhenNotificationOrderChainWithEmailRecipientWithRemindersExists_ReturnsCorrectOrderChainTrackingInformation()
+        public async Task GetOrderChainTracking_WhenNotificationOrderChainWithRemindersExists_ReturnsCorrectOrderChainTrackingInformation()
         {
             // Arrange
             OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
@@ -1476,7 +1476,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
         }
 
         [Fact]
-        public async Task GetOrderChainTracking_WhenNotificationOrderChainWithEmailRecipientWithoutRemindersExists_ReturnsCorrectOrderChainTrackingInformation()
+        public async Task GetOrderChainTracking_WhenNotificationOrderChainWithoutRemindersExists_ReturnsCorrectOrderChainTrackingInformation()
         {
             // Arrange
             OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
