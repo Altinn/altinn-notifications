@@ -1171,7 +1171,184 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
         }
 
         [Fact]
-        public async Task GetOrderChainTracking_WhenOrderChainExists_ReturnsCorrectOrderChainTrackingInformation()
+        public async Task GetOrderChainTracking_WhenNotificationOrderChainWithEmailRecipientWithRemindersExists_ReturnsCorrectOrderChainTrackingInformation()
+        {
+            // Arrange
+            OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+            Guid mainOrderId = Guid.NewGuid();
+            Guid orderChainId = Guid.NewGuid();
+            Guid firstReminderId = Guid.NewGuid();
+            Guid secondReminderId = Guid.NewGuid();
+
+            string creator = "tracking-test-reminders";
+            string idempotencyId = "TRACKING-30E3CD3997E9";
+
+            DateTime creationDateTime = DateTime.UtcNow;
+            var requestedSendTime = DateTime.UtcNow.AddMinutes(10);
+
+            _ordersChainIdsToDelete.Add(orderChainId);
+            _orderIdsToDelete.AddRange([mainOrderId, firstReminderId, secondReminderId]);
+
+            var orderRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+                .SetOrderId(mainOrderId)
+                .SetOrderChainId(orderChainId)
+                .SetIdempotencyId(idempotencyId)
+                .SetCreator(new Creator(creator))
+                .SetSendersReference("MAIN-ORDER-REF")
+                .SetRequestedSendTime(requestedSendTime)
+                .SetRecipient(new NotificationRecipient
+                {
+                    RecipientEmail = new RecipientEmail
+                    {
+                        EmailAddress = "recipient@example.com",
+                        Settings = new EmailSendingOptions
+                        {
+                            Body = "Main email body",
+                            Subject = "Main email subject",
+                            SenderName = "Main email sender",
+                            SenderEmailAddress = "sender@example.com",
+                            ContentType = EmailContentType.Plain,
+                            SendingTimePolicy = SendingTimePolicy.Anytime
+                        }
+                    }
+                })
+                .SetReminders(
+                [
+                    new NotificationReminder
+                    {
+                        DelayDays = 3,
+                        OrderId = firstReminderId,
+                        SendersReference = "FIRST-REMINDER-REF",
+                        RequestedSendTime = requestedSendTime.AddDays(3),
+                        Recipient = new NotificationRecipient
+                        {
+                            RecipientEmail = new RecipientEmail
+                            {
+                                EmailAddress = "recipient@example.com",
+                                Settings = new EmailSendingOptions
+                                {
+                                    Body = "First reminder email body",
+                                    Subject = "First reminder email subject",
+                                    SenderName = "First reminder email sender",
+                                    SenderEmailAddress = "sender@example.com",
+                                    ContentType = EmailContentType.Plain,
+                                    SendingTimePolicy = SendingTimePolicy.Anytime
+                                }
+                            }
+                        }
+                    },
+                    new NotificationReminder
+                    {
+                        DelayDays = 7,
+                        OrderId = secondReminderId,
+                        SendersReference = "SECOND-REMINDER-REF",
+                        RequestedSendTime = requestedSendTime.AddDays(7),
+                        Recipient = new NotificationRecipient
+                        {
+                            RecipientEmail = new RecipientEmail
+                            {
+                                EmailAddress = "recipient@example.com",
+                                Settings = new EmailSendingOptions
+                                {
+                                    Body = "Second reminder email body",
+                                    Subject = "Second reminder email subject",
+                                    SenderName = "Second reminder email sender",
+                                    SenderEmailAddress = "sender@example.com",
+                                    ContentType = EmailContentType.Plain,
+                                    SendingTimePolicy = SendingTimePolicy.Anytime
+                                }
+                            }
+                        }
+                    }
+                ])
+                .Build();
+
+            // Create the main notification order
+            NotificationOrder mainOrder = new()
+            {
+                Id = mainOrderId,
+                Creator = new(creator),
+                Created = creationDateTime,
+                RequestedSendTime = requestedSendTime,
+                NotificationChannel = NotificationChannel.Email,
+                SendersReference = "MAIN-ORDER-REF",
+                Templates =
+                [
+                    new EmailTemplate("sender@example.com", "Main email subject", "Main email body", EmailContentType.Plain)
+                ],
+                Recipients =
+                [
+                    new Recipient([new EmailAddressPoint("recipient@example.com")])
+                ]
+            };
+
+            // Create reminder orders
+            List<NotificationOrder> reminders =
+            [
+                new NotificationOrder
+                {
+                    Id = firstReminderId,
+                    Creator = new(creator),
+                    Created = creationDateTime,
+                    RequestedSendTime = requestedSendTime.AddDays(3),
+                    NotificationChannel = NotificationChannel.Email,
+                    SendersReference = "FIRST-REMINDER-REF",
+                    Templates =
+                    [
+                        new EmailTemplate("sender@example.com", "First reminder email subject", "First reminder email body", EmailContentType.Plain)
+                    ],
+                    Recipients =
+                    [
+                        new Recipient([new EmailAddressPoint("recipient@example.com")])
+                    ]
+                },
+                new NotificationOrder
+                {
+                    Id = secondReminderId,
+                    Creator = new(creator),
+                    Created = creationDateTime,
+                    RequestedSendTime = requestedSendTime.AddDays(7),
+                    NotificationChannel = NotificationChannel.Email,
+                    SendersReference = "SECOND-REMINDER-REF",
+                    Templates =
+                    [
+                        new EmailTemplate("sender@example.com", "Second reminder email subject", "Second reminder email body", EmailContentType.Plain)
+                    ],
+                    Recipients =
+                    [
+                        new Recipient([new EmailAddressPoint("recipient@example.com")])
+                    ]
+                }
+            ];
+
+            // Insert the order chain with reminders in the database
+            await repo.Create(orderRequest, mainOrder, reminders);
+
+            // Act
+            var result = await repo.GetOrderChainTracking(creator, idempotencyId);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(orderChainId, result.OrderChainId);
+            Assert.Equal(mainOrderId, result.OrderChainReceipt.ShipmentId);
+            Assert.Equal("MAIN-ORDER-REF", result.OrderChainReceipt.SendersReference);
+
+            // Verify reminders
+            Assert.NotNull(result.OrderChainReceipt.Reminders);
+            Assert.Equal(2, result.OrderChainReceipt.Reminders.Count);
+
+            // First reminder
+            Assert.Equal(firstReminderId, result.OrderChainReceipt.Reminders[0].ShipmentId);
+            Assert.Equal("FIRST-REMINDER-REF", result.OrderChainReceipt.Reminders[0].SendersReference);
+
+            // Second reminder
+            Assert.Equal(secondReminderId, result.OrderChainReceipt.Reminders[1].ShipmentId);
+            Assert.Equal("SECOND-REMINDER-REF", result.OrderChainReceipt.Reminders[1].SendersReference);
+        }
+
+        [Fact]
+        public async Task GetOrderChainTracking_WhenNotificationOrderChainWithEmailRecipientWithoutRemindersExists_ReturnsCorrectOrderChainTrackingInformation()
         {
             // Arrange
             OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
