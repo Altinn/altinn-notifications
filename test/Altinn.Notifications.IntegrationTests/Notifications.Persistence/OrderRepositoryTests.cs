@@ -1169,5 +1169,80 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             // Assert
             Assert.Null(result);
         }
+
+        [Fact]
+        public async Task GetOrderChainTracking_WhenOrderChainExists_ReturnsCorrectOrderChainTrackingInformation()
+        {
+            // Arrange
+            OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+            Guid orderId = Guid.NewGuid();
+            Guid orderChainId = Guid.NewGuid();
+
+            string creator = "random-creator-name";
+            string idempotencyId = "random-39B0068652C6";
+
+            DateTime creationDateTime = DateTime.UtcNow;
+            var requestedSendTime = DateTime.UtcNow.AddMinutes(10);
+
+            _orderIdsToDelete.Add(orderId);
+            _ordersChainIdsToDelete.Add(orderChainId);
+
+            var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+                .SetOrderId(orderId)
+                .SetOrderChainId(orderChainId)
+                .SetIdempotencyId(idempotencyId)
+                .SetCreator(new Creator(creator))
+                .SetRequestedSendTime(requestedSendTime)
+                .SetSendersReference("TRACKING-C69C615A8412")
+                .SetRecipient(new NotificationRecipient
+                {
+                    RecipientEmail = new RecipientEmail
+                    {
+                        EmailAddress = "recipient@example.com",
+                        Settings = new EmailSendingOptions
+                        {
+                            Body = "Email body",
+                            Subject = "Email subject",
+                            SenderName = "Email sender name",
+                            SenderEmailAddress = "Email sender address",
+                            ContentType = EmailContentType.Plain,
+                            SendingTimePolicy = SendingTimePolicy.Anytime
+                        }
+                    }
+                })
+                .Build();
+
+            NotificationOrder notificationOrder = new()
+            {
+                Id = orderId,
+                Creator = new(creator),
+                Created = creationDateTime,
+                RequestedSendTime = requestedSendTime,
+                NotificationChannel = NotificationChannel.Email,
+                SendersReference = "TRACKING-C69C615A8412",
+                Templates =
+                [
+                    new EmailTemplate("Email sender address", "Email subject", "Email body", EmailContentType.Plain)
+                ],
+                Recipients =
+                [
+                    new Recipient([new EmailAddressPoint("recipient@example.com")])
+                ]
+            };
+
+            // Insert the order chain in the database
+            await repo.Create(orderChainRequest, notificationOrder, null);
+
+            // Act
+            var result = await repo.GetOrderChainTracking(creator, idempotencyId);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(orderChainId, result.OrderChainId);
+            Assert.Null(result.OrderChainReceipt.Reminders);
+            Assert.Equal(orderId, result.OrderChainReceipt.ShipmentId);
+            Assert.Equal("TRACKING-C69C615A8412", result.OrderChainReceipt.SendersReference);
+        }
     }
 }
