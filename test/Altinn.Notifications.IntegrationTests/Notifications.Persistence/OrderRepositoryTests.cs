@@ -1077,7 +1077,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
         }
 
         [Fact]
-        public async Task Create_NotificationOrderChainWithEmailRecipientWithoutReminders_WithInvalidReminders_ThrowsNullReferenceException()
+        public async Task Create_NotificationOrderChainWithEmailRecipientWithoutReminders_WithInvalidTemplates_ThrowsNullReferenceException()
         {
             // Arrange
             OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
