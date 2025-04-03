@@ -338,7 +338,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
         }
 
         [Fact]
-        public async Task Create_NotificationOrderChainWithSmsRecipientWithReminders_PersistsOrdersChainAndOrderAndEmailTemplate()
+        public async Task Create_NotificationOrderChain_WithSmsRecipient_WithReminders_VerifiesDatabasePersistence()
         {
             // Arrange
             OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
@@ -515,7 +515,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
         }
 
         [Fact]
-        public async Task Create_NotificationOrderChainWithPersonRecipientAndReminders_PersistsOrdersChainAndOrdersAndTemplates()
+        public async Task Create_NotificationOrderChain_WithPersonRecipient_WithReminders_VerifiesDatabasePersistence()
         {
             // Arrange
             OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
