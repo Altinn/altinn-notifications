@@ -1153,5 +1153,21 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             // Act & Assert
             await Assert.ThrowsAsync<OperationCanceledException>(async () => await repo.GetOrderChainTracking(creatorName, idempotencyId, cancellationTokenSource.Token));
         }
+
+        [Fact]
+        public async Task GetOrderChainTracking_WhenNoRowsReturned_ReturnsNull()
+        {
+            // Arrange
+            OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+            string creatorName = "non-existent-creator";
+            string idempotencyId = "non-existent-id";
+
+            // Act
+            var result = await repo.GetOrderChainTracking(creatorName, idempotencyId);
+
+            // Assert
+            Assert.Null(result);
+        }
     }
 }
