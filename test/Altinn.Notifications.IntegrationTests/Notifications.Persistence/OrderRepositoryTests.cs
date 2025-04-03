@@ -1171,7 +1171,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
         }
 
         [Fact]
-        public async Task GetOrderChainTracking_WithCancellationDuringExecution_ThrowsOperationCanceledException()
+        public async Task GetOrderChainTracking_WithCancellationDuringExecution_ThrowsTaskCanceledException()
         {
             // Arrange
             OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
