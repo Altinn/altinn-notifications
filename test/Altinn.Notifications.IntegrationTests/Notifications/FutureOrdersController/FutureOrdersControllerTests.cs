@@ -31,9 +31,8 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
 {
     private const string _basePath = "/notifications/api/v1/future/orders";
 
-    private readonly Guid _orderChainId = Guid.NewGuid();
-    private readonly IntegrationTestWebApplicationFactory<FutureOrdersController> _factory;
     private readonly JsonSerializerOptions _options;
+    private readonly IntegrationTestWebApplicationFactory<FutureOrdersController> _factory;
 
     public FutureOrdersControllerTests(IntegrationTestWebApplicationFactory<FutureOrdersController> factory)
     {
@@ -48,6 +47,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     [Fact]
     public async Task Post_CalledByUser_And_ValidRequest_ReturnsForbidden()
     {
+        // Arrange
         var requestExt = new NotificationOrderChainRequestExt
         {
             IdempotencyId = Guid.NewGuid().ToString(),
@@ -79,13 +79,17 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
             Content = new StringContent(JsonSerializer.Serialize(requestExt), Encoding.UTF8, "application/json")
         };
 
+        // Act
         HttpResponseMessage response = await client.SendAsync(request);
+
+        // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Fact]
     public async Task Post_InvalidScope_And_ValidRequest_ReturnsForbidden()
     {
+        // Arrange
         var requestExt = new NotificationOrderChainRequestExt
         {
             IdempotencyId = Guid.NewGuid().ToString(),
@@ -112,18 +116,17 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         HttpClient client = GetTestClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "dummy:scope"));
 
-        var request = new HttpRequestMessage(HttpMethod.Post, _basePath)
-        {
-            Content = new StringContent(JsonSerializer.Serialize(requestExt), Encoding.UTF8, "application/json")
-        };
+        // Act
+        HttpResponseMessage response = await SendPostRequest(client, requestExt);
 
-        HttpResponseMessage response = await client.SendAsync(request);
+        // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Fact]
     public async Task Post_ValidBearerToken_And_ValidRequest_ReturnAccepted()
     {
+        // Arrange
         var requestExt = new NotificationOrderChainRequestExt
         {
             IdempotencyId = Guid.NewGuid().ToString(),
@@ -148,40 +151,45 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
 
         var expectedResponse = new NotificationOrderChainResponse
         {
-            Id = _orderChainId,
-            CreationResult = new NotificationOrderChainReceipt
+            OrderChainId = Guid.NewGuid(),
+            OrderChainReceipt = new NotificationOrderChainReceipt
             {
-                ShipmentId = _orderChainId,
+                ShipmentId = Guid.NewGuid(),
                 SendersReference = "notification-ref"
             }
         };
 
         var orderRequestServiceMock = new Mock<IOrderRequestService>();
         orderRequestServiceMock
-            .Setup(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>()))
+            .Setup(s => s.RegisterNotificationOrderChain(It.Is<NotificationOrderChainRequest>(e => e.IdempotencyId == requestExt.IdempotencyId && e.RequestedSendTime == requestExt.RequestedSendTime)))
             .ReturnsAsync(expectedResponse);
 
         HttpClient client = GetTestClient(orderRequestService: orderRequestServiceMock.Object);
 
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
 
-        var request = new HttpRequestMessage(HttpMethod.Post, _basePath)
-        {
-            Content = new StringContent(JsonSerializer.Serialize(requestExt), Encoding.UTF8, "application/json")
-        };
+        // Act
+        var response = await SendPostRequest(client, requestExt);
+        var responseObject = await DeserializeResponse(response);
 
-        HttpResponseMessage response = await client.SendAsync(request);
-        string responseString = await response.Content.ReadAsStringAsync();
-        var responseObject = JsonSerializer.Deserialize<NotificationOrderChainResponseExt>(responseString, _options);
-
+        // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-        Assert.Equal(_orderChainId, responseObject!.Id);
+
+        Assert.NotNull(responseObject);
+
+        Assert.Null(responseObject.OrderChainReceipt.Reminders);
+
+        Assert.Equal(expectedResponse.OrderChainId, responseObject.OrderChainId);
+        Assert.NotEqual(Guid.Empty, responseObject.OrderChainReceipt.ShipmentId);
+        Assert.NotEqual(expectedResponse.OrderChainId, responseObject.OrderChainReceipt.ShipmentId);
+
         orderRequestServiceMock.VerifyAll();
     }
 
     [Fact]
     public async Task Post_ValidPlatformAccessToken_And_ValidRequest_ReturnAccepted()
     {
+        // Arrange
         var requestExt = new NotificationOrderChainRequestExt
         {
             IdempotencyId = Guid.NewGuid().ToString(),
@@ -206,17 +214,17 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
 
         var expectedResponse = new NotificationOrderChainResponse
         {
-            Id = _orderChainId,
-            CreationResult = new NotificationOrderChainReceipt
+            OrderChainId = Guid.NewGuid(),
+            OrderChainReceipt = new NotificationOrderChainReceipt
             {
-                ShipmentId = _orderChainId,
+                ShipmentId = Guid.NewGuid(),
                 SendersReference = "notification-ref"
             }
         };
 
         var orderRequestServiceMock = new Mock<IOrderRequestService>();
         orderRequestServiceMock
-            .Setup(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>()))
+            .Setup(s => s.RegisterNotificationOrderChain(It.Is<NotificationOrderChainRequest>(e => e.IdempotencyId == requestExt.IdempotencyId && e.RequestedSendTime == requestExt.RequestedSendTime)))
             .ReturnsAsync(expectedResponse);
 
         HttpClient client = GetTestClient(orderRequestService: orderRequestServiceMock.Object);
@@ -227,18 +235,26 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         };
         request.Headers.Add("PlatformAccessToken", PrincipalUtil.GetAccessToken("ttd", "apps-test"));
 
+        // Act
         HttpResponseMessage response = await client.SendAsync(request);
-        string responseString = await response.Content.ReadAsStringAsync();
-        var responseObject = JsonSerializer.Deserialize<NotificationOrderChainResponseExt>(responseString, _options);
+        var responseObject = await DeserializeResponse(response);
 
+        // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-        Assert.Equal(_orderChainId, responseObject!.Id);
+
+        Assert.NotNull(responseObject);
+        Assert.Null(responseObject.OrderChainReceipt.Reminders);
+        Assert.Equal(expectedResponse.OrderChainId, responseObject.OrderChainId);
+        Assert.NotEqual(Guid.Empty, responseObject.OrderChainReceipt.ShipmentId);
+        Assert.NotEqual(expectedResponse.OrderChainId, responseObject.OrderChainReceipt.ShipmentId);
+
         orderRequestServiceMock.VerifyAll();
     }
 
     [Fact]
     public async Task Post_InvalidRequest_MissingRecipientInfo_BadRequest()
     {
+        // Arrange
         var requestExt = new NotificationOrderChainRequestExt
         {
             Recipient = null!,
@@ -249,22 +265,21 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         HttpClient client = GetTestClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
 
-        var request = new HttpRequestMessage(HttpMethod.Post, _basePath)
-        {
-            Content = new StringContent(JsonSerializer.Serialize(requestExt), Encoding.UTF8, "application/json")
-        };
-
-        HttpResponseMessage response = await client.SendAsync(request);
+        // Act
+        var response = await SendPostRequest(client, requestExt);
         string content = await response.Content.ReadAsStringAsync();
-        ProblemDetails? problem = JsonSerializer.Deserialize<ProblemDetails>(content, _options);
+        var problem = JsonSerializer.Deserialize<ProblemDetails>(content, _options);
 
+        // Assert
+        Assert.NotNull(problem);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Equal("One or more validation errors occurred.", problem?.Title);
+        Assert.Equal("One or more validation errors occurred.", problem.Title);
     }
 
     [Fact]
     public async Task Post_MissingBearer_And_ValidRequest_ReturnsUnauthorized()
     {
+        // Arrange
         var requestExt = new NotificationOrderChainRequestExt
         {
             IdempotencyId = Guid.NewGuid().ToString(),
@@ -289,17 +304,15 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
 
         HttpClient client = GetTestClient();
 
-        var request = new HttpRequestMessage(HttpMethod.Post, _basePath)
-        {
-            Content = new StringContent(JsonSerializer.Serialize(requestExt), Encoding.UTF8, "application/json")
-        };
+        // Act
+        HttpResponseMessage response = await SendPostRequest(client, requestExt);
 
-        HttpResponseMessage response = await client.SendAsync(request);
+        // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Fact]
-    public async Task Post_InvalidRequest_ValidSmsRecipient_And_Reminders_ReturnsAccepted()
+    public async Task Post_ValidSmsRecipient_With_Reminders_ReturnsAccepted()
     {
         // Arrange
         var requestExt = new NotificationOrderChainRequestExt
@@ -341,7 +354,8 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
             ]
         };
 
-        var expectedResponse = CreateNotificationOrderChainResponse(Guid.NewGuid());
+        var expectedResponse = CreateNotificationOrderChainResponse(Guid.NewGuid(), 1);
+
         var client = GetTestClient(expectedResponse);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
 
@@ -351,7 +365,20 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-        Assert.Equal(expectedResponse.Id, responseObject!.Id);
+
+        Assert.NotNull(responseObject);
+
+        Assert.Equal(expectedResponse.OrderChainId, responseObject.OrderChainId);
+
+        Assert.NotNull(responseObject.OrderChainReceipt);
+        Assert.NotEqual(Guid.Empty, responseObject.OrderChainReceipt.ShipmentId);
+        Assert.NotEqual(expectedResponse.OrderChainId, responseObject.OrderChainReceipt.ShipmentId);
+
+        Assert.NotNull(responseObject.OrderChainReceipt.Reminders);
+        Assert.Single(responseObject.OrderChainReceipt.Reminders);
+
+        Assert.Equal(0, responseObject.OrderChainReceipt.Reminders.Count(e => e.ShipmentId == Guid.Empty));
+        Assert.Equal(0, responseObject.OrderChainReceipt.Reminders.Count(e => e.ShipmentId == expectedResponse.OrderChainId));
     }
 
     [Fact]
@@ -391,7 +418,15 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-        Assert.Equal(expectedResponse.Id, responseObject!.Id);
+
+        Assert.NotNull(responseObject);
+        Assert.Equal(expectedResponse.OrderChainId, responseObject.OrderChainId);
+
+        Assert.NotNull(responseObject.OrderChainReceipt);
+        Assert.NotEqual(Guid.Empty, responseObject.OrderChainReceipt.ShipmentId);
+        Assert.NotEqual(expectedResponse.OrderChainId, responseObject.OrderChainReceipt.ShipmentId);
+
+        Assert.Null(responseObject.OrderChainReceipt.Reminders);
     }
 
     [Fact]
@@ -436,7 +471,15 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-        Assert.Equal(expectedResponse.Id, responseObject!.Id);
+
+        Assert.NotNull(responseObject);
+        Assert.Equal(expectedResponse.OrderChainId, responseObject.OrderChainId);
+
+        Assert.NotNull(responseObject.OrderChainReceipt);
+        Assert.NotEqual(Guid.Empty, responseObject.OrderChainReceipt.ShipmentId);
+        Assert.NotEqual(expectedResponse.OrderChainId, responseObject.OrderChainReceipt.ShipmentId);
+
+        Assert.Null(responseObject.OrderChainReceipt.Reminders);
     }
 
     [Fact]
@@ -521,13 +564,24 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-        Assert.Equal(expectedResponse.Id, responseObject!.Id);
-        Assert.Equal(2, responseObject.CreationResult.Reminders?.Count);
+
+        Assert.NotNull(responseObject);
+        Assert.Equal(expectedResponse.OrderChainId, responseObject.OrderChainId);
+
+        Assert.NotNull(responseObject.OrderChainReceipt);
+        Assert.NotEqual(Guid.Empty, responseObject.OrderChainReceipt.ShipmentId);
+        Assert.NotEqual(expectedResponse.OrderChainId, responseObject.OrderChainReceipt.ShipmentId);
+
+        Assert.NotNull(responseObject.OrderChainReceipt.Reminders);
+        Assert.Equal(2, responseObject.OrderChainReceipt.Reminders.Count);
+        Assert.Equal(0, responseObject.OrderChainReceipt.Reminders.Count(e => e.ShipmentId == Guid.Empty));
+        Assert.Equal(0, responseObject.OrderChainReceipt.Reminders.Count(e => e.ShipmentId == expectedResponse.OrderChainId));
     }
 
     [Fact]
     public async Task Post_InvalidRequest_RequestedSendTimeInPast_ReturnsBadRequest()
     {
+        // Arrange
         var requestExt = new NotificationOrderChainRequestExt
         {
             IdempotencyId = Guid.NewGuid().ToString(),
@@ -558,8 +612,19 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
             Content = new StringContent(JsonSerializer.Serialize(requestExt), Encoding.UTF8, "application/json")
         };
 
+        // Act
         HttpResponseMessage response = await client.SendAsync(request);
+
+        // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        string content = await response.Content.ReadAsStringAsync();
+        var problem = JsonSerializer.Deserialize<ProblemDetails>(content, _options);
+
+        Assert.NotNull(problem);
+        Assert.Equal("One or more validation errors occurred.", problem.Title);
+
+        Assert.Contains("RequestedSendTime", content, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -593,7 +658,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         validatorMock.Setup(v => v.Validate(It.IsAny<NotificationOrderChainRequestExt>())).Returns(new FluentValidation.Results.ValidationResult());
 
         var httpContextMock = new Mock<HttpContext>();
-        httpContextMock.Setup(ctx => ctx.Items).Returns(new Dictionary<object, object?> { { "Org", null } });
+        httpContextMock.Setup(e => e.Items).Returns(new Dictionary<object, object?> { { "Org", null } });
 
         var controllerContext = new ControllerContext
         {
@@ -610,6 +675,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
 
         // Assert
         Assert.IsType<ForbidResult>(result.Result);
+        orderRequestServiceMock.Verify(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>()), Times.Never);
     }
 
     /// <summary>
@@ -667,11 +733,11 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
 
         return new NotificationOrderChainResponse
         {
-            Id = orderId,
-            CreationResult = new NotificationOrderChainReceipt
+            OrderChainId = orderId,
+            OrderChainReceipt = new NotificationOrderChainReceipt
             {
-                ShipmentId = orderId,
                 Reminders = reminders,
+                ShipmentId = Guid.NewGuid(),
                 SendersReference = sendersReference
             }
         };
@@ -689,10 +755,10 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         {
             var response = expectedResponse ?? new NotificationOrderChainResponse
             {
-                Id = _orderChainId,
-                CreationResult = new NotificationOrderChainReceipt
+                OrderChainId = Guid.NewGuid(),
+                OrderChainReceipt = new NotificationOrderChainReceipt
                 {
-                    ShipmentId = _orderChainId,
+                    ShipmentId = Guid.NewGuid(),
                     SendersReference = "senders-reference-628BE69FE9ED"
                 }
             };

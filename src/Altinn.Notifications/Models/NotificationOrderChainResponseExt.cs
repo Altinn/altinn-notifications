@@ -20,7 +20,7 @@ public class NotificationOrderChainResponseExt
     /// or for tracking purposes.
     /// </remarks>
     [JsonPropertyName("notificationOrderId")]
-    public required Guid Id { get; set; }
+    public required Guid OrderChainId { get; set; }
 
     /// <summary>
     /// Gets or sets the detailed receipt for the notification order creation.
@@ -29,5 +29,5 @@ public class NotificationOrderChainResponseExt
     /// Contains information about the created notification orders and reminders.
     /// </remarks>
     [JsonPropertyName("notification")]
-    public required NotificationOrderChainReceiptExt CreationResult { get; set; }
+    public required NotificationOrderChainReceiptExt OrderChainReceipt { get; set; }
 }
