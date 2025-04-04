@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Altinn.Notifications.Core.Configuration;
@@ -586,7 +587,6 @@ public class OrderRequestServiceTests
                     EmailSettings = new EmailSendingOptions
                     {
                         Subject = "Tax Filing 2025",
-                        SenderName = "Skatteetaten",
                         ContentType = EmailContentType.Html,
                         SendingTimePolicy = SendingTimePolicy.Anytime,
                         SenderEmailAddress = "no-reply@skatteetaten.no",
@@ -619,7 +619,6 @@ public class OrderRequestServiceTests
                             ChannelSchema = NotificationChannel.EmailPreferred,
                             EmailSettings = new EmailSendingOptions
                             {
-                                SenderName = "Skatteetaten",
                                 Subject = "Reminder: Tax 2025",
                                 ContentType = EmailContentType.Html,
                                 SendingTimePolicy = SendingTimePolicy.Anytime,
@@ -652,7 +651,6 @@ public class OrderRequestServiceTests
                             ChannelSchema = NotificationChannel.SmsPreferred,
                             EmailSettings = new EmailSendingOptions
                             {
-                                SenderName = "Skatteetaten",
                                 ContentType = EmailContentType.Html,
                                 Subject = "Final Reminder: Tax 2025",
                                 SendingTimePolicy = SendingTimePolicy.Anytime,
@@ -730,7 +728,8 @@ public class OrderRequestServiceTests
                 It.Is<List<NotificationOrder>>(reminders =>
                 reminders.Count == 2 &&
                 reminders.Any(o => o.Id == firstReminderId) &&
-                reminders.Any(o => o.Id == secondReminderId))))
+                reminders.Any(o => o.Id == secondReminderId)),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync([expectedMainOrder, expectedFirstReminder, expectedFinalReminder]);
 
         contactPointServiceMock
@@ -797,7 +796,8 @@ public class OrderRequestServiceTests
                 It.Is<List<NotificationOrder>>(list =>
                     list.Count == 2 &&
                     list[0].Id == firstReminderId &&
-                    list[1].Id == secondReminderId)),
+                    list[1].Id == secondReminderId),
+                It.IsAny<CancellationToken>()),
             Times.Once);
 
         // Verify contact point interactions
@@ -845,7 +845,6 @@ public class OrderRequestServiceTests
                     {
                         Subject = "Annual Report 2025",
                         ContentType = EmailContentType.Html,
-                        SenderName = "Brønnøysundregistrene",
                         SenderEmailAddress = "no-reply@brreg.no",
                         Body = "<p>Your organization's annual report is due by March 31, 2025. Log in to Altinn to complete it.</p>",
                         SendingTimePolicy = SendingTimePolicy.Anytime
@@ -874,7 +873,8 @@ public class OrderRequestServiceTests
         orderRepositoryMock.Setup(r => r.Create(
             It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId && e.SendersReference == "ANNUAL-REPORT-2025"),
             It.Is<NotificationOrder>(o => o.NotificationChannel == NotificationChannel.Email && o.Recipients.Any(r => r.OrganizationNumber == "312508729")),
-            It.Is<List<NotificationOrder>>(list => list.Count == 0)))
+            It.Is<List<NotificationOrder>>(list => list.Count == 0),
+            It.IsAny<CancellationToken>()))
             .ReturnsAsync([expectedOrder]);
 
         var contactPointServiceMock = new Mock<IContactPointService>();
@@ -916,7 +916,8 @@ public class OrderRequestServiceTests
                 o.SendersReference == "ANNUAL-REPORT-2025" &&
                 o.NotificationChannel == NotificationChannel.Email &&
                 o.Recipients.Any(r => r.OrganizationNumber == "312508729")),
-            It.Is<List<NotificationOrder>>(list => list.Count == 0)),
+            It.Is<List<NotificationOrder>>(list => list.Count == 0),
+            It.IsAny<CancellationToken>()),
             Times.Once);
 
         // Verify contact point interactions
@@ -958,7 +959,7 @@ public class OrderRequestServiceTests
         // Setup repository to return an empty list
         var repoMock = new Mock<IOrderRepository>();
         repoMock
-            .Setup(r => r.Create(It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId), It.Is<NotificationOrder>(e => e.Id == orderId), It.IsAny<List<NotificationOrder>>()))
+            .Setup(r => r.Create(It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId), It.Is<NotificationOrder>(e => e.Id == orderId), It.IsAny<List<NotificationOrder>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
         var service = GetTestService(repoMock.Object, null, orderId, currentTime);
@@ -969,7 +970,284 @@ public class OrderRequestServiceTests
         Assert.Equal("Failed to create the notification order chain.", exception.Message);
 
         // Verify the repository was called
-        repoMock.Verify(r => r.Create(It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId), It.Is<NotificationOrder>(e => e.Id == orderId), It.IsAny<List<NotificationOrder>>()), Times.Once);
+        repoMock.Verify(r => r.Create(It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId), It.Is<NotificationOrder>(e => e.Id == orderId), It.IsAny<List<NotificationOrder>>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task RegisterNotificationOrderChain_WhenCancellationRequested_ThrowsOperationCanceledException()
+    {
+        // Arrange
+        Guid mainOrderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+        DateTime mainOrderSendTime = DateTime.UtcNow;
+
+        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(mainOrderId)
+            .SetOrderChainId(orderChainId)
+            .SetCreator(new Creator("test"))
+            .SetIdempotencyId("test-cancellation-id")
+            .SetRequestedSendTime(mainOrderSendTime.AddDays(1))
+            .SetRecipient(new NotificationRecipient
+            {
+                RecipientEmail = new RecipientEmail
+                {
+                    EmailAddress = "test@example.com",
+                    Settings = new EmailSendingOptions
+                    {
+                        Body = "Test body",
+                        Subject = "Test subject",
+                        ContentType = EmailContentType.Plain
+                    }
+                }
+            })
+            .Build();
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock
+            .Setup(r => r.Create(
+                It.IsAny<NotificationOrderChainRequest>(),
+                It.IsAny<NotificationOrder>(),
+                It.IsAny<List<NotificationOrder>>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<NotificationOrderChainRequest, NotificationOrder, List<NotificationOrder>, CancellationToken>((_, _, _, token) => token.ThrowIfCancellationRequested())
+            .ReturnsAsync([]);
+
+        var service = GetTestService(orderRepositoryMock.Object, null, mainOrderId, mainOrderSendTime);
+
+        // Create a cancellation token that's already canceled
+        using var cancellationTokenSource = new CancellationTokenSource();
+        await cancellationTokenSource.CancelAsync();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<OperationCanceledException>(async () => await service.RegisterNotificationOrderChain(orderChainRequest, cancellationTokenSource.Token));
+
+        // Verify the repository was called with the cancellation token
+        orderRepositoryMock.Verify(
+            r => r.Create(
+                It.IsAny<NotificationOrderChainRequest>(),
+                It.IsAny<NotificationOrder>(),
+                It.IsAny<List<NotificationOrder>>(),
+                It.Is<CancellationToken>(token => token.IsCancellationRequested)),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task RetrieveOrderChainTracking_WhenCancellationRequested_ThrowsOperationCanceledException()
+    {
+        // Arrange
+        string creatorName = "test-creator";
+        string idempotencyId = "test-idempotency-id";
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock
+            .Setup(r => r.GetOrderChainTracking(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<string, string, CancellationToken>((_, _, token) => token.ThrowIfCancellationRequested())
+            .ReturnsAsync((NotificationOrderChainResponse?)null);
+
+        var service = GetTestService(orderRepositoryMock.Object);
+
+        // Create a cancellation token that's already canceled
+        using var cancellationTokenSource = new CancellationTokenSource();
+        await cancellationTokenSource.CancelAsync();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<OperationCanceledException>(async () =>
+            await service.RetrieveOrderChainTracking(creatorName, idempotencyId, cancellationTokenSource.Token));
+
+        // Verify the repository was called with the cancellation token
+        orderRepositoryMock.Verify(
+            r => r.GetOrderChainTracking(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.Is<CancellationToken>(token => token.IsCancellationRequested)),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task RetrieveOrderChainTracking_WhenOrderChainExists_ReturnsResponse()
+    {
+        // Arrange
+        Guid shipmentId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+        string creatorName = "test-creator";
+        string idempotencyId = "test-idempotency-id";
+
+        var expectedResponse = new NotificationOrderChainResponse
+        {
+            OrderChainId = orderChainId,
+            OrderChainReceipt = new NotificationOrderChainReceipt
+            {
+                Reminders = [],
+                ShipmentId = shipmentId,
+                SendersReference = "test-reference"
+            }
+        };
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock
+            .Setup(r => r.GetOrderChainTracking(
+                It.Is<string>(s => s == creatorName),
+                It.Is<string>(s => s == idempotencyId),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedResponse);
+
+        var service = GetTestService(orderRepositoryMock.Object);
+
+        // Act
+        var result = await service.RetrieveOrderChainTracking(creatorName, idempotencyId);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(orderChainId, result.OrderChainId);
+        Assert.Equal(shipmentId, result.OrderChainReceipt.ShipmentId);
+        Assert.Equal("test-reference", result.OrderChainReceipt.SendersReference);
+
+        orderRepositoryMock.Verify(
+            r => r.GetOrderChainTracking(
+                It.Is<string>(s => s == creatorName),
+                It.Is<string>(s => s == idempotencyId),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task RetrieveOrderChainTracking_WhenOrderChainDoesNotExist_ReturnsNull()
+    {
+        // Arrange
+        string idempotencyId = "non-existent-id";
+        string creatorName = "non-existent-creator";
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock
+            .Setup(r => r.GetOrderChainTracking(
+                It.Is<string>(s => s == creatorName),
+                It.Is<string>(s => s == idempotencyId),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((NotificationOrderChainResponse?)null);
+
+        var service = GetTestService(orderRepositoryMock.Object);
+
+        // Act
+        var result = await service.RetrieveOrderChainTracking(creatorName, idempotencyId);
+
+        // Assert
+        Assert.Null(result);
+
+        orderRepositoryMock.Verify(
+            r => r.GetOrderChainTracking(
+                It.Is<string>(s => s == creatorName),
+                It.Is<string>(s => s == idempotencyId),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task RetrieveOrderChainTracking_WithReminders_ReturnsCompleteResponse()
+    {
+        // Arrange
+        string creatorName = "test-creator";
+        string idempotencyId = "test-idempotency-id";
+
+        Guid orderChainId = Guid.NewGuid();
+        Guid mainShipmentId = Guid.NewGuid();
+        Guid firstReminderShipmentId = Guid.NewGuid();
+        Guid secondReminderShipmentId = Guid.NewGuid();
+
+        var expectedResponse = new NotificationOrderChainResponse
+        {
+            OrderChainId = orderChainId,
+            OrderChainReceipt = new NotificationOrderChainReceipt
+            {
+                ShipmentId = mainShipmentId,
+                SendersReference = "065C28CA-90B5-47FF-AFAD-A8DC084FAB9E",
+                Reminders =
+                [
+                    new NotificationOrderChainShipment
+                    {
+                        ShipmentId = firstReminderShipmentId,
+                        SendersReference = "FADAE91D-3352-47D6-9BC6-C68B6A2C8F11"
+                    },
+                    new NotificationOrderChainShipment
+                    {
+                        ShipmentId = secondReminderShipmentId,
+                        SendersReference = "406B91C1-9DB2-422D-8B8A-A76BECF7FE40"
+                    }
+                ]
+            }
+        };
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock
+            .Setup(r => r.GetOrderChainTracking(
+                It.Is<string>(s => s == creatorName),
+                It.Is<string>(s => s == idempotencyId),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedResponse);
+
+        var service = GetTestService(orderRepositoryMock.Object);
+
+        // Act
+        var result = await service.RetrieveOrderChainTracking(creatorName, idempotencyId);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(orderChainId, result.OrderChainId);
+        Assert.Equal(mainShipmentId, result.OrderChainReceipt.ShipmentId);
+        Assert.Equal("065C28CA-90B5-47FF-AFAD-A8DC084FAB9E", result.OrderChainReceipt.SendersReference);
+
+        // Verify reminders
+        Assert.NotNull(result.OrderChainReceipt.Reminders);
+        Assert.Equal(2, result.OrderChainReceipt.Reminders.Count);
+
+        Assert.Equal(firstReminderShipmentId, result.OrderChainReceipt.Reminders[0].ShipmentId);
+        Assert.Equal("FADAE91D-3352-47D6-9BC6-C68B6A2C8F11", result.OrderChainReceipt.Reminders[0].SendersReference);
+
+        Assert.Equal(secondReminderShipmentId, result.OrderChainReceipt.Reminders[1].ShipmentId);
+        Assert.Equal("406B91C1-9DB2-422D-8B8A-A76BECF7FE40", result.OrderChainReceipt.Reminders[1].SendersReference);
+
+        // Verify repository method was called with correct parameters
+        orderRepositoryMock.Verify(
+            r => r.GetOrderChainTracking(
+                It.Is<string>(s => s == creatorName),
+                It.Is<string>(s => s == idempotencyId),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task RetrieveOrderChainTracking_WithCancellationToken_PassesTokenToRepository()
+    {
+        // Arrange
+        string creatorName = "test-creator";
+        string idempotencyId = "test-idempotency-id";
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock
+            .Setup(r => r.GetOrderChainTracking(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((NotificationOrderChainResponse?)null);
+
+        var service = GetTestService(orderRepositoryMock.Object);
+
+        // Create a cancellation token
+        using var cancellationTokenSource = new CancellationTokenSource();
+        var cancellationToken = cancellationTokenSource.Token;
+
+        // Act
+        await service.RetrieveOrderChainTracking(creatorName, idempotencyId, cancellationToken);
+
+        // Assert
+        orderRepositoryMock.Verify(
+            r => r.GetOrderChainTracking(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.Is<CancellationToken>(token => token == cancellationToken)),
+            Times.Once);
     }
 
     [Fact]

@@ -33,7 +33,6 @@ public class NotificationOrderChainMapperTests
                     {
                         Body = "Test body",
                         Subject = "Test subject",
-                        SenderName = "Test sender name",
                         SenderEmailAddress = "sender@example.com"
                     }
                 }
@@ -72,7 +71,6 @@ public class NotificationOrderChainMapperTests
         Assert.Equal("Test body", result.Recipient.RecipientEmail.Settings.Body);
         Assert.Equal("Test subject", result.Recipient.RecipientEmail.Settings.Subject);
         Assert.Equal("recipient@example.com", result.Recipient.RecipientEmail.EmailAddress);
-        Assert.Equal("Test sender name", result.Recipient.RecipientEmail.Settings.SenderName);
         Assert.Equal(EmailContentType.Plain, result.Recipient.RecipientEmail.Settings.ContentType);
         Assert.Equal("sender@example.com", result.Recipient.RecipientEmail.Settings.SenderEmailAddress);
         Assert.Equal(SendingTimePolicy.Anytime, result.Recipient.RecipientEmail.Settings.SendingTimePolicy);
@@ -108,7 +106,6 @@ public class NotificationOrderChainMapperTests
                     {
                         Body = "Email body",
                         Subject = "Email subject",
-                        SenderName = "Email sender name",
                         SenderEmailAddress = "Email sender address",
                         ContentType = EmailContentTypeExt.Plain
                     }
@@ -132,7 +129,6 @@ public class NotificationOrderChainMapperTests
                             {
                                 Body = "Reminder 1 body",
                                 Subject = "Reminder 1 subject",
-                                SenderName = "Reminder 1 sender name",
                                 SenderEmailAddress = "Reminder 1 sender address",
                                 ContentType = EmailContentTypeExt.Plain
                             }
@@ -154,7 +150,6 @@ public class NotificationOrderChainMapperTests
                             {
                                 Body = "Reminder 2 body",
                                 Subject = "Reminder 2 subject",
-                                SenderName = "Reminder 2 sender name",
                                 SenderEmailAddress = "Reminder 2 sender address",
                                 ContentType = EmailContentTypeExt.Plain
                             }
@@ -189,7 +184,6 @@ public class NotificationOrderChainMapperTests
         Assert.NotNull(result.Recipient.RecipientEmail.Settings);
         Assert.Equal("Email body", result.Recipient.RecipientEmail.Settings.Body);
         Assert.Equal("Email subject", result.Recipient.RecipientEmail.Settings.Subject);
-        Assert.Equal("Email sender name", result.Recipient.RecipientEmail.Settings.SenderName);
         Assert.Equal(EmailContentType.Plain, result.Recipient.RecipientEmail.Settings.ContentType);
         Assert.Equal("Email sender address", result.Recipient.RecipientEmail.Settings.SenderEmailAddress);
 
@@ -220,7 +214,6 @@ public class NotificationOrderChainMapperTests
         Assert.Equal("Reminder 1 body", firstReminder.Recipient.RecipientEmail.Settings.Body);
         Assert.Equal("Reminder 1 subject", firstReminder.Recipient.RecipientEmail.Settings.Subject);
         Assert.Equal(EmailContentType.Plain, firstReminder.Recipient.RecipientEmail.Settings.ContentType);
-        Assert.Equal("Reminder 1 sender name", firstReminder.Recipient.RecipientEmail.Settings.SenderName);
         Assert.Equal("Reminder 1 sender address", firstReminder.Recipient.RecipientEmail.Settings.SenderEmailAddress);
 
         // Verify NotificationReminder properties for second reminder
@@ -246,7 +239,6 @@ public class NotificationOrderChainMapperTests
         Assert.Equal("Reminder 2 body", secondReminder.Recipient.RecipientEmail.Settings.Body);
         Assert.Equal("Reminder 2 subject", secondReminder.Recipient.RecipientEmail.Settings.Subject);
         Assert.Equal(EmailContentType.Plain, secondReminder.Recipient.RecipientEmail.Settings.ContentType);
-        Assert.Equal("Reminder 2 sender name", secondReminder.Recipient.RecipientEmail.Settings.SenderName);
         Assert.Equal("Reminder 2 sender address", secondReminder.Recipient.RecipientEmail.Settings.SenderEmailAddress);
 
         // Verify OrderId uniqueness
@@ -275,7 +267,6 @@ public class NotificationOrderChainMapperTests
                     {
                         Body = "Email body",
                         Subject = "Email subject",
-                        SenderName = "Email sender name",
                         SenderEmailAddress = "Email sender address",
                         ContentType = EmailContentTypeExt.Plain,
                         SendingTimePolicy = SendingTimePolicyExt.Anytime
@@ -309,7 +300,6 @@ public class NotificationOrderChainMapperTests
         Assert.NotNull(result.Recipient.RecipientEmail.Settings);
         Assert.Equal("Email body", result.Recipient.RecipientEmail.Settings.Body);
         Assert.Equal("Email subject", result.Recipient.RecipientEmail.Settings.Subject);
-        Assert.Equal("Email sender name", result.Recipient.RecipientEmail.Settings.SenderName);
         Assert.Equal(EmailContentType.Plain, result.Recipient.RecipientEmail.Settings.ContentType);
         Assert.Equal("Email sender address", result.Recipient.RecipientEmail.Settings.SenderEmailAddress);
         Assert.Equal(SendingTimePolicy.Anytime, result.Recipient.RecipientEmail.Settings.SendingTimePolicy);
@@ -349,7 +339,6 @@ public class NotificationOrderChainMapperTests
                         Body = "Organization email body",
                         Subject = "Organization email subject",
                         ContentType = EmailContentTypeExt.Plain,
-                        SenderName = "Organization email sender",
                         SenderEmailAddress = "org-sender@example.com",
                         SendingTimePolicy = SendingTimePolicyExt.Anytime
                     }
@@ -382,7 +371,6 @@ public class NotificationOrderChainMapperTests
         Assert.Equal("Organization email body", result.Recipient.RecipientOrganization.EmailSettings.Body);
         Assert.Equal(EmailContentType.Plain, result.Recipient.RecipientOrganization.EmailSettings.ContentType);
         Assert.Equal("Organization email subject", result.Recipient.RecipientOrganization.EmailSettings.Subject);
-        Assert.Equal("Organization email sender", result.Recipient.RecipientOrganization.EmailSettings.SenderName);
         Assert.Equal("org-sender@example.com", result.Recipient.RecipientOrganization.EmailSettings.SenderEmailAddress);
         Assert.Equal(SendingTimePolicy.Anytime, result.Recipient.RecipientOrganization.EmailSettings.SendingTimePolicy);
 
@@ -424,7 +412,6 @@ public class NotificationOrderChainMapperTests
                     {
                         Body = "Organization email body",
                         Subject = "Organization email subject",
-                        SenderName = "Organization email sender",
                         SenderEmailAddress = "org-sender@example.com",
                         ContentType = EmailContentTypeExt.Plain,
                         SendingTimePolicy = SendingTimePolicyExt.Anytime
@@ -465,7 +452,6 @@ public class NotificationOrderChainMapperTests
         Assert.Equal("Organization email body", result.Recipient.RecipientOrganization.EmailSettings.Body);
         Assert.Equal(EmailContentType.Plain, result.Recipient.RecipientOrganization.EmailSettings.ContentType);
         Assert.Equal("Organization email subject", result.Recipient.RecipientOrganization.EmailSettings.Subject);
-        Assert.Equal("Organization email sender", result.Recipient.RecipientOrganization.EmailSettings.SenderName);
         Assert.Equal("org-sender@example.com", result.Recipient.RecipientOrganization.EmailSettings.SenderEmailAddress);
         Assert.Equal(SendingTimePolicy.Anytime, result.Recipient.RecipientOrganization.EmailSettings.SendingTimePolicy);
 
@@ -508,7 +494,6 @@ public class NotificationOrderChainMapperTests
                     {
                         Body = "Organization email body",
                         Subject = "Organization email subject",
-                        SenderName = "Organization email sender",
                         SenderEmailAddress = "org-sender@example.com",
                         ContentType = EmailContentTypeExt.Plain,
                         SendingTimePolicy = SendingTimePolicyExt.Anytime
@@ -537,7 +522,6 @@ public class NotificationOrderChainMapperTests
                             {
                                 Body = "Reminder 1 org email body",
                                 Subject = "Reminder 1 org email subject",
-                                SenderName = "Reminder 1 org email sender",
                                 SenderEmailAddress = "reminder-org-sender@example.com",
                                 ContentType = EmailContentTypeExt.Html,
                                 SendingTimePolicy = SendingTimePolicyExt.Anytime
@@ -567,7 +551,6 @@ public class NotificationOrderChainMapperTests
                             {
                                 Body = "Reminder 2 org email body",
                                 Subject = "Reminder 2 org email subject",
-                                SenderName = "Reminder 2 org email sender",
                                 SenderEmailAddress = "reminder2-org-sender@example.com",
                                 ContentType = EmailContentTypeExt.Plain,
                                 SendingTimePolicy = SendingTimePolicyExt.Anytime
@@ -604,7 +587,6 @@ public class NotificationOrderChainMapperTests
         Assert.Equal("Organization email body", result.Recipient.RecipientOrganization.EmailSettings.Body);
         Assert.Equal(EmailContentType.Plain, result.Recipient.RecipientOrganization.EmailSettings.ContentType);
         Assert.Equal("Organization email subject", result.Recipient.RecipientOrganization.EmailSettings.Subject);
-        Assert.Equal("Organization email sender", result.Recipient.RecipientOrganization.EmailSettings.SenderName);
         Assert.Equal("org-sender@example.com", result.Recipient.RecipientOrganization.EmailSettings.SenderEmailAddress);
         Assert.Equal(SendingTimePolicy.Anytime, result.Recipient.RecipientOrganization.EmailSettings.SendingTimePolicy);
 
@@ -639,7 +621,6 @@ public class NotificationOrderChainMapperTests
         Assert.Equal("Reminder 1 org email body", firstReminder.Recipient.RecipientOrganization.EmailSettings.Body);
         Assert.Equal(EmailContentType.Html, firstReminder.Recipient.RecipientOrganization.EmailSettings.ContentType);
         Assert.Equal("Reminder 1 org email subject", firstReminder.Recipient.RecipientOrganization.EmailSettings.Subject);
-        Assert.Equal("Reminder 1 org email sender", firstReminder.Recipient.RecipientOrganization.EmailSettings.SenderName);
         Assert.Equal(SendingTimePolicy.Anytime, firstReminder.Recipient.RecipientOrganization.EmailSettings.SendingTimePolicy);
         Assert.Equal("reminder-org-sender@example.com", firstReminder.Recipient.RecipientOrganization.EmailSettings.SenderEmailAddress);
 
@@ -675,7 +656,6 @@ public class NotificationOrderChainMapperTests
         Assert.Equal("Reminder 2 org email body", secondReminder.Recipient.RecipientOrganization.EmailSettings.Body);
         Assert.Equal(EmailContentType.Plain, secondReminder.Recipient.RecipientOrganization.EmailSettings.ContentType);
         Assert.Equal("Reminder 2 org email subject", secondReminder.Recipient.RecipientOrganization.EmailSettings.Subject);
-        Assert.Equal("Reminder 2 org email sender", secondReminder.Recipient.RecipientOrganization.EmailSettings.SenderName);
         Assert.Equal(SendingTimePolicy.Anytime, secondReminder.Recipient.RecipientOrganization.EmailSettings.SendingTimePolicy);
         Assert.Equal("reminder2-org-sender@example.com", secondReminder.Recipient.RecipientOrganization.EmailSettings.SenderEmailAddress);
 
@@ -721,7 +701,6 @@ public class NotificationOrderChainMapperTests
                     {
                         Body = "Organization email body",
                         Subject = "Organization email subject",
-                        SenderName = "Organization email sender",
                         SenderEmailAddress = "org-sender@example.com",
                         ContentType = EmailContentTypeExt.Plain,
                         SendingTimePolicy = SendingTimePolicyExt.Anytime
@@ -761,7 +740,6 @@ public class NotificationOrderChainMapperTests
         Assert.Equal("Organization email body", result.Recipient.RecipientOrganization.EmailSettings.Body);
         Assert.Equal(EmailContentType.Plain, result.Recipient.RecipientOrganization.EmailSettings.ContentType);
         Assert.Equal("Organization email subject", result.Recipient.RecipientOrganization.EmailSettings.Subject);
-        Assert.Equal("Organization email sender", result.Recipient.RecipientOrganization.EmailSettings.SenderName);
         Assert.Equal("org-sender@example.com", result.Recipient.RecipientOrganization.EmailSettings.SenderEmailAddress);
         Assert.Equal(SendingTimePolicy.Anytime, result.Recipient.RecipientOrganization.EmailSettings.SendingTimePolicy);
 
@@ -806,7 +784,6 @@ public class NotificationOrderChainMapperTests
                     {
                         Body = "Organization email body",
                         Subject = "Organization email subject",
-                        SenderName = "Organization email sender",
                         SenderEmailAddress = "org-sender@example.com",
                         ContentType = EmailContentTypeExt.Plain,
                         SendingTimePolicy = SendingTimePolicyExt.Anytime
@@ -835,7 +812,6 @@ public class NotificationOrderChainMapperTests
                             {
                                 Body = "Reminder 1 email body",
                                 Subject = "Reminder 1 email subject",
-                                SenderName = "Reminder 1 email sender",
                                 SenderEmailAddress = "org-sender@example.com",
                                 ContentType = EmailContentTypeExt.Plain,
                                 SendingTimePolicy = SendingTimePolicyExt.Anytime
@@ -896,7 +872,6 @@ public class NotificationOrderChainMapperTests
         Assert.Equal("Organization email body", result.Recipient.RecipientOrganization.EmailSettings.Body);
         Assert.Equal(EmailContentType.Plain, result.Recipient.RecipientOrganization.EmailSettings.ContentType);
         Assert.Equal("Organization email subject", result.Recipient.RecipientOrganization.EmailSettings.Subject);
-        Assert.Equal("Organization email sender", result.Recipient.RecipientOrganization.EmailSettings.SenderName);
         Assert.Equal("org-sender@example.com", result.Recipient.RecipientOrganization.EmailSettings.SenderEmailAddress);
         Assert.Equal(SendingTimePolicy.Anytime, result.Recipient.RecipientOrganization.EmailSettings.SendingTimePolicy);
 
@@ -927,7 +902,6 @@ public class NotificationOrderChainMapperTests
         Assert.Equal("Reminder 1 email body", firstReminder.Recipient.RecipientOrganization.EmailSettings.Body);
         Assert.Equal("Reminder 1 email subject", firstReminder.Recipient.RecipientOrganization.EmailSettings.Subject);
         Assert.Equal(EmailContentType.Plain, firstReminder.Recipient.RecipientOrganization.EmailSettings.ContentType);
-        Assert.Equal("Reminder 1 email sender", firstReminder.Recipient.RecipientOrganization.EmailSettings.SenderName);
         Assert.Equal("org-sender@example.com", firstReminder.Recipient.RecipientOrganization.EmailSettings.SenderEmailAddress);
         Assert.Equal(SendingTimePolicy.Anytime, firstReminder.Recipient.RecipientOrganization.EmailSettings.SendingTimePolicy);
 
@@ -1321,7 +1295,6 @@ public class NotificationOrderChainMapperTests
                         Body = "Person email body",
                         Subject = "Person email subject",
                         ContentType = EmailContentTypeExt.Plain,
-                        SenderName = "Person email sender",
                         SenderEmailAddress = "person-sender@example.com",
                         SendingTimePolicy = SendingTimePolicyExt.Anytime
                     }
@@ -1354,7 +1327,6 @@ public class NotificationOrderChainMapperTests
         Assert.NotNull(result.Recipient.RecipientPerson.EmailSettings);
         Assert.Equal("Person email body", result.Recipient.RecipientPerson.EmailSettings.Body);
         Assert.Equal("Person email subject", result.Recipient.RecipientPerson.EmailSettings.Subject);
-        Assert.Equal("Person email sender", result.Recipient.RecipientPerson.EmailSettings.SenderName);
         Assert.Equal(EmailContentType.Plain, result.Recipient.RecipientPerson.EmailSettings.ContentType);
         Assert.Equal(SendingTimePolicy.Anytime, result.Recipient.RecipientPerson.EmailSettings.SendingTimePolicy);
         Assert.Equal("person-sender@example.com", result.Recipient.RecipientPerson.EmailSettings.SenderEmailAddress);
@@ -1467,7 +1439,6 @@ public class NotificationOrderChainMapperTests
                     {
                         Body = "Person email body",
                         Subject = "Person email subject",
-                        SenderName = "Person email sender",
                         SenderEmailAddress = "person-sender@example.com",
                         ContentType = EmailContentTypeExt.Plain,
                         SendingTimePolicy = SendingTimePolicyExt.Anytime
@@ -1507,7 +1478,6 @@ public class NotificationOrderChainMapperTests
         Assert.NotNull(result.Recipient.RecipientPerson.EmailSettings);
         Assert.Equal("Person email body", result.Recipient.RecipientPerson.EmailSettings.Body);
         Assert.Equal("Person email subject", result.Recipient.RecipientPerson.EmailSettings.Subject);
-        Assert.Equal("Person email sender", result.Recipient.RecipientPerson.EmailSettings.SenderName);
         Assert.Equal(EmailContentType.Plain, result.Recipient.RecipientPerson.EmailSettings.ContentType);
         Assert.Equal(SendingTimePolicy.Anytime, result.Recipient.RecipientPerson.EmailSettings.SendingTimePolicy);
         Assert.Equal("person-sender@example.com", result.Recipient.RecipientPerson.EmailSettings.SenderEmailAddress);
@@ -1553,7 +1523,6 @@ public class NotificationOrderChainMapperTests
                     {
                         Body = "Person email body",
                         Subject = "Person email subject",
-                        SenderName = "Person email sender",
                         SenderEmailAddress = "person-sender@example.com",
                         ContentType = EmailContentTypeExt.Plain,
                         SendingTimePolicy = SendingTimePolicyExt.Anytime
@@ -1584,7 +1553,6 @@ public class NotificationOrderChainMapperTests
                             {
                                 Body = "Reminder 1 person email body",
                                 Subject = "Reminder 1 person email subject",
-                                SenderName = "Reminder 1 person email sender",
                                 SenderEmailAddress = "reminder-person-sender@example.com",
                                 ContentType = EmailContentTypeExt.Html,
                                 SendingTimePolicy = SendingTimePolicyExt.Anytime
@@ -1616,7 +1584,6 @@ public class NotificationOrderChainMapperTests
                             {
                                 Body = "Reminder 2 person email body",
                                 Subject = "Reminder 2 person email subject",
-                                SenderName = "Reminder 2 person email sender",
                                 SenderEmailAddress = "reminder2-person-sender@example.com",
                                 ContentType = EmailContentTypeExt.Plain,
                                 SendingTimePolicy = SendingTimePolicyExt.Anytime
@@ -1651,7 +1618,6 @@ public class NotificationOrderChainMapperTests
         Assert.NotNull(result.Recipient.RecipientPerson.EmailSettings);
         Assert.Equal("Person email body", result.Recipient.RecipientPerson.EmailSettings.Body);
         Assert.Equal("Person email subject", result.Recipient.RecipientPerson.EmailSettings.Subject);
-        Assert.Equal("Person email sender", result.Recipient.RecipientPerson.EmailSettings.SenderName);
         Assert.Equal(EmailContentType.Plain, result.Recipient.RecipientPerson.EmailSettings.ContentType);
         Assert.Equal(SendingTimePolicy.Anytime, result.Recipient.RecipientPerson.EmailSettings.SendingTimePolicy);
         Assert.Equal("person-sender@example.com", result.Recipient.RecipientPerson.EmailSettings.SenderEmailAddress);
@@ -1685,7 +1651,6 @@ public class NotificationOrderChainMapperTests
         Assert.Equal(EmailContentType.Html, firstReminder.Recipient.RecipientPerson.EmailSettings.ContentType);
         Assert.Equal("Reminder 1 person email body", firstReminder.Recipient.RecipientPerson.EmailSettings.Body);
         Assert.Equal("Reminder 1 person email subject", firstReminder.Recipient.RecipientPerson.EmailSettings.Subject);
-        Assert.Equal("Reminder 1 person email sender", firstReminder.Recipient.RecipientPerson.EmailSettings.SenderName);
         Assert.Equal(SendingTimePolicy.Anytime, firstReminder.Recipient.RecipientPerson.EmailSettings.SendingTimePolicy);
         Assert.Equal("reminder-person-sender@example.com", firstReminder.Recipient.RecipientPerson.EmailSettings.SenderEmailAddress);
 
@@ -1713,7 +1678,6 @@ public class NotificationOrderChainMapperTests
         Assert.Equal(EmailContentType.Plain, secondReminder.Recipient.RecipientPerson.EmailSettings.ContentType);
         Assert.Equal("Reminder 2 person email body", secondReminder.Recipient.RecipientPerson.EmailSettings.Body);
         Assert.Equal("Reminder 2 person email subject", secondReminder.Recipient.RecipientPerson.EmailSettings.Subject);
-        Assert.Equal("Reminder 2 person email sender", secondReminder.Recipient.RecipientPerson.EmailSettings.SenderName);
         Assert.Equal(SendingTimePolicy.Anytime, secondReminder.Recipient.RecipientPerson.EmailSettings.SendingTimePolicy);
         Assert.Equal("reminder2-person-sender@example.com", secondReminder.Recipient.RecipientPerson.EmailSettings.SenderEmailAddress);
 
