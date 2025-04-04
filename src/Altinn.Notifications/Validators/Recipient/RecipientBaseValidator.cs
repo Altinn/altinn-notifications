@@ -26,11 +26,11 @@ public class RecipientBaseValidator : AbstractValidator<RecipientBaseExt?>
         {
             RuleFor(options => options!.EmailSettings)
                 .NotNull()
-                .WithMessage("EmailSettings must be set when ChannelSchema is SmsPreffered or EmailPreferred");
+                .WithMessage("EmailSettings must be set when ChannelSchema is SmsPreferred or EmailPreferred");
 
             RuleFor(options => options!.SmsSettings)
                 .NotNull()
-                .WithMessage("SmsSettings must be set when ChannelSchema is SmsPreffered or EmailPreferred");
+                .WithMessage("SmsSettings must be set when ChannelSchema is SmsPreferred or EmailPreferred");
         });
 
         When(options => options!.ChannelSchema == NotificationChannelExt.Sms, () =>

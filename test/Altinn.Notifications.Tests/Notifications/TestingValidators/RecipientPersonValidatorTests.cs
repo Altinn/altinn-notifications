@@ -45,8 +45,8 @@ public class RecipientPersonValidatorTests
         var actual = _recipientPersonValidator.TestValidate(recipientPerson);
 
         // assert
-        actual.ShouldHaveValidationErrorFor(recipient => recipient.EmailSettings).WithErrorMessage("EmailSettings must be set when ChannelSchema is SmsPreffered or EmailPreferred");
-        actual.ShouldHaveValidationErrorFor(recipient => recipient.SmsSettings).WithErrorMessage("SmsSettings must be set when ChannelSchema is SmsPreffered or EmailPreferred");
+        actual.ShouldHaveValidationErrorFor(recipient => recipient.EmailSettings).WithErrorMessage("EmailSettings must be set when ChannelSchema is SmsPreferred or EmailPreferred");
+        actual.ShouldHaveValidationErrorFor(recipient => recipient.SmsSettings).WithErrorMessage("SmsSettings must be set when ChannelSchema is SmsPreferred or EmailPreferred");
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public class RecipientPersonValidatorTests
         var actual = _recipientPersonValidator.TestValidate(recipientPerson);
 
         // assert
-        actual.ShouldHaveValidationErrorFor(recipient => recipient.EmailSettings).WithErrorMessage("EmailSettings must be set when ChannelSchema is SmsPreffered or EmailPreferred");
+        actual.ShouldHaveValidationErrorFor(recipient => recipient.EmailSettings).WithErrorMessage("EmailSettings must be set when ChannelSchema is SmsPreferred or EmailPreferred");
         actual.ShouldNotHaveValidationErrorFor(recipient => recipient.SmsSettings);
     }
 
