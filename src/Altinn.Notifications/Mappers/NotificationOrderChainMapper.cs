@@ -44,16 +44,16 @@ public static class NotificationOrderChainMapper
         DialogportenIdentifiers? dialogportenAssociation = notificationOrderChainRequestExt.DialogportenAssociation?.MapToDialogportenReference();
 
         return new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetRecipient(recipient)
+            .SetReminders(reminders)
             .SetOrderId(Guid.NewGuid())
             .SetOrderChainId(Guid.NewGuid())
             .SetCreator(new Creator(creatorName))
-            .SetIdempotencyId(notificationOrderChainRequestExt.IdempotencyId)
-            .SetRecipient(recipient)
-            .SetConditionEndpoint(notificationOrderChainRequestExt.ConditionEndpoint)
             .SetDialogportenAssociation(dialogportenAssociation)
-            .SetReminders(reminders)
-            .SetRequestedSendTime(notificationOrderChainRequestExt.RequestedSendTime.ToUniversalTime())
+            .SetIdempotencyId(notificationOrderChainRequestExt.IdempotencyId)
             .SetSendersReference(notificationOrderChainRequestExt.SendersReference)
+            .SetConditionEndpoint(notificationOrderChainRequestExt.ConditionEndpoint)
+            .SetRequestedSendTime(notificationOrderChainRequestExt.RequestedSendTime.ToUniversalTime())
             .Build();
     }
 
@@ -78,7 +78,6 @@ public static class NotificationOrderChainMapper
         {
             Body = emailSendingOptionsExt.Body,
             Subject = emailSendingOptionsExt.Subject,
-            SenderName = emailSendingOptionsExt.SenderName,
             ContentType = (EmailContentType)emailSendingOptionsExt.ContentType,
             SenderEmailAddress = emailSendingOptionsExt.SenderEmailAddress?.Trim(),
             SendingTimePolicy = (SendingTimePolicy)emailSendingOptionsExt.SendingTimePolicy

@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-
-using Altinn.Notifications.Core.Enums;
+﻿using Altinn.Notifications.Core.Enums;
 
 namespace Altinn.Notifications.Core.Models.Recipients;
 
@@ -9,15 +7,6 @@ namespace Altinn.Notifications.Core.Models.Recipients;
 /// </summary>
 public class EmailSendingOptions
 {
-    /// <summary>
-    /// Gets or sets the display name of the sender.
-    /// </summary>
-    /// <remarks>
-    /// Can only be used if <see cref="SenderEmailAddress"/> is set.
-    /// Appears alongside the email address in the recipient's email client.
-    /// </remarks>
-    public string? SenderName { get; set; }
-
     /// <summary>
     /// Gets or sets the sender's email address.
     /// </summary>

@@ -13,10 +13,16 @@ public class NotificationOrderChainResponse
     /// <summary>
     /// Gets or sets the unique identifier for the notification order chain itself.
     /// </summary>
-    public required Guid Id { get; set; }
+    /// <remarks>
+    /// This identifier serves as the primary key to reference the entire notification chain
+    /// </remarks>
+    public required Guid OrderChainId { get; set; }
 
     /// <summary>
     /// Gets or sets the detailed receipt for the notification order creation.
     /// </summary>
-    public required NotificationOrderChainReceipt CreationResult { get; set; }
+    /// <remarks>
+    /// This receipt provides all the necessary identifiers to track each component of the notification chain separately
+    /// </remarks>
+    public required NotificationOrderChainReceipt OrderChainReceipt { get; set; }
 }
