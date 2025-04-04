@@ -135,7 +135,6 @@ public class NotificationOrderChainRequestValidatorTests
                     },
                     EmailSettings = new EmailSendingOptionsExt
                     {
-                        SenderName = "Tjenesteeier",
                         SenderEmailAddress = "noreply-te@example.com",
                         Subject = "Ny melding fra TE",
                         Body = "Du har en ny melding fra TE. Logg inn i Altinn for å gjøre deg kjent med innholdet."
@@ -209,7 +208,6 @@ public class NotificationOrderChainRequestValidatorTests
                             EmailSettings = new EmailSendingOptionsExt
                             {
                                 SenderEmailAddress = "noreply-te@example.com",
-                                SenderName = "Tjenesteeier",
                                 SendingTimePolicy = SendingTimePolicyExt.Anytime,
                                 Subject = "Påminnelse: Melding fra TE",
                                 Body = "Du har en melding fra TE som krever handling"

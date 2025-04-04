@@ -29,11 +29,6 @@ namespace Altinn.Notifications.Validators.Email
                         .WithMessage("The sender email address is not valid.");
                 });
 
-                RuleFor(options => options!.SenderName)
-                    .NotEmpty()
-                    .When(options => RecipientRules.IsValidEmail(options!.SenderEmailAddress))
-                    .WithMessage("The sender name cannot be empty when sender email address is provided.");
-
                 RuleFor(options => options!.Subject)
                     .NotEmpty()
                     .WithMessage("The email subject must not be empty.");
