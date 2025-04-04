@@ -287,7 +287,6 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                         {
                             Body = "Email body",
                             Subject = "Email subject",
-                            SenderName = "Email sender name",
                             SenderEmailAddress = "Email sender address",
                             ContentType = EmailContentType.Plain,
                             SendingTimePolicy = SendingTimePolicy.Anytime
@@ -553,7 +552,6 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                             Body = "Main email body",
                             Subject = "Main email subject",
                             ContentType = EmailContentType.Plain,
-                            SenderName = "Main email sender name",
                             SendingTimePolicy = SendingTimePolicy.Anytime,
                             SenderEmailAddress = "Main email sender address"
                         },
@@ -587,7 +585,6 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                                 {
                                     Body = "First reminder email body",
                                     Subject = "First reminder email subject",
-                                    SenderName = "First reminder email sender",
                                     SenderEmailAddress = "sender@example.com",
                                     ContentType = EmailContentType.Html,
                                     SendingTimePolicy = SendingTimePolicy.Anytime
@@ -627,7 +624,6 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                                 {
                                     Body = "Second reminder email body",
                                     Subject = "Second reminder email subject",
-                                    SenderName = "Second reminder email sender",
                                     SenderEmailAddress = "Second reminder email sender address",
                                     ContentType = EmailContentType.Plain,
                                     SendingTimePolicy = SendingTimePolicy.Anytime
@@ -803,7 +799,6 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                             Body = "Main email body",
                             Subject = "Main email subject",
                             ContentType = EmailContentType.Plain,
-                            SenderName = "Main email sender name",
                             SendingTimePolicy = SendingTimePolicy.Anytime,
                             SenderEmailAddress = "Main email sender address"
                         },
@@ -836,7 +831,6 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                                 {
                                     Body = "First reminder email body",
                                     Subject = "First reminder email subject",
-                                    SenderName = "First reminder email sender",
                                     SenderEmailAddress = "sender@example.com",
                                     ContentType = EmailContentType.Html,
                                     SendingTimePolicy = SendingTimePolicy.Anytime
@@ -875,7 +869,6 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                                 {
                                     Body = "Second reminder email body",
                                     Subject = "Second reminder email subject",
-                                    SenderName = "Second reminder email sender",
                                     SenderEmailAddress = "Second reminder email sender address",
                                     ContentType = EmailContentType.Plain,
                                     SendingTimePolicy = SendingTimePolicy.Anytime
@@ -1042,7 +1035,6 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                         {
                             Body = "Email body",
                             Subject = "Email subject",
-                            SenderName = "Email sender name",
                             SenderEmailAddress = "Email sender address",
                             ContentType = EmailContentType.Plain,
                             SendingTimePolicy = SendingTimePolicy.Anytime
@@ -1102,7 +1094,6 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                         {
                             Body = "Email body",
                             Subject = "Email subject",
-                            SenderName = "Email sender name",
                             SenderEmailAddress = "Email sender address",
                             ContentType = EmailContentType.Plain,
                             SendingTimePolicy = SendingTimePolicy.Anytime
@@ -1204,7 +1195,6 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                         {
                             Body = "Email body",
                             Subject = "Email subject",
-                            SenderName = "Email sender name",
                             SenderEmailAddress = "Email sender address",
                             ContentType = EmailContentType.Plain,
                             SendingTimePolicy = SendingTimePolicy.Anytime
@@ -1278,7 +1268,6 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                         {
                             Body = "Main email body",
                             Subject = "Main email subject",
-                            SenderName = "Main email sender",
                             SenderEmailAddress = "sender@example.com",
                             ContentType = EmailContentType.Plain,
                             SendingTimePolicy = SendingTimePolicy.Anytime
@@ -1301,7 +1290,6 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                                 {
                                     Body = "Reminder without reference body",
                                     Subject = "Reminder without reference subject",
-                                    SenderName = "Reminder sender",
                                     SenderEmailAddress = "sender@example.com",
                                     ContentType = EmailContentType.Plain,
                                     SendingTimePolicy = SendingTimePolicy.Anytime
@@ -1407,7 +1395,6 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                         {
                             Body = "Main email body",
                             Subject = "Main email subject",
-                            SenderName = "Main email sender",
                             SenderEmailAddress = "sender@example.com",
                             ContentType = EmailContentType.Plain,
                             SendingTimePolicy = SendingTimePolicy.Anytime
@@ -1431,7 +1418,6 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                                 {
                                     Body = "First reminder email body",
                                     Subject = "First reminder email subject",
-                                    SenderName = "First reminder email sender",
                                     SenderEmailAddress = "sender@example.com",
                                     ContentType = EmailContentType.Plain,
                                     SendingTimePolicy = SendingTimePolicy.Anytime
@@ -1454,7 +1440,6 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                                 {
                                     Body = "Second reminder email body",
                                     Subject = "Second reminder email subject",
-                                    SenderName = "Second reminder email sender",
                                     SenderEmailAddress = "sender@example.com",
                                     ContentType = EmailContentType.Plain,
                                     SendingTimePolicy = SendingTimePolicy.Anytime
@@ -1582,7 +1567,6 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                         {
                             Body = "Email body",
                             Subject = "Email subject",
-                            SenderName = "Email sender name",
                             SenderEmailAddress = "Email sender address",
                             ContentType = EmailContentType.Plain,
                             SendingTimePolicy = SendingTimePolicy.Anytime
