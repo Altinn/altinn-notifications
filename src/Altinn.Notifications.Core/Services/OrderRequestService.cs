@@ -384,7 +384,7 @@ public class OrderRequestService : IOrderRequestService
     /// the appropriate templates and addressing information based on the recipient's configuration.
     /// The default channel is SMS if the recipient type cannot be determined.
     /// </remarks>
-    private static (List<Recipient> Recipients, List<INotificationTemplate> Templates, NotificationChannel Channel, bool? IgnoreReservation, string? ResourceId, SendingTimePolicy SendingTimePolicy) ExtractDeliveryComponents(NotificationRecipient recipient)
+    private static (List<Recipient> Recipients, List<INotificationTemplate> Templates, NotificationChannel Channel, bool? IgnoreReservation, string? ResourceId, SendingTimePolicy? SendingTimePolicy) ExtractDeliveryComponents(NotificationRecipient recipient)
     {
         bool? ignoreReservation = null;
         string? resourceIdentifier = null;
@@ -394,7 +394,7 @@ public class OrderRequestService : IOrderRequestService
 
         NotificationChannel notificationChannel = NotificationChannel.Sms;
 
-        SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime;
+        SendingTimePolicy? sendingTimePolicy = null;
 
         if (recipient.RecipientSms?.Settings != null)
         {
