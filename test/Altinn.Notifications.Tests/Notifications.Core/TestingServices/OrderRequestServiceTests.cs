@@ -587,7 +587,6 @@ public class OrderRequestServiceTests
                     EmailSettings = new EmailSendingOptions
                     {
                         Subject = "Tax Filing 2025",
-                        SenderName = "Skatteetaten",
                         ContentType = EmailContentType.Html,
                         SendingTimePolicy = SendingTimePolicy.Anytime,
                         SenderEmailAddress = "no-reply@skatteetaten.no",
@@ -620,7 +619,6 @@ public class OrderRequestServiceTests
                             ChannelSchema = NotificationChannel.EmailPreferred,
                             EmailSettings = new EmailSendingOptions
                             {
-                                SenderName = "Skatteetaten",
                                 Subject = "Reminder: Tax 2025",
                                 ContentType = EmailContentType.Html,
                                 SendingTimePolicy = SendingTimePolicy.Anytime,
@@ -653,7 +651,6 @@ public class OrderRequestServiceTests
                             ChannelSchema = NotificationChannel.SmsPreferred,
                             EmailSettings = new EmailSendingOptions
                             {
-                                SenderName = "Skatteetaten",
                                 ContentType = EmailContentType.Html,
                                 Subject = "Final Reminder: Tax 2025",
                                 SendingTimePolicy = SendingTimePolicy.Anytime,
@@ -848,7 +845,6 @@ public class OrderRequestServiceTests
                     {
                         Subject = "Annual Report 2025",
                         ContentType = EmailContentType.Html,
-                        SenderName = "Brønnøysundregistrene",
                         SenderEmailAddress = "no-reply@brreg.no",
                         Body = "<p>Your organization's annual report is due by March 31, 2025. Log in to Altinn to complete it.</p>",
                         SendingTimePolicy = SendingTimePolicy.Anytime
@@ -1205,7 +1201,7 @@ public class OrderRequestServiceTests
         // Verify reminders
         Assert.NotNull(result.OrderChainReceipt.Reminders);
         Assert.Equal(2, result.OrderChainReceipt.Reminders.Count);
-        
+
         Assert.Equal(firstReminderShipmentId, result.OrderChainReceipt.Reminders[0].ShipmentId);
         Assert.Equal("FADAE91D-3352-47D6-9BC6-C68B6A2C8F11", result.OrderChainReceipt.Reminders[0].SendersReference);
 
