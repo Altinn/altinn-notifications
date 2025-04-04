@@ -9,6 +9,8 @@ using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
+using Altinn.Notifications.Models.Email;
+using Altinn.Notifications.Models.Sms;
 
 using Xunit;
 
