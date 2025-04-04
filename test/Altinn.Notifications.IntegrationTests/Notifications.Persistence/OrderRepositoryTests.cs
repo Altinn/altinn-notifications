@@ -255,7 +255,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
         }
 
         [Fact]
-        public async Task Create_NotificationOrderChainWithEmailRecipientWithoutReminders_PersistsOrdersChainAndOrderAndEmailTemplate()
+        public async Task Create_NotificationOrderChain_WithEmailRecipient_NoReminders_VerifiesDatabasePersistence()
         {
             // Arrange
             OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
@@ -338,7 +338,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
         }
 
         [Fact]
-        public async Task Create_NotificationOrderChainWithSmsRecipientWithReminders_PersistsOrdersChainAndOrderAndEmailTemplate()
+        public async Task Create_NotificationOrderChain_WithSmsRecipient_WithReminders_VerifiesDatabasePersistence()
         {
             // Arrange
             OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
@@ -515,7 +515,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
         }
 
         [Fact]
-        public async Task Create_NotificationOrderChainWithPersonRecipientAndReminders_PersistsOrdersChainAndOrdersAndTemplates()
+        public async Task Create_NotificationOrderChain_WithPersonRecipient_WithReminders_VerifiesDatabasePersistence()
         {
             // Arrange
             OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
@@ -766,7 +766,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
         }
 
         [Fact]
-        public async Task Create_NotificationOrderChainWithOrganizationRecipientAndReminders_PersistsOrdersChainAndOrdersAndTemplates()
+        public async Task Create_NotificationOrderChain_WithOrganizationRecipient_WithReminders_VerifiesDatabasePersistence()
         {
             // Arrange
             OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
@@ -1008,6 +1008,619 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
 
             Assert.Equal(1, secondReminderSmsCount);
             Assert.Equal(1, secondReminderEmailCount);
+        }
+
+        [Fact]
+        public async Task Create_NotificationOrderChain_WithEmailRecipient_NoReminders_WithInvalidTemplates_ThrowsNullReferenceException()
+        {
+            // Arrange
+            OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+            Guid orderId = Guid.NewGuid();
+            Guid orderChainId = Guid.NewGuid();
+
+            _orderIdsToDelete.Add(orderId);
+            _ordersChainIdsToDelete.Add(orderChainId);
+
+            var creationDateTime = DateTime.UtcNow;
+            var requestedSendTime = DateTime.UtcNow.AddMinutes(10);
+
+            // Create a valid chain request
+            var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+                .SetOrderId(orderId)
+                .SetOrderChainId(orderChainId)
+                .SetCreator(new Creator("skd"))
+                .SetRequestedSendTime(requestedSendTime)
+                .SetIdempotencyId("EXCEPTION-TEST-ID")
+                .SetSendersReference("EXCEPTION-TEST-REF")
+                .SetRecipient(new NotificationRecipient
+                {
+                    RecipientEmail = new RecipientEmail
+                    {
+                        EmailAddress = "recipient@example.com",
+                        Settings = new EmailSendingOptions
+                        {
+                            Body = "Email body",
+                            Subject = "Email subject",
+                            SenderName = "Email sender name",
+                            SenderEmailAddress = "Email sender address",
+                            ContentType = EmailContentType.Plain,
+                            SendingTimePolicy = SendingTimePolicy.Anytime
+                        }
+                    }
+                })
+                .Build();
+
+            // An invalid order with null Templates to cause an exception.
+            NotificationOrder invalidOrder = new()
+            {
+                Id = orderId,
+                Creator = new("skd"),
+                Created = creationDateTime,
+                RequestedSendTime = requestedSendTime,
+                NotificationChannel = NotificationChannel.Email,
+                SendersReference = "EXCEPTION-TEST-REF",
+                Templates = null!, // This will cause an exception
+                Recipients =
+                [
+                    new Recipient([new EmailAddressPoint("recipient@example.com")])
+                ]
+            };
+
+            // Act & Assert
+            await Assert.ThrowsAsync<NullReferenceException>(async () => await repo.Create(orderChainRequest, invalidOrder, null));
+        }
+
+        [Fact]
+        public async Task Create_NotificationOrderChain_WithEmailRecipient_NoReminders_WhenCancellationRequested_ThrowsOperationCanceledException()
+        {
+            // Arrange
+            OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+            Guid orderId = Guid.NewGuid();
+            Guid orderChainId = Guid.NewGuid();
+
+            _orderIdsToDelete.Add(orderId);
+            _ordersChainIdsToDelete.Add(orderChainId);
+
+            var creationDateTime = DateTime.UtcNow;
+            var requestedSendTime = DateTime.UtcNow.AddMinutes(10);
+
+            var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+                .SetOrderId(orderId)
+                .SetOrderChainId(orderChainId)
+                .SetCreator(new Creator("skd"))
+                .SetRequestedSendTime(requestedSendTime)
+                .SetIdempotencyId("CANCELLATION-TEST-ID")
+                .SetSendersReference("CANCELLATION-TEST-REF")
+                .SetRecipient(new NotificationRecipient
+                {
+                    RecipientEmail = new RecipientEmail
+                    {
+                        EmailAddress = "recipient@example.com",
+                        Settings = new EmailSendingOptions
+                        {
+                            Body = "Email body",
+                            Subject = "Email subject",
+                            SenderName = "Email sender name",
+                            SenderEmailAddress = "Email sender address",
+                            ContentType = EmailContentType.Plain,
+                            SendingTimePolicy = SendingTimePolicy.Anytime
+                        }
+                    }
+                })
+                .Build();
+
+            NotificationOrder notificationOrder = new()
+            {
+                Id = orderId,
+                Creator = new("skd"),
+                Created = creationDateTime,
+                RequestedSendTime = requestedSendTime,
+                NotificationChannel = NotificationChannel.Email,
+                SendersReference = "CANCELLATION-TEST-REF",
+                Templates =
+                [
+                    new EmailTemplate("Email sender address", "Email subject", "Email body", EmailContentType.Plain)
+                ],
+                Recipients =
+                [
+                    new Recipient([new EmailAddressPoint("recipient@example.com")])
+                ]
+            };
+
+            // Create a cancellation token that's already cancelled
+            using var cancellationTokenSource = new CancellationTokenSource();
+            await cancellationTokenSource.CancelAsync();
+
+            // Act & Assert
+            await Assert.ThrowsAsync<OperationCanceledException>(async () => await repo.Create(orderChainRequest, notificationOrder, null, cancellationTokenSource.Token));
+        }
+
+        [Fact]
+        public async Task GetOrderChainTracking_WhenNonExistentCreatorAndIdempotencyId_ReturnsNull()
+        {
+            // Arrange
+            OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+            string creatorName = "non-existent-creator";
+            string idempotencyId = "non-existent-id";
+
+            // Act
+            var result = await repo.GetOrderChainTracking(creatorName, idempotencyId);
+
+            // Assert
+            Assert.Null(result);
+        }
+
+        [Fact]
+        public async Task GetOrderChainTracking_WhenCancellationRequested_ThrowsOperationCanceledException()
+        {
+            // Arrange
+            OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+            string creatorName = "test-creator";
+            string idempotencyId = "test-idempotency-id";
+
+            // Create a cancellation token that's already cancelled
+            using var cancellationTokenSource = new CancellationTokenSource();
+            await cancellationTokenSource.CancelAsync();
+
+            // Act & Assert
+            await Assert.ThrowsAsync<OperationCanceledException>(async () => await repo.GetOrderChainTracking(creatorName, idempotencyId, cancellationTokenSource.Token));
+        }
+
+        [Fact]
+        public async Task GetOrderChainTracking_MainOrderWithoutSendersReference_HandlesNullSendersReference()
+        {
+            // Arrange
+            OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+            Guid orderId = Guid.NewGuid();
+            Guid orderChainId = Guid.NewGuid();
+
+            string creator = "creator-A3A0F691111";
+            string idempotencyId = "idempotency-BB8C6E067068";
+
+            DateTime creationDateTime = DateTime.UtcNow;
+            var requestedSendTime = DateTime.UtcNow.AddMinutes(10);
+
+            _orderIdsToDelete.Add(orderId);
+            _ordersChainIdsToDelete.Add(orderChainId);
+
+            // Create the chain request and order without sender's reference
+            var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+                .SetOrderId(orderId)
+                .SetOrderChainId(orderChainId)
+                .SetCreator(new Creator(creator))
+                .SetRequestedSendTime(requestedSendTime)
+                .SetIdempotencyId(idempotencyId)
+                .SetRecipient(new NotificationRecipient
+                {
+                    RecipientEmail = new RecipientEmail
+                    {
+                        EmailAddress = "recipient@example.com",
+                        Settings = new EmailSendingOptions
+                        {
+                            Body = "Email body",
+                            Subject = "Email subject",
+                            SenderName = "Email sender name",
+                            SenderEmailAddress = "Email sender address",
+                            ContentType = EmailContentType.Plain,
+                            SendingTimePolicy = SendingTimePolicy.Anytime
+                        }
+                    }
+                })
+                .Build();
+
+            NotificationOrder notificationOrder = new()
+            {
+                Id = orderId,
+                Creator = new(creator),
+                Created = creationDateTime,
+                RequestedSendTime = requestedSendTime,
+                NotificationChannel = NotificationChannel.Email,
+                Templates =
+                [
+                    new EmailTemplate("Email sender address", "Email subject", "Email body", EmailContentType.Plain)
+                ],
+                Recipients =
+                [
+                    new Recipient([new EmailAddressPoint("recipient@example.com")])
+                ]
+            };
+
+            await repo.Create(orderChainRequest, notificationOrder, null);
+
+            // Act
+            var result = await repo.GetOrderChainTracking(creator, idempotencyId);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(orderChainId, result.OrderChainId);
+            Assert.Null(result.OrderChainReceipt.Reminders);
+            Assert.Null(result.OrderChainReceipt.SendersReference);
+            Assert.Equal(orderId, result.OrderChainReceipt.ShipmentId);
+        }
+
+        [Fact]
+        public async Task GetOrderChainTracking_WhenNotificationOrderWithReminderMissingReference_ReturnsNullReferenceForReminder()
+        {
+            // Arrange
+            OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+            Guid reminderId = Guid.NewGuid();
+            Guid mainOrderId = Guid.NewGuid();
+            Guid orderChainId = Guid.NewGuid();
+
+            string creator = "tracking-211BBFC9BDBB";
+            string idempotencyId = "TRACKING-E18557E17D42";
+
+            DateTime creationDateTime = DateTime.UtcNow;
+            var requestedSendTime = DateTime.UtcNow.AddMinutes(10);
+
+            _ordersChainIdsToDelete.Add(orderChainId);
+            _orderIdsToDelete.AddRange([mainOrderId, reminderId]);
+
+            var orderRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+                .SetOrderId(mainOrderId)
+                .SetOrderChainId(orderChainId)
+                .SetIdempotencyId(idempotencyId)
+                .SetCreator(new Creator(creator))
+                .SetRequestedSendTime(requestedSendTime)
+                .SetSendersReference("MAIN-ORDER-REF-NO-REMINDER-REF")
+                .SetRecipient(new NotificationRecipient
+                {
+                    RecipientEmail = new RecipientEmail
+                    {
+                        EmailAddress = "recipient@example.com",
+                        Settings = new EmailSendingOptions
+                        {
+                            Body = "Main email body",
+                            Subject = "Main email subject",
+                            SenderName = "Main email sender",
+                            SenderEmailAddress = "sender@example.com",
+                            ContentType = EmailContentType.Plain,
+                            SendingTimePolicy = SendingTimePolicy.Anytime
+                        }
+                    }
+                })
+                .SetReminders(
+                [
+                    new NotificationReminder
+                    {
+                        DelayDays = 3,
+                        OrderId = reminderId,
+                        RequestedSendTime = requestedSendTime.AddDays(3),
+                        Recipient = new NotificationRecipient
+                        {
+                            RecipientEmail = new RecipientEmail
+                            {
+                                EmailAddress = "recipient@example.com",
+                                Settings = new EmailSendingOptions
+                                {
+                                    Body = "Reminder without reference body",
+                                    Subject = "Reminder without reference subject",
+                                    SenderName = "Reminder sender",
+                                    SenderEmailAddress = "sender@example.com",
+                                    ContentType = EmailContentType.Plain,
+                                    SendingTimePolicy = SendingTimePolicy.Anytime
+                                }
+                            }
+                        }
+                    }
+                ])
+                .Build();
+
+            // Create the main notification order
+            NotificationOrder mainOrder = new()
+            {
+                Id = mainOrderId,
+                Creator = new(creator),
+                Created = creationDateTime,
+                RequestedSendTime = requestedSendTime,
+                NotificationChannel = NotificationChannel.Email,
+                SendersReference = "MAIN-ORDER-REF-NO-REMINDER-REF",
+                Templates =
+                [
+                    new EmailTemplate("sender@example.com", "Main email subject", "Main email body", EmailContentType.Plain)
+                ],
+                Recipients =
+                [
+                    new Recipient([new EmailAddressPoint("recipient@example.com")])
+                ]
+            };
+
+            // Create reminder order without SendersReference
+            List<NotificationOrder> reminders =
+            [
+                new NotificationOrder
+                {
+                    Id = reminderId,
+                    Creator = new(creator),
+                    Created = creationDateTime,
+                    RequestedSendTime = requestedSendTime.AddDays(3),
+                    NotificationChannel = NotificationChannel.Email,
+                    Templates =
+                    [
+                        new EmailTemplate("sender@example.com", "Reminder without reference subject", "Reminder without reference body", EmailContentType.Plain)
+                    ],
+                    Recipients =
+                    [
+                        new Recipient([new EmailAddressPoint("recipient@example.com")])
+                    ]
+                }
+            ];
+
+            // Inserts the order chain with reminder in the database.
+            await repo.Create(orderRequest, mainOrder, reminders);
+
+            // Act
+            var result = await repo.GetOrderChainTracking(creator, idempotencyId);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(orderChainId, result.OrderChainId);
+            Assert.Equal(mainOrderId, result.OrderChainReceipt.ShipmentId);
+            Assert.Equal("MAIN-ORDER-REF-NO-REMINDER-REF", result.OrderChainReceipt.SendersReference);
+
+            // Verify reminder
+            Assert.NotNull(result.OrderChainReceipt.Reminders);
+            Assert.Single(result.OrderChainReceipt.Reminders);
+            Assert.Null(result.OrderChainReceipt.Reminders[0].SendersReference);
+            Assert.Equal(reminderId, result.OrderChainReceipt.Reminders[0].ShipmentId);
+        }
+
+        [Fact]
+        public async Task GetOrderChainTracking_WhenNotificationOrderChainWithRemindersExists_ReturnsCorrectOrderChainTrackingInformation()
+        {
+            // Arrange
+            OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+            Guid mainOrderId = Guid.NewGuid();
+            Guid orderChainId = Guid.NewGuid();
+            Guid firstReminderId = Guid.NewGuid();
+            Guid secondReminderId = Guid.NewGuid();
+
+            string creator = "tracking-test-reminders";
+            string idempotencyId = "TRACKING-30E3CD3997E9";
+
+            DateTime creationDateTime = DateTime.UtcNow;
+            var requestedSendTime = DateTime.UtcNow.AddMinutes(10);
+
+            _ordersChainIdsToDelete.Add(orderChainId);
+            _orderIdsToDelete.AddRange([mainOrderId, firstReminderId, secondReminderId]);
+
+            var orderRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+                .SetOrderId(mainOrderId)
+                .SetOrderChainId(orderChainId)
+                .SetIdempotencyId(idempotencyId)
+                .SetCreator(new Creator(creator))
+                .SetSendersReference("MAIN-ORDER-REF")
+                .SetRequestedSendTime(requestedSendTime)
+                .SetRecipient(new NotificationRecipient
+                {
+                    RecipientEmail = new RecipientEmail
+                    {
+                        EmailAddress = "recipient@example.com",
+                        Settings = new EmailSendingOptions
+                        {
+                            Body = "Main email body",
+                            Subject = "Main email subject",
+                            SenderName = "Main email sender",
+                            SenderEmailAddress = "sender@example.com",
+                            ContentType = EmailContentType.Plain,
+                            SendingTimePolicy = SendingTimePolicy.Anytime
+                        }
+                    }
+                })
+                .SetReminders(
+                [
+                    new NotificationReminder
+                    {
+                        DelayDays = 3,
+                        OrderId = firstReminderId,
+                        SendersReference = "FIRST-REMINDER-REF",
+                        RequestedSendTime = requestedSendTime.AddDays(3),
+                        Recipient = new NotificationRecipient
+                        {
+                            RecipientEmail = new RecipientEmail
+                            {
+                                EmailAddress = "recipient@example.com",
+                                Settings = new EmailSendingOptions
+                                {
+                                    Body = "First reminder email body",
+                                    Subject = "First reminder email subject",
+                                    SenderName = "First reminder email sender",
+                                    SenderEmailAddress = "sender@example.com",
+                                    ContentType = EmailContentType.Plain,
+                                    SendingTimePolicy = SendingTimePolicy.Anytime
+                                }
+                            }
+                        }
+                    },
+                    new NotificationReminder
+                    {
+                        DelayDays = 7,
+                        OrderId = secondReminderId,
+                        SendersReference = "SECOND-REMINDER-REF",
+                        RequestedSendTime = requestedSendTime.AddDays(7),
+                        Recipient = new NotificationRecipient
+                        {
+                            RecipientEmail = new RecipientEmail
+                            {
+                                EmailAddress = "recipient@example.com",
+                                Settings = new EmailSendingOptions
+                                {
+                                    Body = "Second reminder email body",
+                                    Subject = "Second reminder email subject",
+                                    SenderName = "Second reminder email sender",
+                                    SenderEmailAddress = "sender@example.com",
+                                    ContentType = EmailContentType.Plain,
+                                    SendingTimePolicy = SendingTimePolicy.Anytime
+                                }
+                            }
+                        }
+                    }
+                ])
+                .Build();
+
+            // Create the main notification order
+            NotificationOrder mainOrder = new()
+            {
+                Id = mainOrderId,
+                Creator = new(creator),
+                Created = creationDateTime,
+                RequestedSendTime = requestedSendTime,
+                NotificationChannel = NotificationChannel.Email,
+                SendersReference = "MAIN-ORDER-REF",
+                Templates =
+                [
+                    new EmailTemplate("sender@example.com", "Main email subject", "Main email body", EmailContentType.Plain)
+                ],
+                Recipients =
+                [
+                    new Recipient([new EmailAddressPoint("recipient@example.com")])
+                ]
+            };
+
+            // Create reminder orders
+            List<NotificationOrder> reminders =
+            [
+                new NotificationOrder
+                {
+                    Id = firstReminderId,
+                    Creator = new(creator),
+                    Created = creationDateTime,
+                    RequestedSendTime = requestedSendTime.AddDays(3),
+                    NotificationChannel = NotificationChannel.Email,
+                    SendersReference = "FIRST-REMINDER-REF",
+                    Templates =
+                    [
+                        new EmailTemplate("sender@example.com", "First reminder email subject", "First reminder email body", EmailContentType.Plain)
+                    ],
+                    Recipients =
+                    [
+                        new Recipient([new EmailAddressPoint("recipient@example.com")])
+                    ]
+                },
+                new NotificationOrder
+                {
+                    Id = secondReminderId,
+                    Creator = new(creator),
+                    Created = creationDateTime,
+                    RequestedSendTime = requestedSendTime.AddDays(7),
+                    NotificationChannel = NotificationChannel.Email,
+                    SendersReference = "SECOND-REMINDER-REF",
+                    Templates =
+                    [
+                        new EmailTemplate("sender@example.com", "Second reminder email subject", "Second reminder email body", EmailContentType.Plain)
+                    ],
+                    Recipients =
+                    [
+                        new Recipient([new EmailAddressPoint("recipient@example.com")])
+                    ]
+                }
+            ];
+
+            // Insert the order chain with reminders in the database
+            await repo.Create(orderRequest, mainOrder, reminders);
+
+            // Act
+            var result = await repo.GetOrderChainTracking(creator, idempotencyId);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(orderChainId, result.OrderChainId);
+            Assert.Equal(mainOrderId, result.OrderChainReceipt.ShipmentId);
+            Assert.Equal("MAIN-ORDER-REF", result.OrderChainReceipt.SendersReference);
+
+            // Verify reminders
+            Assert.NotNull(result.OrderChainReceipt.Reminders);
+            Assert.Equal(2, result.OrderChainReceipt.Reminders.Count);
+
+            // First reminder
+            Assert.Equal(firstReminderId, result.OrderChainReceipt.Reminders[0].ShipmentId);
+            Assert.Equal("FIRST-REMINDER-REF", result.OrderChainReceipt.Reminders[0].SendersReference);
+
+            // Second reminder
+            Assert.Equal(secondReminderId, result.OrderChainReceipt.Reminders[1].ShipmentId);
+            Assert.Equal("SECOND-REMINDER-REF", result.OrderChainReceipt.Reminders[1].SendersReference);
+        }
+
+        [Fact]
+        public async Task GetOrderChainTracking_WhenNotificationOrderChainWithoutRemindersExists_ReturnsCorrectOrderChainTrackingInformation()
+        {
+            // Arrange
+            OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+            Guid orderId = Guid.NewGuid();
+            Guid orderChainId = Guid.NewGuid();
+
+            string creator = "random-creator-name";
+            string idempotencyId = "random-39B0068652C6";
+
+            DateTime creationDateTime = DateTime.UtcNow;
+            var requestedSendTime = DateTime.UtcNow.AddMinutes(10);
+
+            _orderIdsToDelete.Add(orderId);
+            _ordersChainIdsToDelete.Add(orderChainId);
+
+            var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+                .SetOrderId(orderId)
+                .SetOrderChainId(orderChainId)
+                .SetIdempotencyId(idempotencyId)
+                .SetCreator(new Creator(creator))
+                .SetRequestedSendTime(requestedSendTime)
+                .SetSendersReference("TRACKING-C69C615A8412")
+                .SetRecipient(new NotificationRecipient
+                {
+                    RecipientEmail = new RecipientEmail
+                    {
+                        EmailAddress = "recipient@example.com",
+                        Settings = new EmailSendingOptions
+                        {
+                            Body = "Email body",
+                            Subject = "Email subject",
+                            SenderName = "Email sender name",
+                            SenderEmailAddress = "Email sender address",
+                            ContentType = EmailContentType.Plain,
+                            SendingTimePolicy = SendingTimePolicy.Anytime
+                        }
+                    }
+                })
+                .Build();
+
+            NotificationOrder notificationOrder = new()
+            {
+                Id = orderId,
+                Creator = new(creator),
+                Created = creationDateTime,
+                RequestedSendTime = requestedSendTime,
+                NotificationChannel = NotificationChannel.Email,
+                SendersReference = "TRACKING-C69C615A8412",
+                Templates =
+                [
+                    new EmailTemplate("Email sender address", "Email subject", "Email body", EmailContentType.Plain)
+                ],
+                Recipients =
+                [
+                    new Recipient([new EmailAddressPoint("recipient@example.com")])
+                ]
+            };
+
+            // Insert the order chain in the database
+            await repo.Create(orderChainRequest, notificationOrder, null);
+
+            // Act
+            var result = await repo.GetOrderChainTracking(creator, idempotencyId);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(orderChainId, result.OrderChainId);
+            Assert.Null(result.OrderChainReceipt.Reminders);
+            Assert.Equal(orderId, result.OrderChainReceipt.ShipmentId);
+            Assert.Equal("TRACKING-C69C615A8412", result.OrderChainReceipt.SendersReference);
         }
     }
 }
