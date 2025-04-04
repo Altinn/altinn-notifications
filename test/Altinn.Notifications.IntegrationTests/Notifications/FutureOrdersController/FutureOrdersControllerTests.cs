@@ -382,7 +382,6 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
                     {
                         Body = "Email body",
                         Subject = "Email subject",
-                        SenderName = "Email sender name",
                         SenderEmailAddress = "sender@example.com",
                         ContentType = EmailContentTypeExt.Plain
                     },
@@ -434,7 +433,6 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
                     {
                         Body = "Email body",
                         Subject = "Email subject",
-                        SenderName = "Email sender name",
                         SenderEmailAddress = "sender@example.com",
                         ContentType = EmailContentTypeExt.Plain
                     }
@@ -457,7 +455,6 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
                             {
                                 Body = "Reminder email body",
                                 Subject = "Reminder email subject",
-                                SenderName = "Reminder email sender name",
                                 SenderEmailAddress = "sender@example.com",
                                 ContentType = EmailContentTypeExt.Plain
                             }
@@ -714,7 +711,6 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
                     {
                         Body = "Test body",
                         Subject = "Test subject",
-                        SenderName = "Test sender",
                         SenderEmailAddress = "sender@example.com",
                         ContentType = EmailContentTypeExt.Plain
                     }
@@ -735,7 +731,6 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
                             {
                                 Body = "Reminder body",
                                 Subject = "Reminder subject",
-                                SenderName = "Reminder sender",
                                 SenderEmailAddress = "reminder-sender@example.com",
                                 ContentType = EmailContentTypeExt.Plain
                             }
@@ -832,7 +827,6 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
                     {
                         Body = "Test body",
                         Subject = "Test subject",
-                        SenderName = "Test sender",
                         SenderEmailAddress = "sender@example.com",
                         ContentType = EmailContentTypeExt.Plain
                     }
