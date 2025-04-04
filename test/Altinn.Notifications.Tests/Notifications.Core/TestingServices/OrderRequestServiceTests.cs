@@ -684,7 +684,8 @@ public class OrderRequestServiceTests
             [new([], "29105573746")],
             true,
             "urn:altinn:resource:tax-2025",
-            new Uri("https://api.skatteetaten.no/conditions/new"));
+            new Uri("https://api.skatteetaten.no/conditions/new"),
+            sendingTimePolicy: null);
 
         var expectedFirstReminder = new NotificationOrder(
             firstReminderId,
@@ -700,7 +701,8 @@ public class OrderRequestServiceTests
             [new([], "29105573746")],
             true,
             "urn:altinn:resource:tax-2025",
-            new Uri("https://api.skatteetaten.no/conditions/incomplete"));
+            new Uri("https://api.skatteetaten.no/conditions/incomplete"),
+            sendingTimePolicy: null);
 
         var expectedFinalReminder = new NotificationOrder(
             secondReminderId,
@@ -716,7 +718,8 @@ public class OrderRequestServiceTests
             [new([], "29105573746")],
             true,
             "urn:altinn:resource:tax-2025",
-            new Uri("https://api.Skatteetaten.no/conditions/incomplete"));
+            new Uri("https://api.Skatteetaten.no/conditions/incomplete"),
+            sendingTimePolicy: null);
 
         var orderRepositoryMock = new Mock<IOrderRepository>();
         var contactPointServiceMock = new Mock<IContactPointService>();
@@ -866,7 +869,8 @@ public class OrderRequestServiceTests
             [new([], organizationNumber: "312508729")],
             null,
             "urn:altinn:resource:annual-report-2025",
-            new Uri("https://api.brreg.no/conditions/annual-report"));
+            new Uri("https://api.brreg.no/conditions/annual-report"),
+            sendingTimePolicy: null);
 
         // Setup mock
         var orderRepositoryMock = new Mock<IOrderRepository>();
@@ -1307,7 +1311,107 @@ public class OrderRequestServiceTests
             Times.Once);
     }
 
-    public static OrderRequestService GetTestService(IOrderRepository? repository = null, IContactPointService? contactPointService = null, Guid? guid = null, DateTime? dateTime = null)
+    /// <summary>
+    /// Test to ensure that the correct value for SendingTimePolicy is passed to the repository.
+    /// </summary>
+    /// <param name="sendingTimePolicyInput">If sendingTimePolicyInput is null, the value for sms should be set to the default value in the setter: Daytime</param>
+    /// <param name="shouldEqual">Should be equal to sendingTimePolicyInput, unless value is null</param>
+    /// <returns></returns>
+    [Theory]
+    [InlineData(SendingTimePolicy.Daytime, SendingTimePolicy.Daytime)]
+    [InlineData(SendingTimePolicy.Anytime, SendingTimePolicy.Anytime)]
+    [InlineData(null, SendingTimePolicy.Daytime)]
+    public async Task CreateNotificationOrder_PassesCorrectValueForSendingTimePolicyToRepository(SendingTimePolicy? sendingTimePolicyInput, SendingTimePolicy shouldEqual)
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+        var smsSettings = new SmsSendingOptions
+        {
+            Body = "Test Body",
+            Sender = "TestSender"
+        };
+
+        if (sendingTimePolicyInput != null)
+        {
+            smsSettings = new SmsSendingOptions
+            {
+                Body = "Test Body",
+                Sender = "TestSender",
+                SendingTimePolicy = sendingTimePolicyInput.Value
+            };
+        }
+
+        var mockResponse = new List<NotificationOrder>
+        {
+            new()
+        };
+        DateTime currentTime = DateTime.UtcNow;
+        var recipient = new NotificationRecipient
+        {
+            RecipientSms = new RecipientSms
+            {
+                PhoneNumber = "+4799999999",
+                Settings = smsSettings
+            }
+        };
+        Mock<IOrderRepository> orderRepositoryMock = new();
+        orderRepositoryMock
+            .Setup(r => r.Create(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<NotificationOrder>(), It.IsAny<List<NotificationOrder>>(), CancellationToken.None))
+            .Returns(Task.FromResult(mockResponse));
+
+        var service = GetTestService(orderRepositoryMock.Object, null, orderId, currentTime);
+
+        // Act
+        await service.RegisterNotificationOrderChain(
+            new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+                .SetOrderId(orderId)
+                .SetOrderChainId(orderChainId)
+                .SetRecipient(recipient)
+                .SetCreator(new Creator("test"))
+                .SetRequestedSendTime(currentTime.AddHours(1))
+                .SetIdempotencyId("C0A3FABE-D65F-48A0-8745-5D4CC6EA7968")
+                .Build());
+
+        // Assert
+        orderRepositoryMock.Verify(
+            r => r.Create(
+            It.IsAny<NotificationOrderChainRequest>(),
+            It.Is<NotificationOrder>(o => o.SendingTimePolicy == shouldEqual),
+            It.IsAny<List<NotificationOrder>>(),
+            CancellationToken.None),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task RegisterNotificationOrder_ShouldPassNullValueForSendingTimePolicyToRepository()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        var mockResponse = new NotificationOrder();
+
+        var notificationOrder = new NotificationOrderRequest()
+        {
+        };
+
+        Mock<IOrderRepository> orderRepositoryMock = new();
+        orderRepositoryMock
+            .Setup(r => r.Create(It.IsAny<NotificationOrder>()))
+            .Returns(Task.FromResult(mockResponse));
+
+        var service = GetTestService(orderRepositoryMock.Object, null, orderId, DateTime.UtcNow);
+
+        // Act
+        await service.RegisterNotificationOrder(notificationOrder);
+
+        // Assert
+        orderRepositoryMock.Verify(
+            r => r.Create(
+                It.Is<NotificationOrder>(o => o.SendingTimePolicy == null)),
+            Times.Once);
+    }
+
+    private static OrderRequestService GetTestService(IOrderRepository? repository = null, IContactPointService? contactPointService = null, Guid? guid = null, DateTime? dateTime = null)
     {
         if (repository == null)
         {
