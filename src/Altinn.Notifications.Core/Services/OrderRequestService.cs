@@ -77,9 +77,17 @@ public class OrderRequestService : IOrderRequestService
     }
 
     /// <inheritdoc/>
-    public async Task<NotificationOrderChainResponse> RegisterNotificationOrderChain(NotificationOrderChainRequest orderRequest)
+    public async Task<NotificationOrderChainResponse?> RetrieveOrderChainTracking(string creatorName, string idempotencyId, CancellationToken cancellationToken = default)
+    {
+        return await _repository.GetOrderChainTracking(creatorName, idempotencyId, cancellationToken) ?? null;
+    }
+
+    /// <inheritdoc/>
+    public async Task<NotificationOrderChainResponse> RegisterNotificationOrderChain(NotificationOrderChainRequest orderRequest, CancellationToken cancellationToken = default)
     {
         DateTime currentTime = _dateTime.UtcNow();
+
+        cancellationToken.ThrowIfCancellationRequested();
 
         var mainOrder = await CreateNotificationOrder(
             orderRequest.Recipient,
@@ -93,9 +101,10 @@ public class OrderRequestService : IOrderRequestService
         var reminderOrders = await CreateNotificationOrders(
             orderRequest.Reminders,
             orderRequest.Creator,
-            currentTime);
+            currentTime,
+            cancellationToken);
 
-        List<NotificationOrder> savedOrders = await _repository.Create(orderRequest, mainOrder, reminderOrders);
+        List<NotificationOrder> savedOrders = await _repository.Create(orderRequest, mainOrder, reminderOrders, cancellationToken);
 
         if (savedOrders == null || savedOrders.Count == 0)
         {
@@ -108,8 +117,8 @@ public class OrderRequestService : IOrderRequestService
         // Create and return the response
         return new NotificationOrderChainResponse
         {
-            Id = orderRequest.OrderChainId,
-            CreationResult = new NotificationOrderChainReceipt
+            OrderChainId = orderRequest.OrderChainId,
+            OrderChainReceipt = new NotificationOrderChainReceipt
             {
                 ShipmentId = savedMainOrder.Id,
                 SendersReference = savedMainOrder.SendersReference,
@@ -184,51 +193,6 @@ public class OrderRequestService : IOrderRequestService
             resourceId,
             conditionEndpoint,
             sendingTimePolicy);
-    }
-
-    /// <summary>
-    /// Creates notification orders for each reminder provided.
-    /// </summary>
-    /// <param name="reminders">
-    /// A list of <see cref="NotificationReminder"/> objects representing the reminders to be sent after the main notification order.
-    /// </param>
-    /// <param name="creator">
-    /// The <see cref="Creator"/> associated with the reminder orders, indicating the originator of the notifications.
-    /// </param>
-    /// <param name="currentTime">
-    /// The current UTC date and time, used as the reference time for creating the orders.
-    /// </param>
-    /// <returns>
-    /// A <see cref="Task"/> representing the asynchronous operation, yielding a <see cref="List{NotificationOrder}"/> objects representing reminder orders.
-    /// </returns>
-    /// <remarks>
-    /// This method iterates through the provided reminders and, for each reminder, invokes 
-    /// <see cref="CreateNotificationOrder"/> to generate a corresponding reminder order using the reminder's details.
-    /// </remarks>
-    private async Task<List<NotificationOrder>> CreateNotificationOrders(List<NotificationReminder>? reminders, Creator creator, DateTime currentTime)
-    {
-        var reminderOrders = new List<NotificationOrder>();
-
-        if (reminders == null || reminders.Count == 0)
-        {
-            return reminderOrders;
-        }
-
-        foreach (var reminder in reminders)
-        {
-            var reminderOrder = await CreateNotificationOrder(
-                reminder.Recipient,
-                reminder.OrderId,
-                reminder.SendersReference,
-                reminder.RequestedSendTime,
-                creator,
-                currentTime,
-                reminder.ConditionEndpoint);
-
-            reminderOrders.Add(reminderOrder);
-        }
-
-        return reminderOrders;
     }
 
     private async Task<RecipientLookupResult?> GetRecipientLookupResult(List<Recipient> originalRecipients, NotificationChannel channel, string? resourceId)
@@ -345,6 +309,59 @@ public class OrderRequestService : IOrderRequestService
     private static SmsTemplate CreateSmsTemplate(SmsSendingOptions smsSettings)
     {
         return new SmsTemplate(smsSettings.Sender, smsSettings.Body);
+    }
+
+    /// <summary>
+    /// Creates notification orders for each reminder provided.
+    /// </summary>
+    /// <param name="reminders">
+    /// A list of <see cref="NotificationReminder"/> objects representing the reminders to be sent after the main notification order.
+    /// </param>
+    /// <param name="creator">
+    /// The <see cref="Creator"/> associated with the reminder orders, indicating the originator of the notifications.
+    /// </param>
+    /// <param name="currentTime">
+    /// The current UTC date and time, used as the reference time for creating the orders.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task"/> representing the asynchronous operation, yielding a <see cref="List{NotificationOrder}"/> objects representing reminder orders.
+    /// </returns>
+    /// <remarks>
+    /// This method iterates through the provided reminders and, for each reminder, invokes 
+    /// <see cref="CreateNotificationOrder"/> to generate a corresponding reminder order using the reminder's details.
+    /// </remarks>
+    /// <exception cref="OperationCanceledException">
+    /// Thrown when the operation is canceled through the provided <paramref name="cancellationToken"/>.
+    /// </exception>
+    private async Task<List<NotificationOrder>> CreateNotificationOrders(List<NotificationReminder>? reminders, Creator creator, DateTime currentTime, CancellationToken cancellationToken = default)
+    {
+        var reminderOrders = new List<NotificationOrder>();
+
+        if (reminders == null || reminders.Count == 0)
+        {
+            return reminderOrders;
+        }
+
+        foreach (var reminder in reminders)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var reminderOrder = await CreateNotificationOrder(
+                reminder.Recipient,
+                reminder.OrderId,
+                reminder.SendersReference,
+                reminder.RequestedSendTime,
+                creator,
+                currentTime,
+                reminder.ConditionEndpoint);
+
+            reminderOrders.Add(reminderOrder);
+        }
+
+        return reminderOrders;
     }
 
     /// <summary>
