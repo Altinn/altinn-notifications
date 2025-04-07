@@ -81,7 +81,7 @@ public class FutureOrdersController : ControllerBase
             var notificationOrderChainRequest = notificationOrderRequest.MapToNotificationOrderChainRequest(creator);
             var registeredNotificationOrderChain = await _orderRequestService.RegisterNotificationOrderChain(notificationOrderChainRequest, cancellationToken);
 
-            return Accepted(registeredNotificationOrderChain.OrderChainId.GetSelfLinkFromOrderChainId(), registeredNotificationOrderChain.MapToNotificationOrderChainResponseExt());
+            return Created(registeredNotificationOrderChain.OrderChainId.GetSelfLinkFromOrderChainId(), registeredNotificationOrderChain.MapToNotificationOrderChainResponseExt());
         }
         catch (OperationCanceledException)
         {
