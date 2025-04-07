@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
@@ -17,6 +18,7 @@ namespace Altinn.Notifications.Persistence.Repository;
 /// <summary>
 /// Implementation of order repository logic
 /// </summary>
+[ExcludeFromCodeCoverage]
 public class OrderRepository : IOrderRepository
 {
     private readonly NpgsqlDataSource _dataSource;
