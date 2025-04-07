@@ -54,7 +54,6 @@ public class FutureOrdersController : ControllerBase
     [SwaggerResponse(400, "The notification order is invalid", typeof(ValidationProblemDetails))]
     [SwaggerResponse(422, "The notification order is invalid", typeof(ValidationProblemDetails))]
     [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request before the server could complete processing")]
-    [SwaggerResponse(500, "An unexpected error occurred")]
     public async Task<ActionResult<NotificationOrderChainResponseExt>> Post(NotificationOrderChainRequestExt notificationOrderRequest, CancellationToken cancellationToken = default)
     {
         try
@@ -86,10 +85,6 @@ public class FutureOrdersController : ControllerBase
         catch (OperationCanceledException)
         {
             return StatusCode(499, "Request terminated - The client disconnected or cancelled the request before the server could complete processing");
-        }
-        catch (Exception)
-        {
-            return StatusCode(500, $"An unexpected error occurred");
         }
     }
 }
