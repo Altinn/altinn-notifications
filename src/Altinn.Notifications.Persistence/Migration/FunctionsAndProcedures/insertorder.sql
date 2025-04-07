@@ -38,6 +38,3 @@ BEGIN
    RETURN _orderid;
 END;
 $BODY$;
-
-ALTER FUNCTION notifications.insertorder(uuid, text, text, timestamp with time zone, timestamp with time zone, jsonb, integer)
-    OWNER TO postgres;
