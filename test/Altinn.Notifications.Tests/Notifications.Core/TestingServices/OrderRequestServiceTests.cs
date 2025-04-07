@@ -684,8 +684,7 @@ public class OrderRequestServiceTests
             [new([], "29105573746")],
             true,
             "urn:altinn:resource:tax-2025",
-            new Uri("https://api.skatteetaten.no/conditions/new"),
-            sendingTimePolicy: null);
+            new Uri("https://api.skatteetaten.no/conditions/new"));
 
         var expectedFirstReminder = new NotificationOrder(
             firstReminderId,
@@ -701,8 +700,7 @@ public class OrderRequestServiceTests
             [new([], "29105573746")],
             true,
             "urn:altinn:resource:tax-2025",
-            new Uri("https://api.skatteetaten.no/conditions/incomplete"),
-            sendingTimePolicy: null);
+            new Uri("https://api.skatteetaten.no/conditions/incomplete"));
 
         var expectedFinalReminder = new NotificationOrder(
             secondReminderId,
@@ -718,8 +716,7 @@ public class OrderRequestServiceTests
             [new([], "29105573746")],
             true,
             "urn:altinn:resource:tax-2025",
-            new Uri("https://api.Skatteetaten.no/conditions/incomplete"),
-            sendingTimePolicy: null);
+            new Uri("https://api.Skatteetaten.no/conditions/incomplete"));
 
         var orderRepositoryMock = new Mock<IOrderRepository>();
         var contactPointServiceMock = new Mock<IContactPointService>();
@@ -869,8 +866,7 @@ public class OrderRequestServiceTests
             [new([], organizationNumber: "312508729")],
             null,
             "urn:altinn:resource:annual-report-2025",
-            new Uri("https://api.brreg.no/conditions/annual-report"),
-            sendingTimePolicy: null);
+            new Uri("https://api.brreg.no/conditions/annual-report"));
 
         // Setup mock
         var orderRepositoryMock = new Mock<IOrderRepository>();

@@ -53,19 +53,20 @@ public class OrderRequestService : IOrderRequestService
 
         var templates = SetSenderIfNotDefined(orderRequest.Templates);
 
-        var order = new NotificationOrder(
-            orderId,
-            orderRequest.SendersReference,
-            templates,
-            orderRequest.RequestedSendTime ?? currentime,
-            orderRequest.NotificationChannel,
-            orderRequest.Creator,
-            currentime,
-            orderRequest.Recipients,
-            orderRequest.IgnoreReservation,
-            orderRequest.ResourceId,
-            orderRequest.ConditionEndpoint,
-            sendingTimePolicy: null); 
+        var order = new NotificationOrder
+        {
+            Id = orderId,
+            SendersReference = orderRequest.SendersReference,
+            Templates = templates,
+            RequestedSendTime = orderRequest.RequestedSendTime ?? currentime,
+            NotificationChannel = orderRequest.NotificationChannel,
+            Creator = orderRequest.Creator,
+            Created = currentime,
+            Recipients = orderRequest.Recipients,
+            IgnoreReservation = orderRequest.IgnoreReservation,
+            ResourceId = orderRequest.ResourceId,
+            ConditionEndpoint = orderRequest.ConditionEndpoint
+        };
 
         NotificationOrder savedOrder = await _repository.Create(order);
 
@@ -180,19 +181,21 @@ public class OrderRequestService : IOrderRequestService
 
         templates = SetSenderIfNotDefined(templates);
 
-        return new NotificationOrder(
-            orderId,
-            sendersReference,
-            templates,
-            requestedSendTime,
-            channel,
-            creator,
-            currentTime,
-            recipients,
-            ignoreReservation,
-            resourceId,
-            conditionEndpoint,
-            sendingTimePolicy);
+        return new NotificationOrder
+        {
+            Id = orderId,
+            SendersReference = sendersReference,
+            Templates = templates,
+            RequestedSendTime = requestedSendTime,
+            NotificationChannel = channel,
+            Creator = creator,
+            Created = currentTime,
+            Recipients = recipients,
+            IgnoreReservation = ignoreReservation,
+            ResourceId = resourceId,
+            ConditionEndpoint = conditionEndpoint,
+            SendingTimePolicy = sendingTimePolicy
+        };
     }
 
     private async Task<RecipientLookupResult?> GetRecipientLookupResult(List<Recipient> originalRecipients, NotificationChannel channel, string? resourceId)

@@ -56,8 +56,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
             [],
             false,
             null,
-            null,
-            sendingTimePolicy: null);
+            null);
 
         _orderWithStatus = new(
             _orderId,

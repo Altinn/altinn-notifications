@@ -64,8 +64,7 @@ public class NotificationOrder : IBaseNotificationOrder
         List<Recipient> recipients,
         bool? ignoreReservation,
         string? resourceId,
-        Uri? conditionEndpoint,
-        SendingTimePolicy? sendingTimePolicy)
+        Uri? conditionEndpoint)
     {
         Id = id;
         SendersReference = sendersReference;
@@ -74,7 +73,6 @@ public class NotificationOrder : IBaseNotificationOrder
         NotificationChannel = notificationChannel;
         Creator = creator;
         Created = created;
-        SendingTimePolicy = sendingTimePolicy;
         Recipients = recipients;
         IgnoreReservation = ignoreReservation;
         ResourceId = resourceId;
