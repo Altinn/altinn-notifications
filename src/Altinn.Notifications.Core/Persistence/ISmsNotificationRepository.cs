@@ -23,7 +23,7 @@ public interface ISmsNotificationRepository
     /// Retrieves all SMS notifications that have the status 'New'.
     /// </summary>
     /// <returns>A task that represents the asynchronous operation. The task result contains a list of new SMS notifications.</returns>
-    Task<List<Sms>> GetNewNotifications();
+    Task<List<Sms>> GetNewNotifications(SendingTimePolicy sendingTimePolicy);
 
     /// <summary>
     /// Retrieves all processed SMS recipients for a specified order.

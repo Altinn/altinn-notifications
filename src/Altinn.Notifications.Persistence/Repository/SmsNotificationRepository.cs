@@ -18,7 +18,7 @@ public class SmsNotificationRepository : ISmsNotificationRepository
 {
     private readonly NpgsqlDataSource _dataSource;
 
-    private const string _getNewSmsNotificationsSql = "select * from notifications.getsms_statusnew_updatestatus()";
+    private const string _getNewSmsNoticationsSqlWithSendingTimePolicyParameter = "select * from notifications.getsms_statusnew_updatestatus($1)"; // (_sendingtimepolicy)
     private const string _getSmsNotificationRecipientsSql = "select * from notifications.getsmsrecipients_v2($1)"; // (_orderid)
     private const string _insertNewSmsNotificationSql = "call notifications.insertsmsnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _customizedbody, _result, _smscount, _resulttime, _expirytime)
 
@@ -88,12 +88,18 @@ public class SmsNotificationRepository : ISmsNotificationRepository
         return recipients;
     }
 
-    /// <inheritdoc/>
-    public async Task<List<Sms>> GetNewNotifications()
+    /// <summary>
+    /// Retrieves and updates status on all sms that have the status new
+    /// Calls database function with sendingTimePolicy parameter to filter result based on sending schedule of choice
+    /// </summary>
+    /// <param name="sendingTimePolicy">Filtered by the sending time policy set on the order related to the notification row</param>
+    /// <returns>List of rows read and updated from the database</returns>
+    public async Task<List<Sms>> GetNewNotifications(SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime)
     {
         List<Sms> readyToSendSMS = [];
-        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getNewSmsNotificationsSql);
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getNewSmsNoticationsSqlWithSendingTimePolicyParameter);
 
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Integer, (int)sendingTimePolicy);
         await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync())
         {
             while (await reader.ReadAsync())
