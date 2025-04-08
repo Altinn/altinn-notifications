@@ -9,7 +9,7 @@ namespace Altinn.Notifications.Controllers;
 /// </summary>
 [Route("notifications/api/v1/trigger")]
 [ApiController]
-[ApiExplorerSettings(IgnoreApi = false)]
+[ApiExplorerSettings(IgnoreApi = true)]
 public class TriggerController : ControllerBase
 {
     private readonly IOrderProcessingService _orderProcessingService;
