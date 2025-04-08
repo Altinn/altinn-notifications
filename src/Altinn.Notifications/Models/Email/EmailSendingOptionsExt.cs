@@ -10,16 +10,6 @@ namespace Altinn.Notifications.Models.Email;
 public class EmailSendingOptionsExt
 {
     /// <summary>
-    /// Gets or sets the display name of the sender.
-    /// </summary>
-    /// <remarks>
-    /// Can only be used if <see cref="SenderEmailAddress"/> is set.
-    /// Appears alongside the email address in the recipient's email client.
-    /// </remarks>
-    [JsonPropertyName("senderName")]
-    public string? SenderName { get; set; }
-
-    /// <summary>
     /// Gets or sets the sender's email address.
     /// </summary>
     /// <remarks>

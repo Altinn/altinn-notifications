@@ -32,21 +32,29 @@ import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 import * as setupToken from "../setup.js";
 import * as ordersApi from "../api/notifications/orders.js";
 import * as notificationsApi from "../api/notifications/notifications.js";
+import { post_mail_order, get_mail_notifications, setEmptyThresholds } from "./threshold-labels.js";
+import { getNotificationOrderById, getNotificationOrderBySendersReference, getNotificationOrderWithStatus } from "../api/notifications/get-notification-orders.js";
+
+const labels = [post_mail_order, get_mail_notifications];
 
 const emailOrderRequestJson = JSON.parse(
     open("../data/orders/01-email-request.json")
 );
 
+const environment = __ENV.env;
+
 const scopes = "altinn:serviceowner/notifications.create";
 const ninRecipient = __ENV.ninRecipient ? __ENV.ninRecipient.toLowerCase() : null;
-const emailRecipient = __ENV.emailRecipient ? __ENV.emailRecipient.toLowerCase() : null;
+const emailRecipient = __ENV.emailRecipient ? __ENV.emailRecipient.toLowerCase() : environment === "yt01"? "noreply@altinn.no" : null;
 
 export const options = {
+    summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(95)', 'p(99)', 'p(99.5)', 'p(99.9)', 'count'],
     thresholds: {
         // Checks rate should be 100%. Raise error if any check has failed.
         checks: ['rate>=1']
     }
 };
+setEmptyThresholds(labels, options);
 
 /**
  * Initialize test data.
@@ -86,7 +94,8 @@ export function setup() {
 function postEmailNotificationOrderRequest(data) {
     const response = ordersApi.postEmailNotificationOrder(
         JSON.stringify(data.emailOrderRequest),
-        data.token
+        data.token,
+        post_mail_order
     );
 
     const success = check(response, {
@@ -99,66 +108,16 @@ function postEmailNotificationOrderRequest(data) {
 
     check(response, {
         "POST email notification order request. Location header provided": (_) => selfLink,
-        "POST email notification order request. Recipient lookup was successful": (r) => JSON.parse(r.body).recipientLookup.status == 'Success'
     });
 
+    if (ninRecipient) {
+        check(response, {
+            "POST email notification order request. Recipient lookup was successful": (r) => JSON.parse(r.body).recipientLookup.status == 'Success'
+        });
+    }
     return selfLink;
 }
 
-/**
- * Gets a notification order by its ID.
- * @param {Object} data - The data object containing token.
- * @param {string} selfLink - The selfLink of the order.
- * @param {string} orderId - The order identifier.
- */
-function getNotificationOrderById(data, selfLink, orderId) {
-    const response = ordersApi.getByUrl(selfLink, data.token);
-
-    check(response, {
-        "GET notification order by id. Status is 200 OK": (r) => r.status === 200,
-    });
-
-    check(JSON.parse(response.body), {
-        "GET notification order by id. Id property is a match": (order) => order.id === orderId,
-        "GET notification order by id. Creator property is a match": (order) => order.creator === "ttd",
-    });
-}
-
-/**
- * Gets a notification order by the sender's reference.
- * @param {Object} data - The data object containing sendersReference and token.
- */
-function getNotificationOrderBySendersReference(data) {
-    const response = ordersApi.getBySendersReference(data.sendersReference, data.token);
-
-    check(response, {
-        "GET notification order by senders reference. Status is 200 OK": (r) => r.status === 200,
-    });
-
-    check(JSON.parse(response.body), {
-        "GET notification order by senders reference. Count is equal to 1": (orderList) => orderList.count === 1,
-        "GET notification order by senders reference. Orderlist contains one element": (orderList) => Array.isArray(orderList.orders) && orderList.orders.length == 1,
-    });
-}
-
-/**
- * Gets a notification order with its status.
- * @param {Object} data - The data object containing token.
- * @param {string} orderId - The ID of the order.
- */
-function getNotificationOrderWithStatus(data, orderId) {
-    const response = ordersApi.getWithStatus(orderId, data.token);
-
-    check(response, {
-        "GET notification order with status. Status is 200 OK": (r) => r.status === 200,
-    });
-
-    check(JSON.parse(response.body), {
-        "GET notification order with status. Id property is a match": (order) => order.id === orderId,
-        "GET notification order with status. NotificationChannel is email": (order) => order.notificationChannel === "Email",
-        "GET notification order with status. ProcessingStatus is defined": (order) => order.processingStatus,
-    });
-}
 
 /**
  * Gets the email notification summary.
@@ -166,7 +125,7 @@ function getNotificationOrderWithStatus(data, orderId) {
  * @param {string} orderId - The ID of the order.
  */
 function getEmailNotificationSummary(data, orderId) {
-    const response = notificationsApi.getEmailNotifications(orderId, data.token);
+    const response = notificationsApi.getEmailNotifications(orderId, data.token, get_mail_notifications);
 
     check(response, {
         "GET email notifications. Status is 200 OK": (r) => r.status === 200,
@@ -186,7 +145,8 @@ function postEmailNotificationOrderWithNegativeConditionCheck(data) {
 
     let response = ordersApi.postEmailNotificationOrder(
         JSON.stringify(emailOrderRequest),
-        data.token
+        data.token, 
+        post_mail_order
     );
 
     let success = check(response, {
@@ -220,7 +180,7 @@ export default function (data) {
     if (data.runFullTestSet) {
         getNotificationOrderById(data, selfLink, id);
         getNotificationOrderBySendersReference(data);
-        getNotificationOrderWithStatus(data, id);
+        getNotificationOrderWithStatus(data, id, "Email");
         getEmailNotificationSummary(data, id);
         postEmailNotificationOrderWithNegativeConditionCheck(data);
     } else {

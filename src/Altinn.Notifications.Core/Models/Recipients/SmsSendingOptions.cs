@@ -13,7 +13,7 @@ public class SmsSendingOptions
     /// <remarks>
     /// Can be either a phone number or an alphanumeric sender identifier, subject to carrier and regional restrictions.
     /// </remarks>
-    public required string Sender { get; set; }
+    public string? Sender { get; set; }
 
     /// <summary>
     /// Gets or sets the text content of the SMS message.

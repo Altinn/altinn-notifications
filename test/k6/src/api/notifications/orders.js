@@ -2,19 +2,20 @@ import http from "k6/http";
 import * as config from "../../config.js";
 import * as apiHelpers from "../../apiHelpers.js";
 
-export function postEmailNotificationOrder(serializedOrder, token) {
+export function postEmailNotificationOrder(serializedOrder, token, label) {
   const endpoint = config.notifications.orders_email;
 
   const params = apiHelpers.buildHeaderWithBearerAndContentType(token);
+  params.tags = { name: label };
 
   return http.post(endpoint, serializedOrder, params);
 }
 
-export function postSmsNotificationOrder(serializedOrder, token) {
+export function postSmsNotificationOrder(serializedOrder, token, label) {
   const endpoint = config.notifications.orders_sms;
 
   const params = apiHelpers.buildHeaderWithBearerAndContentType(token);
-
+  params.tags = { name: label };
   return http.post(endpoint, serializedOrder, params);
 }
 
