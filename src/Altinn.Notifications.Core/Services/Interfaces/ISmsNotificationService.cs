@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Models.Address;
+﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
 
@@ -25,7 +26,7 @@ public interface ISmsNotificationService
     /// Initiates the process of sending all ready-to-send SMS notifications.
     /// </summary>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    Task SendNotifications();
+    Task SendNotifications(SendingTimePolicy sendingTimePolicy);
 
     /// <summary>
     /// Updates the send status of an SMS notification based on the provided send operation result.

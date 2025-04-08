@@ -9,7 +9,7 @@ namespace Altinn.Notifications.Controllers;
 /// </summary>
 [Route("notifications/api/v1/trigger")]
 [ApiController]
-[ApiExplorerSettings(IgnoreApi = true)]
+[ApiExplorerSettings(IgnoreApi = false)]
 public class TriggerController : ControllerBase
 {
     private readonly IOrderProcessingService _orderProcessingService;
@@ -57,19 +57,34 @@ public class TriggerController : ControllerBase
     }
 
     /// <summary>
-    /// Endpoint for starting the processing of sms that are ready to be sent
+    /// Endpoint for starting the processing of sms that are ready to be sent with policy daytime
+    /// Automatically filtered to process daytime sms only
     /// </summary>
     [HttpPost]
     [Consumes("application/json")]
     [Route("sendsms")]
-    public async Task<ActionResult> Trigger_SendSmsNotifications()
+    [Route("sendsmsdaytime")]
+    public async Task<ActionResult> Trigger_SendSmsNotificationsDaytime()
     {
         if (!_scheduleService.CanSendSmsNotifications())
         {
             return Ok();
         }
 
-        await _smsNotificationService.SendNotifications();
+        await _smsNotificationService.SendNotifications(Core.Enums.SendingTimePolicy.Daytime);
+        return Ok();
+    }
+
+    /// <summary>
+    /// Endpoint for starting the processing of sms that are ready to be sent with policy anytime
+    /// </summary>
+    /// <returns>A <see cref="Task{TResult}"/> representing the result of the asynchronous operation.</returns>
+    [HttpPost]  
+    [Consumes("application/json")]
+    [Route("sendsmsanytime")]
+    public async Task<ActionResult> Trigger_SendSmsNotificationsAnytime()
+    {
+        await _smsNotificationService.SendNotifications(Core.Enums.SendingTimePolicy.Anytime);
         return Ok();
     }
 }
