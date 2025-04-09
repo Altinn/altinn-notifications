@@ -405,6 +405,8 @@ END;
 $BODY$;
 
 -- getsmsstatusnewupdatestatus.sql:
+-- This function is kept for backward compatibility and may be removed in future versions.
+-- Use notifications.getsms_statusnew_updatestatus(integer) instead.
 CREATE OR REPLACE FUNCTION notifications.getsms_statusnew_updatestatus()
     RETURNS TABLE(alternateid uuid, sendernumber text, mobilenumber text, body text) 
     LANGUAGE 'plpgsql'
