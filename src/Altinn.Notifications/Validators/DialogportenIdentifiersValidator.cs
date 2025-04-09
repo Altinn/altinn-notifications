@@ -14,6 +14,7 @@ namespace Altinn.Notifications.Validators
         /// </summary>
         public DialogportenIdentifiersValidator()
         {
+            // intentionally left empty for future implementation.
         }
     }
 }
