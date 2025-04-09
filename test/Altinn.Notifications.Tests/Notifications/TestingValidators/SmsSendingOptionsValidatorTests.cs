@@ -47,7 +47,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingValidators
         }
 
         [Fact]
-        public void Should_Faild_When_Body_Is_Not_Set()
+        public void Should_Fail_When_Body_Is_Not_Set()
         {
             // Arrange
             var smsSendingOptions = new SmsSendingOptionsExt
