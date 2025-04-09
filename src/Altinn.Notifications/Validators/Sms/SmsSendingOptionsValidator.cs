@@ -22,20 +22,15 @@ namespace Altinn.Notifications.Validators.Sms
                     .NotEmpty()
                     .WithMessage("SMS body cannot be null or empty.");
                 
-                RuleFor(option => option!.Sender)
-                    .NotNull()
-                    .NotEmpty()
-                    .WithMessage("SMS sender cannot be null or empty.");
-
                 RuleFor(option => option!.SendingTimePolicy)
-                    .Must(HaveValueDaytime)
-                    .WithMessage("SMS only supports send time daytime");
+                    .Must(HaveValueDaytimeOrAnytime)
+                    .WithMessage("SMS only supports send time daytime and anytime");
             });
         }
 
-        private static bool HaveValueDaytime(SendingTimePolicyExt sendingTime)
+        private static bool HaveValueDaytimeOrAnytime(SendingTimePolicyExt sendingTime)
         {
-            return sendingTime == SendingTimePolicyExt.Daytime;
+            return sendingTime == SendingTimePolicyExt.Daytime || sendingTime == SendingTimePolicyExt.Anytime;
         }
     }
 }

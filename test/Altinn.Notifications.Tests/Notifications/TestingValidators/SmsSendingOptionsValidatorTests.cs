@@ -12,7 +12,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingValidators
         private readonly SmsSendingOptionsValidator _validator = new();
 
         [Fact]
-        public void Should_Not_Accept_SendingTimePolicy_When_Not_Anytime()
+        public void Should_Accept_SendingTimePolicy_When_Anytime()
         {
             // Arrange
             var smsSendingOptions = new SmsSendingOptionsExt
@@ -26,7 +26,43 @@ namespace Altinn.Notifications.Tests.Notifications.TestingValidators
             var actual = _validator.TestValidate(smsSendingOptions);
 
             // Assert
-            actual.ShouldHaveValidationErrorFor(options => options.SendingTimePolicy).WithErrorMessage("SMS only supports send time daytime");
+            actual.ShouldNotHaveValidationErrorFor(options => options.SendingTimePolicy);
+        }
+
+        [Fact]
+        public void Should_Validate_Successfully_Without_Sender_Field()
+        {
+            // Arrange
+            var smsSendingOptions = new SmsSendingOptionsExt
+            {
+                Body = "Test body",
+                SendingTimePolicy = SendingTimePolicyExt.Daytime
+            };
+
+            // Act
+            var actual = _validator.TestValidate(smsSendingOptions);
+
+            // Assert
+            actual.ShouldNotHaveAnyValidationErrors();
+        }
+
+        [Fact]
+        public void Should_Faild_When_Body_Is_Not_Set()
+        {
+            // Arrange
+            var smsSendingOptions = new SmsSendingOptionsExt
+            {
+                Sender = "Test sender",
+                Body = string.Empty,
+                SendingTimePolicy = SendingTimePolicyExt.Daytime
+            };
+
+            // Act
+            var actual = _validator.TestValidate(smsSendingOptions);
+
+            // Assert
+            actual.ShouldHaveValidationErrorFor(options => options.Body)
+                .WithErrorMessage("SMS body cannot be null or empty.");
         }
     }
 }
