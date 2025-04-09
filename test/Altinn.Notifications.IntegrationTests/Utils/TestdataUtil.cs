@@ -36,26 +36,6 @@ public static class TestdataUtil
         return (order, smsNotification);
     }
 
-    public static (NotificationOrder Order, SmsNotification Notification) GeOrderAndSmsAnytimeNotification()
-    {
-        NotificationOrder order = NotificationOrder_SmsTemplate_OneRecipient();
-        order.Id = Guid.NewGuid();
-        var recipient = order.Recipients[0];
-        SmsAddressPoint? addressPoint = recipient.AddressInfo.Find(a => a.AddressType == AddressType.Sms) as SmsAddressPoint;
-        var smsNotification = new SmsNotification()
-        {
-            Id = Guid.NewGuid(),
-            OrderId = order.Id,
-            RequestedSendTime = DateTime.UtcNow,
-            Recipient = new()
-            {
-                MobileNumber = addressPoint!.MobileNumber,
-            },
-            SendResult = new(SmsNotificationResultType.New, DateTime.UtcNow)
-        };
-        return (order, smsNotification);
-    }
-
     public static (NotificationOrder Order, EmailNotification Notification) GetOrderAndEmailNotification()
     {
         NotificationOrder order = NotificationOrder_EmailTemplate_OneRecipient();
