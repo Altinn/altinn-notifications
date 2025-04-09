@@ -1,7 +1,9 @@
 ﻿using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Email;
 using Altinn.Notifications.Validators.Email;
+
 using FluentValidation.TestHelper;
+
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.TestingValidators;
@@ -11,15 +13,14 @@ public class EmailSendingOptionsValidatorTests
     private readonly EmailSendingOptionsValidator _validator = new();
 
     [Fact]
-    public void Should_Validate_To_True_When_SenderEmailAddress_And_SenderName_Are_Null()
+    public void Should_Validate_To_True_When_SenderEmailAddress_Is_Null()
     {
         // Arrange
         var emailSendingOptions = new EmailSendingOptionsExt
         {
             Subject = "Test subject",
             Body = "Test body",
-            SenderEmailAddress = null,
-            SenderName = null
+            SenderEmailAddress = null
         };
 
         // Act
@@ -27,7 +28,6 @@ public class EmailSendingOptionsValidatorTests
 
         // Assert
         actual.ShouldNotHaveValidationErrorFor(options => options.SenderEmailAddress);
-        actual.ShouldNotHaveValidationErrorFor(options => options.SenderName);
     }
 
     [Theory]
@@ -59,24 +59,21 @@ public class EmailSendingOptionsValidatorTests
         }
     }
 
-    [Theory]
-    [InlineData("")]
-    [InlineData(null)]
-    public void Should_Validate_Null_Or_Empty_SenderNameToFalse_When_SenderEmailAddress_Is_Set(string? senderName)
+    [Fact]
+    public void Should_Not_Accept_SendingTimePolicy_When_Not_Anytime()
     {
         // Arrange
         var emailSendingOptions = new EmailSendingOptionsExt
         {
             Subject = "Test subject",
             Body = "Test body",
-            SenderEmailAddress = "noreply@digdir.no",
-            SenderName = senderName
+            SendingTimePolicy = SendingTimePolicyExt.Daytime
         };
 
         // Act
         var actual = _validator.TestValidate(emailSendingOptions);
-
+        
         // Assert
-        actual.ShouldHaveValidationErrorFor(options => options.SenderName);
+        actual.ShouldHaveValidationErrorFor(options => options.SendingTimePolicy).WithErrorMessage("Email only supports send time anytime");
     }
 }

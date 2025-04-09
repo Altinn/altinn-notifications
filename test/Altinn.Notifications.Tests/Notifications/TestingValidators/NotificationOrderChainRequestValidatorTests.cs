@@ -13,14 +13,14 @@ using Xunit;
 namespace Altinn.Notifications.Tests.Notifications.TestingValidators;
 
 /// <summary>
-/// Port of Oles Bruno tests for creating a notification
+/// Tests for validating various scenarios of notification order chain requests
 /// </summary>
 public class NotificationOrderChainRequestValidatorTests
 {
     private readonly NotificationOrderChainRequestValidator _validator = new();
 
     [Fact]
-    public void Notification_With_Two_Reminders_Should_Validate_Successfully()
+    public void Notification_With_Invalid_Phone_Number_Should_Fail_Validation()
     {
         // Arrange
         var request = new NotificationOrderChainRequestExt
@@ -41,9 +41,7 @@ public class NotificationOrderChainRequestValidatorTests
                     EmailAddress = "ola.normann@example.com",
                     Settings = new EmailSendingOptionsExt
                     {
-                        SendingTimePolicy = SendingTimePolicyExt.Anytime, // ?
-
-                        // NotificationScheme = NotificationSchemeExt.Unrestricted, // TODO: check if this is correct
+                        SendingTimePolicy = SendingTimePolicyExt.Anytime,
                         Subject = "Ny melding fra TE",
                         Body = "Du har fått en ny melding fra TE i Altinn meldingsboks. Logg inn i Altinn for å gjøre deg kjent med innholdet."
                     }
@@ -135,7 +133,6 @@ public class NotificationOrderChainRequestValidatorTests
                     },
                     EmailSettings = new EmailSendingOptionsExt
                     {
-                        SenderName = "Tjenesteeier",
                         SenderEmailAddress = "noreply-te@example.com",
                         Subject = "Ny melding fra TE",
                         Body = "Du har en ny melding fra TE. Logg inn i Altinn for å gjøre deg kjent med innholdet."
@@ -209,7 +206,6 @@ public class NotificationOrderChainRequestValidatorTests
                             EmailSettings = new EmailSendingOptionsExt
                             {
                                 SenderEmailAddress = "noreply-te@example.com",
-                                SenderName = "Tjenesteeier",
                                 SendingTimePolicy = SendingTimePolicyExt.Anytime,
                                 Subject = "Påminnelse: Melding fra TE",
                                 Body = "Du har en melding fra TE som krever handling"

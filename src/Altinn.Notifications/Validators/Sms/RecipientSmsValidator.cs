@@ -1,34 +1,34 @@
 ﻿using Altinn.Notifications.Core.Helpers;
 using Altinn.Notifications.Models.Sms;
+
 using FluentValidation;
 
-namespace Altinn.Notifications.Validators.Sms
+namespace Altinn.Notifications.Validators.Sms;
+
+/// <summary>
+/// Represents validation logic for the SMS recipient model.
+/// </summary>
+internal sealed class RecipientSmsValidator : AbstractValidator<RecipientSmsExt?>
 {
     /// <summary>
-    /// Represents validation logic for the SMS recipient model.
+    /// Initializes a new instance of the <see cref="RecipientSmsValidator"/> class.
     /// </summary>
-    internal sealed class RecipientSmsValidator : AbstractValidator<RecipientSmsExt?>
+    public RecipientSmsValidator()
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RecipientSmsValidator"/> class.
-        /// </summary>
-        public RecipientSmsValidator()
+        When(options => options != null, () =>
         {
-            When(options => options != null, () =>
-            {
-                RuleFor(recipient => recipient!.PhoneNumber)
-                    .NotNull()
-                    .NotEmpty()
-                    .WithMessage("Recipient phone number cannot be null or empty.");
+            RuleFor(recipient => recipient!.PhoneNumber)
+                .NotNull()
+                .NotEmpty()
+                .WithMessage("Recipient phone number cannot be null or empty.");
 
-                RuleFor(recipient => recipient!.PhoneNumber)
-                    .Must(MobileNumberHelper.IsValidMobileNumber)
-                    .WithMessage("Recipient phone number is not a valid mobile number.");
+            RuleFor(recipient => recipient!.PhoneNumber)
+                .Must(MobileNumberHelper.IsValidMobileNumber)
+                .WithMessage("Recipient phone number is not a valid mobile number.");
 
-                RuleFor(recipient => recipient!.Settings)
-                    .NotNull()
-                    .SetValidator(new SmsSendingOptionsValidator());
-            });
-        }
+            RuleFor(recipient => recipient!.Settings)
+                .NotNull()
+                .SetValidator(new SmsSendingOptionsValidator());
+        });
     }
 }

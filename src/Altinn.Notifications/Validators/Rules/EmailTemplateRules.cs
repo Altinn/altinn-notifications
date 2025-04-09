@@ -1,7 +1,7 @@
-﻿using Altinn.Notifications.Extensions;
-using Altinn.Notifications.Mappers;
+﻿using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Email;
+
 using FluentValidation;
 
 namespace Altinn.Notifications.Validators.Rules

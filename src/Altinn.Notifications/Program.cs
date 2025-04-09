@@ -15,7 +15,6 @@ using Altinn.Notifications.Middleware;
 using Altinn.Notifications.Persistence.Extensions;
 using Altinn.Notifications.Swagger;
 using Altinn.Notifications.Telemetry;
-using Altinn.Notifications.Validators;
 
 using AltinnCore.Authentication.JwtCookie;
 

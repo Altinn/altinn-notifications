@@ -1,6 +1,6 @@
 ﻿using Altinn.Notifications.Models;
+
 using FluentValidation;
-using FluentValidation.Validators;
 
 namespace Altinn.Notifications.Validators
 {
@@ -14,6 +14,7 @@ namespace Altinn.Notifications.Validators
         /// </summary>
         public DialogportenIdentifiersValidator()
         {
+            // intentionally left empty for future implementation.
         }
     }
 }

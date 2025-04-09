@@ -1,5 +1,7 @@
-﻿using Altinn.Notifications.Models.Email;
+﻿using Altinn.Notifications.Models;
+using Altinn.Notifications.Models.Email;
 using Altinn.Notifications.Validators.Rules;
+
 using FluentValidation;
 
 namespace Altinn.Notifications.Validators.Email
@@ -27,11 +29,6 @@ namespace Altinn.Notifications.Validators.Email
                         .WithMessage("The sender email address is not valid.");
                 });
 
-                RuleFor(options => options!.SenderName)
-                    .NotEmpty()
-                    .When(options => RecipientRules.IsValidEmail(options!.SenderEmailAddress))
-                    .WithMessage("The sender name cannot be empty when sender email address is provided.");
-
                 RuleFor(options => options!.Subject)
                     .NotEmpty()
                     .WithMessage("The email subject must not be empty.");
@@ -39,7 +36,16 @@ namespace Altinn.Notifications.Validators.Email
                 RuleFor(options => options!.Body)
                     .NotEmpty()
                     .WithMessage("The email body must not be empty.");
+
+                RuleFor(option => option!.SendingTimePolicy)
+                    .Must(HaveValueAnytime)
+                    .WithMessage("Email only supports send time anytime");
             });
+        }
+
+        private static bool HaveValueAnytime(SendingTimePolicyExt sendingTime)
+        {
+            return sendingTime == SendingTimePolicyExt.Anytime;
         }
     }
 }

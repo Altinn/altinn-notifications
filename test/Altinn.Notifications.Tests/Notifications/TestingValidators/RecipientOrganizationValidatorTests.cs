@@ -2,6 +2,7 @@
 using Altinn.Notifications.Models.Recipient;
 using Altinn.Notifications.Models.Sms;
 using Altinn.Notifications.Validators.Recipient;
+
 using FluentValidation.TestHelper;
 using Xunit;
 
@@ -59,8 +60,8 @@ public class RecipientOrganizationValidatorTests
         var actual = _recipientOrganizationValidator.TestValidate(recipientOrganization);
         
         // assert
-        actual.ShouldHaveValidationErrorFor(recipient => recipient.EmailSettings).WithErrorMessage("EmailSettings must be set when ChannelSchema is SmsPreffered or EmailPreferred");
-        actual.ShouldHaveValidationErrorFor(recipient => recipient.SmsSettings).WithErrorMessage("SmsSettings must be set when ChannelSchema is SmsPreffered or EmailPreferred");
+        actual.ShouldHaveValidationErrorFor(recipient => recipient.EmailSettings).WithErrorMessage("EmailSettings must be set when ChannelSchema is SmsPreferred or EmailPreferred");
+        actual.ShouldHaveValidationErrorFor(recipient => recipient.SmsSettings).WithErrorMessage("SmsSettings must be set when ChannelSchema is SmsPreferred or EmailPreferred");
     }
 
     [Fact]
@@ -82,7 +83,7 @@ public class RecipientOrganizationValidatorTests
         var actual = _recipientOrganizationValidator.TestValidate(recipientOrganization);
 
         // assert
-        actual.ShouldHaveValidationErrorFor(recipient => recipient.EmailSettings).WithErrorMessage("EmailSettings must be set when ChannelSchema is SmsPreffered or EmailPreferred");
+        actual.ShouldHaveValidationErrorFor(recipient => recipient.EmailSettings).WithErrorMessage("EmailSettings must be set when ChannelSchema is SmsPreferred or EmailPreferred");
         actual.ShouldNotHaveValidationErrorFor(recipient => recipient.SmsSettings);
     }
 

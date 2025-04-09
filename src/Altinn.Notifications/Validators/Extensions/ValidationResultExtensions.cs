@@ -1,5 +1,4 @@
 ﻿using FluentValidation.Results;
-
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace Altinn.Notifications.Validators.Extensions;
