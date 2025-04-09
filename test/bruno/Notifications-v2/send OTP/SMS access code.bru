@@ -5,9 +5,13 @@ meta {
 }
 
 post {
-  url: http://localhost:5151/otp
+  url: {{host}}/notifications/api/v1/future/orders
   body: json
-  auth: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt}}
 }
 
 body:json {
@@ -15,11 +19,12 @@ body:json {
     "idempotencyId": "{{random_idempotency_id}}",
     "sendersReference": "te-123-123",
     "recipient": {
-      "recipientType": "sms",
-      "phoneNumber": "55555555",
-      "smsSettings": {
-        "notificationScheme": "TimeCritical_v1",
-        "message": "Engangskode fra TE: 123456"
+      "recipientSms": {
+        "phoneNumber": "004799999999",
+        "smsSettings": {
+          "body": "Engangskode fra TE: 123456",
+          "sendingTimePolicy": "Anytime"
+        }
       }
     }
   }

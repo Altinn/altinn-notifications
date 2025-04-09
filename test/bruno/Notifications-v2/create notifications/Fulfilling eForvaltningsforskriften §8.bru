@@ -7,7 +7,11 @@ meta {
 post {
   url: {{host}}/notifications/api/v1/future/orders
   body: json
-  auth: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt}}
 }
 
 body:json {
@@ -25,12 +29,12 @@ body:json {
         "ignoreReservation": false,
         "channelSchema": "EmailPreferred",
         "smsSettings": {
-          "notificationScheme": "Daytime_Workingdays_v1",
+          "sendingTimePolicy": "Daytime",
           "body": "Du har en ny melding fra TE. Logg inn i Altinn for å gjøre deg kjent med innholdet.",
           "sender": "test sender"
         },
         "emailSettings": {
-          "notificationScheme": "Unrestricted_v1",
+          "sendingTimePolicy": "Anytime",
           "subject": "Ny melding fra TE",
           "body": "Du har en ny melding fra TE. Logg inn i Altinn for å gjøre deg kjent med innholdet."
         }
@@ -48,12 +52,12 @@ body:json {
             "ignoreReservation": true,
             "channelSchema": "SmsPreferred",
             "smsSettings": {
-              "notificationSchema": "Daytime",
+              "sendingTimePolicy": "Daytime",
               "body": "Du har en melding fra TE som krever handling. Logg inn i Altinn for å gjøre deg kjent med innholdet.",
               "sender": "test sender"
             },
             "emailSettings": {
-              "notificationScheme": "Unrestricted_v1",
+              "sendingTimePolicy": "Anytime",
               "subject": "Påminnelse: Melding fra TE",
               "body": "Du har en melding fra TE som krever handling. Logg inn i Altinn for å gjøre deg kjent med innholdet."
             }

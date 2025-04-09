@@ -7,7 +7,11 @@ meta {
 post {
   url: {{host}}/notifications/api/v1/future/orders
   body: json
-  auth: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt}}
 }
 
 body:json {
