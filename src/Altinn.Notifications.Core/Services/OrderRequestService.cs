@@ -269,23 +269,45 @@ public class OrderRequestService : IOrderRequestService
         };
     }
 
+    /// <summary>
+    /// Retrieves a list of recipients who are missing contact information for the specified notification channel.
+    /// </summary>
+    /// <param name="channel">
+    /// The <see cref="NotificationChannel"/> to check for missing contact information.
+    /// Supported channels include SMS, Email, EmailAndSms, EmailPreferred, and SmsPreferred.
+    /// </param>
+    /// <param name="recipients">
+    /// A list of <see cref="Recipient"/> objects to evaluate for missing contact points.
+    /// </param>
+    /// <returns>
+    /// A list of <see cref="Recipient"/> objects that are missing the required contact information
+    /// for the specified notification channel.
+    /// </returns>
+    /// <remarks>
+    /// This method performs a deep copy of the recipients that are missing contact information to ensure the original list remains unaltered.
+    /// </remarks>
     private static List<Recipient> GetMissingContactRecipientList(NotificationChannel channel, List<Recipient> recipients)
     {
         return channel switch
         {
-            NotificationChannel.Email => recipients
-                               .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email))
-                               .Select(r => r.DeepCopy())
-                               .ToList(),
-            NotificationChannel.Sms => recipients
-                                .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Sms))
-                              .Select(r => r.DeepCopy())
-                               .ToList(),
-            NotificationChannel.EmailPreferred or NotificationChannel.SmsPreferred => recipients
-                              .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email || ap.AddressType == AddressType.Sms))
-                             .Select(r => r.DeepCopy())
-                               .ToList(),
-            _ => [],
+            NotificationChannel.Sms =>
+                [..recipients
+                .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Sms))
+                .Select(r => r.DeepCopy())],
+
+            NotificationChannel.Email =>
+                [..recipients
+                .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email))
+                .Select(r => r.DeepCopy())],
+
+            NotificationChannel.EmailAndSms or
+            NotificationChannel.SmsPreferred or
+            NotificationChannel.EmailPreferred =>
+                [..recipients
+                .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email || ap.AddressType == AddressType.Sms))
+                .Select(r => r.DeepCopy())],
+
+            _ => []
         };
     }
 
