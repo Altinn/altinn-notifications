@@ -22,7 +22,7 @@ public class OrderProcessingService : IOrderProcessingService
     private readonly IEmailOrderProcessingService _emailProcessingService;
     private readonly ISmsOrderProcessingService _smsProcessingService;
     private readonly IPreferredChannelProcessingService _preferredChannelProcessingService;
-    private readonly IEmailAndSmsProcessingService _bothChannelsProcessingService;
+    private readonly IEmailAndSmsProcessingService _emailAndSmsProcessingService;
     private readonly IConditionClient _conditionClient;
     private readonly IKafkaProducer _producer;
     private readonly string _pastDueOrdersTopic;
@@ -36,7 +36,7 @@ public class OrderProcessingService : IOrderProcessingService
         IEmailOrderProcessingService emailProcessingService,
         ISmsOrderProcessingService smsProcessingService,
         IPreferredChannelProcessingService preferredChannelProcessingService,
-        IEmailAndSmsProcessingService bothChannelsProcessingService,
+        IEmailAndSmsProcessingService emailAndSmsProcessingService,
         IConditionClient conditionClient,
         IKafkaProducer producer,
         IOptions<KafkaSettings> kafkaSettings,
@@ -46,7 +46,7 @@ public class OrderProcessingService : IOrderProcessingService
         _emailProcessingService = emailProcessingService;
         _smsProcessingService = smsProcessingService;
         _preferredChannelProcessingService = preferredChannelProcessingService;
-        _bothChannelsProcessingService = bothChannelsProcessingService;
+        _emailAndSmsProcessingService = emailAndSmsProcessingService;
         _conditionClient = conditionClient;
         _producer = producer;
         _pastDueOrdersTopic = kafkaSettings.Value.PastDueOrdersTopicName;
@@ -98,7 +98,7 @@ public class OrderProcessingService : IOrderProcessingService
                 break;
 
             case NotificationChannel.EmailAndSms:
-                await _bothChannelsProcessingService.ProcessOrder(order);
+                await _emailAndSmsProcessingService.ProcessOrder(order);
                 break;
 
             case NotificationChannel.SmsPreferred:
@@ -132,7 +132,7 @@ public class OrderProcessingService : IOrderProcessingService
                 break;
 
             case NotificationChannel.EmailAndSms:
-                await _bothChannelsProcessingService.ProcessOrder(order);
+                await _emailAndSmsProcessingService.ProcessOrder(order);
                 break;
 
             case NotificationChannel.SmsPreferred:
