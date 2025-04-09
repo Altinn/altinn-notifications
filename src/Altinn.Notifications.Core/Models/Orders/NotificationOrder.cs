@@ -37,6 +37,9 @@ public class NotificationOrder : IBaseNotificationOrder
     /// <inheritdoc/>>
     public DateTime Created { get; internal set; }
 
+    /// <inheritdoc/>
+    public SendingTimePolicy? SendingTimePolicy { get; internal set; }
+
     /// <summary>
     /// Gets the templates to create notifications based of
     /// </summary>
