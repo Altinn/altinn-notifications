@@ -42,7 +42,7 @@ BEGIN
         SELECT TRUE AS cancelallowed,
            order_details.*
         FROM notifications.getorder_includestatus_v4(_alternateid, _creatorname) AS order_details;
-     ELSEIF (order_record.requestedsendtime <= NOW() + INTERVAL '5 minutes' or order_record.processedstatus != 'Registered') THEN
+     ELSIF (order_record.requestedsendtime <= NOW() + INTERVAL '5 minutes' or order_record.processedstatus != 'Registered') THEN
         RETURN QUERY 
         SELECT FALSE AS cancelallowed, NULL::uuid, NULL::text, NULL::text, NULL::timestamp with time zone, NULL::timestamp with time zone, NULL::timestamp with time zone, NULL::orderprocessingstate, NULL::text, NULL::boolean, NULL::text, NULL::text, NULL::bigint, NULL::bigint, NULL::bigint, NULL::bigint;
      ELSE 
