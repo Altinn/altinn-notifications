@@ -30,7 +30,13 @@ namespace Altinn.Notifications.Validators.Sms
 
         private static bool HaveValueDaytimeOrAnytime(SendingTimePolicyExt sendingTime)
         {
-            return sendingTime == SendingTimePolicyExt.Daytime || sendingTime == SendingTimePolicyExt.Anytime;
+            return
+                sendingTime switch
+                {
+                    SendingTimePolicyExt.Daytime => true,
+                    SendingTimePolicyExt.Anytime => true,
+                    _ => false
+                };
         }
     }
 }
