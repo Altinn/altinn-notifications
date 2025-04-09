@@ -48,6 +48,11 @@ public interface IBaseNotificationOrder
     public DateTime Created { get; }
 
     /// <summary>
+    /// Gets the sending time policy for the notification order
+    /// </summary>
+    public SendingTimePolicy? SendingTimePolicy { get; }
+
+    /// <summary>
     /// Gets or sets the condition endpoint used to check the send condition
     /// </summary>
     public Uri? ConditionEndpoint { get; set; }

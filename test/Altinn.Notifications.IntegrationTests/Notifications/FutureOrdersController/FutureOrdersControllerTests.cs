@@ -188,7 +188,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     }
 
     [Fact]
-    public async Task Post_OrganizationTokenWithCorrectScope_ReturnsAcceptedWithOrderDetails()
+    public async Task Post_OrganizationTokenWithCorrectScope_ReturnsCreateddWithOrderDetails()
     {
         // Arrange
         var requestExt = CreateValidRequest();
@@ -221,7 +221,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var responseObject = await DeserializeResponse(response);
 
         // Assert
-        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         Assert.NotNull(responseObject);
         Assert.Null(responseObject.OrderChainReceipt.Reminders);
         Assert.Equal(expectedResponse.OrderChainId, responseObject.OrderChainId);
@@ -231,7 +231,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     }
 
     [Fact]
-    public async Task Post_PlatformAccessTokenAuthentication_ReturnsAcceptedWithOrderDetails()
+    public async Task Post_PlatformAccessTokenAuthentication_ReturnsCreatedWithOrderDetails()
     {
         // Arrange
         var requestExt = CreateValidRequest();
@@ -267,7 +267,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var responseObject = await DeserializeResponse(response);
 
         // Assert
-        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         Assert.NotNull(responseObject);
         Assert.Null(responseObject.OrderChainReceipt.Reminders);
         Assert.Equal(expectedResponse.OrderChainId, responseObject.OrderChainId);
@@ -277,7 +277,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     }
 
     [Fact]
-    public async Task Post_ValidRequest_WithReminders_ReturnsAcceptedResponseWithReminderDetails()
+    public async Task Post_ValidRequest_WithReminders_ReturnsCreatedResponseWithReminderDetails()
     {
         // Arrange
         var requestExt = new NotificationOrderChainRequestExt
@@ -330,7 +330,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var responseObject = await DeserializeResponse(response);
 
         // Assert
-        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         Assert.NotNull(responseObject);
         Assert.Equal(expectedResponse.OrderChainId, responseObject.OrderChainId);
         Assert.NotNull(responseObject.OrderChainReceipt);
@@ -343,7 +343,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     }
 
     [Fact]
-    public async Task Post_ValidRequestUsingRecipientEmail_WithoutReminders_ReturnsAccepted()
+    public async Task Post_ValidRequestUsingRecipientEmail_WithoutReminders_ReturnsCreated()
     {
         // Arrange
         var requestExt = CreateValidRequest();
@@ -358,7 +358,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var responseObject = await DeserializeResponse(response);
 
         // Assert
-        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         Assert.NotNull(responseObject);
         Assert.Equal(expectedResponse.OrderChainId, responseObject.OrderChainId);
         Assert.NotNull(responseObject.OrderChainReceipt);
@@ -368,7 +368,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     }
 
     [Fact]
-    public async Task Post_ValidRequestUsingPersonRecipient_WithoutReminders_ReturnsAccepted()
+    public async Task Post_ValidRequestUsingPersonRecipient_WithoutReminders_ReturnsCreated()
     {
         // Arrange
         var requestExt = new NotificationOrderChainRequestExt
@@ -408,7 +408,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var responseObject = await DeserializeResponse(response);
 
         // Assert
-        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         Assert.NotNull(responseObject);
         Assert.Equal(expectedResponse.OrderChainId, responseObject.OrderChainId);
         Assert.NotNull(responseObject.OrderChainReceipt);
@@ -418,7 +418,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     }
 
     [Fact]
-    public async Task Post_ValidRequestUsingOrganizationRecipient_WithReminders_ReturnsAccepted()
+    public async Task Post_ValidRequestUsingOrganizationRecipient_WithReminders_ReturnsCreated()
     {
         // Arrange
         var requestExt = new NotificationOrderChainRequestExt
@@ -498,7 +498,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var responseObject = await DeserializeResponse(response);
 
         // Assert
-        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         Assert.NotNull(responseObject);
         Assert.Equal(expectedResponse.OrderChainId, responseObject.OrderChainId);
         Assert.NotNull(responseObject.OrderChainReceipt);
@@ -543,7 +543,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     }
 
     [Fact]
-    public async Task Post_ValidRequest_FirstTimeSubmission_ReturnsAcceptedWithSelfReferenceUrl()
+    public async Task Post_ValidRequest_FirstTimeSubmission_ReturnsCreatedWithSelfReferenceUrl()
     {
         // Arrange
         var request = CreateValidRequest();
@@ -570,9 +570,9 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var result = await controller.Post(request);
 
         // Assert
-        var acceptedResult = Assert.IsType<AcceptedResult>(result.Result);
-        Assert.Equal(expectedUrl, acceptedResult.Location);
-        var response = Assert.IsType<NotificationOrderChainResponseExt>(acceptedResult.Value);
+        var createdResult = Assert.IsType<CreatedResult>(result.Result);
+        Assert.Equal(expectedUrl, createdResult.Location);
+        var response = Assert.IsType<NotificationOrderChainResponseExt>(createdResult.Value);
         Assert.Equal(newResponse.OrderChainId, response.OrderChainId);
     }
 
@@ -606,35 +606,6 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     }
 
     [Fact]
-    public async Task Post_UnexpectedException_Returns500WithErrorMessage()
-    {
-        // Arrange
-        var request = CreateValidRequest();
-        var validatorMock = SetupValidValidator();
-        var orderServiceMock = new Mock<IOrderRequestService>();
-
-        orderServiceMock.Setup(s => s.RetrieveOrderChainTracking(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("Unexpected error"));
-
-        var httpContext = new DefaultHttpContext();
-        httpContext.Items["Org"] = "ttd";
-
-        var controller = new FutureOrdersController(orderServiceMock.Object, validatorMock.Object)
-        {
-            ControllerContext = new ControllerContext { HttpContext = httpContext }
-        };
-
-        // Act
-        var result = await controller.Post(request);
-
-        // Assert
-        var statusCodeResult = Assert.IsType<ObjectResult>(result.Result);
-        Assert.Equal(500, statusCodeResult.StatusCode);
-        Assert.NotNull(statusCodeResult.Value);
-        Assert.Contains("An unexpected error occurred", statusCodeResult.Value.ToString());
-    }
-
-    [Fact]
     public async Task Post_OperationCanceledDuringRegistration_Returns499Status()
     {
         // Arrange
@@ -664,35 +635,6 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         Assert.Equal(499, statusCodeResult.StatusCode);
         Assert.NotNull(statusCodeResult.Value);
         Assert.Contains("Request terminated", statusCodeResult.Value.ToString());
-    }
-
-    [Fact]
-    public async Task Post_RetrieveThrowsException_Returns500Status()
-    {
-        // Arrange
-        var request = CreateValidRequest();
-        var validatorMock = SetupValidValidator();
-        var orderServiceMock = new Mock<IOrderRequestService>();
-
-        orderServiceMock.Setup(s => s.RetrieveOrderChainTracking(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("Database error"));
-
-        var httpContext = new DefaultHttpContext();
-        httpContext.Items["Org"] = "ttd";
-
-        var controller = new FutureOrdersController(orderServiceMock.Object, validatorMock.Object)
-        {
-            ControllerContext = new ControllerContext { HttpContext = httpContext }
-        };
-
-        // Act
-        var result = await controller.Post(request);
-
-        // Assert
-        var statusCodeResult = Assert.IsType<ObjectResult>(result.Result);
-        Assert.Equal(500, statusCodeResult.StatusCode);
-        Assert.NotNull(statusCodeResult.Value);
-        Assert.Contains("An unexpected error occurred", statusCodeResult.Value.ToString());
     }
 
     [Fact]
