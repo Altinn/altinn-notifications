@@ -373,6 +373,7 @@ public class OrderProcessingServiceTests
         IOrderRepository? repo = null,
         IEmailOrderProcessingService? emailMock = null,
         ISmsOrderProcessingService? smsMock = null,
+        IBothChannelsProcessingService? bothMock = null,
         IPreferredChannelProcessingService? preferredMock = null,
         IKafkaProducer? producer = null,
         IConditionClient? conditionClient = null)
@@ -395,6 +396,12 @@ public class OrderProcessingServiceTests
             smsMock = smsMockService.Object;
         }
 
+        if (bothMock == null)
+        {
+            var bothChannelsProcessingService = new Mock<IBothChannelsProcessingService>();
+            bothMock = bothChannelsProcessingService.Object;
+        }
+
         if (preferredMock == null)
         {
             var preferredMockService = new Mock<IPreferredChannelProcessingService>();
@@ -415,6 +422,6 @@ public class OrderProcessingServiceTests
 
         var kafkaSettings = new Altinn.Notifications.Core.Configuration.KafkaSettings() { PastDueOrdersTopicName = _pastDueTopicName };
 
-        return new OrderProcessingService(repo, emailMock, smsMock, preferredMock, conditionClient, producer, Options.Create(kafkaSettings), new LoggerFactory().CreateLogger<OrderProcessingService>());
+        return new OrderProcessingService(repo, emailMock, smsMock, preferredMock, bothMock, conditionClient, producer, Options.Create(kafkaSettings), new LoggerFactory().CreateLogger<OrderProcessingService>());
     }
 }

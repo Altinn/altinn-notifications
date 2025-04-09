@@ -86,6 +86,50 @@ public class ContactPointService : IContactPointService
     }
 
     /// <inheritdoc/>
+    public async Task AddEmailAndSmsContactPointsAsync(List<Recipient> recipients, string? resourceId)
+    {
+        await AugmentRecipients(
+            recipients,
+            resourceId,
+            (recipient, userContactPoints) =>
+            {
+                if (!string.IsNullOrEmpty(userContactPoints.Email))
+                {
+                    recipient.AddressInfo.Add(new EmailAddressPoint(userContactPoints.Email));
+                }
+
+                if (!string.IsNullOrEmpty(userContactPoints.MobileNumber))
+                {
+                    recipient.AddressInfo.Add(new SmsAddressPoint(userContactPoints.MobileNumber));
+                }
+
+                return recipient;
+            },
+            (recipient, orgContactPoints) =>
+            {
+                recipient.AddressInfo.AddRange(orgContactPoints.EmailList
+                    .Select(e => new EmailAddressPoint(e))
+                    .ToList());
+
+                recipient.AddressInfo.AddRange(orgContactPoints.UserContactPoints
+                    .Where(u => !string.IsNullOrEmpty(u.Email))
+                    .Select(u => new EmailAddressPoint(u.Email))
+                    .ToList());
+
+                recipient.AddressInfo.AddRange(orgContactPoints.MobileNumberList
+                    .Select(m => new SmsAddressPoint(m))
+                    .ToList());
+
+                recipient.AddressInfo.AddRange(orgContactPoints.UserContactPoints
+                  .Where(u => !string.IsNullOrEmpty(u.MobileNumber))
+                  .Select(u => new SmsAddressPoint(u.MobileNumber))
+                  .ToList());
+
+                return recipient;
+            });
+    }
+
+    /// <inheritdoc/>
     public async Task AddPreferredContactPoints(NotificationChannel channel, List<Recipient> recipients, string? resourceId)
     {
         await AugmentRecipients(

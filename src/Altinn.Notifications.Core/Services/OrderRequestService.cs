@@ -207,11 +207,17 @@ public class OrderRequestService : IOrderRequestService
             case NotificationChannel.Email:
                 await _contactPointService.AddEmailContactPoints(recipientsWithoutContactPoint, resourceId);
                 break;
+
             case NotificationChannel.Sms:
                 await _contactPointService.AddSmsContactPoints(recipientsWithoutContactPoint, resourceId);
                 break;
-            case NotificationChannel.EmailPreferred:
+
+            case NotificationChannel.EmailAndSms:
+                await _contactPointService.AddEmailAndSmsContactPointsAsync(recipientsWithoutContactPoint, resourceId);
+                break;
+
             case NotificationChannel.SmsPreferred:
+            case NotificationChannel.EmailPreferred:
                 await _contactPointService.AddPreferredContactPoints(channel, recipientsWithoutContactPoint, resourceId);
                 break;
         }
