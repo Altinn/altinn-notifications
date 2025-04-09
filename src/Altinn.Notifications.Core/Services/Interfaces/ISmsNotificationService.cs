@@ -25,8 +25,9 @@ public interface ISmsNotificationService
     /// <summary>
     /// Initiates the process of sending all ready-to-send SMS notifications.
     /// </summary>
+    /// <param name="sendingTimePolicy">The sending time policy to filter the notifications. Defaults to daytime for SMS.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    Task SendNotifications(SendingTimePolicy sendingTimePolicy);
+    Task SendNotifications(SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime);
 
     /// <summary>
     /// Updates the send status of an SMS notification based on the provided send operation result.
