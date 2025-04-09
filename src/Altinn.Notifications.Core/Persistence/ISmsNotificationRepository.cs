@@ -22,8 +22,9 @@ public interface ISmsNotificationRepository
     /// <summary>
     /// Retrieves all SMS notifications that have the status 'New'.
     /// </summary>
+    /// <param name="sendingTimePolicy">The sending time policy to filter the notifications. Defaults to daytime for sms</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains a list of new SMS notifications.</returns>
-    Task<List<Sms>> GetNewNotifications(SendingTimePolicy sendingTimePolicy);
+    Task<List<Sms>> GetNewNotifications(SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime);
 
     /// <summary>
     /// Retrieves all processed SMS recipients for a specified order.

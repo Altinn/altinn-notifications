@@ -9,10 +9,15 @@ namespace Altinn.Notifications.IntegrationTests.Utils;
 
 public static class TestdataUtil
 {
-    public static (NotificationOrder Order, SmsNotification Notification) GetOrderAndSmsNotification()
+    public static (NotificationOrder Order, SmsNotification Notification) GetOrderAndSmsNotification(SendingTimePolicy? sendingTimePolicy = null)
     {
         NotificationOrder order = NotificationOrder_SmsTemplate_OneRecipient();
         order.Id = Guid.NewGuid();
+        if (sendingTimePolicy != null)
+        {
+            order.SendingTimePolicy = sendingTimePolicy;
+        }
+
         var recipient = order.Recipients[0];
         SmsAddressPoint? addressPoint = recipient.AddressInfo.Find(a => a.AddressType == AddressType.Sms) as SmsAddressPoint;
 
@@ -28,6 +33,26 @@ public static class TestdataUtil
             SendResult = new(SmsNotificationResultType.New, DateTime.UtcNow)
         };
 
+        return (order, smsNotification);
+    }
+
+    public static (NotificationOrder Order, SmsNotification Notification) GeOrderAndSmsAnytimeNotification()
+    {
+        NotificationOrder order = NotificationOrder_SmsTemplate_OneRecipient();
+        order.Id = Guid.NewGuid();
+        var recipient = order.Recipients[0];
+        SmsAddressPoint? addressPoint = recipient.AddressInfo.Find(a => a.AddressType == AddressType.Sms) as SmsAddressPoint;
+        var smsNotification = new SmsNotification()
+        {
+            Id = Guid.NewGuid(),
+            OrderId = order.Id,
+            RequestedSendTime = DateTime.UtcNow,
+            Recipient = new()
+            {
+                MobileNumber = addressPoint!.MobileNumber,
+            },
+            SendResult = new(SmsNotificationResultType.New, DateTime.UtcNow)
+        };
         return (order, smsNotification);
     }
 
