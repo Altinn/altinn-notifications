@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 
 using Altinn.Notifications.Controllers;
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Services.Interfaces;
 
 using Microsoft.AspNetCore.Mvc;
@@ -21,7 +22,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
         public TriggerControllerTests()
         {
             _smsNotificationServiceMock = new Mock<ISmsNotificationService>();
-            _smsNotificationServiceMock.Setup(x => x.SendNotifications()).Returns(Task.CompletedTask);
+            _smsNotificationServiceMock.Setup(x => x.SendNotifications(It.IsAny<SendingTimePolicy>())).Returns(Task.CompletedTask);
             _notificationScheduleMock = new Mock<INotificationScheduleService>();
 
             _controller = new TriggerController(
@@ -39,10 +40,10 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
             _notificationScheduleMock.Setup(x => x.CanSendSmsNotifications()).Returns(false);
 
             // Act
-            ActionResult result = await _controller.Trigger_SendSmsNotifications();
+            ActionResult result = await _controller.Trigger_SendSmsNotificationsDaytime();
 
             // Assert
-            _smsNotificationServiceMock.Verify(x => x.SendNotifications(), Times.Never);
+            _smsNotificationServiceMock.Verify(x => x.SendNotifications(It.IsAny<SendingTimePolicy>()), Times.Never);
             Assert.IsType<OkResult>(result);
         }
 
@@ -54,10 +55,10 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
             _notificationScheduleMock.Setup(x => x.CanSendSmsNotifications()).Returns(false);
 
             // Act
-            ActionResult result = await _controller.Trigger_SendSmsNotifications();
+            ActionResult result = await _controller.Trigger_SendSmsNotificationsDaytime();
 
             // Assert
-            _smsNotificationServiceMock.Verify(x => x.SendNotifications(), Times.Never);
+            _smsNotificationServiceMock.Verify(x => x.SendNotifications(It.IsAny<SendingTimePolicy>()), Times.Never);
             Assert.IsType<OkResult>(result);
         }
     }

@@ -63,9 +63,9 @@ public class SmsNotificationService : ISmsNotificationService
     }
 
     /// <inheritdoc/>
-    public async Task SendNotifications()
+    public async Task SendNotifications(SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime)
     {
-        var smsList = await _repository.GetNewNotifications();
+        var smsList = await _repository.GetNewNotifications(sendingTimePolicy);
         foreach (Sms sms in smsList)
         {
             bool success = await _producer.ProduceAsync(_smsQueueTopicName, sms.Serialize());
