@@ -35,12 +35,12 @@ public interface IContactPointService
     public Task AddEmailAndSmsContactPointsAsync(List<Recipient> recipients, string? resourceId);
 
     /// <summary>
-    /// Looks up and adds the preferred contact points for recipients based on their national identity number or organization number.
-    /// </summary>
-    /// <param name="channel">The notification channel specifying which channel is preferred.</param>
-    /// <param name="recipients">List of recipients to retrieve contact points for.</param>
-    /// <param name="resourceId">The resource to find contact points in relation to.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    /// <remarks>Implementation alters the recipient reference object directly.</remarks>
+        /// Looks up and adds the preferred contact points for recipients based on their national identity number or organization number.
+        /// </summary>
+        /// <param name="channel">The notification channel specifying which channel is preferred.</param>
+        /// <param name="recipients">List of recipients to retrieve contact points for.</param>
+        /// <param name="resourceId">The resource to find contact points in relation to.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
+        /// <remarks>Implementation alters the recipient reference object directly.</remarks>
     public Task AddPreferredContactPoints(NotificationChannel channel, List<Recipient> recipients, string? resourceId);
 }
