@@ -229,6 +229,7 @@ public class ContactPointService : IContactPointService
 
         var userLookupTask = LookupPersonContactPoints(recipients);
         var orgLookupTask = LookupOrganizationContactPoints(recipients, resourceId);
+
         await Task.WhenAll(userLookupTask, orgLookupTask);
 
         List<UserContactPoints> userContactPointsList = userLookupTask.Result;
