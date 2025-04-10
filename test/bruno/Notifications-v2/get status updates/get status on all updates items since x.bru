@@ -1,0 +1,15 @@
+meta {
+  name: get status on all updates items since x
+  type: http
+  seq: 2
+}
+
+get {
+  url: http://localhost:5151/status/shipment/feed?seq=0
+  body: none
+  auth: none
+}
+
+params:query {
+  seq: 0
+}

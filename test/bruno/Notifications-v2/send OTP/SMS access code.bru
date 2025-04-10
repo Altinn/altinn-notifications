@@ -1,0 +1,31 @@
+meta {
+  name: SMS access code
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt}}
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "te-123-123",
+    "recipient": {
+      "recipientSms": {
+        "phoneNumber": "004799999999",
+        "smsSettings": {
+          "body": "Engangskode fra TE: 123456",
+          "sendingTimePolicy": "Anytime"
+        }
+      }
+    }
+  }
+}

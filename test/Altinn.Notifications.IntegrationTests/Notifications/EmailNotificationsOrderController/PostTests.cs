@@ -7,6 +7,7 @@ using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Controllers;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Models;
+using Altinn.Notifications.Models.Email;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using Altinn.Notifications.Tests.Notifications.Utils;
 

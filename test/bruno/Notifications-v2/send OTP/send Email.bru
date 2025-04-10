@@ -1,0 +1,32 @@
+meta {
+  name: send Email
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt}}
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "te-123-123",
+    "recipient": {
+      "recipientEmail": {
+        "emailAddress": "noreply@digdir.no",
+        "emailSettings": {
+          "body": "Engangskode fra TE: 123456",
+          "sendingTimePolicy": "Anytime",
+          "subject": "Testing sending an email with Bruno"
+        }
+      }
+    }
+  }
+}
