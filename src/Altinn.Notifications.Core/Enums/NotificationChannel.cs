@@ -23,5 +23,10 @@ public enum NotificationChannel
     /// <summary>
     /// The selected channel for the notification is SMS and to use email if SMS is not available.
     /// </summary>
-    SmsPreferred
+    SmsPreferred,
+
+    /// <summary>
+    /// The selected channel for the notification is both email and SMS, sending the notification through both channels simultaneously.
+    /// </summary>
+    EmailAndSms
 }

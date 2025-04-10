@@ -44,14 +44,10 @@ public class ContactPointService : IContactPointService
             },
             (recipient, orgContactPoints) =>
             {
-                recipient.AddressInfo.AddRange(orgContactPoints.EmailList
-                    .Select(e => new EmailAddressPoint(e))
-                    .ToList());
+                recipient.AddressInfo.AddRange(orgContactPoints.EmailList.Select(e => new EmailAddressPoint(e)));
 
-                recipient.AddressInfo.AddRange(orgContactPoints.UserContactPoints
-                    .Where(u => !string.IsNullOrEmpty(u.Email))
-                    .Select(u => new EmailAddressPoint(u.Email))
-                    .ToList());
+                recipient.AddressInfo.AddRange(orgContactPoints.UserContactPoints.Where(u => !string.IsNullOrEmpty(u.Email)).Select(u => new EmailAddressPoint(u.Email)));
+
                 return recipient;
             });
     }
@@ -73,14 +69,44 @@ public class ContactPointService : IContactPointService
             },
             (recipient, orgContactPoints) =>
             {
-                recipient.AddressInfo.AddRange(orgContactPoints.MobileNumberList
-                    .Select(m => new SmsAddressPoint(m))
-                    .ToList());
+                recipient.AddressInfo.AddRange(orgContactPoints.MobileNumberList.Select(m => new SmsAddressPoint(m)));
 
-                recipient.AddressInfo.AddRange(orgContactPoints.UserContactPoints
-                  .Where(u => !string.IsNullOrEmpty(u.MobileNumber))
-                  .Select(u => new SmsAddressPoint(u.MobileNumber))
-                  .ToList());
+                recipient.AddressInfo.AddRange(orgContactPoints.UserContactPoints.Where(u => !string.IsNullOrEmpty(u.MobileNumber)).Select(u => new SmsAddressPoint(u.MobileNumber)));
+
+                return recipient;
+            });
+    }
+
+    /// <inheritdoc/>
+    public async Task AddEmailAndSmsContactPointsAsync(List<Recipient> recipients, string? resourceId)
+    {
+        await AugmentRecipients(
+            recipients,
+            resourceId,
+            (recipient, userContactPoints) =>
+            {
+                if (!string.IsNullOrEmpty(userContactPoints.Email))
+                {
+                    recipient.AddressInfo.Add(new EmailAddressPoint(userContactPoints.Email));
+                }
+
+                if (!string.IsNullOrEmpty(userContactPoints.MobileNumber))
+                {
+                    recipient.AddressInfo.Add(new SmsAddressPoint(userContactPoints.MobileNumber));
+                }
+
+                return recipient;
+            },
+            (recipient, orgContactPoints) =>
+            {
+                recipient.AddressInfo.AddRange(orgContactPoints.EmailList.Select(e => new EmailAddressPoint(e)));
+
+                recipient.AddressInfo.AddRange(orgContactPoints.MobileNumberList.Select(m => new SmsAddressPoint(m)));
+
+                recipient.AddressInfo.AddRange(orgContactPoints.UserContactPoints.Where(u => !string.IsNullOrEmpty(u.Email)).Select(u => new EmailAddressPoint(u.Email)));
+
+                recipient.AddressInfo.AddRange(orgContactPoints.UserContactPoints.Where(u => !string.IsNullOrEmpty(u.MobileNumber)).Select(u => new SmsAddressPoint(u.MobileNumber)));
+
                 return recipient;
             });
     }
@@ -168,11 +194,11 @@ public class ContactPointService : IContactPointService
     {
         if (preferredList.Count > 0)
         {
-            recipient.AddressInfo.AddRange(preferredList.Select(preferredSelector).ToList());
+            recipient.AddressInfo.AddRange(preferredList.Select(preferredSelector));
         }
         else
         {
-            recipient.AddressInfo.AddRange(fallbackList.Select(fallbackSelector).ToList());
+            recipient.AddressInfo.AddRange(fallbackList.Select(fallbackSelector));
         }
     }
 
@@ -203,6 +229,7 @@ public class ContactPointService : IContactPointService
 
         var userLookupTask = LookupPersonContactPoints(recipients);
         var orgLookupTask = LookupOrganizationContactPoints(recipients, resourceId);
+
         await Task.WhenAll(userLookupTask, orgLookupTask);
 
         List<UserContactPoints> userContactPointsList = userLookupTask.Result;
@@ -238,10 +265,9 @@ public class ContactPointService : IContactPointService
 
     private async Task<List<UserContactPoints>> LookupPersonContactPoints(List<Recipient> recipients)
     {
-        List<string> nins = recipients
+        List<string> nins = [.. recipients
                 .Where(r => !string.IsNullOrEmpty(r.NationalIdentityNumber))
-                .Select(r => r.NationalIdentityNumber!)
-                .ToList();
+                .Select(r => r.NationalIdentityNumber!)];
 
         if (nins.Count == 0)
         {
@@ -260,10 +286,9 @@ public class ContactPointService : IContactPointService
 
     private async Task<List<OrganizationContactPoints>> LookupOrganizationContactPoints(List<Recipient> recipients, string? resourceId)
     {
-        List<string> orgNos = recipients
+        List<string> orgNos = [.. recipients
          .Where(r => !string.IsNullOrEmpty(r.OrganizationNumber))
-         .Select(r => r.OrganizationNumber!)
-         .ToList();
+         .Select(r => r.OrganizationNumber!)];
 
         if (orgNos.Count == 0)
         {
@@ -305,12 +330,11 @@ public class ContactPointService : IContactPointService
 
         contactPoints.ForEach(contactPoint =>
         {
-            contactPoint.MobileNumberList = contactPoint.MobileNumberList
+            contactPoint.MobileNumberList = [.. contactPoint.MobileNumberList
                 .Select(mobileNumber =>
                 {
                     return MobileNumberHelper.EnsureCountryCodeIfValidNumber(mobileNumber);
-                })
-                .ToList();
+                })];
         });
 
         return contactPoints;
