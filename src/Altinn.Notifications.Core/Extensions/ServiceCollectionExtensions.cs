@@ -33,7 +33,7 @@ public static class ServiceCollectionExtensions
             .AddSingleton<IOrderProcessingService, OrderProcessingService>()
             .AddSingleton<IEmailOrderProcessingService, EmailOrderProcessingService>()
             .AddSingleton<ISmsOrderProcessingService, SmsOrderProcessingService>()
-            .AddSingleton<IEmailAndSmsProcessingService, EmailAndSmsProcessingService>()
+            .AddSingleton<IEmailAndSmsOrderProcessingService, EmailAndSmsOrderProcessingService>()
             .AddSingleton<IPreferredChannelProcessingService, PreferredChannelProcessingService>()
             .AddSingleton<IGetOrderService, GetOrderService>()
             .AddSingleton<IOrderRequestService, OrderRequestService>()

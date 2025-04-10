@@ -5,7 +5,7 @@ namespace Altinn.Notifications.Core.Services.Interfaces;
 /// <summary>
 /// Defines operations for processing notification orders that involve both email and SMS delivery channels.
 /// </summary>
-public interface IEmailAndSmsProcessingService
+public interface IEmailAndSmsOrderProcessingService
 {
     /// <summary>
     /// Processes a notification order by preparing and dispatching it through the email and SMS delivery channels.

@@ -373,7 +373,7 @@ public class OrderProcessingServiceTests
         IOrderRepository? repo = null,
         IEmailOrderProcessingService? emailMock = null,
         ISmsOrderProcessingService? smsMock = null,
-        IEmailAndSmsProcessingService? bothMock = null,
+        IEmailAndSmsOrderProcessingService? bothMock = null,
         IPreferredChannelProcessingService? preferredMock = null,
         IKafkaProducer? producer = null,
         IConditionClient? conditionClient = null)
@@ -398,7 +398,7 @@ public class OrderProcessingServiceTests
 
         if (bothMock == null)
         {
-            var emailAndSmsProcessingService = new Mock<IEmailAndSmsProcessingService>();
+            var emailAndSmsProcessingService = new Mock<IEmailAndSmsOrderProcessingService>();
             bothMock = emailAndSmsProcessingService.Object;
         }
 

@@ -6,18 +6,18 @@ using Altinn.Notifications.Core.Services.Interfaces;
 namespace Altinn.Notifications.Core.Services;
 
 /// <summary>
-/// Implementation of the <see cref="IEmailAndSmsProcessingService"/>
+/// Implementation of the <see cref="IEmailAndSmsOrderProcessingService"/>
 /// </summary>
-public class EmailAndSmsProcessingService : IEmailAndSmsProcessingService
+public class EmailAndSmsOrderProcessingService : IEmailAndSmsOrderProcessingService
 {
     private readonly IEmailOrderProcessingService _emailProcessingService;
     private readonly ISmsOrderProcessingService _smsProcessingService;
     private readonly IContactPointService _contactPointService;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="EmailAndSmsProcessingService"/> class.
+    /// Initializes a new instance of the <see cref="EmailAndSmsOrderProcessingService"/> class.
     /// </summary>
-    public EmailAndSmsProcessingService(
+    public EmailAndSmsOrderProcessingService(
         IEmailOrderProcessingService emailProcessingService,
         ISmsOrderProcessingService smsProcessingService,
         IContactPointService contactPointService)

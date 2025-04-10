@@ -22,7 +22,7 @@ public class OrderProcessingService : IOrderProcessingService
     private readonly IEmailOrderProcessingService _emailProcessingService;
     private readonly ISmsOrderProcessingService _smsProcessingService;
     private readonly IPreferredChannelProcessingService _preferredChannelProcessingService;
-    private readonly IEmailAndSmsProcessingService _emailAndSmsProcessingService;
+    private readonly IEmailAndSmsOrderProcessingService _emailAndSmsProcessingService;
     private readonly IConditionClient _conditionClient;
     private readonly IKafkaProducer _producer;
     private readonly string _pastDueOrdersTopic;
@@ -36,7 +36,7 @@ public class OrderProcessingService : IOrderProcessingService
         IEmailOrderProcessingService emailProcessingService,
         ISmsOrderProcessingService smsProcessingService,
         IPreferredChannelProcessingService preferredChannelProcessingService,
-        IEmailAndSmsProcessingService emailAndSmsProcessingService,
+        IEmailAndSmsOrderProcessingService emailAndSmsProcessingService,
         IConditionClient conditionClient,
         IKafkaProducer producer,
         IOptions<KafkaSettings> kafkaSettings,
