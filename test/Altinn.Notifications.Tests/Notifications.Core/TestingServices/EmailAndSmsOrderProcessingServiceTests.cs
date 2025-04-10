@@ -313,4 +313,42 @@ public class EmailAndSmsOrderProcessingServiceTests
             s => s.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.Is<List<Recipient>>(r => r.Count == 0)),
             Times.Once);
     }
+
+    [Fact]
+    public async Task ProcessOrderRetry_WithNoContacts_DoesNotCallProcessingServices()
+    {
+        // Arrange
+        var order = new NotificationOrder
+        {
+            Recipients =
+            [
+                new Recipient
+                    {
+                        AddressInfo = [],
+                        NationalIdentityNumber = "04917199103"
+                    }
+            ]
+        };
+
+        var contactPointServiceMock = new Mock<IContactPointService>();
+        contactPointServiceMock.Setup(s => s.AddEmailAndSmsContactPointsAsync(It.IsAny<List<Recipient>>(), It.IsAny<string>())).Returns(Task.CompletedTask);
+
+        var smsProcessingServiceMock = new Mock<ISmsOrderProcessingService>();
+        var emailProcessingServiceMock = new Mock<IEmailOrderProcessingService>();
+
+        var service = new EmailAndSmsOrderProcessingService(emailProcessingServiceMock.Object, smsProcessingServiceMock.Object, contactPointServiceMock.Object);
+
+        // Act
+        await service.ProcessOrderRetry(order);
+
+        // Assert
+        // Both services should be called with empty recipient lists
+        emailProcessingServiceMock.Verify(
+            s => s.ProcessOrderRetryWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.Is<List<Recipient>>(r => r.Count == 0)),
+            Times.Once);
+
+        smsProcessingServiceMock.Verify(
+            s => s.ProcessOrderRetryWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.Is<List<Recipient>>(r => r.Count == 0)),
+            Times.Once);
+    }
 }
