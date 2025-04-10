@@ -670,6 +670,56 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             Assert.Equal("+4799999992", ((SmsAddressPoint)org0.AddressInfo[2]).MobileNumber);
         }
 
+        [Fact]
+        public async Task AddEmailAndSmsContactPointsAsync_NationalIdentityNumber_ProfileServiceCalled()
+        {
+            // Arrange
+            string email = "person@example.com";
+            string mobileNumber = "+4799999999";
+            string nationalIdentityNumber = "29320645032";
+
+            List<Recipient> recipients = 
+            [
+                new Recipient { NationalIdentityNumber = nationalIdentityNumber }
+            ];
+
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(p => p.GetUserContactPoints(It.Is<List<string>>(s => s.Contains(nationalIdentityNumber))))
+                .ReturnsAsync(
+                [
+                    new UserContactPoints
+                    {
+                        Email = email,
+                        IsReserved = true,
+                        MobileNumber = mobileNumber,
+                        NationalIdentityNumber = nationalIdentityNumber
+                    }
+                ]);
+
+            var service = GetTestService(profileClient: profileClientMock.Object);
+
+            // Act
+            await service.AddEmailAndSmsContactPointsAsync(recipients, null);
+
+            // Assert
+            profileClientMock.Verify(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalIdentityNumber))), Times.Once);
+
+            Assert.True(recipients[0].IsReserved);
+            Assert.Equal(2, recipients[0].AddressInfo.Count);
+            Assert.Equal(nationalIdentityNumber, recipients[0].NationalIdentityNumber);
+
+            var emailAddress = recipients[0].AddressInfo.OfType<EmailAddressPoint>().FirstOrDefault();
+            Assert.NotNull(emailAddress);
+            Assert.Equal(email, emailAddress.EmailAddress);
+            Assert.Equal(AddressType.Email, emailAddress.AddressType);
+
+            var smsAddress = recipients[0].AddressInfo.OfType<SmsAddressPoint>().FirstOrDefault();
+            Assert.NotNull(smsAddress);
+            Assert.Equal(mobileNumber, smsAddress.MobileNumber);
+            Assert.Equal(AddressType.Sms, smsAddress.AddressType);
+        }
+
         private static ContactPointService GetTestService(
             IProfileClient? profileClient = null,
             IRegisterClient? registerClient = null,
