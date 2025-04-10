@@ -138,7 +138,7 @@ public class OrderProcessingServiceTests
         };
 
         var emailAndSmsMockService = new Mock<IEmailAndSmsOrderProcessingService>();
-        emailAndSmsMockService.Setup(e => e.ProcessOrder(It.IsAny<NotificationOrder>())).Returns(Task.CompletedTask);
+        emailAndSmsMockService.Setup(e => e.ProcessOrderAsync(It.IsAny<NotificationOrder>())).Returns(Task.CompletedTask);
 
         var smsMockService = new Mock<ISmsOrderProcessingService>();
         var emailMockService = new Mock<IEmailOrderProcessingService>();
@@ -150,7 +150,7 @@ public class OrderProcessingServiceTests
         await orderProcessingService.ProcessOrder(order);
 
         // Assert
-        emailAndSmsMockService.Verify(e => e.ProcessOrder(order), Times.Once);
+        emailAndSmsMockService.Verify(e => e.ProcessOrderAsync(order), Times.Once);
 
         // Individual email and SMS services should not be called
         smsMockService.Verify(s => s.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Never);
@@ -283,7 +283,7 @@ public class OrderProcessingServiceTests
         };
 
         var emailAndSmsMockService = new Mock<IEmailAndSmsOrderProcessingService>();
-        emailAndSmsMockService.Setup(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>())).Returns(Task.CompletedTask);
+        emailAndSmsMockService.Setup(e => e.ProcessOrderRetryAsync(It.IsAny<NotificationOrder>())).Returns(Task.CompletedTask);
 
         var smsMockService = new Mock<ISmsOrderProcessingService>();
         var emailMockService = new Mock<IEmailOrderProcessingService>();
@@ -295,7 +295,7 @@ public class OrderProcessingServiceTests
         await orderProcessingService.ProcessOrderRetry(order);
 
         // Assert
-        emailAndSmsMockService.Verify(e => e.ProcessOrderRetry(order), Times.Once);
+        emailAndSmsMockService.Verify(e => e.ProcessOrderRetryAsync(order), Times.Once);
 
         // Individual email and SMS services should not be called
         smsMockService.Verify(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Never);

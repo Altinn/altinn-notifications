@@ -38,7 +38,7 @@ public class EmailAndSmsOrderProcessingServiceTests
         var service = new EmailAndSmsOrderProcessingService(emailProcessingServiceMock.Object, smsProcessingServiceMock.Object, contactPointServiceMock.Object);
 
         // Act
-        await service.ProcessOrder(order);
+        await service.ProcessOrderAsync(order);
 
         // Assert
         contactPointServiceMock.Verify(e => e.AddEmailAndSmsContactPointsAsync(It.Is<List<Recipient>>(r => r.Count == 1 && r[0].NationalIdentityNumber == "19230269672"), "urn:altinn:resource"), Times.Once);
@@ -68,7 +68,7 @@ public class EmailAndSmsOrderProcessingServiceTests
         var service = new EmailAndSmsOrderProcessingService(emailProcessingServiceMock.Object, smsProcessingServiceMock.Object, contactPointServiceMock.Object);
 
         // Act
-        await service.ProcessOrder(order);
+        await service.ProcessOrderAsync(order);
 
         // Assert
         contactPointServiceMock.Verify(s => s.AddEmailAndSmsContactPointsAsync(It.Is<List<Recipient>>(r => r.Count == 0), It.IsAny<string>()), Times.Once);
@@ -101,7 +101,7 @@ public class EmailAndSmsOrderProcessingServiceTests
         var service = new EmailAndSmsOrderProcessingService(emailProcessingServiceMock.Object, smsProcessingServiceMock.Object, contactPointServiceMock.Object);
 
         // Act
-        await service.ProcessOrder(order);
+        await service.ProcessOrderAsync(order);
 
         // Assert
         emailProcessingServiceMock.Verify(
@@ -140,7 +140,7 @@ public class EmailAndSmsOrderProcessingServiceTests
         var service = new EmailAndSmsOrderProcessingService(emailProcessingServiceMock.Object, smsProcessingServiceMock.Object, contactPointServiceMock.Object);
 
         // Act
-        await service.ProcessOrderRetry(order);
+        await service.ProcessOrderRetryAsync(order);
 
         // Assert
         emailProcessingServiceMock.Verify(
@@ -191,7 +191,7 @@ public class EmailAndSmsOrderProcessingServiceTests
         var service = new EmailAndSmsOrderProcessingService(emailProcessingServiceMock.Object, smsProcessingServiceMock.Object, contactPointServiceMock.Object);
 
         // Act
-        await service.ProcessOrder(order);
+        await service.ProcessOrderAsync(order);
 
         // Assert
         Assert.NotNull(capturedSmsRecipients);
@@ -247,7 +247,7 @@ public class EmailAndSmsOrderProcessingServiceTests
         var service = new EmailAndSmsOrderProcessingService(emailProcessingServiceMock.Object, smsProcessingServiceMock.Object, contactPointServiceMock.Object);
 
         // Act
-        await service.ProcessOrderRetry(order);
+        await service.ProcessOrderRetryAsync(order);
 
         // Assert
         Assert.NotNull(capturedEmailRecipients);
@@ -297,7 +297,7 @@ public class EmailAndSmsOrderProcessingServiceTests
         var service = new EmailAndSmsOrderProcessingService(emailProcessingServiceMock.Object, smsProcessingServiceMock.Object, contactPointServiceMock.Object);
 
         // Act
-        await service.ProcessOrder(order);
+        await service.ProcessOrderAsync(order);
 
         // Assert
         Assert.NotNull(capturedSmsRecipients);
@@ -339,7 +339,7 @@ public class EmailAndSmsOrderProcessingServiceTests
         var service = new EmailAndSmsOrderProcessingService(emailProcessingServiceMock.Object, smsProcessingServiceMock.Object, contactPointServiceMock.Object);
 
         // Act
-        await service.ProcessOrderRetry(order);
+        await service.ProcessOrderRetryAsync(order);
 
         // Assert
         // Both services should be called with empty recipient lists

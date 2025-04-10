@@ -28,13 +28,13 @@ public class EmailAndSmsOrderProcessingService : IEmailAndSmsOrderProcessingServ
     }
 
     /// <inheritdoc/>
-    public async Task ProcessOrder(NotificationOrder order)
+    public async Task ProcessOrderAsync(NotificationOrder order)
     {
         await ProcessOrderInternal(order, false);
     }
 
     /// <inheritdoc/>
-    public async Task ProcessOrderRetry(NotificationOrder order)
+    public async Task ProcessOrderRetryAsync(NotificationOrder order)
     {
         await ProcessOrderInternal(order, true);
     }

@@ -12,7 +12,7 @@ public interface IEmailAndSmsOrderProcessingService
     /// </summary>
     /// <param name="order">The notification order containing recipients, content templates, and delivery preferences.</param>
     /// <returns>A task representing the asynchronous processing operation.</returns>
-    public Task ProcessOrder(NotificationOrder order);
+    public Task ProcessOrderAsync(NotificationOrder order);
 
     /// <summary>
     /// Attempts to reprocess a previously failed notification order.
@@ -20,5 +20,5 @@ public interface IEmailAndSmsOrderProcessingService
     /// </summary>
     /// <param name="order">The notification order to retry processing.</param>
     /// <returns>A task representing the asynchronous retry operation.</returns>
-    public Task ProcessOrderRetry(NotificationOrder order);
+    public Task ProcessOrderRetryAsync(NotificationOrder order);
 }
