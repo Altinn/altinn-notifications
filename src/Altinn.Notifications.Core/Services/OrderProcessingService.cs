@@ -132,7 +132,7 @@ public class OrderProcessingService : IOrderProcessingService
                 break;
 
             case NotificationChannel.EmailAndSms:
-                await _emailAndSmsProcessingService.ProcessOrder(order);
+                await _emailAndSmsProcessingService.ProcessOrderRetry(order);
                 break;
 
             case NotificationChannel.SmsPreferred:
