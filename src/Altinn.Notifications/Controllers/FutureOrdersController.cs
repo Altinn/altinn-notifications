@@ -43,7 +43,7 @@ public class FutureOrdersController : ControllerBase
     /// The API will accept the request after some basic validation of the request.
     /// The system will also attempt to verify that it will be possible to fulfill the order.
     /// </remarks>
-    /// <param name="notificationOrderRequest">The notification order equest</param>
+    /// <param name="notificationOrderRequest">The notification order request</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests</param>
     /// <returns>The notification order request response</returns>
     [HttpPost]
