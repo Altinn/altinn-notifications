@@ -151,4 +151,65 @@ public class EmailAndSmsOrderProcessingServiceTests
             s => s.ProcessOrderRetryWithoutAddressLookup(order, It.Is<List<Recipient>>(r => r.Count == 1 && r[0].AddressInfo.Count == 1 && r[0].AddressInfo[0] is SmsAddressPoint)),
             Times.Once);
     }
+
+    [Fact]
+    public async Task ProcessOrder_WithMixedContactPoints_SeparatesChannelsCorrectly()
+    {
+        // Arrange
+        var order = new NotificationOrder
+        {
+            Recipients = [
+                new Recipient
+                {
+                    NationalIdentityNumber = "10277990119",
+                    AddressInfo =
+                    [
+                        new SmsAddressPoint("+4799999999"),
+                        new EmailAddressPoint("person@example.com")
+                    ]
+                }
+            ]
+        };
+
+        var contactPointServiceMock = new Mock<IContactPointService>();
+        var smsProcessingServiceMock = new Mock<ISmsOrderProcessingService>();
+        var emailProcessingServiceMock = new Mock<IEmailOrderProcessingService>();
+
+        List<Recipient>? capturedSmsRecipients = null;
+        List<Recipient>? capturedEmailRecipients = null;
+
+        emailProcessingServiceMock
+            .Setup(s => s.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
+            .Callback<NotificationOrder, List<Recipient>>((_, recipients) => capturedEmailRecipients = recipients)
+            .Returns(Task.CompletedTask);
+
+        smsProcessingServiceMock
+            .Setup(s => s.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
+            .Callback<NotificationOrder, List<Recipient>>((_, recipients) => capturedSmsRecipients = recipients)
+            .Returns(Task.CompletedTask);
+
+        var service = new EmailAndSmsOrderProcessingService(emailProcessingServiceMock.Object, smsProcessingServiceMock.Object, contactPointServiceMock.Object);
+
+        // Act
+        await service.ProcessOrder(order);
+
+        // Assert
+        Assert.NotNull(capturedSmsRecipients);
+        Assert.NotNull(capturedEmailRecipients);
+
+        Assert.Single(capturedSmsRecipients);
+        Assert.Single(capturedEmailRecipients);
+
+        Assert.Equal("10277990119", capturedSmsRecipients[0].NationalIdentityNumber);
+        Assert.Equal("10277990119", capturedEmailRecipients[0].NationalIdentityNumber);
+
+        Assert.Single(capturedSmsRecipients[0].AddressInfo);
+        Assert.Single(capturedEmailRecipients[0].AddressInfo);
+
+        Assert.IsType<SmsAddressPoint>(capturedSmsRecipients[0].AddressInfo[0]);
+        Assert.IsType<EmailAddressPoint>(capturedEmailRecipients[0].AddressInfo[0]);
+
+        Assert.Equal("+4799999999", ((SmsAddressPoint)capturedSmsRecipients[0].AddressInfo[0]).MobileNumber);
+        Assert.Equal("person@example.com", ((EmailAddressPoint)capturedEmailRecipients[0].AddressInfo[0]).EmailAddress);
+    }
 }
