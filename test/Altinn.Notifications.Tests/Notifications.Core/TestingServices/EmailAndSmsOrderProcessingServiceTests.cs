@@ -262,4 +262,55 @@ public class EmailAndSmsOrderProcessingServiceTests
             s => s.ProcessOrderRetryWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.Is<List<Recipient>>(r => r.Count == 0)),
             Times.Once);
     }
+
+    [Fact]
+    public async Task ProcessOrder_WithOnlySmsContacts_OnlyCallsSmsProcessingService()
+    {
+        // Arrange
+        var order = new NotificationOrder
+        {
+            Recipients =
+            [
+                new Recipient
+                {
+                    NationalIdentityNumber = "18826599975",
+                    AddressInfo =
+                    [
+                        new SmsAddressPoint("+4712345678")
+                    ]
+                }
+            ]
+        };
+
+        var contactPointServiceMock = new Mock<IContactPointService>();
+        var smsProcessingServiceMock = new Mock<ISmsOrderProcessingService>();
+        var emailProcessingServiceMock = new Mock<IEmailOrderProcessingService>();
+
+        // Capture args for verification
+        List<Recipient>? capturedSmsRecipients = null;
+
+        smsProcessingServiceMock
+            .Setup(s => s.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
+            .Callback<NotificationOrder, List<Recipient>>((_, recipients) => capturedSmsRecipients = recipients)
+            .Returns(Task.CompletedTask);
+
+        var service = new EmailAndSmsOrderProcessingService(emailProcessingServiceMock.Object, smsProcessingServiceMock.Object, contactPointServiceMock.Object);
+
+        // Act
+        await service.ProcessOrder(order);
+
+        // Assert
+        Assert.NotNull(capturedSmsRecipients);
+        Assert.Single(capturedSmsRecipients);
+
+        Assert.Equal("18826599975", capturedSmsRecipients[0].NationalIdentityNumber);
+
+        Assert.Single(capturedSmsRecipients[0].AddressInfo);
+        Assert.IsType<SmsAddressPoint>(capturedSmsRecipients[0].AddressInfo[0]);
+
+        // Verify Email service was not called with any recipients
+        emailProcessingServiceMock.Verify(
+            s => s.ProcessOrderWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.Is<List<Recipient>>(r => r.Count == 0)),
+            Times.Once);
+    }
 }
