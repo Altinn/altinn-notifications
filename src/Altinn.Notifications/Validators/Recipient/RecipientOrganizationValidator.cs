@@ -1,8 +1,4 @@
-﻿using Altinn.Notifications.Models;
-using Altinn.Notifications.Models.Recipient;
-using Altinn.Notifications.Validators.Email;
-using Altinn.Notifications.Validators.Extensions;
-using Altinn.Notifications.Validators.Sms;
+﻿using Altinn.Notifications.Models.Recipient;
 
 using FluentValidation;
 
@@ -34,6 +30,6 @@ namespace Altinn.Notifications.Validators.Recipient
                     .When(options => !string.IsNullOrEmpty(options!.OrgNumber))
                     .WithMessage($"Organization number must be {_organizationNumberLength} digits long.");
             });
-        }  
+        }
     }
 }
