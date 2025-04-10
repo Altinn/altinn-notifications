@@ -129,6 +129,36 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
+    public async Task ProcessOrder_EmailAndSmsOrder_EmailAndSmsOrderProcessingServiceCalled()
+    {
+        // Arrange 
+        NotificationOrder order = new()
+        {
+            NotificationChannel = NotificationChannel.EmailAndSms
+        };
+
+        var emailAndSmsMockService = new Mock<IEmailAndSmsOrderProcessingService>();
+        emailAndSmsMockService.Setup(e => e.ProcessOrder(It.IsAny<NotificationOrder>())).Returns(Task.CompletedTask);
+
+        var smsMockService = new Mock<ISmsOrderProcessingService>();
+        var emailMockService = new Mock<IEmailOrderProcessingService>();
+        var preferredChannelMockService = new Mock<IPreferredChannelProcessingService>();
+
+        var orderProcessingService = GetTestService(emailMock: emailMockService.Object, smsMock: smsMockService.Object, bothMock: emailAndSmsMockService.Object, preferredMock: preferredChannelMockService.Object);
+
+        // Act
+        await orderProcessingService.ProcessOrder(order);
+
+        // Assert
+        emailAndSmsMockService.Verify(e => e.ProcessOrder(order), Times.Once);
+
+        // Individual email and SMS services should not be called
+        smsMockService.Verify(s => s.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Never);
+        emailMockService.Verify(e => e.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Never);
+        preferredChannelMockService.Verify(e => e.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Never);
+    }
+
+    [Fact]
     public async Task ProcessOrder_SendConditionNotMet_ProcessingStops()
     {
         // Arrange 
@@ -238,9 +268,39 @@ public class OrderProcessingServiceTests
         await orderProcessingService.ProcessOrderRetry(order);
 
         // Assert
-        emailMockService.Verify(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Never);
         smsMockService.Verify(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Never);
+        emailMockService.Verify(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Never);
         preferredMockService.Verify(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ProcessOrderRetry_EmailAndSmsOrder_EmailAndSmsOrderProcessingServiceCalled()
+    {
+        // Arrange 
+        NotificationOrder order = new()
+        {
+            NotificationChannel = NotificationChannel.EmailAndSms,
+        };
+
+        var emailAndSmsMockService = new Mock<IEmailAndSmsOrderProcessingService>();
+        emailAndSmsMockService.Setup(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>())).Returns(Task.CompletedTask);
+
+        var smsMockService = new Mock<ISmsOrderProcessingService>();
+        var emailMockService = new Mock<IEmailOrderProcessingService>();
+        var preferredChannelMockService = new Mock<IPreferredChannelProcessingService>();
+
+        var orderProcessingService = GetTestService(emailMock: emailMockService.Object, smsMock: smsMockService.Object, bothMock: emailAndSmsMockService.Object, preferredMock: preferredChannelMockService.Object);
+
+        // Act
+        await orderProcessingService.ProcessOrderRetry(order);
+
+        // Assert
+        emailAndSmsMockService.Verify(e => e.ProcessOrderRetry(order), Times.Once);
+
+        // Individual email and SMS services should not be called
+        smsMockService.Verify(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Never);
+        emailMockService.Verify(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Never);
+        preferredChannelMockService.Verify(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Never);
     }
 
     [Fact]
