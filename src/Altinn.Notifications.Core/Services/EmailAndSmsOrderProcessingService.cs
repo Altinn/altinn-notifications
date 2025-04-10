@@ -94,27 +94,27 @@ public class EmailAndSmsOrderProcessingService : IEmailAndSmsOrderProcessingServ
         {
             string recipientIdentifier = recipient.OrganizationNumber ?? recipient.NationalIdentityNumber!;
 
-            int smsContactPointCount = recipient.AddressInfo.Count(a => a.AddressType == AddressType.Sms);
-            if (smsContactPointCount > 0)
+            var smsAddressInfo = recipient.AddressInfo.Where(a => a.AddressType == AddressType.Sms).ToList();
+            if (smsAddressInfo.Count > 0)
             {
                 smsRecipients[recipientIdentifier] = new Recipient
                 {
+                    AddressInfo = smsAddressInfo,
                     IsReserved = recipient.IsReserved,
                     OrganizationNumber = recipient.OrganizationNumber,
-                    NationalIdentityNumber = recipient.NationalIdentityNumber,
-                    AddressInfo = [.. recipient.AddressInfo.Where(a => a.AddressType == AddressType.Sms)],
+                    NationalIdentityNumber = recipient.NationalIdentityNumber
                 };
             }
 
-            int emailContactPointCount = recipient.AddressInfo.Count(a => a.AddressType == AddressType.Email);
-            if (emailContactPointCount > 0)
+            var emailAddressInfo = recipient.AddressInfo.Where(a => a.AddressType == AddressType.Email).ToList();
+            if (emailAddressInfo.Count > 0)
             {
                 emailRecipients[recipientIdentifier] = new Recipient
                 {
+                    AddressInfo = emailAddressInfo,
                     IsReserved = recipient.IsReserved,
                     OrganizationNumber = recipient.OrganizationNumber,
-                    NationalIdentityNumber = recipient.NationalIdentityNumber,
-                    AddressInfo = [.. recipient.AddressInfo.Where(a => a.AddressType == AddressType.Email)],
+                    NationalIdentityNumber = recipient.NationalIdentityNumber
                 };
             }
         }
