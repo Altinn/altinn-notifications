@@ -212,4 +212,54 @@ public class EmailAndSmsOrderProcessingServiceTests
         Assert.Equal("+4799999999", ((SmsAddressPoint)capturedSmsRecipients[0].AddressInfo[0]).MobileNumber);
         Assert.Equal("person@example.com", ((EmailAddressPoint)capturedEmailRecipients[0].AddressInfo[0]).EmailAddress);
     }
+
+    [Fact]
+    public async Task ProcessOrderRetry_WithOnlyEmailContacts_OnlyCallsEmailProcessingService()
+    {
+        // Arrange
+        var order = new NotificationOrder
+        {
+            Recipients =
+            [
+                new Recipient
+                {
+                    OrganizationNumber = "01885298520",
+                    AddressInfo =
+                    [
+                        new EmailAddressPoint("org@example.com")
+                    ]
+                }
+            ]
+        };
+
+        var contactPointServiceMock = new Mock<IContactPointService>();
+        var smsProcessingServiceMock = new Mock<ISmsOrderProcessingService>();
+        var emailProcessingServiceMock = new Mock<IEmailOrderProcessingService>();
+
+        // Capture args for verification
+        List<Recipient>? capturedEmailRecipients = null;
+
+        emailProcessingServiceMock
+            .Setup(s => s.ProcessOrderRetryWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.IsAny<List<Recipient>>()))
+            .Callback<NotificationOrder, List<Recipient>>((_, recipients) => capturedEmailRecipients = recipients)
+            .Returns(Task.CompletedTask);
+
+        var service = new EmailAndSmsOrderProcessingService(emailProcessingServiceMock.Object, smsProcessingServiceMock.Object, contactPointServiceMock.Object);
+
+        // Act
+        await service.ProcessOrderRetry(order);
+
+        // Assert
+        Assert.NotNull(capturedEmailRecipients);
+        Assert.Single(capturedEmailRecipients);
+
+        Assert.Equal("01885298520", capturedEmailRecipients[0].OrganizationNumber);
+
+        Assert.Single(capturedEmailRecipients[0].AddressInfo);
+        Assert.IsType<EmailAddressPoint>(capturedEmailRecipients[0].AddressInfo[0]);
+
+        smsProcessingServiceMock.Verify(
+            s => s.ProcessOrderRetryWithoutAddressLookup(It.IsAny<NotificationOrder>(), It.Is<List<Recipient>>(r => r.Count == 0)),
+            Times.Once);
+    }
 }
