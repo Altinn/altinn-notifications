@@ -1,5 +1,6 @@
 ﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
 
@@ -42,7 +43,7 @@ public class PreferredChannelProcessingService : IPreferredChannelProcessingServ
     private async Task ProcessOrderInternal(NotificationOrder order, bool isRetry)
     {
         List<Recipient> recipients = order.Recipients;
-        List<Recipient> recipientsWithoutContactPoint = 
+        List<Recipient> recipientsWithoutContactPoint =
             recipients
                 .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email || ap.AddressType == AddressType.Sms))
                 .ToList();
@@ -90,27 +91,50 @@ public class PreferredChannelProcessingService : IPreferredChannelProcessingServ
         }
     }
 
-    private static (List<Recipient> PreferredChannelRecipients, List<Recipient> FallBackChannelRecipients) GenerateRecipientLists(
-      List<Recipient> recipients,
-      AddressType preferredAddressType,
-      AddressType fallbackAddressType)
+    private static (List<Recipient> PreferredChannelRecipients, List<Recipient> FallbackChannelRecipients) GenerateRecipientLists(List<Recipient> recipients, AddressType preferredAddressType, AddressType fallbackAddressType)
     {
-        List<Recipient> preferredChannelRecipients = recipients
-            .Where(r => r.AddressInfo.Exists(ap => ap.AddressType == preferredAddressType))
-            .ToList();
+        // Initialize dictionaries to hold recipients for preferred and fallback channels
+        var fallbackChannelRecipients = new Dictionary<string, Recipient>();
+        var preferredChannelRecipients = new Dictionary<string, Recipient>();
 
-        List<Recipient> fallBackChannelRecipients = recipients
-            .Where(r => r.AddressInfo.Exists(ap => ap.AddressType == fallbackAddressType))
-            .Except(preferredChannelRecipients)
-            .ToList();
+        foreach (var recipient in recipients)
+        {
+            // Generate a unique identifier for the recipient
+            string recipientIdentifier = recipient.NationalIdentityNumber ?? recipient.OrganizationNumber ?? Guid.NewGuid().ToString();
 
-        List<Recipient> missingContactRecipients = recipients
-            .Except(preferredChannelRecipients)
-            .Except(fallBackChannelRecipients)
-            .ToList();
+            // Process recipients with fallback addresses.
+            int fallbackAddressCount = recipient.AddressInfo.Count(a => a.AddressType == fallbackAddressType);
+            if (fallbackAddressCount > 0)
+            {
+                fallbackChannelRecipients[recipientIdentifier] = new Recipient
+                {
+                    IsReserved = recipient.IsReserved,
+                    OrganizationNumber = recipient.OrganizationNumber,
+                    NationalIdentityNumber = recipient.NationalIdentityNumber,
+                    AddressInfo = [.. recipient.AddressInfo.Where(a => a.AddressType == fallbackAddressType)],
+                };
+            }
 
-        preferredChannelRecipients.AddRange(missingContactRecipients);
+            // Process recipients with preferred addresses
+            int preferredAddressCount = recipient.AddressInfo.Count(a => a.AddressType == preferredAddressType);
+            if (preferredAddressCount > 0)
+            {
+                preferredChannelRecipients[recipientIdentifier] = new Recipient
+                {
+                    IsReserved = recipient.IsReserved,
+                    OrganizationNumber = recipient.OrganizationNumber,
+                    NationalIdentityNumber = recipient.NationalIdentityNumber,
+                    AddressInfo = [.. recipient.AddressInfo.Where(a => a.AddressType == preferredAddressType)],
+                };
+            }
 
-        return (preferredChannelRecipients, fallBackChannelRecipients);
+            // Handle recipients with neither a preferred nor a fallback address.
+            if (fallbackAddressCount == 0 && preferredAddressCount == 0)
+            {
+                preferredChannelRecipients[recipientIdentifier] = recipient;
+            }
+        }
+
+        return ([.. preferredChannelRecipients.Values], [.. fallbackChannelRecipients.Values]);
     }
 }

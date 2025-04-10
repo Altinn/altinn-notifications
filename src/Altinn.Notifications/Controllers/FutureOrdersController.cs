@@ -61,7 +61,7 @@ public class FutureOrdersController : ControllerBase
             var validationResult = _validator.Validate(notificationOrderRequest);
             if (!validationResult.IsValid)
             {
-                validationResult.AddToModelState(this.ModelState);
+                validationResult.AddToModelState(ModelState);
                 return ValidationProblem(ModelState);
             }
 
