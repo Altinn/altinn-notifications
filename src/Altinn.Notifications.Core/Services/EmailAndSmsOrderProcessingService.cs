@@ -92,7 +92,7 @@ public class EmailAndSmsOrderProcessingService : IEmailAndSmsOrderProcessingServ
 
         foreach (var recipient in recipients)
         {
-            string recipientIdentifier = recipient.OrganizationNumber ?? recipient.NationalIdentityNumber ?? Guid.NewGuid().ToString();
+            string recipientIdentifier = recipient.OrganizationNumber ?? recipient.NationalIdentityNumber!;
 
             int smsContactPointCount = recipient.AddressInfo.Count(a => a.AddressType == AddressType.Sms);
             if (smsContactPointCount > 0)
