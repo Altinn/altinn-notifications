@@ -144,7 +144,7 @@ public class OrderProcessingServiceTests
         var emailMockService = new Mock<IEmailOrderProcessingService>();
         var preferredChannelMockService = new Mock<IPreferredChannelProcessingService>();
 
-        var orderProcessingService = GetTestService(emailMock: emailMockService.Object, smsMock: smsMockService.Object, bothMock: emailAndSmsMockService.Object, preferredMock: preferredChannelMockService.Object);
+        var orderProcessingService = GetTestService(emailMock: emailMockService.Object, smsMock: smsMockService.Object, emailAndSmsMock: emailAndSmsMockService.Object, preferredMock: preferredChannelMockService.Object);
 
         // Act
         await orderProcessingService.ProcessOrder(order);
@@ -289,7 +289,7 @@ public class OrderProcessingServiceTests
         var emailMockService = new Mock<IEmailOrderProcessingService>();
         var preferredChannelMockService = new Mock<IPreferredChannelProcessingService>();
 
-        var orderProcessingService = GetTestService(emailMock: emailMockService.Object, smsMock: smsMockService.Object, bothMock: emailAndSmsMockService.Object, preferredMock: preferredChannelMockService.Object);
+        var orderProcessingService = GetTestService(emailMock: emailMockService.Object, smsMock: smsMockService.Object, emailAndSmsMock: emailAndSmsMockService.Object, preferredMock: preferredChannelMockService.Object);
 
         // Act
         await orderProcessingService.ProcessOrderRetry(order);
@@ -433,7 +433,7 @@ public class OrderProcessingServiceTests
         IOrderRepository? repo = null,
         IEmailOrderProcessingService? emailMock = null,
         ISmsOrderProcessingService? smsMock = null,
-        IEmailAndSmsOrderProcessingService? bothMock = null,
+        IEmailAndSmsOrderProcessingService? emailAndSmsMock = null,
         IPreferredChannelProcessingService? preferredMock = null,
         IKafkaProducer? producer = null,
         IConditionClient? conditionClient = null)
@@ -456,10 +456,10 @@ public class OrderProcessingServiceTests
             smsMock = smsMockService.Object;
         }
 
-        if (bothMock == null)
+        if (emailAndSmsMock == null)
         {
             var emailAndSmsProcessingService = new Mock<IEmailAndSmsOrderProcessingService>();
-            bothMock = emailAndSmsProcessingService.Object;
+            emailAndSmsMock = emailAndSmsProcessingService.Object;
         }
 
         if (preferredMock == null)
@@ -482,6 +482,6 @@ public class OrderProcessingServiceTests
 
         var kafkaSettings = new Altinn.Notifications.Core.Configuration.KafkaSettings() { PastDueOrdersTopicName = _pastDueTopicName };
 
-        return new OrderProcessingService(repo, emailMock, smsMock, preferredMock, bothMock, conditionClient, producer, Options.Create(kafkaSettings), new LoggerFactory().CreateLogger<OrderProcessingService>());
+        return new OrderProcessingService(repo, emailMock, smsMock, preferredMock, emailAndSmsMock, conditionClient, producer, Options.Create(kafkaSettings), new LoggerFactory().CreateLogger<OrderProcessingService>());
     }
 }
