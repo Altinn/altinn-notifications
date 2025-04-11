@@ -286,7 +286,7 @@ async Task ConnectToKeyVaultAndSetApplicationInsights(ConfigurationManager confi
 void AddInputModelValidators(IServiceCollection services)
 {
     ValidatorOptions.Global.LanguageManager.Enabled = false;
-    services.AddValidatorsFromAssembly(typeof(Program).Assembly, includeInternalTypes: true);
+    services.AddValidatorsFromAssemblyWithDuplicateCheck(Assembly.GetExecutingAssembly());
 }
 
 void IncludeXmlComments(SwaggerGenOptions swaggerGenOptions)
