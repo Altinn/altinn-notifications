@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
-namespace Altinn.Notifications.Models;
+namespace Altinn.Notifications.Models.Email;
 
 /// <summary>
 /// Defines a request for sending an email notification to a specific email address.

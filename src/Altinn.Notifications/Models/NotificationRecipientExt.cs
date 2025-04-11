@@ -1,5 +1,9 @@
 ﻿using System.Text.Json.Serialization;
 
+using Altinn.Notifications.Models.Email;
+using Altinn.Notifications.Models.Recipient;
+using Altinn.Notifications.Models.Sms;
+
 namespace Altinn.Notifications.Models;
 
 /// <summary>
