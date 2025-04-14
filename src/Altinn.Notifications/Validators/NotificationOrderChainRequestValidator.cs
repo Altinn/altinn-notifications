@@ -14,6 +14,8 @@ internal sealed class NotificationOrderChainRequestValidator : AbstractValidator
     /// </summary>
     public NotificationOrderChainRequestValidator()
     {
+        Include(new NotificationOrderBaseValidator());
+
         RuleFor(order => order.IdempotencyId)
             .NotNull()
             .NotEmpty()
