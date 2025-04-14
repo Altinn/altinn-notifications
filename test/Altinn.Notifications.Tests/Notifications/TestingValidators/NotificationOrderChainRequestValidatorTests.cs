@@ -318,7 +318,6 @@ public class NotificationOrderChainRequestValidatorTests
                         Subject = "test"
                     }
                 }
-
             }
         };
 
@@ -326,6 +325,6 @@ public class NotificationOrderChainRequestValidatorTests
         var result = _validator.TestValidate(order);
         
         // Assert
-        result.ShouldHaveAnyValidationError().WithErrorMessage("RequestedSendTime is required and must be greater than or equal to now.");
+        result.ShouldHaveAnyValidationError().WithErrorMessage("RequestedSendTime must be greater than or equal to now.");
     }
 }
