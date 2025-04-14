@@ -94,4 +94,58 @@ public class RecipientPersonValidatorTests
         actual.ShouldNotHaveValidationErrorFor(recipient => recipient.EmailSettings);
         actual.ShouldNotHaveValidationErrorFor(recipient => recipient.SmsSettings);
     }
+
+    [Fact]
+    public void Should_Validate_ResourceId_To_True_When_Null()
+    {
+        // arrange
+        var recipientPerson = new RecipientPersonExt
+        {
+            NationalIdentityNumber = "12345678910",
+            ResourceId = null,
+            ChannelSchema = NotificationChannelExt.Sms,
+        };
+
+        // act
+        var actual = _recipientPersonValidator.TestValidate(recipientPerson);
+        
+        // assert
+        actual.ShouldNotHaveValidationErrorFor(recipient => recipient.ResourceId);
+    }
+
+    [Fact]
+    public void Should_Not_Validate_ResourceId_To_True_When_Invalid_Prefix()
+    {
+        // arrange
+        var recipientPerson = new RecipientPersonExt
+        {
+            NationalIdentityNumber = "12345678910",
+            ResourceId = "burn:altinn:resource:12345678910", // invalid prefix
+            ChannelSchema = NotificationChannelExt.Sms,
+        };
+
+        // act
+        var actual = _recipientPersonValidator.TestValidate(recipientPerson);
+
+        // assert
+        actual.ShouldHaveValidationErrorFor(recipient => recipient.ResourceId).WithErrorMessage("ResourceId must have a valid syntax.");
+    }
+
+    [Fact]
+    public void Should_Validate_ResourceId_To_True_When_Valid_Prefix()
+    {
+        // arrange
+        var recipientPerson = new RecipientPersonExt
+        {
+            NationalIdentityNumber = "12345678910",
+            ResourceId = "urn:altinn:resource:12345678910",
+            ChannelSchema = NotificationChannelExt.Sms,
+        };
+        
+        // act
+        var actual = _recipientPersonValidator.TestValidate(recipientPerson);
+        
+        // assert
+        actual.ShouldNotHaveValidationErrorFor(recipient => recipient.ResourceId);
+    }
 }

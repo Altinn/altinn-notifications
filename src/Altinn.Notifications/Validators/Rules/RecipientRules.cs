@@ -248,4 +248,19 @@ public static class RecipientRules
 
         return match.Success;
     }
+
+    /// <summary>
+    /// Validates that the resource ID starts with "urn:altinn:resource" when not null.
+    /// </summary>
+    /// <param name="arg">A nullable string representation of a valid resource id</param>
+    /// <returns>true if the resource id is a valid full resource id</returns>
+    internal static bool BeValidResourceId(string? arg)
+    {
+        if (arg == null)
+        {
+            return true;
+        }
+
+        return arg.StartsWith("urn:altinn:resource");
+    }
 }

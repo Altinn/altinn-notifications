@@ -296,4 +296,36 @@ public class NotificationOrderChainRequestValidatorTests
         // Assert
         result.ShouldNotHaveAnyValidationErrors();
     }
+
+    [Fact]
+    public void RequestedSendTimeValidation_Should_Inherit_From_BaseValidator()
+    {
+        // Arrange
+        var order = new NotificationOrderChainRequestExt
+        {
+            IdempotencyId = "id",
+            SendersReference = "te-123-123",
+            RequestedSendTime = DateTime.UtcNow.AddDays(-1),
+            Recipient = new NotificationRecipientExt
+            {
+                RecipientEmail = new RecipientEmailExt
+                {
+                    EmailAddress = "noreply@altinn.no",
+                    Settings = new EmailSendingOptionsExt
+                    {
+                        Body = "test",
+                        SendingTimePolicy = SendingTimePolicyExt.Anytime,
+                        Subject = "test"
+                    }
+                }
+
+            }
+        };
+
+        // Act
+        var result = _validator.TestValidate(order);
+        
+        // Assert
+        result.ShouldHaveAnyValidationError().WithErrorMessage("RequestedSendTime is required and must be greater than or equal to now.");
+    }
 }
