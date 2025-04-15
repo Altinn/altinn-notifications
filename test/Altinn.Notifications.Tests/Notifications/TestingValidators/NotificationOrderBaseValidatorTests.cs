@@ -22,7 +22,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingValidators
 
             // Act
             var result = _validator.TestValidate(notificationOrder);
-            
+
             // Assert
             result.ShouldNotHaveValidationErrorFor(x => x.ConditionEndpoint);
         }
@@ -30,14 +30,19 @@ namespace Altinn.Notifications.Tests.Notifications.TestingValidators
         [Fact]
         public void Should_Fail_Initialisation_With_Invalid_Uri_ConditionEndpoint()
         {
-            Assert.Throws<UriFormatException>(() =>
+            // Arrange
+            var notificationOrder = new NotificationOrderBaseExt
             {
-                var notificationOrder = new NotificationOrderBaseExt
-                {
-                    ConditionEndpoint = new Uri("/api/endpoint"),
-                    RequestedSendTime = DateTime.UtcNow.AddMinutes(1)
-                };
-            });
+                ConditionEndpoint = new Uri("/api/endpoint", UriKind.Relative),
+                RequestedSendTime = DateTime.UtcNow.AddMinutes(1)
+            };
+
+            // Act
+            var result = _validator.TestValidate(notificationOrder);
+
+            // Assert
+            result.ShouldHaveValidationErrorFor(x => x.ConditionEndpoint)
+                .WithErrorMessage("ConditionEndpoint must be a valid absolute URI or null.");
         }
 
         [Fact]
@@ -72,7 +77,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingValidators
 
             // Act
             var result = _validator.TestValidate(notificationOrder);
-            
+
             // Assert
             result.ShouldNotHaveValidationErrorFor(x => x.RequestedSendTime);
         }
