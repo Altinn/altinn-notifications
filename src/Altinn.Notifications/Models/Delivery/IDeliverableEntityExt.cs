@@ -13,6 +13,7 @@ namespace Altinn.Notifications.Models.Delivery;
 /// 
 /// It represents a key abstraction in the notification tracking hierarchy that bridges
 /// status information with addressing details across various communication channels.
+/// 
 /// The polymorphic serialization support enables type-safe handling of different delivery
 /// mechanisms while maintaining a consistent tracking contract.
 /// </remarks>

@@ -6,7 +6,7 @@ using Altinn.Notifications.Models.Status;
 namespace Altinn.Notifications.Models.Delivery;
 
 /// <summary>
-/// Represents the interface for a root tracking entity for a notification shipment that can be sent to multiple recipients through various communication channels.
+/// Represents the root tracking interface for a notification shipment that can be sent to multiple recipients through various communication channels.
 /// </summary>
 /// <remarks>
 /// <para>
