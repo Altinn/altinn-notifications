@@ -25,7 +25,7 @@ namespace Altinn.Notifications.Core.Models.Delivery;
 /// the relationship between these individual deliveries and the overall shipment status.
 /// </para>
 /// </remarks>
-internal interface IShipmentDeliveryManifest : IStatus
+public interface IShipmentDeliveryManifest : IStatus
 {
     /// <summary>
     /// Gets the unique identifier for this shipment.

@@ -1,4 +1,9 @@
 ﻿using Altinn.Notifications.Configuration;
+using Altinn.Notifications.Core.Models.Delivery;
+using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Shared;
+using Altinn.Notifications.Extensions;
+using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models.Delivery;
 
 using Microsoft.AspNetCore.Authorization;
@@ -27,8 +32,18 @@ namespace Altinn.Notifications.Controllers;
 [SwaggerResponse(401, "Caller is unauthorized")]
 [SwaggerResponse(403, "Caller is not authorized to access the requested resource")]
 [Authorize(Policy = AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS)]
-public class ShipmentController
+public class ShipmentController : ControllerBase
 {
+    private readonly IShipmentDeliveryService _shipmentDeliveryService;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ShipmentController"/> class.
+    /// </summary>
+    public ShipmentController(IShipmentDeliveryService shipmentDeliveryService)
+    {
+        _shipmentDeliveryService = shipmentDeliveryService;
+    }
+
     /// <summary>
     /// Retrieve the delivery mainfest for a specific notification shipment.
     /// </summary>
@@ -50,37 +65,15 @@ public class ShipmentController
     [SwaggerResponse(200, "The shipment matching the provided identifier was retrieved successfully", typeof(ShipmentDeliveryManifestExt))]
     public async Task<ActionResult<ShipmentDeliveryManifestExt>> GetById([FromRoute] Guid id)
     {
-        // Example data for demonstration purposes
-        var exampleShipment = new ShipmentDeliveryManifestExt
+        string? creatorName = HttpContext.GetOrg();
+
+        if (creatorName == null)
         {
-            ShipmentId = id,
-            Status = "Processed",
-            Type = "Notification",
-            LastUpdate = DateTime.UtcNow,
-            SendersReference = "Dummy-Senders-Reference",
-            StatusDescription = "The notification has been successfully processed",
+            return Forbid();
+        }
 
-            Recipients =
-            [
-                new EmailDeliveryManifestExt
-                {
-                    Status = "Delivered",
-                    LastUpdate = DateTime.UtcNow,
-                    Destination = "navn.navnesen@example.com",
-                    StatusDescription = "Email successfully delivered to recipient's inbox"
-                },
+        Result<IShipmentDeliveryManifest, ServiceError> result = await _shipmentDeliveryService.GetDeliveryManifest(id, creatorName);
 
-                new SmsDeliveryManifestExt
-                {
-                    Status = "Sent",
-                    Destination = "+4799999999",
-                    LastUpdate = DateTime.UtcNow,
-                    StatusDescription = "SMS successfully sent to carrier"
-                }
-            ]
-        };
-
-        // Simulate returning the example data
-        return exampleShipment;
+        return result.Match<ActionResult<ShipmentDeliveryManifestExt>>(manifest => Ok(manifest.MapToShipmentDeliveryManifestExt()), error => StatusCode(error.ErrorCode, error.ErrorMessage));
     }
 }

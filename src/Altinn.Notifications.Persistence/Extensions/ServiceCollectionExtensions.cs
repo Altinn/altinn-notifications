@@ -33,6 +33,7 @@ public static class ServiceCollectionExtensions
         .AddSingleton<INotificationSummaryRepository, NotificationSummaryRepository>()
         .AddSingleton<IResourceLimitRepository, ResourceLimitRepository>()
         .AddSingleton<IMetricsRepository, MetricsRepository>()
+        .AddSingleton<IShipmentRepository, ShipmentRepository>()
         .AddNpgsqlDataSource(connectionString, builder =>
             builder.EnableParameterLogging(settings.LogParameters)
                    .EnableDynamicJson()

@@ -1,4 +1,5 @@
 ﻿using Altinn.Notifications.Core.Configuration;
+using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 
@@ -47,6 +48,7 @@ public static class ServiceCollectionExtensions
             .AddSingleton<IMetricsService, MetricsService>()
             .AddSingleton<INotificationScheduleService, NotificationScheduleService>()
             .AddSingleton<IKeywordsService, KeywordsService>()
+            .AddSingleton<IShipmentDeliveryService, ShipmentDeliveryService>()
             .Configure<KafkaSettings>(config.GetSection("KafkaSettings"))
             .Configure<NotificationConfig>(config.GetSection("NotificationConfig"));
     }
