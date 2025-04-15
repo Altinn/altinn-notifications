@@ -282,103 +282,7 @@ END;
 $BODY$;
 
 
--- getorderspastsendtimeupdatestatus.sql:
-CREATE OR REPLACE FUNCTION notifications.getorders_pastsendtime_updatestatus()
-    RETURNS TABLE(notificationorders jsonb)
-    LANGUAGE 'plpgsql'
-AS $BODY$
-BEGIN
-RETURN QUERY
-	UPDATE notifications.orders
-	SET processedstatus = 'Processing'
-	WHERE _id IN (select _id
-				 from notifications.orders
-				 where processedstatus = 'Registered'
-				 and requestedsendtime <= now() + INTERVAL '1 minute'
-				 limit 50)
-	RETURNING notificationorder AS notificationorders;
-END;
-$BODY$;
-
--- getsmsrecipients.sql:
-CREATE OR REPLACE FUNCTION notifications.getsmsrecipients_v2(_orderid uuid)
-RETURNS TABLE(
-  recipientorgno text, 
-  recipientnin text,
-  mobilenumber text
-) 
-LANGUAGE 'plpgsql'
-AS $BODY$
-DECLARE
-__orderid BIGINT := (SELECT _id from notifications.orders
-			where alternateid = _orderid);
-BEGIN
-RETURN query 
-	SELECT s.recipientorgno, s.recipientnin, s.mobilenumber
-	FROM notifications.smsnotifications s
-	WHERE s._orderid = __orderid;
-END;
-$BODY$;
-
--- getsmsstatusnewupdatestatus.sql:
-CREATE OR REPLACE FUNCTION notifications.getsms_statusnew_updatestatus()
-    RETURNS TABLE(alternateid uuid, sendernumber text, mobilenumber text, body text) 
-    LANGUAGE 'plpgsql'
-AS $BODY$
-BEGIN
-    RETURN QUERY 
-    WITH updated AS (
-        UPDATE notifications.smsnotifications
-        SET result = 'Sending', resulttime = now()
-        WHERE result = 'New' 
-        RETURNING notifications.smsnotifications.alternateid, 
-                  _orderid, 
-                  notifications.smsnotifications.mobilenumber,
-                  notifications.smsnotifications.customizedbody
-    )
-    SELECT u.alternateid, 
-           st.sendernumber, 
-           u.mobilenumber, 
-           CASE WHEN u.customizedbody IS NOT NULL AND u.customizedbody <> '' THEN u.customizedbody ELSE st.body END AS body
-    FROM updated u
-    JOIN notifications.smstexts st ON u._orderid = st._orderid;        
-END;
-$BODY$;
-
-
--- getsmssummary.sql:
-CREATE OR REPLACE FUNCTION notifications.getsmssummary_v2(
-	_alternateorderid uuid,
-	_creatorname text)
-    RETURNS TABLE(
-        sendersreference text, 
-        alternateid uuid, 
-        recipientorgno text, 
-        recipientnin text, 
-        mobilenumber text, 
-        result smsnotificationresulttype, 
-        resulttime timestamptz) 
-    LANGUAGE 'plpgsql'
-AS $BODY$
-
-	BEGIN
-		RETURN QUERY
-		   SELECT o.sendersreference, n.alternateid, n.recipientorgno, n.recipientnin, n.mobilenumber, n.result, n.resulttime
-			FROM notifications.smsnotifications n
-            LEFT JOIN notifications.orders o ON n._orderid = o._id
-			WHERE o.alternateid = _alternateorderid
-			and o.creatorname = _creatorname;
-        IF NOT FOUND THEN
-            RETURN QUERY
-            SELECT o.sendersreference, NULL::uuid, NULL::text, NULL::text, NULL::text, NULL::smsnotificationresulttype, NULL::timestamptz
-            FROM notifications.orders o
-            WHERE o.alternateid = _alternateorderid
-            and o.creatorname = _creatorname;
-        END IF;
-	END;
-$BODY$;
-
--- get_orders_chain_tracking.sql:
+-- getorderschaintracking.sql:
 -- Retrieves tracking information for a notification order chain using the creator's short name and idempotency identifier.
 CREATE OR REPLACE FUNCTION notifications.get_orders_chain_tracking
 (
@@ -461,6 +365,177 @@ The reminders JSON array contains objects with the following structure:
 - OrderId: The unique identifier for the reminder notification order
 - SendersReference: The sender''s reference for the reminder notification (may be null).';
 
+
+-- getorderspastsendtimeupdatestatus.sql:
+CREATE OR REPLACE FUNCTION notifications.getorders_pastsendtime_updatestatus()
+    RETURNS TABLE(notificationorders jsonb)
+    LANGUAGE 'plpgsql'
+AS $BODY$
+BEGIN
+RETURN QUERY
+	UPDATE notifications.orders
+	SET processedstatus = 'Processing'
+	WHERE _id IN (select _id
+				 from notifications.orders
+				 where processedstatus = 'Registered'
+				 and requestedsendtime <= now() + INTERVAL '1 minute'
+				 limit 50)
+	RETURNING notificationorder AS notificationorders;
+END;
+$BODY$;
+
+-- getshipmenttracking.sql:
+CREATE OR REPLACE FUNCTION notifications.get_shipment_tracking(p_alternateid UUID)
+RETURNS TABLE (
+    reference     TEXT,
+    status        TEXT,
+    last_update   TIMESTAMPTZ,
+    destination   TEXT
+) AS $$
+DECLARE
+    v_order_exists BOOLEAN;
+BEGIN
+    -- Check if the order exists and store the result
+    SELECT EXISTS (
+        SELECT 1
+        FROM notifications.orders
+        WHERE alternateid = p_alternateid
+    ) INTO v_order_exists;
+    
+    -- Exit early if the order doesn't exist
+    IF NOT v_order_exists THEN
+        RETURN;
+    END IF;
+
+    -- Return combined shipment tracking results
+    RETURN QUERY
+    WITH order_data AS (
+        -- Single query to get order data, used in all CTEs
+        SELECT o._id, o.sendersreference, o.processedstatus, o.created, o.processed
+        FROM notifications.orders o
+        WHERE o.alternateid = p_alternateid
+    ),
+    order_tracking AS (
+        SELECT
+            od.sendersreference AS reference,
+            od.processedstatus::TEXT AS status,
+            GREATEST(od.created, COALESCE(od.processed, od.created)) AS last_update,
+            NULL::TEXT AS destination
+        FROM order_data od
+    ),
+    email_tracking AS (
+        SELECT
+            NULL::TEXT AS reference,
+            e.result::TEXT AS status,
+            e.resulttime AS last_update,
+            e.toaddress AS destination
+        FROM order_data od
+        JOIN notifications.emailnotifications e ON e._orderid = od._id
+    ),
+    sms_tracking AS (
+        SELECT
+            NULL::TEXT AS reference,
+            s.result::TEXT AS status,
+            s.resulttime AS last_update,
+            s.mobilenumber AS destination
+        FROM order_data od
+        JOIN notifications.smsnotifications s ON s._orderid = od._id
+    )
+    SELECT * FROM order_tracking
+    UNION ALL
+    SELECT * FROM email_tracking
+    UNION ALL
+    SELECT * FROM sms_tracking
+    ORDER BY last_update DESC, destination NULLS FIRST;
+END;
+$$ LANGUAGE plpgsql;
+
+COMMENT ON FUNCTION notifications.get_shipment_tracking(UUID) IS
+'Returns unified tracking information for a notification shipment identified by the given alternate identifier.
+Includes:
+ - Order-level status and reference information
+ - Associated delivery via email and SMS channels
+Results are returned in a single table, ordered by last_update (newest first) and destination.
+If no matching order exists, an empty result set is returned.';
+
+
+-- getsmsrecipients.sql:
+CREATE OR REPLACE FUNCTION notifications.getsmsrecipients_v2(_orderid uuid)
+RETURNS TABLE(
+  recipientorgno text, 
+  recipientnin text,
+  mobilenumber text
+) 
+LANGUAGE 'plpgsql'
+AS $BODY$
+DECLARE
+__orderid BIGINT := (SELECT _id from notifications.orders
+			where alternateid = _orderid);
+BEGIN
+RETURN query 
+	SELECT s.recipientorgno, s.recipientnin, s.mobilenumber
+	FROM notifications.smsnotifications s
+	WHERE s._orderid = __orderid;
+END;
+$BODY$;
+
+-- getsmsstatusnewupdatestatus.sql:
+CREATE OR REPLACE FUNCTION notifications.getsms_statusnew_updatestatus()
+    RETURNS TABLE(alternateid uuid, sendernumber text, mobilenumber text, body text) 
+    LANGUAGE 'plpgsql'
+AS $BODY$
+BEGIN
+    RETURN QUERY 
+    WITH updated AS (
+        UPDATE notifications.smsnotifications
+        SET result = 'Sending', resulttime = now()
+        WHERE result = 'New' 
+        RETURNING notifications.smsnotifications.alternateid, 
+                  _orderid, 
+                  notifications.smsnotifications.mobilenumber,
+                  notifications.smsnotifications.customizedbody
+    )
+    SELECT u.alternateid, 
+           st.sendernumber, 
+           u.mobilenumber, 
+           CASE WHEN u.customizedbody IS NOT NULL AND u.customizedbody <> '' THEN u.customizedbody ELSE st.body END AS body
+    FROM updated u
+    JOIN notifications.smstexts st ON u._orderid = st._orderid;        
+END;
+$BODY$;
+
+
+-- getsmssummary.sql:
+CREATE OR REPLACE FUNCTION notifications.getsmssummary_v2(
+	_alternateorderid uuid,
+	_creatorname text)
+    RETURNS TABLE(
+        sendersreference text, 
+        alternateid uuid, 
+        recipientorgno text, 
+        recipientnin text, 
+        mobilenumber text, 
+        result smsnotificationresulttype, 
+        resulttime timestamptz) 
+    LANGUAGE 'plpgsql'
+AS $BODY$
+
+	BEGIN
+		RETURN QUERY
+		   SELECT o.sendersreference, n.alternateid, n.recipientorgno, n.recipientnin, n.mobilenumber, n.result, n.resulttime
+			FROM notifications.smsnotifications n
+            LEFT JOIN notifications.orders o ON n._orderid = o._id
+			WHERE o.alternateid = _alternateorderid
+			and o.creatorname = _creatorname;
+        IF NOT FOUND THEN
+            RETURN QUERY
+            SELECT o.sendersreference, NULL::uuid, NULL::text, NULL::text, NULL::text, NULL::smsnotificationresulttype, NULL::timestamptz
+            FROM notifications.orders o
+            WHERE o.alternateid = _alternateorderid
+            and o.creatorname = _creatorname;
+        END IF;
+	END;
+$BODY$;
 
 -- insertemailnotification.sql:
 CREATE OR REPLACE PROCEDURE notifications.insertemailnotification(
