@@ -30,9 +30,9 @@ namespace Altinn.Notifications.Validators.Recipient
                     .When(options => !string.IsNullOrEmpty(options!.OrgNumber))
                     .WithMessage($"Organization number must be {_organizationNumberLength} digits long.");
 
-                RuleFor(recipient => recipient!.ResourceId)
-                    .Must(RecipientRules.BeValidResourceId)
-                    .When(recipient => recipient!.ResourceId != null)
+                RuleFor(options => options!.ResourceId)
+                    .Must(arg => RecipientRules.BeValidResourceId(arg!))
+                    .When(options => options!.ResourceId != null)
                     .WithMessage("ResourceId must have a valid syntax.");
             });
         }

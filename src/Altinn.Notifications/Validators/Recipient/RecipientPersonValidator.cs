@@ -17,15 +17,15 @@ internal sealed class RecipientPersonValidator : AbstractValidator<RecipientPers
     {
         Include(new RecipientBaseValidator());
 
-        When(recipient => recipient != null, () =>
+        When(options => options != null, () =>
         {
-            RuleFor(recipient => recipient!.NationalIdentityNumber)
+            RuleFor(options => options!.NationalIdentityNumber)
                 .NotEmpty()
                 .MustBeValidNationalIdentityNumber();
 
-            RuleFor(recipient => recipient!.ResourceId)
-                .Must(RecipientRules.BeValidResourceId)
-                .When(recipient => recipient!.ResourceId != null)
+            RuleFor(options => options!.ResourceId)
+                .Must(arg => RecipientRules.BeValidResourceId(arg!))
+                .When(options => options!.ResourceId != null)
                 .WithMessage("ResourceId must have a valid syntax.");
         });
     }
