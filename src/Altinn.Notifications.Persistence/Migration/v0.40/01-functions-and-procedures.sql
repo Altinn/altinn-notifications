@@ -450,8 +450,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-COMMENT ON FUNCTION notifications.get_shipment_tracking(UUID) IS
-'Returns unified tracking information for a notification shipment identified by the given alternate identifier.
+COMMENT ON FUNCTION notifications.get_shipment_tracking(UUID, Text) IS
+'Returns tracking information for a notification shipment identified by the given alternate identifier and creator name.
 Includes:
  - Order-level status and reference information
  - Associated delivery via email and SMS channels
