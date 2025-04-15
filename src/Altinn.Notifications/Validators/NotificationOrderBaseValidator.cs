@@ -22,7 +22,9 @@ namespace Altinn.Notifications.Validators
 
             RuleFor(option => option.ConditionEndpoint)
                 .Must(conditionEndpoint => conditionEndpoint == null || Uri.IsWellFormedUriString(conditionEndpoint.ToString(), UriKind.Absolute))
-                .WithMessage("ConditionEndpoint must be a valid absolute URI or null.");
+                .WithMessage("ConditionEndpoint must be a valid absolute URI or null.")
+                .Must(conditionEndpoint => conditionEndpoint == null || new string[] { "https", "http" }.Contains(conditionEndpoint.Scheme.ToLower()))
+                .WithMessage("ConditionEndpoint must use http or https scheme.");
         }
     }
 }
