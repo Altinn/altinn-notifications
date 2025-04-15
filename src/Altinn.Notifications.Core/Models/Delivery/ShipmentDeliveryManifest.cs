@@ -11,8 +11,8 @@ namespace Altinn.Notifications.Core.Models.Delivery;
 /// <remarks>
 /// <para>
 /// The <see cref="ShipmentDeliveryManifest"/> record serves as the primary tracking entity in the notification system's
-/// hierarchy. By implementing <see cref="IStatus"/>, it enables standardized status monitoring at the shipment level
-/// while orchestrating the delivery workflow across multiple recipients.
+/// hierarchy. By implementing <see cref="IShipmentDeliveryManifest"/> (which extends <see cref="IStatus"/>), 
+/// it enables standardized status monitoring at the shipment level while orchestrating the delivery workflow across multiple recipients.
 /// </para>
 /// <para>
 /// This entity aggregates and consolidates tracking data from individual recipient-specific deliveries 
@@ -27,34 +27,15 @@ namespace Altinn.Notifications.Core.Models.Delivery;
 /// </remarks>
 public record ShipmentDeliveryManifest : IShipmentDeliveryManifest
 {
-    /// <summary>
-    /// Gets the unique identifier for this shipment.
-    /// </summary>
-    /// <value>
-    /// A <see cref="Guid"/> that uniquely identifies this shipment within the notification system.
-    /// This identifier serves as the primary key for shipment tracking and correlation.
-    /// </value>
+    /// <inheritdoc />
     [JsonPropertyName("shipmentId")]
     public Guid ShipmentId { get; init; }
 
-    /// <summary>
-    /// Gets the sender-provided reference for cross-system correlation.
-    /// </summary>
-    /// <value>
-    /// An optional string supplied by the sender to link this shipment to external systems
-    /// or business processes, enabling easier cross-system tracing and reconciliation.
-    /// May be null if no external reference was provided.
-    /// </value>
+    /// <inheritdoc />
     [JsonPropertyName("sendersReference")]
     public string? SendersReference { get; init; }
 
-    /// <summary>
-    /// Gets the classification or category of this shipment.
-    /// </summary>
-    /// <value>
-    /// A string categorizing the shipment (e.g., "Notification" or "Reminder"),
-    /// useful for filtering, reporting, or specialized processing workflows.
-    /// </value>
+    /// <inheritdoc />
     [JsonPropertyName("type")]
     public string Type { get; init; } = "Notification";
 
@@ -70,13 +51,7 @@ public record ShipmentDeliveryManifest : IShipmentDeliveryManifest
     [JsonPropertyName("lastUpdate")]
     public DateTime LastUpdate { get; init; } = DateTime.UtcNow;
 
-    /// <summary>
-    /// Gets the collection of recipient-specific delivery tracking records.
-    /// </summary>
-    /// <value>
-    /// An immutable list of <see cref="IDeliverableEntity"/> instances, each representing
-    /// a delivery manifest to a specific recipient through a particular communication channel.
-    /// </value>
+    /// <inheritdoc />
     [JsonPropertyName("recipients")]
     public IImmutableList<IDeliverableEntity> Recipients { get; init; } = [];
 }
