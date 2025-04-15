@@ -6,26 +6,26 @@ using Altinn.Notifications.Models.Status;
 namespace Altinn.Notifications.Models.Delivery;
 
 /// <summary>
-/// Represents the root tracking entity for a notification shipment that can be sent to multiple recipients through various communication channels.
+/// Represents the interface for a root tracking entity for a notification shipment that can be sent to multiple recipients through various communication channels.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="ShipmentDeliveryManifestExt"/> record serves as the primary tracking entity in the notification system's
-/// hierarchy. By implementing <see cref="IStatusExt"/>, it enables standardized status monitoring at the shipment level
+/// The <see cref="IShipmentDeliveryManifestExt"/> interface serves as the primary tracking contract in the notification system's
+/// hierarchy. By extending <see cref="IStatusExt"/>, it enables standardized status monitoring at the shipment level
 /// while orchestrating the delivery workflow across multiple recipients.
 /// </para>
 /// <para>
-/// This entity aggregates and consolidates tracking data from individual recipient-specific deliveries 
+/// This interface defines properties to aggregate and consolidate tracking data from individual recipient-specific deliveries 
 /// (represented by <see cref="IDeliverableEntityExt"/> implementations) while maintaining its own status information.
 /// This design enables both high-level shipment monitoring and granular per-recipient tracking in a unified model.
 /// </para>
 /// <para>
 /// Within the notification workflow, a single shipment typically represents a logical notification 
-/// that may target multiple recipients using various channels (SMS or email). The manifest maintains 
+/// that may target multiple recipients using various channels (SMS or email). The interface defines properties to maintain 
 /// the relationship between these individual deliveries and the overall shipment status.
 /// </para>
 /// </remarks>
-public record ShipmentDeliveryManifestExt : IShipmentDeliveryManifestExt
+public interface IShipmentDeliveryManifestExt : IStatusExt
 {
     /// <summary>
     /// Gets the unique identifier for this shipment.
@@ -35,7 +35,7 @@ public record ShipmentDeliveryManifestExt : IShipmentDeliveryManifestExt
     /// This identifier serves as the primary key for shipment tracking and correlation.
     /// </value>
     [JsonPropertyName("shipmentId")]
-    public Guid ShipmentId { get; init; }
+    Guid ShipmentId { get; }
 
     /// <summary>
     /// Gets the sender-provided reference for cross-system correlation.
@@ -46,7 +46,7 @@ public record ShipmentDeliveryManifestExt : IShipmentDeliveryManifestExt
     /// May be null if no external reference was provided.
     /// </value>
     [JsonPropertyName("sendersReference")]
-    public string? SendersReference { get; init; }
+    string? SendersReference { get; }
 
     /// <summary>
     /// Gets the classification or category of this shipment.
@@ -56,19 +56,7 @@ public record ShipmentDeliveryManifestExt : IShipmentDeliveryManifestExt
     /// useful for filtering, reporting, or specialized processing workflows.
     /// </value>
     [JsonPropertyName("type")]
-    public string Type { get; init; } = string.Empty;
-
-    /// <inheritdoc />
-    [JsonPropertyName("status")]
-    public string Status { get; init; } = string.Empty;
-
-    /// <inheritdoc />
-    [JsonPropertyName("description")]
-    public string? StatusDescription { get; init; } = null;
-
-    /// <inheritdoc />
-    [JsonPropertyName("lastUpdate")]
-    public DateTime LastUpdate { get; init; } = DateTime.UtcNow;
+    string Type { get; }
 
     /// <summary>
     /// Gets the collection of recipient-specific delivery tracking records.
@@ -78,5 +66,5 @@ public record ShipmentDeliveryManifestExt : IShipmentDeliveryManifestExt
     /// a delivery manifest to a specific recipient through a particular communication channel.
     /// </value>
     [JsonPropertyName("recipients")]
-    public IImmutableList<IDeliverableEntityExt> Recipients { get; init; } = [];
+    IImmutableList<IDeliverableEntityExt> Recipients { get; }
 }
