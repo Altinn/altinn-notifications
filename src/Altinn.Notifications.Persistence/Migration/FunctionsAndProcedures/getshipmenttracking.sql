@@ -68,5 +68,5 @@ COMMENT ON FUNCTION notifications.get_shipment_tracking(UUID, TEXT) IS
 Includes:
  - Order-level status and reference information
  - Associated delivery via email and SMS channels
-Results are returned in a single table, ordered by last_update (newest first) and destination.
+Results are returned in a single table.
 If no matching order exists, an empty result set is returned.';
