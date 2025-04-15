@@ -19,7 +19,7 @@ public class ValidatorRegistrationExtensionsTests
     {
         // Arrange
         var serviceCollection = new ServiceCollection();
-        var assembly = Assembly.GetExecutingAssembly(); // Or mock an assembly.
+        var assembly = new MockAssemblyWithDuplicates(); // Simulate an assembly with duplicate validators
 
         // Act & Assert
         var exception = Assert.Throws<InvalidOperationException>(() =>
@@ -50,6 +50,17 @@ public class ValidatorRegistrationExtensionsTests
 
         // Assert
         Assert.Null(exception);
+    }
+
+    private class MockAssemblyWithDuplicates : Assembly
+    {
+        public override Type[] GetTypes()
+        {
+            return [
+                typeof(DuplicateValidator1),
+                typeof(DuplicateValidator2)
+            ];
+        }
     }
 
     // Helper class to simulate assembly without duplicates
