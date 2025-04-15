@@ -385,7 +385,7 @@ END;
 $BODY$;
 
 -- getshipmenttracking.sql:
-CREATE OR REPLACE FUNCTION notifications.get_shipment_tracking(p_alternateid UUID)
+CREATE OR REPLACE FUNCTION notifications.get_shipment_tracking(_alternateid UUID)
 RETURNS TABLE (
     reference     TEXT,
     status        TEXT,
@@ -399,7 +399,7 @@ BEGIN
     SELECT EXISTS (
         SELECT 1
         FROM notifications.orders
-        WHERE alternateid = p_alternateid
+        WHERE alternateid = _alternateid
     ) INTO v_order_exists;
     
     -- Exit early if the order doesn't exist
@@ -413,7 +413,7 @@ BEGIN
         -- Single query to get order data, used in all CTEs
         SELECT o._id, o.sendersreference, o.processedstatus, o.created, o.processed
         FROM notifications.orders o
-        WHERE o.alternateid = p_alternateid
+        WHERE o.alternateid = _alternateid
     ),
     order_tracking AS (
         SELECT
