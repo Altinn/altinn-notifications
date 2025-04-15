@@ -445,8 +445,7 @@ BEGIN
     UNION ALL
     SELECT * FROM email_tracking
     UNION ALL
-    SELECT * FROM sms_tracking
-    ORDER BY last_update DESC, destination NULLS FIRST;
+    SELECT * FROM sms_tracking;
 END;
 $$ LANGUAGE plpgsql;
 
