@@ -16,12 +16,12 @@ namespace Altinn.Notifications.Core.Services;
 /// </remarks>
 public class DeliverableEntitiesService : IDeliverableEntitiesService
 {
-    private readonly IDeliverableEntitiesRepository _shipmentRepository;
+    private readonly IShipmentDeliveryManifestRepository _shipmentRepository;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DeliverableEntitiesService"/> class.
     /// </summary>
-    public DeliverableEntitiesService(IDeliverableEntitiesRepository shipmentRepository)
+    public DeliverableEntitiesService(IShipmentDeliveryManifestRepository shipmentRepository)
     {
         _shipmentRepository = shipmentRepository;
     }

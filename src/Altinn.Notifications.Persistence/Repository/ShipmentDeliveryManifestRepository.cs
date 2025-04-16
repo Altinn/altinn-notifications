@@ -12,10 +12,10 @@ using NpgsqlTypes;
 namespace Altinn.Notifications.Persistence.Repository;
 
 /// <summary>
-/// Implements the <see cref="IDeliverableEntitiesRepository"/> interface, providing database
-/// access operations for retrieving tracking data for deliverable entities such as SMS and email.
+/// Implements the <see cref="IShipmentDeliveryManifestRepository"/> interface, providing database
+/// access operations for retrieving shipment information and delivery statuses.
 /// </summary>
-public partial class DeliverableEntitiesRepository : IDeliverableEntitiesRepository
+public partial class ShipmentDeliveryManifestRepository : IShipmentDeliveryManifestRepository
 {
     private readonly NpgsqlDataSource _dataSource;
 
@@ -29,9 +29,9 @@ public partial class DeliverableEntitiesRepository : IDeliverableEntitiesReposit
     private const string _sqlGetShipmentTrackingInfo = "SELECT * FROM notifications.get_shipment_tracking($1, $2)"; // (_alternateid, _creatorname)
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="DeliverableEntitiesRepository"/> class.
+    /// Initializes a new instance of the <see cref="ShipmentDeliveryManifestRepository"/> class.
     /// </summary>
-    public DeliverableEntitiesRepository(NpgsqlDataSource dataSource)
+    public ShipmentDeliveryManifestRepository(NpgsqlDataSource dataSource)
     {
         _dataSource = dataSource;
     }
