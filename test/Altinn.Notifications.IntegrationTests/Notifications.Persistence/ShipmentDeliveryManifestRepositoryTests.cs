@@ -5,6 +5,7 @@ using Altinn.Notifications.Core.Models.Delivery;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
@@ -537,5 +538,202 @@ public class ShipmentDeliveryManifestRepositoryTests : IAsyncLifetime
         Assert.NotEmpty(smsDelivery.Status);
         Assert.NotNull(smsDelivery.StatusDescription);
         Assert.True(smsDelivery.LastUpdate > DateTime.MinValue);
+    }
+
+    [Fact]
+    public async Task GetDeliveryManifestAsync_WithSmsPreferredChannel_ReturnsBothSmsAndEmailDeliveryManifests()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        Guid smsNotificationId = Guid.NewGuid();
+        Guid emailNotificationId = Guid.NewGuid();
+
+        string creator = "TEST_ORG";
+        string senderReference = "SMS-PREFERRED-TEST-5421FA3B";
+
+        // SMS details (primary channel)
+        string smsBody = "Primary SMS message for SmsPreferred test";
+        string smsSender = "SMS Sender";
+        string phoneNumber = "+4788776655";
+
+        // Email details (fallback channel)
+        string emailSubject = "Fallback Email Subject";
+        string emailBody = "Fallback email content for SmsPreferred channel test";
+        string senderEmailAddress = "fallback@example.com";
+        string recipientEmailAddress = "recipient@example.com";
+
+        DateTime creationDateTime = DateTime.UtcNow;
+        var requestedSendTime = DateTime.UtcNow.AddMinutes(15);
+
+        // Add order ID to the cleanup list
+        _orderIdentifiersToDelete.Add(orderId);
+
+        // Create NotificationOrderChainRequest using builder with SmsPreferred channel
+        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId)
+            .SetOrderChainId(Guid.NewGuid()) // We don't need to track this since it's not a chain with reminders
+            .SetCreator(new Creator(creator))
+            .SetRequestedSendTime(requestedSendTime)
+            .SetIdempotencyId("SMSPREF-TEST-" + Guid.NewGuid().ToString("N").Substring(0, 8))
+            .SetSendersReference(senderReference)
+            .SetRecipient(new NotificationRecipient
+            {
+                // Use RecipientPerson to access the SmsPreferred channel setting
+                RecipientPerson = new RecipientPerson
+                {
+                    NationalIdentityNumber = "12345678901", // Dummy value for test
+                    ChannelSchema = NotificationChannel.SmsPreferred, // Important - specifies SmsPreferred
+
+                    // Primary (SMS) channel settings
+                    SmsSettings = new SmsSendingOptions
+                    {
+                        Body = smsBody,
+                        Sender = smsSender,
+                        SendingTimePolicy = SendingTimePolicy.Anytime
+                    },
+
+                    // Fallback (Email) channel settings
+                    EmailSettings = new EmailSendingOptions
+                    {
+                        Body = emailBody,
+                        Subject = emailSubject,
+                        SenderEmailAddress = senderEmailAddress,
+                        ContentType = EmailContentType.Plain,
+                        SendingTimePolicy = SendingTimePolicy.Anytime
+                    }
+                }
+            })
+            .Build();
+
+        // Create the notification order with SmsPreferred channel
+        NotificationOrder notificationOrder = new()
+        {
+            Id = orderId,
+            Creator = new(creator),
+            Created = creationDateTime,
+            SendersReference = senderReference,
+            RequestedSendTime = requestedSendTime,
+            NotificationChannel = NotificationChannel.SmsPreferred, // SmsPreferred channel
+            Templates =
+            [
+                new SmsTemplate(smsBody, smsSender),
+                new EmailTemplate(senderEmailAddress, emailSubject, emailBody, EmailContentType.Plain)
+            ],
+            Recipients =
+            [
+                new Recipient(
+                [
+                    new SmsAddressPoint(phoneNumber),
+                    new EmailAddressPoint(recipientEmailAddress)
+                ],
+                null,
+                "12345678901")
+            ]
+        };
+
+        // Create corresponding SMS notification (primary channel)
+        SmsNotification smsNotification = new()
+        {
+            Id = smsNotificationId,
+            OrderId = orderId,
+            RequestedSendTime = requestedSendTime,
+            Recipient = new()
+            {
+                MobileNumber = phoneNumber,
+                NationalIdentityNumber = "12345678901"
+            }
+        };
+
+        // Create corresponding Email notification (fallback channel)
+        EmailNotification emailNotification = new(orderId, requestedSendTime)
+        {
+            Id = emailNotificationId,
+            Recipient = new()
+            {
+                ToAddress = recipientEmailAddress,
+                NationalIdentityNumber = "12345678901"
+            }
+        };
+
+        // Insert the notification order using the order repository
+        OrderRepository orderRepository = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+        await orderRepository.Create(orderChainRequest, notificationOrder, null);
+
+        // Insert the SMS notification (primary channel)
+        SmsNotificationRepository smsNotificationRepository = (SmsNotificationRepository)ServiceUtil.GetServices([typeof(ISmsNotificationRepository)])
+            .First(i => i.GetType() == typeof(SmsNotificationRepository));
+        await smsNotificationRepository.AddNotification(smsNotification, DateTime.UtcNow.AddMinutes(30), 1);
+
+        // Insert the Email notification (fallback channel)
+        EmailNotificationRepository emailNotificationRepository = (EmailNotificationRepository)ServiceUtil.GetServices([typeof(IEmailNotificationRepository)])
+            .First(i => i.GetType() == typeof(EmailNotificationRepository));
+        await emailNotificationRepository.AddNotification(emailNotification, DateTime.UtcNow.AddMinutes(30));
+
+        // Act
+        // Get the delivery manifest to verify both notifications are included
+        ShipmentDeliveryManifestRepository shipmentDeliveryManifestRepository = (ShipmentDeliveryManifestRepository)ServiceUtil.GetServices([typeof(IShipmentDeliveryManifestRepository)])
+            .First(i => i.GetType() == typeof(ShipmentDeliveryManifestRepository));
+
+        IShipmentDeliveryManifest? shipmentDeliveryManifest =
+            await shipmentDeliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, CancellationToken.None);
+
+        // Assert
+        Assert.NotNull(shipmentDeliveryManifest);
+
+        // Verify basic shipment properties
+        Assert.Equal(orderId, shipmentDeliveryManifest.ShipmentId);
+        Assert.Equal(senderReference, shipmentDeliveryManifest.SendersReference);
+        Assert.Equal("Notification", shipmentDeliveryManifest.Type);
+        Assert.NotNull(shipmentDeliveryManifest.Status);
+        Assert.NotEmpty(shipmentDeliveryManifest.Status);
+        Assert.NotNull(shipmentDeliveryManifest.StatusDescription);
+        Assert.True(shipmentDeliveryManifest.LastUpdate > DateTime.MinValue);
+
+        // Verify recipients collection - should contain both SMS and Email deliveries
+        Assert.NotNull(shipmentDeliveryManifest.Recipients);
+        Assert.Equal(2, shipmentDeliveryManifest.Recipients.Count); // Should have both SMS and Email deliveries
+
+        // Verify the SMS delivery (primary channel)
+        var smsDeliveries = shipmentDeliveryManifest.Recipients
+            .Where(r => r is SmsDeliveryManifest)
+            .Cast<SmsDeliveryManifest>()
+            .ToList();
+
+        Assert.Single(smsDeliveries);
+
+        var smsDelivery = smsDeliveries.First();
+        Assert.Equal(phoneNumber, smsDelivery.Destination);
+        Assert.NotEmpty(smsDelivery.Status);
+        Assert.NotNull(smsDelivery.StatusDescription);
+        Assert.True(smsDelivery.LastUpdate > DateTime.MinValue);
+
+        // Verify the Email delivery (fallback channel)
+        var emailDeliveries = shipmentDeliveryManifest.Recipients
+            .Where(r => r is EmailDeliveryManifest)
+            .Cast<EmailDeliveryManifest>()
+            .ToList();
+
+        Assert.Single(emailDeliveries);
+
+        var emailDelivery = emailDeliveries.First();
+        Assert.Equal(recipientEmailAddress, emailDelivery.Destination);
+        Assert.NotEmpty(emailDelivery.Status);
+        Assert.NotNull(emailDelivery.StatusDescription);
+        Assert.True(emailDelivery.LastUpdate > DateTime.MinValue);
+
+        // Verify order details from both repositories to confirm proper end-to-end processing
+        var retrievedOrder = await orderRepository.GetOrderById(orderId, creator);
+        Assert.NotNull(retrievedOrder);
+        Assert.Equal(NotificationChannel.SmsPreferred, retrievedOrder.NotificationChannel);
+
+        // Verify notifications in both repositories
+        var smsRecipients = await smsNotificationRepository.GetRecipients(orderId);
+        Assert.NotEmpty(smsRecipients);
+        Assert.Equal(phoneNumber, smsRecipients.First().MobileNumber);
+
+        var emailRecipients = await emailNotificationRepository.GetRecipients(orderId);
+        Assert.NotEmpty(emailRecipients);
+        Assert.Equal(recipientEmailAddress, emailRecipients.First().ToAddress);
     }
 }
