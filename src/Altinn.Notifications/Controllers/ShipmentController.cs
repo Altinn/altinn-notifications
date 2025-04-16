@@ -1,6 +1,5 @@
 ﻿using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core.Models.Delivery;
-using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Extensions;
@@ -17,32 +16,21 @@ namespace Altinn.Notifications.Controllers;
 /// <summary>
 /// API controller for managing notification shipments and their delivery status.
 /// </summary>
-/// <remarks>
-/// <para>
-/// The <see cref="ShipmentController"/> provides endpoints for retrieving information about 
-/// notification shipments sent through the Altinn Notifications system, including delivery status
-/// for various communication channels (SMS, email).
-/// </para>
-/// <para>
-/// All endpoints require valid authentication and authorization according to the platform's 
-/// security policies.
-/// </para>
-/// </remarks>
 [ApiController]
-[Route("notifications/api/v1/shipment")]
+[Route("notifications/api/v1/future/shipment")]
 [SwaggerResponse(401, "Caller is unauthorized")]
 [SwaggerResponse(403, "Caller is not authorized to access the requested resource")]
 [Authorize(Policy = AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS)]
 public class ShipmentController : ControllerBase
 {
-    private readonly IShipmentDeliveryManifestService _deliverableEntitiesService;
+    private readonly IShipmentDeliveryManifestService _shipmentDeliveryManifestService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ShipmentController"/> class.
     /// </summary>
-    public ShipmentController(IShipmentDeliveryManifestService deliverableEntitiesService)
+    public ShipmentController(IShipmentDeliveryManifestService shipmentDeliveryManifestService)
     {
-        _deliverableEntitiesService = deliverableEntitiesService;
+        _shipmentDeliveryManifestService = shipmentDeliveryManifestService;
     }
 
     /// <summary>
@@ -70,15 +58,22 @@ public class ShipmentController : ControllerBase
         try
         {
             string? creatorName = HttpContext.GetOrg();
-
             if (creatorName == null)
             {
                 return Forbid();
             }
 
-            Result<IShipmentDeliveryManifest, ServiceError> result = await _deliverableEntitiesService.GetDeliveryManifestAsync(id, creatorName, cancellationToken);
+            Result<IShipmentDeliveryManifest, ServiceError> result = await _shipmentDeliveryManifestService.GetDeliveryManifestAsync(id, creatorName, cancellationToken);
 
-            return result.Match<ActionResult<ShipmentDeliveryManifestExt>>(manifest => Ok(manifest.MapToShipmentDeliveryManifestExt()), error => StatusCode(error.ErrorCode, error.ErrorMessage));
+            return result.Match<ActionResult<ShipmentDeliveryManifestExt>>(
+                shipment =>
+                {
+                    return (ShipmentDeliveryManifestExt)shipment.MapToShipmentDeliveryManifestExt();
+                },
+                error =>
+                {
+                    return StatusCode(error.ErrorCode, error.ErrorMessage);
+                });
         }
         catch (OperationCanceledException)
         {
