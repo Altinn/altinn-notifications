@@ -6,7 +6,7 @@ namespace Altinn.Notifications.Core.Services.Interfaces;
 /// <summary>
 /// Interface defining a service for retrieving shipment delivery manifests and their associated deliverable entities.
 /// </summary>
-public interface IDeliverableEntitiesService
+public interface IShipmentDeliveryManifestService
 {
     /// <summary>
     /// Asynchronously retrieves the delivery manifest for a specific shipment.

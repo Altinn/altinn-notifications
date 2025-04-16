@@ -3,7 +3,7 @@
 namespace Altinn.Notifications.Core.Persistence;
 
 /// <summary>
-/// Interface defining the repository service for retrieving shipment information and delivery statuses.
+/// Interface defining a repository service for retrieving shipment delivery manifests and their associated deliverable entities.
 /// </summary>
 /// <remarks>
 /// This repository interface abstracts the data access layer for shipment information, enabling clients to retrieve

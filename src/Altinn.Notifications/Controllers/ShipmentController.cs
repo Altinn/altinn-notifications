@@ -35,12 +35,12 @@ namespace Altinn.Notifications.Controllers;
 [Authorize(Policy = AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS)]
 public class ShipmentController : ControllerBase
 {
-    private readonly IDeliverableEntitiesService _deliverableEntitiesService;
+    private readonly IShipmentDeliveryManifestService _deliverableEntitiesService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ShipmentController"/> class.
     /// </summary>
-    public ShipmentController(IDeliverableEntitiesService deliverableEntitiesService)
+    public ShipmentController(IShipmentDeliveryManifestService deliverableEntitiesService)
     {
         _deliverableEntitiesService = deliverableEntitiesService;
     }

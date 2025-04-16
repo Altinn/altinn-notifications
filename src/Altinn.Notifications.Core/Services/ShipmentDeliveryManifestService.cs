@@ -6,7 +6,7 @@ using Altinn.Notifications.Core.Shared;
 namespace Altinn.Notifications.Core.Services;
 
 /// <summary>
-/// Implements the <see cref="IDeliverableEntitiesService"/> interface,
+/// Implements the <see cref="IShipmentDeliveryManifestService"/> interface,
 /// for retrieving shipment delivery manifests and their associated deliverable entities.
 /// </summary>
 /// <remarks>
@@ -14,22 +14,25 @@ namespace Altinn.Notifications.Core.Services;
 /// including current status and tracking information of deliverable entities such as Email and SMS.
 /// It acts as an abstraction layer between controllers and data repositories.
 /// </remarks>
-public class DeliverableEntitiesService : IDeliverableEntitiesService
+public class ShipmentDeliveryManifestService : IShipmentDeliveryManifestService
 {
-    private readonly IShipmentDeliveryManifestRepository _shipmentRepository;
+    private readonly IShipmentDeliveryManifestRepository _shipmentDeliveryManifestRepository;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="DeliverableEntitiesService"/> class.
+    /// Initializes a new instance of the <see cref="ShipmentDeliveryManifestService"/> class.
     /// </summary>
-    public DeliverableEntitiesService(IShipmentDeliveryManifestRepository shipmentRepository)
+    public ShipmentDeliveryManifestService(IShipmentDeliveryManifestRepository shipmentDeliveryManifestRepository)
     {
-        _shipmentRepository = shipmentRepository;
+        _shipmentDeliveryManifestRepository = shipmentDeliveryManifestRepository;
     }
 
     /// <inheritdoc />
     public async Task<Result<IShipmentDeliveryManifest, ServiceError>> GetDeliveryManifestAsync(Guid alternateid, string creatorName, CancellationToken cancellationToken)
     {
-        var order = await _shipmentRepository.GetDeliveryManifestAsync(alternateid, creatorName, cancellationToken);
+
+
+        var order =
+            await _shipmentDeliveryManifestRepository.GetDeliveryManifestAsync(alternateid, creatorName, cancellationToken);
 
         if (order == null)
         {
