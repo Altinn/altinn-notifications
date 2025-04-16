@@ -29,7 +29,7 @@ public record ShipmentDeliveryManifest : IShipmentDeliveryManifest
 {
     /// <inheritdoc />
     [JsonPropertyName("shipmentId")]
-    public Guid ShipmentId { get; init; }
+    public required Guid ShipmentId { get; init; }
 
     /// <inheritdoc />
     [JsonPropertyName("sendersReference")]
@@ -37,11 +37,11 @@ public record ShipmentDeliveryManifest : IShipmentDeliveryManifest
 
     /// <inheritdoc />
     [JsonPropertyName("type")]
-    public string Type { get; init; } = string.Empty;
+    public required string Type { get; init; } = string.Empty;
 
     /// <inheritdoc />
     [JsonPropertyName("status")]
-    public string Status { get; init; } = string.Empty;
+    public required string Status { get; init; } = string.Empty;
 
     /// <inheritdoc />
     [JsonPropertyName("description")]
@@ -49,9 +49,9 @@ public record ShipmentDeliveryManifest : IShipmentDeliveryManifest
 
     /// <inheritdoc />
     [JsonPropertyName("lastUpdate")]
-    public DateTime LastUpdate { get; init; } = DateTime.UtcNow;
+    public required DateTime LastUpdate { get; init; } = DateTime.UtcNow;
 
     /// <inheritdoc />
     [JsonPropertyName("recipients")]
-    public IImmutableList<IDeliverableEntity> Recipients { get; init; } = [];
+    public required IImmutableList<IDeliverableEntity> Recipients { get; init; } = [];
 }

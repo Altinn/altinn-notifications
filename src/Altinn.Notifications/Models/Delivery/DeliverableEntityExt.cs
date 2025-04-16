@@ -20,11 +20,11 @@ public abstract record DeliverableEntityExt : IDeliverableEntityExt
 {
     /// <inheritdoc />
     [JsonPropertyName("destination")]
-    public string Destination { get; init; } = string.Empty;
+    public required string Destination { get; init; } = string.Empty;
 
     /// <inheritdoc />
     [JsonPropertyName("status")]
-    public string Status { get; init; } = string.Empty;
+    public required string Status { get; init; } = string.Empty;
 
     /// <inheritdoc />
     [JsonPropertyName("description")]
@@ -32,5 +32,5 @@ public abstract record DeliverableEntityExt : IDeliverableEntityExt
 
     /// <inheritdoc />
     [JsonPropertyName("lastUpdate")]
-    public DateTime LastUpdate { get; init; } = DateTime.UtcNow;
+    public required DateTime LastUpdate { get; init; } = DateTime.UtcNow;
 }
