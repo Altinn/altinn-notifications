@@ -11,7 +11,7 @@ namespace Altinn.Notifications.Mappers;
 /// <remarks>
 /// This mapper serves as a critical bridge between the internal domain models and the external API-facing models.
 /// </remarks>
-public static class ShipmentDeliveryManifestMapper
+public static class DeliverableEntitiesMapper
 {
     /// <summary>
     /// Maps a domain shipment delivery manifest to its external representation for API responses.

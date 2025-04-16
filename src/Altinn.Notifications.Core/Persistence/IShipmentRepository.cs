@@ -10,12 +10,13 @@ public interface IShipmentRepository
     /// <summary>
     /// Retrieves the delivery manifest for a specific shipment identified by its unique identifier and creator name.
     /// </summary>
-    /// <param name="shipmentId">The unique identifier of the shipment to retrieve.</param>
+    /// <param name="alternateid">The unique identifier of the shipment to retrieve.</param>
     /// <param name="creatorName">The name of the creator/owner who originated the shipment.</param>
+    /// <param name="cancellationToken">A token for canceling the asynchronous operation.</param>
     /// <returns>
     /// A task representing the asynchronous operation that, when completed, contains the 
-    /// <see cref="IShipmentDeliveryManifest"/> object associated with the specified shipment identifier,
-    /// or <c>null</c> if no matching shipment is found.
+    /// <see cref="IShipmentDeliveryManifest"/> object associated with the delivery manifest
+    /// for a specific shipment, or <c>null</c> if no matching shipment is found.
     /// </returns>
-    Task<IShipmentDeliveryManifest?> GetDeliveryManifest(Guid shipmentId, string creatorName);
+    Task<IShipmentDeliveryManifest?> GetDeliveryManifestAsync(Guid alternateid, string creatorName, CancellationToken cancellationToken);
 }
