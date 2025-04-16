@@ -29,11 +29,11 @@ public static class ServiceCollectionExtensions
         return services
         .AddSingleton<IOrderRepository, OrderRepository>()
         .AddSingleton<IMetricsRepository, MetricsRepository>()
-        .AddSingleton<IShipmentRepository, ShipmentRepository>()
         .AddSingleton<IResourceLimitRepository, ResourceLimitRepository>()
         .AddSingleton<ISmsNotificationRepository, SmsNotificationRepository>()
         .AddSingleton<IEmailNotificationRepository, EmailNotificationRepository>()
         .AddSingleton<INotificationSummaryRepository, NotificationSummaryRepository>()
+        .AddSingleton<IDeliverableEntitiesRepository, DeliverableEntitiesRepository>()
         .AddNpgsqlDataSource(connectionString, builder =>
             builder.EnableParameterLogging(settings.LogParameters)
                    .EnableDynamicJson()
