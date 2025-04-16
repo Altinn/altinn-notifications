@@ -1,5 +1,6 @@
 ﻿using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core.Models.Delivery;
+using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Extensions;
@@ -34,20 +35,21 @@ namespace Altinn.Notifications.Controllers;
 [Authorize(Policy = AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS)]
 public class ShipmentController : ControllerBase
 {
-    private readonly IShipmentDeliveryService _shipmentDeliveryService;
+    private readonly IDeliverableEntitiesService _deliverableEntitiesService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ShipmentController"/> class.
     /// </summary>
-    public ShipmentController(IShipmentDeliveryService shipmentDeliveryService)
+    public ShipmentController(IDeliverableEntitiesService deliverableEntitiesService)
     {
-        _shipmentDeliveryService = shipmentDeliveryService;
+        _deliverableEntitiesService = deliverableEntitiesService;
     }
 
     /// <summary>
     /// Retrieve the delivery mainfest for a specific notification shipment.
     /// </summary>
     /// <param name="id">The unique identifier (GUID) of the shipment.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests</param>
     /// <returns>
     /// Returns an <see cref="ActionResult{T}"/> containing the <see cref="ShipmentDeliveryManifestExt"/> if found,
     /// or a 404 Not Found response if no shipment with the specified identifier exists.
@@ -63,17 +65,24 @@ public class ShipmentController : ControllerBase
     [Produces("application/json")]
     [SwaggerResponse(404, "No shipment with the provided identifier was found")]
     [SwaggerResponse(200, "The shipment matching the provided identifier was retrieved successfully", typeof(ShipmentDeliveryManifestExt))]
-    public async Task<ActionResult<ShipmentDeliveryManifestExt>> GetById([FromRoute] Guid id)
+    public async Task<ActionResult<ShipmentDeliveryManifestExt>> GetById([FromRoute] Guid id, CancellationToken cancellationToken = default)
     {
-        string? creatorName = HttpContext.GetOrg();
-
-        if (creatorName == null)
+        try
         {
-            return Forbid();
+            string? creatorName = HttpContext.GetOrg();
+
+            if (creatorName == null)
+            {
+                return Forbid();
+            }
+
+            Result<IShipmentDeliveryManifest, ServiceError> result = await _deliverableEntitiesService.GetDeliveryManifestAsync(id, creatorName, cancellationToken);
+
+            return result.Match<ActionResult<ShipmentDeliveryManifestExt>>(manifest => Ok(manifest.MapToShipmentDeliveryManifestExt()), error => StatusCode(error.ErrorCode, error.ErrorMessage));
         }
-
-        Result<IShipmentDeliveryManifest, ServiceError> result = await _shipmentDeliveryService.GetDeliveryManifest(id, creatorName);
-
-        return result.Match<ActionResult<ShipmentDeliveryManifestExt>>(manifest => Ok(manifest.MapToShipmentDeliveryManifestExt()), error => StatusCode(error.ErrorCode, error.ErrorMessage));
+        catch (OperationCanceledException)
+        {
+            return StatusCode(499, "Request terminated - The client disconnected or cancelled the request before the server could complete processing");
+        }
     }
 }
