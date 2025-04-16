@@ -9,7 +9,7 @@ namespace Altinn.Notifications.Core.Services.Interfaces;
 public interface IShipmentDeliveryManifestService
 {
     /// <summary>
-    /// Asynchronously retrieves the delivery manifest for a specific shipment.
+    /// Retrieves the delivery manifest for a specific shipment.
     /// </summary>
     /// <param name="alternateid">The unique identifier of the shipment to retrieve.</param>
     /// <param name="creatorName">The name of the creator/owner who originated the shipment.</param>
