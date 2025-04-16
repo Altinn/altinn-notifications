@@ -37,7 +37,7 @@ public record ShipmentDeliveryManifest : IShipmentDeliveryManifest
 
     /// <inheritdoc />
     [JsonPropertyName("type")]
-    public string Type { get; init; } = "Notification";
+    public string Type { get; init; } = string.Empty;
 
     /// <inheritdoc />
     [JsonPropertyName("status")]
