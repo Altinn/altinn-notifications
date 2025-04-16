@@ -168,12 +168,12 @@ public class ShipmentDeliveryManifestMapperTests
     public void MapToShipmentDeliveryManifestExt_UnsupportedDeliverableEntityType_ThrowsArgumentException()
     {
         // Arrange
-        var mockEntity = new Mock<IDeliverableEntity>();
-        mockEntity.Setup(e => e.Status).Returns("Unknown");
-        mockEntity.Setup(e => e.LastUpdate).Returns(DateTime.UtcNow);
-        mockEntity.Setup(e => e.Destination).Returns("unknown destination");
+        var unknoweDliverableEntity = new Mock<IDeliverableEntity>();
+        unknoweDliverableEntity.Setup(e => e.Status).Returns("Unknown");
+        unknoweDliverableEntity.Setup(e => e.LastUpdate).Returns(DateTime.UtcNow);
+        unknoweDliverableEntity.Setup(e => e.Destination).Returns("unknown destination");
 
-        var recipients = ImmutableList.Create(mockEntity.Object);
+        var recipients = ImmutableList.Create(unknoweDliverableEntity.Object);
 
         var shipmentDeliveryManifest = new ShipmentDeliveryManifest
         {
