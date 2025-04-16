@@ -31,21 +31,8 @@ public static class DeliverableEntitiesMapper
             ShipmentId = manifest.ShipmentId,
             SendersReference = manifest.SendersReference,
             StatusDescription = manifest.StatusDescription,
-            Recipients = manifest.Recipients.MapToIDeliverableEntityExt()
+            Recipients = manifest.Recipients.MapToDeliverableEntitiesExt()
         };
-    }
-
-    /// <summary>
-    /// Maps a collection of domain deliverable entities to their corresponding external representations.
-    /// </summary>
-    /// <param name="entities">The collection of internal domain deliverable entities to transform.</param>
-    /// <returns>
-    /// An immutable list of external deliverable entities, each converted to its appropriate type-specific implementation,
-    /// or an empty collection if no entities are present.
-    /// </returns>
-    private static IImmutableList<IDeliverableEntityExt> MapToIDeliverableEntityExt(this IImmutableList<IDeliverableEntity> entities)
-    {
-        return entities.Count == 0 ? [] : [.. entities.Select(MapToDeliverableEntityExt)];
     }
 
     /// <summary>
@@ -107,5 +94,18 @@ public static class DeliverableEntitiesMapper
             Destination = manifest.Destination,
             StatusDescription = manifest.StatusDescription,
         };
+    }
+
+    /// <summary>
+    /// Maps a collection of domain deliverable entities to their corresponding external representations.
+    /// </summary>
+    /// <param name="entities">The collection of internal domain deliverable entities to transform.</param>
+    /// <returns>
+    /// An immutable list of external deliverable entities, each converted to its appropriate type-specific implementation,
+    /// or an empty collection if no entities are present.
+    /// </returns>
+    private static IImmutableList<IDeliverableEntityExt> MapToDeliverableEntitiesExt(this IImmutableList<IDeliverableEntity> entities)
+    {
+        return entities.Count == 0 ? [] : [.. entities.Select(MapToDeliverableEntityExt)];
     }
 }
