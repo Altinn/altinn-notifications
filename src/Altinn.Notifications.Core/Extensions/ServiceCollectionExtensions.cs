@@ -1,5 +1,4 @@
 ﻿using Altinn.Notifications.Core.Configuration;
-using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 
@@ -30,25 +29,25 @@ public static class ServiceCollectionExtensions
 
         services
             .AddSingleton<IGuidService, GuidService>()
-            .AddSingleton<IDateTimeService, DateTimeService>()
-            .AddSingleton<IOrderProcessingService, OrderProcessingService>()
-            .AddSingleton<IEmailOrderProcessingService, EmailOrderProcessingService>()
-            .AddSingleton<ISmsOrderProcessingService, SmsOrderProcessingService>()
-            .AddSingleton<IPreferredChannelProcessingService, PreferredChannelProcessingService>()
-            .AddSingleton<IGetOrderService, GetOrderService>()
-            .AddSingleton<IOrderRequestService, OrderRequestService>()
-            .AddSingleton<ICancelOrderService, CancelOrderService>()
-            .AddSingleton<IEmailNotificationSummaryService, EmailNotificationSummaryService>()
-            .AddSingleton<IEmailNotificationService, EmailNotificationService>()
-            .AddSingleton<ISmsNotificationService, SmsNotificationService>()
-            .AddSingleton<ISmsNotificationSummaryService, SmsNotificationSummaryService>()
-            .AddSingleton<IContactPointService, ContactPointService>()
-            .AddSingleton<IAltinnServiceUpdateService, AltinnServiceUpdateService>()
-            .AddSingleton<INotificationsEmailServiceUpdateService, NotificationsEmailServiceUpdateService>()
             .AddSingleton<IMetricsService, MetricsService>()
-            .AddSingleton<INotificationScheduleService, NotificationScheduleService>()
             .AddSingleton<IKeywordsService, KeywordsService>()
-            .AddSingleton<IShipmentDeliveryService, ShipmentDeliveryService>()
+            .AddSingleton<IDateTimeService, DateTimeService>()
+            .AddSingleton<IGetOrderService, GetOrderService>()
+            .AddSingleton<ICancelOrderService, CancelOrderService>()
+            .AddSingleton<IContactPointService, ContactPointService>()
+            .AddSingleton<IOrderRequestService, OrderRequestService>()
+            .AddSingleton<ISmsNotificationService, SmsNotificationService>()
+            .AddSingleton<IOrderProcessingService, OrderProcessingService>()
+            .AddSingleton<IDeliverableEntitiesService, DeliverableEntitiesService>()
+            .AddSingleton<IEmailNotificationService, EmailNotificationService>()
+            .AddSingleton<ISmsOrderProcessingService, SmsOrderProcessingService>()
+            .AddSingleton<IAltinnServiceUpdateService, AltinnServiceUpdateService>()
+            .AddSingleton<INotificationScheduleService, NotificationScheduleService>()
+            .AddSingleton<IEmailOrderProcessingService, EmailOrderProcessingService>()
+            .AddSingleton<ISmsNotificationSummaryService, SmsNotificationSummaryService>()
+            .AddSingleton<IEmailNotificationSummaryService, EmailNotificationSummaryService>()
+            .AddSingleton<IPreferredChannelProcessingService, PreferredChannelProcessingService>()
+            .AddSingleton<INotificationsEmailServiceUpdateService, NotificationsEmailServiceUpdateService>()
             .Configure<KafkaSettings>(config.GetSection("KafkaSettings"))
             .Configure<NotificationConfig>(config.GetSection("NotificationConfig"));
     }
