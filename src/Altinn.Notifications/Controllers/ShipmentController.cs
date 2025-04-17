@@ -14,7 +14,7 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace Altinn.Notifications.Controllers;
 
 /// <summary>
-/// API controller for managing notification shipments and their delivery status.
+/// Controller for managing notification shipments and their delivery status.
 /// </summary>
 [ApiController]
 [Route("notifications/api/v1/future/shipment")]
@@ -34,20 +34,14 @@ public class ShipmentController : ControllerBase
     }
 
     /// <summary>
-    /// Retrieve the delivery manifest for a specific notification shipment.
+    /// Retrieve the delivery manifest for a specific notification order.
     /// </summary>
-    /// <param name="id">The unique identifier (GUID) of the shipment.</param>
+    /// <param name="id">The unique identifier (GUID) of the notification order.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests</param>
     /// <returns>
     /// Returns an <see cref="ActionResult{T}"/> containing the <see cref="NotificationDeliveryManifestExt"/> if found,
-    /// or a 404 Not Found response if no shipment with the specified identifier exists.
+    /// or a 404 Not Found response if no notification order with the specified identifier exists.
     /// </returns>
-    /// <remarks>
-    /// <para>
-    /// Use this endpoint to audit delivery outcomes, monitor notification workflows, or reconcile shipment status
-    /// with external systems via the sender's reference.
-    /// </para>
-    /// </remarks>
     [HttpGet]
     [Route("{id}")]
     [Produces("application/json")]
@@ -66,9 +60,9 @@ public class ShipmentController : ControllerBase
             Result<INotificationDeliveryManifest, ServiceError> result = await _notificationDeliveryManifestService.GetDeliveryManifestAsync(id, creatorName, cancellationToken);
 
             return result.Match<ActionResult<NotificationDeliveryManifestExt>>(
-                shipment =>
+                deliveryManifest =>
                 {
-                    return (NotificationDeliveryManifestExt)shipment.MapToNotificationDeliveryManifestExt();
+                    return (NotificationDeliveryManifestExt)deliveryManifest.MapToNotificationDeliveryManifestExt();
                 },
                 error =>
                 {
