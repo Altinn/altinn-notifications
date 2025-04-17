@@ -47,7 +47,7 @@ public class ShipmentDeliveryManifestMapperTests
         };
 
         // Act
-        var result = shipmentDeliveryManifest.MapToShipmentDeliveryManifestExt();
+        var result = shipmentDeliveryManifest.MapToNotificationDeliveryManifestExt();
 
         // Assert
         Assert.NotNull(result);
@@ -95,7 +95,7 @@ public class ShipmentDeliveryManifestMapperTests
         };
 
         // Act
-        var result = shipmentDeliveryManifest.MapToShipmentDeliveryManifestExt();
+        var result = shipmentDeliveryManifest.MapToNotificationDeliveryManifestExt();
 
         // Assert
         Assert.NotNull(result);
@@ -124,7 +124,7 @@ public class ShipmentDeliveryManifestMapperTests
         };
 
         // Act
-        var result = shipmentDeliveryManifest.MapToShipmentDeliveryManifestExt();
+        var result = shipmentDeliveryManifest.MapToNotificationDeliveryManifestExt();
 
         // Assert
         Assert.NotNull(result);
@@ -152,7 +152,7 @@ public class ShipmentDeliveryManifestMapperTests
         };
 
         // Act
-        var result = shipmentDeliveryManifest.MapToShipmentDeliveryManifestExt();
+        var result = shipmentDeliveryManifest.MapToNotificationDeliveryManifestExt();
 
         // Assert
         Assert.NotNull(result);
@@ -187,7 +187,7 @@ public class ShipmentDeliveryManifestMapperTests
         };
 
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(shipmentDeliveryManifest.MapToShipmentDeliveryManifestExt);
+        var exception = Assert.Throws<ArgumentException>(shipmentDeliveryManifest.MapToNotificationDeliveryManifestExt);
 
         Assert.Equal("deliverableEntity", exception.ParamName);
         Assert.StartsWith("Unsupported deliverable entity type:", exception.Message);

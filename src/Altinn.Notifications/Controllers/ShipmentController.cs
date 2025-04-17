@@ -68,7 +68,7 @@ public class ShipmentController : ControllerBase
             return result.Match<ActionResult<NotificationDeliveryManifestExt>>(
                 shipment =>
                 {
-                    return (NotificationDeliveryManifestExt)shipment.MapToShipmentDeliveryManifestExt();
+                    return (NotificationDeliveryManifestExt)shipment.MapToNotificationDeliveryManifestExt();
                 },
                 error =>
                 {
