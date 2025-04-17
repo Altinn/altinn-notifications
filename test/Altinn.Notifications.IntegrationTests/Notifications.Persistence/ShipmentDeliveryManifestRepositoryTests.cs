@@ -109,7 +109,7 @@ public class ShipmentDeliveryManifestRepositoryTests : IAsyncLifetime
         ShipmentDeliveryManifestRepository shipmentDeliveryManifestRepository = (ShipmentDeliveryManifestRepository)ServiceUtil.GetServices([typeof(IShipmentDeliveryManifestRepository)])
             .First(i => i.GetType() == typeof(ShipmentDeliveryManifestRepository));
 
-        IShipmentDeliveryManifest? shipmentDeliveryManifest =
+        INotificationDeliveryManifest? shipmentDeliveryManifest =
             await shipmentDeliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, CancellationToken.None);
 
         // Assert
@@ -218,7 +218,7 @@ public class ShipmentDeliveryManifestRepositoryTests : IAsyncLifetime
         ShipmentDeliveryManifestRepository shipmentDeliveryManifestRepository = (ShipmentDeliveryManifestRepository)ServiceUtil.GetServices([typeof(IShipmentDeliveryManifestRepository)])
             .First(i => i.GetType() == typeof(ShipmentDeliveryManifestRepository));
 
-        IShipmentDeliveryManifest? shipmentDeliveryManifest =
+        INotificationDeliveryManifest? shipmentDeliveryManifest =
             await shipmentDeliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, CancellationToken.None);
 
         // Assert
@@ -348,7 +348,7 @@ public class ShipmentDeliveryManifestRepositoryTests : IAsyncLifetime
         ShipmentDeliveryManifestRepository shipmentDeliveryManifestRepository = (ShipmentDeliveryManifestRepository)ServiceUtil.GetServices([typeof(IShipmentDeliveryManifestRepository)])
             .First(i => i.GetType() == typeof(ShipmentDeliveryManifestRepository));
 
-        IShipmentDeliveryManifest? shipmentDeliveryManifest =
+        INotificationDeliveryManifest? shipmentDeliveryManifest =
             await shipmentDeliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, CancellationToken.None);
 
         // Assert
@@ -490,7 +490,7 @@ public class ShipmentDeliveryManifestRepositoryTests : IAsyncLifetime
         ShipmentDeliveryManifestRepository shipmentDeliveryManifestRepository = (ShipmentDeliveryManifestRepository)ServiceUtil.GetServices([typeof(IShipmentDeliveryManifestRepository)])
             .First(i => i.GetType() == typeof(ShipmentDeliveryManifestRepository));
 
-        IShipmentDeliveryManifest? shipmentDeliveryManifest =
+        INotificationDeliveryManifest? shipmentDeliveryManifest =
             await shipmentDeliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, CancellationToken.None);
 
         // Assert
@@ -675,7 +675,7 @@ public class ShipmentDeliveryManifestRepositoryTests : IAsyncLifetime
         ShipmentDeliveryManifestRepository shipmentDeliveryManifestRepository = (ShipmentDeliveryManifestRepository)ServiceUtil.GetServices([typeof(IShipmentDeliveryManifestRepository)])
             .First(i => i.GetType() == typeof(ShipmentDeliveryManifestRepository));
 
-        IShipmentDeliveryManifest? shipmentDeliveryManifest =
+        INotificationDeliveryManifest? shipmentDeliveryManifest =
             await shipmentDeliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, CancellationToken.None);
 
         // Assert

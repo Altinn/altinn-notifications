@@ -37,7 +37,7 @@ public partial class ShipmentDeliveryManifestRepository : IShipmentDeliveryManif
     }
 
     /// <inheritdoc />
-    public async Task<IShipmentDeliveryManifest?> GetDeliveryManifestAsync(Guid alternateid, string creatorName, CancellationToken cancellationToken)
+    public async Task<INotificationDeliveryManifest?> GetDeliveryManifestAsync(Guid alternateid, string creatorName, CancellationToken cancellationToken)
     {
         await using var command = _dataSource.CreateCommand(_sqlGetShipmentTrackingInfo);
         command.Parameters.AddWithValue(NpgsqlDbType.Uuid, alternateid);
@@ -55,17 +55,17 @@ public partial class ShipmentDeliveryManifestRepository : IShipmentDeliveryManif
     }
 
     /// <summary>
-    /// Builds a <see cref="ShipmentDeliveryManifest"/> from database query results.
+    /// Builds a <see cref="NotificationDeliveryManifest"/> from database query results.
     /// </summary>
     /// <param name="reader">Data reader positioned at the first row of shipment tracking data.</param>
     /// <param name="shipmentId">Unique identifier for the shipment.</param>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>
     /// A task representing the asynchronous operation. When completed successfully, the task result contains 
-    /// a fully populated <see cref="IShipmentDeliveryManifest"/> with consolidated tracking information 
+    /// a fully populated <see cref="INotificationDeliveryManifest"/> with consolidated tracking information 
     /// for both the shipment and all its individual recipient deliveries.
     /// </returns>
-    private static async Task<IShipmentDeliveryManifest> CreateShipmentDeliveryManifestAsync(NpgsqlDataReader reader, Guid shipmentId, CancellationToken cancellationToken)
+    private static async Task<INotificationDeliveryManifest> CreateShipmentDeliveryManifestAsync(NpgsqlDataReader reader, Guid shipmentId, CancellationToken cancellationToken)
     {
         var deliverableEntities = new List<IDeliveryManifest>();
 
@@ -76,7 +76,7 @@ public partial class ShipmentDeliveryManifestRepository : IShipmentDeliveryManif
             await CreateAndAddDeliveryEntityAsync(reader, deliverableEntities, cancellationToken);
         }
 
-        return new ShipmentDeliveryManifest
+        return new NotificationDeliveryManifest
         {
             Status = status,
             LastUpdate = lastUpdate,

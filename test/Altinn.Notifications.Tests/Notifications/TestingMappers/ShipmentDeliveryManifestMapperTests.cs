@@ -35,7 +35,7 @@ public class ShipmentDeliveryManifestMapperTests
 
         var recipients = ImmutableList.Create<IDeliveryManifest>(smsDeliveryManifest, emailDeliveryManifest);
 
-        var shipmentDeliveryManifest = new ShipmentDeliveryManifest
+        var shipmentDeliveryManifest = new NotificationDeliveryManifest
         {
             Status = "Processing",
             Type = "Notification",
@@ -83,7 +83,7 @@ public class ShipmentDeliveryManifestMapperTests
     public void MapToShipmentDeliveryManifestExt_WithoutRecipients_MapsCorrectly()
     {
         // Arrange
-        var shipmentDeliveryManifest = new ShipmentDeliveryManifest
+        var shipmentDeliveryManifest = new NotificationDeliveryManifest
         {
             Recipients = [],
             Status = "Delivered",
@@ -112,7 +112,7 @@ public class ShipmentDeliveryManifestMapperTests
     public void MapToShipmentDeliveryManifestExt_WithNullSendersReference_MapsCorrectly()
     {
         // Arrange
-        var shipmentDeliveryManifest = new ShipmentDeliveryManifest
+        var shipmentDeliveryManifest = new NotificationDeliveryManifest
         {
             Status = "Processing",
             Type = "Notification",
@@ -140,7 +140,7 @@ public class ShipmentDeliveryManifestMapperTests
     public void MapToShipmentDeliveryManifestExt_WithNullStatusDescription_MapsCorrectly()
     {
         // Arrange
-        var shipmentDeliveryManifest = new ShipmentDeliveryManifest
+        var shipmentDeliveryManifest = new NotificationDeliveryManifest
         {
             Status = "Processing",
             Type = "Notification",
@@ -175,7 +175,7 @@ public class ShipmentDeliveryManifestMapperTests
 
         var recipients = ImmutableList.Create(unknoweDliverableEntity.Object);
 
-        var shipmentDeliveryManifest = new ShipmentDeliveryManifest
+        var shipmentDeliveryManifest = new NotificationDeliveryManifest
         {
             Status = "Processing",
             Type = "Notification",

@@ -30,5 +30,5 @@ public interface IShipmentDeliveryManifestService
     ///   </item>
     /// </list>
     /// </returns>
-    Task<Result<IShipmentDeliveryManifest, ServiceError>> GetDeliveryManifestAsync(Guid alternateid, string creatorName, CancellationToken cancellationToken);
+    Task<Result<INotificationDeliveryManifest, ServiceError>> GetDeliveryManifestAsync(Guid alternateid, string creatorName, CancellationToken cancellationToken);
 }

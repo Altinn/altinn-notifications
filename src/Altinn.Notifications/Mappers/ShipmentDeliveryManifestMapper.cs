@@ -21,7 +21,7 @@ public static class ShipmentDeliveryManifestMapper
     /// An <see cref="INotificationDeliveryManifestExt"/> containing the mapped data from the original 
     /// domain manifest, ready for serialization and transmission to external clients.
     /// </returns>
-    public static INotificationDeliveryManifestExt MapToShipmentDeliveryManifestExt(this IShipmentDeliveryManifest manifest)
+    public static INotificationDeliveryManifestExt MapToShipmentDeliveryManifestExt(this INotificationDeliveryManifest manifest)
     {
         return new NotificationDeliveryManifestExt
         {

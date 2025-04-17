@@ -27,7 +27,7 @@ public class ShipmentDeliveryManifestService : IShipmentDeliveryManifestService
     }
 
     /// <inheritdoc />
-    public async Task<Result<IShipmentDeliveryManifest, ServiceError>> GetDeliveryManifestAsync(Guid alternateid, string creatorName, CancellationToken cancellationToken)
+    public async Task<Result<INotificationDeliveryManifest, ServiceError>> GetDeliveryManifestAsync(Guid alternateid, string creatorName, CancellationToken cancellationToken)
     {
         var order =
             await _shipmentDeliveryManifestRepository.GetDeliveryManifestAsync(alternateid, creatorName, cancellationToken);
@@ -37,6 +37,6 @@ public class ShipmentDeliveryManifestService : IShipmentDeliveryManifestService
             return new ServiceError(404, "Shipment not found.");
         }
 
-        return (ShipmentDeliveryManifest)order;
+        return (NotificationDeliveryManifest)order;
     }
 }

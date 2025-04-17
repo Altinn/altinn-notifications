@@ -63,7 +63,7 @@ public class ShipmentController : ControllerBase
                 return Forbid();
             }
 
-            Result<IShipmentDeliveryManifest, ServiceError> result = await _shipmentDeliveryManifestService.GetDeliveryManifestAsync(id, creatorName, cancellationToken);
+            Result<INotificationDeliveryManifest, ServiceError> result = await _shipmentDeliveryManifestService.GetDeliveryManifestAsync(id, creatorName, cancellationToken);
 
             return result.Match<ActionResult<NotificationDeliveryManifestExt>>(
                 shipment =>
