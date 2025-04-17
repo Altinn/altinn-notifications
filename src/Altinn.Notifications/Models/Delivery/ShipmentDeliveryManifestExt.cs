@@ -16,7 +16,7 @@ namespace Altinn.Notifications.Models.Delivery;
 /// </para>
 /// <para>
 /// This entity aggregates and consolidates tracking data from individual recipient-specific deliveries 
-/// (represented by <see cref="IDeliverableEntityExt"/> implementations) while maintaining its own status information.
+/// (represented by <see cref="IDeliveryStatusInfo"/> implementations) while maintaining its own status information.
 /// This design enables both high-level shipment monitoring and granular per-recipient tracking in a unified model.
 /// </para>
 /// <para>
@@ -53,5 +53,5 @@ public record ShipmentDeliveryManifestExt : IShipmentDeliveryManifestExt
 
     /// <inheritdoc />
     [JsonPropertyName("recipients")]
-    public required IImmutableList<IDeliverableEntityExt> Recipients { get; init; } = [];
+    public required IImmutableList<IDeliveryStatusInfo> Recipients { get; init; } = [];
 }

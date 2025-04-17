@@ -6,7 +6,7 @@ namespace Altinn.Notifications.Models.Delivery;
 /// Provides a base implementation for tracking deliverable entities in the notification system.
 /// </summary>
 /// <remarks>
-/// This abstract record implements the <see cref="IDeliverableEntityExt"/> interface, offering
+/// This abstract record implements the <see cref="IDeliveryStatusInfo"/> interface, offering
 /// a standardized foundation for tracking notifications across different delivery channels.
 /// 
 /// It combines destination addressing with status tracking capabilities, maintaining a consistent
@@ -16,7 +16,7 @@ namespace Altinn.Notifications.Models.Delivery;
 /// Specialized implementations extend this class to provide channel-specific delivery tracking
 /// while inheriting its core tracking functionality.
 /// </remarks>
-public abstract record DeliverableEntityExt : IDeliverableEntityExt
+public abstract record DeliverableEntityExt : IDeliveryStatusInfo
 {
     /// <inheritdoc />
     [JsonPropertyName("destination")]
