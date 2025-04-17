@@ -6,33 +6,27 @@ using Altinn.Notifications.Models.Status;
 namespace Altinn.Notifications.Models.Delivery;
 
 /// <summary>
-/// Represents the root tracking interface for a notification shipment that can be sent to multiple recipients through various communication channels.
+/// Represents the delivery manifest for a notification shipment.
 /// </summary>
 /// <remarks>
-/// <para>
-/// The <see cref="IShipmentDeliveryManifestExt"/> interface serves as the primary tracking contract in the notification system's
-/// hierarchy. By extending <see cref="IStatusExt"/>, it enables standardized status monitoring at the shipment level
-/// while orchestrating the delivery workflow across multiple recipients.
-/// </para>
-/// <para>
-/// This interface defines properties to aggregate and consolidate tracking data from individual recipient-specific deliveries 
-/// (represented by <see cref="IDeliveryManifestExt"/> implementations) while maintaining its own status information.
-/// This design enables both high-level shipment monitoring and granular per-recipient tracking in a unified model.
-/// </para>
-/// <para>
-/// Within the notification workflow, a single shipment typically represents a logical notification 
-/// that may target multiple recipients using various channels (SMS or email). The interface defines properties to maintain 
-/// the relationship between these individual deliveries and the overall shipment status.
-/// </para>
+/// This interface defines the structure of a shipment that delivers a notification. Each shipment is uniquely identified
+/// by a <see cref="ShipmentId"/> and may optionally include a <see cref="SendersReference"/> to correlate the shipment
+/// with external systems or processes. The <see cref="Type"/> is always "Notification", indicating that the shipment
+/// pertains to the delivery of a notification message.
+///
+/// The <see cref="Recipients"/> property contains detailed delivery manifests for each recipient, including:
+/// - Their destination address (e.g., email address or phone number)
+/// - The current delivery status
+/// - A description of the status, if available
+/// - The timestamp of the last status update
 /// </remarks>
-public interface IShipmentDeliveryManifestExt : IStatusExt
+public interface INotificationDeliveryManifestExt : IStatusExt
 {
     /// <summary>
     /// Gets the unique identifier for this shipment.
     /// </summary>
     /// <value>
     /// A <see cref="Guid"/> that uniquely identifies this shipment within the notification system.
-    /// This identifier serves as the primary key for shipment tracking and correlation.
     /// </value>
     [JsonPropertyName("shipmentId")]
     Guid ShipmentId { get; }
@@ -43,7 +37,6 @@ public interface IShipmentDeliveryManifestExt : IStatusExt
     /// <value>
     /// An optional string supplied by the sender to link this shipment to external systems
     /// or business processes, enabling easier cross-system tracing and reconciliation.
-    /// May be null if no external reference was provided.
     /// </value>
     [JsonPropertyName("sendersReference")]
     string? SendersReference { get; }

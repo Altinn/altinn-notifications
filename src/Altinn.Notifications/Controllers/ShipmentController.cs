@@ -39,7 +39,7 @@ public class ShipmentController : ControllerBase
     /// <param name="id">The unique identifier (GUID) of the shipment.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests</param>
     /// <returns>
-    /// Returns an <see cref="ActionResult{T}"/> containing the <see cref="ShipmentDeliveryManifestExt"/> if found,
+    /// Returns an <see cref="ActionResult{T}"/> containing the <see cref="NotificationDeliveryManifestExt"/> if found,
     /// or a 404 Not Found response if no shipment with the specified identifier exists.
     /// </returns>
     /// <remarks>
@@ -52,8 +52,8 @@ public class ShipmentController : ControllerBase
     [Route("{id}")]
     [Produces("application/json")]
     [SwaggerResponse(404, "No shipment with the provided identifier was found")]
-    [SwaggerResponse(200, "The shipment matching the provided identifier was retrieved successfully", typeof(ShipmentDeliveryManifestExt))]
-    public async Task<ActionResult<ShipmentDeliveryManifestExt>> GetById([FromRoute] Guid id, CancellationToken cancellationToken = default)
+    [SwaggerResponse(200, "The shipment matching the provided identifier was retrieved successfully", typeof(NotificationDeliveryManifestExt))]
+    public async Task<ActionResult<NotificationDeliveryManifestExt>> GetById([FromRoute] Guid id, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -65,10 +65,10 @@ public class ShipmentController : ControllerBase
 
             Result<IShipmentDeliveryManifest, ServiceError> result = await _shipmentDeliveryManifestService.GetDeliveryManifestAsync(id, creatorName, cancellationToken);
 
-            return result.Match<ActionResult<ShipmentDeliveryManifestExt>>(
+            return result.Match<ActionResult<NotificationDeliveryManifestExt>>(
                 shipment =>
                 {
-                    return (ShipmentDeliveryManifestExt)shipment.MapToShipmentDeliveryManifestExt();
+                    return (NotificationDeliveryManifestExt)shipment.MapToShipmentDeliveryManifestExt();
                 },
                 error =>
                 {

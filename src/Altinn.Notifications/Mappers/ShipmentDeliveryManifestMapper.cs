@@ -18,12 +18,12 @@ public static class ShipmentDeliveryManifestMapper
     /// </summary>
     /// <param name="manifest">The internal domain shipment delivery manifest to transform.</param>
     /// <returns>
-    /// An <see cref="IShipmentDeliveryManifestExt"/> containing the mapped data from the original 
+    /// An <see cref="INotificationDeliveryManifestExt"/> containing the mapped data from the original 
     /// domain manifest, ready for serialization and transmission to external clients.
     /// </returns>
-    public static IShipmentDeliveryManifestExt MapToShipmentDeliveryManifestExt(this IShipmentDeliveryManifest manifest)
+    public static INotificationDeliveryManifestExt MapToShipmentDeliveryManifestExt(this IShipmentDeliveryManifest manifest)
     {
-        return new ShipmentDeliveryManifestExt
+        return new NotificationDeliveryManifestExt
         {
             Type = manifest.Type,
             Status = manifest.Status,
