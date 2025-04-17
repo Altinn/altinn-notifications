@@ -33,7 +33,7 @@ public class ShipmentDeliveryManifestMapperTests
             StatusDescription = "Email will be delivered to recipient on time"
         };
 
-        var recipients = ImmutableList.Create<IDeliverableEntity>(smsDeliveryManifest, emailDeliveryManifest);
+        var recipients = ImmutableList.Create<IDeliveryManifest>(smsDeliveryManifest, emailDeliveryManifest);
 
         var shipmentDeliveryManifest = new ShipmentDeliveryManifest
         {
@@ -120,7 +120,7 @@ public class ShipmentDeliveryManifestMapperTests
             ShipmentId = Guid.NewGuid(),
             LastUpdate = DateTime.UtcNow,
             StatusDescription = "In progress",
-            Recipients = ImmutableList<IDeliverableEntity>.Empty
+            Recipients = ImmutableList<IDeliveryManifest>.Empty
         };
 
         // Act
@@ -148,7 +148,7 @@ public class ShipmentDeliveryManifestMapperTests
             ShipmentId = Guid.NewGuid(),
             LastUpdate = DateTime.UtcNow,
             StatusDescription = null, // Explicitly set to null
-            Recipients = ImmutableList<IDeliverableEntity>.Empty
+            Recipients = ImmutableList<IDeliveryManifest>.Empty
         };
 
         // Act
@@ -168,7 +168,7 @@ public class ShipmentDeliveryManifestMapperTests
     public void MapToShipmentDeliveryManifestExt_UnsupportedDeliverableEntityType_ThrowsArgumentException()
     {
         // Arrange
-        var unknoweDliverableEntity = new Mock<IDeliverableEntity>();
+        var unknoweDliverableEntity = new Mock<IDeliveryManifest>();
         unknoweDliverableEntity.Setup(e => e.Status).Returns("Unknown");
         unknoweDliverableEntity.Setup(e => e.LastUpdate).Returns(DateTime.UtcNow);
         unknoweDliverableEntity.Setup(e => e.Destination).Returns("unknown destination");

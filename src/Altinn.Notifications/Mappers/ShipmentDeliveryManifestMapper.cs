@@ -46,7 +46,7 @@ public static class ShipmentDeliveryManifestMapper
     /// <exception cref="ArgumentException">
     /// Thrown when the input entity is not a recognized deliverable type (neither SMS nor email).
     /// </exception>
-    private static IDeliveryManifestExt MapToDeliverableEntityExt(IDeliverableEntity deliverableEntity)
+    private static IDeliveryManifestExt MapToDeliverableEntityExt(IDeliveryManifest deliverableEntity)
     {
         return deliverableEntity switch
         {
@@ -104,7 +104,7 @@ public static class ShipmentDeliveryManifestMapper
     /// An immutable list of external deliverable entities, each converted to its appropriate type-specific implementation,
     /// or an empty collection if no entities are present.
     /// </returns>
-    private static IImmutableList<IDeliveryManifestExt> MapToDeliverableEntitiesExt(this IImmutableList<IDeliverableEntity> entities)
+    private static IImmutableList<IDeliveryManifestExt> MapToDeliverableEntitiesExt(this IImmutableList<IDeliveryManifest> entities)
     {
         return entities.Count == 0 ? [] : [.. entities.Select(MapToDeliverableEntityExt)];
     }

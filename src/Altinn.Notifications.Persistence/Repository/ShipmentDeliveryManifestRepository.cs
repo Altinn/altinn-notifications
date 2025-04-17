@@ -67,7 +67,7 @@ public partial class ShipmentDeliveryManifestRepository : IShipmentDeliveryManif
     /// </returns>
     private static async Task<IShipmentDeliveryManifest> CreateShipmentDeliveryManifestAsync(NpgsqlDataReader reader, Guid shipmentId, CancellationToken cancellationToken)
     {
-        var deliverableEntities = new List<IDeliverableEntity>();
+        var deliverableEntities = new List<IDeliveryManifest>();
 
         var (status, lastUpdate, reference) = await ExtractShipmentDataAsync(reader, cancellationToken);
 
@@ -96,7 +96,7 @@ public partial class ShipmentDeliveryManifestRepository : IShipmentDeliveryManif
     /// tracking data, which must include destination, status, and timestamp values.
     /// </param>
     /// <param name="deliverableEntities">
-    /// A collection to which the newly created <see cref="IDeliverableEntity"/> will be added.
+    /// A collection to which the newly created <see cref="IDeliveryManifest"/> will be added.
     /// </param>
     /// <param name="cancellationToken">
     /// A <see cref="CancellationToken"/> that can be used to cancel the operation.
@@ -104,7 +104,7 @@ public partial class ShipmentDeliveryManifestRepository : IShipmentDeliveryManif
     /// <remarks>
     /// If the destination field is null, the row is skipped and no entity is added.
     /// </remarks>
-    private static async Task CreateAndAddDeliveryEntityAsync(NpgsqlDataReader reader, List<IDeliverableEntity> deliverableEntities, CancellationToken cancellationToken)
+    private static async Task CreateAndAddDeliveryEntityAsync(NpgsqlDataReader reader, List<IDeliveryManifest> deliverableEntities, CancellationToken cancellationToken)
     {
         var statusOrdinal = reader.GetOrdinal(_statusColumnName);
         var referenceOrdinal = reader.GetOrdinal(_referenceColumnName);
@@ -127,7 +127,7 @@ public partial class ShipmentDeliveryManifestRepository : IShipmentDeliveryManif
         var lastUpdate = reader.GetDateTime(lastUpdateOrdinal);
         var destination = reader.GetString(destinationOrdinal);
 
-        IDeliverableEntity deliverableEntity = MobileNumbersRegex().IsMatch(destination)
+        IDeliveryManifest deliverableEntity = MobileNumbersRegex().IsMatch(destination)
             ? new SmsDeliveryManifest
             {
                 Status = status,
