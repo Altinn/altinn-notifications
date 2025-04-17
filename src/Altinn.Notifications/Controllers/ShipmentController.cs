@@ -34,7 +34,7 @@ public class ShipmentController : ControllerBase
     }
 
     /// <summary>
-    /// Retrieve the delivery mainfest for a specific notification shipment.
+    /// Retrieve the delivery manifest for a specific notification shipment.
     /// </summary>
     /// <param name="id">The unique identifier (GUID) of the shipment.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests</param>
