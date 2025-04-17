@@ -106,8 +106,8 @@ public class ShipmentDeliveryManifestRepositoryTests : IAsyncLifetime
         await smsNotificationRepository.AddNotification(smsNotification, DateTime.UtcNow.AddMinutes(30), 1);
 
         // Act
-        ShipmentDeliveryManifestRepository shipmentDeliveryManifestRepository = (ShipmentDeliveryManifestRepository)ServiceUtil.GetServices([typeof(IShipmentDeliveryManifestRepository)])
-            .First(i => i.GetType() == typeof(ShipmentDeliveryManifestRepository));
+        NotificationDeliveryManifestRepository shipmentDeliveryManifestRepository = (NotificationDeliveryManifestRepository)ServiceUtil.GetServices([typeof(INotificationDeliveryManifestRepository)])
+            .First(i => i.GetType() == typeof(NotificationDeliveryManifestRepository));
 
         INotificationDeliveryManifest? shipmentDeliveryManifest =
             await shipmentDeliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, CancellationToken.None);
@@ -215,8 +215,8 @@ public class ShipmentDeliveryManifestRepositoryTests : IAsyncLifetime
         await emailNotificationRepo.AddNotification(emailNotification, DateTime.UtcNow);
 
         // Act
-        ShipmentDeliveryManifestRepository shipmentDeliveryManifestRepository = (ShipmentDeliveryManifestRepository)ServiceUtil.GetServices([typeof(IShipmentDeliveryManifestRepository)])
-            .First(i => i.GetType() == typeof(ShipmentDeliveryManifestRepository));
+        NotificationDeliveryManifestRepository shipmentDeliveryManifestRepository = (NotificationDeliveryManifestRepository)ServiceUtil.GetServices([typeof(INotificationDeliveryManifestRepository)])
+            .First(i => i.GetType() == typeof(NotificationDeliveryManifestRepository));
 
         INotificationDeliveryManifest? shipmentDeliveryManifest =
             await shipmentDeliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, CancellationToken.None);
@@ -345,8 +345,8 @@ public class ShipmentDeliveryManifestRepositoryTests : IAsyncLifetime
         await smsNotificationRepository.AddNotification(smsNotification, DateTime.UtcNow.AddMinutes(30), 1);
 
         // Act
-        ShipmentDeliveryManifestRepository shipmentDeliveryManifestRepository = (ShipmentDeliveryManifestRepository)ServiceUtil.GetServices([typeof(IShipmentDeliveryManifestRepository)])
-            .First(i => i.GetType() == typeof(ShipmentDeliveryManifestRepository));
+        NotificationDeliveryManifestRepository shipmentDeliveryManifestRepository = (NotificationDeliveryManifestRepository)ServiceUtil.GetServices([typeof(INotificationDeliveryManifestRepository)])
+            .First(i => i.GetType() == typeof(NotificationDeliveryManifestRepository));
 
         INotificationDeliveryManifest? shipmentDeliveryManifest =
             await shipmentDeliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, CancellationToken.None);
@@ -487,8 +487,8 @@ public class ShipmentDeliveryManifestRepositoryTests : IAsyncLifetime
         await smsNotificationRepository.AddNotification(smsNotification, DateTime.UtcNow.AddMinutes(30), 1);
 
         // Act
-        ShipmentDeliveryManifestRepository shipmentDeliveryManifestRepository = (ShipmentDeliveryManifestRepository)ServiceUtil.GetServices([typeof(IShipmentDeliveryManifestRepository)])
-            .First(i => i.GetType() == typeof(ShipmentDeliveryManifestRepository));
+        NotificationDeliveryManifestRepository shipmentDeliveryManifestRepository = (NotificationDeliveryManifestRepository)ServiceUtil.GetServices([typeof(INotificationDeliveryManifestRepository)])
+            .First(i => i.GetType() == typeof(NotificationDeliveryManifestRepository));
 
         INotificationDeliveryManifest? shipmentDeliveryManifest =
             await shipmentDeliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, CancellationToken.None);
@@ -672,8 +672,8 @@ public class ShipmentDeliveryManifestRepositoryTests : IAsyncLifetime
 
         // Act
         // Get the delivery manifest to verify both notifications are included
-        ShipmentDeliveryManifestRepository shipmentDeliveryManifestRepository = (ShipmentDeliveryManifestRepository)ServiceUtil.GetServices([typeof(IShipmentDeliveryManifestRepository)])
-            .First(i => i.GetType() == typeof(ShipmentDeliveryManifestRepository));
+        NotificationDeliveryManifestRepository shipmentDeliveryManifestRepository = (NotificationDeliveryManifestRepository)ServiceUtil.GetServices([typeof(INotificationDeliveryManifestRepository)])
+            .First(i => i.GetType() == typeof(NotificationDeliveryManifestRepository));
 
         INotificationDeliveryManifest? shipmentDeliveryManifest =
             await shipmentDeliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, CancellationToken.None);

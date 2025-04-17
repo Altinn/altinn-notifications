@@ -16,13 +16,13 @@ namespace Altinn.Notifications.Core.Models.Delivery;
 public record NotificationDeliveryManifest : INotificationDeliveryManifest
 {
     /// <inheritdoc />
-    public int? SequenceNumber { get; init; } = null;
+    public int? SequenceNumber { get; init; }
 
     /// <inheritdoc />
     public required Guid ShipmentId { get; init; }
 
     /// <inheritdoc />
-    public string? SendersReference { get; init; } = null;
+    public string? SendersReference { get; init; }
 
     /// <inheritdoc />
     public required string Type { get; init; }
@@ -31,7 +31,7 @@ public record NotificationDeliveryManifest : INotificationDeliveryManifest
     public required string Status { get; init; }
 
     /// <inheritdoc />
-    public string? StatusDescription { get; init; } = null;
+    public string? StatusDescription { get; init; }
 
     /// <inheritdoc />
     public required DateTime LastUpdate { get; init; }

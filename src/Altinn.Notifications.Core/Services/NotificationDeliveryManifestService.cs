@@ -11,12 +11,12 @@ namespace Altinn.Notifications.Core.Services;
 /// </summary>
 public class NotificationDeliveryManifestService : INotificationDeliveryManifestService
 {
-    private readonly IShipmentDeliveryManifestRepository _shipmentDeliveryManifestRepository;
+    private readonly INotificationDeliveryManifestRepository _shipmentDeliveryManifestRepository;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationDeliveryManifestService"/> class.
     /// </summary>
-    public NotificationDeliveryManifestService(IShipmentDeliveryManifestRepository shipmentDeliveryManifestRepository)
+    public NotificationDeliveryManifestService(INotificationDeliveryManifestRepository shipmentDeliveryManifestRepository)
     {
         _shipmentDeliveryManifestRepository = shipmentDeliveryManifestRepository;
     }

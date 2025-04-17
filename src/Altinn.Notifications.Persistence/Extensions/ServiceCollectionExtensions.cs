@@ -33,7 +33,7 @@ public static class ServiceCollectionExtensions
         .AddSingleton<ISmsNotificationRepository, SmsNotificationRepository>()
         .AddSingleton<IEmailNotificationRepository, EmailNotificationRepository>()
         .AddSingleton<INotificationSummaryRepository, NotificationSummaryRepository>()
-        .AddSingleton<IShipmentDeliveryManifestRepository, ShipmentDeliveryManifestRepository>()
+        .AddSingleton<INotificationDeliveryManifestRepository, NotificationDeliveryManifestRepository>()
         .AddNpgsqlDataSource(connectionString, builder =>
             builder.EnableParameterLogging(settings.LogParameters)
                    .EnableDynamicJson()

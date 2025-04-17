@@ -24,7 +24,7 @@ public abstract record DeliveryManifest : IDeliveryManifest
     public required string Status { get; init; }
 
     /// <inheritdoc />
-    public string? StatusDescription { get; init; } = null;
+    public string? StatusDescription { get; init; }
 
     /// <inheritdoc />
     public required DateTime LastUpdate { get; init; }

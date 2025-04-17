@@ -19,7 +19,7 @@ public record NotificationDeliveryManifestExt : INotificationDeliveryManifestExt
     /// <inheritdoc />
     [JsonPropertyName("sequenceNumber")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? SequenceNumber { get; init; } = null;
+    public int? SequenceNumber { get; init; }
 
     /// <inheritdoc />
     [JsonPropertyName("shipmentId")]
@@ -27,7 +27,7 @@ public record NotificationDeliveryManifestExt : INotificationDeliveryManifestExt
 
     /// <inheritdoc />
     [JsonPropertyName("sendersReference")]
-    public string? SendersReference { get; init; } = null;
+    public string? SendersReference { get; init; }
 
     /// <inheritdoc />
     [JsonPropertyName("type")]
@@ -40,7 +40,7 @@ public record NotificationDeliveryManifestExt : INotificationDeliveryManifestExt
     /// <inheritdoc />
     [JsonPropertyName("description")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? StatusDescription { get; init; } = null;
+    public string? StatusDescription { get; init; }
 
     /// <inheritdoc />
     [JsonPropertyName("lastUpdate")]
