@@ -44,9 +44,9 @@ public static class ServiceCollectionExtensions
             .AddSingleton<INotificationScheduleService, NotificationScheduleService>()
             .AddSingleton<IEmailOrderProcessingService, EmailOrderProcessingService>()
             .AddSingleton<ISmsNotificationSummaryService, SmsNotificationSummaryService>()
-            .AddSingleton<INotificationDeliveryManifestService, NotificationDeliveryManifestService>()
             .AddSingleton<IEmailNotificationSummaryService, EmailNotificationSummaryService>()
             .AddSingleton<IPreferredChannelProcessingService, PreferredChannelProcessingService>()
+            .AddSingleton<INotificationDeliveryManifestService, NotificationDeliveryManifestService>()
             .AddSingleton<INotificationsEmailServiceUpdateService, NotificationsEmailServiceUpdateService>()
             .Configure<KafkaSettings>(config.GetSection("KafkaSettings"))
             .Configure<NotificationConfig>(config.GetSection("NotificationConfig"));

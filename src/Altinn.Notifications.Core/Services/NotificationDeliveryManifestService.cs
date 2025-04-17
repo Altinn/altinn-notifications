@@ -11,27 +11,27 @@ namespace Altinn.Notifications.Core.Services;
 /// </summary>
 public class NotificationDeliveryManifestService : INotificationDeliveryManifestService
 {
-    private readonly INotificationDeliveryManifestRepository _shipmentDeliveryManifestRepository;
+    private readonly INotificationDeliveryManifestRepository _notificationDeliveryManifestRepository;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationDeliveryManifestService"/> class.
     /// </summary>
-    public NotificationDeliveryManifestService(INotificationDeliveryManifestRepository shipmentDeliveryManifestRepository)
+    public NotificationDeliveryManifestService(INotificationDeliveryManifestRepository notificationDeliveryManifestRepository)
     {
-        _shipmentDeliveryManifestRepository = shipmentDeliveryManifestRepository;
+        _notificationDeliveryManifestRepository = notificationDeliveryManifestRepository;
     }
 
     /// <inheritdoc />
     public async Task<Result<INotificationDeliveryManifest, ServiceError>> GetDeliveryManifestAsync(Guid alternateId, string creatorName, CancellationToken cancellationToken)
     {
-        var order =
-            await _shipmentDeliveryManifestRepository.GetDeliveryManifestAsync(alternateId, creatorName, cancellationToken);
+        var deliveryManifest = 
+            await _notificationDeliveryManifestRepository.GetDeliveryManifestAsync(alternateId, creatorName, cancellationToken);
 
-        if (order == null)
+        if (deliveryManifest == null)
         {
             return new ServiceError(404, "Shipment not found.");
         }
 
-        return (NotificationDeliveryManifest)order;
+        return (NotificationDeliveryManifest)deliveryManifest;
     }
 }
