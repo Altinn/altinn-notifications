@@ -21,11 +21,11 @@ public abstract record DeliveryManifestExt : IDeliveryManifestExt
 {
     /// <inheritdoc />
     [JsonPropertyName("destination")]
-    public required string Destination { get; init; } = string.Empty;
+    public required string Destination { get; init; }
 
     /// <inheritdoc />
     [JsonPropertyName("status")]
-    public required string Status { get; init; } = string.Empty;
+    public required string Status { get; init; }
 
     /// <inheritdoc />
     [JsonPropertyName("description")]
@@ -34,5 +34,5 @@ public abstract record DeliveryManifestExt : IDeliveryManifestExt
 
     /// <inheritdoc />
     [JsonPropertyName("lastUpdate")]
-    public required DateTime LastUpdate { get; init; } = DateTime.UtcNow;
+    public required DateTime LastUpdate { get; init; }
 }
