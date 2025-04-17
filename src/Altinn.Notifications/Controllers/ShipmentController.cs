@@ -23,14 +23,14 @@ namespace Altinn.Notifications.Controllers;
 [Authorize(Policy = AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS)]
 public class ShipmentController : ControllerBase
 {
-    private readonly IShipmentDeliveryManifestService _shipmentDeliveryManifestService;
+    private readonly INotificationDeliveryManifestService _notificationDeliveryManifestService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ShipmentController"/> class.
     /// </summary>
-    public ShipmentController(IShipmentDeliveryManifestService shipmentDeliveryManifestService)
+    public ShipmentController(INotificationDeliveryManifestService notificationDeliveryManifestService)
     {
-        _shipmentDeliveryManifestService = shipmentDeliveryManifestService;
+        _notificationDeliveryManifestService = notificationDeliveryManifestService;
     }
 
     /// <summary>
@@ -63,7 +63,7 @@ public class ShipmentController : ControllerBase
                 return Forbid();
             }
 
-            Result<INotificationDeliveryManifest, ServiceError> result = await _shipmentDeliveryManifestService.GetDeliveryManifestAsync(id, creatorName, cancellationToken);
+            Result<INotificationDeliveryManifest, ServiceError> result = await _notificationDeliveryManifestService.GetDeliveryManifestAsync(id, creatorName, cancellationToken);
 
             return result.Match<ActionResult<NotificationDeliveryManifestExt>>(
                 shipment =>
