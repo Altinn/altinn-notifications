@@ -3,12 +3,12 @@
 namespace Altinn.Notifications.Core.Models.Status;
 
 /// <summary>
-/// Defines common status tracking capabilities for trackable entities in the notification system.
+/// Represents standardized status information for trackable entities in the notification system.
 /// </summary>
 /// <remarks>
-/// This interface establishes a standardized contract for tracking status information,
-/// enabling consistent monitoring across different entity types and delivery channels.
-/// It serves as a foundation for status reporting throughout the notification lifecycle.
+/// This interface defines a common structure for exposing status, an optional description,
+/// and the last update timestamp. It ensures consistent representation of status-related data
+/// across different entity types and delivery channels.
 /// </remarks>
 public interface IStatus
 {
