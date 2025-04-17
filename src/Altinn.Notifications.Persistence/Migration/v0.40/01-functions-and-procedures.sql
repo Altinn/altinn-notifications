@@ -385,9 +385,9 @@ END;
 $BODY$;
 
 -- getshipmenttracking.sql:
-CREATE OR REPLACE FUNCTION notifications.get_shipment_tracking(
-_alternateid UUID,
-_creatorname TEXT)
+CREATE OR REPLACE FUNCTION notifications.get_notification_delivery_info(
+    _alternateid UUID,
+    _creatorname TEXT)
 RETURNS TABLE (
     reference     TEXT,
     status        TEXT,
@@ -397,19 +397,20 @@ RETURNS TABLE (
 DECLARE
     v_order_exists BOOLEAN;
 BEGIN
-    -- Check if the order exists and store the result
+    -- Check for the existence of the order
     SELECT EXISTS (
         SELECT 1
         FROM notifications.orders o
         WHERE o.alternateid = _alternateid AND o.creatorname = _creatorname
-    ) INTO v_order_exists;
-    
-    -- Exit early if the order doesn't exist
+    )
+    INTO v_order_exists;
+
+    -- Return empty set if no order is found
     IF NOT v_order_exists THEN
         RETURN;
     END IF;
 
-    -- Return shipment tracking results
+    -- Return combined tracking info
     RETURN QUERY
     WITH order_data AS (
         SELECT o._id, o.sendersreference, o.created, o.processed, o.processedstatus
@@ -450,12 +451,14 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-COMMENT ON FUNCTION notifications.get_shipment_tracking(UUID, TEXT) IS
-'Returns tracking information for a notification shipment identified by the given alternate identifier and creator name.
+COMMENT ON FUNCTION notifications.get_notification_delivery_info(UUID, TEXT) IS
+'Returns delivery tracking information for a notification identified by the given alternate identifier and creator name.
+
 Includes:
- - Order-level status and reference information
- - Associated delivery via email and SMS channels
-Results are returned in a single table.
+ - Order-level tracking (reference and status)
+ - Email notification tracking (status, result time, destination)
+ - SMS notification tracking (status, result time, destination)
+
 If no matching order exists, an empty result set is returned.';
 
 
