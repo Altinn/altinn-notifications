@@ -11,10 +11,10 @@ using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.TestingMappers;
 
-public class ShipmentDeliveryManifestMapperTests
+public class NotificationDeliveryManifestMapperTests
 {
     [Fact]
-    public void MapToShipmentDeliveryManifestExt_WithRecipients_MapsCorrectly()
+    public void MapToNotificationDeliveryManifestExt_WithRecipients_MapsCorrectly()
     {
         // Arrange
         var smsDeliveryManifest = new SmsDeliveryManifest
@@ -35,7 +35,7 @@ public class ShipmentDeliveryManifestMapperTests
 
         var recipients = ImmutableList.Create<IDeliveryManifest>(smsDeliveryManifest, emailDeliveryManifest);
 
-        var shipmentDeliveryManifest = new NotificationDeliveryManifest
+        var notificationDeliveryManifest = new NotificationDeliveryManifest
         {
             Status = "Processing",
             Type = "Notification",
@@ -47,16 +47,17 @@ public class ShipmentDeliveryManifestMapperTests
         };
 
         // Act
-        var result = shipmentDeliveryManifest.MapToNotificationDeliveryManifestExt();
+        var result = notificationDeliveryManifest.MapToNotificationDeliveryManifestExt();
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(shipmentDeliveryManifest.Type, result.Type);
-        Assert.Equal(shipmentDeliveryManifest.Status, result.Status);
-        Assert.Equal(shipmentDeliveryManifest.LastUpdate, result.LastUpdate);
-        Assert.Equal(shipmentDeliveryManifest.ShipmentId, result.ShipmentId);
-        Assert.Equal(shipmentDeliveryManifest.SendersReference, result.SendersReference);
-        Assert.Equal(shipmentDeliveryManifest.StatusDescription, result.StatusDescription);
+        Assert.Equal(notificationDeliveryManifest.Type, result.Type);
+        Assert.Equal(notificationDeliveryManifest.Status, result.Status);
+        Assert.Equal(notificationDeliveryManifest.LastUpdate, result.LastUpdate);
+        Assert.Equal(notificationDeliveryManifest.ShipmentId, result.ShipmentId);
+        Assert.Equal(notificationDeliveryManifest.SequenceNumber, result.SequenceNumber);
+        Assert.Equal(notificationDeliveryManifest.SendersReference, result.SendersReference);
+        Assert.Equal(notificationDeliveryManifest.StatusDescription, result.StatusDescription);
 
         Assert.Equal(2, result.Recipients.Count);
         Assert.IsType<SmsDeliveryManifestExt>(result.Recipients[0]);
@@ -80,7 +81,7 @@ public class ShipmentDeliveryManifestMapperTests
     }
 
     [Fact]
-    public void MapToShipmentDeliveryManifestExt_WithoutRecipients_MapsCorrectly()
+    public void MapToNotificationDeliveryManifestExt_WithoutRecipients_MapsCorrectly()
     {
         // Arrange
         var shipmentDeliveryManifest = new NotificationDeliveryManifest
@@ -104,19 +105,20 @@ public class ShipmentDeliveryManifestMapperTests
         Assert.Equal(shipmentDeliveryManifest.Status, result.Status);
         Assert.Equal(shipmentDeliveryManifest.LastUpdate, result.LastUpdate);
         Assert.Equal(shipmentDeliveryManifest.ShipmentId, result.ShipmentId);
+        Assert.Equal(shipmentDeliveryManifest.SequenceNumber, result.SequenceNumber);
         Assert.Equal(shipmentDeliveryManifest.SendersReference, result.SendersReference);
         Assert.Equal(shipmentDeliveryManifest.StatusDescription, result.StatusDescription);
     }
 
     [Fact]
-    public void MapToShipmentDeliveryManifestExt_WithNullSendersReference_MapsCorrectly()
+    public void MapToNotificationDeliveryManifestExt_WithNullSendersReference_MapsCorrectly()
     {
         // Arrange
         var shipmentDeliveryManifest = new NotificationDeliveryManifest
         {
             Status = "Processing",
             Type = "Notification",
-            SendersReference = null, // Explicitly set to null
+            SendersReference = null,
             ShipmentId = Guid.NewGuid(),
             LastUpdate = DateTime.UtcNow,
             StatusDescription = "In progress",
@@ -133,21 +135,22 @@ public class ShipmentDeliveryManifestMapperTests
         Assert.Equal(shipmentDeliveryManifest.Status, result.Status);
         Assert.Equal(shipmentDeliveryManifest.LastUpdate, result.LastUpdate);
         Assert.Equal(shipmentDeliveryManifest.ShipmentId, result.ShipmentId);
+        Assert.Equal(shipmentDeliveryManifest.SequenceNumber, result.SequenceNumber);
         Assert.Equal(shipmentDeliveryManifest.StatusDescription, result.StatusDescription);
     }
 
     [Fact]
-    public void MapToShipmentDeliveryManifestExt_WithNullStatusDescription_MapsCorrectly()
+    public void MapToNotificationDeliveryManifestExt_WithNullStatusDescription_MapsCorrectly()
     {
         // Arrange
         var shipmentDeliveryManifest = new NotificationDeliveryManifest
         {
             Status = "Processing",
             Type = "Notification",
+            StatusDescription = null,
             SendersReference = "REF123",
             ShipmentId = Guid.NewGuid(),
             LastUpdate = DateTime.UtcNow,
-            StatusDescription = null, // Explicitly set to null
             Recipients = ImmutableList<IDeliveryManifest>.Empty
         };
 
@@ -161,11 +164,12 @@ public class ShipmentDeliveryManifestMapperTests
         Assert.Equal(shipmentDeliveryManifest.Status, result.Status);
         Assert.Equal(shipmentDeliveryManifest.LastUpdate, result.LastUpdate);
         Assert.Equal(shipmentDeliveryManifest.ShipmentId, result.ShipmentId);
+        Assert.Equal(shipmentDeliveryManifest.SequenceNumber, result.SequenceNumber);
         Assert.Equal(shipmentDeliveryManifest.SendersReference, result.SendersReference);
     }
 
     [Fact]
-    public void MapToShipmentDeliveryManifestExt_UnsupportedDeliverableEntityType_ThrowsArgumentException()
+    public void MapToNotificationDeliveryManifestExt_UnsupportedDeliverableEntityType_ThrowsArgumentException()
     {
         // Arrange
         var unknoweDliverableEntity = new Mock<IDeliveryManifest>();
