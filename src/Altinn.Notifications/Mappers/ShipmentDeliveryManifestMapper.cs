@@ -40,13 +40,13 @@ public static class ShipmentDeliveryManifestMapper
     /// </summary>
     /// <param name="deliverableEntity">The internal domain deliverable entity to transform.</param>
     /// <returns>
-    /// An appropriate implementation of <see cref="IDeliveryStatusInfoExt"/> based on the concrete type
+    /// An appropriate implementation of <see cref="IDeliveryStatusExt"/> based on the concrete type
     /// of the input entity, preserving all tracking and addressing information.
     /// </returns>
     /// <exception cref="ArgumentException">
     /// Thrown when the input entity is not a recognized deliverable type (neither SMS nor email).
     /// </exception>
-    private static IDeliveryStatusInfoExt MapToDeliverableEntityExt(IDeliverableEntity deliverableEntity)
+    private static IDeliveryStatusExt MapToDeliverableEntityExt(IDeliverableEntity deliverableEntity)
     {
         return deliverableEntity switch
         {
@@ -104,7 +104,7 @@ public static class ShipmentDeliveryManifestMapper
     /// An immutable list of external deliverable entities, each converted to its appropriate type-specific implementation,
     /// or an empty collection if no entities are present.
     /// </returns>
-    private static IImmutableList<IDeliveryStatusInfoExt> MapToDeliverableEntitiesExt(this IImmutableList<IDeliverableEntity> entities)
+    private static IImmutableList<IDeliveryStatusExt> MapToDeliverableEntitiesExt(this IImmutableList<IDeliverableEntity> entities)
     {
         return entities.Count == 0 ? [] : [.. entities.Select(MapToDeliverableEntityExt)];
     }
