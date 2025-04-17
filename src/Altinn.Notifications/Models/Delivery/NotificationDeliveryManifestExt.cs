@@ -1,8 +1,6 @@
 ﻿using System.Collections.Immutable;
 using System.Text.Json.Serialization;
 
-using Altinn.Notifications.Models.Status;
-
 namespace Altinn.Notifications.Models.Delivery;
 
 /// <summary>
@@ -19,6 +17,11 @@ namespace Altinn.Notifications.Models.Delivery;
 /// </remarks>
 public record NotificationDeliveryManifestExt : INotificationDeliveryManifestExt
 {
+    /// <inheritdoc />
+    [JsonPropertyName("sequenceNumber")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? SequenceNumber { get; init; }
+
     /// <inheritdoc />
     [JsonPropertyName("shipmentId")]
     public required Guid ShipmentId { get; init; }
@@ -37,6 +40,7 @@ public record NotificationDeliveryManifestExt : INotificationDeliveryManifestExt
 
     /// <inheritdoc />
     [JsonPropertyName("description")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? StatusDescription { get; init; } = null;
 
     /// <inheritdoc />

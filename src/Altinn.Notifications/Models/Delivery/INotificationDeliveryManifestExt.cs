@@ -8,20 +8,21 @@ namespace Altinn.Notifications.Models.Delivery;
 /// <summary>
 /// Represents the delivery manifest for a notification shipment.
 /// </summary>
-/// <remarks>
-/// This interface defines the structure of a shipment that delivers a notification. Each shipment is uniquely identified
-/// by a <see cref="ShipmentId"/> and may optionally include a <see cref="SendersReference"/> to correlate the shipment
-/// with external systems or processes. The <see cref="Type"/> is always "Notification", indicating that the shipment
-/// pertains to the delivery of a notification message.
-///
-/// The <see cref="Recipients"/> property contains detailed delivery manifests for each recipient, including:
-/// - Their destination address (e.g., email address or phone number)
-/// - The current delivery status
-/// - A description of the status, if available
-/// - The timestamp of the last status update
-/// </remarks>
 public interface INotificationDeliveryManifestExt : IStatusExt
 {
+    /// <summary>
+    /// Gets the sequence number of this shipment when presented in a collection.
+    /// </summary>
+    /// <value>
+    /// An integer indicating the relative position of the manifest in a list or table.
+    /// </value>
+    /// <remarks>
+    /// This property is primarily used for display purposes when multiple manifests are shown 
+    /// together in a structured format. If not part of a collection, the value must always be <c>null</c>.
+    /// </remarks>
+    [JsonPropertyName("sequenceNumber")]
+    int? SequenceNumber { get; }
+
     /// <summary>
     /// Gets the unique identifier for this shipment.
     /// </summary>
@@ -55,8 +56,11 @@ public interface INotificationDeliveryManifestExt : IStatusExt
     /// Gets the collection of recipient-specific delivery tracking records.
     /// </summary>
     /// <value>
-    /// An immutable list of <see cref="IDeliveryManifestExt"/> instances, each representing
-    /// a delivery manifest to a specific recipient through a particular communication channel.
+    /// An immutable list contains detailed delivery manifests for each recipient, including:
+    /// - The destination address (e.g., email address or phone number)
+    /// - The current delivery status
+    /// - A description of the status, if available
+    /// - The timestamp of the last status update
     /// </value>
     [JsonPropertyName("recipients")]
     IImmutableList<IDeliveryManifestExt> Recipients { get; }

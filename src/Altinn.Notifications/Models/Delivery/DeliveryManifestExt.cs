@@ -29,6 +29,7 @@ public abstract record DeliveryManifestExt : IDeliveryManifestExt
 
     /// <inheritdoc />
     [JsonPropertyName("description")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? StatusDescription { get; init; } = null;
 
     /// <inheritdoc />
