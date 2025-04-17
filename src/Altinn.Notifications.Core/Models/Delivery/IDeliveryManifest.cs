@@ -1,6 +1,4 @@
-﻿using System.Text.Json.Serialization;
-
-using Altinn.Notifications.Core.Models.Status;
+﻿using Altinn.Notifications.Core.Models.Status;
 
 namespace Altinn.Notifications.Core.Models.Delivery;
 
@@ -14,9 +12,6 @@ namespace Altinn.Notifications.Core.Models.Delivery;
 /// It supports polymorphic serialization, enabling type-safe tracking of different delivery mechanisms while ensuring
 /// consistency in the reporting of delivery status across channels.
 /// </remarks>
-[JsonDerivedType(typeof(SmsDeliveryManifest), "SMS")]
-[JsonDerivedType(typeof(EmailDeliveryManifest), "Email")]
-[JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
 public interface IDeliveryManifest : IStatus
 {
     /// <summary>
@@ -27,6 +22,5 @@ public interface IDeliveryManifest : IStatus
     /// - For email: an email address  
     /// - For SMS: a mobile phone number in international format
     /// </value>
-    [JsonPropertyName("destination")]
     string Destination { get; }
 }

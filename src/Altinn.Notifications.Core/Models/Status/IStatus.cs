@@ -1,6 +1,4 @@
-﻿using System.Text.Json.Serialization;
-
-namespace Altinn.Notifications.Core.Models.Status;
+﻿namespace Altinn.Notifications.Core.Models.Status;
 
 /// <summary>
 /// Represents standardized status information for trackable entities in the notification system.
@@ -23,7 +21,6 @@ public interface IStatus
     /// allowing for consistent filtering, reporting, and processing of entities based on
     /// their current state.
     /// </remarks>
-    [JsonPropertyName("status")]
     string Status { get; }
 
     /// <summary>
@@ -37,7 +34,6 @@ public interface IStatus
     /// this description offers more detailed information about the specific circumstances
     /// of the current entity state, particularly useful for troubleshooting or auditing.
     /// </remarks>
-    [JsonPropertyName("description")]
     string? StatusDescription { get; }
 
     /// <summary>
@@ -51,6 +47,5 @@ public interface IStatus
     /// an audit trail for the notification process and enabling time-based analytics
     /// on processing efficiency.
     /// </remarks>
-    [JsonPropertyName("lastUpdate")]
     DateTime LastUpdate { get; }
 }

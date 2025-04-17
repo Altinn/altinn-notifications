@@ -1,6 +1,4 @@
-﻿using System.Text.Json.Serialization;
-
-namespace Altinn.Notifications.Core.Models.Delivery;
+﻿namespace Altinn.Notifications.Core.Models.Delivery;
 
 /// <summary>
 /// Provides a base implementation for tracking the status and destination information of deliverable entities 
@@ -20,18 +18,14 @@ namespace Altinn.Notifications.Core.Models.Delivery;
 public abstract record DeliveryManifest : IDeliveryManifest
 {
     /// <inheritdoc />
-    [JsonPropertyName("destination")]
-    public required string Destination { get; init; } = string.Empty;
+    public required string Destination { get; init; }
 
     /// <inheritdoc />
-    [JsonPropertyName("status")]
-    public required string Status { get; init; } = string.Empty;
+    public required string Status { get; init; }
 
     /// <inheritdoc />
-    [JsonPropertyName("description")]
     public string? StatusDescription { get; init; } = null;
 
     /// <inheritdoc />
-    [JsonPropertyName("lastUpdate")]
-    public required DateTime LastUpdate { get; init; } = DateTime.UtcNow;
+    public required DateTime LastUpdate { get; init; }
 }
