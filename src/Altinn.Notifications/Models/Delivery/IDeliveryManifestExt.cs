@@ -17,7 +17,7 @@ namespace Altinn.Notifications.Models.Delivery;
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
 [JsonDerivedType(typeof(SmsDeliveryManifestExt), "SMS")]
 [JsonDerivedType(typeof(EmailDeliveryManifestExt), "Email")]
-public interface IDeliveryStatusExt : IStatusExt
+public interface IDeliveryManifestExt : IStatusExt
 {
     /// <summary>
     /// Gets the destination address where the deliverable entity is intended to be sent.

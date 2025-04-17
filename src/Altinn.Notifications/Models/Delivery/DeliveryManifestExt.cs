@@ -7,7 +7,7 @@ namespace Altinn.Notifications.Models.Delivery;
 /// within the notification system.
 /// </summary>
 /// <remarks>
-/// This abstract record implements the <see cref="IDeliveryStatusExt"/> interface, providing a standardized
+/// This abstract record implements the <see cref="IDeliveryManifestExt"/> interface, providing a standardized
 /// foundation for tracking the status and destination of notifications across various delivery channels.
 ///
 /// It combines destination address information with status tracking, ensuring a consistent implementation pattern
@@ -17,7 +17,7 @@ namespace Altinn.Notifications.Models.Delivery;
 /// Specialized implementations can extend this class to support channel-specific tracking, while inheriting its core 
 /// functionality for status and destination management.
 /// </remarks>
-public abstract record DeliveryStatusExt : IDeliveryStatusExt
+public abstract record DeliveryManifestExt : IDeliveryManifestExt
 {
     /// <inheritdoc />
     [JsonPropertyName("destination")]
