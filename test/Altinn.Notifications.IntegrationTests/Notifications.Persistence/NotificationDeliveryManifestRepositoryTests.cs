@@ -1,4 +1,6 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using System.Data;
+
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Delivery;
@@ -8,10 +10,7 @@ using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
-using Moq;
-using Npgsql;
-using System.Data;
-using System.Text.RegularExpressions;
+
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
