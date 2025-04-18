@@ -134,6 +134,7 @@ public class NotificationDeliveryManifestServiceTests
                 Assert.IsType<ServiceError>(actuallError);
                 Assert.Equal(404, actuallError.ErrorCode);
                 Assert.Equal("Shipment not found.", actuallError.ErrorMessage);
+
                 return true;
             });
     }
@@ -224,6 +225,7 @@ public class NotificationDeliveryManifestServiceTests
                 Assert.IsType<ServiceError>(actuallError);
                 Assert.Equal(404, actuallError.ErrorCode);
                 Assert.Equal("Shipment not found.", actuallError.ErrorMessage);
+
                 return true;
             });
     }
@@ -282,6 +284,7 @@ public class NotificationDeliveryManifestServiceTests
                 Assert.IsType<ServiceError>(actuallError);
                 Assert.Equal(404, actuallError.ErrorCode);
                 Assert.Equal("Shipment not found.", actuallError.ErrorMessage);
+
                 return true;
             });
     }
