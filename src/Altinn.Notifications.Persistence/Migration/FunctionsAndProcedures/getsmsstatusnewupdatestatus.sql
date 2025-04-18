@@ -25,15 +25,14 @@ END;
 $BODY$;
 
 -- FUNCTION: notifications.getsms_statusnew_updatestatus(integer)
-CREATE OR REPLACE FUNCTION notifications.getsms_statusnew_updatestatus(
-	_sendingtimepolicy integer)
-    RETURNS TABLE(alternateid uuid, sendernumber text, mobilenumber text, body text) 
-    LANGUAGE 'plpgsql'
-    COST 100
-    VOLATILE PARALLEL UNSAFE
-    ROWS 1000
+CREATE
+OR REPLACE FUNCTION NOTIFICATIONS.GETSMS_STATUSNEW_UPDATESTATUS (_SENDINGTIMEPOLICY INTEGER) RETURNS TABLE (
+	ALTERNATEID UUID,
+	SENDERNUMBER TEXT,
+	MOBILENUMBER TEXT,
+	BODY TEXT
+) LANGUAGE 'plpgsql' COST 100 VOLATILE PARALLEL UNSAFE ROWS 1000 AS $BODY$
 
-AS $BODY$
 
 BEGIN
     RETURN QUERY 
@@ -47,20 +46,24 @@ BEGIN
                   notifications.smsnotifications.customizedbody
     )
     SELECT u.alternateid, 
-           st.sendernumber, 
-           u.mobilenumber, 
-           CASE WHEN u.customizedbody IS NOT NULL AND u.customizedbody <> '' THEN u.customizedbody ELSE st.body END AS body
-    FROM updated u
-    JOIN notifications.smstexts st ON u._orderid = st._orderid
-	JOIN notifications.orders o ON st._orderid = o._id 
+       st.sendernumber, 
+       u.mobilenumber, 
+       CASE WHEN u.customizedbody IS NOT NULL AND u.customizedbody <> '' THEN u.customizedbody ELSE st.body END AS body
+FROM updated u
+JOIN notifications.smstexts st ON u._orderid = st._orderid
+JOIN notifications.orders o ON st._orderid = o._id 
+WHERE
 	-- sendingTimePolicy = 2 is equal to daytime, the default choice when null
-	WHERE o.sendingtimepolicy = _sendingtimepolicy OR (o.sendingtimepolicy IS NULL AND _sendingtimepolicy = 2);        
+    CASE
+        WHEN _sendingtimepolicy = 1 THEN
+            o.sendingtimepolicy = 1
+        WHEN _sendingtimepolicy = 2 THEN
+            (o.sendingtimepolicy = 2 OR o.sendingtimepolicy IS NULL)
+    END;
 END;
 $BODY$;
 
-COMMENT ON function notifications.getsms_statusnew_updatestatus(
-	_sendingtimepolicy integer) is
-'Reads all entries in smsnotifications where result status is New.
+COMMENT ON FUNCTION NOTIFICATIONS.GETSMS_STATUSNEW_UPDATESTATUS (INTEGER) IS 'Reads all entries in smsnotifications where result status is New.
  Result is then updated to Sending. Parameter _sendingtimepolicy is used to
  filter the returned entries based on the policy for scheduling set on the related
  order row. If this is null, it is treated as Daytime, which is the default setting';
