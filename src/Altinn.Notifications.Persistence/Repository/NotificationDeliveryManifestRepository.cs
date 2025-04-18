@@ -212,6 +212,6 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
     ///   <item><description>One or more digits</description></item>
     /// </list>
     /// </returns>
-    [GeneratedRegex(@"^(?:\+|00)?\d+$")]
+    [GeneratedRegex(@"^(?:\+|00)?[1-9]\d{7,14}$")]
     private static partial Regex MobileNumbersRegex();
 }

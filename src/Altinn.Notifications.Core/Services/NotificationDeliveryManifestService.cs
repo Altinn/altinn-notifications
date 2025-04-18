@@ -24,8 +24,7 @@ public class NotificationDeliveryManifestService : INotificationDeliveryManifest
     /// <inheritdoc />
     public async Task<Result<INotificationDeliveryManifest, ServiceError>> GetDeliveryManifestAsync(Guid alternateId, string creatorName, CancellationToken cancellationToken)
     {
-        var deliveryManifest = 
-            await _notificationDeliveryManifestRepository.GetDeliveryManifestAsync(alternateId, creatorName, cancellationToken);
+        var deliveryManifest = await _notificationDeliveryManifestRepository.GetDeliveryManifestAsync(alternateId, creatorName, cancellationToken);
 
         if (deliveryManifest == null)
         {

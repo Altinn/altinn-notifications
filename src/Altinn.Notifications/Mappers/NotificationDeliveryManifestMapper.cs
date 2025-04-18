@@ -79,7 +79,7 @@ public static class NotificationDeliveryManifestMapper
     /// </summary>
     /// <param name="emailDeliveryManifest">The internal domain email delivery manifest to transform.</param>
     /// <returns>
-    /// A <see cref="SmsDeliveryManifestExt"/> containing the mapped data from the domain
+    /// A <see cref="EmailDeliveryManifestExt"/> containing the mapped data from the domain
     /// manifest, ready for serialization and transmission to external clients.
     /// </returns>
     private static EmailDeliveryManifestExt MapToEmailDeliveryManifestExt(this EmailDeliveryManifest emailDeliveryManifest)
