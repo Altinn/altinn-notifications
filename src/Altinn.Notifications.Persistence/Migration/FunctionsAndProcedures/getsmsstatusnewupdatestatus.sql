@@ -25,41 +25,46 @@ END;
 $BODY$;
 
 -- FUNCTION: notifications.getsms_statusnew_updatestatus(integer)
-CREATE
-OR REPLACE FUNCTION NOTIFICATIONS.GETSMS_STATUSNEW_UPDATESTATUS (_SENDINGTIMEPOLICY INTEGER) RETURNS TABLE (
-	ALTERNATEID UUID,
-	SENDERNUMBER TEXT,
-	MOBILENUMBER TEXT,
-	BODY TEXT
-) LANGUAGE 'plpgsql' COST 100 VOLATILE PARALLEL UNSAFE ROWS 1000 AS $BODY$
-
-
+CREATE OR REPLACE FUNCTION NOTIFICATIONS.GETSMS_STATUSNEW_UPDATESTATUS (_SENDINGTIMEPOLICY INTEGER) 
+RETURNS TABLE (
+    ALTERNATEID UUID,
+    SENDERNUMBER TEXT,
+    MOBILENUMBER TEXT,
+    BODY TEXT
+) 
+LANGUAGE 'plpgsql' 
+COST 100 
+VOLATILE 
+PARALLEL UNSAFE 
+ROWS 1000 
+AS $BODY$
 BEGIN
     RETURN QUERY 
     WITH updated AS (
-        UPDATE notifications.smsnotifications
+        UPDATE notifications.smsnotifications s
         SET result = 'Sending', resulttime = now()
-        WHERE result = 'New' 
-        RETURNING notifications.smsnotifications.alternateid, 
-                  _orderid, 
-                  notifications.smsnotifications.mobilenumber,
-                  notifications.smsnotifications.customizedbody
+        FROM notifications.orders o
+        WHERE s.result = 'New' 
+          AND s._orderid = o._id
+          AND (
+              (_sendingtimepolicy = 1 AND o.sendingtimepolicy = 1)
+           OR (_sendingtimepolicy = 2 AND (o.sendingtimepolicy = 2 OR o.sendingtimepolicy IS NULL))
+          )
+        RETURNING s.alternateid, 
+                  s._orderid, 
+                  s.mobilenumber,
+                  s.customizedbody
     )
     SELECT u.alternateid, 
-       st.sendernumber, 
-       u.mobilenumber, 
-       CASE WHEN u.customizedbody IS NOT NULL AND u.customizedbody <> '' THEN u.customizedbody ELSE st.body END AS body
-FROM updated u
-JOIN notifications.smstexts st ON u._orderid = st._orderid
-JOIN notifications.orders o ON st._orderid = o._id 
-WHERE
-	-- sendingTimePolicy = 2 is equal to daytime, the default choice when null
-    CASE
-        WHEN _sendingtimepolicy = 1 THEN
-            o.sendingtimepolicy = 1
-        WHEN _sendingtimepolicy = 2 THEN
-            (o.sendingtimepolicy = 2 OR o.sendingtimepolicy IS NULL)
-    END;
+           st.sendernumber, 
+           u.mobilenumber, 
+           CASE 
+               WHEN u.customizedbody IS NOT NULL AND u.customizedbody <> '' 
+               THEN u.customizedbody 
+               ELSE st.body 
+           END AS body
+    FROM updated u
+    JOIN notifications.smstexts st ON u._orderid = st._orderid;
 END;
 $BODY$;
 
