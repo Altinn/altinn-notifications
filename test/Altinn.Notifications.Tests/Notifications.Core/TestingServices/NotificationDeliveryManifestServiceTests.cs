@@ -142,7 +142,7 @@ public class NotificationDeliveryManifestServiceTests
     [Fact]
     public async Task GetDeliveryManifestAsync_VerifyRepositoryIsCalledWithCorrectParameters()
     {
-        // Arrange// Arrange
+        // Arrange
         string orderCreatorName = "TEST-ORG";
         Guid orderAlternateId = Guid.NewGuid();
         CancellationToken cancellationToken = CancellationToken.None;
