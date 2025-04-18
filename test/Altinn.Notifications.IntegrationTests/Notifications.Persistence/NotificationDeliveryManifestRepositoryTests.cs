@@ -10,6 +10,7 @@ using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
 using Moq;
 using Npgsql;
+using System.Data;
 using System.Text.RegularExpressions;
 using Xunit;
 
@@ -44,6 +45,24 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
     public async Task InitializeAsync()
     {
         await Task.CompletedTask;
+    }
+
+    [Fact]
+    public async Task GetDeliveryManifestAsync_WhenOrderDoesntExist_ReturnsNull()
+    {
+        // Arrange
+        string creator = "TEST_ORG";
+        Guid nonExistentOrderId = Guid.NewGuid();
+
+        // Act
+        NotificationDeliveryManifestRepository deliveryManifestRepository = (NotificationDeliveryManifestRepository)ServiceUtil.GetServices([typeof(INotificationDeliveryManifestRepository)])
+            .First(i => i.GetType() == typeof(NotificationDeliveryManifestRepository));
+
+        INotificationDeliveryManifest? deliveryManifest =
+            await deliveryManifestRepository.GetDeliveryManifestAsync(nonExistentOrderId, creator, CancellationToken.None);
+
+        // Assert
+        Assert.Null(deliveryManifest);
     }
 
     [Fact]
@@ -491,5 +510,4 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         Assert.Equal(recipientPhoneNumber, smsDelivery.Destination);
         Assert.True(smsDelivery.LastUpdate > DateTime.MinValue);
     }
-
 }
