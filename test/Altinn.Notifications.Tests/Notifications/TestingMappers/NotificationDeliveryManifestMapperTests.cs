@@ -193,7 +193,7 @@ public class NotificationDeliveryManifestMapperTests
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(shipmentDeliveryManifest.MapToNotificationDeliveryManifestExt);
 
-        Assert.Equal("deliverableEntity", exception.ParamName);
+        Assert.Equal("deliveryManifest", exception.ParamName);
         Assert.StartsWith("Unsupported deliverable entity type:", exception.Message);
     }
 }
