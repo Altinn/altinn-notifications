@@ -7,6 +7,7 @@ using Altinn.Notifications.Core.Models.Delivery;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Shared;
+
 using Moq;
 
 using Xunit;
