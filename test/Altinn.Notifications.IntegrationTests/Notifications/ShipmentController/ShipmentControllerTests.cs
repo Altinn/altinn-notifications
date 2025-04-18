@@ -414,9 +414,9 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         };
     }
 
-    private static SmsDeliveryManifest CreateEmailDeliveryManifest(string emailAddress, string status, string? statusDescription, DateTime lastUpdate)
+    private static EmailDeliveryManifest CreateEmailDeliveryManifest(string emailAddress, string status, string? statusDescription, DateTime lastUpdate)
     {
-        return new SmsDeliveryManifest()
+        return new EmailDeliveryManifest()
         {
             Status = status,
             LastUpdate = lastUpdate,
