@@ -172,12 +172,12 @@ public class NotificationDeliveryManifestMapperTests
     public void MapToNotificationDeliveryManifestExt_UnsupportedDeliverableEntityType_ThrowsArgumentException()
     {
         // Arrange
-        var unknoweDliverableEntity = new Mock<IDeliveryManifest>();
-        unknoweDliverableEntity.Setup(e => e.Status).Returns("Unknown");
-        unknoweDliverableEntity.Setup(e => e.LastUpdate).Returns(DateTime.UtcNow);
-        unknoweDliverableEntity.Setup(e => e.Destination).Returns("unknown destination");
+        var unknownDeliverableEntity = new Mock<IDeliveryManifest>();
+        unknownDeliverableEntity.Setup(e => e.Status).Returns("Unknown");
+        unknownDeliverableEntity.Setup(e => e.LastUpdate).Returns(DateTime.UtcNow);
+        unknownDeliverableEntity.Setup(e => e.Destination).Returns("unknown destination");
 
-        var recipients = ImmutableList.Create(unknoweDliverableEntity.Object);
+        var recipients = ImmutableList.Create(unknownDeliverableEntity.Object);
 
         var shipmentDeliveryManifest = new NotificationDeliveryManifest
         {
