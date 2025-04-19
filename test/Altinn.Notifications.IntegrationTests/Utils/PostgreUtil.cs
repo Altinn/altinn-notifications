@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Models.Notification;
+﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Extensions;
@@ -93,9 +94,9 @@ public static class PostgreUtil
         return o;
     }
 
-    public static async Task<(NotificationOrder Order, SmsNotification SmsNotification)> PopulateDBWithOrderAndSmsNotification(string? sendersReference = null)
+    public static async Task<(NotificationOrder Order, SmsNotification SmsNotification)> PopulateDBWithOrderAndSmsNotification(string? sendersReference = null, SendingTimePolicy? sendingTimePolicy = null)
     {
-        (NotificationOrder order, SmsNotification smsNotification) = TestdataUtil.GetOrderAndSmsNotification();
+        (NotificationOrder order, SmsNotification smsNotification) = TestdataUtil.GetOrderAndSmsNotification(sendingTimePolicy);
         var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IOrderRepository), typeof(ISmsNotificationRepository) });
 
         OrderRepository orderRepo = (OrderRepository)serviceList.First(i => i.GetType() == typeof(OrderRepository));
