@@ -28,12 +28,12 @@ namespace Altinn.Notifications.Tests.Notifications.TestingValidators
         }
 
         [Fact]
-        public void Should_Fail_Initialisation_With_Invalid_Uri_ConditionEndpoint()
+        public void Should_Fail_Validation_With_Relative_Uri_ConditionEndpoint()
         {
             // Arrange
             var notificationOrder = new NotificationOrderBaseExt
             {
-                ConditionEndpoint = new Uri("/api/endpoint", UriKind.Relative),
+                ConditionEndpoint = new Uri("api/endpoint", UriKind.Relative),
                 RequestedSendTime = DateTime.UtcNow.AddMinutes(1)
             };
 
@@ -43,6 +43,24 @@ namespace Altinn.Notifications.Tests.Notifications.TestingValidators
             // Assert
             result.ShouldHaveValidationErrorFor(x => x.ConditionEndpoint)
                 .WithErrorMessage("ConditionEndpoint must be a valid absolute URI or null.");
+        }
+
+        [Fact]
+        public void Should_Fail_Validation_When_ConditionEndpoint_Has_Wrong_Protocol()
+        {
+            // Arrange
+            var notificationOrder = new NotificationOrderBaseExt
+            {
+                ConditionEndpoint = new Uri("urn:isbn:0-321-76572-0", UriKind.Absolute),
+                RequestedSendTime = DateTime.UtcNow.AddMinutes(1)
+            };
+
+            // Act
+            var result = _validator.TestValidate(notificationOrder);
+            
+            // Assert
+            result.ShouldHaveValidationErrorFor(x => x.ConditionEndpoint)
+                .WithErrorMessage("ConditionEndpoint must use http or https scheme.");
         }
 
         [Fact]

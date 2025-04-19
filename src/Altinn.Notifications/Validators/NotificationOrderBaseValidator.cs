@@ -20,11 +20,26 @@ namespace Altinn.Notifications.Validators
                 .GreaterThanOrEqualTo(DateTime.UtcNow)
                 .WithMessage("RequestedSendTime must be greater than or equal to now.");
 
-            RuleFor(option => option.ConditionEndpoint)
-                .Must(conditionEndpoint => conditionEndpoint == null || Uri.IsWellFormedUriString(conditionEndpoint.ToString(), UriKind.Absolute))
-                .WithMessage("ConditionEndpoint must be a valid absolute URI or null.")
-                .Must(conditionEndpoint => conditionEndpoint == null || new string[] { "https", "http" }.Contains(conditionEndpoint.Scheme.ToLower()))
-                .WithMessage("ConditionEndpoint must use http or https scheme.");
+            When(option => option.ConditionEndpoint != null, () =>
+            {
+                RuleFor(option => option.ConditionEndpoint)
+                    .Must(BeAbsoluteUri!)
+                    .WithMessage("ConditionEndpoint must be a valid absolute URI or null.");
+
+                RuleFor(option => option.ConditionEndpoint)
+                    .Must(conditionEndpoint => conditionEndpoint == null || Uri.IsWellFormedUriString(conditionEndpoint.ToString(), UriKind.Absolute))
+                    .WithMessage("ConditionEndpoint must be a valid absolute URI or null.");
+                
+                RuleFor(option => option.ConditionEndpoint)
+                    .Must(conditionEndpoint => new string[] { "https", "http" }.Contains(conditionEndpoint!.Scheme.ToLower()))
+                    .When(option => option.ConditionEndpoint!.IsAbsoluteUri)
+                    .WithMessage("ConditionEndpoint must use http or https scheme.");
+            });
+        }
+
+        private static bool BeAbsoluteUri(Uri uri)
+        {
+            return uri.IsAbsoluteUri;
         }
     }
 }
