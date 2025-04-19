@@ -173,8 +173,14 @@ public static class RecipientRules
                 .WithMessage("Mobile number can contain only '+' and numeric characters, and it must adhere to the E.164 standard.");
         });
     }
-    
-    private static IRuleBuilderOptions<T, string?> MustBeValidNationalIdentityNumber<T>(this IRuleBuilder<T, string?> ruleBuilder)
+
+    /// <summary>
+    /// Validates that the national identity number is 11 digits long and contains only numeric characters.
+    /// </summary>
+    /// <typeparam name="T">The type of the object being validated.</typeparam>
+    /// <param name="ruleBuilder">The rule builder to which the validation rules will be added.</param>
+    /// <returns>The rule builder options with the added validation rules.</returns>
+    internal static IRuleBuilderOptions<T, string?> MustBeValidNationalIdentityNumber<T>(this IRuleBuilder<T, string?> ruleBuilder)
     {
         return ruleBuilder
         .ChildRules(nationalIdentityNumber =>
@@ -241,5 +247,15 @@ public static class RecipientRules
         Match match = regex.Match(email);
 
         return match.Success;
+    }
+
+    /// <summary>
+    /// Validates that the resource ID starts with "urn:altinn:resource".
+    /// </summary>
+    /// <param name="resourceId">A string representation of a valid resource id</param>
+    /// <returns>true if the resource id is a valid full resource id</returns>
+    internal static bool BeValidResourceId(string resourceId)
+    {
+        return resourceId.StartsWith("urn:altinn:resource");
     }
 }
