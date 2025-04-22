@@ -22,9 +22,14 @@ internal sealed class RecipientEmailValidator : AbstractValidator<RecipientEmail
         When(recipient => recipient != null, () =>
         {
             RuleFor(recipient => recipient!.EmailAddress)
-                .NotNull()
-                .Must(RecipientRules.IsValidEmail)
-                .WithMessage("Invalid email address format.");
+               .NotEmpty()
+               .WithMessage("Email address cannot be empty.")
+               .DependentRules(() => 
+               {
+                   RuleFor(recipient => recipient!.EmailAddress)
+                       .Must(RecipientRules.IsValidEmail)
+                       .WithMessage("Invalid email address format.");
+               });
 
             RuleFor(recipient => recipient!.Settings)
                 .NotNull()
