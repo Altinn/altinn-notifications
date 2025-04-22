@@ -92,6 +92,24 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task GetNewNotificationWithSendingPolicyAnytime()
+    {
+        // Arrange
+        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendersReference: null, sendingTimePolicy: SendingTimePolicy.Anytime);
+        _orderIdsToDelete.Add(order.Id);
+
+        SmsNotificationRepository repo = (SmsNotificationRepository)ServiceUtil
+          .GetServices(new List<Type>() { typeof(ISmsNotificationRepository) })
+          .First(i => i.GetType() == typeof(SmsNotificationRepository));
+
+        // Act
+        List<Sms> smsToBeSent = await repo.GetNewNotifications(SendingTimePolicy.Anytime);
+
+        // Assert
+        Assert.Contains(smsToBeSent, s => s.NotificationId == smsNotification.Id);
+    }
+
+    [Fact]
     public async Task GetRecipients()
     {
         // Arrange
