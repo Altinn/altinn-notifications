@@ -149,7 +149,7 @@ public class NotificationOrderChainRequestValidatorTests
     }
 
     [Fact]
-    public void Fulfilling_eForv_Paragraph8()
+    public void Notification_With_Reminder_Should_Validate_Successfully()
     {
         // Arrange
         var order = new NotificationOrderChainRequestExt
@@ -182,8 +182,8 @@ public class NotificationOrderChainRequestValidatorTests
                     }
                 }
             },
-            Reminders = new List<NotificationReminderExt>
-            {
+            Reminders =
+            [
                 new NotificationReminderExt
                 {
                     ConditionEndpoint = new Uri("https://api.te.no/altinn/te-123-123/?seen=true"),
@@ -213,7 +213,7 @@ public class NotificationOrderChainRequestValidatorTests
                         }
                     }
                 }
-            }
+            ]
         };
 
         // Act
@@ -224,7 +224,7 @@ public class NotificationOrderChainRequestValidatorTests
     }
 
     [Fact]
-    public void EForvaltningsForskriften_Should_Validate_Successfully()
+    public void Notification_With_IgnoreReservation_Should_Validate_Successfully()
     {
         // Arrange
         var order = new NotificationOrderChainRequestExt
@@ -298,7 +298,7 @@ public class NotificationOrderChainRequestValidatorTests
     }
 
     [Fact]
-    public void RequestedSendTimeValidation_Should_Inherit_From_BaseValidator()
+    public void RequestedSendTimeValidation_Should_Include_Validation_From_BaseValidator()
     {
         // Arrange
         var order = new NotificationOrderChainRequestExt
