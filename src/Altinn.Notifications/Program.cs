@@ -12,11 +12,9 @@ using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Health;
 using Altinn.Notifications.Integrations.Extensions;
 using Altinn.Notifications.Middleware;
-using Altinn.Notifications.Models;
 using Altinn.Notifications.Persistence.Extensions;
 using Altinn.Notifications.Swagger;
 using Altinn.Notifications.Telemetry;
-using Altinn.Notifications.Validators;
 
 using AltinnCore.Authentication.JwtCookie;
 
@@ -288,10 +286,7 @@ async Task ConnectToKeyVaultAndSetApplicationInsights(ConfigurationManager confi
 void AddInputModelValidators(IServiceCollection services)
 {
     ValidatorOptions.Global.LanguageManager.Enabled = false;
-    services.AddSingleton<IValidator<EmailNotificationOrderRequestExt>, EmailNotificationOrderRequestValidator>();
-    services.AddSingleton<IValidator<SmsNotificationOrderRequestExt>, SmsNotificationOrderRequestValidator>();
-    services.AddSingleton<IValidator<NotificationOrderRequestExt>, NotificationOrderRequestValidator>();
-    services.AddSingleton<IValidator<NotificationOrderChainRequestExt>, NotificationOrderWithRemindersRequestValidator>();
+    services.AddValidatorsFromAssemblyWithDuplicateCheck(typeof(Program).Assembly);
 }
 
 void IncludeXmlComments(SwaggerGenOptions swaggerGenOptions)

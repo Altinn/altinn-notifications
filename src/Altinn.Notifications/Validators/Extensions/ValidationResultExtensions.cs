@@ -1,8 +1,7 @@
 ﻿using FluentValidation.Results;
-
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 
-namespace Altinn.Notifications.Validators;
+namespace Altinn.Notifications.Validators.Extensions;
 
 /// <summary>
 /// Extension class for <see cref="ValidationResult"/>

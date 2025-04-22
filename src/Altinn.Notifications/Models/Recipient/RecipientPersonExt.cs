@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
-namespace Altinn.Notifications.Models;
+namespace Altinn.Notifications.Models.Recipient;
 
 /// <summary>
 /// Defines a model for sending notifications to a person identified by their national identity number.
@@ -11,7 +11,7 @@ namespace Altinn.Notifications.Models;
 /// This class enables notifications to be sent to citizens through the Common Contact Register (KRR) integration,
 /// supporting both email and SMS delivery channels based on the recipient's registered contact information.
 /// </remarks>
-public class RecipientPersonExt
+public class RecipientPersonExt : RecipientBaseExt
 {
     /// <summary>
     /// Gets or sets the national identity number of the recipient.
@@ -46,7 +46,7 @@ public class RecipientPersonExt
     [Required]
     [JsonPropertyName("channelSchema")]
     [DefaultValue(NotificationChannelExt.EmailPreferred)]
-    public required NotificationChannelExt ChannelSchema { get; set; } = NotificationChannelExt.EmailPreferred;
+    public override required NotificationChannelExt ChannelSchema { get; set; } = NotificationChannelExt.EmailPreferred;
 
     /// <summary>
     /// Gets or sets a value indicating whether to bypass the recipient's reservation against electronic communication.
@@ -58,26 +58,4 @@ public class RecipientPersonExt
     /// </remarks>
     [JsonPropertyName("ignoreReservation")]
     public bool IgnoreReservation { get; set; } = false;
-
-    /// <summary>
-    /// Gets or sets the email-specific configuration, used when the channel scheme includes email.
-    /// </summary>
-    /// <remarks>
-    /// Required when <see cref="ChannelSchema"/> is set to <see cref="NotificationChannelExt.Email"/>, 
-    /// <see cref="NotificationChannelExt.EmailPreferred"/>, or <see cref="NotificationChannelExt.EmailAndSms"/>.
-    /// Contains email content, subject, sender information, and delivery preferences.
-    /// </remarks>
-    [JsonPropertyName("emailSettings")]
-    public EmailSendingOptionsExt? EmailSettings { get; set; }
-
-    /// <summary>
-    /// Gets or sets the SMS-specific configuration, used when the channel scheme includes SMS.
-    /// </summary>
-    /// <remarks>
-    /// Required when <see cref="ChannelSchema"/> is set to <see cref="NotificationChannelExt.Sms"/>, 
-    /// <see cref="NotificationChannelExt.SmsPreferred"/>, or <see cref="NotificationChannelExt.EmailAndSms"/>.
-    /// Contains SMS content, sender information, and delivery preferences.
-    /// </remarks>
-    [JsonPropertyName("smsSettings")]
-    public SmsSendingOptionsExt? SmsSettings { get; set; }
 }
