@@ -46,6 +46,5 @@ public class RecipientOrganizationExt : RecipientBaseExt
     /// </remarks>
     [Required]
     [JsonPropertyName("channelSchema")]
-    [DefaultValue(NotificationChannelExt.SmsPreferred)]
-    public override required NotificationChannelExt ChannelSchema { get; set; } = NotificationChannelExt.SmsPreferred;
+    public override required NotificationChannelExt ChannelSchema { get; set; }
 }
