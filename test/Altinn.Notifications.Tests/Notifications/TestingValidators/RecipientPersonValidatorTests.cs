@@ -1,4 +1,7 @@
-﻿using Altinn.Notifications.Models;
+﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models.Recipients;
+using Altinn.Notifications.Models;
+using Altinn.Notifications.Models.Email;
 using Altinn.Notifications.Models.Recipient;
 using Altinn.Notifications.Models.Sms;
 using Altinn.Notifications.Validators.Recipient;
@@ -26,7 +29,7 @@ public class RecipientPersonValidatorTests
 
         // act
         var actual = _recipientPersonValidator.TestValidate(recipientPerson);
-        
+
         // assert
         actual.ShouldHaveValidationErrorFor(recipient => recipient.NationalIdentityNumber).WithErrorMessage(errorMessage);
     }
@@ -108,7 +111,7 @@ public class RecipientPersonValidatorTests
 
         // act
         var actual = _recipientPersonValidator.TestValidate(recipientPerson);
-        
+
         // assert
         actual.ShouldNotHaveValidationErrorFor(recipient => recipient.ResourceId);
     }
@@ -141,11 +144,58 @@ public class RecipientPersonValidatorTests
             ResourceId = "urn:altinn:resource:12345678910",
             ChannelSchema = NotificationChannelExt.Sms,
         };
-        
+
         // act
         var actual = _recipientPersonValidator.TestValidate(recipientPerson);
-        
+
         // assert
         actual.ShouldNotHaveValidationErrorFor(recipient => recipient.ResourceId);
+    }
+
+    [Fact]
+    public void Should_Have_Validation_Errors_When_Missing_Settings_Using_EmailAndSms_Scheme()
+    {
+        // arrange
+        var recipientPerson = new RecipientPersonExt
+        {
+            NationalIdentityNumber = "12345678910",
+            ChannelSchema = NotificationChannelExt.EmailAndSms
+        };
+
+        // act
+        var actual = _recipientPersonValidator.TestValidate(recipientPerson);
+
+        // assert
+        actual.ShouldHaveValidationErrorFor(recipient => recipient.SmsSettings).WithErrorMessage("SmsSettings must be set when ChannelSchema is EmailAndSms");
+        actual.ShouldHaveValidationErrorFor(recipient => recipient.EmailSettings).WithErrorMessage("EmailSettings must be set when ChannelSchema is EmailAndSms");
+    }
+
+    [Fact]
+    public void Should_NOT_Have_Validation_Errors_When_Both_Settings_Present_Using_EmailAndSms_Scheme()
+    {
+        // arrange
+        var recipientPerson = new RecipientPersonExt
+        {
+            NationalIdentityNumber = "12345678910",
+            ChannelSchema = NotificationChannelExt.EmailAndSms,
+            EmailSettings = new EmailSendingOptionsExt
+            {
+                Subject = "Test subject",
+                Body = "Test email body",
+                SendingTimePolicy = SendingTimePolicyExt.Anytime
+            },
+            SmsSettings = new SmsSendingOptionsExt
+            {
+                Body = "Test SMS message",
+                SendingTimePolicy = SendingTimePolicyExt.Daytime
+            }
+        };
+
+        // act
+        var actual = _recipientPersonValidator.TestValidate(recipientPerson);
+
+        // assert
+        actual.ShouldNotHaveValidationErrorFor(recipient => recipient.SmsSettings);
+        actual.ShouldNotHaveValidationErrorFor(recipient => recipient.EmailSettings);
     }
 }
