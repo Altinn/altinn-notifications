@@ -18,11 +18,30 @@ public class RecipientBaseValidator : AbstractValidator<RecipientBaseExt?>
     /// </summary>
     public RecipientBaseValidator()
     {
-        RuleFor(recipient => recipient!.ChannelSchema)
-      .IsInEnum()
-      .WithMessage("Invalid channel scheme value.");
+        ValidateChannelSchema();
+        ValidateChannelSpecificSettings();
+        ValidateSettingsContent();
+    }
 
-        When(options => options!.ChannelSchema.IsPreferredSchema(), () =>
+    private void ValidateChannelSchema()
+    {
+        RuleFor(recipient => recipient!.ChannelSchema)
+            .IsInEnum()
+            .WithMessage("Invalid channel scheme value.");
+    }
+
+    private void ValidateChannelSpecificSettings()
+    {
+        ConfigureFallbackChannelValidation();
+
+        ConfigureDualChannelValidation();
+
+        ConfigureSingleChannelValidation();
+    }
+
+    private void ConfigureFallbackChannelValidation()
+    {
+        When(options => options!.ChannelSchema.IsFallbackChannelSchema(), () =>
         {
             RuleFor(options => options!.EmailSettings)
                 .NotNull()
@@ -32,7 +51,25 @@ public class RecipientBaseValidator : AbstractValidator<RecipientBaseExt?>
                 .NotNull()
                 .WithMessage("SmsSettings must be set when ChannelSchema is SmsPreferred or EmailPreferred");
         });
+    }
 
+    private void ConfigureDualChannelValidation()
+    {
+        When(options => options!.ChannelSchema.IsDualChannelSchema(), () =>
+        {
+            RuleFor(options => options!.EmailSettings)
+                .NotNull()
+                .WithMessage("EmailSettings must be set when ChannelSchema is EmailAndSms");
+
+            RuleFor(options => options!.SmsSettings)
+                .NotNull()
+                .WithMessage("SmsSettings must be set when ChannelSchema is EmailAndSms");
+        });
+    }
+
+    private void ConfigureSingleChannelValidation()
+    {
+        // SMS channel validation
         When(options => options!.ChannelSchema == NotificationChannelExt.Sms, () =>
         {
             RuleFor(options => options!.SmsSettings)
@@ -40,13 +77,17 @@ public class RecipientBaseValidator : AbstractValidator<RecipientBaseExt?>
                 .WithMessage("SmsSettings must be set when ChannelSchema is Sms");
         });
 
+        // Email channel validation
         When(options => options!.ChannelSchema == NotificationChannelExt.Email, () =>
         {
             RuleFor(options => options!.EmailSettings)
                 .NotNull()
                 .WithMessage("EmailSettings must be set when ChannelSchema is Email");
         });
+    }
 
+    private void ValidateSettingsContent()
+    {
         When(options => options!.EmailSettings != null, () =>
         {
             RuleFor(options => options!.EmailSettings)
