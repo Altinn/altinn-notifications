@@ -167,8 +167,6 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         Assert.NotEmpty(deliveryManifest.Status);
         Assert.Null(deliveryManifest.SequenceNumber);
         Assert.Equal(orderId, deliveryManifest.ShipmentId);
-        Assert.NotNull(deliveryManifest.StatusDescription);
-        Assert.NotEmpty(deliveryManifest.StatusDescription);
         Assert.Equal("Notification", deliveryManifest.Type);
         Assert.True(deliveryManifest.LastUpdate > DateTime.MinValue);
         Assert.Equal(senderReference, deliveryManifest.SendersReference);
@@ -258,8 +256,6 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         Assert.NotEmpty(deliveryManifest.Status);
         Assert.Null(deliveryManifest.SequenceNumber);
         Assert.Equal(orderId, deliveryManifest.ShipmentId);
-        Assert.NotNull(deliveryManifest.StatusDescription);
-        Assert.NotEmpty(deliveryManifest.StatusDescription);
         Assert.Equal("Notification", deliveryManifest.Type);
         Assert.True(deliveryManifest.LastUpdate > DateTime.MinValue);
         Assert.Equal(senderReference, deliveryManifest.SendersReference);
@@ -272,7 +268,6 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
 
         var smsDelivery = smsDeliveries[0];
         Assert.NotEmpty(smsDelivery.Status);
-        Assert.NotNull(smsDelivery.StatusDescription);
         Assert.Equal(phoneNumber, smsDelivery.Destination);
         Assert.True(smsDelivery.LastUpdate > DateTime.MinValue);
 
@@ -355,8 +350,6 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         Assert.NotEmpty(deliveryManifest.Status);
         Assert.Null(deliveryManifest.SequenceNumber);
         Assert.Equal(orderId, deliveryManifest.ShipmentId);
-        Assert.NotNull(deliveryManifest.StatusDescription);
-        Assert.NotEmpty(deliveryManifest.StatusDescription);
         Assert.Equal("Notification", deliveryManifest.Type);
         Assert.True(deliveryManifest.LastUpdate > DateTime.MinValue);
         Assert.Equal(senderReference, deliveryManifest.SendersReference);
@@ -370,7 +363,6 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         var emailDelivery = emailDeliveries[0];
 
         Assert.NotEmpty(emailDelivery.Status);
-        Assert.NotNull(emailDelivery.StatusDescription);
         Assert.True(emailDelivery.LastUpdate > DateTime.MinValue);
         Assert.Equal(recipientEmailAddress, emailDelivery.Destination);
 
@@ -480,8 +472,6 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         Assert.NotEmpty(deliveryManifest.Status);
         Assert.Null(deliveryManifest.SequenceNumber);
         Assert.Equal(orderId, deliveryManifest.ShipmentId);
-        Assert.NotNull(deliveryManifest.StatusDescription);
-        Assert.NotEmpty(deliveryManifest.StatusDescription);
         Assert.Equal("Notification", deliveryManifest.Type);
         Assert.True(deliveryManifest.LastUpdate > DateTime.MinValue);
         Assert.Equal(senderReference, deliveryManifest.SendersReference);
@@ -495,7 +485,6 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
 
         var emailDelivery = emailDeliveries[0];
         Assert.NotEmpty(emailDelivery.Status);
-        Assert.NotNull(emailDelivery.StatusDescription);
         Assert.True(emailDelivery.LastUpdate > DateTime.MinValue);
         Assert.Equal(recipientEmailAddress, emailDelivery.Destination);
 
@@ -505,8 +494,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
 
         var smsDelivery = smsDeliveries[0];
         Assert.NotEmpty(smsDelivery.Status);
-        Assert.NotNull(smsDelivery.StatusDescription);
-        Assert.Equal(recipientPhoneNumber, smsDelivery.Destination);
         Assert.True(smsDelivery.LastUpdate > DateTime.MinValue);
+        Assert.Equal(recipientPhoneNumber, smsDelivery.Destination);
     }
 }

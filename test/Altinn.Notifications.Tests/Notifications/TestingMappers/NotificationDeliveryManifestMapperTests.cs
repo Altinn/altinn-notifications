@@ -21,16 +21,14 @@ public class NotificationDeliveryManifestMapperTests
         {
             Status = "Delivered",
             Destination = "+4799999999",
-            LastUpdate = DateTime.UtcNow,
-            StatusDescription = "Message delivered to recipient"
+            LastUpdate = DateTime.UtcNow
         };
 
         var emailDeliveryManifest = new EmailDeliveryManifest
         {
             Status = "New",
             Destination = "recipient@example.com",
-            LastUpdate = DateTime.UtcNow.AddDays(10),
-            StatusDescription = "Email will be delivered to recipient on time"
+            LastUpdate = DateTime.UtcNow.AddDays(10)
         };
 
         var recipients = ImmutableList.Create<IDeliveryManifest>(smsDeliveryManifest, emailDeliveryManifest);
@@ -42,8 +40,7 @@ public class NotificationDeliveryManifestMapperTests
             Recipients = recipients,
             ShipmentId = Guid.NewGuid(),
             LastUpdate = DateTime.UtcNow,
-            SendersReference = "74DDBD31-7C43-4AF0-8A8A-803DED6CCC6D",
-            StatusDescription = "Notification processing has started"
+            SendersReference = "74DDBD31-7C43-4AF0-8A8A-803DED6CCC6D"
         };
 
         // Act
@@ -57,7 +54,6 @@ public class NotificationDeliveryManifestMapperTests
         Assert.Equal(notificationDeliveryManifest.ShipmentId, result.ShipmentId);
         Assert.Equal(notificationDeliveryManifest.SequenceNumber, result.SequenceNumber);
         Assert.Equal(notificationDeliveryManifest.SendersReference, result.SendersReference);
-        Assert.Equal(notificationDeliveryManifest.StatusDescription, result.StatusDescription);
 
         Assert.Equal(2, result.Recipients.Count);
         Assert.IsType<SmsDeliveryManifestExt>(result.Recipients[0]);
@@ -69,7 +65,6 @@ public class NotificationDeliveryManifestMapperTests
         Assert.Equal(smsDeliveryManifest.Status, smsResult.Status);
         Assert.Equal(smsDeliveryManifest.LastUpdate, smsResult.LastUpdate);
         Assert.Equal(smsDeliveryManifest.Destination, smsResult.Destination);
-        Assert.Equal(smsDeliveryManifest.StatusDescription, smsResult.StatusDescription);
 
         // Verify second recipient (Email)
         var emailResult = result.Recipients[1] as EmailDeliveryManifestExt;
@@ -77,7 +72,6 @@ public class NotificationDeliveryManifestMapperTests
         Assert.Equal(emailDeliveryManifest.Status, emailResult.Status);
         Assert.Equal(emailDeliveryManifest.LastUpdate, emailResult.LastUpdate);
         Assert.Equal(emailDeliveryManifest.Destination, emailResult.Destination);
-        Assert.Equal(emailDeliveryManifest.StatusDescription, emailResult.StatusDescription);
     }
 
     [Fact]
@@ -91,7 +85,6 @@ public class NotificationDeliveryManifestMapperTests
             Type = "Notification",
             ShipmentId = Guid.NewGuid(),
             LastUpdate = DateTime.UtcNow,
-            StatusDescription = "Successfully delivered",
             SendersReference = "F883C29A-CA66-4830-B4A1-CB23B11F268D",
         };
 
@@ -107,7 +100,6 @@ public class NotificationDeliveryManifestMapperTests
         Assert.Equal(shipmentDeliveryManifest.ShipmentId, result.ShipmentId);
         Assert.Equal(shipmentDeliveryManifest.SequenceNumber, result.SequenceNumber);
         Assert.Equal(shipmentDeliveryManifest.SendersReference, result.SendersReference);
-        Assert.Equal(shipmentDeliveryManifest.StatusDescription, result.StatusDescription);
     }
 
     [Fact]
@@ -121,7 +113,6 @@ public class NotificationDeliveryManifestMapperTests
             SendersReference = null,
             ShipmentId = Guid.NewGuid(),
             LastUpdate = DateTime.UtcNow,
-            StatusDescription = "In progress",
             Recipients = ImmutableList<IDeliveryManifest>.Empty
         };
 
@@ -136,36 +127,6 @@ public class NotificationDeliveryManifestMapperTests
         Assert.Equal(shipmentDeliveryManifest.LastUpdate, result.LastUpdate);
         Assert.Equal(shipmentDeliveryManifest.ShipmentId, result.ShipmentId);
         Assert.Equal(shipmentDeliveryManifest.SequenceNumber, result.SequenceNumber);
-        Assert.Equal(shipmentDeliveryManifest.StatusDescription, result.StatusDescription);
-    }
-
-    [Fact]
-    public void MapToNotificationDeliveryManifestExt_WithNullStatusDescription_MapsCorrectly()
-    {
-        // Arrange
-        var shipmentDeliveryManifest = new NotificationDeliveryManifest
-        {
-            Status = "Processing",
-            Type = "Notification",
-            StatusDescription = null,
-            SendersReference = "REF123",
-            ShipmentId = Guid.NewGuid(),
-            LastUpdate = DateTime.UtcNow,
-            Recipients = ImmutableList<IDeliveryManifest>.Empty
-        };
-
-        // Act
-        var result = shipmentDeliveryManifest.MapToNotificationDeliveryManifestExt();
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Null(result.StatusDescription);
-        Assert.Equal(shipmentDeliveryManifest.Type, result.Type);
-        Assert.Equal(shipmentDeliveryManifest.Status, result.Status);
-        Assert.Equal(shipmentDeliveryManifest.LastUpdate, result.LastUpdate);
-        Assert.Equal(shipmentDeliveryManifest.ShipmentId, result.ShipmentId);
-        Assert.Equal(shipmentDeliveryManifest.SequenceNumber, result.SequenceNumber);
-        Assert.Equal(shipmentDeliveryManifest.SendersReference, result.SendersReference);
     }
 
     [Fact]
@@ -186,7 +147,6 @@ public class NotificationDeliveryManifestMapperTests
             Recipients = recipients,
             ShipmentId = Guid.NewGuid(),
             LastUpdate = DateTime.UtcNow,
-            StatusDescription = "Processing",
             SendersReference = "TEST-UNSUPPORTED"
         };
 

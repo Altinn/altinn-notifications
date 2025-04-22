@@ -38,11 +38,6 @@ public record NotificationDeliveryManifestExt : INotificationDeliveryManifestExt
     public required string Status { get; init; }
 
     /// <inheritdoc />
-    [JsonPropertyName("description")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? StatusDescription { get; init; }
-
-    /// <inheritdoc />
     [JsonPropertyName("lastUpdate")]
     public required DateTime LastUpdate { get; init; }
 

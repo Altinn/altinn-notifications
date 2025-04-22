@@ -11,8 +11,7 @@ namespace Altinn.Notifications.Models.Delivery;
 /// foundation for tracking the status and destination of notifications across various delivery channels.
 ///
 /// It combines destination address information with status tracking, ensuring a consistent implementation pattern
-/// for all delivery types. The class centralizes key properties, including the destination address, the current status,
-/// a detailed status description, and the timestamp of the last update.
+/// for all delivery types. The class centralizes key properties, including the destination address, the current status, and the timestamp of the last update.
 ///
 /// Specialized implementations can extend this class to support channel-specific tracking, while inheriting its core 
 /// functionality for status and destination management.
@@ -26,11 +25,6 @@ public abstract record DeliveryManifestExt : IDeliveryManifestExt
     /// <inheritdoc />
     [JsonPropertyName("status")]
     public required string Status { get; init; }
-
-    /// <inheritdoc />
-    [JsonPropertyName("description")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? StatusDescription { get; init; }
 
     /// <inheritdoc />
     [JsonPropertyName("lastUpdate")]

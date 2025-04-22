@@ -82,19 +82,16 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         Assert.Equal(_shipmentId, manifest.ShipmentId);
         Assert.Equal("COMPLETED-ORDER-REF-F10D5B2DCDFD", manifest.SendersReference);
         Assert.True((DateTime.UtcNow.AddDays(-7) - manifest.LastUpdate).TotalSeconds < 5);
-        Assert.Equal("The notification order has been handled successfully", manifest.StatusDescription);
 
         Assert.Equal(2, manifest.Recipients.Count);
 
         var smsRecipient = Assert.IsType<IDeliveryManifestExt>(manifest.Recipients[0], exactMatch: false);
         Assert.Equal("Delivered", smsRecipient.Status);
         Assert.Equal("+4799999999", smsRecipient.Destination);
-        Assert.Equal("Message delivered to recipient", smsRecipient.StatusDescription);
 
         var emailRecipient = Assert.IsType<IDeliveryManifestExt>(manifest.Recipients[1], exactMatch: false);
         Assert.Equal("Sent", emailRecipient.Status);
         Assert.Equal("test@example.com", emailRecipient.Destination);
-        Assert.Equal("Email delivered to recipient", emailRecipient.StatusDescription);
 
         _serviceMock.Verify(
             s => s.GetDeliveryManifestAsync(It.Is<Guid>(e => e.Equals(_shipmentId)), It.Is<string>(e => e.Equals("ttd")), It.IsAny<CancellationToken>()),
@@ -201,19 +198,16 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         Assert.Equal(_shipmentId, manifest.ShipmentId);
         Assert.Equal("COMPLETED-ORDER-REF-F10D5B2DCDFD", manifest.SendersReference);
         Assert.True((DateTime.UtcNow.AddDays(-7) - manifest.LastUpdate).TotalSeconds < 5);
-        Assert.Equal("The notification order has been handled successfully", manifest.StatusDescription);
 
         Assert.Equal(2, manifest.Recipients.Count);
 
         var smsRecipient = Assert.IsType<IDeliveryManifestExt>(manifest.Recipients[0], exactMatch: false);
         Assert.Equal("Delivered", smsRecipient.Status);
         Assert.Equal("+4799999999", smsRecipient.Destination);
-        Assert.Equal("Message delivered to recipient", smsRecipient.StatusDescription);
 
         var emailRecipient = Assert.IsType<IDeliveryManifestExt>(manifest.Recipients[1], exactMatch: false);
         Assert.Equal("Sent", emailRecipient.Status);
         Assert.Equal("test@example.com", emailRecipient.Destination);
-        Assert.Equal("Email delivered to recipient", emailRecipient.StatusDescription);
 
         _serviceMock.Verify(
             s => s.GetDeliveryManifestAsync(It.Is<Guid>(e => e.Equals(_shipmentId)), It.Is<string>(e => e.Equals("ttd")), It.IsAny<CancellationToken>()),
@@ -288,19 +282,16 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         Assert.Equal(_shipmentId, manifest.ShipmentId);
         Assert.Equal("COMPLETED-ORDER-REF-F10D5B2DCDFD", manifest.SendersReference);
         Assert.True((DateTime.UtcNow.AddDays(-7) - manifest.LastUpdate).TotalSeconds < 5);
-        Assert.Equal("The notification order has been handled successfully", manifest.StatusDescription);
 
         Assert.Equal(2, manifest.Recipients.Count);
 
         var smsRecipient = Assert.IsType<IDeliveryManifestExt>(manifest.Recipients[0], exactMatch: false);
         Assert.Equal("Delivered", smsRecipient.Status);
         Assert.Equal("+4799999999", smsRecipient.Destination);
-        Assert.Equal("Message delivered to recipient", smsRecipient.StatusDescription);
 
         var emailRecipient = Assert.IsType<IDeliveryManifestExt>(manifest.Recipients[1], exactMatch: false);
         Assert.Equal("Sent", emailRecipient.Status);
         Assert.Equal("test@example.com", emailRecipient.Destination);
-        Assert.Equal("Email delivered to recipient", emailRecipient.StatusDescription);
 
         _serviceMock.Verify(
             s => s.GetDeliveryManifestAsync(It.Is<Guid>(e => e.Equals(_shipmentId)), It.Is<string>(e => e.Equals("ttd")), It.IsAny<CancellationToken>()),
@@ -386,8 +377,8 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
     {
         var recipients = new List<IDeliveryManifest>
         {
-            CreateSmsDeliveryManifest("+4799999999", "Delivered", "Message delivered to recipient", DateTime.Now.AddDays(-7)),
-            CreateEmailDeliveryManifest("test@example.com", "Sent", "Email delivered to recipient", DateTime.Now.AddDays(-20))
+            CreateSmsDeliveryManifest("+4799999999", "Delivered", DateTime.Now.AddDays(-7)),
+            CreateEmailDeliveryManifest("test@example.com", "Sent", DateTime.Now.AddDays(-20))
         };
 
         return new NotificationDeliveryManifest
@@ -398,30 +389,27 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
             ShipmentId = shipmentId,
             LastUpdate = DateTime.UtcNow.AddDays(-7),
             Recipients = recipients.ToImmutableList(),
-            SendersReference = "COMPLETED-ORDER-REF-F10D5B2DCDFD",
-            StatusDescription = "The notification order has been handled successfully"
+            SendersReference = "COMPLETED-ORDER-REF-F10D5B2DCDFD"
         };
     }
 
-    private static SmsDeliveryManifest CreateSmsDeliveryManifest(string phoneNumber, string status, string? statusDescription, DateTime lastUpdate)
+    private static SmsDeliveryManifest CreateSmsDeliveryManifest(string phoneNumber, string status, DateTime lastUpdate)
     {
         return new SmsDeliveryManifest()
         {
             Status = status,
             LastUpdate = lastUpdate,
-            Destination = phoneNumber,
-            StatusDescription = statusDescription
+            Destination = phoneNumber
         };
     }
 
-    private static EmailDeliveryManifest CreateEmailDeliveryManifest(string emailAddress, string status, string? statusDescription, DateTime lastUpdate)
+    private static EmailDeliveryManifest CreateEmailDeliveryManifest(string emailAddress, string status, DateTime lastUpdate)
     {
         return new EmailDeliveryManifest()
         {
             Status = status,
             LastUpdate = lastUpdate,
-            Destination = emailAddress,
-            StatusDescription = statusDescription
+            Destination = emailAddress
         };
     }
 }

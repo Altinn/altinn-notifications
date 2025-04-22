@@ -66,9 +66,9 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
     {
         var deliverableEntities = new List<IDeliveryManifest>();
 
-        var reference = await ExtractTrackingSummaryAsync(reader, cancellationToken);
+        var reference = await ExtractSenderReferenceAsync(reader, cancellationToken);
 
-        var (status, lastUpdate) = await ExtractStatusSummaryAsync(reader, cancellationToken);
+        var (status, lastUpdate) = await ExtractStatusAsync(reader, cancellationToken);
 
         while (await reader.ReadAsync(cancellationToken))
         {
@@ -82,21 +82,8 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
             LastUpdate = lastUpdate,
             ShipmentId = alternateId,
             SendersReference = reference,
-            StatusDescription = ParseStatus(status),
             Recipients = deliverableEntities.ToImmutableList()
         };
-    }
-
-    /// <summary>
-    /// Parses a status and returns a human-readable explanation.
-    /// </summary>
-    /// <param name="status">The status value to parse.</param>
-    /// <returns>
-    /// A human-readable string that provides a detailed explanation of the status.
-    /// </returns>
-    private static string ParseStatus(string status)
-    {
-        return $"A human-readable explanation of the current status: {status}.";
     }
 
     /// <summary>
@@ -107,7 +94,7 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
     /// <returns>
     /// The sender's reference as a string, or <see langword="null"/> if no reference is present.
     /// </returns>
-    private static async Task<string?> ExtractTrackingSummaryAsync(NpgsqlDataReader reader, CancellationToken cancellationToken)
+    private static async Task<string?> ExtractSenderReferenceAsync(NpgsqlDataReader reader, CancellationToken cancellationToken)
     {
         var referenceOrdinal = reader.GetOrdinal(_referenceColumnName);
         return await reader.IsDBNullAsync(referenceOrdinal, cancellationToken) ? null : reader.GetString(referenceOrdinal);
@@ -128,7 +115,7 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
     ///   <item><description>The timestamp is null</description></item>
     /// </list>
     /// </exception>
-    private static async Task<(string Status, DateTime LastUpdate)> ExtractStatusSummaryAsync(NpgsqlDataReader reader, CancellationToken cancellationToken)
+    private static async Task<(string Status, DateTime LastUpdate)> ExtractStatusAsync(NpgsqlDataReader reader, CancellationToken cancellationToken)
     {
         var statusOrdinal = reader.GetOrdinal(_statusColumnName);
         var isStatusNull = await reader.IsDBNullAsync(statusOrdinal, cancellationToken);
@@ -148,7 +135,7 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
     }
 
     /// <summary>
-    /// Creates a delivery manifest entity from the current database row and adds it to the collection if conditions are met.
+    /// Creates a delivery manifest entity from the current database row and adds it to the collection.
     /// </summary>
     /// <param name="reader">
     /// An <see cref="NpgsqlDataReader"/> positioned at a row containing recipient delivery data.
@@ -178,7 +165,6 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
         }
 
         var status = reader.GetString(statusOrdinal);
-        var statusDescription = ParseStatus(status);
 
         var lastUpdate = reader.GetDateTime(lastUpdateOrdinal);
         var destination = reader.GetString(destinationOrdinal);
@@ -188,15 +174,13 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
             {
                 Status = status,
                 LastUpdate = lastUpdate,
-                Destination = destination,
-                StatusDescription = statusDescription
+                Destination = destination
             }
             : new EmailDeliveryManifest
             {
                 Status = status,
                 LastUpdate = lastUpdate,
-                Destination = destination,
-                StatusDescription = statusDescription
+                Destination = destination
             };
 
         deliveryManifestEntities.Add(deliverableEntity);

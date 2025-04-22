@@ -27,7 +27,6 @@ public static class NotificationDeliveryManifestMapper
             LastUpdate = manifest.LastUpdate,
             ShipmentId = manifest.ShipmentId,
             SendersReference = manifest.SendersReference,
-            StatusDescription = manifest.StatusDescription,
             Recipients = manifest.Recipients.MapToDeliveryManifestExtObjects()
         };
     }
@@ -69,8 +68,7 @@ public static class NotificationDeliveryManifestMapper
         {
             Status = smsDeliveryManifest.Status,
             LastUpdate = smsDeliveryManifest.LastUpdate,
-            Destination = smsDeliveryManifest.Destination,
-            StatusDescription = smsDeliveryManifest.StatusDescription
+            Destination = smsDeliveryManifest.Destination
         };
     }
 
@@ -88,8 +86,7 @@ public static class NotificationDeliveryManifestMapper
         {
             Status = emailDeliveryManifest.Status,
             LastUpdate = emailDeliveryManifest.LastUpdate,
-            Destination = emailDeliveryManifest.Destination,
-            StatusDescription = emailDeliveryManifest.StatusDescription
+            Destination = emailDeliveryManifest.Destination
         };
     }
 

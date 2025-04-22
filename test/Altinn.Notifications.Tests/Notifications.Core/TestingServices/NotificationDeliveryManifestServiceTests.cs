@@ -37,16 +37,14 @@ public class NotificationDeliveryManifestServiceTests
         {
             Status = "Delivered",
             Destination = "+4799999999",
-            LastUpdate = DateTime.UtcNow.AddDays(-10),
-            StatusDescription = "SMS was delivered successfully."
+            LastUpdate = DateTime.UtcNow.AddDays(-10)
         };
 
         var emailDeliveryManifest = new EmailDeliveryManifest
         {
             Status = "Delivered",
             Destination = "recipient@example.com",
-            LastUpdate = DateTime.UtcNow.AddDays(-5),
-            StatusDescription = "Email was delivered successfully."
+            LastUpdate = DateTime.UtcNow.AddDays(-5)
         };
 
         var expectedManifest = new NotificationDeliveryManifest
@@ -55,7 +53,6 @@ public class NotificationDeliveryManifestServiceTests
             Type = "Notification",
             ShipmentId = orderAlternateId,
             LastUpdate = DateTime.UtcNow.AddDays(-5),
-            StatusDescription = "The notification order was fully processed",
             SendersReference = "COMPLETED-NOTIFICATION-ORDER-REF-FCEE4CF15BE1",
             Recipients = ImmutableList.Create<IDeliveryManifest>(smsDeliveryManifest, emailDeliveryManifest)
         };
@@ -82,7 +79,6 @@ public class NotificationDeliveryManifestServiceTests
                 Assert.Null(success.SequenceNumber);
                 Assert.Equal("Completed", success.Status);
                 Assert.Equal("Notification", success.Type);
-                Assert.Equal("The notification order was fully processed", success.StatusDescription);
                 Assert.Equal("COMPLETED-NOTIFICATION-ORDER-REF-FCEE4CF15BE1", success.SendersReference);
 
                 Assert.Equal(2, success.Recipients.Count);
@@ -91,13 +87,11 @@ public class NotificationDeliveryManifestServiceTests
                 Assert.NotNull(smsRecipient);
                 Assert.Equal("Delivered", smsRecipient.Status);
                 Assert.Equal("+4799999999", smsRecipient.Destination);
-                Assert.Equal("SMS was delivered successfully.", smsRecipient.StatusDescription);
 
                 var emailRecipient = success.Recipients[1] as EmailDeliveryManifest;
                 Assert.NotNull(emailRecipient);
                 Assert.Equal("Delivered", emailRecipient.Status);
                 Assert.Equal("recipient@example.com", emailRecipient.Destination);
-                Assert.Equal("Email was delivered successfully.", emailRecipient.StatusDescription);
 
                 return true;
             },
@@ -151,16 +145,14 @@ public class NotificationDeliveryManifestServiceTests
         {
             Status = "Delivered",
             Destination = "+4799999999",
-            LastUpdate = DateTime.UtcNow.AddDays(-10),
-            StatusDescription = "SMS was delivered successfully."
+            LastUpdate = DateTime.UtcNow.AddDays(-10)
         };
 
         var emailDeliveryManifest = new EmailDeliveryManifest
         {
             Status = "Delivered",
             Destination = "recipient@example.com",
-            LastUpdate = DateTime.UtcNow.AddDays(-5),
-            StatusDescription = "Email was delivered successfully."
+            LastUpdate = DateTime.UtcNow.AddDays(-5)
         };
 
         var expectedManifest = new NotificationDeliveryManifest
@@ -169,7 +161,6 @@ public class NotificationDeliveryManifestServiceTests
             Type = "Notification",
             ShipmentId = orderAlternateId,
             LastUpdate = DateTime.UtcNow.AddDays(-5),
-            StatusDescription = "The notification order was fully processed",
             SendersReference = "COMPLETED-NOTIFICATION-ORDER-REF-FCEE4CF15BE1",
             Recipients = ImmutableList.Create<IDeliveryManifest>(smsDeliveryManifest, emailDeliveryManifest)
         };
