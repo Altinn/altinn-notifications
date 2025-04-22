@@ -1,5 +1,7 @@
-﻿using Altinn.Notifications.Models;
+﻿using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Email;
+using Altinn.Notifications.Models.Recipient;
 using Altinn.Notifications.Models.Sms;
 using Altinn.Notifications.Validators;
 
@@ -104,5 +106,37 @@ public class NotificationRecipientValidatorTests
 
         // Assert
         actual.ShouldHaveValidationErrorFor(recipient => recipient).WithErrorMessage("Must have exactly one recipient.");
+    }
+
+    [Fact]
+    public void Should_Have_No_Validation_Errors_When_Using_EmailAndSms_Channel()
+    {
+        // Arrange
+        var recipient = new NotificationRecipientExt
+        {
+            RecipientPerson = new RecipientPersonExt
+            {
+                NationalIdentityNumber = "12345678910",
+                ChannelSchema = NotificationChannelExt.EmailAndSms,
+                EmailSettings = new EmailSendingOptionsExt
+                {
+                    Body = "Test email body",
+                    Subject = "Test subject",
+                    SendingTimePolicy = SendingTimePolicyExt.Anytime
+                },
+                SmsSettings = new SmsSendingOptionsExt
+                {
+                    Body = "Test SMS message",
+                    Sender = "TestSender",
+                    SendingTimePolicy = SendingTimePolicyExt.Daytime
+                }
+            }
+        };
+
+        // Act
+        var actual = _validator.TestValidate(recipient);
+
+        // Assert
+        actual.ShouldNotHaveAnyValidationErrors();
     }
 }
