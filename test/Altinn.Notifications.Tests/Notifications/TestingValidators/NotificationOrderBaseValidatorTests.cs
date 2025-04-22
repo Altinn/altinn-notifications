@@ -83,7 +83,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingValidators
         }
 
         [Fact]
-        public void Should_Pass_Validation_When_TimeZOne_is_Specified()
+        public void Should_Pass_Validation_When_TimeZone_is_Specified()
         {
             // Arrange
             var year = DateTime.Now.Year;
