@@ -21,7 +21,7 @@ namespace Altinn.Notifications.Validators.Sms
                     .NotNull()
                     .NotEmpty()
                     .WithMessage("SMS body cannot be null or empty.");
-                
+
                 RuleFor(option => option!.SendingTimePolicy)
                     .Must(HaveValueDaytimeOrAnytime)
                     .WithMessage("SMS only supports send time daytime and anytime");
@@ -30,13 +30,7 @@ namespace Altinn.Notifications.Validators.Sms
 
         private static bool HaveValueDaytimeOrAnytime(SendingTimePolicyExt sendingTime)
         {
-            return
-                sendingTime switch
-                {
-                    SendingTimePolicyExt.Daytime => true,
-                    SendingTimePolicyExt.Anytime => true,
-                    _ => false
-                };
+            return sendingTime == SendingTimePolicyExt.Daytime || sendingTime == SendingTimePolicyExt.Anytime;
         }
     }
 }
