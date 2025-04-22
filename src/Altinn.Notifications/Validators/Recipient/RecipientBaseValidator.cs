@@ -69,7 +69,6 @@ public class RecipientBaseValidator : AbstractValidator<RecipientBaseExt?>
 
     private void ConfigureSingleChannelValidation()
     {
-        // SMS channel validation
         When(options => options!.ChannelSchema == NotificationChannelExt.Sms, () =>
         {
             RuleFor(options => options!.SmsSettings)
@@ -77,7 +76,6 @@ public class RecipientBaseValidator : AbstractValidator<RecipientBaseExt?>
                 .WithMessage("SmsSettings must be set when ChannelSchema is Sms");
         });
 
-        // Email channel validation
         When(options => options!.ChannelSchema == NotificationChannelExt.Email, () =>
         {
             RuleFor(options => options!.EmailSettings)
