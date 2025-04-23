@@ -116,7 +116,7 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
     /// ProcessingLifecycle enum. It's used when processing delivery information from the database
     /// to ensure consistent status representation throughout the notification system.
     /// </remarks>
-    private static ProcessingLifecycle GetSmsProcessingStatus(string status)
+    private static ProcessingLifecycle GetSmsLifecycleStage(string status)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(status);
 
@@ -139,7 +139,7 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
     /// ProcessingLifecycle enum. It's used when processing delivery information from the database
     /// to ensure consistent status representation throughout the notification system.
     /// </remarks>
-    private static ProcessingLifecycle GetEmailProcessingStatus(string status)
+    private static ProcessingLifecycle GetEmailLifecycleStage(string status)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(status);
 
@@ -162,7 +162,7 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
     /// ProcessingLifecycle enum. It's used when processing delivery information from the database
     /// to ensure consistent status representation throughout the notification system.
     /// </remarks>
-    private static ProcessingLifecycle GetOrderProcessingStatus(string status)
+    private static ProcessingLifecycle GetOrderLifecycleStage(string status)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(status);
 
@@ -262,13 +262,13 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
             {
                 LastUpdate = lastUpdate,
                 Destination = destination,
-                Status = GetSmsProcessingStatus(status),
+                Status = GetSmsLifecycleStage(status),
             }
             : new EmailDeliveryManifest
             {
                 LastUpdate = lastUpdate,
                 Destination = destination,
-                Status = GetEmailProcessingStatus(status),
+                Status = GetEmailLifecycleStage(status),
             };
 
         deliveryManifestEntities.Add(deliverableEntity);
@@ -304,7 +304,7 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
             LastUpdate = lastUpdate,
             ShipmentId = alternateId,
             SendersReference = reference,
-            Status = GetOrderProcessingStatus(status),
+            Status = GetOrderLifecycleStage(status),
             Recipients = deliverableEntities.ToImmutableList()
         };
     }
