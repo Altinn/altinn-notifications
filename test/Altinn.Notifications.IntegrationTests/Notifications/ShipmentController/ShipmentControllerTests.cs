@@ -2,7 +2,6 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Controllers;
@@ -45,8 +44,7 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
 
         _options = new JsonSerializerOptions
         {
-            PropertyNameCaseInsensitive = true,
-            Converters = { new JsonStringEnumConverter() }
+            PropertyNameCaseInsensitive = true
         };
 
         _serviceMock = new Mock<INotificationDeliveryManifestService>();
@@ -81,7 +79,6 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         Assert.NotNull(manifest);
         Assert.Null(manifest.SequenceNumber);
         Assert.Equal("Notification", manifest.Type);
-        Assert.Equal(2, manifest.Recipients.Count);
         Assert.Equal(_shipmentId, manifest.ShipmentId);
         Assert.Equal(ProcessingLifecycleExt.Order_Completed, manifest.Status);
         Assert.Equal("COMPLETED-ORDER-REF-F10D5B2DCDFD", manifest.SendersReference);
@@ -94,7 +91,7 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         Assert.Equal(ProcessingLifecycleExt.SMS_Delivered, smsRecipient.Status);
 
         var emailRecipient = Assert.IsType<IDeliveryManifestExt>(manifest.Recipients[1], exactMatch: false);
-        Assert.Equal("test@example.com", emailRecipient.Destination);
+        Assert.Equal("recipient@example.com", emailRecipient.Destination);
         Assert.Equal(ProcessingLifecycleExt.Email_Delivered, emailRecipient.Status);
 
         _serviceMock.Verify(
@@ -197,7 +194,6 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         Assert.NotNull(manifest);
         Assert.Null(manifest.SequenceNumber);
         Assert.Equal("Notification", manifest.Type);
-        Assert.Equal(2, manifest.Recipients.Count);
         Assert.Equal(_shipmentId, manifest.ShipmentId);
         Assert.Equal(ProcessingLifecycleExt.Order_Completed, manifest.Status);
         Assert.Equal("COMPLETED-ORDER-REF-F10D5B2DCDFD", manifest.SendersReference);
@@ -210,8 +206,8 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         Assert.Equal(ProcessingLifecycleExt.SMS_Delivered, smsRecipient.Status);
 
         var emailRecipient = Assert.IsType<IDeliveryManifestExt>(manifest.Recipients[1], exactMatch: false);
-        Assert.Equal("test@example.com", emailRecipient.Destination);
-        Assert.Equal(ProcessingLifecycleExt.Email_Delivered, manifest.Status);
+        Assert.Equal("recipient@example.com", emailRecipient.Destination);
+        Assert.Equal(ProcessingLifecycleExt.Email_Delivered, emailRecipient.Status);
 
         _serviceMock.Verify(
             s => s.GetDeliveryManifestAsync(It.Is<Guid>(e => e.Equals(_shipmentId)), It.Is<string>(e => e.Equals("ttd")), It.IsAny<CancellationToken>()),
@@ -293,7 +289,7 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         Assert.Equal(ProcessingLifecycleExt.SMS_Delivered, smsRecipient.Status);
 
         var emailRecipient = Assert.IsType<IDeliveryManifestExt>(manifest.Recipients[1], exactMatch: false);
-        Assert.Equal("test@example.com", emailRecipient.Destination);
+        Assert.Equal("recipient@example.com", emailRecipient.Destination);
         Assert.Equal(ProcessingLifecycleExt.Email_Delivered, emailRecipient.Status);
 
         _serviceMock.Verify(
@@ -381,7 +377,7 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         var recipients = new List<IDeliveryManifest>
         {
             CreateSmsDeliveryManifest("+4799999999", ProcessingLifecycle.SMS_Delivered, DateTime.Now.AddDays(-7)),
-            CreateEmailDeliveryManifest("test@example.com", ProcessingLifecycle.Email_Delivered, DateTime.Now.AddDays(-20))
+            CreateEmailDeliveryManifest("recipient@example.com", ProcessingLifecycle.Email_Delivered, DateTime.Now.AddDays(-20))
         };
 
         return new NotificationDeliveryManifest

@@ -87,12 +87,12 @@ public class NotificationDeliveryManifestServiceTests
                 var smsRecipient = success.Recipients[0] as SmsDeliveryManifest;
                 Assert.NotNull(smsRecipient);
                 Assert.Equal("+4799999999", smsRecipient.Destination);
-                Assert.Equal(ProcessingLifecycle.SMS_Delivered, success.Status);
+                Assert.Equal(ProcessingLifecycle.SMS_Delivered, smsRecipient.Status);
 
                 var emailRecipient = success.Recipients[1] as EmailDeliveryManifest;
                 Assert.NotNull(emailRecipient);
                 Assert.Equal("recipient@example.com", emailRecipient.Destination);
-                Assert.Equal(ProcessingLifecycle.Email_Delivered, success.Status);
+                Assert.Equal(ProcessingLifecycle.Email_Delivered, emailRecipient.Status);
 
                 return true;
             },
