@@ -2,6 +2,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Controllers;
@@ -44,7 +45,8 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
 
         _options = new JsonSerializerOptions
         {
-            PropertyNameCaseInsensitive = true
+            PropertyNameCaseInsensitive = true,
+            Converters = { new JsonStringEnumConverter() }
         };
 
         _serviceMock = new Mock<INotificationDeliveryManifestService>();
@@ -366,8 +368,8 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
             builder.ConfigureTestServices(services =>
             {
                 services.AddSingleton(service);
-                services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
                 services.AddSingleton<IPublicSigningKeyProvider, PublicSigningKeyProviderMock>();
+                services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
             });
         }).CreateClient();
 
