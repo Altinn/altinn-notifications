@@ -24,7 +24,60 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
     private const string _lastUpdateColumnName = "last_update";
     private const string _destinationColumnName = "destination";
 
-    private const string _sqlGetNotificationDeliveryInfo = "SELECT * FROM notifications.get_notification_delivery_info($1, $2)"; // (_alternateid, _creatorname)
+    private const string _sqlGetShipmentTrackingInfo = "SELECT * FROM notifications.get_shipment_tracking($1, $2)"; // (_alternateid, _creatorname)
+
+    /// <summary>
+    /// Maps database SMS notification result types to ProcessingLifecycle values.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, ProcessingLifecycle> SmsStatusMap = new Dictionary<string, ProcessingLifecycle>(StringComparer.OrdinalIgnoreCase)
+    {
+        { "new", ProcessingLifecycle.SMS_New },
+        { "failed", ProcessingLifecycle.SMS_Failed },
+        { "sending", ProcessingLifecycle.SMS_Sending },
+        { "accepted", ProcessingLifecycle.SMS_Accepted },
+        { "delivered", ProcessingLifecycle.SMS_Delivered },
+        { "failed_deleted", ProcessingLifecycle.SMS_Failed_Deleted },
+        { "failed_expired", ProcessingLifecycle.SMS_Failed_Expired },
+        { "failed_rejected", ProcessingLifecycle.SMS_Failed_Rejected },
+        { "failed_undelivered", ProcessingLifecycle.SMS_Failed_Undelivered },
+        { "failed_barredreceiver", ProcessingLifecycle.SMS_Failed_BarredReceiver },
+        { "failed_invalidreceiver", ProcessingLifecycle.SMS_Failed_InvalidRecipient },
+        { "failed_invalidrecipient", ProcessingLifecycle.SMS_Failed_InvalidRecipient },
+        { "failed_recipientreserved", ProcessingLifecycle.SMS_Failed_RecipientReserved },
+        { "failed_recipientnotidentified", ProcessingLifecycle.SMS_Failed_RecipientNotIdentified }
+    };
+
+    /// <summary>
+    /// Maps database email notification result types to ProcessingLifecycle values.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, ProcessingLifecycle> EmailStatusMap = new Dictionary<string, ProcessingLifecycle>(StringComparer.OrdinalIgnoreCase)
+    {
+        { "new", ProcessingLifecycle.Email_New },
+        { "failed", ProcessingLifecycle.Email_Failed },
+        { "sending", ProcessingLifecycle.Email_Sending },
+        { "succeeded", ProcessingLifecycle.Email_Succeeded },
+        { "delivered", ProcessingLifecycle.Email_Delivered },
+        { "failed_bounced", ProcessingLifecycle.Email_Failed_Bounced },
+        { "failed_quarantined", ProcessingLifecycle.Email_Failed_Quarantined },
+        { "failed_filteredspam", ProcessingLifecycle.Email_Failed_FilteredSpam },
+        { "failed_transienterror", ProcessingLifecycle.Email_Failed_TransientError },
+        { "failed_invalidemailformat", ProcessingLifecycle.Email_Failed_InvalidFormat },
+        { "failed_recipientreserved", ProcessingLifecycle.Email_Failed_RecipientReserved },
+        { "failed_supressedrecipient", ProcessingLifecycle.Email_Failed_SuppressedRecipient },
+        { "failed_recipientnotidentified", ProcessingLifecycle.Email_Failed_RecipientNotIdentified }
+    };
+
+    /// <summary>
+    /// Maps database order processing state types to ProcessingLifecycle values.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, ProcessingLifecycle> OrderStatusMap = new Dictionary<string, ProcessingLifecycle>(StringComparer.OrdinalIgnoreCase)
+    {
+        { "cancelled", ProcessingLifecycle.Order_Cancelled },
+        { "completed", ProcessingLifecycle.Order_Completed },
+        { "registered", ProcessingLifecycle.Order_Registered },
+        { "processing", ProcessingLifecycle.Order_Processing },
+        { "sendconditionnotmet", ProcessingLifecycle.Order_SendConditionNotMet }
+    };
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationDeliveryManifestRepository"/> class.
@@ -37,9 +90,9 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
     /// <inheritdoc />
     public async Task<INotificationDeliveryManifest?> GetDeliveryManifestAsync(Guid alternateId, string creatorName, CancellationToken cancellationToken)
     {
-        await using var command = _dataSource.CreateCommand(_sqlGetNotificationDeliveryInfo);
-        command.Parameters.AddWithValue(NpgsqlDbType.Uuid, alternateId);
-        command.Parameters.AddWithValue(NpgsqlDbType.Text, creatorName);
+        await using var command = _dataSource.CreateCommand(_sqlGetShipmentTrackingInfo);
+        command.Parameters.AddWithValue("p_alternateid", NpgsqlDbType.Uuid, alternateId);
+        command.Parameters.AddWithValue("p_creatorname", NpgsqlDbType.Text, creatorName);
 
         await using var reader = await command.ExecuteReaderAsync(CommandBehavior.SingleResult, cancellationToken);
         if (!reader.HasRows)
@@ -53,95 +106,90 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
     }
 
     /// <summary>
-    /// Maps a database SMS notification result string to its corresponding <see cref="ProcessingLifecycle"/> enum value.
+    /// Converts a database SMS notification status to its corresponding <see cref="ProcessingLifecycle"/> enum value.
     /// </summary>
-    /// <param name="status">The SMS status string from the database (from SMSNOTIFICATIONRESULTTYPE enum type).</param>
+    /// <param name="status">The SMS status string from the database (from SMSNOTIFICATIONRESULTTYPE type).</param>
     /// <returns>The corresponding <see cref="ProcessingLifecycle"/> enum value for the SMS notification status.</returns>
     /// <exception cref="ArgumentException">Thrown when the status string doesn't match any known SMS notification status.</exception>
+    /// <remarks>
+    /// This method performs case-insensitive mapping between database SMS status values and the 
+    /// ProcessingLifecycle enum. It's used when processing delivery information from the database
+    /// to ensure consistent status representation throughout the notification system.
+    /// </remarks>
     private static ProcessingLifecycle GetSmsProcessingStatus(string status)
     {
-        return status.ToLowerInvariant() switch
+        ArgumentException.ThrowIfNullOrWhiteSpace(status);
+
+        if (SmsStatusMap.TryGetValue(status.ToLowerInvariant(), out ProcessingLifecycle result))
         {
-            "new" => ProcessingLifecycle.SMS_New,
-            "failed" => ProcessingLifecycle.SMS_Failed,
-            "sending" => ProcessingLifecycle.SMS_Sending,
-            "accepted" => ProcessingLifecycle.SMS_Accepted,
-            "delivered" => ProcessingLifecycle.SMS_Delivered,
-            "failed_deleted" => ProcessingLifecycle.SMS_Failed_Deleted,
-            "failed_expired" => ProcessingLifecycle.SMS_Failed_Expired,
-            "failed_rejected" => ProcessingLifecycle.SMS_Failed_Rejected,
-            "failed_undelivered" => ProcessingLifecycle.SMS_Failed_Undelivered,
-            "failed_barredreceiver" => ProcessingLifecycle.SMS_Failed_BarredReceiver,
-            "failed_invalidreceiver" => ProcessingLifecycle.SMS_Failed_InvalidRecipient,
-            "failed_invalidrecipient" => ProcessingLifecycle.SMS_Failed_InvalidRecipient,
-            "failed_recipientreserved" => ProcessingLifecycle.SMS_Failed_RecipientReserved,
-            "failed_recipientnotidentified" => ProcessingLifecycle.SMS_Failed_RecipientNotIdentified,
-            _ => throw new ArgumentException($"Unknown SMS notification status: {status}", nameof(status))
-        };
+            return result;
+        }
+
+        throw new ArgumentException($"Unknown SMS notification status: '{status}'", nameof(status));
     }
 
     /// <summary>
-    /// Maps a database email notification result string to its corresponding <see cref="ProcessingLifecycle"/> enum value.
+    /// Converts a database email notification status to its corresponding <see cref="ProcessingLifecycle"/> enum value.
     /// </summary>
-    /// <param name="status">The email status string from the database (from emailnotificationresulttype type).</param>
+    /// <param name="status">The email status string from the database (from EMAILNOTIFICATIONRESULTTYPE type).</param>
     /// <returns>The corresponding <see cref="ProcessingLifecycle"/> enum value for the email notification status.</returns>
     /// <exception cref="ArgumentException">Thrown when the status string doesn't match any known email notification status.</exception>
+    /// <remarks>
+    /// This method performs case-insensitive mapping between database email status values and the 
+    /// ProcessingLifecycle enum. It's used when processing delivery information from the database
+    /// to ensure consistent status representation throughout the notification system.
+    /// </remarks>
     private static ProcessingLifecycle GetEmailProcessingStatus(string status)
     {
-        return status.ToLowerInvariant() switch
+        ArgumentException.ThrowIfNullOrWhiteSpace(status);
+
+        if (EmailStatusMap.TryGetValue(status.ToLowerInvariant(), out ProcessingLifecycle result))
         {
-            "new" => ProcessingLifecycle.Email_New,
-            "failed" => ProcessingLifecycle.Email_Failed,
-            "sending" => ProcessingLifecycle.Email_Sending,
-            "succeeded" => ProcessingLifecycle.Email_Succeeded,
-            "delivered" => ProcessingLifecycle.Email_Delivered,
-            "failed_bounced" => ProcessingLifecycle.Email_Failed_Bounced,
-            "failed_quarantined" => ProcessingLifecycle.Email_Failed_Quarantined,
-            "failed_filteredspam" => ProcessingLifecycle.Email_Failed_FilteredSpam,
-            "failed_transienterror" => ProcessingLifecycle.Email_Failed_TransientError,
-            "failed_invalidemailformat" => ProcessingLifecycle.Email_Failed_InvalidFormat,
-            "failed_recipientreserved" => ProcessingLifecycle.Email_Failed_RecipientReserved,
-            "failed_supressedrecipient" => ProcessingLifecycle.Email_Failed_SupressedRecipient,
-            "failed_recipientnotidentified" => ProcessingLifecycle.Email_Failed_RecipientNotIdentified,
-            _ => throw new ArgumentException($"Unknown email notification status: {status}", nameof(status))
-        };
+            return result;
+        }
+
+        throw new ArgumentException($"Unknown email notification status: '{status}'", nameof(status));
     }
 
     /// <summary>
-    /// Maps a database order processing state string to its corresponding <see cref="ProcessingLifecycle"/> enum value.
+    /// Converts a database order processing state to its corresponding <see cref="ProcessingLifecycle"/> enum value.
     /// </summary>
-    /// <param name="status">The order status string from the database (from orderprocessingstate type).</param>
+    /// <param name="status">The order status string from the database (from ORDERPROCESSINGSTATE type).</param>
     /// <returns>The corresponding <see cref="ProcessingLifecycle"/> enum value for the order status.</returns>
-    /// <exception cref="ArgumentException">Thrown when the status string doesn't match any known order status.</exception>
+    /// <exception cref="ArgumentException">Thrown when the status string doesn't match any known order processing state.</exception>
+    /// <remarks>
+    /// This method performs case-insensitive mapping between database order status values and the 
+    /// ProcessingLifecycle enum. It's used when processing delivery information from the database
+    /// to ensure consistent status representation throughout the notification system.
+    /// </remarks>
     private static ProcessingLifecycle GetOrderProcessingStatus(string status)
     {
-        return status.ToLowerInvariant() switch
+        ArgumentException.ThrowIfNullOrWhiteSpace(status);
+
+        if (OrderStatusMap.TryGetValue(status.ToLowerInvariant(), out ProcessingLifecycle result))
         {
-            "cancelled" => ProcessingLifecycle.Order_Cancelled,
-            "completed" => ProcessingLifecycle.Order_Completed,
-            "registered" => ProcessingLifecycle.Order_Registered,
-            "processing" => ProcessingLifecycle.Order_Processing,
-            "sendconditionnotmet" => ProcessingLifecycle.Order_SendConditionNotMet,
-            _ => throw new ArgumentException($"Unknown order status: {status}", nameof(status))
-        };
+            return result;
+        }
+
+        throw new ArgumentException($"Unknown order processing state: '{status}'", nameof(status));
     }
 
     /// <summary>
-    /// Extracts the sender's reference for the notification order.
+    /// Retrieves the sender's reference for the notification order.
     /// </summary>
     /// <param name="reader">Database reader positioned at a notification order data row.</param>
     /// <param name="cancellationToken">Token for canceling the asynchronous operation.</param>
     /// <returns>
     /// The sender's reference as a string, or <see langword="null"/> if no reference is present.
     /// </returns>
-    private static async Task<string?> ExtractSenderReferenceAsync(NpgsqlDataReader reader, CancellationToken cancellationToken)
+    private static async Task<string?> GetSenderReferenceAsync(NpgsqlDataReader reader, CancellationToken cancellationToken)
     {
         var referenceOrdinal = reader.GetOrdinal(_referenceColumnName);
         return await reader.IsDBNullAsync(referenceOrdinal, cancellationToken) ? null : reader.GetString(referenceOrdinal);
     }
 
     /// <summary>
-    /// Extracts the status and last update timestamp for the notification order.
+    /// Retrieves the status and last update timestamp for the notification order.
     /// </summary>
     /// <param name="reader">Database reader positioned at a notification order data row.</param>
     /// <param name="cancellationToken">Token for canceling the asynchronous operation.</param>
@@ -155,7 +203,7 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
     ///   <item><description>The timestamp is null</description></item>
     /// </list>
     /// </exception>
-    private static async Task<(string Status, DateTime LastUpdate)> ExtractStatusAsync(NpgsqlDataReader reader, CancellationToken cancellationToken)
+    private static async Task<(string Status, DateTime LastUpdate)> GetStatusAsync(NpgsqlDataReader reader, CancellationToken cancellationToken)
     {
         var statusOrdinal = reader.GetOrdinal(_statusColumnName);
         var isStatusNull = await reader.IsDBNullAsync(statusOrdinal, cancellationToken);
@@ -187,7 +235,7 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
     /// A <see cref="CancellationToken"/> that can be used to cancel the asynchronous operation.
     /// </param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    private static async Task CreateDeliveryManifestEntityAsync(NpgsqlDataReader reader, List<IDeliveryManifest> deliveryManifestEntities, CancellationToken cancellationToken)
+    private static async Task PopulateDeliveryManifestEntitiesAsync(NpgsqlDataReader reader, List<IDeliveryManifest> deliveryManifestEntities, CancellationToken cancellationToken)
     {
         var statusOrdinal = reader.GetOrdinal(_statusColumnName);
         var referenceOrdinal = reader.GetOrdinal(_referenceColumnName);
@@ -241,13 +289,13 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
     {
         var deliverableEntities = new List<IDeliveryManifest>();
 
-        var reference = await ExtractSenderReferenceAsync(reader, cancellationToken);
+        var reference = await GetSenderReferenceAsync(reader, cancellationToken);
 
-        var (status, lastUpdate) = await ExtractStatusAsync(reader, cancellationToken);
+        var (status, lastUpdate) = await GetStatusAsync(reader, cancellationToken);
 
         while (await reader.ReadAsync(cancellationToken))
         {
-            await CreateDeliveryManifestEntityAsync(reader, deliverableEntities, cancellationToken);
+            await PopulateDeliveryManifestEntitiesAsync(reader, deliverableEntities, cancellationToken);
         }
 
         return new NotificationDeliveryManifest
@@ -271,6 +319,6 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
     ///   <item><description>One or more digits</description></item>
     /// </list>
     /// </returns>
-    [GeneratedRegex(@"^(?:\+|00)?[1-9]\d{7,14}$")]
+    [GeneratedRegex(@"^(?:\+|00)?[1-9]\d{1,14}$")]
     private static partial Regex MobileNumbersRegex();
 }
