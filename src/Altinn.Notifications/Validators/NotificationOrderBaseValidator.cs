@@ -1,4 +1,5 @@
 ﻿using Altinn.Notifications.Models;
+using Altinn.Notifications.Validators.Rules;
 
 using FluentValidation;
 
@@ -22,24 +23,9 @@ namespace Altinn.Notifications.Validators
 
             When(option => option.ConditionEndpoint != null, () =>
             {
-                RuleFor(option => option.ConditionEndpoint)
-                    .Must(BeAbsoluteUri!)
-                    .WithMessage("ConditionEndpoint must be a valid absolute URI or null.");
-
-                RuleFor(option => option.ConditionEndpoint)
-                    .Must(conditionEndpoint => conditionEndpoint == null || Uri.IsWellFormedUriString(conditionEndpoint.ToString(), UriKind.Absolute))
-                    .WithMessage("ConditionEndpoint must be a valid absolute URI or null.");
-                
-                RuleFor(option => option.ConditionEndpoint)
-                    .Must(conditionEndpoint => new string[] { "https", "http" }.Contains(conditionEndpoint!.Scheme.ToLower()))
-                    .When(option => option.ConditionEndpoint!.IsAbsoluteUri)
-                    .WithMessage("ConditionEndpoint must use http or https scheme.");
+                RuleFor(options => options.ConditionEndpoint!)
+                    .ValidateConditionEndpoint();
             });
-        }
-
-        private static bool BeAbsoluteUri(Uri uri)
-        {
-            return uri.IsAbsoluteUri;
         }
     }
 }

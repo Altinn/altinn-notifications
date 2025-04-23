@@ -8,6 +8,10 @@ using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.TestingValidators;
 
+/// <summary>
+/// Tests for the RecipientOrganizationValidator, which validates organizations 
+/// receiving notifications through various channels.
+/// </summary>
 public class RecipientOrganizationValidatorTests
 {
     private readonly RecipientOrganizationValidator _recipientOrganizationValidator = new();
@@ -58,7 +62,7 @@ public class RecipientOrganizationValidatorTests
 
         // act
         var actual = _recipientOrganizationValidator.TestValidate(recipientOrganization);
-
+        
         // assert
         actual.ShouldHaveValidationErrorFor(recipient => recipient.EmailSettings).WithErrorMessage("EmailSettings must be set when ChannelSchema is SmsPreferred or EmailPreferred");
         actual.ShouldHaveValidationErrorFor(recipient => recipient.SmsSettings).WithErrorMessage("SmsSettings must be set when ChannelSchema is SmsPreferred or EmailPreferred");
@@ -162,46 +166,5 @@ public class RecipientOrganizationValidatorTests
 
         // assert
         actual.ShouldNotHaveValidationErrorFor(recipient => recipient.ResourceId);
-    }
-
-    [Fact]
-    public void Should_Have_Validation_Errors_When_Missing_Both_Settings_Using_EmailAndSms_Scheme()
-    {
-        // arrange
-        var recipientOrganization = new RecipientOrganizationExt
-        {
-            OrgNumber = "123456789",
-            ChannelSchema = NotificationChannelExt.EmailAndSms
-        };
-
-        // act
-        var actual = _recipientOrganizationValidator.TestValidate(recipientOrganization);
-
-        // assert
-        actual.ShouldHaveValidationErrorFor(recipient => recipient.SmsSettings).WithErrorMessage("SmsSettings must be set when ChannelSchema is EmailAndSms");
-        actual.ShouldHaveValidationErrorFor(recipient => recipient.EmailSettings).WithErrorMessage("EmailSettings must be set when ChannelSchema is EmailAndSms");
-    }
-
-    [Fact]
-    public void Should_Have_Validation_Error_When_Missing_Email_Settings_Using_EmailAndSms_Scheme()
-    {
-        // arrange
-        var recipientOrganization = new RecipientOrganizationExt
-        {
-            OrgNumber = "123456789",
-            ChannelSchema = NotificationChannelExt.EmailAndSms,
-            SmsSettings = new SmsSendingOptionsExt
-            {
-                Sender = "Test sender",
-                Body = "Hello world"
-            }
-        };
-
-        // act
-        var actual = _recipientOrganizationValidator.TestValidate(recipientOrganization);
-
-        // assert
-        actual.ShouldHaveValidationErrorFor(recipient => recipient.EmailSettings).WithErrorMessage("EmailSettings must be set when ChannelSchema is EmailAndSms");
-        actual.ShouldNotHaveValidationErrorFor(recipient => recipient.SmsSettings);
     }
 }

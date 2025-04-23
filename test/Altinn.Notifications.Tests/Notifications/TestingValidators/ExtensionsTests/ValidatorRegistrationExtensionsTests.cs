@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Models;
@@ -10,7 +12,9 @@ using Xunit;
 namespace Altinn.Notifications.Tests.Notifications.TestingValidators.ExtensionsTests;
 
 /// <summary>
-/// Tests for the ValidatorRegistrationExtensions class for using assembly scan for dependency injection.
+/// Tests for the ValidatorRegistrationExtensions class which provides assembly scanning for validator registration.
+/// These tests ensure that duplicate validators for the same model type are properly detected and prevented, 
+/// which helps avoid inconsistent validation behavior and registration conflicts in the dependency injection container.
 /// </summary>
 public class ValidatorRegistrationExtensionsTests
 {
@@ -40,16 +44,12 @@ public class ValidatorRegistrationExtensionsTests
         // Create a mock assembly with no duplicates
         var assembly = new MockAssemblyWithoutDuplicates();
 
-        // Act - This should not throw
+        // Act
         serviceCollection.AddValidatorsFromAssemblyWithDuplicateCheck(assembly);
 
-        var exception = Record.Exception(() =>
-        {
-            serviceCollection.AddValidatorsFromAssemblyWithDuplicateCheck(assembly);
-        });
-
         // Assert
-        Assert.Null(exception);
+        Assert.Contains(serviceCollection, d => d.ServiceType == typeof(IValidator<NotificationOrderBaseExt>));
+        Assert.Contains(serviceCollection, d => d.ServiceType == typeof(IValidator<RecipientBaseExt>));
     }
 
     private class MockAssemblyWithDuplicates : Assembly
@@ -61,6 +61,8 @@ public class ValidatorRegistrationExtensionsTests
                 typeof(DuplicateValidator2)
             ];
         }
+
+        public override IEnumerable<TypeInfo> DefinedTypes => GetTypes().Select(t => t.GetTypeInfo());
     }
 
     // Helper class to simulate assembly without duplicates
@@ -70,6 +72,8 @@ public class ValidatorRegistrationExtensionsTests
         {
             return [typeof(UniqueValidator), typeof(UniqueValidator2)];
         }
+
+        public override IEnumerable<TypeInfo> DefinedTypes => GetTypes().Select(t => t.GetTypeInfo());
     }
 
     public class UniqueValidator : AbstractValidator<NotificationOrderBaseExt>

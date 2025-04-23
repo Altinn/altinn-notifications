@@ -20,7 +20,7 @@ namespace Altinn.Notifications.Validators
             RuleFor(specification => specification)
                 .Must(HaveOneSetRecipientOnly)
                 .WithMessage("Must have exactly one recipient.");
-                
+
             RuleFor(specification => specification)
                 .NotNull()
                 .WithMessage("Recipient specification cannot be null.");
@@ -45,13 +45,13 @@ namespace Altinn.Notifications.Validators
         /// <returns></returns>
         private static bool HaveOneSetRecipientOnly(NotificationRecipientExt specification)
         {
-            var numberOfSetRecipients = 0;
-            numberOfSetRecipients += specification.RecipientEmail != null ? 1 : 0;
-            numberOfSetRecipients += specification.RecipientSms != null ? 1 : 0;
-            numberOfSetRecipients += specification.RecipientPerson != null ? 1 : 0;
-            numberOfSetRecipients += specification.RecipientOrganization != null ? 1 : 0;
-
-            return numberOfSetRecipients == 1;
+            return new object?[]
+            {
+                specification.RecipientEmail,
+                specification.RecipientSms,
+                specification.RecipientPerson,
+                specification.RecipientOrganization
+            }.Count(recipient => recipient != null) == 1;
         }
     }
 }

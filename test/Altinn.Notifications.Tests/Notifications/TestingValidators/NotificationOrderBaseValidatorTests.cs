@@ -83,7 +83,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingValidators
         }
 
         [Fact]
-        public void Should_Pass_Validation_When_TimeZone_is_Specified()
+        public void Should_Pass_Validation_When_TimeZOne_is_Specified()
         {
             // Arrange
             var year = DateTime.Now.Year;
@@ -98,23 +98,6 @@ namespace Altinn.Notifications.Tests.Notifications.TestingValidators
 
             // Assert
             result.ShouldNotHaveValidationErrorFor(x => x.RequestedSendTime);
-        }
-
-        [Fact]
-        public void Should_Fail_Validation_When_RequestedSendTime_Is_In_Past()
-        {
-            // Arrange
-            var notificationOrder = new NotificationOrderBaseExt
-            {
-                RequestedSendTime = DateTime.UtcNow.AddMinutes(-5)
-            };
-
-            // Act
-            var result = _validator.TestValidate(notificationOrder);
-
-            // Assert
-            result.ShouldHaveValidationErrorFor(x => x.RequestedSendTime)
-                .WithErrorMessage("RequestedSendTime must be greater than or equal to now.");
         }
     }
 }

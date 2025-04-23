@@ -43,6 +43,11 @@ namespace Altinn.Notifications.Core.Helpers
                 return false;
             }
 
+            if (mobileNumber.StartsWith("++"))
+            {
+                return false;
+            }
+
             if (mobileNumber.StartsWith("00"))
             {
                 mobileNumber = "+" + mobileNumber.Remove(0, 2);
