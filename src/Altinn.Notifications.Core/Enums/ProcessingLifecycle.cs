@@ -33,7 +33,7 @@ public enum ProcessingLifecycle
     /// </summary>
     /// <remarks>
     /// This state indicates that all notifications within the order have been registered in the system,
-    /// though individual notifications may have its own status.
+    /// though individual notifications may have their own status.
     /// </remarks>
     Order_Completed,
 
@@ -42,7 +42,7 @@ public enum ProcessingLifecycle
     /// </summary>
     /// <remarks>
     /// This occurs when an order has conditional sending requirements that weren't met,
-    /// such as a condition endpoint returned a negative result.
+    /// such as when a condition endpoint returned a negative result.
     /// </remarks>
     Order_SendConditionNotMet,
 
@@ -107,7 +107,7 @@ public enum ProcessingLifecycle
     /// The SMS notification was not sent because the recipient has reserved against receiving messages according to the KRR register.
     /// </summary>
     /// <remarks>
-    /// The recipient has explicitly opted out of receiving notifications through the Norwegian Contact and Reservation (KRR) Register.
+    /// The recipient has explicitly opted out of receiving notifications through the Norwegian Contact and Reservation Register (KRR).
     /// </remarks>
     SMS_Failed_RecipientReserved,
 
@@ -203,7 +203,7 @@ public enum ProcessingLifecycle
     /// The email notification was not sent because the recipient has reserved against receiving messages according to the KRR register.
     /// </summary>
     /// <remarks>
-    /// The recipient has explicitly opted out of receiving notifications through the Norwegian Contact and Reservation (KRR) Register.
+    /// The recipient has explicitly opted out of receiving notifications through the Norwegian Contact and Reservation Register (KRR).
     /// </remarks>
     Email_Failed_RecipientReserved,
 
