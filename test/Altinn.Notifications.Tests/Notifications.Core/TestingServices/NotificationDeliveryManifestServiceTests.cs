@@ -3,6 +3,7 @@ using System.Collections.Immutable;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Delivery;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
@@ -35,24 +36,24 @@ public class NotificationDeliveryManifestServiceTests
 
         var smsDeliveryManifest = new SmsDeliveryManifest
         {
-            Status = "Delivered",
             Destination = "+4799999999",
-            LastUpdate = DateTime.UtcNow.AddDays(-10)
+            LastUpdate = DateTime.UtcNow.AddDays(-10),
+            Status = ProcessingLifecycle.SMS_Delivered
         };
 
         var emailDeliveryManifest = new EmailDeliveryManifest
         {
-            Status = "Delivered",
             Destination = "recipient@example.com",
-            LastUpdate = DateTime.UtcNow.AddDays(-5)
+            LastUpdate = DateTime.UtcNow.AddDays(-5),
+            Status = ProcessingLifecycle.Email_Delivered
         };
 
         var expectedManifest = new NotificationDeliveryManifest
         {
-            Status = "Completed",
             Type = "Notification",
             ShipmentId = orderAlternateId,
             LastUpdate = DateTime.UtcNow.AddDays(-5),
+            Status = ProcessingLifecycle.Order_Completed,
             SendersReference = "COMPLETED-NOTIFICATION-ORDER-REF-FCEE4CF15BE1",
             Recipients = ImmutableList.Create<IDeliveryManifest>(smsDeliveryManifest, emailDeliveryManifest)
         };
@@ -77,21 +78,21 @@ public class NotificationDeliveryManifestServiceTests
                 Assert.Equal(orderAlternateId, success.ShipmentId);
 
                 Assert.Null(success.SequenceNumber);
-                Assert.Equal("Completed", success.Status);
                 Assert.Equal("Notification", success.Type);
+                Assert.Equal(ProcessingLifecycle.Order_Completed, success.Status);
                 Assert.Equal("COMPLETED-NOTIFICATION-ORDER-REF-FCEE4CF15BE1", success.SendersReference);
 
                 Assert.Equal(2, success.Recipients.Count);
 
                 var smsRecipient = success.Recipients[0] as SmsDeliveryManifest;
                 Assert.NotNull(smsRecipient);
-                Assert.Equal("Delivered", smsRecipient.Status);
                 Assert.Equal("+4799999999", smsRecipient.Destination);
+                Assert.Equal(ProcessingLifecycle.SMS_Delivered, success.Status);
 
                 var emailRecipient = success.Recipients[1] as EmailDeliveryManifest;
                 Assert.NotNull(emailRecipient);
-                Assert.Equal("Delivered", emailRecipient.Status);
                 Assert.Equal("recipient@example.com", emailRecipient.Destination);
+                Assert.Equal(ProcessingLifecycle.Email_Delivered, success.Status);
 
                 return true;
             },
@@ -143,24 +144,24 @@ public class NotificationDeliveryManifestServiceTests
 
         var smsDeliveryManifest = new SmsDeliveryManifest
         {
-            Status = "Delivered",
             Destination = "+4799999999",
-            LastUpdate = DateTime.UtcNow.AddDays(-10)
+            LastUpdate = DateTime.UtcNow.AddDays(-10),
+            Status = ProcessingLifecycle.SMS_Delivered
         };
 
         var emailDeliveryManifest = new EmailDeliveryManifest
         {
-            Status = "Delivered",
             Destination = "recipient@example.com",
-            LastUpdate = DateTime.UtcNow.AddDays(-5)
+            LastUpdate = DateTime.UtcNow.AddDays(-5),
+            Status = ProcessingLifecycle.Email_Delivered
         };
 
         var expectedManifest = new NotificationDeliveryManifest
         {
-            Status = "Completed",
             Type = "Notification",
             ShipmentId = orderAlternateId,
             LastUpdate = DateTime.UtcNow.AddDays(-5),
+            Status = ProcessingLifecycle.Order_Completed,
             SendersReference = "COMPLETED-NOTIFICATION-ORDER-REF-FCEE4CF15BE1",
             Recipients = ImmutableList.Create<IDeliveryManifest>(smsDeliveryManifest, emailDeliveryManifest)
         };
