@@ -357,7 +357,7 @@ public class NotificationOrderChainRequestValidatorTests
         var result = _validator.TestValidate(order);
 
         // Assert
-        result.ShouldHaveAnyValidationError().WithErrorMessage("EmailSettings must be set when ChannelSchema is SmsPreferred or EmailAndSms");
+        result.ShouldHaveAnyValidationError().WithErrorMessage("EmailSettings must be set when ChannelSchema is EmailAndSms");
     }
 
     [Fact]
@@ -391,6 +391,6 @@ public class NotificationOrderChainRequestValidatorTests
         var result = _validator.TestValidate(order);
 
         // Assert
-        result.ShouldHaveAnyValidationError().WithErrorMessage("SmsSettings must be set when ChannelSchema is SmsPreferred or EmailAndSms");
+        result.ShouldHaveAnyValidationError().WithErrorMessage("SmsSettings must be set when ChannelSchema is EmailAndSms");
     }
 }
