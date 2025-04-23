@@ -64,7 +64,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-COMMENT ON FUNCTION notifications.get_notification_delivery_info(UUID, TEXT) IS
+COMMENT ON FUNCTION notifications.get_shipment_tracking(UUID, TEXT) IS
 'Returns delivery tracking information for a notification identified by the given alternate identifier and creator name.
 
 Includes:
