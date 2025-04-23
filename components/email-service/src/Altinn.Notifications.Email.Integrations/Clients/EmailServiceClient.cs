@@ -4,11 +4,11 @@ using System.Text.RegularExpressions;
 using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Core.Models;
 using Altinn.Notifications.Email.Core.Sending;
+using Altinn.Notifications.Email.Integrations.Clients.AzureCommunicationServices;
 using Altinn.Notifications.Email.Integrations.Configuration;
 
 using Azure;
 using Azure.Communication.Email;
-
 using Microsoft.Extensions.Logging;
 
 namespace Altinn.Notifications.Email.Integrations.Clients;
@@ -21,16 +21,14 @@ namespace Altinn.Notifications.Email.Integrations.Clients;
 public class EmailServiceClient : IEmailServiceClient
 {
     private readonly EmailClient _emailClient;
-    private readonly ILogger<IEmailServiceClient> _logger;
-
-    private readonly string _failedInvalidEmailFormatErrorMessage = "Invalid format for email address";
+    private readonly ILogger<EmailServiceClient> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailServiceClient"/> class.
     /// </summary>
     /// <param name="communicationServicesSettings">Settings for integration against Communication Services.</param>
     /// <param name="logger">A logger</param>
-    public EmailServiceClient(CommunicationServicesSettings communicationServicesSettings, ILogger<IEmailServiceClient> logger)
+    public EmailServiceClient(CommunicationServicesSettings communicationServicesSettings, ILogger<EmailServiceClient> logger)
     {
         _emailClient = new EmailClient(communicationServicesSettings.ConnectionString);
         _logger = logger;
@@ -66,8 +64,10 @@ public class EmailServiceClient : IEmailServiceClient
         catch (RequestFailedException e)
         {
             _logger.LogError(e, "// EmailServiceClient // SendEmail // Failed to send email, NotificationId {NotificationId}", email.NotificationId);
-            EmailClientErrorResponse emailSendFailResponse = new();
-            emailSendFailResponse.SendResult = GetEmailSendResult(e);
+            EmailClientErrorResponse emailSendFailResponse = new()
+            {
+                SendResult = GetEmailSendResult(e)
+            };
 
             if (emailSendFailResponse.SendResult == Core.Status.EmailSendResult.Failed_TransientError)
             {
@@ -97,7 +97,7 @@ public class EmailServiceClient : IEmailServiceClient
                     return Core.Status.EmailSendResult.Succeeded;
                 }
 
-                var response = operation.WaitForCompletionResponse();
+                var response = await operation.WaitForCompletionResponseAsync();
                 _logger.LogError(
                     "// EmailServiceClient // GetOperationUpdate // Operation {OperationId} failed with status {Status} and reason phrase {Reason}",
                     operationId,
@@ -108,29 +108,43 @@ public class EmailServiceClient : IEmailServiceClient
         }
         catch (RequestFailedException e)
         {
-            _logger.LogError(e, "// EmailServiceClient // GetOperationUpdate // Exception thrown when getting status, OperationId {OperationId}", operationId);
+            if (e.ErrorCode == ErrorTypes.RecipientsSuppressedErrorCode)
+            {
+                _logger.LogWarning("A request failed because the recipient is on the suppression list of Azure Communcation Services, OperationId {OperationId}", operationId);
+            }
+            else
+            {
+                _logger.LogError(e, "// EmailServiceClient // GetOperationUpdate // Exception thrown when getting status, OperationId {OperationId}", operationId);
+            }
+
             return GetEmailSendResult(e);
         }
 
         return Core.Status.EmailSendResult.Sending;
     }
 
-    private Core.Status.EmailSendResult GetEmailSendResult(RequestFailedException e)
+    private static Core.Status.EmailSendResult GetEmailSendResult(RequestFailedException e)
     {
-        if (e.ErrorCode == "TooManyRequests")
+        Core.Status.EmailSendResult emailSendResult;
+
+        if (e.ErrorCode == ErrorTypes.ExcessiveCallVolumeErrorCode)
         {
-            return Core.Status.EmailSendResult.Failed_TransientError;
+            emailSendResult = Core.Status.EmailSendResult.Failed_TransientError;
         }
-        else if (e.ErrorCode == "EmailDroppedAllRecipientsSuppressed")
+        else if (e.ErrorCode == ErrorTypes.RecipientsSuppressedErrorCode)
         {
-            return Core.Status.EmailSendResult.Failed_SupressedRecipient;
+            emailSendResult = Core.Status.EmailSendResult.Failed_SupressedRecipient;
         }
-        else if (e.Message.Contains(_failedInvalidEmailFormatErrorMessage))
+        else if (e.Message.Contains(ErrorTypes.InvalidEmailFormatErrorMessage))
         {
-            return Core.Status.EmailSendResult.Failed_InvalidEmailFormat;
+            emailSendResult = Core.Status.EmailSendResult.Failed_InvalidEmailFormat;
+        }
+        else
+        {
+            emailSendResult = Core.Status.EmailSendResult.Failed;
         }
 
-        return Core.Status.EmailSendResult.Failed;
+        return emailSendResult;
     }
 
     /// <summary>

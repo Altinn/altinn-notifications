@@ -10,12 +10,12 @@ namespace Altinn.Notifications.Email.Telemetry
     public class RequestFilterProcessor : BaseProcessor<Activity>
     {
         private const string RequestKind = "Microsoft.AspNetCore.Hosting.HttpRequestIn";
-        private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IHttpContextAccessor? _httpContextAccessor;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestFilterProcessor"/> class.
         /// </summary>
-        public RequestFilterProcessor(IHttpContextAccessor httpContextAccessor = null) : base()
+        public RequestFilterProcessor(IHttpContextAccessor? httpContextAccessor = null) : base()
         {
             _httpContextAccessor = httpContextAccessor;
         }
@@ -47,7 +47,7 @@ namespace Altinn.Notifications.Email.Telemetry
         /// <param name="activity">xx</param>
         public override void OnEnd(Activity activity)
         {
-            if (activity.OperationName == RequestKind && _httpContextAccessor.HttpContext is not null &&
+            if (activity.OperationName == RequestKind && _httpContextAccessor?.HttpContext is not null &&
                 _httpContextAccessor.HttpContext.Request.Headers.TryGetValue("X-Forwarded-For", out StringValues ipAddress))
             {
                 activity.SetTag("ipAddress", ipAddress.FirstOrDefault());
