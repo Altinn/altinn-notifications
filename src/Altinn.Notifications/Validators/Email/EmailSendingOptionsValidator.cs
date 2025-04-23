@@ -40,6 +40,10 @@ namespace Altinn.Notifications.Validators.Email
                 RuleFor(option => option!.SendingTimePolicy)
                     .Must(HaveValueAnytime)
                     .WithMessage("Email only supports send time anytime");
+
+                RuleFor(option => option!.ContentType)
+                    .IsInEnum()
+                    .WithMessage("Email content type must be either Plain or HTML.");
             });
         }
 
