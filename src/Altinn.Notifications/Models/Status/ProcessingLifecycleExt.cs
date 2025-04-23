@@ -51,7 +51,7 @@ public enum ProcessingLifecycleExt
     /// This occurs when an order has conditional sending requirements that weren't met,
     /// such as when a condition endpoint returned a negative result.
     /// </remarks>  
-    [EnumMember(Value = "order_sending_condition_not_met")]
+    [EnumMember(Value = "order_send_condition_not_met")]
     Order_SendConditionNotMet,
 
     /// <summary>
@@ -259,8 +259,8 @@ public enum ProcessingLifecycleExt
     /// <remarks>
     /// The recipient's address is on a do-not-send list maintained by the service provider.
     /// </remarks>
-    [EnumMember(Value = "email_failed_supressed_recipient")]
-    Email_Failed_SupressedRecipient,
+    [EnumMember(Value = "email_failed_suppressed_recipient")]
+    Email_Failed_SuppressedRecipient,
 
     /// <summary>
     /// The email notification encountered a temporary failure that might succeed with a retry attempt.
