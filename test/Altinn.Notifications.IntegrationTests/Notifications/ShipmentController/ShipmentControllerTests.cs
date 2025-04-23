@@ -5,11 +5,13 @@ using System.Text.Json;
 
 using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Controllers;
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Delivery;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.IntegrationTests;
 using Altinn.Notifications.Models.Delivery;
+using Altinn.Notifications.Models.Status;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using Altinn.Notifications.Tests.Notifications.Utils;
 
@@ -76,22 +78,22 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
 
         Assert.NotNull(manifest);
         Assert.Null(manifest.SequenceNumber);
-        Assert.Equal("Completed", manifest.Status);
         Assert.Equal("Notification", manifest.Type);
         Assert.Equal(2, manifest.Recipients.Count);
         Assert.Equal(_shipmentId, manifest.ShipmentId);
+        Assert.Equal(ProcessingLifecycleExt.Order_Completed, manifest.Status);
         Assert.Equal("COMPLETED-ORDER-REF-F10D5B2DCDFD", manifest.SendersReference);
         Assert.True((DateTime.UtcNow.AddDays(-7) - manifest.LastUpdate).TotalSeconds < 5);
 
         Assert.Equal(2, manifest.Recipients.Count);
 
         var smsRecipient = Assert.IsType<IDeliveryManifestExt>(manifest.Recipients[0], exactMatch: false);
-        Assert.Equal("Delivered", smsRecipient.Status);
         Assert.Equal("+4799999999", smsRecipient.Destination);
+        Assert.Equal(ProcessingLifecycleExt.SMS_Delivered, smsRecipient.Status);
 
         var emailRecipient = Assert.IsType<IDeliveryManifestExt>(manifest.Recipients[1], exactMatch: false);
-        Assert.Equal("Sent", emailRecipient.Status);
         Assert.Equal("test@example.com", emailRecipient.Destination);
+        Assert.Equal(ProcessingLifecycleExt.Email_Delivered, emailRecipient.Status);
 
         _serviceMock.Verify(
             s => s.GetDeliveryManifestAsync(It.Is<Guid>(e => e.Equals(_shipmentId)), It.Is<string>(e => e.Equals("ttd")), It.IsAny<CancellationToken>()),
@@ -192,22 +194,22 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
 
         Assert.NotNull(manifest);
         Assert.Null(manifest.SequenceNumber);
-        Assert.Equal("Completed", manifest.Status);
         Assert.Equal("Notification", manifest.Type);
         Assert.Equal(2, manifest.Recipients.Count);
         Assert.Equal(_shipmentId, manifest.ShipmentId);
+        Assert.Equal(ProcessingLifecycleExt.Order_Completed, manifest.Status);
         Assert.Equal("COMPLETED-ORDER-REF-F10D5B2DCDFD", manifest.SendersReference);
         Assert.True((DateTime.UtcNow.AddDays(-7) - manifest.LastUpdate).TotalSeconds < 5);
 
         Assert.Equal(2, manifest.Recipients.Count);
 
         var smsRecipient = Assert.IsType<IDeliveryManifestExt>(manifest.Recipients[0], exactMatch: false);
-        Assert.Equal("Delivered", smsRecipient.Status);
         Assert.Equal("+4799999999", smsRecipient.Destination);
+        Assert.Equal(ProcessingLifecycleExt.SMS_Delivered, smsRecipient.Status);
 
         var emailRecipient = Assert.IsType<IDeliveryManifestExt>(manifest.Recipients[1], exactMatch: false);
-        Assert.Equal("Sent", emailRecipient.Status);
         Assert.Equal("test@example.com", emailRecipient.Destination);
+        Assert.Equal(ProcessingLifecycleExt.Email_Delivered, manifest.Status);
 
         _serviceMock.Verify(
             s => s.GetDeliveryManifestAsync(It.Is<Guid>(e => e.Equals(_shipmentId)), It.Is<string>(e => e.Equals("ttd")), It.IsAny<CancellationToken>()),
@@ -276,22 +278,21 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
 
         Assert.NotNull(manifest);
         Assert.Null(manifest.SequenceNumber);
-        Assert.Equal("Completed", manifest.Status);
         Assert.Equal("Notification", manifest.Type);
-        Assert.Equal(2, manifest.Recipients.Count);
         Assert.Equal(_shipmentId, manifest.ShipmentId);
+        Assert.Equal(ProcessingLifecycleExt.Order_Completed, manifest.Status);
         Assert.Equal("COMPLETED-ORDER-REF-F10D5B2DCDFD", manifest.SendersReference);
         Assert.True((DateTime.UtcNow.AddDays(-7) - manifest.LastUpdate).TotalSeconds < 5);
 
         Assert.Equal(2, manifest.Recipients.Count);
 
         var smsRecipient = Assert.IsType<IDeliveryManifestExt>(manifest.Recipients[0], exactMatch: false);
-        Assert.Equal("Delivered", smsRecipient.Status);
         Assert.Equal("+4799999999", smsRecipient.Destination);
+        Assert.Equal(ProcessingLifecycleExt.SMS_Delivered, smsRecipient.Status);
 
         var emailRecipient = Assert.IsType<IDeliveryManifestExt>(manifest.Recipients[1], exactMatch: false);
-        Assert.Equal("Sent", emailRecipient.Status);
         Assert.Equal("test@example.com", emailRecipient.Destination);
+        Assert.Equal(ProcessingLifecycleExt.Email_Delivered, emailRecipient.Status);
 
         _serviceMock.Verify(
             s => s.GetDeliveryManifestAsync(It.Is<Guid>(e => e.Equals(_shipmentId)), It.Is<string>(e => e.Equals("ttd")), It.IsAny<CancellationToken>()),
@@ -377,23 +378,24 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
     {
         var recipients = new List<IDeliveryManifest>
         {
-            CreateSmsDeliveryManifest("+4799999999", "Delivered", DateTime.Now.AddDays(-7)),
-            CreateEmailDeliveryManifest("test@example.com", "Sent", DateTime.Now.AddDays(-20))
+            CreateSmsDeliveryManifest("+4799999999", ProcessingLifecycle.SMS_Delivered, DateTime.Now.AddDays(-7)),
+            CreateEmailDeliveryManifest("test@example.com", ProcessingLifecycle.Email_Delivered, DateTime.Now.AddDays(-20))
         };
 
         return new NotificationDeliveryManifest
         {
-            Status = "Completed",
             Type = "Notification",
             SequenceNumber = null,
             ShipmentId = shipmentId,
+            Status = ProcessingLifecycle.Order_Completed,
+
             LastUpdate = DateTime.UtcNow.AddDays(-7),
             Recipients = recipients.ToImmutableList(),
             SendersReference = "COMPLETED-ORDER-REF-F10D5B2DCDFD"
         };
     }
 
-    private static SmsDeliveryManifest CreateSmsDeliveryManifest(string phoneNumber, string status, DateTime lastUpdate)
+    private static SmsDeliveryManifest CreateSmsDeliveryManifest(string phoneNumber, ProcessingLifecycle status, DateTime lastUpdate)
     {
         return new SmsDeliveryManifest()
         {
@@ -403,7 +405,7 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         };
     }
 
-    private static EmailDeliveryManifest CreateEmailDeliveryManifest(string emailAddress, string status, DateTime lastUpdate)
+    private static EmailDeliveryManifest CreateEmailDeliveryManifest(string emailAddress, ProcessingLifecycle status, DateTime lastUpdate)
     {
         return new EmailDeliveryManifest()
         {

@@ -2,6 +2,7 @@
 using System.Data;
 using System.Text.RegularExpressions;
 
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Delivery;
 using Altinn.Notifications.Core.Persistence;
 
@@ -52,37 +53,76 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
     }
 
     /// <summary>
-    /// Builds a <see cref="NotificationDeliveryManifest"/> from database query results.
+    /// Maps a database SMS notification result string to its corresponding <see cref="ProcessingLifecycle"/> enum value.
     /// </summary>
-    /// <param name="reader">Data reader positioned at the first row of shipment tracking data.</param>
-    /// <param name="alternateId">Unique identifier for the notification order.</param>
-    /// <param name="cancellationToken">Token to cancel the operation.</param>
-    /// <returns>
-    /// A task representing the asynchronous operation. When completed successfully, the task result contains 
-    /// a fully populated <see cref="INotificationDeliveryManifest"/> with consolidated tracking information 
-    /// for both the shipment and all its individual recipient deliveries.
-    /// </returns>
-    private static async Task<INotificationDeliveryManifest> CreateNotificationDeliveryManifestAsync(NpgsqlDataReader reader, Guid alternateId, CancellationToken cancellationToken)
+    /// <param name="status">The SMS status string from the database (from SMSNOTIFICATIONRESULTTYPE enum type).</param>
+    /// <returns>The corresponding <see cref="ProcessingLifecycle"/> enum value for the SMS notification status.</returns>
+    /// <exception cref="ArgumentException">Thrown when the status string doesn't match any known SMS notification status.</exception>
+    private static ProcessingLifecycle GetSmsProcessingStatus(string status)
     {
-        var deliverableEntities = new List<IDeliveryManifest>();
-
-        var reference = await ExtractSenderReferenceAsync(reader, cancellationToken);
-
-        var (status, lastUpdate) = await ExtractStatusAsync(reader, cancellationToken);
-
-        while (await reader.ReadAsync(cancellationToken))
+        return status.ToLowerInvariant() switch
         {
-            await CreateDeliveryManifestEntityAsync(reader, deliverableEntities, cancellationToken);
-        }
+            "new" => ProcessingLifecycle.SMS_New,
+            "failed" => ProcessingLifecycle.SMS_Failed,
+            "sending" => ProcessingLifecycle.SMS_Sending,
+            "accepted" => ProcessingLifecycle.SMS_Accepted,
+            "delivered" => ProcessingLifecycle.SMS_Delivered,
+            "failed_deleted" => ProcessingLifecycle.SMS_Failed_Deleted,
+            "failed_expired" => ProcessingLifecycle.SMS_Failed_Expired,
+            "failed_rejected" => ProcessingLifecycle.SMS_Failed_Rejected,
+            "failed_undelivered" => ProcessingLifecycle.SMS_Failed_Undelivered,
+            "failed_barredreceiver" => ProcessingLifecycle.SMS_Failed_BarredReceiver,
+            "failed_invalidreceiver" => ProcessingLifecycle.SMS_Failed_InvalidRecipient,
+            "failed_invalidrecipient" => ProcessingLifecycle.SMS_Failed_InvalidRecipient,
+            "failed_recipientreserved" => ProcessingLifecycle.SMS_Failed_RecipientReserved,
+            "failed_recipientnotidentified" => ProcessingLifecycle.SMS_Failed_RecipientNotIdentified,
+            _ => throw new ArgumentException($"Unknown SMS notification status: {status}", nameof(status))
+        };
+    }
 
-        return new NotificationDeliveryManifest
+    /// <summary>
+    /// Maps a database email notification result string to its corresponding <see cref="ProcessingLifecycle"/> enum value.
+    /// </summary>
+    /// <param name="status">The email status string from the database (from emailnotificationresulttype type).</param>
+    /// <returns>The corresponding <see cref="ProcessingLifecycle"/> enum value for the email notification status.</returns>
+    /// <exception cref="ArgumentException">Thrown when the status string doesn't match any known email notification status.</exception>
+    private static ProcessingLifecycle GetEmailProcessingStatus(string status)
+    {
+        return status.ToLowerInvariant() switch
         {
-            Status = status,
-            Type = "Notification",
-            LastUpdate = lastUpdate,
-            ShipmentId = alternateId,
-            SendersReference = reference,
-            Recipients = deliverableEntities.ToImmutableList()
+            "new" => ProcessingLifecycle.Email_New,
+            "failed" => ProcessingLifecycle.Email_Failed,
+            "sending" => ProcessingLifecycle.Email_Sending,
+            "succeeded" => ProcessingLifecycle.Email_Succeeded,
+            "delivered" => ProcessingLifecycle.Email_Delivered,
+            "failed_bounced" => ProcessingLifecycle.Email_Failed_Bounced,
+            "failed_quarantined" => ProcessingLifecycle.Email_Failed_Quarantined,
+            "failed_filteredspam" => ProcessingLifecycle.Email_Failed_FilteredSpam,
+            "failed_transienterror" => ProcessingLifecycle.Email_Failed_TransientError,
+            "failed_invalidemailformat" => ProcessingLifecycle.Email_Failed_InvalidFormat,
+            "failed_recipientreserved" => ProcessingLifecycle.Email_Failed_RecipientReserved,
+            "failed_supressedrecipient" => ProcessingLifecycle.Email_Failed_SupressedRecipient,
+            "failed_recipientnotidentified" => ProcessingLifecycle.Email_Failed_RecipientNotIdentified,
+            _ => throw new ArgumentException($"Unknown email notification status: {status}", nameof(status))
+        };
+    }
+
+    /// <summary>
+    /// Maps a database order processing state string to its corresponding <see cref="ProcessingLifecycle"/> enum value.
+    /// </summary>
+    /// <param name="status">The order status string from the database (from orderprocessingstate type).</param>
+    /// <returns>The corresponding <see cref="ProcessingLifecycle"/> enum value for the order status.</returns>
+    /// <exception cref="ArgumentException">Thrown when the status string doesn't match any known order status.</exception>
+    private static ProcessingLifecycle GetOrderProcessingStatus(string status)
+    {
+        return status.ToLowerInvariant() switch
+        {
+            "cancelled" => ProcessingLifecycle.Order_Cancelled,
+            "completed" => ProcessingLifecycle.Order_Completed,
+            "registered" => ProcessingLifecycle.Order_Registered,
+            "processing" => ProcessingLifecycle.Order_Processing,
+            "sendconditionnotmet" => ProcessingLifecycle.Order_SendConditionNotMet,
+            _ => throw new ArgumentException($"Unknown order status: {status}", nameof(status))
         };
     }
 
@@ -172,18 +212,53 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
         IDeliveryManifest deliverableEntity = MobileNumbersRegex().IsMatch(destination)
             ? new SmsDeliveryManifest
             {
-                Status = status,
                 LastUpdate = lastUpdate,
-                Destination = destination
+                Destination = destination,
+                Status = GetSmsProcessingStatus(status),
             }
             : new EmailDeliveryManifest
             {
-                Status = status,
                 LastUpdate = lastUpdate,
-                Destination = destination
+                Destination = destination,
+                Status = GetEmailProcessingStatus(status),
             };
 
         deliveryManifestEntities.Add(deliverableEntity);
+    }
+
+    /// <summary>
+    /// Builds a <see cref="NotificationDeliveryManifest"/> from database query results.
+    /// </summary>
+    /// <param name="reader">Data reader positioned at the first row of shipment tracking data.</param>
+    /// <param name="alternateId">Unique identifier for the notification order.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>
+    /// A task representing the asynchronous operation. When completed successfully, the task result contains 
+    /// a fully populated <see cref="INotificationDeliveryManifest"/> with consolidated tracking information 
+    /// for both the shipment and all its individual recipient deliveries.
+    /// </returns>
+    private static async Task<INotificationDeliveryManifest> CreateNotificationDeliveryManifestAsync(NpgsqlDataReader reader, Guid alternateId, CancellationToken cancellationToken)
+    {
+        var deliverableEntities = new List<IDeliveryManifest>();
+
+        var reference = await ExtractSenderReferenceAsync(reader, cancellationToken);
+
+        var (status, lastUpdate) = await ExtractStatusAsync(reader, cancellationToken);
+
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            await CreateDeliveryManifestEntityAsync(reader, deliverableEntities, cancellationToken);
+        }
+
+        return new NotificationDeliveryManifest
+        {
+            Type = "Notification",
+            LastUpdate = lastUpdate,
+            ShipmentId = alternateId,
+            SendersReference = reference,
+            Status = GetOrderProcessingStatus(status),
+            Recipients = deliverableEntities.ToImmutableList()
+        };
     }
 
     /// <summary>
