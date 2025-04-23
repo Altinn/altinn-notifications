@@ -26,6 +26,7 @@ public static class NotificationDeliveryManifestMapper
             Type = manifest.Type,
             LastUpdate = manifest.LastUpdate,
             ShipmentId = manifest.ShipmentId,
+            SequenceNumber = manifest.SequenceNumber,
             SendersReference = manifest.SendersReference,
             Status = (ProcessingLifecycleExt)manifest.Status,
             Recipients = manifest.Recipients.MapToDeliveryManifestExtObjects()
