@@ -5,6 +5,8 @@ using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Models;
+using Altinn.Notifications.Models.Email;
+using Altinn.Notifications.Models.Sms;
 
 namespace Altinn.Notifications.Mappers;
 
