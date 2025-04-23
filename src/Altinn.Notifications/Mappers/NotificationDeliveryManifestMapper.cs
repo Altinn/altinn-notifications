@@ -21,6 +21,8 @@ public static class NotificationDeliveryManifestMapper
     /// </returns>
     public static INotificationDeliveryManifestExt MapToNotificationDeliveryManifestExt(this INotificationDeliveryManifest manifest)
     {
+        ArgumentNullException.ThrowIfNull(manifest);
+
         return new NotificationDeliveryManifestExt
         {
             Type = manifest.Type,
@@ -66,6 +68,8 @@ public static class NotificationDeliveryManifestMapper
     /// </returns>
     private static SmsDeliveryManifestExt MapToSmsDeliveryManifestExt(this SmsDeliveryManifest smsDeliveryManifest)
     {
+        ArgumentNullException.ThrowIfNull(smsDeliveryManifest);
+
         return new SmsDeliveryManifestExt
         {
             LastUpdate = smsDeliveryManifest.LastUpdate,
@@ -84,6 +88,8 @@ public static class NotificationDeliveryManifestMapper
     /// </returns>
     private static EmailDeliveryManifestExt MapToEmailDeliveryManifestExt(this EmailDeliveryManifest emailDeliveryManifest)
     {
+        ArgumentNullException.ThrowIfNull(emailDeliveryManifest);
+
         return new EmailDeliveryManifestExt
         {
             LastUpdate = emailDeliveryManifest.LastUpdate,
