@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Delivery;
+using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Persistence;
 
 using Npgsql;
@@ -91,8 +92,8 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
     public async Task<INotificationDeliveryManifest?> GetDeliveryManifestAsync(Guid alternateId, string creatorName, CancellationToken cancellationToken)
     {
         await using var command = _dataSource.CreateCommand(_sqlGetShipmentTrackingInfo);
-        command.Parameters.AddWithValue("_alternateid", NpgsqlDbType.Uuid, alternateId);
-        command.Parameters.AddWithValue("_creatorname", NpgsqlDbType.Text, creatorName);
+        command.Parameters.AddWithValue(NpgsqlDbType.Uuid, alternateId);
+        command.Parameters.AddWithValue(NpgsqlDbType.Text, creatorName);
 
         await using var reader = await command.ExecuteReaderAsync(CommandBehavior.SingleResult, cancellationToken);
         if (!reader.HasRows)
