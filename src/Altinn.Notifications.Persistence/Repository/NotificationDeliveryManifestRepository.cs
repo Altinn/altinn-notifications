@@ -91,8 +91,8 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
     public async Task<INotificationDeliveryManifest?> GetDeliveryManifestAsync(Guid alternateId, string creatorName, CancellationToken cancellationToken)
     {
         await using var command = _dataSource.CreateCommand(_sqlGetShipmentTrackingInfo);
-        command.Parameters.AddWithValue("p_alternateid", NpgsqlDbType.Uuid, alternateId);
-        command.Parameters.AddWithValue("p_creatorname", NpgsqlDbType.Text, creatorName);
+        command.Parameters.AddWithValue("_alternateid", NpgsqlDbType.Uuid, alternateId);
+        command.Parameters.AddWithValue("_creatorname", NpgsqlDbType.Text, creatorName);
 
         await using var reader = await command.ExecuteReaderAsync(CommandBehavior.SingleResult, cancellationToken);
         if (!reader.HasRows)
