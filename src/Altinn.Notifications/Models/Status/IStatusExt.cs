@@ -12,18 +12,20 @@ namespace Altinn.Notifications.Models.Status;
 public interface IStatusExt
 {
     /// <summary>
-    /// Gets the current status of the entity.
+    /// Gets the current lifecycle status of the entity.
     /// </summary>
     /// <value>
-    /// A string representing the state (e.g., "Registered", "Processed", "Delivered", "Failed").
+    /// A <see cref="ProcessingLifecycleExt"/> enum value representing the current state
+    /// in the notification processing workflow.
     /// </value>
     /// <remarks>
-    /// The status value follows a standardized set of states across the notification system,
-    /// allowing for consistent filtering, reporting, and processing of entities based on
-    /// their current state.
+    /// The status follows a standardized set of states defined by the <see cref="ProcessingLifecycleExt"/> enum,
+    /// with distinct values for order processing, SMS notifications, and email notifications.
+    /// This allows for consistent filtering, reporting, and processing of entities based on
+    /// their current state within the system.
     /// </remarks>
     [JsonPropertyName("status")]
-    string Status { get; }
+    ProcessingLifecycleExt Status { get; }
 
     /// <summary>
     /// Gets the UTC date and time when the status was last updated.

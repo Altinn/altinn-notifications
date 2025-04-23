@@ -1,5 +1,7 @@
 ﻿using System.Text.Json.Serialization;
 
+using Altinn.Notifications.Models.Status;
+
 namespace Altinn.Notifications.Models.Delivery;
 
 /// <summary>
@@ -24,7 +26,7 @@ public abstract record DeliveryManifestExt : IDeliveryManifestExt
 
     /// <inheritdoc />
     [JsonPropertyName("status")]
-    public required string Status { get; init; }
+    public required ProcessingLifecycleExt Status { get; init; }
 
     /// <inheritdoc />
     [JsonPropertyName("lastUpdate")]

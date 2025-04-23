@@ -2,6 +2,7 @@
 
 using Altinn.Notifications.Core.Models.Delivery;
 using Altinn.Notifications.Models.Delivery;
+using Altinn.Notifications.Models.Status;
 
 namespace Altinn.Notifications.Mappers;
 
@@ -23,10 +24,10 @@ public static class NotificationDeliveryManifestMapper
         return new NotificationDeliveryManifestExt
         {
             Type = manifest.Type,
-            Status = manifest.Status,
             LastUpdate = manifest.LastUpdate,
             ShipmentId = manifest.ShipmentId,
             SendersReference = manifest.SendersReference,
+            Status = (ProcessingLifecycleExt)manifest.Status,
             Recipients = manifest.Recipients.MapToDeliveryManifestExtObjects()
         };
     }
@@ -66,9 +67,9 @@ public static class NotificationDeliveryManifestMapper
     {
         return new SmsDeliveryManifestExt
         {
-            Status = smsDeliveryManifest.Status,
             LastUpdate = smsDeliveryManifest.LastUpdate,
-            Destination = smsDeliveryManifest.Destination
+            Destination = smsDeliveryManifest.Destination,
+            Status = (ProcessingLifecycleExt)smsDeliveryManifest.Status
         };
     }
 
@@ -84,9 +85,9 @@ public static class NotificationDeliveryManifestMapper
     {
         return new EmailDeliveryManifestExt
         {
-            Status = emailDeliveryManifest.Status,
             LastUpdate = emailDeliveryManifest.LastUpdate,
-            Destination = emailDeliveryManifest.Destination
+            Destination = emailDeliveryManifest.Destination,
+            Status = (ProcessingLifecycleExt)emailDeliveryManifest.Status
         };
     }
 
