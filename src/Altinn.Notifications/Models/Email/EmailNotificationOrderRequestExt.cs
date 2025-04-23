@@ -2,7 +2,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Altinn.Notifications.Models;
+namespace Altinn.Notifications.Models.Email;
 
 /// <summary>
 /// Class representing an email notification order request

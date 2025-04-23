@@ -10,6 +10,9 @@ using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Models;
+using Altinn.Notifications.Models.Email;
+using Altinn.Notifications.Models.Recipient;
+using Altinn.Notifications.Models.Sms;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using Altinn.Notifications.Tests.Notifications.Utils;
 
