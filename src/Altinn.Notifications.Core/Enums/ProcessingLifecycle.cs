@@ -229,7 +229,7 @@ public enum ProcessingLifecycle
     /// <remarks>
     /// The recipient's address is on a do-not-send list maintained by the service provider.
     /// </remarks>
-    Email_Failed_SupressedRecipient,
+    Email_Failed_SuppressedRecipient,
 
     /// <summary>
     /// The email notification encountered a temporary failure that might succeed with a retry attempt.
