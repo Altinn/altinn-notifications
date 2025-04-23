@@ -12,7 +12,9 @@ using Xunit;
 namespace Altinn.Notifications.Tests.Notifications.TestingValidators.ExtensionsTests;
 
 /// <summary>
-/// Tests for the ValidatorRegistrationExtensions class for using assembly scan for dependency injection.
+/// Tests for the ValidatorRegistrationExtensions class which provides assembly scanning for validator registration.
+/// These tests ensure that duplicate validators for the same model type are properly detected and prevented, 
+/// which helps avoid inconsistent validation behavior and registration conflicts in the dependency injection container.
 /// </summary>
 public class ValidatorRegistrationExtensionsTests
 {

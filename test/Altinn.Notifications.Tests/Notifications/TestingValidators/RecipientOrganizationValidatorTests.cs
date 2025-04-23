@@ -8,6 +8,10 @@ using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.TestingValidators;
 
+/// <summary>
+/// Tests for the RecipientOrganizationValidator, which validates organizations 
+/// receiving notifications through various channels.
+/// </summary>
 public class RecipientOrganizationValidatorTests
 {
     private readonly RecipientOrganizationValidator _recipientOrganizationValidator = new();
