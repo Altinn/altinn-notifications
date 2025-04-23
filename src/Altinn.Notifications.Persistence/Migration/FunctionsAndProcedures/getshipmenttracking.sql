@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION notifications.get_notification_delivery_info(
+CREATE OR REPLACE FUNCTION notifications.get_shipment_tracking(
     _alternateid UUID,
     _creatorname TEXT)
 RETURNS TABLE (
