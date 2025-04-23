@@ -1,7 +1,10 @@
-﻿namespace Altinn.Notifications.Models.Status;
+﻿using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
+
+namespace Altinn.Notifications.Models.Status;
 
 /// <summary>
-/// Represents the complete lifecycle status of orders and notifications in the Notifications system.
+/// Represents the lifecycle status of orders and individual notifications.
 /// </summary>
 /// <remarks>
 /// This enum categorizes the different states that an order, SMS notification, or email notification
@@ -9,6 +12,7 @@
 /// 
 /// The status values are prefixed with their respective domain (Order_, SMS_, or Email_) for clarity.
 /// </remarks>
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum ProcessingLifecycleExt
 {
     /// <summary>
@@ -17,6 +21,7 @@ public enum ProcessingLifecycleExt
     /// <remarks>
     /// This is the initial state for all notification orders upon submission.
     /// </remarks>
+    [EnumMember(Value = "order_registered")]
     Order_Registered,
 
     /// <summary>
@@ -26,6 +31,7 @@ public enum ProcessingLifecycleExt
     /// During this state, the system is validating recipients, generating email and/or SMS notifications, 
     /// and preparing them for delivery through the appropriate channels.
     /// </remarks>
+    [EnumMember(Value = "order_processing")]
     Order_Processing,
 
     /// <summary>
@@ -35,6 +41,7 @@ public enum ProcessingLifecycleExt
     /// This state indicates that all notifications within the order have been registered in the system,
     /// though individual notifications may have their own status.
     /// </remarks>
+    [EnumMember(Value = "order_completed")]
     Order_Completed,
 
     /// <summary>
@@ -43,7 +50,8 @@ public enum ProcessingLifecycleExt
     /// <remarks>
     /// This occurs when an order has conditional sending requirements that weren't met,
     /// such as when a condition endpoint returned a negative result.
-    /// </remarks>
+    /// </remarks>  
+    [EnumMember(Value = "order_sending_condition_not_met")]
     Order_SendConditionNotMet,
 
     /// <summary>
@@ -53,6 +61,7 @@ public enum ProcessingLifecycleExt
     /// Cancellation can be triggered by administrative action or automated system rules
     /// like exceeding retry limits or detection of system-wide issues.
     /// </remarks>
+    [EnumMember(Value = "order_cancelled")]
     Order_Cancelled,
 
     /// <summary>
@@ -61,6 +70,7 @@ public enum ProcessingLifecycleExt
     /// <remarks>
     /// This is the initial state for all SMS notifications upon processing the order completely.
     /// </remarks>
+    [EnumMember(Value = "sms_new")]
     SMS_New,
 
     /// <summary>
@@ -69,6 +79,7 @@ public enum ProcessingLifecycleExt
     /// <remarks>
     /// The notification has been passed to the SMS service provider and is awaiting delivery confirmation.
     /// </remarks>
+    [EnumMember(Value = "sms_sending")]
     SMS_Sending,
 
     /// <summary>
@@ -77,6 +88,7 @@ public enum ProcessingLifecycleExt
     /// <remarks>
     /// The service provider has confirmed that the message is valid and will attempt delivery.
     /// </remarks>
+    [EnumMember(Value = "sms_accepted")]
     SMS_Accepted,
 
     /// <summary>
@@ -85,6 +97,7 @@ public enum ProcessingLifecycleExt
     /// <remarks>
     /// A delivery confirmation has been received from the service provider, indicating successful receipt by the recipient's device.
     /// </remarks>
+    [EnumMember(Value = "sms_delivered")]
     SMS_Delivered,
 
     /// <summary>
@@ -93,6 +106,7 @@ public enum ProcessingLifecycleExt
     /// <remarks>
     /// This is a general failure state when the specific reason for failure isn't known or doesn't match other defined failure types.
     /// </remarks>
+    [EnumMember(Value = "sms_failed")]
     SMS_Failed,
 
     /// <summary>
@@ -101,6 +115,7 @@ public enum ProcessingLifecycleExt
     /// <remarks>
     /// The provided phone number doesn't conform to required formats or is recognized as invalid by the carrier.
     /// </remarks>
+    [EnumMember(Value = "sms_failed_invalid_recipient")]
     SMS_Failed_InvalidRecipient,
 
     /// <summary>
@@ -109,6 +124,7 @@ public enum ProcessingLifecycleExt
     /// <remarks>
     /// The recipient has explicitly opted out of receiving notifications through the Norwegian Contact and Reservation Register (KRR).
     /// </remarks>
+    [EnumMember(Value = "sms_failed_recipient_reserved")]
     SMS_Failed_RecipientReserved,
 
     /// <summary>
@@ -117,6 +133,7 @@ public enum ProcessingLifecycleExt
     /// <remarks>
     /// The carrier or service provider has indicated that the number cannot receive messages.
     /// </remarks>
+    [EnumMember(Value = "sms_failed_barred_receiver")]
     SMS_Failed_BarredReceiver,
 
     /// <summary>
@@ -125,6 +142,7 @@ public enum ProcessingLifecycleExt
     /// <remarks>
     /// The message was removed from the delivery queue by the system or service provider.
     /// </remarks>
+    [EnumMember(Value = "sms_failed_deleted")]
     SMS_Failed_Deleted,
 
     /// <summary>
@@ -133,6 +151,7 @@ public enum ProcessingLifecycleExt
     /// <remarks>
     /// The message's time-to-live was exceeded before successful delivery.
     /// </remarks>
+    [EnumMember(Value = "sms_failed_expired")]
     SMS_Failed_Expired,
 
     /// <summary>
@@ -141,6 +160,7 @@ public enum ProcessingLifecycleExt
     /// <remarks>
     /// The service provider made all configured retry attempts without successfully delivering the message.
     /// </remarks>
+    [EnumMember(Value = "sms_failed_undelivered")]
     SMS_Failed_Undelivered,
 
     /// <summary>
@@ -149,6 +169,7 @@ public enum ProcessingLifecycleExt
     /// <remarks>
     /// No mobile number could be found for the recipient in the available contact registries.
     /// </remarks>
+    [EnumMember(Value = "sms_failed_recipient_not_identified")]
     SMS_Failed_RecipientNotIdentified,
 
     /// <summary>
@@ -157,6 +178,7 @@ public enum ProcessingLifecycleExt
     /// <remarks>
     /// The message was explicitly rejected during the delivery process.
     /// </remarks>
+    [EnumMember(Value = "sms_failed_rejected")]
     SMS_Failed_Rejected,
 
     /// <summary>
@@ -165,6 +187,7 @@ public enum ProcessingLifecycleExt
     /// <remarks>
     /// This is the initial state for all email notifications upon processing the order completely.
     /// </remarks>
+    [EnumMember(Value = "email_new")]
     Email_New,
 
     /// <summary>
@@ -173,6 +196,7 @@ public enum ProcessingLifecycleExt
     /// <remarks>
     /// The notification has been passed to the email service provider and is awaiting delivery confirmation.
     /// </remarks>
+    [EnumMember(Value = "email_sending")]
     Email_Sending,
 
     /// <summary>
@@ -181,6 +205,7 @@ public enum ProcessingLifecycleExt
     /// <remarks>
     /// The service provider has accepted the email for delivery, though final delivery to the recipient's inbox is not yet confirmed.
     /// </remarks>
+    [EnumMember(Value = "email_succeeded")]
     Email_Succeeded,
 
     /// <summary>
@@ -189,6 +214,7 @@ public enum ProcessingLifecycleExt
     /// <remarks>
     /// A delivery confirmation has been received, indicating the email has reached the recipient's inbox.
     /// </remarks>
+    [EnumMember(Value = "email_delivered")]
     Email_Delivered,
 
     /// <summary>
@@ -197,6 +223,7 @@ public enum ProcessingLifecycleExt
     /// <remarks>
     /// This is a general failure state when the specific reason for failure isn't known or doesn't match other defined failure types.
     /// </remarks>
+    [EnumMember(Value = "email_failed")]
     Email_Failed,
 
     /// <summary>
@@ -205,6 +232,7 @@ public enum ProcessingLifecycleExt
     /// <remarks>
     /// The recipient has explicitly opted out of receiving notifications through the Norwegian Contact and Reservation Register (KRR).
     /// </remarks>
+    [EnumMember(Value = "email_failed_recipient_reserved")]
     Email_Failed_RecipientReserved,
 
     /// <summary>
@@ -213,6 +241,7 @@ public enum ProcessingLifecycleExt
     /// <remarks>
     /// No email address could be found for the recipient in the available contact registries.
     /// </remarks>
+    [EnumMember(Value = "email_failed_recipient_not_identified")]
     Email_Failed_RecipientNotIdentified,
 
     /// <summary>
@@ -221,6 +250,7 @@ public enum ProcessingLifecycleExt
     /// <remarks>
     /// The provided email address doesn't conform to required formats or contains syntax errors.
     /// </remarks>
+    [EnumMember(Value = "email_failed_invalid_format")]
     Email_Failed_InvalidFormat,
 
     /// <summary>
@@ -229,6 +259,7 @@ public enum ProcessingLifecycleExt
     /// <remarks>
     /// The recipient's address is on a do-not-send list maintained by the service provider.
     /// </remarks>
+    [EnumMember(Value = "email_failed_supressed_recipient")]
     Email_Failed_SupressedRecipient,
 
     /// <summary>
@@ -237,6 +268,7 @@ public enum ProcessingLifecycleExt
     /// <remarks>
     /// The service provider encountered a temporary issue, and the message might be delivered successfully on retry.
     /// </remarks>
+    [EnumMember(Value = "email_failed_transient_error")]
     Email_Failed_TransientError,
 
     /// <summary>
@@ -245,6 +277,7 @@ public enum ProcessingLifecycleExt
     /// <remarks>
     /// A hard bounce occurred, indicating permanent delivery failure.
     /// </remarks>
+    [EnumMember(Value = "email_failed_bounced")]
     Email_Failed_Bounced,
 
     /// <summary>
@@ -253,6 +286,7 @@ public enum ProcessingLifecycleExt
     /// <remarks>
     /// The message was delivered but placed in the spam/junk folder or rejected as spam.
     /// </remarks>
+    [EnumMember(Value = "email_failed_filtered_spam")]
     Email_Failed_FilteredSpam,
 
     /// <summary>
@@ -261,5 +295,6 @@ public enum ProcessingLifecycleExt
     /// <remarks>
     /// The message was flagged by security systems for manual review before potential delivery.
     /// </remarks>
+    [EnumMember(Value = "email_failed_quarantined")]
     Email_Failed_Quarantined
 }

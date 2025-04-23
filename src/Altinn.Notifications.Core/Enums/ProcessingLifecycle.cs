@@ -1,7 +1,7 @@
 ﻿namespace Altinn.Notifications.Core.Enums;
 
 /// <summary>
-/// Represents the complete lifecycle status of orders and notifications in the Notifications system.
+/// Represents the lifecycle status of orders and individual notifications.
 /// </summary>
 /// <remarks>
 /// This enum categorizes the different states that an order, SMS notification, or email notification
