@@ -3,12 +3,12 @@
 /// <summary>
 /// Represents the status of an order, E-mail notification, and SMS notification in the system.
 /// </summary>
-public enum NotificationStatusType
+public enum ProcessingLifecycle
 {
     /// <summary>
     /// The order has been received and registered in the system but processing has not yet begun.
     /// </summary>
-    Order_Registered,
+    Order_Registered, 
 
     /// <summary>
     /// The system is actively processing the order and preparing notifications for delivery.
