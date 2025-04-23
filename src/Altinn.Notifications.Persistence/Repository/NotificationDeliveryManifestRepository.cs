@@ -4,7 +4,6 @@ using System.Text.RegularExpressions;
 
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Delivery;
-using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Persistence;
 
 using Npgsql;
