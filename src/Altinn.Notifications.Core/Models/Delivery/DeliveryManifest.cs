@@ -1,4 +1,6 @@
-﻿namespace Altinn.Notifications.Core.Models.Delivery;
+﻿using Altinn.Notifications.Core.Enums;
+
+namespace Altinn.Notifications.Core.Models.Delivery;
 
 /// <summary>
 /// Provides a base implementation for tracking the status and destination information of deliverable entities 
@@ -20,7 +22,7 @@ public abstract record DeliveryManifest : IDeliveryManifest
     public required string Destination { get; init; }
 
     /// <inheritdoc />
-    public required string Status { get; init; }
+    public required ProcessingLifecycle Status { get; init; }
 
     /// <inheritdoc />
     public required DateTime LastUpdate { get; init; }

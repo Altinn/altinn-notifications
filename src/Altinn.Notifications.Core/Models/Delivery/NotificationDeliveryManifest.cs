@@ -1,5 +1,7 @@
 ﻿using System.Collections.Immutable;
 
+using Altinn.Notifications.Core.Enums;
+
 namespace Altinn.Notifications.Core.Models.Delivery;
 
 /// <summary>
@@ -28,7 +30,7 @@ public record NotificationDeliveryManifest : INotificationDeliveryManifest
     public required string Type { get; init; }
 
     /// <inheritdoc />
-    public required string Status { get; init; }
+    public required ProcessingLifecycle Status { get; init; }
 
     /// <inheritdoc />
     public required DateTime LastUpdate { get; init; }
