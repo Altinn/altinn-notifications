@@ -19,6 +19,7 @@ public static class NotificationDeliveryManifestMapper
     /// An <see cref="INotificationDeliveryManifestExt"/> containing the mapped data from the original 
     /// domain manifest, ready for serialization and transmission to external clients.
     /// </returns>
+    /// <exception cref="ArgumentNullException">Thrown when the manifest parameter is null.</exception>
     public static INotificationDeliveryManifestExt MapToNotificationDeliveryManifestExt(this INotificationDeliveryManifest manifest)
     {
         ArgumentNullException.ThrowIfNull(manifest);
@@ -66,6 +67,7 @@ public static class NotificationDeliveryManifestMapper
     /// A <see cref="SmsDeliveryManifestExt"/> containing the mapped data from the domain
     /// manifest, ready for serialization and transmission to external clients.
     /// </returns>
+    /// <exception cref="ArgumentNullException">Thrown when the manifest parameter is null.</exception>
     private static SmsDeliveryManifestExt MapToSmsDeliveryManifestExt(this SmsDeliveryManifest smsDeliveryManifest)
     {
         ArgumentNullException.ThrowIfNull(smsDeliveryManifest);
@@ -86,6 +88,7 @@ public static class NotificationDeliveryManifestMapper
     /// A <see cref="EmailDeliveryManifestExt"/> containing the mapped data from the domain
     /// manifest, ready for serialization and transmission to external clients.
     /// </returns>
+    /// <exception cref="ArgumentNullException">Thrown when the manifest parameter is null.</exception>
     private static EmailDeliveryManifestExt MapToEmailDeliveryManifestExt(this EmailDeliveryManifest emailDeliveryManifest)
     {
         ArgumentNullException.ThrowIfNull(emailDeliveryManifest);
