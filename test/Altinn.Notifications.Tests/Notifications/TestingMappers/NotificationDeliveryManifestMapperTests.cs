@@ -6,6 +6,7 @@ using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Delivery;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models.Delivery;
+using Altinn.Notifications.Models.Status;
 
 using Moq;
 
@@ -51,9 +52,9 @@ public class NotificationDeliveryManifestMapperTests
         // Assert
         Assert.NotNull(result);
         Assert.Equal(notificationDeliveryManifest.Type, result.Type);
+        Assert.Equal(ProcessingLifecycleExt.Order_Completed, result.Status);
         Assert.Equal(notificationDeliveryManifest.LastUpdate, result.LastUpdate);
         Assert.Equal(notificationDeliveryManifest.ShipmentId, result.ShipmentId);
-        Assert.Equal((int)notificationDeliveryManifest.Status, (int)result.Status);
         Assert.Equal(notificationDeliveryManifest.SequenceNumber, result.SequenceNumber);
         Assert.Equal(notificationDeliveryManifest.SendersReference, result.SendersReference);
 
@@ -66,14 +67,14 @@ public class NotificationDeliveryManifestMapperTests
         Assert.NotNull(smsResult);
         Assert.Equal(smsDeliveryManifest.LastUpdate, smsResult.LastUpdate);
         Assert.Equal(smsDeliveryManifest.Destination, smsResult.Destination);
-        Assert.Equal((int)smsDeliveryManifest.Status, (int)smsResult.Status);
+        Assert.Equal(ProcessingLifecycleExt.SMS_Delivered, smsResult.Status);
 
         // Verify second recipient (Email)
         var emailResult = result.Recipients[1] as EmailDeliveryManifestExt;
         Assert.NotNull(emailResult);
+        Assert.Equal(ProcessingLifecycleExt.Email_New, emailResult.Status);
         Assert.Equal(emailDeliveryManifest.LastUpdate, emailResult.LastUpdate);
         Assert.Equal(emailDeliveryManifest.Destination, emailResult.Destination);
-        Assert.Equal((int)emailDeliveryManifest.Status, (int)emailResult.Status);
     }
 
     [Fact]
@@ -97,9 +98,9 @@ public class NotificationDeliveryManifestMapperTests
         Assert.NotNull(result);
         Assert.Empty(result.Recipients);
         Assert.Equal(shipmentDeliveryManifest.Type, result.Type);
+        Assert.Equal(ProcessingLifecycleExt.Order_Completed, result.Status);
         Assert.Equal(shipmentDeliveryManifest.LastUpdate, result.LastUpdate);
         Assert.Equal(shipmentDeliveryManifest.ShipmentId, result.ShipmentId);
-        Assert.Equal((int)shipmentDeliveryManifest.Status, (int)result.Status);
         Assert.Equal(shipmentDeliveryManifest.SequenceNumber, result.SequenceNumber);
         Assert.Equal(shipmentDeliveryManifest.SendersReference, result.SendersReference);
     }
@@ -127,7 +128,7 @@ public class NotificationDeliveryManifestMapperTests
         Assert.Equal(shipmentDeliveryManifest.Type, result.Type);
         Assert.Equal(shipmentDeliveryManifest.LastUpdate, result.LastUpdate);
         Assert.Equal(shipmentDeliveryManifest.ShipmentId, result.ShipmentId);
-        Assert.Equal((int)shipmentDeliveryManifest.Status, (int)result.Status);
+        Assert.Equal(ProcessingLifecycleExt.Order_Processing, result.Status);
         Assert.Equal(shipmentDeliveryManifest.SequenceNumber, result.SequenceNumber);
     }
 
