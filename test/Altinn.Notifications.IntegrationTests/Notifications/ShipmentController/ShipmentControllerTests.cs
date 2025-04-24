@@ -2,6 +2,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Controllers;
@@ -44,7 +45,14 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
 
         _options = new JsonSerializerOptions
         {
-            PropertyNameCaseInsensitive = true
+            WriteIndented = true,
+            PropertyNameCaseInsensitive = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            Converters =
+            {
+                new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
+            }
         };
 
         _serviceMock = new Mock<INotificationDeliveryManifestService>();
