@@ -27,10 +27,10 @@ public interface IStatus
     ProcessingLifecycle Status { get; }
 
     /// <summary>
-    /// Gets the UTC date and time when the status was last updated.
+    /// Gets the date and time when the status was last updated.
     /// </summary>
     /// <value>
-    /// A <see cref="DateTime"/> in UTC format representing when the status was most recently modified.
+    /// A <see cref="DateTime"/> representing when the status was most recently modified.
     /// </value>
     /// <remarks>
     /// This timestamp facilitates chronological tracking of status changes, providing
