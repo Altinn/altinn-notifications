@@ -41,10 +41,10 @@ public class RecipientOrganizationExt : RecipientBaseExt
     /// <item><description><see cref="NotificationChannelExt.Sms"/> - Use SMS only</description></item>
     /// <item><description><see cref="NotificationChannelExt.EmailPreferred"/> - Try email first, fall back to SMS if email unavailable</description></item>
     /// <item><description><see cref="NotificationChannelExt.SmsPreferred"/> - Try SMS first, fall back to email if SMS unavailable</description></item>
+    /// <item><description><see cref="NotificationChannelExt.EmailAndSms"/> - Use both email and SMS</description></item>
     /// </list>
     /// </remarks>
     [Required]
     [JsonPropertyName("channelSchema")]
-    [DefaultValue(NotificationChannelExt.SmsPreferred)]
-    public override required NotificationChannelExt ChannelSchema { get; set; } = NotificationChannelExt.SmsPreferred;
+    public override required NotificationChannelExt ChannelSchema { get; set; }
 }

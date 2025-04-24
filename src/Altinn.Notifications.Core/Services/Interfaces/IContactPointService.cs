@@ -27,6 +27,14 @@ public interface IContactPointService
     public Task AddSmsContactPoints(List<Recipient> recipients, string? resourceId);
 
     /// <summary>
+    /// Looks up and adds both email and SMS contact points simultaneously for recipients based on their national identity number or organization number.
+    /// </summary>
+    /// <param name="recipients">List of recipients to retrieve contact points for. Each recipient must have either a national identity number or organization number.</param>
+    /// <param name="resourceId">The resource identifier used to determine relevant contact points within the context of a specific resource or service.</param>
+    /// <returns>Implementation alters the recipient reference objects directly by adding any found email and SMS contact points to their <see cref="Recipient.AddressInfo"/> collection.</returns>
+    public Task AddEmailAndSmsContactPointsAsync(List<Recipient> recipients, string? resourceId);
+
+    /// <summary>
     /// Looks up and adds the preferred contact points for recipients based on their national identity number or organization number.
     /// </summary>
     /// <param name="channel">The notification channel specifying which channel is preferred.</param>

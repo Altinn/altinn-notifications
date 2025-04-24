@@ -124,7 +124,8 @@ public class OrderRequestService : IOrderRequestService
                 ShipmentId = savedMainOrder.Id,
                 SendersReference = savedMainOrder.SendersReference,
                 Reminders = savedOrders.Count > 1
-                    ? [.. savedOrders.Skip(1)
+                    ? [.. savedOrders
+                        .Where(e => e.Id != savedMainOrder.Id)
                         .Select(order => new NotificationOrderChainShipment
                         {
                             ShipmentId = order.Id,
@@ -212,11 +213,17 @@ public class OrderRequestService : IOrderRequestService
             case NotificationChannel.Email:
                 await _contactPointService.AddEmailContactPoints(recipientsWithoutContactPoint, resourceId);
                 break;
+
             case NotificationChannel.Sms:
                 await _contactPointService.AddSmsContactPoints(recipientsWithoutContactPoint, resourceId);
                 break;
-            case NotificationChannel.EmailPreferred:
+
+            case NotificationChannel.EmailAndSms:
+                await _contactPointService.AddEmailAndSmsContactPointsAsync(recipientsWithoutContactPoint, resourceId);
+                break;
+
             case NotificationChannel.SmsPreferred:
+            case NotificationChannel.EmailPreferred:
                 await _contactPointService.AddPreferredContactPoints(channel, recipientsWithoutContactPoint, resourceId);
                 break;
         }
@@ -243,43 +250,86 @@ public class OrderRequestService : IOrderRequestService
         return lookupResult;
     }
 
+    /// <summary>
+    /// Retrieves a list of identifiers for recipients who are missing the required contact information
+    /// for the specified notification channel.
+    /// </summary>
+    /// <param name="channel">
+    /// The <see cref="NotificationChannel"/> to check for missing contact information.
+    /// Supported channels include Email, SMS, EmailAndSms, EmailPreferred, and SmsPreferred.
+    /// </param>
+    /// <param name="recipients">
+    /// A list of <see cref="Recipient"/> objects to evaluate for missing contact points.
+    /// Each recipient is checked for the presence of contact information relevant to the specified channel.
+    /// </param>
+    /// <returns>
+    /// A list of strings representing the identifiers (either <see cref="Recipient.OrganizationNumber"/> or
+    /// <see cref="Recipient.NationalIdentityNumber"/>) of recipients who are missing the required contact information.
+    /// </returns>
     private static List<string> GetMissingContactListIds(NotificationChannel channel, List<Recipient> recipients)
     {
         return channel switch
         {
-            NotificationChannel.Email => recipients
-                               .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email))
-                               .Select(r => r.OrganizationNumber ?? r.NationalIdentityNumber!)
-                               .ToList(),
-            NotificationChannel.Sms => recipients
-                                .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Sms))
-                                .Select(r => r.OrganizationNumber ?? r.NationalIdentityNumber!)
-                                .ToList(),
-            NotificationChannel.EmailPreferred or NotificationChannel.SmsPreferred => recipients
-                              .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email || ap.AddressType == AddressType.Sms))
-                              .Select(r => r.OrganizationNumber ?? r.NationalIdentityNumber!)
-                              .ToList(),
+            NotificationChannel.Email =>
+                                [.. recipients
+                                    .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email))
+                                    .Select(r => r.OrganizationNumber ?? r.NationalIdentityNumber!)],
+
+            NotificationChannel.Sms =>
+                                [.. recipients
+                                    .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Sms))
+                                    .Select(r => r.OrganizationNumber ?? r.NationalIdentityNumber!)],
+
+            NotificationChannel.EmailAndSms or
+            NotificationChannel.EmailPreferred or
+            NotificationChannel.SmsPreferred =>
+                                [.. recipients
+                                    .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email || ap.AddressType == AddressType.Sms))
+                                    .Select(r => r.OrganizationNumber ?? r.NationalIdentityNumber!)],
+
             _ => [],
         };
     }
 
+    /// <summary>
+    /// Retrieves a list of recipients who are missing contact information for the specified notification channel.
+    /// </summary>
+    /// <param name="channel">
+    /// The <see cref="NotificationChannel"/> to check for missing contact information.
+    /// Supported channels include SMS, Email, EmailAndSms, EmailPreferred, and SmsPreferred.
+    /// </param>
+    /// <param name="recipients">
+    /// A list of <see cref="Recipient"/> objects to evaluate for missing contact points.
+    /// </param>
+    /// <returns>
+    /// A list of <see cref="Recipient"/> objects that are missing the required contact information
+    /// for the specified notification channel.
+    /// </returns>
+    /// <remarks>
+    /// This method performs a deep copy of the recipients that are missing contact information to ensure the original list remains unaltered.
+    /// </remarks>
     private static List<Recipient> GetMissingContactRecipientList(NotificationChannel channel, List<Recipient> recipients)
     {
         return channel switch
         {
-            NotificationChannel.Email => recipients
-                               .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email))
-                               .Select(r => r.DeepCopy())
-                               .ToList(),
-            NotificationChannel.Sms => recipients
-                                .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Sms))
-                              .Select(r => r.DeepCopy())
-                               .ToList(),
-            NotificationChannel.EmailPreferred or NotificationChannel.SmsPreferred => recipients
-                              .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email || ap.AddressType == AddressType.Sms))
-                             .Select(r => r.DeepCopy())
-                               .ToList(),
-            _ => [],
+            NotificationChannel.Sms =>
+                [..recipients
+                .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Sms))
+                .Select(r => r.DeepCopy())],
+
+            NotificationChannel.Email =>
+                [..recipients
+                .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email))
+                .Select(r => r.DeepCopy())],
+
+            NotificationChannel.EmailAndSms or
+            NotificationChannel.SmsPreferred or
+            NotificationChannel.EmailPreferred =>
+                [..recipients
+                .Where(r => !r.AddressInfo.Exists(ap => ap.AddressType == AddressType.Email || ap.AddressType == AddressType.Sms))
+                .Select(r => r.DeepCopy())],
+
+            _ => []
         };
     }
 

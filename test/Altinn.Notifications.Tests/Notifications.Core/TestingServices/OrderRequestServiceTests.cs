@@ -557,6 +557,80 @@ public class OrderRequestServiceTests
     }
 
     [Fact]
+    public async Task RegisterNotificationOrder_ForEmailAndSms_CallsAddEmailAndSmsContactPointsAsync()
+    {
+        // Arrange
+        Guid id = Guid.NewGuid();
+        DateTime createdTime = DateTime.UtcNow;
+        DateTime sendTime = DateTime.UtcNow.AddMinutes(10);
+
+        var input = new NotificationOrderRequest
+        {
+            Creator = new Creator("ttd"),
+            RequestedSendTime = sendTime,
+
+            NotificationChannel = NotificationChannel.EmailAndSms,
+            SendersReference = "15FF9B24-EF7E-469D-80D6-E186FCF6D657",
+
+            Recipients =
+            [
+                new Recipient { NationalIdentityNumber = "14210548840" },
+                new Recipient { NationalIdentityNumber = "30286043298" }
+            ],
+
+            Templates =
+            [
+                new SmsTemplate { Body = "sms-body", SenderNumber = "TestSender" },
+                new EmailTemplate { Body = "email-body", FromAddress = "noreply@altinn.no" }
+            ]
+        };
+
+        Mock<IOrderRepository> repoMock = new();
+        repoMock
+            .Setup(r => r.Create(It.IsAny<NotificationOrder>()))
+            .ReturnsAsync((NotificationOrder order) => order);
+
+        Mock<IContactPointService> contactPointMock = new();
+        contactPointMock
+            .Setup(cp => cp.AddEmailAndSmsContactPointsAsync(It.IsAny<List<Recipient>>(), It.IsAny<string?>()))
+            .Callback<List<Recipient>, string?>((recipients, resourceId) =>
+            {
+                foreach (var recipient in recipients)
+                {
+                    if (recipient.NationalIdentityNumber == "14210548840")
+                    {
+                        recipient.AddressInfo.Add(new SmsAddressPoint("+4799999999"));
+                        recipient.AddressInfo.Add(new EmailAddressPoint("first-recipient@example.com"));
+                    }
+                    else if (recipient.NationalIdentityNumber == "30286043298")
+                    {
+                        recipient.AddressInfo.Add(new SmsAddressPoint("+4788888888"));
+                        recipient.AddressInfo.Add(new EmailAddressPoint("second-recipient@example.com"));
+                    }
+                }
+            });
+
+        var service = GetTestService(repoMock.Object, contactPointMock.Object, id, createdTime);
+
+        // Act
+        NotificationOrderRequestResponse actual = await service.RegisterNotificationOrder(input);
+
+        // Assert
+        Assert.NotNull(actual);
+        Assert.Equal(id, actual.OrderId);
+
+        contactPointMock.Verify(
+            cp => cp.AddEmailAndSmsContactPointsAsync(
+                It.Is<List<Recipient>>(recipients =>
+                    recipients.Any(r => r.NationalIdentityNumber == "14210548840") &&
+                    recipients.Any(r => r.NationalIdentityNumber == "30286043298")),
+                It.Is<string?>(resourceId => resourceId == null)),
+            Times.Once);
+
+        repoMock.Verify(r => r.Create(It.IsAny<NotificationOrder>()), Times.Once);
+    }
+
+    [Fact]
     public async Task RegisterNotificationOrderChain_RecipientPersonWithMultipleReminders_OrderChainCreated()
     {
         // Arrange
