@@ -142,7 +142,7 @@ public class NotificationDeliveryManifestMapperTests
     }
 
     [Fact]
-    public void MapToNotificationDeliveryManifestExt_NullSmsRecipient_ThrowsArgumentException()
+    public void MapToNotificationDeliveryManifestExt_NullSmsRecipient_ThrowsArgumentNullException()
     {
         // Arrange
         var mockManifest = new Mock<INotificationDeliveryManifest>();
@@ -155,7 +155,7 @@ public class NotificationDeliveryManifestMapperTests
         mockManifest.Setup(m => m.Recipients).Returns(mockRecipients);
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(mockManifest.Object.MapToNotificationDeliveryManifestExt);
+        Assert.Throws<ArgumentNullException>(mockManifest.Object.MapToNotificationDeliveryManifestExt);
     }
 
     [Fact]

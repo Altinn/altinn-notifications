@@ -47,8 +47,11 @@ public static class NotificationDeliveryManifestMapper
     /// <exception cref="ArgumentException">
     /// Thrown when the input entity is not recognized as a valid delivery manifest type (e.g., neither SMS nor email).
     /// </exception>
+    /// <exception cref="ArgumentNullException">Thrown when the manifest parameter is null.</exception>
     private static IDeliveryManifestExt MapToDeliveryManifestExt(IDeliveryManifest deliveryManifest)
     {
+        ArgumentNullException.ThrowIfNull(deliveryManifest);
+
         return deliveryManifest switch
         {
             SmsDeliveryManifest smsManifest => smsManifest.MapToSmsDeliveryManifestExt(),
