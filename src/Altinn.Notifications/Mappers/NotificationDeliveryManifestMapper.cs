@@ -67,11 +67,8 @@ public static class NotificationDeliveryManifestMapper
     /// A <see cref="SmsDeliveryManifestExt"/> containing the mapped data from the domain
     /// manifest, ready for serialization and transmission to external clients.
     /// </returns>
-    /// <exception cref="ArgumentNullException">Thrown when the manifest parameter is null.</exception>
     private static SmsDeliveryManifestExt MapToSmsDeliveryManifestExt(this SmsDeliveryManifest smsDeliveryManifest)
     {
-        ArgumentNullException.ThrowIfNull(smsDeliveryManifest);
-
         return new SmsDeliveryManifestExt
         {
             LastUpdate = smsDeliveryManifest.LastUpdate,
@@ -88,11 +85,8 @@ public static class NotificationDeliveryManifestMapper
     /// A <see cref="EmailDeliveryManifestExt"/> containing the mapped data from the domain
     /// manifest, ready for serialization and transmission to external clients.
     /// </returns>
-    /// <exception cref="ArgumentNullException">Thrown when the manifest parameter is null.</exception>
     private static EmailDeliveryManifestExt MapToEmailDeliveryManifestExt(this EmailDeliveryManifest emailDeliveryManifest)
     {
-        ArgumentNullException.ThrowIfNull(emailDeliveryManifest);
-
         return new EmailDeliveryManifestExt
         {
             LastUpdate = emailDeliveryManifest.LastUpdate,
