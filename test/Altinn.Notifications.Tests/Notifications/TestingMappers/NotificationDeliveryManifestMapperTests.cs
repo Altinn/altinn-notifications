@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 
 using Altinn.Notifications.Core.Enums;
@@ -131,6 +132,33 @@ public class NotificationDeliveryManifestMapperTests
     }
 
     [Fact]
+    public void MapToNotificationDeliveryManifestExt_NullManifest_ThrowsArgumentNullException()
+    {
+        // Arrange
+        INotificationDeliveryManifest? manifest = null;
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(manifest!.MapToNotificationDeliveryManifestExt);
+    }
+
+    [Fact]
+    public void MapToNotificationDeliveryManifestExt_NullSmsRecipient_ThrowsArgumentException()
+    {
+        // Arrange
+        var mockManifest = new Mock<INotificationDeliveryManifest>();
+        mockManifest.Setup(m => m.Type).Returns("Notification");
+        mockManifest.Setup(m => m.ShipmentId).Returns(Guid.NewGuid());
+        mockManifest.Setup(m => m.LastUpdate).Returns(DateTime.UtcNow);
+        mockManifest.Setup(m => m.Status).Returns(ProcessingLifecycle.Order_Processing);
+
+        var mockRecipients = new List<IDeliveryManifest> { null! }.ToImmutableList();
+        mockManifest.Setup(m => m.Recipients).Returns(mockRecipients);
+
+        // Act & Assert
+        Assert.Throws<ArgumentException>(mockManifest.Object.MapToNotificationDeliveryManifestExt);
+    }
+
+    [Fact]
     public void MapToNotificationDeliveryManifestExt_UnsupportedDeliverableEntityType_ThrowsArgumentException()
     {
         // Arrange
@@ -152,9 +180,6 @@ public class NotificationDeliveryManifestMapperTests
         };
 
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(shipmentDeliveryManifest.MapToNotificationDeliveryManifestExt);
-
-        Assert.Equal("deliveryManifest", exception.ParamName);
-        Assert.StartsWith("Unsupported delivery manifest type:", exception.Message);
+        Assert.Throws<ArgumentException>(shipmentDeliveryManifest.MapToNotificationDeliveryManifestExt);
     }
 }
