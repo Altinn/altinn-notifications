@@ -29,7 +29,7 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
     /// <summary>
     /// Maps database SMS notification result types to ProcessingLifecycle values.
     /// </summary>
-    private static readonly IReadOnlyDictionary<string, ProcessingLifecycle> SmsStatusMap = new Dictionary<string, ProcessingLifecycle>(StringComparer.OrdinalIgnoreCase)
+    private static readonly IReadOnlyDictionary<string, ProcessingLifecycle> _smsStatusMap = new Dictionary<string, ProcessingLifecycle>(StringComparer.OrdinalIgnoreCase)
     {
         { "new", ProcessingLifecycle.SMS_New },
         { "failed", ProcessingLifecycle.SMS_Failed },
@@ -50,7 +50,7 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
     /// <summary>
     /// Maps database email notification result types to ProcessingLifecycle values.
     /// </summary>
-    private static readonly IReadOnlyDictionary<string, ProcessingLifecycle> EmailStatusMap = new Dictionary<string, ProcessingLifecycle>(StringComparer.OrdinalIgnoreCase)
+    private static readonly IReadOnlyDictionary<string, ProcessingLifecycle> _emailStatusMap = new Dictionary<string, ProcessingLifecycle>(StringComparer.OrdinalIgnoreCase)
     {
         { "new", ProcessingLifecycle.Email_New },
         { "failed", ProcessingLifecycle.Email_Failed },
@@ -70,7 +70,7 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
     /// <summary>
     /// Maps database order processing state types to ProcessingLifecycle values.
     /// </summary>
-    private static readonly IReadOnlyDictionary<string, ProcessingLifecycle> OrderStatusMap = new Dictionary<string, ProcessingLifecycle>(StringComparer.OrdinalIgnoreCase)
+    private static readonly IReadOnlyDictionary<string, ProcessingLifecycle> _orderStatusMap = new Dictionary<string, ProcessingLifecycle>(StringComparer.OrdinalIgnoreCase)
     {
         { "cancelled", ProcessingLifecycle.Order_Cancelled },
         { "completed", ProcessingLifecycle.Order_Completed },
@@ -120,7 +120,7 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(status);
 
-        if (SmsStatusMap.TryGetValue(status.ToLowerInvariant(), out ProcessingLifecycle result))
+        if (_smsStatusMap.TryGetValue(status.ToLowerInvariant(), out ProcessingLifecycle result))
         {
             return result;
         }
@@ -143,7 +143,7 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(status);
 
-        if (EmailStatusMap.TryGetValue(status.ToLowerInvariant(), out ProcessingLifecycle result))
+        if (_emailStatusMap.TryGetValue(status.ToLowerInvariant(), out ProcessingLifecycle result))
         {
             return result;
         }
@@ -166,7 +166,7 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(status);
 
-        if (OrderStatusMap.TryGetValue(status.ToLowerInvariant(), out ProcessingLifecycle result))
+        if (_orderStatusMap.TryGetValue(status.ToLowerInvariant(), out ProcessingLifecycle result))
         {
             return result;
         }
