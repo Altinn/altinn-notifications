@@ -125,7 +125,7 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
             return result;
         }
 
-        throw new ArgumentException($"Unknown SMS notification status: '{status}'", nameof(status));
+        throw new ArgumentException($"Unknown SMS notification processing state: '{status}'", nameof(status));
     }
 
     /// <summary>
@@ -148,7 +148,7 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
             return result;
         }
 
-        throw new ArgumentException($"Unknown email notification status: '{status}'", nameof(status));
+        throw new ArgumentException($"Unknown email notification processing state: '{status}'", nameof(status));
     }
 
     /// <summary>
