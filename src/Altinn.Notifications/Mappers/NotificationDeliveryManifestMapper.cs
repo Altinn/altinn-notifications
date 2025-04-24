@@ -31,8 +31,8 @@ public static class NotificationDeliveryManifestMapper
             ShipmentId = manifest.ShipmentId,
             SequenceNumber = manifest.SequenceNumber,
             SendersReference = manifest.SendersReference,
-            Status = (ProcessingLifecycleExt)manifest.Status,
-            Recipients = manifest.Recipients.MapToDeliveryManifestExtObjects()
+            Recipients = manifest.Recipients.MapToDeliveryManifestExtObjects(),
+            Status = Enum.Parse<ProcessingLifecycleExt>(manifest.Status.ToString())
         };
     }
 
@@ -65,36 +65,36 @@ public static class NotificationDeliveryManifestMapper
     /// <summary>
     /// Maps a domain SMS delivery manifest to its external representation for API responses.
     /// </summary>
-    /// <param name="smsDeliveryManifest">The internal domain SMS delivery manifest to transform.</param>
+    /// <param name="manifest">The internal domain SMS delivery manifest to transform.</param>
     /// <returns>
     /// A <see cref="SmsDeliveryManifestExt"/> containing the mapped data from the domain
     /// manifest, ready for serialization and transmission to external clients.
     /// </returns>
-    private static SmsDeliveryManifestExt MapToSmsDeliveryManifestExt(this SmsDeliveryManifest smsDeliveryManifest)
+    private static SmsDeliveryManifestExt MapToSmsDeliveryManifestExt(this SmsDeliveryManifest manifest)
     {
         return new SmsDeliveryManifestExt
         {
-            LastUpdate = smsDeliveryManifest.LastUpdate,
-            Destination = smsDeliveryManifest.Destination,
-            Status = (ProcessingLifecycleExt)smsDeliveryManifest.Status
+            LastUpdate = manifest.LastUpdate,
+            Destination = manifest.Destination,
+            Status = Enum.Parse<ProcessingLifecycleExt>(manifest.Status.ToString())
         };
     }
 
     /// <summary>
     /// Maps a domain email delivery manifest to its external representation for API responses.
     /// </summary>
-    /// <param name="emailDeliveryManifest">The internal domain email delivery manifest to transform.</param>
+    /// <param name="manifest">The internal domain email delivery manifest to transform.</param>
     /// <returns>
     /// A <see cref="EmailDeliveryManifestExt"/> containing the mapped data from the domain
     /// manifest, ready for serialization and transmission to external clients.
     /// </returns>
-    private static EmailDeliveryManifestExt MapToEmailDeliveryManifestExt(this EmailDeliveryManifest emailDeliveryManifest)
+    private static EmailDeliveryManifestExt MapToEmailDeliveryManifestExt(this EmailDeliveryManifest manifest)
     {
         return new EmailDeliveryManifestExt
         {
-            LastUpdate = emailDeliveryManifest.LastUpdate,
-            Destination = emailDeliveryManifest.Destination,
-            Status = (ProcessingLifecycleExt)emailDeliveryManifest.Status
+            LastUpdate = manifest.LastUpdate,
+            Destination = manifest.Destination,
+            Status = Enum.Parse<ProcessingLifecycleExt>(manifest.Status.ToString())
         };
     }
 
