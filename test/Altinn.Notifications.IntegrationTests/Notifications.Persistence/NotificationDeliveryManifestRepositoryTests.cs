@@ -110,6 +110,137 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task GetDeliveryManifestAsync_WithCancellation_HonorsCancellationToken()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        string creator = "TEST_ORG";
+
+        using var cts = new CancellationTokenSource();
+
+        // Act & Assert
+        NotificationDeliveryManifestRepository deliveryManifestRepository = (NotificationDeliveryManifestRepository)ServiceUtil.GetServices([typeof(INotificationDeliveryManifestRepository)])
+            .First(i => i.GetType() == typeof(NotificationDeliveryManifestRepository));
+
+        await cts.CancelAsync();
+
+        await Assert.ThrowsAsync<TaskCanceledException>(async () => await deliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, cts.Token));
+    }
+
+    [Fact]
+    public async Task GetDeliveryManifestAsync_WithVariousOrderStatuses_MapsStatusesCorrectly()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        Guid smsNotificationId = Guid.NewGuid();
+        Guid emailNotificationId = Guid.NewGuid();
+
+        string creator = "TEST_ORG";
+        string recipientPhone = "+4799999999";
+        string recipientEmail = "recipient@example.com";
+        string senderReference = "ORDER-STATUS-TEST-REF-D904B29A";
+
+        _orderIdentifiers.Add(orderId);
+
+        NotificationOrder order = new()
+        {
+            Id = orderId,
+            Creator = new(creator),
+            Created = DateTime.UtcNow,
+            SendersReference = senderReference,
+            SendingTimePolicy = SendingTimePolicy.Anytime,
+            RequestedSendTime = DateTime.UtcNow.AddMinutes(30),
+            NotificationChannel = NotificationChannel.SmsPreferred,
+            Templates =
+            [
+                new SmsTemplate("Test Sender", "Test SMS content"),
+                new EmailTemplate("sender@example.com", "Test Subject", "Test Body", EmailContentType.Plain)
+            ],
+            Recipients =
+            [
+                new Recipient([new SmsAddressPoint(recipientPhone), new EmailAddressPoint(recipientEmail)])
+            ]
+        };
+
+        // Create the order and notifications
+        OrderRepository orderRepository = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+        await orderRepository.Create(order);
+
+        // Add SMS notification
+        SmsNotification smsNotification = new()
+        {
+            OrderId = orderId,
+            Id = smsNotificationId,
+            RequestedSendTime = DateTime.UtcNow.AddMinutes(30),
+            Recipient = new()
+            {
+                MobileNumber = recipientPhone
+            }
+        };
+
+        SmsNotificationRepository smsRepository = (SmsNotificationRepository)ServiceUtil.GetServices([typeof(ISmsNotificationRepository)])
+            .First(i => i.GetType() == typeof(SmsNotificationRepository));
+        await smsRepository.AddNotification(smsNotification, DateTime.UtcNow.AddMinutes(45), 1);
+
+        // Add email notification
+        EmailNotification emailNotification = new()
+        {
+            OrderId = orderId,
+            Id = emailNotificationId,
+            RequestedSendTime = DateTime.UtcNow.AddMinutes(30),
+            Recipient = new()
+            {
+                ToAddress = recipientEmail
+            }
+        };
+
+        EmailNotificationRepository emailRepository = (EmailNotificationRepository)ServiceUtil.GetServices([typeof(IEmailNotificationRepository)])
+            .First(i => i.GetType() == typeof(EmailNotificationRepository));
+        await emailRepository.AddNotification(emailNotification, DateTime.UtcNow);
+
+        // Directly modify the order status and notification statuses in the database to test status mapping
+        // Note: This is typically not recommended in production code but useful for testing
+        string updateOrderSql = $@"UPDATE notifications.orders SET processedstatus = 'Completed' WHERE alternateid = '{orderId}'";
+        string updateSmsSql = $@"UPDATE notifications.smsnotifications SET result = 'Accepted' WHERE alternateid = '{smsNotificationId}'";
+        string updateEmailSql = $@"UPDATE notifications.emailnotifications SET result = 'Succeeded' WHERE alternateid = '{emailNotificationId}'";
+
+        await PostgreUtil.RunSql(updateOrderSql);
+        await PostgreUtil.RunSql(updateSmsSql);
+        await PostgreUtil.RunSql(updateEmailSql);
+
+        // Act
+        NotificationDeliveryManifestRepository deliveryManifestRepository = (NotificationDeliveryManifestRepository)ServiceUtil.GetServices([typeof(INotificationDeliveryManifestRepository)])
+            .First(i => i.GetType() == typeof(NotificationDeliveryManifestRepository));
+
+        INotificationDeliveryManifest? deliveryManifest = await deliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, CancellationToken.None);
+
+        // Assert
+        Assert.NotNull(deliveryManifest);
+
+        // Verify order status
+        Assert.Equal(senderReference, deliveryManifest.SendersReference);
+        Assert.Equal(ProcessingLifecycle.Order_Completed, deliveryManifest.Status);
+
+        // Verify recipients collection
+        Assert.NotNull(deliveryManifest.Recipients);
+        Assert.Equal(2, deliveryManifest.Recipients.Count);
+
+        // Verify SMS recipient
+        var smsDeliveries = deliveryManifest.Recipients.Where(r => r is SmsDeliveryManifest).ToList();
+        Assert.Single(smsDeliveries);
+        var smsDelivery = smsDeliveries[0];
+        Assert.Equal(recipientPhone, smsDelivery.Destination);
+        Assert.Equal(ProcessingLifecycle.SMS_Accepted, smsDelivery.Status);
+
+        // Verify email recipient
+        var emailDeliveries = deliveryManifest.Recipients.Where(r => r is EmailDeliveryManifest).ToList();
+        Assert.Single(emailDeliveries);
+        var emailDelivery = emailDeliveries[0];
+        Assert.Equal(recipientEmail, emailDelivery.Destination);
+        Assert.Equal(ProcessingLifecycle.Email_Succeeded, emailDelivery.Status);
+    }
+
+    [Fact]
     public async Task GetDeliveryManifestAsync_WhenNoNotificationsExist_ReturnsCorrectDeliveryManifest()
     {
         // Arrange
@@ -365,6 +496,76 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
 
         var smsDeliveries = deliveryManifest.Recipients.Where(r => r is SmsDeliveryManifest).ToList();
         Assert.Empty(smsDeliveries);
+    }
+
+    [Fact]
+    public async Task GetDeliveryManifestAsync_WithAlternatePhoneNumberFormats_CorrectlyIdentifiesSmsNotifications()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        Guid smsNotificationId = Guid.NewGuid();
+
+        string creator = "TEST_ORG";
+        string phoneNumber = "004799999999";
+        string senderReference = "PHONE-FORMAT-TEST-REF-20938FD4";
+
+        _orderIdentifiers.Add(orderId);
+
+        NotificationOrder order = new()
+        {
+            Id = orderId,
+            Creator = new(creator),
+            Created = DateTime.UtcNow,
+            SendersReference = senderReference,
+            RequestedSendTime = DateTime.UtcNow.AddMinutes(30),
+            SendingTimePolicy = SendingTimePolicy.Anytime,
+            NotificationChannel = NotificationChannel.Sms,
+            Templates =
+            [
+                new SmsTemplate("Test Sender", "Test SMS message content")
+            ],
+            Recipients =
+            [
+                new Recipient([new SmsAddressPoint(phoneNumber)])
+            ]
+        };
+
+        SmsNotification smsNotification = new()
+        {
+            OrderId = orderId,
+            Id = smsNotificationId,
+            RequestedSendTime = DateTime.UtcNow.AddMinutes(30),
+            Recipient = new()
+            {
+                MobileNumber = phoneNumber
+            }
+        };
+
+        OrderRepository orderRepository = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)])
+            .First(i => i.GetType() == typeof(OrderRepository));
+        await orderRepository.Create(order);
+
+        SmsNotificationRepository smsRepository = (SmsNotificationRepository)ServiceUtil.GetServices([typeof(ISmsNotificationRepository)])
+            .First(i => i.GetType() == typeof(SmsNotificationRepository));
+        await smsRepository.AddNotification(smsNotification, DateTime.UtcNow.AddMinutes(45), 1);
+
+        // Act
+        NotificationDeliveryManifestRepository deliveryManifestRepository = (NotificationDeliveryManifestRepository)ServiceUtil.GetServices([typeof(INotificationDeliveryManifestRepository)])
+            .First(i => i.GetType() == typeof(NotificationDeliveryManifestRepository));
+
+        INotificationDeliveryManifest? deliveryManifest =
+            await deliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, CancellationToken.None);
+
+        // Assert
+        Assert.NotNull(deliveryManifest);
+
+        Assert.NotEmpty(deliveryManifest.Recipients);
+
+        var smsDeliveries = deliveryManifest.Recipients.Where(r => r is SmsDeliveryManifest).ToList();
+        Assert.Single(smsDeliveries);
+
+        var smsDelivery = smsDeliveries[0];
+        Assert.Equal(phoneNumber, smsDelivery.Destination);
     }
 
     [Fact]
