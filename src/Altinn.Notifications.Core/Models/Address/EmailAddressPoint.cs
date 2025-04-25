@@ -25,7 +25,7 @@ public class EmailAddressPoint : IAddressPoint
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="EmailAddressPoint"/> class.
+    /// Initializes a new instance of the <see cref="EmailAddressPoint"/> class.Test
     /// </summary>
     internal EmailAddressPoint()
     {
