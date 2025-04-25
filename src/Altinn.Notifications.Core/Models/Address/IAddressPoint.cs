@@ -5,7 +5,7 @@ using Altinn.Notifications.Core.Enums;
 namespace Altinn.Notifications.Core.Models.Address;
 
 /// <summary>
-/// Interface describing an address point
+/// Interface describing an address point testy
 /// </summary>
 [JsonDerivedType(typeof(EmailAddressPoint), "email")]
 [JsonDerivedType(typeof(SmsAddressPoint), "sms")]
