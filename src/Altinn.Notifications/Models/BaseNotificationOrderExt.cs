@@ -6,7 +6,7 @@ namespace Altinn.Notifications.Models;
 /// A class representing the base properties of a registered notification order. 
 /// </summary>
 /// <remarks>
-/// External representaion to be used in the API.
+/// External representaion to be used in the API. Yup
 /// </remarks>
 public class BaseNotificationOrderExt
 {
