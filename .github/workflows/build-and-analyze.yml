@@ -1,12 +1,12 @@
 name: .NET Analysis
 on:
   push:
-    branches: [ main ]
+    branches: [main]
     paths-ignore:
-      - "test/k6/**"
-      - ".github/**"
+      - 'test/k6/**'
+      - '.github/**'
   pull_request:
-    branches: [ main ]
+    branches: [main]
     types: [opened, synchronize, reopened]
   workflow_dispatch:
 jobs:
@@ -40,7 +40,7 @@ jobs:
           java-version: 17
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+          fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
       - name: Install SonarCloud scanners
         run: |
           dotnet tool install --global dotnet-sonarscanner
@@ -58,7 +58,7 @@ jobs:
           time: '30s'
       - name: Build & Test
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           dotnet-sonarscanner begin /k:"Altinn_altinn-notifications" /o:"altinn" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" /d:sonar.exclusions="src/Altinn.Notifications.Persistence/Migration/**/*"
@@ -75,7 +75,7 @@ jobs:
       - name: Complete sonar analysis
         if: always()
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
