@@ -109,21 +109,21 @@ public class NotificationDeliveryManifestMapperTests
         // Arrange
         var emailDeliveryManifest = new EmailDeliveryManifest
         {
-            Destination = "middle@example.com",
             LastUpdate = DateTime.UtcNow,
+            Destination = "recipient@example.com",
             Status = ProcessingLifecycle.Email_Succeeded
         };
 
         var firstSmsDeliveryManifest = new SmsDeliveryManifest
         {
-            Destination = "+4711111111",
+            Destination = "+4799999999",
             LastUpdate = DateTime.UtcNow,
             Status = ProcessingLifecycle.SMS_Delivered
         };
 
         var secondSmsDeliveryManifest = new SmsDeliveryManifest
         {
-            Destination = "+4722222222",
+            Destination = "+4788888888",
             LastUpdate = DateTime.UtcNow,
             Status = ProcessingLifecycle.SMS_Failed
         };
@@ -148,17 +148,17 @@ public class NotificationDeliveryManifestMapperTests
 
         Assert.IsType<SmsDeliveryManifestExt>(result.Recipients[0]);
         var smsResult1 = result.Recipients[0] as SmsDeliveryManifestExt;
-        Assert.Equal("+4711111111", smsResult1!.Destination);
+        Assert.Equal("+4799999999", smsResult1!.Destination);
         Assert.Equal(ProcessingLifecycleExt.SMS_Delivered, smsResult1.Status);
 
         Assert.IsType<EmailDeliveryManifestExt>(result.Recipients[1]);
         var emailResult = result.Recipients[1] as EmailDeliveryManifestExt;
-        Assert.Equal("middle@example.com", emailResult!.Destination);
+        Assert.Equal("recipient@example.com", emailResult!.Destination);
         Assert.Equal(ProcessingLifecycleExt.Email_Succeeded, emailResult.Status);
 
         Assert.IsType<SmsDeliveryManifestExt>(result.Recipients[2]);
         var smsResult2 = result.Recipients[2] as SmsDeliveryManifestExt;
-        Assert.Equal("+4722222222", smsResult2!.Destination);
+        Assert.Equal("+4788888888", smsResult2!.Destination);
         Assert.Equal(ProcessingLifecycleExt.SMS_Failed, smsResult2.Status);
     }
 
@@ -196,9 +196,9 @@ public class NotificationDeliveryManifestMapperTests
         {
             Recipients = null!,
             Type = "Notification",
-            SendersReference = "REF123",
             ShipmentId = Guid.NewGuid(),
             LastUpdate = DateTime.UtcNow,
+            SendersReference = "REF-822D07A3FC64",
             Status = ProcessingLifecycle.Order_Processing
         };
 
@@ -274,11 +274,11 @@ public class NotificationDeliveryManifestMapperTests
         // Arrange
         var manifest = new NotificationDeliveryManifest
         {
-            Type = "Notification",
             Status = status,
+            Type = "Notification",
             ShipmentId = Guid.NewGuid(),
             LastUpdate = DateTime.UtcNow,
-            SendersReference = "REF123",
+            SendersReference = "REF-0D62AE8083B9",
             Recipients = ImmutableList<IDeliveryManifest>.Empty
         };
 
@@ -308,9 +308,9 @@ public class NotificationDeliveryManifestMapperTests
         // Arrange
         var smsDeliveryManifest = new SmsDeliveryManifest
         {
+            Status = status,
             Destination = "+4799999999",
-            LastUpdate = DateTime.UtcNow,
-            Status = status
+            LastUpdate = DateTime.UtcNow
         };
 
         var recipients = ImmutableList.Create<IDeliveryManifest>(smsDeliveryManifest);
@@ -319,9 +319,9 @@ public class NotificationDeliveryManifestMapperTests
         {
             Type = "Notification",
             Recipients = recipients,
-            SendersReference = "REF123",
             ShipmentId = Guid.NewGuid(),
             LastUpdate = DateTime.UtcNow,
+            SendersReference = "REF-8957DE972471",
             Status = ProcessingLifecycle.Order_Completed
         };
 
@@ -353,9 +353,9 @@ public class NotificationDeliveryManifestMapperTests
         // Arrange
         var emailDeliveryManifest = new EmailDeliveryManifest
         {
-            Destination = "test@example.com",
+            Status = status,
             LastUpdate = DateTime.UtcNow,
-            Status = status
+            Destination = "test@example.com"
         };
 
         var recipients = ImmutableList.Create<IDeliveryManifest>(emailDeliveryManifest);
