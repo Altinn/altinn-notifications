@@ -18,18 +18,6 @@ namespace Altinn.Notifications.Core.Models.Delivery;
 public interface INotificationDeliveryManifest : IStatus
 {
     /// <summary>
-    /// Gets the sequence number of this shipment when presented in a collection.
-    /// </summary>
-    /// <value>
-    /// An integer indicating the relative position of the manifest in a list or table.
-    /// </value>
-    /// <remarks>
-    /// This property is primarily used for display purposes when multiple manifests are shown 
-    /// together in a structured format. If not part of a collection, the value must always be <c>null</c>.
-    /// </remarks>
-    int? SequenceNumber { get; }
-
-    /// <summary>
     /// Gets the unique identifier for this shipment.
     /// </summary>
     /// <value>

@@ -19,11 +19,6 @@ namespace Altinn.Notifications.Models.Delivery;
 public record NotificationDeliveryManifestExt : INotificationDeliveryManifestExt
 {
     /// <inheritdoc />
-    [JsonPropertyName("sequenceNumber")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? SequenceNumber { get; init; }
-
-    /// <inheritdoc />
     [JsonPropertyName("shipmentId")]
     public required Guid ShipmentId { get; init; }
 

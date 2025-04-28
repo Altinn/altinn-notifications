@@ -55,7 +55,6 @@ public class NotificationDeliveryManifestMapperTests
         Assert.Equal(ProcessingLifecycleExt.Order_Completed, result.Status);
         Assert.Equal(notificationDeliveryManifest.LastUpdate, result.LastUpdate);
         Assert.Equal(notificationDeliveryManifest.ShipmentId, result.ShipmentId);
-        Assert.Equal(notificationDeliveryManifest.SequenceNumber, result.SequenceNumber);
         Assert.Equal(notificationDeliveryManifest.SendersReference, result.SendersReference);
 
         Assert.Equal(2, result.Recipients.Count);
@@ -101,7 +100,6 @@ public class NotificationDeliveryManifestMapperTests
         Assert.Equal(ProcessingLifecycleExt.Order_Completed, result.Status);
         Assert.Equal(shipmentDeliveryManifest.LastUpdate, result.LastUpdate);
         Assert.Equal(shipmentDeliveryManifest.ShipmentId, result.ShipmentId);
-        Assert.Equal(shipmentDeliveryManifest.SequenceNumber, result.SequenceNumber);
         Assert.Equal(shipmentDeliveryManifest.SendersReference, result.SendersReference);
     }
 
@@ -129,7 +127,6 @@ public class NotificationDeliveryManifestMapperTests
         Assert.Equal(shipmentDeliveryManifest.LastUpdate, result.LastUpdate);
         Assert.Equal(shipmentDeliveryManifest.ShipmentId, result.ShipmentId);
         Assert.Equal(ProcessingLifecycleExt.Order_Processing, result.Status);
-        Assert.Equal(shipmentDeliveryManifest.SequenceNumber, result.SequenceNumber);
     }
 
     [Fact]

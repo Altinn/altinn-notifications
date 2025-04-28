@@ -294,7 +294,6 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
 
         Assert.NotNull(deliveryManifest.Type);
         Assert.NotEmpty(deliveryManifest.Type);
-        Assert.Null(deliveryManifest.SequenceNumber);
         Assert.Equal(orderId, deliveryManifest.ShipmentId);
         Assert.Equal("Notification", deliveryManifest.Type);
         Assert.True(deliveryManifest.LastUpdate > DateTime.MinValue);
@@ -382,7 +381,6 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
 
         Assert.NotNull(deliveryManifest.Type);
         Assert.NotEmpty(deliveryManifest.Type);
-        Assert.Null(deliveryManifest.SequenceNumber);
         Assert.Equal(orderId, deliveryManifest.ShipmentId);
         Assert.Equal("Notification", deliveryManifest.Type);
         Assert.True(deliveryManifest.LastUpdate > DateTime.MinValue);
@@ -475,7 +473,6 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
 
         Assert.NotNull(deliveryManifest.Type);
         Assert.NotEmpty(deliveryManifest.Type);
-        Assert.Null(deliveryManifest.SequenceNumber);
         Assert.Equal(orderId, deliveryManifest.ShipmentId);
         Assert.Equal("Notification", deliveryManifest.Type);
         Assert.True(deliveryManifest.LastUpdate > DateTime.MinValue);
@@ -666,7 +663,6 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
 
         Assert.NotNull(deliveryManifest.Type);
         Assert.NotEmpty(deliveryManifest.Type);
-        Assert.Null(deliveryManifest.SequenceNumber);
         Assert.Equal(orderId, deliveryManifest.ShipmentId);
         Assert.Equal("Notification", deliveryManifest.Type);
         Assert.True(deliveryManifest.LastUpdate > DateTime.MinValue);

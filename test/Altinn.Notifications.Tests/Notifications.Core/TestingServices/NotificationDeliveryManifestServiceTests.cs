@@ -77,7 +77,6 @@ public class NotificationDeliveryManifestServiceTests
                 Assert.NotNull(success);
                 Assert.Equal(orderAlternateId, success.ShipmentId);
 
-                Assert.Null(success.SequenceNumber);
                 Assert.Equal("Notification", success.Type);
                 Assert.Equal(ProcessingLifecycle.Order_Completed, success.Status);
                 Assert.Equal("COMPLETED-NOTIFICATION-ORDER-REF-FCEE4CF15BE1", success.SendersReference);

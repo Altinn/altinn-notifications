@@ -18,9 +18,6 @@ namespace Altinn.Notifications.Core.Models.Delivery;
 public record NotificationDeliveryManifest : INotificationDeliveryManifest
 {
     /// <inheritdoc />
-    public int? SequenceNumber { get; init; }
-
-    /// <inheritdoc />
     public required Guid ShipmentId { get; init; }
 
     /// <inheritdoc />

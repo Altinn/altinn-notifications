@@ -85,7 +85,6 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         Assert.NotNull(manifest);
-        Assert.Null(manifest.SequenceNumber);
         Assert.Equal("Notification", manifest.Type);
         Assert.Equal(_shipmentId, manifest.ShipmentId);
         Assert.Equal(ProcessingLifecycleExt.Order_Completed, manifest.Status);
@@ -200,7 +199,6 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         Assert.NotNull(manifest);
-        Assert.Null(manifest.SequenceNumber);
         Assert.Equal("Notification", manifest.Type);
         Assert.Equal(_shipmentId, manifest.ShipmentId);
         Assert.Equal(ProcessingLifecycleExt.Order_Completed, manifest.Status);
@@ -283,7 +281,6 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         var manifest = Assert.IsType<NotificationDeliveryManifestExt>(happyPathResult.Value);
 
         Assert.NotNull(manifest);
-        Assert.Null(manifest.SequenceNumber);
         Assert.Equal("Notification", manifest.Type);
         Assert.Equal(_shipmentId, manifest.ShipmentId);
         Assert.Equal(ProcessingLifecycleExt.Order_Completed, manifest.Status);
@@ -391,7 +388,6 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         return new NotificationDeliveryManifest
         {
             Type = "Notification",
-            SequenceNumber = null,
             ShipmentId = shipmentId,
             Status = ProcessingLifecycle.Order_Completed,
 
