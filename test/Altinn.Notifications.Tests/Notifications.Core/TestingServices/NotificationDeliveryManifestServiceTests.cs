@@ -71,7 +71,7 @@ public class NotificationDeliveryManifestServiceTests
         Assert.False(deliveryManifest.IsError);
         Assert.True(deliveryManifest.IsSuccess);
 
-        deliveryManifest.Match(
+        bool wasSuccessful = deliveryManifest.Match(
             success =>
             {
                 Assert.NotNull(success);
@@ -100,6 +100,8 @@ public class NotificationDeliveryManifestServiceTests
             {
                 return false;
             });
+
+        Assert.True(wasSuccessful);
     }
 
     [Fact]
@@ -119,7 +121,7 @@ public class NotificationDeliveryManifestServiceTests
         Assert.True(result.IsError);
         Assert.False(result.IsSuccess);
 
-        result.Match(
+        bool wasFailed = result.Match(
             success =>
             {
                 return false;
@@ -132,6 +134,8 @@ public class NotificationDeliveryManifestServiceTests
 
                 return true;
             });
+
+        Assert.True(wasFailed);
     }
 
     [Fact]
@@ -207,19 +211,21 @@ public class NotificationDeliveryManifestServiceTests
         Assert.True(result.IsError);
         Assert.False(result.IsSuccess);
 
-        result.Match(
-            success =>
-            {
-                return false;
-            },
-            actuallError =>
-            {
-                Assert.IsType<ServiceError>(actuallError);
-                Assert.Equal(404, actuallError.ErrorCode);
-                Assert.Equal("Shipment not found.", actuallError.ErrorMessage);
+        var wasFailed = result.Match(
+             success =>
+             {
+                 return false;
+             },
+             actuallError =>
+             {
+                 Assert.IsType<ServiceError>(actuallError);
+                 Assert.Equal(404, actuallError.ErrorCode);
+                 Assert.Equal("Shipment not found.", actuallError.ErrorMessage);
 
-                return true;
-            });
+                 return true;
+             });
+
+        Assert.True(wasFailed);
     }
 
     [Fact]
@@ -266,18 +272,20 @@ public class NotificationDeliveryManifestServiceTests
         Assert.True(result.IsError);
         Assert.False(result.IsSuccess);
 
-        result.Match(
-            success =>
-            {
-                return false;
-            },
-            actuallError =>
-            {
-                Assert.IsType<ServiceError>(actuallError);
-                Assert.Equal(404, actuallError.ErrorCode);
-                Assert.Equal("Shipment not found.", actuallError.ErrorMessage);
+        var wasFailed = result.Match(
+              success =>
+              {
+                  return false;
+              },
+              actuallError =>
+              {
+                  Assert.IsType<ServiceError>(actuallError);
+                  Assert.Equal(404, actuallError.ErrorCode);
+                  Assert.Equal("Shipment not found.", actuallError.ErrorMessage);
 
-                return true;
-            });
+                  return true;
+              });
+
+        Assert.True(wasFailed);
     }
 }
