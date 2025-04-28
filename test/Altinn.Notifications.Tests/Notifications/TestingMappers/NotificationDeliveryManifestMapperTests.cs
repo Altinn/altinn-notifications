@@ -104,6 +104,65 @@ public class NotificationDeliveryManifestMapperTests
     }
 
     [Fact]
+    public void MapToNotificationDeliveryManifestExt_MixedDeliveryTypes_MapsCorrectly()
+    {
+        // Arrange
+        var emailDeliveryManifest = new EmailDeliveryManifest
+        {
+            Destination = "middle@example.com",
+            LastUpdate = DateTime.UtcNow,
+            Status = ProcessingLifecycle.Email_Succeeded
+        };
+
+        var firstSmsDeliveryManifest = new SmsDeliveryManifest
+        {
+            Destination = "+4711111111",
+            LastUpdate = DateTime.UtcNow,
+            Status = ProcessingLifecycle.SMS_Delivered
+        };
+
+        var secondSmsDeliveryManifest = new SmsDeliveryManifest
+        {
+            Destination = "+4722222222",
+            LastUpdate = DateTime.UtcNow,
+            Status = ProcessingLifecycle.SMS_Failed
+        };
+
+        var recipients = ImmutableList.Create<IDeliveryManifest>(firstSmsDeliveryManifest, emailDeliveryManifest, secondSmsDeliveryManifest);
+
+        var manifest = new NotificationDeliveryManifest
+        {
+            Type = "Notification",
+            Recipients = recipients,
+            ShipmentId = Guid.NewGuid(),
+            LastUpdate = DateTime.UtcNow,
+            SendersReference = "REF-MIXED",
+            Status = ProcessingLifecycle.Order_Completed
+        };
+
+        // Act
+        var result = manifest.MapToNotificationDeliveryManifestExt();
+
+        // Assert
+        Assert.Equal(3, result.Recipients.Count);
+
+        Assert.IsType<SmsDeliveryManifestExt>(result.Recipients[0]);
+        var smsResult1 = result.Recipients[0] as SmsDeliveryManifestExt;
+        Assert.Equal("+4711111111", smsResult1!.Destination);
+        Assert.Equal(ProcessingLifecycleExt.SMS_Delivered, smsResult1.Status);
+
+        Assert.IsType<EmailDeliveryManifestExt>(result.Recipients[1]);
+        var emailResult = result.Recipients[1] as EmailDeliveryManifestExt;
+        Assert.Equal("middle@example.com", emailResult!.Destination);
+        Assert.Equal(ProcessingLifecycleExt.Email_Succeeded, emailResult.Status);
+
+        Assert.IsType<SmsDeliveryManifestExt>(result.Recipients[2]);
+        var smsResult2 = result.Recipients[2] as SmsDeliveryManifestExt;
+        Assert.Equal("+4722222222", smsResult2!.Destination);
+        Assert.Equal(ProcessingLifecycleExt.SMS_Failed, smsResult2.Status);
+    }
+
+    [Fact]
     public void MapToNotificationDeliveryManifestExt_WithNullSendersReference_MapsCorrectly()
     {
         // Arrange
@@ -127,6 +186,29 @@ public class NotificationDeliveryManifestMapperTests
         Assert.Equal(shipmentDeliveryManifest.LastUpdate, result.LastUpdate);
         Assert.Equal(shipmentDeliveryManifest.ShipmentId, result.ShipmentId);
         Assert.Equal(ProcessingLifecycleExt.Order_Processing, result.Status);
+    }
+
+    [Fact]
+    public void MapToNotificationDeliveryManifestExt_WithNullRecipients_MapsToEmptyCollection()
+    {
+        // Arrange
+        var shipmentDeliveryManifest = new NotificationDeliveryManifest
+        {
+            Recipients = null!,
+            Type = "Notification",
+            SendersReference = "REF123",
+            ShipmentId = Guid.NewGuid(),
+            LastUpdate = DateTime.UtcNow,
+            Status = ProcessingLifecycle.Order_Processing
+        };
+
+        // Act
+        var result = shipmentDeliveryManifest.MapToNotificationDeliveryManifestExt();
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.NotNull(result.Recipients);
+        Assert.Empty(result.Recipients);
     }
 
     [Fact]
@@ -179,5 +261,121 @@ public class NotificationDeliveryManifestMapperTests
 
         // Act & Assert
         Assert.Throws<ArgumentException>(shipmentDeliveryManifest.MapToNotificationDeliveryManifestExt);
+    }
+
+    [Theory]
+    [InlineData(ProcessingLifecycle.Order_Completed, ProcessingLifecycleExt.Order_Completed)]
+    [InlineData(ProcessingLifecycle.Order_Cancelled, ProcessingLifecycleExt.Order_Cancelled)]
+    [InlineData(ProcessingLifecycle.Order_Registered, ProcessingLifecycleExt.Order_Registered)]
+    [InlineData(ProcessingLifecycle.Order_Processing, ProcessingLifecycleExt.Order_Processing)]
+    [InlineData(ProcessingLifecycle.Order_SendConditionNotMet, ProcessingLifecycleExt.Order_SendConditionNotMet)]
+    public void MapToNotificationDeliveryManifestExt_OrderStatuses_MapsCorrectly(ProcessingLifecycle status, ProcessingLifecycleExt expected)
+    {
+        // Arrange
+        var manifest = new NotificationDeliveryManifest
+        {
+            Type = "Notification",
+            Status = status,
+            ShipmentId = Guid.NewGuid(),
+            LastUpdate = DateTime.UtcNow,
+            SendersReference = "REF123",
+            Recipients = ImmutableList<IDeliveryManifest>.Empty
+        };
+
+        // Act
+        var result = manifest.MapToNotificationDeliveryManifestExt();
+
+        // Assert
+        Assert.Equal(expected, result.Status);
+    }
+
+    [Theory]
+    [InlineData(ProcessingLifecycle.SMS_New, ProcessingLifecycleExt.SMS_New)]
+    [InlineData(ProcessingLifecycle.SMS_Failed, ProcessingLifecycleExt.SMS_Failed)]
+    [InlineData(ProcessingLifecycle.SMS_Sending, ProcessingLifecycleExt.SMS_Sending)]
+    [InlineData(ProcessingLifecycle.SMS_Accepted, ProcessingLifecycleExt.SMS_Accepted)]
+    [InlineData(ProcessingLifecycle.SMS_Delivered, ProcessingLifecycleExt.SMS_Delivered)]
+    [InlineData(ProcessingLifecycle.SMS_Failed_Deleted, ProcessingLifecycleExt.SMS_Failed_Deleted)]
+    [InlineData(ProcessingLifecycle.SMS_Failed_Expired, ProcessingLifecycleExt.SMS_Failed_Expired)]
+    [InlineData(ProcessingLifecycle.SMS_Failed_Rejected, ProcessingLifecycleExt.SMS_Failed_Rejected)]
+    [InlineData(ProcessingLifecycle.SMS_Failed_Undelivered, ProcessingLifecycleExt.SMS_Failed_Undelivered)]
+    [InlineData(ProcessingLifecycle.SMS_Failed_BarredReceiver, ProcessingLifecycleExt.SMS_Failed_BarredReceiver)]
+    [InlineData(ProcessingLifecycle.SMS_Failed_InvalidRecipient, ProcessingLifecycleExt.SMS_Failed_InvalidRecipient)]
+    [InlineData(ProcessingLifecycle.SMS_Failed_RecipientReserved, ProcessingLifecycleExt.SMS_Failed_RecipientReserved)]
+    [InlineData(ProcessingLifecycle.SMS_Failed_RecipientNotIdentified, ProcessingLifecycleExt.SMS_Failed_RecipientNotIdentified)]
+    public void MapToNotificationDeliveryManifestExt_SmsStatuses_MapsCorrectly(ProcessingLifecycle status, ProcessingLifecycleExt expected)
+    {
+        // Arrange
+        var smsDeliveryManifest = new SmsDeliveryManifest
+        {
+            Destination = "+4799999999",
+            LastUpdate = DateTime.UtcNow,
+            Status = status
+        };
+
+        var recipients = ImmutableList.Create<IDeliveryManifest>(smsDeliveryManifest);
+
+        var manifest = new NotificationDeliveryManifest
+        {
+            Type = "Notification",
+            Recipients = recipients,
+            SendersReference = "REF123",
+            ShipmentId = Guid.NewGuid(),
+            LastUpdate = DateTime.UtcNow,
+            Status = ProcessingLifecycle.Order_Completed
+        };
+
+        // Act
+        var result = manifest.MapToNotificationDeliveryManifestExt();
+
+        // Assert
+        var smsResult = result.Recipients[0] as SmsDeliveryManifestExt;
+        Assert.NotNull(smsResult);
+        Assert.Equal(expected, smsResult.Status);
+    }
+
+    [Theory]
+    [InlineData(ProcessingLifecycle.Email_New, ProcessingLifecycleExt.Email_New)]
+    [InlineData(ProcessingLifecycle.Email_Failed, ProcessingLifecycleExt.Email_Failed)]
+    [InlineData(ProcessingLifecycle.Email_Sending, ProcessingLifecycleExt.Email_Sending)]
+    [InlineData(ProcessingLifecycle.Email_Succeeded, ProcessingLifecycleExt.Email_Succeeded)]
+    [InlineData(ProcessingLifecycle.Email_Delivered, ProcessingLifecycleExt.Email_Delivered)]
+    [InlineData(ProcessingLifecycle.Email_Failed_Bounced, ProcessingLifecycleExt.Email_Failed_Bounced)]
+    [InlineData(ProcessingLifecycle.Email_Failed_Quarantined, ProcessingLifecycleExt.Email_Failed_Quarantined)]
+    [InlineData(ProcessingLifecycle.Email_Failed_FilteredSpam, ProcessingLifecycleExt.Email_Failed_FilteredSpam)]
+    [InlineData(ProcessingLifecycle.Email_Failed_InvalidFormat, ProcessingLifecycleExt.Email_Failed_InvalidFormat)]
+    [InlineData(ProcessingLifecycle.Email_Failed_TransientError, ProcessingLifecycleExt.Email_Failed_TransientError)]
+    [InlineData(ProcessingLifecycle.Email_Failed_RecipientReserved, ProcessingLifecycleExt.Email_Failed_RecipientReserved)]
+    [InlineData(ProcessingLifecycle.Email_Failed_SuppressedRecipient, ProcessingLifecycleExt.Email_Failed_SuppressedRecipient)]
+    [InlineData(ProcessingLifecycle.Email_Failed_RecipientNotIdentified, ProcessingLifecycleExt.Email_Failed_RecipientNotIdentified)]
+    public void MapToNotificationDeliveryManifestExt_EmailStatuses_MapsCorrectly(ProcessingLifecycle status, ProcessingLifecycleExt expected)
+    {
+        // Arrange
+        var emailDeliveryManifest = new EmailDeliveryManifest
+        {
+            Destination = "test@example.com",
+            LastUpdate = DateTime.UtcNow,
+            Status = status
+        };
+
+        var recipients = ImmutableList.Create<IDeliveryManifest>(emailDeliveryManifest);
+
+        var manifest = new NotificationDeliveryManifest
+        {
+            Type = "Notification",
+            Recipients = recipients,
+            SendersReference = "REF123",
+            ShipmentId = Guid.NewGuid(),
+            LastUpdate = DateTime.UtcNow,
+            Status = ProcessingLifecycle.Order_Completed
+        };
+
+        // Act
+        var result = manifest.MapToNotificationDeliveryManifestExt();
+
+        // Assert
+        var emailResult = result.Recipients[0] as EmailDeliveryManifestExt;
+        Assert.NotNull(emailResult);
+        Assert.Equal(expected, emailResult.Status);
     }
 }
