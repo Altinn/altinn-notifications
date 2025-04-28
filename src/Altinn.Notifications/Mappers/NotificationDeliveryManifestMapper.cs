@@ -31,8 +31,8 @@ public static class NotificationDeliveryManifestMapper
             ShipmentId = manifest.ShipmentId,
             SequenceNumber = manifest.SequenceNumber,
             SendersReference = manifest.SendersReference,
-            Recipients = manifest.Recipients.MapToDeliveryManifestExtObjects(),
-            Status = Enum.Parse<ProcessingLifecycleExt>(manifest.Status.ToString())
+            Status = Enum.Parse<ProcessingLifecycleExt>(manifest.Status.ToString()),
+            Recipients = manifest.Recipients != null ? manifest.Recipients.MapToDeliveryManifestExtObjects() : []
         };
     }
 
