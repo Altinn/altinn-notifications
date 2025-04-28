@@ -43,7 +43,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        await Task.CompletedTask;
+        return;
     }
 
     [Fact]

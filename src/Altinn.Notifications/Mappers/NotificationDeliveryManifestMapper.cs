@@ -31,7 +31,7 @@ public static class NotificationDeliveryManifestMapper
             ShipmentId = manifest.ShipmentId,
             SendersReference = manifest.SendersReference,
             Status = MapProcessingLifecycle(manifest.Status),
-            Recipients = manifest.Recipients != null ? manifest.Recipients.MapToDeliveryManifestExtObjects() : []
+            Recipients = manifest.Recipients?.MapToDeliveryManifestExtObjects() ?? []
         };
     }
 
