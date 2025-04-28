@@ -1,4 +1,5 @@
 ﻿using Altinn.Notifications.Models;
+using Altinn.Notifications.Validators.Rules;
 
 using FluentValidation;
 
@@ -15,9 +16,16 @@ namespace Altinn.Notifications.Validators
         public NotificationOrderBaseValidator()
         {
             RuleFor(option => option.RequestedSendTime)
-                .NotEmpty()
+                .Must(sendTime => sendTime.Kind != DateTimeKind.Unspecified)
+                .WithMessage("The requested send time value must have specified a time zone.")
                 .GreaterThanOrEqualTo(DateTime.UtcNow)
-                .WithMessage("RequestedSendTime is required and must be greater than or equal to now.");
+                .WithMessage("RequestedSendTime must be greater than or equal to now.");
+
+            When(option => option.ConditionEndpoint != null, () =>
+            {
+                RuleFor(options => options.ConditionEndpoint!)
+                    .ValidateConditionEndpoint();
+            });
         }
     }
 }

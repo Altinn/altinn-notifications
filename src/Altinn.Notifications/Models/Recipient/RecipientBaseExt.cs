@@ -22,6 +22,7 @@ public abstract class RecipientBaseExt
     /// <item><description><see cref="NotificationChannelExt.Sms"/> - Use SMS only</description></item>
     /// <item><description><see cref="NotificationChannelExt.EmailPreferred"/> - Try email first, fall back to SMS if email unavailable</description></item>
     /// <item><description><see cref="NotificationChannelExt.SmsPreferred"/> - Try SMS first, fall back to email if SMS unavailable</description></item>
+    /// <item><description><see cref="NotificationChannelExt.EmailAndSms"/> - Use both email and SMS.</description></item>
     /// </list>
     /// </remarks>
     [Required]
@@ -32,8 +33,8 @@ public abstract class RecipientBaseExt
     /// Gets or sets the email-specific configuration, used when the channel scheme includes email.
     /// </summary>
     /// <remarks>
-    /// Required when <see cref="ChannelSchema"/> is set to <see cref="NotificationChannelExt.Email"/> 
-    /// or <see cref="NotificationChannelExt.EmailPreferred"/>.
+    /// Required when <see cref="ChannelSchema"/> is set to <see cref="NotificationChannelExt.Email"/>,
+    /// <see cref="NotificationChannelExt.EmailPreferred"/>, or <see cref="NotificationChannelExt.EmailAndSms"/>.
     /// Contains email content, subject, sender information, and delivery preferences.
     /// </remarks>
     [JsonPropertyName("emailSettings")]
@@ -43,8 +44,8 @@ public abstract class RecipientBaseExt
     /// Gets or sets the SMS-specific configuration, used when the channel scheme includes SMS.
     /// </summary>
     /// <remarks>
-    /// Required when <see cref="ChannelSchema"/> is set to <see cref="NotificationChannelExt.Sms"/> 
-    /// or <see cref="NotificationChannelExt.SmsPreferred"/>.
+    /// Required when <see cref="ChannelSchema"/> is set to <see cref="NotificationChannelExt.Sms"/>,
+    /// <see cref="NotificationChannelExt.SmsPreferred"/>, or <see cref="NotificationChannelExt.EmailAndSms"/>..
     /// Contains SMS content, sender information, and delivery preferences.
     /// </remarks>
     [JsonPropertyName("smsSettings")]

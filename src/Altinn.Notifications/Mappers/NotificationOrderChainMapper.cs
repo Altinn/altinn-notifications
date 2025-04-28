@@ -176,7 +176,7 @@ public static class NotificationOrderChainMapper
         return new SmsSendingOptions
         {
             Body = smsSendingOptionsExt.Body,
-            Sender = smsSendingOptionsExt.Sender,
+            Sender = smsSendingOptionsExt.Sender?.Trim(),
             SendingTimePolicy = (SendingTimePolicy)smsSendingOptionsExt.SendingTimePolicy
         };
     }

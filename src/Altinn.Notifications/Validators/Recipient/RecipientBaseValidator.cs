@@ -22,7 +22,18 @@ public class RecipientBaseValidator : AbstractValidator<RecipientBaseExt?>
       .IsInEnum()
       .WithMessage("Invalid channel scheme value.");
 
-        When(options => options!.ChannelSchema.IsPreferredSchema(), () =>
+        When(options => options!.ChannelSchema.IsDualChannelSchema(), () =>
+        {
+            RuleFor(options => options!.EmailSettings)
+                .NotNull()
+                .WithMessage("EmailSettings must be set when ChannelSchema is EmailAndSms");
+
+            RuleFor(options => options!.SmsSettings)
+                .NotNull()
+                .WithMessage("SmsSettings must be set when ChannelSchema is EmailAndSms");
+        });
+
+        When(options => options!.ChannelSchema.IsFallbackChannelSchema(), () =>
         {
             RuleFor(options => options!.EmailSettings)
                 .NotNull()

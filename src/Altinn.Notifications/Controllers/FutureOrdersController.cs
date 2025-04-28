@@ -15,7 +15,7 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace Altinn.Notifications.Controllers;
 
 /// <summary>
-/// Controller to handle notification orders that has one or more reminders.
+/// Controller to handle notification orders that has non or more reminders.
 /// </summary>
 [ApiController]
 [Route("notifications/api/v1/future/orders")]
@@ -37,13 +37,13 @@ public class FutureOrdersController : ControllerBase
     }
 
     /// <summary>
-    /// Creates a new notification order that has one or more reminders.
+    /// Creates a new notification order that has non or more reminders.
     /// </summary>
     /// <remarks>
     /// The API will accept the request after some basic validation of the request.
     /// The system will also attempt to verify that it will be possible to fulfill the order.
     /// </remarks>
-    /// <param name="notificationOrderRequest">The notification order with reminders request</param>
+    /// <param name="notificationOrderRequest">The notification order request</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests</param>
     /// <returns>The notification order request response</returns>
     [HttpPost]
@@ -61,7 +61,7 @@ public class FutureOrdersController : ControllerBase
             var validationResult = _validator.Validate(notificationOrderRequest);
             if (!validationResult.IsValid)
             {
-                validationResult.AddToModelState(this.ModelState);
+                validationResult.AddToModelState(ModelState);
                 return ValidationProblem(ModelState);
             }
 

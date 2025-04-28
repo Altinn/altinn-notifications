@@ -187,7 +187,7 @@ public class SmsNotificationServiceTests
     {
         // Arrange 
         var repoMock = new Mock<ISmsNotificationRepository>();
-        repoMock.Setup(r => r.GetNewNotifications())
+        repoMock.Setup(r => r.GetNewNotifications(It.IsAny<SendingTimePolicy>()))
             .ReturnsAsync(new List<Sms> { _sms, _sms, _sms });
 
         var producerMock = new Mock<IKafkaProducer>();
@@ -209,7 +209,7 @@ public class SmsNotificationServiceTests
     {
         // Arrange 
         var repoMock = new Mock<ISmsNotificationRepository>();
-        repoMock.Setup(r => r.GetNewNotifications())
+        repoMock.Setup(r => r.GetNewNotifications(It.IsAny<SendingTimePolicy>()))
             .ReturnsAsync(new List<Sms> { _sms });
 
         repoMock

@@ -8,6 +8,10 @@ using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.TestingValidators;
 
+/// <summary>
+/// Tests for the RecipientOrganizationValidator, which validates organizations 
+/// receiving notifications through various channels.
+/// </summary>
 public class RecipientOrganizationValidatorTests
 {
     private readonly RecipientOrganizationValidator _recipientOrganizationValidator = new();
@@ -108,5 +112,59 @@ public class RecipientOrganizationValidatorTests
         // assert
         actual.ShouldNotHaveValidationErrorFor(recipient => recipient.EmailSettings);
         actual.ShouldNotHaveValidationErrorFor(recipient => recipient.SmsSettings);
+    }
+
+    [Fact]
+    public void Should_Validate_ResourceId_To_True_When_Null()
+    {
+        // arrange
+        var recipientOrganization = new RecipientOrganizationExt
+        {
+            OrgNumber = "123456789",
+            ResourceId = null,
+            ChannelSchema = NotificationChannelExt.EmailPreferred,
+        };
+
+        // act
+        var actual = _recipientOrganizationValidator.TestValidate(recipientOrganization);
+
+        // assert
+        actual.ShouldNotHaveValidationErrorFor(recipient => recipient.ResourceId);
+    }
+
+    [Fact]
+    public void Should_Not_Validate_ResourceId_To_True_When_Invalid_Prefix()
+    {
+        // arrange
+        var recipientOrganization = new RecipientOrganizationExt
+        {
+            OrgNumber = "123456789",
+            ResourceId = "burn:altinn:resource:12345678910", // invalid prefix
+            ChannelSchema = NotificationChannelExt.EmailPreferred,
+        };
+
+        // act
+        var actual = _recipientOrganizationValidator.TestValidate(recipientOrganization);
+
+        // assert
+        actual.ShouldHaveValidationErrorFor(recipient => recipient.ResourceId).WithErrorMessage("ResourceId must have a valid syntax.");
+    }
+
+    [Fact]
+    public void Should_Validate_ResourceId_To_True_When_Valid_Prefix()
+    {
+        // arrange
+        var recipientOrganization = new RecipientOrganizationExt
+        {
+            OrgNumber = "123456789",
+            ResourceId = "urn:altinn:resource:12345678910",
+            ChannelSchema = NotificationChannelExt.EmailPreferred,
+        };
+
+        // act
+        var actual = _recipientOrganizationValidator.TestValidate(recipientOrganization);
+
+        // assert
+        actual.ShouldNotHaveValidationErrorFor(recipient => recipient.ResourceId);
     }
 }

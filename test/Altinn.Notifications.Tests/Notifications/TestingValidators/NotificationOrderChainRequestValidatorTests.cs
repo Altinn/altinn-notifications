@@ -149,7 +149,7 @@ public class NotificationOrderChainRequestValidatorTests
     }
 
     [Fact]
-    public void Fulfilling_eForv_Paragraph8()
+    public void Notification_With_Reminder_Should_Validate_Successfully()
     {
         // Arrange
         var order = new NotificationOrderChainRequestExt
@@ -182,8 +182,8 @@ public class NotificationOrderChainRequestValidatorTests
                     }
                 }
             },
-            Reminders = new List<NotificationReminderExt>
-            {
+            Reminders =
+            [
                 new NotificationReminderExt
                 {
                     ConditionEndpoint = new Uri("https://api.te.no/altinn/te-123-123/?seen=true"),
@@ -213,7 +213,7 @@ public class NotificationOrderChainRequestValidatorTests
                         }
                     }
                 }
-            }
+            ]
         };
 
         // Act
@@ -224,7 +224,7 @@ public class NotificationOrderChainRequestValidatorTests
     }
 
     [Fact]
-    public void EForvaltningsForskriften_Should_Validate_Successfully()
+    public void Notification_With_IgnoreReservation_Should_Validate_Successfully()
     {
         // Arrange
         var order = new NotificationOrderChainRequestExt
@@ -295,5 +295,102 @@ public class NotificationOrderChainRequestValidatorTests
 
         // Assert
         result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void RequestedSendTimeValidation_Should_Include_Validation_From_BaseValidator()
+    {
+        // Arrange
+        var order = new NotificationOrderChainRequestExt
+        {
+            IdempotencyId = "id",
+            SendersReference = "te-123-123",
+            RequestedSendTime = DateTime.UtcNow.AddDays(-1),
+            Recipient = new NotificationRecipientExt
+            {
+                RecipientEmail = new RecipientEmailExt
+                {
+                    EmailAddress = "noreply@altinn.no",
+                    Settings = new EmailSendingOptionsExt
+                    {
+                        Body = "test",
+                        SendingTimePolicy = SendingTimePolicyExt.Anytime,
+                        Subject = "test"
+                    }
+                }
+            }
+        };
+
+        // Act
+        var result = _validator.TestValidate(order);
+
+        // Assert
+        result.ShouldHaveAnyValidationError().WithErrorMessage("RequestedSendTime must be greater than or equal to now.");
+    }
+
+    [Fact]
+    public void Notification_With_EmailAndSmsChannel_WithMissingEmailSettings_ShouldFailValidation()
+    {
+        // Arrange
+        var order = new NotificationOrderChainRequestExt
+        {
+            IdempotencyId = "id-0841A839C83D",
+            SendersReference = "ref-2B4759F7CADF",
+            Recipient = new NotificationRecipientExt
+            {
+                RecipientPerson = new RecipientPersonExt
+                {
+                    NationalIdentityNumber = "25280522832",
+                    ChannelSchema = NotificationChannelExt.EmailAndSms,
+                    ResourceId = "urn:altinn:resource:skd_app-0CFDFD86EFC8",
+                    SmsSettings = new SmsSendingOptionsExt
+                    {
+                        Sender = "Skatteetaten",
+                        SendingTimePolicy = SendingTimePolicyExt.Daytime,
+                        Body = "Du har en ny melding fra Skatteetaten. Logg inn i Altinn."
+                    }
+                }
+            }
+        };
+
+        // Act
+        var result = _validator.TestValidate(order);
+
+        // Assert
+        result.ShouldHaveAnyValidationError().WithErrorMessage("EmailSettings must be set when ChannelSchema is EmailAndSms");
+    }
+
+    [Fact]
+    public void Notification_With_EmailAndSmsChannel_WithMissingSmsSettings_ShouldFailValidation()
+    {
+        // Arrange
+        var order = new NotificationOrderChainRequestExt
+        {
+            IdempotencyId = "id-0841A839C83D",
+            SendersReference = "ref-2B4759F7CADF",
+            Recipient = new NotificationRecipientExt
+            {
+                RecipientPerson = new RecipientPersonExt
+                {
+                    NationalIdentityNumber = "25280522832",
+                    ChannelSchema = NotificationChannelExt.EmailAndSms,
+                    ResourceId = "urn:altinn:resource:skd_app-0CFDFD86EFC8",
+                    EmailSettings = new EmailSendingOptionsExt
+                    {
+                        SenderEmailAddress = "Skatteetaten",
+                        ContentType = EmailContentTypeExt.Plain,
+                        Subject = "Ny melding fra Skatteetaten",
+                        SendingTimePolicy = SendingTimePolicyExt.Anytime,
+                        Body = "Du har en ny melding fra Skatteetaten. Logg inn i Altinn."
+                    }
+                }
+            }
+        };
+
+        // Act
+        var result = _validator.TestValidate(order);
+
+        // Assert
+        result.ShouldHaveAnyValidationError().WithErrorMessage("SmsSettings must be set when ChannelSchema is EmailAndSms");
     }
 }
