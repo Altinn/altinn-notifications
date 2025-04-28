@@ -83,11 +83,11 @@ public class NotificationDeliveryManifestMapperTests
         // Arrange
         var shipmentDeliveryManifest = new NotificationDeliveryManifest
         {
-            Recipients = [],
             Type = "Notification",
             ShipmentId = Guid.NewGuid(),
             LastUpdate = DateTime.UtcNow,
             Status = ProcessingLifecycle.Order_Completed,
+            Recipients = ImmutableList<IDeliveryManifest>.Empty,
             SendersReference = "F883C29A-CA66-4830-B4A1-CB23B11F268D",
         };
 
