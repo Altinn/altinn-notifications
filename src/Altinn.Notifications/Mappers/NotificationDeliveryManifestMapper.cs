@@ -1,5 +1,5 @@
 ﻿using System.Collections.Immutable;
-
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Delivery;
 using Altinn.Notifications.Models.Delivery;
 using Altinn.Notifications.Models.Status;
@@ -31,8 +31,59 @@ public static class NotificationDeliveryManifestMapper
             ShipmentId = manifest.ShipmentId,
             SequenceNumber = manifest.SequenceNumber,
             SendersReference = manifest.SendersReference,
-            Status = Enum.Parse<ProcessingLifecycleExt>(manifest.Status.ToString()),
+            Status = MapProcessingLifecycle(manifest.Status),
             Recipients = manifest.Recipients != null ? manifest.Recipients.MapToDeliveryManifestExtObjects() : []
+        };
+    }
+
+    /// <summary>
+    /// Maps a <see cref="ProcessingLifecycle"/> enum value to its corresponding <see cref="ProcessingLifecycleExt"/> value.
+    /// </summary>
+    /// <param name="status">The internal processing lifecycle status to map.</param>
+    /// <returns>The corresponding external processing lifecycle status.</returns>
+    private static ProcessingLifecycleExt MapProcessingLifecycle(ProcessingLifecycle status)
+    {
+        return status switch
+        {
+            // Order statuses
+            ProcessingLifecycle.Order_Completed => ProcessingLifecycleExt.Order_Completed,
+            ProcessingLifecycle.Order_Cancelled => ProcessingLifecycleExt.Order_Cancelled,
+            ProcessingLifecycle.Order_Registered => ProcessingLifecycleExt.Order_Registered,
+            ProcessingLifecycle.Order_Processing => ProcessingLifecycleExt.Order_Processing,
+            ProcessingLifecycle.Order_SendConditionNotMet => ProcessingLifecycleExt.Order_SendConditionNotMet,
+
+            // SMS statuses
+            ProcessingLifecycle.SMS_New => ProcessingLifecycleExt.SMS_New,
+            ProcessingLifecycle.SMS_Failed => ProcessingLifecycleExt.SMS_Failed,
+            ProcessingLifecycle.SMS_Sending => ProcessingLifecycleExt.SMS_Sending,
+            ProcessingLifecycle.SMS_Accepted => ProcessingLifecycleExt.SMS_Accepted,
+            ProcessingLifecycle.SMS_Delivered => ProcessingLifecycleExt.SMS_Delivered,
+            ProcessingLifecycle.SMS_Failed_Deleted => ProcessingLifecycleExt.SMS_Failed_Deleted,
+            ProcessingLifecycle.SMS_Failed_Expired => ProcessingLifecycleExt.SMS_Failed_Expired,
+            ProcessingLifecycle.SMS_Failed_Rejected => ProcessingLifecycleExt.SMS_Failed_Rejected,
+            ProcessingLifecycle.SMS_Failed_Undelivered => ProcessingLifecycleExt.SMS_Failed_Undelivered,
+            ProcessingLifecycle.SMS_Failed_BarredReceiver => ProcessingLifecycleExt.SMS_Failed_BarredReceiver,
+            ProcessingLifecycle.SMS_Failed_InvalidRecipient => ProcessingLifecycleExt.SMS_Failed_InvalidRecipient,
+            ProcessingLifecycle.SMS_Failed_RecipientReserved => ProcessingLifecycleExt.SMS_Failed_RecipientReserved,
+            ProcessingLifecycle.SMS_Failed_RecipientNotIdentified => ProcessingLifecycleExt.SMS_Failed_RecipientNotIdentified,
+
+            // Email statuses
+            ProcessingLifecycle.Email_New => ProcessingLifecycleExt.Email_New,
+            ProcessingLifecycle.Email_Failed => ProcessingLifecycleExt.Email_Failed,
+            ProcessingLifecycle.Email_Sending => ProcessingLifecycleExt.Email_Sending,
+            ProcessingLifecycle.Email_Succeeded => ProcessingLifecycleExt.Email_Succeeded,
+            ProcessingLifecycle.Email_Delivered => ProcessingLifecycleExt.Email_Delivered,
+            ProcessingLifecycle.Email_Failed_Bounced => ProcessingLifecycleExt.Email_Failed_Bounced,
+            ProcessingLifecycle.Email_Failed_Quarantined => ProcessingLifecycleExt.Email_Failed_Quarantined,
+            ProcessingLifecycle.Email_Failed_FilteredSpam => ProcessingLifecycleExt.Email_Failed_FilteredSpam,
+            ProcessingLifecycle.Email_Failed_InvalidFormat => ProcessingLifecycleExt.Email_Failed_InvalidFormat,
+            ProcessingLifecycle.Email_Failed_TransientError => ProcessingLifecycleExt.Email_Failed_TransientError,
+            ProcessingLifecycle.Email_Failed_RecipientReserved => ProcessingLifecycleExt.Email_Failed_RecipientReserved,
+            ProcessingLifecycle.Email_Failed_SuppressedRecipient => ProcessingLifecycleExt.Email_Failed_SuppressedRecipient,
+            ProcessingLifecycle.Email_Failed_RecipientNotIdentified => ProcessingLifecycleExt.Email_Failed_RecipientNotIdentified,
+
+            // In case a new status is added to the enum but not to this mapping:
+            _ => throw new ArgumentOutOfRangeException(nameof(status), $"Unsupported status: {status}")
         };
     }
 
@@ -76,7 +127,7 @@ public static class NotificationDeliveryManifestMapper
         {
             LastUpdate = manifest.LastUpdate,
             Destination = manifest.Destination,
-            Status = Enum.Parse<ProcessingLifecycleExt>(manifest.Status.ToString())
+            Status = MapProcessingLifecycle(manifest.Status)
         };
     }
 
@@ -94,7 +145,7 @@ public static class NotificationDeliveryManifestMapper
         {
             LastUpdate = manifest.LastUpdate,
             Destination = manifest.Destination,
-            Status = Enum.Parse<ProcessingLifecycleExt>(manifest.Status.ToString())
+            Status = MapProcessingLifecycle(manifest.Status)
         };
     }
 
