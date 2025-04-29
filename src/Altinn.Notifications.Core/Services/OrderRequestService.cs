@@ -174,7 +174,7 @@ public class OrderRequestService : IOrderRequestService
     {
         var (recipients, templates, channel, ignoreReservation, resourceId, sendingTimePolicy) = ExtractDeliveryComponents(recipient);
 
-        var lookupResult = await GetRecipientLookupResult(recipients, channel, resourceId);
+        var lookupResult = await GetRecipientLookupResult(recipients, channel, GetSanitizedResourceId(resourceId);
         if (lookupResult?.MissingContact?.Count > 0)
         {
             throw new InvalidOperationException($"Missing contact information for recipient(s): {string.Join(", ", lookupResult.MissingContact)}");
@@ -197,6 +197,16 @@ public class OrderRequestService : IOrderRequestService
             ConditionEndpoint = conditionEndpoint,
             SendingTimePolicy = sendingTimePolicy
         };
+    }
+
+    private static string? GetSanitizedResourceId(string? resourceId)
+    {
+        if (resourceId != null)
+        {
+            return resourceId.Replace("urn:altinn:resource:", string.Empty);
+        }
+
+        return null;
     }
 
     private async Task<RecipientLookupResult?> GetRecipientLookupResult(List<Recipient> originalRecipients, NotificationChannel channel, string? resourceId)
