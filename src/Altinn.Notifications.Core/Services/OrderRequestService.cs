@@ -1,5 +1,6 @@
 ﻿using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
@@ -174,10 +175,10 @@ public class OrderRequestService : IOrderRequestService
     {
         var (recipients, templates, channel, ignoreReservation, resourceId, sendingTimePolicy) = ExtractDeliveryComponents(recipient);
 
-        var lookupResult = await GetRecipientLookupResult(recipients, channel, GetSanitizedResourceId(resourceId);
+        var lookupResult = await GetRecipientLookupResult(recipients, channel, GetSanitizedResourceId(resourceId));
         if (lookupResult?.MissingContact?.Count > 0)
         {
-            throw new InvalidOperationException($"Missing contact information for recipient(s): {string.Join(", ", lookupResult.MissingContact)}");
+            throw new RecipientLookupException($"Missing contact information for recipient(s): {string.Join(", ", lookupResult.MissingContact)}");
         }
 
         templates = SetSenderIfNotDefined(templates);

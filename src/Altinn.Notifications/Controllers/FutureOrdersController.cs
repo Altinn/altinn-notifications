@@ -1,4 +1,5 @@
 ﻿using Altinn.Notifications.Configuration;
+using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
@@ -84,7 +85,25 @@ public class FutureOrdersController : ControllerBase
         }
         catch (OperationCanceledException)
         {
-            return StatusCode(499, "Request terminated - The client disconnected or cancelled the request before the server could complete processing");
+            var problemDetails = new ProblemDetails
+            {
+                Title = "Request terminated",
+                Detail = "The client disconnected or cancelled the request before the server could complete processing.",
+                Status = 499
+            };
+
+            return StatusCode(499, problemDetails);
+        }
+        catch (RecipientLookupException e)
+        {
+            var problemDetails = new ProblemDetails
+            {
+                Title = "Recipient lookup failed",
+                Detail = e.Message,
+                Status = 422
+            };
+
+            return UnprocessableEntity(problemDetails);
         }
     }
 }

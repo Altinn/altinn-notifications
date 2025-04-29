@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
@@ -879,7 +880,7 @@ public class OrderRequestServiceTests
             cp => cp.AddPreferredContactPoints(
                 It.Is<NotificationChannel>(ch => ch == NotificationChannel.EmailPreferred),
                 It.Is<List<Recipient>>(r => r.Any(rec => rec.NationalIdentityNumber == "29105573746")),
-                It.Is<string?>(s => s == "urn:altinn:resource:tax-2025")),
+                It.Is<string?>(s => s == "tax-2025")),
             Times.Exactly(2));
 
         // Verify contact point added the expected email address
@@ -887,7 +888,7 @@ public class OrderRequestServiceTests
             cp => cp.AddPreferredContactPoints(
                 It.Is<NotificationChannel>(ch => ch == NotificationChannel.SmsPreferred),
                 It.Is<List<Recipient>>(r => r.Any(rec => rec.NationalIdentityNumber == "29105573746")),
-                It.Is<string?>(s => s == "urn:altinn:resource:tax-2025")),
+                It.Is<string?>(s => s == "tax-2025")),
             Times.Once);
     }
 
@@ -998,7 +999,7 @@ public class OrderRequestServiceTests
         contactPointServiceMock.Verify(
             cp => cp.AddEmailContactPoints(
             It.Is<List<Recipient>>(r => r.Any(rec => rec.OrganizationNumber == "312508729")),
-            It.Is<string?>(s => s == "urn:altinn:resource:annual-report-2025")),
+            It.Is<string?>(s => s == "annual-report-2025")),
             Times.Once);
     }
 
@@ -1325,7 +1326,7 @@ public class OrderRequestServiceTests
     }
 
     [Fact]
-    public async Task CreateNotificationOrder_WithMissingContactInformation_ThrowsInvalidOperationException()
+    public async Task CreateNotificationOrder_WithMissingContactInformation_ThrowsRecipientLookupException()
     {
         // Arrange
         Guid orderId = Guid.NewGuid();
@@ -1359,7 +1360,7 @@ public class OrderRequestServiceTests
         var service = GetTestService(null, contactPointMock.Object, orderId, currentTime);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+        var exception = await Assert.ThrowsAsync<RecipientLookupException>(async () =>
             await service.RegisterNotificationOrderChain(
                 new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
                     .SetOrderId(orderId)
@@ -1377,7 +1378,7 @@ public class OrderRequestServiceTests
         contactPointMock.Verify(
             contactService => contactService.AddEmailContactPoints(
                 It.Is<List<Recipient>>(r => r.Any(rec => rec.NationalIdentityNumber == "16069412345")),
-                It.Is<string?>(s => s == "urn:altinn:resource:test")),
+                It.Is<string?>(s => s == "test")),
             Times.Once);
     }
 
