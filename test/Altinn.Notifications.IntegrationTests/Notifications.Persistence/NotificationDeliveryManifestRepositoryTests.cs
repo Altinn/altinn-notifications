@@ -341,7 +341,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             ConditionEndpoint = new Uri(conditionEndpoint),
             Templates =
             [
-                new SmsTemplate(messageBody, senderNumber)
+                new SmsTemplate(senderNumber, messageBody)
             ],
             Recipients =
             [
