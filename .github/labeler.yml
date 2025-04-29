@@ -1,5 +1,8 @@
 # Labels for pull requests
 
 review/domain-model-changes:
-  - 'src/Altinn.Notifications.Core/Enums/**'
-  - 'src/Altinn.Notifications.Core/Models/**'
+- any:
+  - changed-files:
+    - any-glob-to-any-file:
+      - src/Altinn.Notifications.Core/Enums/*
+      - src/Altinn.Notifications.Core/Models/*
