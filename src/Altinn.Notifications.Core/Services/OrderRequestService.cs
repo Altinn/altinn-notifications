@@ -429,7 +429,7 @@ public class OrderRequestService : IOrderRequestService
     /// <item><description>Channel - The determined notification channel based on recipient type</description></item>
     /// <item><description>IgnoreReservation - Flag indicating whether to bypass KRR reservations</description></item>
     /// <item><description>ResourceId - Optional resource ID for authorization and tracking</description></item>
-    /// <item><description>SendingTimePolicyForSms - The sendingTimePolicy associated with the selected SMS's configuration</description></item>
+    /// <item><description>SmsSendingTimePolicy - The sendingTimePolicy associated with the selected SMS's configuration</description></item>
     /// </list>
     /// </returns>
     /// <remarks>
@@ -437,7 +437,7 @@ public class OrderRequestService : IOrderRequestService
     /// the appropriate templates and addressing information based on the recipient's configuration.
     /// The default channel is SMS if the recipient type cannot be determined.
     /// </remarks>
-    private static (List<Recipient> Recipients, List<INotificationTemplate> Templates, NotificationChannel Channel, bool? IgnoreReservation, string? ResourceId, SendingTimePolicy? SendingTimePolicyForSms) ExtractDeliveryComponents(NotificationRecipient recipient)
+    private static (List<Recipient> Recipients, List<INotificationTemplate> Templates, NotificationChannel Channel, bool? IgnoreReservation, string? ResourceId, SendingTimePolicy? SmsSendingTimePolicy) ExtractDeliveryComponents(NotificationRecipient recipient)
     {
         bool? ignoreReservation = null;
         string? resourceIdentifier = null;
@@ -445,15 +445,14 @@ public class OrderRequestService : IOrderRequestService
         var recipients = new List<Recipient>();
         var templates = new List<INotificationTemplate>();
 
+        SendingTimePolicy? smsSendingTimePolicy = null;
         NotificationChannel notificationChannel = NotificationChannel.Sms;
-
-        SendingTimePolicy? sendingTimePolicyForSms = null;
 
         if (recipient.RecipientSms?.Settings != null)
         {
             notificationChannel = NotificationChannel.Sms;
 
-            sendingTimePolicyForSms = recipient.RecipientSms.Settings.SendingTimePolicy;
+            smsSendingTimePolicy = recipient.RecipientSms.Settings.SendingTimePolicy;
 
             templates.Add(CreateSmsTemplate(recipient.RecipientSms.Settings));
 
@@ -476,7 +475,7 @@ public class OrderRequestService : IOrderRequestService
             if (recipient.RecipientPerson.SmsSettings != null)
             {
                 templates.Add(CreateSmsTemplate(recipient.RecipientPerson.SmsSettings));
-                sendingTimePolicyForSms = recipient.RecipientPerson.SmsSettings.SendingTimePolicy;
+                smsSendingTimePolicy = recipient.RecipientPerson.SmsSettings.SendingTimePolicy;
             }
 
             if (recipient.RecipientPerson.EmailSettings != null)
@@ -494,7 +493,7 @@ public class OrderRequestService : IOrderRequestService
             if (recipient.RecipientOrganization.SmsSettings != null)
             {
                 templates.Add(CreateSmsTemplate(recipient.RecipientOrganization.SmsSettings));
-                sendingTimePolicyForSms = recipient.RecipientOrganization.SmsSettings.SendingTimePolicy;
+                smsSendingTimePolicy = recipient.RecipientOrganization.SmsSettings.SendingTimePolicy;
             }
 
             if (recipient.RecipientOrganization.EmailSettings != null)
@@ -505,6 +504,6 @@ public class OrderRequestService : IOrderRequestService
             recipients.Add(new Recipient([], organizationNumber: recipient.RecipientOrganization.OrgNumber));
         }
 
-        return (recipients, templates, notificationChannel, ignoreReservation, resourceIdentifier, sendingTimePolicyForSms);
+        return (recipients, templates, notificationChannel, ignoreReservation, resourceIdentifier, smsSendingTimePolicy);
     }
 }
