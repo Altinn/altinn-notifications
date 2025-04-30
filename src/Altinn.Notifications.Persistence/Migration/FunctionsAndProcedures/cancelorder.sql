@@ -47,9 +47,9 @@ BEGIN
         SELECT FALSE AS cancelallowed, NULL::uuid, NULL::text, NULL::text, NULL::timestamp with time zone, NULL::timestamp with time zone, NULL::timestamp with time zone, NULL::orderprocessingstate, NULL::text, NULL::boolean, NULL::text, NULL::text, NULL::bigint, NULL::bigint, NULL::bigint, NULL::bigint;
      ELSE 
         -- Cancel the order by updating its status
-        UPDATE notifications.orders
+        UPDATE notifications.orders o
         SET processedstatus = 'Cancelled', processed = NOW()
-        WHERE notifications.orders.alternateid = _alternateid and notifications.orders.creatorname = _creatorname;
+        WHERE o.alternateid = _alternateid and o.creatorname = _creatorname;
 
         -- Retrieve the updated order details
         RETURN QUERY 
