@@ -49,7 +49,7 @@ BEGIN
         -- Cancel the order by updating its status
         UPDATE notifications.orders
         SET processedstatus = 'Cancelled', processed = NOW()
-        WHERE notifications.orders.alternateid = _alternateid;
+        WHERE notifications.orders.alternateid = _alternateid and notifications.orders.creatorname = _creatorname;
 
         -- Retrieve the updated order details
         RETURN QUERY 
