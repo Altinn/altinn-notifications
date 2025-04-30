@@ -48,7 +48,7 @@ BEGIN
      ELSE 
         -- Cancel the order by updating its status
         UPDATE notifications.orders o
-        SET processedstatus = 'Cancelled', processed = NOW()
+        SET o.processedstatus = 'Cancelled', o.processed = NOW()
         WHERE o.alternateid = _alternateid and o.creatorname = _creatorname;
 
         -- Retrieve the updated order details
