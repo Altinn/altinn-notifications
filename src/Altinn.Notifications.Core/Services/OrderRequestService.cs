@@ -121,7 +121,7 @@ public class OrderRequestService : IOrderRequestService
 
         if (savedOrders == null || savedOrders.Count == 0)
         {
-            throw new InvalidOperationException("Failed to create the notification order chain.");
+            return new ServiceError(422, "Failed to create the notification order chain.");
         }
 
         // Get the main order (first in the list)

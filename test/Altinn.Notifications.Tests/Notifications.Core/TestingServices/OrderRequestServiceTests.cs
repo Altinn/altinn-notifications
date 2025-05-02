@@ -1026,7 +1026,7 @@ public class OrderRequestServiceTests
     }
 
     [Fact]
-    public async Task RegisterNotificationOrderChain_RepositoryReturnsEmptyList_ThrowsInvalidOperationException()
+    public async Task RegisterNotificationOrderChain_RepositoryReturnsEmptyList_ReturnsServiceErrorObjectWithError()
     {
         // Arrange
         Guid orderId = Guid.NewGuid();
@@ -1062,9 +1062,19 @@ public class OrderRequestServiceTests
         var service = GetTestService(repoMock.Object, null, orderId, currentTime);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () => await service.RegisterNotificationOrderChain(orderRequest));
+        var result = await service.RegisterNotificationOrderChain(orderRequest);
 
-        Assert.Equal("Failed to create the notification order chain.", exception.Message);
+        result.Match<bool>(
+            success =>
+            {
+                Assert.Fail("Should not succeed with an empty list.");
+                return false;
+            },
+            error =>
+            {
+                Assert.Equal("Failed to create the notification order chain.", error.ErrorMessage);
+                return true;
+            });
 
         // Verify the repository was called
         repoMock.Verify(r => r.Create(It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId), It.Is<NotificationOrder>(e => e.Id == orderId), It.IsAny<List<NotificationOrder>>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -1348,7 +1358,7 @@ public class OrderRequestServiceTests
     }
 
     [Fact]
-    public async Task CreateNotificationOrder_WithMissingContactInformation_ThrowsRecipientLookupException()
+    public async Task CreateNotificationOrder_WithMissingContactInformation_ReturnsServiceErrorObjectWithMessage()
     {
         // Arrange
         Guid orderId = Guid.NewGuid();
