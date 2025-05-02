@@ -2,6 +2,7 @@ meta {
   name: Validation demo - contract
   type: http
   seq: 4
+  description: Tests API validation by sending an invalid contract to verify proper error handling
 }
 
 post {
@@ -17,5 +18,13 @@ auth:bearer {
 body:json {
   {
     "this contract will not work": "I am sure!"
+  }
+}
+
+expected {
+  // Expected response code and body
+  code: 400
+  body: {
+    contains: "ValidationError"
   }
 }
