@@ -1,0 +1,29 @@
+meta {
+  name: notifications create token
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{TokenGeneratorBaseUrl}}/api/GetEnterpriseToken?env={{Environment}}&scopes=altinn:serviceowner/notifications.create&org=ttd&orgNo=991825827
+  body: none
+  auth: basic
+}
+
+params:query {
+  env: {{Environment}}
+  scopes: altinn:serviceowner/notifications.create
+  org: ttd
+  orgNo: 991825827
+}
+
+auth:basic {
+  username: {{TokenGeneratorUserName}}
+  password: {{TokenGeneratorPassword}}
+}
+
+script:post-response {
+  let data = res.getBody();
+  bru.setEnvVar("jwt",data);
+  
+}
