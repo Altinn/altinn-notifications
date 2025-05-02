@@ -243,11 +243,11 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
         var destinationOrdinal = reader.GetOrdinal(_destinationColumnName);
 
         var isStatusNull = await reader.IsDBNullAsync(statusOrdinal, cancellationToken);
+        var isReferenceNull = await reader.IsDBNullAsync(referenceOrdinal, cancellationToken);
         var isTimestampNull = await reader.IsDBNullAsync(lastUpdateOrdinal, cancellationToken);
         var isDestinationNull = await reader.IsDBNullAsync(destinationOrdinal, cancellationToken);
-        var isReferencePresent = !await reader.IsDBNullAsync(referenceOrdinal, cancellationToken);
 
-        if (isStatusNull || isTimestampNull || isDestinationNull || isReferencePresent)
+        if (isStatusNull || isTimestampNull || isDestinationNull || isReferenceNull)
         {
             return;
         }
