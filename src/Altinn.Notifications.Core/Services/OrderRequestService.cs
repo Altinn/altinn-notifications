@@ -1,6 +1,5 @@
 ﻿using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
-using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
@@ -8,6 +7,7 @@ using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Models;
 
 using Microsoft.Extensions.Options;
@@ -85,13 +85,13 @@ public class OrderRequestService : IOrderRequestService
     }
 
     /// <inheritdoc/>
-    public async Task<NotificationOrderChainResponse> RegisterNotificationOrderChain(NotificationOrderChainRequest orderRequest, CancellationToken cancellationToken = default)
+    public async Task<Result<NotificationOrderChainResponse, ServiceError>> RegisterNotificationOrderChain(NotificationOrderChainRequest orderRequest, CancellationToken cancellationToken = default)
     {
         DateTime currentTime = _dateTime.UtcNow();
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        var mainOrder = await CreateNotificationOrder(
+        Result<NotificationOrder, ServiceError> result = await CreateNotificationOrder(
             orderRequest.Recipient,
             orderRequest.OrderId,
             orderRequest.SendersReference,
@@ -99,6 +99,17 @@ public class OrderRequestService : IOrderRequestService
             orderRequest.Creator,
             currentTime,
             orderRequest.ConditionEndpoint);
+
+        if (result.IsError)
+        {
+            var serviceError = result.Match<ServiceError>(
+                order => null!,
+                error => error);
+
+            return serviceError;
+        }
+
+        var mainOrder = result.Match<NotificationOrder>(success => success, error => null!);
 
         var reminderOrders = await CreateNotificationOrders(
             orderRequest.Reminders,
@@ -171,14 +182,15 @@ public class OrderRequestService : IOrderRequestService
     /// If any required contact data is missing, an <see cref="InvalidOperationException"/> is thrown.
     /// Additionally, default sender information is applied to any templates that lack sender details.
     /// </remarks>
-    private async Task<NotificationOrder> CreateNotificationOrder(NotificationRecipient recipient, Guid orderId, string? sendersReference, DateTime requestedSendTime, Creator creator, DateTime currentTime, Uri? conditionEndpoint)
+    private async Task<Result<NotificationOrder, ServiceError>> CreateNotificationOrder(NotificationRecipient recipient, Guid orderId, string? sendersReference, DateTime requestedSendTime, Creator creator, DateTime currentTime, Uri? conditionEndpoint)
     {
         var (recipients, templates, channel, ignoreReservation, resourceId, sendingTimePolicy) = ExtractDeliveryComponents(recipient);
 
         var lookupResult = await GetRecipientLookupResult(recipients, channel, GetSanitizedResourceId(resourceId));
+
         if (lookupResult?.MissingContact?.Count > 0)
         {
-            throw new RecipientLookupException($"Missing contact information for recipient(s): {string.Join(", ", lookupResult.MissingContact)}");
+            return new ServiceError(422, $"Missing contact information for recipient(s): {string.Join(", ", lookupResult.MissingContact)}");
         }
 
         templates = SetSenderIfNotDefined(templates);
@@ -413,7 +425,7 @@ public class OrderRequestService : IOrderRequestService
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var reminderOrder = await CreateNotificationOrder(
+            Result<NotificationOrder, ServiceError> result = await CreateNotificationOrder(
                 reminder.Recipient,
                 reminder.OrderId,
                 reminder.SendersReference,
@@ -422,7 +434,11 @@ public class OrderRequestService : IOrderRequestService
                 currentTime,
                 reminder.ConditionEndpoint);
 
-            reminderOrders.Add(reminderOrder);
+            if (result.IsSuccess)
+            {
+                var reminderOrder = result.Match<NotificationOrder>(success => success, error => null!);
+                reminderOrders.Add(reminderOrder);
+            }
         }
 
         return reminderOrders;

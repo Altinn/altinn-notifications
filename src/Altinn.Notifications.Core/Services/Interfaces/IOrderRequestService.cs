@@ -1,4 +1,5 @@
 ﻿using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Models;
 
 namespace Altinn.Notifications.Core.Services.Interfaces;
@@ -42,7 +43,7 @@ public interface IOrderRequestService
     /// <exception cref="OperationCanceledException">
     /// Thrown when the operation is canceled through the provided <paramref name="cancellationToken"/>.
     /// </exception>
-    Task<NotificationOrderChainResponse> RegisterNotificationOrderChain(NotificationOrderChainRequest orderRequest, CancellationToken cancellationToken = default);
+    Task<Result<NotificationOrderChainResponse, ServiceError>> RegisterNotificationOrderChain(NotificationOrderChainRequest orderRequest, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Retrieves tracking information for a notification order chain using the creator's name and idempotency identifier.

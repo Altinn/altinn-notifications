@@ -1,6 +1,7 @@
 ﻿using Altinn.Notifications.Configuration;
-using Altinn.Notifications.Core.Exceptions;
+using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
@@ -79,9 +80,24 @@ public class FutureOrdersController : ControllerBase
             }
 
             var notificationOrderChainRequest = notificationOrderRequest.MapToNotificationOrderChainRequest(creator);
-            var registeredNotificationOrderChain = await _orderRequestService.RegisterNotificationOrderChain(notificationOrderChainRequest, cancellationToken);
 
-            return Created(registeredNotificationOrderChain.OrderChainId.GetSelfLinkFromOrderChainId(), registeredNotificationOrderChain.MapToNotificationOrderChainResponseExt());
+            Result<NotificationOrderChainResponse, ServiceError> result = await _orderRequestService.RegisterNotificationOrderChain(notificationOrderChainRequest, cancellationToken);
+
+            return result.Match(
+                registeredNotificationOrderChain =>
+                {
+                    return Created(registeredNotificationOrderChain.OrderChainId.GetSelfLinkFromOrderChainId(), registeredNotificationOrderChain.MapToNotificationOrderChainResponseExt());
+                },
+                error =>
+                {
+                    var problemDetails = new ProblemDetails
+                    {
+                        Title = "Notification order chain registration failed",
+                        Detail = error.ErrorMessage,
+                        Status = error.ErrorCode
+                    };
+                    return StatusCode(error.ErrorCode, problemDetails);
+                });
         }
         catch (OperationCanceledException)
         {
@@ -93,17 +109,6 @@ public class FutureOrdersController : ControllerBase
             };
 
             return StatusCode(499, problemDetails);
-        }
-        catch (RecipientLookupException e)
-        {
-            var problemDetails = new ProblemDetails
-            {
-                Title = "Recipient lookup failed",
-                Detail = e.Message,
-                Status = 422
-            };
-
-            return UnprocessableEntity(problemDetails);
         }
     }
 }
