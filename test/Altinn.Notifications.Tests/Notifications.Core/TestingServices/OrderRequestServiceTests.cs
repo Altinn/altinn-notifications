@@ -904,36 +904,46 @@ public class OrderRequestServiceTests
     }
 
     [Fact]
-    public async Task RegisterNotificationOrderChain_RecipientOrganizationWithoutReminders_OrderChainCreated()
+    public async Task RegisterNotificationOrderChain_RecipientOrganizationWithEmailAndSms_SendingTimePolicyRespectsSmsOverEmail()
     {
         // Arrange
         Guid orderId = Guid.NewGuid();
         Guid orderChainId = Guid.NewGuid();
         DateTime currentTime = DateTime.UtcNow;
 
+        // Create a request with both email and SMS settings
+        // SMS has Daytime policy while Email has Anytime policy
         var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
             .SetOrderId(orderId)
             .SetOrderChainId(orderChainId)
             .SetCreator(new Creator("brg"))
-            .SetSendersReference("ANNUAL-REPORT-2025")
+            .SetSendersReference("REF-42DBDAB8281C")
             .SetRequestedSendTime(currentTime.AddHours(2))
-            .SetIdempotencyId("65698F3A-7B27-478C-9E76-A190C34A8099")
-            .SetConditionEndpoint(new Uri("https://api.brreg.no/conditions/annual-report"))
-            .SetDialogportenAssociation(new DialogportenIdentifiers { DialogId = "20E3D06D5546", TransmissionId = "F9D34BB1C65F" })
+            .SetIdempotencyId("A5B28914-7056-4E3B-9DAF-BEA23321D39C")
+            .SetConditionEndpoint(new Uri("https://api.brreg.no/conditions/notification"))
+            .SetDialogportenAssociation(new DialogportenIdentifiers { DialogId = "31E9F67A4B2D", TransmissionId = "C7D25A18E34F" })
             .SetRecipient(new NotificationRecipient
             {
                 RecipientOrganization = new RecipientOrganization
                 {
                     OrgNumber = "312508729",
-                    ChannelSchema = NotificationChannel.Email,
-                    ResourceId = "urn:altinn:resource:annual-report-2025",
+                    ChannelSchema = NotificationChannel.EmailAndSms,
+                    ResourceId = "urn:altinn:resource:email-sms-resouce-name",
+
+                    SmsSettings = new SmsSendingOptions
+                    {
+                        Sender = "Brønnøysund",
+                        Body = "Your organization's annual report is due by March 31, 2025. Log in to Altinn to complete it.",
+                        SendingTimePolicy = SendingTimePolicy.Daytime
+                    },
+
                     EmailSettings = new EmailSendingOptions
                     {
                         Subject = "Annual Report 2025",
                         ContentType = EmailContentType.Html,
                         SenderEmailAddress = "no-reply@brreg.no",
-                        Body = "<p>Your organization's annual report is due by March 31, 2025. Log in to Altinn to complete it.</p>",
-                        SendingTimePolicy = SendingTimePolicy.Anytime
+                        SendingTimePolicy = SendingTimePolicy.Anytime,
+                        Body = "<p>Your organization's annual report is due by March 31, 2025. Log in to Altinn to complete it.</p>"
                     }
                 }
             })
@@ -941,38 +951,38 @@ public class OrderRequestServiceTests
 
         var expectedOrder = new NotificationOrder(
             orderId,
-            "ANNUAL-REPORT-2025",
+            "REF-42DBDAB8281C",
             [
+                new SmsTemplate("Brønnøysund", "Your organization's annual report is due by March 31, 2025. Log in to Altinn to complete it."),
                 new EmailTemplate("no-reply@brreg.no", "Annual Report 2025", "<p>Your organization's annual report is due by March 31, 2025. Log in to Altinn to complete it.</p>", EmailContentType.Html)
             ],
             currentTime.AddHours(2),
-            NotificationChannel.Email,
+            NotificationChannel.EmailAndSms,
             new Creator("brg"),
             DateTime.UtcNow,
             [new([], organizationNumber: "312508729")],
             null,
-            "urn:altinn:resource:annual-report-2025",
-            new Uri("https://api.brreg.no/conditions/annual-report"));
+            "urn:altinn:resource:email-sms-resouce-name",
+            new Uri("https://api.brreg.no/conditions/notification"));
 
-        // Setup mock
         var orderRepositoryMock = new Mock<IOrderRepository>();
         orderRepositoryMock.Setup(r => r.Create(
-            It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId && e.SendersReference == "ANNUAL-REPORT-2025"),
-            It.Is<NotificationOrder>(o => o.NotificationChannel == NotificationChannel.Email && o.Recipients.Any(r => r.OrganizationNumber == "312508729")),
+            It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId && e.SendersReference == "REF-42DBDAB8281C"),
+            It.Is<NotificationOrder>(o => o.NotificationChannel == NotificationChannel.EmailAndSms && o.Recipients.Any(r => r.OrganizationNumber == "312508729")),
             It.Is<List<NotificationOrder>>(list => list.Count == 0),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync([expectedOrder]);
+            It.IsAny<CancellationToken>())).ReturnsAsync([expectedOrder]);
 
         var contactPointServiceMock = new Mock<IContactPointService>();
         contactPointServiceMock
-            .Setup(contactService => contactService.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>()))
+            .Setup(contactService => contactService.AddEmailAndSmsContactPointsAsync(It.IsAny<List<Recipient>>(), It.IsAny<string?>()))
             .Callback<List<Recipient>, string?>((recipients, _) =>
             {
                 foreach (var recipient in recipients)
                 {
                     if (recipient.OrganizationNumber == "312508729")
                     {
-                        recipient.AddressInfo.Add(new EmailAddressPoint("recipient@example.com"));
+                        recipient.AddressInfo.Add(new SmsAddressPoint("+4799999999"));
+                        recipient.AddressInfo.Add(new EmailAddressPoint("organization@example.com"));
                     }
                 }
             });
@@ -980,40 +990,35 @@ public class OrderRequestServiceTests
         var service = GetTestService(orderRepositoryMock.Object, contactPointServiceMock.Object, orderId, currentTime);
 
         // Act
-        Result<NotificationOrderChainResponse, ServiceError> response = await service.RegisterNotificationOrderChain(orderChainRequest);
-
+        Result<NotificationOrderChainResponse, ServiceError> result = await service.RegisterNotificationOrderChain(orderChainRequest);
+       
         // Assert
-        response.Match<bool>(
-            response =>
+        result.Match<bool>(
+            result =>
             {
-                Assert.NotNull(response);
-                Assert.Equal(orderChainId, response.OrderChainId);
+                Assert.NotNull(result);
+                Assert.Equal(orderChainId, result.OrderChainId);
+                Assert.Equal(orderId, result.OrderChainReceipt.ShipmentId);
+                Assert.Equal("REF-42DBDAB8281C", result.OrderChainReceipt.SendersReference);
 
-                Assert.NotNull(response.OrderChainReceipt);
-                Assert.Equal(orderId, response.OrderChainReceipt.ShipmentId);
-                Assert.NotEqual(orderChainId, response.OrderChainReceipt.ShipmentId);
-                Assert.Equal("ANNUAL-REPORT-2025", response.OrderChainReceipt.SendersReference);
-
-                Assert.Null(response.OrderChainReceipt.Reminders);
-
-                // Verify repository interactions
                 orderRepositoryMock.Verify(
                     r => r.Create(
                     It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId),
                     It.Is<NotificationOrder>(o =>
                         o.Id == orderId &&
-                        o.SendersReference == "ANNUAL-REPORT-2025" &&
-                        o.NotificationChannel == NotificationChannel.Email &&
+                        o.SendersReference == "REF-42DBDAB8281C" &&
+                        o.SendingTimePolicy == SendingTimePolicy.Daytime &&
+                        o.NotificationChannel == NotificationChannel.EmailAndSms &&
                         o.Recipients.Any(r => r.OrganizationNumber == "312508729")),
                     It.Is<List<NotificationOrder>>(list => list.Count == 0),
                     It.IsAny<CancellationToken>()),
                     Times.Once);
 
-                // Verify contact point interactions
+                // Verify contact point service was called correctly
                 contactPointServiceMock.Verify(
-                    cp => cp.AddEmailContactPoints(
+                    cp => cp.AddEmailAndSmsContactPointsAsync(
                     It.Is<List<Recipient>>(r => r.Any(rec => rec.OrganizationNumber == "312508729")),
-                    It.Is<string?>(s => s == "annual-report-2025")),
+                    It.Is<string?>(s => s == "urn:altinn:resource:email-sms-resouce-name")),
                     Times.Once);
 
                 return true;
