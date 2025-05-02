@@ -14,6 +14,8 @@ namespace Altinn.Notifications.Mappers;
 /// </summary>
 public static class NotificationOrderChainMapper
 {
+    private const string SingleWhiteSpace = " ";
+
     /// <summary>
     /// Maps a <see cref="NotificationOrderChainRequestExt"/> to a <see cref="NotificationOrderChainRequest"/>.
     /// </summary>
@@ -77,9 +79,9 @@ public static class NotificationOrderChainMapper
         return new EmailSendingOptions
         {
             Body = emailSendingOptionsExt.Body,
-            Subject = emailSendingOptionsExt.Subject,
             ContentType = (EmailContentType)emailSendingOptionsExt.ContentType,
             SenderEmailAddress = emailSendingOptionsExt.SenderEmailAddress?.Trim(),
+            Subject = emailSendingOptionsExt.Subject.Replace("\n", SingleWhiteSpace),
             SendingTimePolicy = (SendingTimePolicy)emailSendingOptionsExt.SendingTimePolicy
         };
     }

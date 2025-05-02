@@ -318,6 +318,43 @@ public class NotificationOrderChainMapperTests
     }
 
     [Fact]
+    public void MapToNotificationOrderChainRequest_WithEmailRecipientContainingNewlinesInSubject_ReplacesNewlinesWithSingleWhiteSpace()
+    {
+        // Arrange
+        var creatorName = "ttd";
+        var requestExt = new NotificationOrderChainRequestExt
+        {
+            IdempotencyId = "63404F51-2079-4598-BD23-8F4467590FB4",
+            Recipient = new NotificationRecipientExt
+            {
+                RecipientEmail = new RecipientEmailExt
+                {
+                    EmailAddress = "recipient@example.com",
+                    Settings = new EmailSendingOptionsExt
+                    {
+                        Body = "This is a test email body",
+                        SenderEmailAddress = "sender@example.com",
+                        Subject = "This\nis\na\ntest\nemail\nsubject"
+                    }
+                }
+            }
+        };
+
+        // Act
+        var result = requestExt.MapToNotificationOrderChainRequest(creatorName);
+
+        // Assert
+        Assert.NotNull(result);
+
+        Assert.NotNull(result.Recipient);
+        Assert.NotNull(result.Recipient.RecipientEmail);
+        Assert.Equal("recipient@example.com", result.Recipient.RecipientEmail.EmailAddress);
+        Assert.Equal("This is a test email body", result.Recipient.RecipientEmail.Settings.Body);
+        Assert.Equal("This is a test email subject", result.Recipient.RecipientEmail!.Settings.Subject);
+        Assert.Equal("sender@example.com", result.Recipient.RecipientEmail.Settings.SenderEmailAddress);
+    }
+
+    [Fact]
     public void MapToNotificationOrderChainRequest_WithOrganizationRecipientEmailChannel_MapsCorrectly()
     {
         // Arrange
