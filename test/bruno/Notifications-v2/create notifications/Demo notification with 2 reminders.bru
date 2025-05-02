@@ -20,15 +20,16 @@ body:json {
     "sendersReference": "te-123-123",
     "requestedSendTime": "2025-01-31T12:59:08.677Z",
     "conditionEndpoint": "https://api.te.no/altinn/te-123-123/?seen=true",
-    "associationDialogporten": {
-      "dialogueId": "{{dialog-guid}}",
+    "dialogportenAssociation": {
+      "dialogId": "{{dialog-guid}}",
       "transmissionId": "{{transmissionId-utsending-1}}"
     },
     "recipient": {
       "recipientEmail": {
         "emailAddress": "ola.normann@example.com",
         "emailSettings": {
-          "notificationScheme": "Unrestricted_v1",
+          "sendingTimePolicy": "Anytime",
+          "contentType": "Plain",
           "subject": "Ny melding fra TE",
           "body": "Du har fått en ny melding fra TE i Altinn meldingsboks. Logg inn i Altinn for å gjøre deg kjent med innholdet."
         }
