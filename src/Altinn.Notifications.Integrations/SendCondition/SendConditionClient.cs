@@ -24,31 +24,98 @@ namespace Altinn.Notifications.Integrations.SendCondition
         /// <inheritdoc/>
         public async Task<Result<bool, ConditionClientError>> CheckSendCondition(Uri url)
         {
-            HttpResponseMessage res = await _client.GetAsync(url);
-            string responseString = await res.Content.ReadAsStringAsync();
-
-            if (res.IsSuccessStatusCode)
+            try
             {
-                try
-                {
-                    SendConditionResponse? conditionResponse = JsonSerializer.Deserialize<SendConditionResponse?>(responseString);
+                using var response = await _client.GetAsync(url).ConfigureAwait(false);
+                return await ProcessHttpResponse(response).ConfigureAwait(false);
+            }
+            catch (HttpRequestException ex)
+            {
+                return new ConditionClientError { Message = $"HTTP request failed: {ex.Message}" };
+            }
+            catch (TaskCanceledException ex)
+            {
+                return new ConditionClientError { Message = $"Request timed out: {ex.Message}" };
+            }
+            catch (Exception ex)
+            {
+                return new ConditionClientError { Message = $"Unexpected error during HTTP request: {ex.Message}" };
+            }
+        }
 
-                    if (conditionResponse?.SendNotification != null)
-                    {
-                        return conditionResponse.SendNotification.Value;
-                    }
-                    else
-                    {
-                        return new ConditionClientError { StatusCode = (int)res.StatusCode, Message = $"No condition response in body: {responseString}" };
-                    }
-                }
-                catch (JsonException)
+        /// <summary>
+        /// Deserializes the response string into a SendConditionResponse object
+        /// </summary>
+        /// <param name="responseString">The response string to deserialize</param>
+        /// <param name="statusCode">The HTTP status code</param>
+        /// <returns>A boolean with the send condition result or a <see cref="ConditionClientError"/></returns>
+        private static Result<bool, ConditionClientError> DeserializeResponse(string responseString, int statusCode)
+        {
+            try
+            {
+                SendConditionResponse? conditionResponse = JsonSerializer.Deserialize<SendConditionResponse?>(responseString);
+
+                if (conditionResponse?.SendNotification != null)
                 {
-                    return new ConditionClientError { Message = $"Deserialization into SendConditionResponse failed. Message {responseString}" };
+                    return conditionResponse.SendNotification.Value;
                 }
+
+                return new ConditionClientError
+                {
+                    StatusCode = statusCode,
+                    Message = $"No condition response in the body: {(responseString.Length > 50 ? responseString[..50] + "..." : responseString)}"
+                };
+            }
+            catch (JsonException ex)
+            {
+                return new ConditionClientError
+                {
+                    Message = $"Deserialization into SendConditionResponse failed. Error: {ex.Message}, Response: {(responseString.Length > 50 ? responseString[..50] + "..." : responseString)}"
+                };
+            }
+        }
+
+        /// <summary>
+        /// Processes the HTTP response and extracts the send condition result.
+        /// </summary>
+        /// <param name="response">The HTTP response to process</param>
+        /// <returns>A boolean with the send condition result or a <see cref="ConditionClientError"/></returns>
+        private static async Task<Result<bool, ConditionClientError>> ProcessHttpResponse(HttpResponseMessage response)
+        {
+            string responseString;
+
+            try
+            {
+                responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                return new ConditionClientError
+                {
+                    StatusCode = Convert.ToInt32(response.StatusCode),
+                    Message = $"Unexpected response content: {ex.Message}"
+                };
             }
 
-            return new ConditionClientError { StatusCode = (int)res.StatusCode, Message = responseString };
+            if (!response.IsSuccessStatusCode)
+            {
+                return new ConditionClientError
+                {
+                    StatusCode = Convert.ToInt32(response.StatusCode),
+                    Message = $"Unsuccessful response: {(responseString.Length > 50 ? responseString[..50] + "..." : responseString)}"
+                };
+            }
+
+            if (string.IsNullOrWhiteSpace(responseString))
+            {
+                return new ConditionClientError
+                {
+                    Message = "Response body is empty",
+                    StatusCode = Convert.ToInt32(response.StatusCode),
+                };
+            }
+
+            return DeserializeResponse(responseString, (int)response.StatusCode);
         }
     }
 }
