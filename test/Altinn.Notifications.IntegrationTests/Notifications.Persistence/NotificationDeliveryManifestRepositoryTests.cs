@@ -26,11 +26,6 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         _ordersChainIdentifiers = [];
     }
 
-    public Task InitializeAsync()
-    {
-        return Task.CompletedTask;
-    }
-
     public async Task DisposeAsync()
     {
         if (_orderIdentifiers.Count != 0)
@@ -44,6 +39,11 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             string deleteSql = $@"DELETE from notifications.orderschain oc where oc.orderid in ('{string.Join("','", _ordersChainIdentifiers)}')";
             await PostgreUtil.RunSql(deleteSql);
         }
+    }
+
+    public Task InitializeAsync()
+    {
+        return Task.CompletedTask;
     }
 
     [Fact]

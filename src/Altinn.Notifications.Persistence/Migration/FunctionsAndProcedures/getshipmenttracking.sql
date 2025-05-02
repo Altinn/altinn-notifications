@@ -40,7 +40,7 @@ BEGIN
     ),
     email_tracking AS (
         SELECT
-            NULL::TEXT AS reference,
+            od.sendersreference AS reference,
             e.result::TEXT AS status,
             e.resulttime AS last_update,
             e.toaddress AS destination
@@ -49,7 +49,7 @@ BEGIN
     ),
     sms_tracking AS (
         SELECT
-            NULL::TEXT AS reference,
+            od.sendersreference AS reference,
             s.result::TEXT AS status,
             s.resulttime AS last_update,
             s.mobilenumber AS destination
