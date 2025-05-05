@@ -334,7 +334,7 @@ public class NotificationOrderChainMapperTests
                     {
                         Body = "This is a test email body",
                         SenderEmailAddress = "sender@example.com",
-                        Subject = "This\nis\na\ntest\nemail\nsubject"
+                        Subject = "This\nis\r\na\rtest\r\nemail\nsubject"
                     }
                 }
             }

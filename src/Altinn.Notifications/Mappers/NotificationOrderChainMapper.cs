@@ -1,4 +1,6 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using System.Text.RegularExpressions;
+
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
@@ -12,7 +14,7 @@ namespace Altinn.Notifications.Mappers;
 /// <summary>
 /// Provides mapping functionality between external API models and internal domain models.
 /// </summary>
-public static class NotificationOrderChainMapper
+public static partial class NotificationOrderChainMapper
 {
     private const string SingleWhiteSpace = " ";
 
@@ -81,8 +83,8 @@ public static class NotificationOrderChainMapper
             Body = emailSendingOptionsExt.Body,
             ContentType = (EmailContentType)emailSendingOptionsExt.ContentType,
             SenderEmailAddress = emailSendingOptionsExt.SenderEmailAddress?.Trim(),
-            Subject = emailSendingOptionsExt.Subject.Replace("\n", SingleWhiteSpace),
-            SendingTimePolicy = (SendingTimePolicy)emailSendingOptionsExt.SendingTimePolicy
+            SendingTimePolicy = (SendingTimePolicy)emailSendingOptionsExt.SendingTimePolicy,
+            Subject = NormalizeLineEndingsRegex().Replace(emailSendingOptionsExt.Subject, SingleWhiteSpace)
         };
     }
 
@@ -182,4 +184,10 @@ public static class NotificationOrderChainMapper
             SendingTimePolicy = (SendingTimePolicy)smsSendingOptionsExt.SendingTimePolicy
         };
     }
+
+    /// <summary>
+    /// Regular expression to detect newline characters.
+    /// </summary>
+    [GeneratedRegex(@"\r\n|\r|\n")]
+    private static partial Regex NormalizeLineEndingsRegex();
 }

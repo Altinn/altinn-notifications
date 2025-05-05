@@ -1,4 +1,6 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using System.Text.RegularExpressions;
+
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
@@ -13,7 +15,7 @@ namespace Altinn.Notifications.Mappers;
 /// <summary>
 /// Provides mapping functionality between external API models and internal domain models.
 /// </summary>
-public static class OrderMapper
+public static partial class OrderMapper
 {
     private const string SingleWhiteSpace = " ";
 
@@ -48,7 +50,7 @@ public static class OrderMapper
         {
             var emailTemplate = new EmailTemplate(
                 null,
-                extRequest.EmailTemplate.Subject.Replace("\n", SingleWhiteSpace),
+                NormalizeLineEndingsRegex().Replace(extRequest.EmailTemplate.Subject, SingleWhiteSpace),
                 extRequest.EmailTemplate.Body,
                 (EmailContentType)extRequest.EmailTemplate.ContentType);
 
@@ -81,7 +83,7 @@ public static class OrderMapper
     {
         var emailTemplate = new EmailTemplate(
             null,
-            extRequest.Subject.Replace("\n", SingleWhiteSpace),
+            NormalizeLineEndingsRegex().Replace(extRequest.Subject, SingleWhiteSpace),
             extRequest.Body,
             (EmailContentType?)extRequest.ContentType ?? EmailContentType.Plain);
 
@@ -337,4 +339,10 @@ public static class OrderMapper
 
         return smsAddressPoint?.MobileNumber;
     }
+
+    /// <summary>
+    /// Regular expression to detect newline characters.
+    /// </summary>
+    [GeneratedRegex(@"\r\n|\r|\n")]
+    private static partial Regex NormalizeLineEndingsRegex();
 }
