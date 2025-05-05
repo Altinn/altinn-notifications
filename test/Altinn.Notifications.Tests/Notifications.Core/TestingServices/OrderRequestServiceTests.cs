@@ -928,7 +928,7 @@ public class OrderRequestServiceTests
                 {
                     OrgNumber = "312508729",
                     ChannelSchema = NotificationChannel.EmailAndSms,
-                    ResourceId = "urn:altinn:resource:email-sms-resouce-name",
+                    ResourceId = "urn:altinn:resource:email-sms-resource-name",
 
                     SmsSettings = new SmsSendingOptions
                     {
@@ -962,7 +962,7 @@ public class OrderRequestServiceTests
             DateTime.UtcNow,
             [new([], organizationNumber: "312508729")],
             null,
-            "urn:altinn:resource:email-sms-resouce-name",
+            "urn:altinn:resource:email-sms-resource-name",
             new Uri("https://api.brreg.no/conditions/notification"));
 
         var orderRepositoryMock = new Mock<IOrderRepository>();
@@ -1018,7 +1018,7 @@ public class OrderRequestServiceTests
                 contactPointServiceMock.Verify(
                     cp => cp.AddEmailAndSmsContactPointsAsync(
                     It.Is<List<Recipient>>(r => r.Any(rec => rec.OrganizationNumber == "312508729")),
-                    It.Is<string?>(s => s == "urn:altinn:resource:email-sms-resouce-name")),
+                    It.Is<string?>(s => s == "email-sms-resource-name")), // prefix urn:altinn:resource: is stripped
                     Times.Once);
 
                 return true;
