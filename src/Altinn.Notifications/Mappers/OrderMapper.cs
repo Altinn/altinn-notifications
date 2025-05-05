@@ -15,6 +15,8 @@ namespace Altinn.Notifications.Mappers;
 /// </summary>
 public static class OrderMapper
 {
+    private const string SingleWhiteSpace = " ";
+
     /// <summary>
     /// Maps a <see cref="NotificationOrderRequestExt"/> to a <see cref="NotificationOrderRequest"/>
     /// </summary>
@@ -46,7 +48,7 @@ public static class OrderMapper
         {
             var emailTemplate = new EmailTemplate(
                 null,
-                extRequest.EmailTemplate.Subject,
+                extRequest.EmailTemplate.Subject.Replace("\n", SingleWhiteSpace),
                 extRequest.EmailTemplate.Body,
                 (EmailContentType)extRequest.EmailTemplate.ContentType);
 
@@ -79,7 +81,7 @@ public static class OrderMapper
     {
         var emailTemplate = new EmailTemplate(
             null,
-            extRequest.Subject,
+            extRequest.Subject.Replace("\n", SingleWhiteSpace),
             extRequest.Body,
             (EmailContentType?)extRequest.ContentType ?? EmailContentType.Plain);
 
