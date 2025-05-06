@@ -458,7 +458,7 @@ public class OrderMapperTests
         {
             Body = "email-body",
             ContentType = EmailContentTypeExt.Html,
-            Subject = "This is a\nsubject with\nnewlines\r\nand CRLF\rand CR"
+            Subject = "This is a\nsubject with\r\nnewlines and\rcarriage returns"
         };
 
         NotificationOrderRequestExt notificationRequestExt = new()
@@ -468,7 +468,7 @@ public class OrderMapperTests
             {
                 Body = "email-body",
                 ContentType = EmailContentTypeExt.Html,
-                Subject = "Another\nsubject with\r\nmixed\rnewline types"
+                Subject = "Another\nsubject with\r\nnewlines and\rcarriage returns",
             }
         };
 
@@ -481,7 +481,7 @@ public class OrderMapperTests
         var notificationEmailTemplate = actualNotificationRequest.Templates[0] as EmailTemplate;
 
         // Assert
-        Assert.Equal("This is a subject with newlines and CRLF and CR", emailTemplate!.Subject);
-        Assert.Equal("Another subject with mixed newline types", notificationEmailTemplate!.Subject);
+        Assert.Equal("This is a subject with newlines and carriage returns", emailTemplate!.Subject);
+        Assert.Equal("Another subject with newlines and carriage returns", notificationEmailTemplate!.Subject);
     }
 }
