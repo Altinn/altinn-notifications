@@ -1,0 +1,14 @@
+# These files are text and should be normalized (convert crlf -> lf)
+*.cs      text diff=csharp
+*.yaml    text
+*.yml     text
+*.csproj  text
+*.sln     text
+*.ps1     text
+*.cmd     text
+*.msbuild text
+*.md      text diff=markdown
+
+# Images should be treated as binary ('binary' is a macro for '-text -diff', i.e. "don't normalize or diff on content")
+*.png     binary
+*.jpeg    binary
