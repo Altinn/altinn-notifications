@@ -476,7 +476,6 @@ public class OrderMapperTests
         var actualEmailRequest = emailRequestExt.MapToOrderRequest("ttd");
         var actualNotificationRequest = notificationRequestExt.MapToOrderRequest("ttd");
 
-        // Get email template from both requests
         var emailTemplate = actualEmailRequest.Templates[0] as EmailTemplate;
         var notificationEmailTemplate = actualNotificationRequest.Templates[0] as EmailTemplate;
 
