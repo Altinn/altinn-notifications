@@ -8,7 +8,7 @@
 *.cmd     text
 *.msbuild text
 *.md      text diff=markdown
-*.json   text
+*.json    text
 Dockerfile text
 
 # Images should be treated as binary ('binary' is a macro for '-text -diff', i.e. "don't normalize or diff on content")
