@@ -90,7 +90,7 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
 
                     return true;
                 },
-                actuallError =>
+                error =>
                 {
                     throw new Exception("No error value should be returned if send condition response is true");
                 });
@@ -110,7 +110,7 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
 
                     return true;
                 },
-                actuallError =>
+                error =>
                 {
                     throw new Exception("No error value should be returned if send condition response is false");
                 });
@@ -128,11 +128,11 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
                 {
                     throw new Exception("No success value should be returned if json deserialization fails");
                 },
-                actuallError =>
+                error =>
                 {
-                    Assert.False(string.IsNullOrEmpty(actuallError.Message));
+                    Assert.False(string.IsNullOrEmpty(error.Message));
 
-                    Assert.Contains("Deserialization into SendConditionResponse failed", actuallError.Message);
+                    Assert.Contains("Deserialization into SendConditionResponse failed", error.Message);
 
                     return true;
                 });
@@ -150,10 +150,10 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
                 {
                     throw new Exception("No success value should be returned if non success code is returned");
                 },
-                actuallError =>
+                error =>
                 {
-                    Assert.Equal(400, actuallError.StatusCode);
-                    Assert.Contains("Unsuccessful response", actuallError.Message);
+                    Assert.Equal(400, error.StatusCode);
+                    Assert.Contains("Unsuccessful response", error.Message);
 
                     return true;
                 });
@@ -171,10 +171,10 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
                 {
                     throw new Exception("No success value should be returned if non success code is returned");
                 },
-                actuallError =>
+                error =>
                 {
-                    Assert.False(string.IsNullOrEmpty(actuallError.Message));
-                    Assert.Contains("No condition response in the body", actuallError.Message);
+                    Assert.False(string.IsNullOrEmpty(error.Message));
+                    Assert.Contains("No condition response in the body", error.Message);
 
                     return true;
                 });
