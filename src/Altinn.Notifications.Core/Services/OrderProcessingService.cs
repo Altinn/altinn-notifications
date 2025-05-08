@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
@@ -76,7 +76,13 @@ public class OrderProcessingService : IOrderProcessingService
         sw.Stop();
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Processes a notification order by verifying its send condition and delegating to the appropriate channel-specific processing service.
+    /// </summary>
+    /// <param name="order">The notification order to process.</param>
+    /// <remarks>
+    /// If the order's send condition is not met, its processing status is set to <c>SendConditionNotMet</c> and processing stops. Otherwise, the order is processed according to its notification channel, and its status is updated to <c>Completed</c> upon successful processing.
+    /// </remarks>
     public async Task ProcessOrder(NotificationOrder order)
     {
         if (!await IsSendConditionMet(order, false))
@@ -150,7 +156,15 @@ public class OrderProcessingService : IOrderProcessingService
     /// <param name="order">The notification order to check</param>
     /// <param name="isRetry">Boolean indicating if this is a retry attempt</param>
     /// <returns>True if condition is met and processing should continue</returns>
-    /// <exception cref="OrderProcessingException">Throws an exception if failure on first attempt ot check condition</exception>
+    /// <summary>
+    /// Determines whether the send condition for a notification order is met by querying the specified condition endpoint.
+    /// </summary>
+    /// <param name="order">The notification order to evaluate.</param>
+    /// <param name="isRetry">Indicates if this is a retry attempt; affects error handling behavior.</param>
+    /// <returns>True if the send condition is met or if no condition endpoint is specified; otherwise, false.</returns>
+    /// <exception cref="OrderProcessingException">
+    /// Thrown if the condition check fails on the first attempt (not a retry).
+    /// </exception>
     internal async Task<bool> IsSendConditionMet(NotificationOrder order, bool isRetry)
     {
         if (order.ConditionEndpoint == null)

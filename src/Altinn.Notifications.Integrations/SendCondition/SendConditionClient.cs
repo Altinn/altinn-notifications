@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.SendCondition;
@@ -21,7 +21,11 @@ namespace Altinn.Notifications.Integrations.SendCondition
             _client = client;
         }
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Sends an HTTP GET request to the specified URL to check a send condition and returns the result or a detailed error.
+        /// </summary>
+        /// <param name="url">The URI to query for the send condition.</param>
+        /// <returns>A result containing the send condition as a boolean, or a <see cref="ConditionClientError"/> if the request fails or the response is invalid.</returns>
         public async Task<Result<bool, ConditionClientError>> CheckSendCondition(Uri url)
         {
             try
@@ -48,7 +52,15 @@ namespace Altinn.Notifications.Integrations.SendCondition
         /// </summary>
         /// <param name="responseString">The response string to deserialize</param>
         /// <param name="statusCode">The HTTP status code</param>
-        /// <returns>A boolean with the send condition result or a <see cref="ConditionClientError"/></returns>
+        /// <summary>
+        /// Attempts to deserialize the response string into a <c>SendConditionResponse</c> and extract the send condition result.
+        /// </summary>
+        /// <param name="responseString">The JSON response body to deserialize.</param>
+        /// <param name="statusCode">The HTTP status code associated with the response.</param>
+        /// <returns>
+        /// A boolean indicating the send condition if deserialization succeeds and the expected property is present; 
+        /// otherwise, a <see cref="ConditionClientError"/> describing the failure.
+        /// </returns>
         private static Result<bool, ConditionClientError> DeserializeResponse(string responseString, int statusCode)
         {
             try
@@ -79,7 +91,13 @@ namespace Altinn.Notifications.Integrations.SendCondition
         /// Processes the HTTP response and extracts the send condition result.
         /// </summary>
         /// <param name="response">The HTTP response to process</param>
-        /// <returns>A boolean with the send condition result or a <see cref="ConditionClientError"/></returns>
+        /// <summary>
+        /// Processes an HTTP response by reading its content, validating the status code and body, and deserializing the result into a boolean or a <see cref="ConditionClientError"/>.
+        /// </summary>
+        /// <param name="response">The HTTP response message to process.</param>
+        /// <returns>
+        /// A result containing the boolean send condition if successful, or a <see cref="ConditionClientError"/> describing the failure.
+        /// </returns>
         private static async Task<Result<bool, ConditionClientError>> ProcessHttpResponse(HttpResponseMessage response)
         {
             string responseString;
