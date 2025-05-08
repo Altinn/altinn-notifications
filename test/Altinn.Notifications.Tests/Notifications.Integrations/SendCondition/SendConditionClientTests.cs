@@ -310,5 +310,47 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
                     return true;
                 });
         }
+
+        [Fact]
+        public async Task CheckSendCondition_ReadAsyncFails_ReturnsClientError()
+        {
+            // Act
+            Result<bool, ConditionClientError> result = await _sendConditionClient.CheckSendCondition(new Uri("http://test.com?desiredResponse=readasyncfails"));
+
+            // Assert
+            var assertReult = result.Match(
+                  sendNotification =>
+                  {
+                      throw new Exception("No success value should be returned when ReadAsStringAsync fails");
+                  },
+                  actualError =>
+                  {
+                      Assert.Contains("Unexpected error during HTTP request", actualError.Message);
+                      return true;
+                  });
+
+            Assert.True(assertReult);
+        }
+
+        [Fact]
+        public async Task CheckSendCondition_DefaultCase_ReturnsTrue()
+        {
+            // Act
+            Result<bool, ConditionClientError> result = await _sendConditionClient.CheckSendCondition(new Uri("http://test.com"));
+
+            // Assert
+            var assertReult = result.Match(
+                sendNotification =>
+                {
+                    Assert.True(sendNotification);
+                    return true;
+                },
+                actualError =>
+                {
+                    throw new Exception("No error value should be returned for the default case");
+                });
+
+            Assert.True(assertReult);
+        }
     }
 }
