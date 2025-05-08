@@ -92,7 +92,9 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
                 },
                 error =>
                 {
-                    throw new Exception("No error value should be returned if send condition response is true");
+                    Assert.Fail("No error value should be returned if send condition response is true");
+
+                    return false;
                 });
         }
 
@@ -112,7 +114,9 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
                 },
                 error =>
                 {
-                    throw new Exception("No error value should be returned if send condition response is false");
+                    Assert.Fail("No error value should be returned if send condition response is false");
+
+                    return false;
                 });
         }
 
@@ -126,7 +130,9 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
             result.Match(
                 sendNotification =>
                 {
-                    throw new Exception("No success value should be returned if json deserialization fails");
+                    Assert.Fail("No success value should be returned if json deserialization fails");
+
+                    return false;
                 },
                 error =>
                 {
@@ -148,7 +154,9 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
             result.Match(
                 sendNotification =>
                 {
-                    throw new Exception("No success value should be returned if non success code is returned");
+                    Assert.Fail("No success value should be returned if non success code is returned");
+
+                    return false;
                 },
                 error =>
                 {
@@ -169,7 +177,9 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
             result.Match(
                 sendNotification =>
                 {
-                    throw new Exception("No success value should be returned if non success code is returned");
+                    Assert.Fail("No success value should be returned if non success code is returned");
+
+                    return false;
                 },
                 error =>
                 {
@@ -190,7 +200,9 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
             result.Match(
                 sendNotification =>
                 {
-                    throw new Exception("No success value should be returned for empty response body");
+                    Assert.Fail("No success value should be returned for empty response body");
+
+                    return false;
                 },
                 actualError =>
                 {
@@ -210,7 +222,9 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
             result.Match(
                 sendNotification =>
                 {
-                    throw new Exception("No success value should be returned when SendNotification is null");
+                    Assert.Fail("No success value should be returned when SendNotification is null");
+
+                    return false;
                 },
                 actualError =>
                 {
@@ -242,7 +256,9 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
             result.Match(
                 sendNotification =>
                 {
-                    throw new Exception("No success value should be returned when HttpRequestException occurs");
+                    Assert.Fail("No success value should be returned when HttpRequestException occurs");
+
+                    return false;
                 },
                 actualError =>
                 {
@@ -272,7 +288,9 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
             result.Match(
                 sendNotification =>
                 {
-                    throw new Exception("No success value should be returned when TaskCanceledException occurs");
+                    Assert.Fail("No success value should be returned when TaskCanceledException occurs");
+
+                    return false;
                 },
                 actualError =>
                 {
@@ -302,7 +320,9 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
             result.Match(
                 sendNotification =>
                 {
-                    throw new Exception("No success value should be returned when generic exception occurs");
+                    Assert.Fail("No success value should be returned when generic exception occurs");
+
+                    return false;
                 },
                 actualError =>
                 {
@@ -332,7 +352,9 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
             var asserted = result.Match(
                 success =>
                 {
-                    throw new Exception("Should not succeed when no content is returned");
+                    Assert.Fail("Should not succeed when no content is returned");
+
+                    return false;
                 },
                 error =>
                 {
