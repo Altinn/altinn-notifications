@@ -26,8 +26,8 @@ namespace Altinn.Notifications.Integrations.SendCondition
         {
             try
             {
-                using var response = await _client.GetAsync(url).ConfigureAwait(false);
-                return await ProcessHttpResponse(response).ConfigureAwait(false);
+                using var response = await _client.GetAsync(url);
+                return await ProcessHttpResponse(response);
             }
             catch (HttpRequestException ex)
             {
@@ -86,7 +86,7 @@ namespace Altinn.Notifications.Integrations.SendCondition
 
             try
             {
-                responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                responseString = await response.Content.ReadAsStringAsync();
             }
             catch (Exception ex)
             {
@@ -102,7 +102,7 @@ namespace Altinn.Notifications.Integrations.SendCondition
                 return new ConditionClientError
                 {
                     StatusCode = Convert.ToInt32(response.StatusCode),
-                    Message = $"Unsuccessful response: {(responseString.Length > 50 ? responseString[..50] + "..." : responseString)}"
+                    Message = $"Unsuccessful response. First 50 character received: {(responseString.Length > 50 ? responseString[..50] + "..." : responseString)}"
                 };
             }
 
