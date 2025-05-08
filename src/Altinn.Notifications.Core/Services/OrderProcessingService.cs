@@ -79,7 +79,7 @@ public class OrderProcessingService : IOrderProcessingService
     /// <inheritdoc/>
     public async Task ProcessOrder(NotificationOrder order)
     {
-        if (!await IsSendConditionMet(order, isRetry: false))
+        if (!await IsSendConditionMet(order, false))
         {
             await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
             return;
@@ -161,21 +161,50 @@ public class OrderProcessingService : IOrderProcessingService
         var conditionCheckResult = await _conditionClient.CheckSendCondition(order.ConditionEndpoint);
 
         return conditionCheckResult.Match(
-          successResult =>
-          {
-              return successResult;
-          },
-          errorResult =>
-          {
-              if (!isRetry)
-              {
-                  // Always send to retry on first error. Exception is caught by consumer and message is moved to retry topic.
-                  throw new OrderProcessingException($"// OrderProcessingService // IsSendConditionMet // Condition check for order with ID '{order.Id}' failed with HTTP status code '{errorResult.StatusCode}' at endpoint '{order.ConditionEndpoint}'");
-              }
+            successResult =>
+            {
+                if (successResult)
+                {
+                    _logger.LogDebug(
+                        "// OrderProcessingService // IsSendConditionMet // Condition check yield true for order '{OrderId}' at endpoint '{Endpoint}'.",
+                        order.Id,
+                        order.ConditionEndpoint);
+                }
+                else
+                {
+                    _logger.LogInformation(
+                        "// OrderProcessingService // IsSendConditionMet // Condition check yield false for order '{OrderId}' at endpoint '{Endpoint}'.",
+                        order.Id,
+                        order.ConditionEndpoint);
+                }
 
-              // notifications should always be created and sent if the condition check is not successful
-              _logger.LogInformation("// OrderProcessingService // IsSendConditionMet // Condition check for order with ID '{ID}' failed on retry. Processing regardless.", order.Id);
-              return true;
-          });
+                return successResult;
+            },
+            errorResult =>
+            {
+                if (!isRetry)
+                {
+                    _logger.LogInformation(
+                        "// OrderProcessingService // IsSendConditionMet // Condition check failed for order '{OrderId}' at endpoint '{Endpoint}'. Status code: {StatusCode}. Error message: '{ErrorMessage}'. Order will be sent to retry queue.",
+                        order.Id,
+                        order.ConditionEndpoint,
+                        errorResult.StatusCode,
+                        errorResult.Message ?? "No error message provided");
+
+                    // Exception is caught by consumer and message is moved to retry topic
+                    throw new OrderProcessingException(
+                        $"// OrderProcessingService // IsSendConditionMet // Condition check for order with ID '{order.Id}' failed with HTTP status code '{errorResult.StatusCode}' at endpoint '{order.ConditionEndpoint}'");
+                }
+
+                _logger.LogInformation(
+                    "// OrderProcessingService // IsSendConditionMet // Condition check failed on retry for order with ID '{OrderId}' at endpoint '{Endpoint}'. Status code: {StatusCode}. Error message: '{ErrorMessage}'. Processing the order regardless.",
+                    order.Id,
+                    order.ConditionEndpoint,
+                    errorResult.StatusCode,
+                    errorResult.Message ?? "No error message provided");
+
+                // On retry, notifications should be sent even if condition check fails
+                return true;
+            });
     }
 }
