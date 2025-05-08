@@ -449,4 +449,38 @@ public class OrderMapperTests
         // Assert
         Assert.Equivalent(expected, actual, true);
     }
+
+    [Fact]
+    public void MapToOrderRequest_SubjectWithNewLines_ReplacesWithSingleSpace()
+    {
+        // Arrange
+        EmailNotificationOrderRequestExt emailRequestExt = new()
+        {
+            Body = "email-body",
+            ContentType = EmailContentTypeExt.Html,
+            Subject = "This is a\nsubject with\r\nnewlines and\rcarriage returns"
+        };
+
+        NotificationOrderRequestExt notificationRequestExt = new()
+        {
+            NotificationChannel = NotificationChannelExt.Email,
+            EmailTemplate = new()
+            {
+                Body = "email-body",
+                ContentType = EmailContentTypeExt.Html,
+                Subject = "Another\nsubject with\r\nnewlines and\rcarriage returns",
+            }
+        };
+
+        // Act
+        var actualEmailRequest = emailRequestExt.MapToOrderRequest("ttd");
+        var actualNotificationRequest = notificationRequestExt.MapToOrderRequest("ttd");
+
+        var emailTemplate = actualEmailRequest.Templates[0] as EmailTemplate;
+        var notificationEmailTemplate = actualNotificationRequest.Templates[0] as EmailTemplate;
+
+        // Assert
+        Assert.Equal("This is a subject with newlines and carriage returns", emailTemplate!.Subject);
+        Assert.Equal("Another subject with newlines and carriage returns", notificationEmailTemplate!.Subject);
+    }
 }

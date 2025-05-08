@@ -38,14 +38,14 @@ BEGIN
         COUNT(1) AS generatedEmailCount
     INTO _succeededEmailCount, _generatedEmailCount
     FROM notifications.emailnotifications
-    WHERE _orderid = _target_orderid;
+    WHERE emailnotifications._orderid = _target_orderid;
     
     SELECT      
         SUM(CASE WHEN result = 'Accepted' THEN 1 ELSE 0 END), 
         COUNT(1) AS generatedSmsCount
     INTO _succeededSmsCount, _generatedSmsCount
     FROM notifications.smsnotifications
-    WHERE _orderid = _target_orderid;
+    WHERE smsnotifications._orderid = _target_orderid;
 
     RETURN QUERY
     SELECT 
@@ -70,6 +70,6 @@ BEGIN
     FROM
         notifications.orders AS orders
     WHERE 
-        orders.alternateid = _alternateid;
+        orders._id = _target_orderid;
 END;
 $BODY$;
