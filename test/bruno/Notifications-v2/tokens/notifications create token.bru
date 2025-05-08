@@ -24,7 +24,6 @@ auth:basic {
 
 script:post-response {
   let data = res.getBody();
-  bru.setEnvVar("jwt",data);
   
   // Check if the response contains a valid token
   if (!data || data.trim() === '') {
@@ -32,5 +31,4 @@ script:post-response {
     return;
   }
   bru.setEnvVar("jwt",data);
-    
 }
