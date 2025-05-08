@@ -25,55 +25,54 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
 
-        private readonly DelegatingHandlerStub _messageHandler;
         private readonly SendConditionClient _sendConditionClient;
 
         public SendConditionClientTests()
         {
-            _messageHandler = new DelegatingHandlerStub(async (request, token) =>
-            {
-                await Task.CompletedTask;
-                string? desiredResponse = HttpUtility.ParseQueryString(request!.RequestUri!.Query)["desiredResponse"];
+            var messageHandler = new DelegatingHandlerStub(async (request, token) =>
+             {
+                 await Task.CompletedTask;
+                 string? desiredResponse = HttpUtility.ParseQueryString(request!.RequestUri!.Query)["desiredResponse"];
 
-                return desiredResponse switch
-                {
-                    "true" => new HttpResponseMessage(HttpStatusCode.OK)
-                    {
-                        Content = new StringContent(JsonSerializer.Serialize(new SendConditionResponse { SendNotification = true }, _serializerOptions))
-                    },
-                    "false" => new HttpResponseMessage(HttpStatusCode.OK)
-                    {
-                        Content = new StringContent(JsonSerializer.Serialize(new SendConditionResponse { SendNotification = false }, _serializerOptions))
-                    },
-                    "oknobody" => new HttpResponseMessage(HttpStatusCode.OK)
-                    {
-                        Content = new StringContent("{\"isValidJson\": true}")
-                    },
-                    "invalidbody" => new HttpResponseMessage(HttpStatusCode.OK)
-                    {
-                        Content = new StringContent("This is not a valid JSON")
-                    },
-                    "badrequest" => new HttpResponseMessage(HttpStatusCode.BadRequest)
-                    {
-                        Content = new StringContent("Bad request")
-                    },
-                    "emptybody" => new HttpResponseMessage(HttpStatusCode.OK)
-                    {
-                        Content = new StringContent(string.Empty)
-                    },
-                    "nullnotification" => new HttpResponseMessage(HttpStatusCode.OK)
-                    {
-                        Content = new StringContent(JsonSerializer.Serialize(new SendConditionResponse { SendNotification = null }, _serializerOptions))
-                    },
-                    "readasyncfails" => throw new Exception("ReadAsStringAsync failed"),
-                    _ => new HttpResponseMessage(HttpStatusCode.OK)
-                    {
-                        Content = new StringContent(JsonSerializer.Serialize(new SendConditionResponse { SendNotification = true }, _serializerOptions))
-                    },
-                };
-            });
+                 return desiredResponse switch
+                 {
+                     "true" => new HttpResponseMessage(HttpStatusCode.OK)
+                     {
+                         Content = new StringContent(JsonSerializer.Serialize(new SendConditionResponse { SendNotification = true }, _serializerOptions))
+                     },
+                     "false" => new HttpResponseMessage(HttpStatusCode.OK)
+                     {
+                         Content = new StringContent(JsonSerializer.Serialize(new SendConditionResponse { SendNotification = false }, _serializerOptions))
+                     },
+                     "oknobody" => new HttpResponseMessage(HttpStatusCode.OK)
+                     {
+                         Content = new StringContent("{\"isValidJson\": true}")
+                     },
+                     "invalidbody" => new HttpResponseMessage(HttpStatusCode.OK)
+                     {
+                         Content = new StringContent("This is not a valid JSON")
+                     },
+                     "badrequest" => new HttpResponseMessage(HttpStatusCode.BadRequest)
+                     {
+                         Content = new StringContent("Bad request")
+                     },
+                     "emptybody" => new HttpResponseMessage(HttpStatusCode.OK)
+                     {
+                         Content = new StringContent(string.Empty)
+                     },
+                     "nullnotification" => new HttpResponseMessage(HttpStatusCode.OK)
+                     {
+                         Content = new StringContent(JsonSerializer.Serialize(new SendConditionResponse { SendNotification = null }, _serializerOptions))
+                     },
+                     "readasyncfails" => throw new Exception("ReadAsStringAsync failed"),
+                     _ => new HttpResponseMessage(HttpStatusCode.OK)
+                     {
+                         Content = new StringContent(JsonSerializer.Serialize(new SendConditionResponse { SendNotification = true }, _serializerOptions))
+                     },
+                 };
+             });
 
-            _sendConditionClient = new SendConditionClient(new HttpClient(_messageHandler));
+            _sendConditionClient = new SendConditionClient(new HttpClient(messageHandler));
         }
 
         [Fact]
