@@ -5,9 +5,9 @@ meta {
 }
 
 get {
-  url: http://localhost:5151/status/shipment/feed?seq=0
+  url: {{host}}/notifications/api/v1/future/shipment/feed?seq=0
   body: none
-  auth: none
+  auth: bearer
 }
 
 params:query {
