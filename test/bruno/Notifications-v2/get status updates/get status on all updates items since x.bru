@@ -1,0 +1,15 @@
+meta {
+  name: get status on all updates items since x
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{host}}/notifications/api/v1/future/shipment/feed?seq=0
+  body: none
+  auth: bearer
+}
+
+params:query {
+  seq: 0
+}

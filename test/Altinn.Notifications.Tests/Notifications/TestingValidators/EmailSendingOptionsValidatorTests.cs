@@ -76,4 +76,38 @@ public class EmailSendingOptionsValidatorTests
         // Assert
         actual.ShouldHaveValidationErrorFor(options => options.SendingTimePolicy).WithErrorMessage("Email only supports send time anytime");
     }
+
+    [Fact]
+    public void Should_Reject_Empty_Subject()
+    {
+        // Arrange
+        var emailSendingOptions = new EmailSendingOptionsExt
+        {
+            Subject = string.Empty,
+            Body = "Test body"
+        };
+
+        // Act
+        var actual = _validator.TestValidate(emailSendingOptions);
+
+        // Assert
+        actual.ShouldHaveValidationErrorFor(options => options.Subject).WithErrorMessage("The email subject must not be empty.");
+    }
+
+    [Fact]
+    public void Should_Reject_Empty_Body()
+    {
+        // Arrange
+        var emailSendingOptions = new EmailSendingOptionsExt
+        {
+            Subject = "Test subject",
+            Body = string.Empty
+        };
+
+        // Act
+        var actual = _validator.TestValidate(emailSendingOptions);
+
+        // Assert
+        actual.ShouldHaveValidationErrorFor(options => options.Body).WithErrorMessage("The email body must not be empty.");
+    }
 }
