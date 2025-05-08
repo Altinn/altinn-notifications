@@ -312,45 +312,37 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
         }
 
         [Fact]
-        public async Task CheckSendCondition_ReadAsyncFails_ReturnsClientError()
+        public async Task CheckSendCondition_NoContentStatus_ReturnsClientErrorWithStatusCode204()
         {
-            // Act
-            Result<bool, ConditionClientError> result = await _sendConditionClient.CheckSendCondition(new Uri("http://test.com?desiredResponse=readasyncfails"));
-
-            // Assert
-            var assertReult = result.Match(
-                  sendNotification =>
-                  {
-                      throw new Exception("No success value should be returned when ReadAsStringAsync fails");
-                  },
-                  actualError =>
-                  {
-                      Assert.Contains("Unexpected error during HTTP request", actualError.Message);
-                      return true;
-                  });
-
-            Assert.True(assertReult);
-        }
-
-        [Fact]
-        public async Task CheckSendCondition_DefaultCase_ReturnsTrue()
-        {
-            // Act
-            Result<bool, ConditionClientError> result = await _sendConditionClient.CheckSendCondition(new Uri("http://test.com"));
-
-            // Assert
-            var assertReult = result.Match(
-                sendNotification =>
+            // Arrange
+            var handler = new DelegatingHandlerStub((request, token) =>
+            {
+                var response = new HttpResponseMessage(HttpStatusCode.NoContent)
                 {
-                    Assert.True(sendNotification);
-                    return true;
+                    Content = new StringContent(string.Empty)
+                };
+                return Task.FromResult(response);
+            });
+            var client = new SendConditionClient(new HttpClient(handler));
+
+            // Act
+            var result = await client.CheckSendCondition(new Uri("http://test.com"));
+
+            // Assert
+            var asserted = result.Match(
+                success =>
+                {
+                    throw new Exception("Should not succeed when no content is returned");
                 },
-                actualError =>
+                error =>
                 {
-                    throw new Exception("No error value should be returned for the default case");
+                    Assert.Equal(204, error.StatusCode);
+                    Assert.Equal("Response body is empty", error.Message);
+
+                    return true;
                 });
 
-            Assert.True(assertReult);
+            Assert.True(asserted);
         }
     }
 }
