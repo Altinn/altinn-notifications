@@ -348,7 +348,7 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
             var result = await client.CheckSendCondition(new Uri("http://test.com"));
 
             // Assert
-            var asserted = result.Match(
+            result.Match(
                 success =>
                 {
                     Assert.Fail("Should not succeed when no content is returned");
@@ -362,8 +362,6 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.SendCondition
 
                     return true;
                 });
-
-            Assert.True(asserted);
         }
     }
 }
