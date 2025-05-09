@@ -36,6 +36,16 @@ public readonly struct Result<TValue, TError>
     public bool IsSuccess => !IsError;
 
     /// <summary>
+    /// Gets the error value of the Result.
+    /// </summary>
+    public TError? Error => _error;
+
+    /// <summary>
+    /// Gets the success value of the Result.
+    /// </summary>
+    public TValue? Value => _value;
+
+    /// <summary>
     /// Implicit operator used when creating an instance of Result when assigning a success value.
     /// </summary>
     /// <param name="value">An object of the type indicating success.</param>

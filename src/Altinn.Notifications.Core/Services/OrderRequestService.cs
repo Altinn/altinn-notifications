@@ -100,16 +100,12 @@ public class OrderRequestService : IOrderRequestService
             currentTime,
             orderRequest.ConditionEndpoint);
 
-        if (result.IsError)
+        if (result.IsError && result.Error != null)
         {
-            var serviceError = result.Match<ServiceError>(
-                order => null!,
-                error => error);
-
-            return serviceError;
+            return result.Error;
         }
 
-        var mainOrder = result.Match<NotificationOrder>(success => success, error => null!);
+        var mainOrder = result.Value;
 
         var reminderOrders = await CreateNotificationOrders(
             orderRequest.Reminders,
@@ -117,7 +113,7 @@ public class OrderRequestService : IOrderRequestService
             currentTime,
             cancellationToken);
 
-        List<NotificationOrder> savedOrders = await _repository.Create(orderRequest, mainOrder, reminderOrders, cancellationToken);
+        List<NotificationOrder> savedOrders = await _repository.Create(orderRequest, mainOrder!, reminderOrders, cancellationToken);
 
         if (savedOrders == null || savedOrders.Count == 0)
         {
@@ -214,9 +210,13 @@ public class OrderRequestService : IOrderRequestService
 
     private static string? GetSanitizedResourceId(string? resourceId)
     {
-        if (resourceId != null)
+        if (!string.IsNullOrWhiteSpace(resourceId))
         {
-            return resourceId.Replace("urn:altinn:resource:", string.Empty);
+            // Only perform replace if the prefix exists
+            if (resourceId.StartsWith("urn:altinn:resource:"))
+            {
+                return resourceId.Replace("urn:altinn:resource:", string.Empty);
+            }
         }
 
         return null;
@@ -409,10 +409,7 @@ public class OrderRequestService : IOrderRequestService
     /// This method iterates through the provided reminders and, for each reminder, invokes 
     /// <see cref="CreateNotificationOrder"/> to generate a corresponding reminder order using the reminder's details.
     /// </remarks>
-    /// <exception cref="OperationCanceledException">
-    /// Thrown when the operation is canceled through the provided <paramref name="cancellationToken"/>.
-    /// </exception>
-    private async Task<List<NotificationOrder>> CreateNotificationOrders(List<NotificationReminder>? reminders, Creator creator, DateTime currentTime, CancellationToken cancellationToken = default)
+    private async Task<Result<List<NotificationOrder>, ServiceError>> CreateNotificationOrders(List<NotificationReminder>? reminders, Creator creator, DateTime currentTime, CancellationToken cancellationToken = default)
     {
         var reminderOrders = new List<NotificationOrder>();
 
@@ -434,11 +431,16 @@ public class OrderRequestService : IOrderRequestService
                 currentTime,
                 reminder.ConditionEndpoint);
 
-            if (result.IsSuccess)
+            if (result.IsSuccess && result.Value != null)
             {
-                var reminderOrder = result.Match<NotificationOrder>(success => success, error => null!);
-                reminderOrders.Add(reminderOrder);
+                reminderOrders.Add(result.Value);
             }
+            else if (result.IsError && result.Error != null)
+            {
+                return result.Error;
+            }
+
+            // xml doc på interface
         }
 
         return reminderOrders;
