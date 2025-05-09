@@ -403,7 +403,8 @@ public class OrderRequestService : IOrderRequestService
     /// A token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.
     /// </param>
     /// <returns>
-    /// A <see cref="Task"/> representing the asynchronous operation, yielding a <see cref="List{NotificationOrder}"/> objects representing reminder orders.
+    /// On success, a <see cref="Task{TResult}"/> containing a list of <see cref="List{NotificationOrder}"/> objects representing reminder orders.
+    /// On failure, a <see cref="ServiceError"/> indicating the reason for the failure.
     /// </returns>
     /// <remarks>
     /// This method iterates through the provided reminders and, for each reminder, invokes 
@@ -439,8 +440,6 @@ public class OrderRequestService : IOrderRequestService
             {
                 return result.Error;
             }
-
-            // xml doc på interface
         }
 
         return reminderOrders;
