@@ -599,10 +599,13 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var result = await controller.Post(request);
 
         // Assert
-        var statusCodeResult = Assert.IsType<ObjectResult>(result.Result);
-        Assert.Equal(499, statusCodeResult.StatusCode);
-        Assert.NotNull(statusCodeResult.Value);
-        Assert.Contains("Request terminated", statusCodeResult.Value.ToString());
+        // Cast the result as a ProblemDetails object and verify its contents
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        var problemDetails = Assert.IsType<ProblemDetails>(objectResult.Value);
+
+        Assert.NotNull(problemDetails);
+        Assert.Equal("Request terminated", problemDetails.Title);
+        Assert.Equal(499, problemDetails.Status);
     }
 
     [Fact]
@@ -631,10 +634,13 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var result = await controller.Post(request);
 
         // Assert
+        // Cast the result as a ProblemDetails object and verify its contents
         var statusCodeResult = Assert.IsType<ObjectResult>(result.Result);
-        Assert.Equal(499, statusCodeResult.StatusCode);
-        Assert.NotNull(statusCodeResult.Value);
-        Assert.Contains("Request terminated", statusCodeResult.Value.ToString());
+        var problemDetails = Assert.IsType<ProblemDetails>(statusCodeResult.Value);
+
+        Assert.NotNull(problemDetails);
+        Assert.Equal(499, problemDetails.Status);
+        Assert.Contains("Request terminated", problemDetails.Title);
     }
 
     [Fact]

@@ -7,11 +7,7 @@ meta {
 post {
   url: {{host}}/notifications/api/v1/future/orders
   body: json
-  auth: bearer
-}
-
-auth:bearer {
-  token: {{jwt}}
+  auth: inherit
 }
 
 body:json {
@@ -21,7 +17,7 @@ body:json {
     "requestedSendTime": "2025-07-31T12:59:08.677Z",
     "conditionEndpoint": "https://api.te.no/altinn/te-123-123/?seen=true",
     "dialogportenAssociation": {
-      "dialogId": "{{dialog-guid}}",
+      "dialogId": "{{dialog_guid}}",
       "transmissionId": "{{transmissionId-utsending-1}}"
     },
     "recipient": {

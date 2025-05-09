@@ -14,6 +14,7 @@ using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Models;
 
 using Microsoft.Extensions.Options;
@@ -835,60 +836,71 @@ public class OrderRequestServiceTests
         var service = GetTestService(orderRepositoryMock.Object, contactPointServiceMock.Object, mainOrderId, mainOrderSendTime);
 
         // Act
-        var response = await service.RegisterNotificationOrderChain(orderChainRequest);
+        Result<NotificationOrderChainResponse, ServiceError> result = await service.RegisterNotificationOrderChain(orderChainRequest);
 
         // Assert
-        Assert.Equal(orderChainId, response.OrderChainId);
-        Assert.Equal(mainOrderId, response.OrderChainReceipt.ShipmentId);
-        Assert.Equal("TAX-REMINDER-2025", response.OrderChainReceipt.SendersReference);
+        result.Match<bool>(
+            response =>
+            {
+                Assert.Equal(orderChainId, response.OrderChainId);
+                Assert.Equal(mainOrderId, response.OrderChainReceipt.ShipmentId);
+                Assert.Equal("TAX-REMINDER-2025", response.OrderChainReceipt.SendersReference);
 
-        Assert.NotNull(response.OrderChainReceipt.Reminders);
-        Assert.Equal(2, response.OrderChainReceipt.Reminders.Count);
+                Assert.NotNull(response.OrderChainReceipt.Reminders);
+                Assert.Equal(2, response.OrderChainReceipt.Reminders.Count);
 
-        Assert.NotEqual(orderChainId, response.OrderChainReceipt.Reminders[0].ShipmentId);
-        Assert.Equal(firstReminderId, response.OrderChainReceipt.Reminders[0].ShipmentId);
-        Assert.Equal("TAX-REMINDER-2025-FIRST", response.OrderChainReceipt.Reminders[0].SendersReference);
+                Assert.NotEqual(orderChainId, response.OrderChainReceipt.Reminders[0].ShipmentId);
+                Assert.Equal(firstReminderId, response.OrderChainReceipt.Reminders[0].ShipmentId);
+                Assert.Equal("TAX-REMINDER-2025-FIRST", response.OrderChainReceipt.Reminders[0].SendersReference);
 
-        Assert.NotEqual(orderChainId, response.OrderChainReceipt.Reminders[1].ShipmentId);
-        Assert.Equal(secondReminderId, response.OrderChainReceipt.Reminders[1].ShipmentId);
-        Assert.Equal("TAX-REMINDER-2025-FINAL", response.OrderChainReceipt.Reminders[1].SendersReference);
+                Assert.NotEqual(orderChainId, response.OrderChainReceipt.Reminders[1].ShipmentId);
+                Assert.Equal(secondReminderId, response.OrderChainReceipt.Reminders[1].ShipmentId);
+                Assert.Equal("TAX-REMINDER-2025-FINAL", response.OrderChainReceipt.Reminders[1].SendersReference);
 
-        // Verify repository interactions
-        orderRepositoryMock.Verify(
-            r => r.Create(
-                It.Is<NotificationOrderChainRequest>(req =>
-                    req.OrderChainId == orderChainId &&
-                    req.DialogportenAssociation != null &&
-                    req.DialogportenAssociation.DialogId == "20E3D06D5546" &&
-                    req.DialogportenAssociation.TransmissionId == "F9D34BB1C65F"),
-                It.Is<NotificationOrder>(o =>
-                    o.Id == mainOrderId &&
-                    o.SendersReference == "TAX-REMINDER-2025" &&
-                    o.ResourceId == "urn:altinn:resource:tax-2025" &&
-                    o.NotificationChannel == NotificationChannel.EmailPreferred &&
-                    o.Recipients.Any(r => r.NationalIdentityNumber == "29105573746")),
-                It.Is<List<NotificationOrder>>(list =>
-                    list.Count == 2 &&
-                    list[0].Id == firstReminderId &&
-                    list[1].Id == secondReminderId),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
+                // Verify repository interactions
+                orderRepositoryMock.Verify(
+                    r => r.Create(
+                        It.Is<NotificationOrderChainRequest>(req =>
+                            req.OrderChainId == orderChainId &&
+                            req.DialogportenAssociation != null &&
+                            req.DialogportenAssociation.DialogId == "20E3D06D5546" &&
+                            req.DialogportenAssociation.TransmissionId == "F9D34BB1C65F"),
+                        It.Is<NotificationOrder>(o =>
+                            o.Id == mainOrderId &&
+                            o.SendersReference == "TAX-REMINDER-2025" &&
+                            o.ResourceId == "urn:altinn:resource:tax-2025" &&
+                            o.NotificationChannel == NotificationChannel.EmailPreferred &&
+                            o.Recipients.Any(r => r.NationalIdentityNumber == "29105573746")),
+                        It.Is<List<NotificationOrder>>(list =>
+                            list.Count == 2 &&
+                            list[0].Id == firstReminderId &&
+                            list[1].Id == secondReminderId),
+                        It.IsAny<CancellationToken>()),
+                    Times.Once);
 
-        // Verify contact point interactions
-        contactPointServiceMock.Verify(
-            cp => cp.AddPreferredContactPoints(
-                It.Is<NotificationChannel>(ch => ch == NotificationChannel.EmailPreferred),
-                It.Is<List<Recipient>>(r => r.Any(rec => rec.NationalIdentityNumber == "29105573746")),
-                It.Is<string?>(s => s == "urn:altinn:resource:tax-2025")),
-            Times.Exactly(2));
+                // Verify contact point interactions
+                contactPointServiceMock.Verify(
+                    cp => cp.AddPreferredContactPoints(
+                        It.Is<NotificationChannel>(ch => ch == NotificationChannel.EmailPreferred),
+                        It.Is<List<Recipient>>(r => r.Any(rec => rec.NationalIdentityNumber == "29105573746")),
+                        It.Is<string?>(s => s == "tax-2025")),
+                    Times.Exactly(2));
 
-        // Verify contact point added the expected email address
-        contactPointServiceMock.Verify(
-            cp => cp.AddPreferredContactPoints(
-                It.Is<NotificationChannel>(ch => ch == NotificationChannel.SmsPreferred),
-                It.Is<List<Recipient>>(r => r.Any(rec => rec.NationalIdentityNumber == "29105573746")),
-                It.Is<string?>(s => s == "urn:altinn:resource:tax-2025")),
-            Times.Once);
+                // Verify contact point added the expected email address
+                contactPointServiceMock.Verify(
+                    cp => cp.AddPreferredContactPoints(
+                        It.Is<NotificationChannel>(ch => ch == NotificationChannel.SmsPreferred),
+                        It.Is<List<Recipient>>(r => r.Any(rec => rec.NationalIdentityNumber == "29105573746")),
+                        It.Is<string?>(s => s == "tax-2025")),
+                    Times.Once);
+
+                return true;
+            },
+            error =>
+            {
+                Assert.Fail($"Expected success but got error: {error}");
+                return false;
+            });
     }
 
     [Fact]
@@ -916,7 +928,7 @@ public class OrderRequestServiceTests
                 {
                     OrgNumber = "312508729",
                     ChannelSchema = NotificationChannel.EmailAndSms,
-                    ResourceId = "urn:altinn:resource:email-sms-resouce-name",
+                    ResourceId = "urn:altinn:resource:email-sms-resource-name",
 
                     SmsSettings = new SmsSendingOptions
                     {
@@ -950,7 +962,7 @@ public class OrderRequestServiceTests
             DateTime.UtcNow,
             [new([], organizationNumber: "312508729")],
             null,
-            "urn:altinn:resource:email-sms-resouce-name",
+            "urn:altinn:resource:email-sms-resource-name",
             new Uri("https://api.brreg.no/conditions/notification"));
 
         var orderRepositoryMock = new Mock<IOrderRepository>();
@@ -978,37 +990,48 @@ public class OrderRequestServiceTests
         var service = GetTestService(orderRepositoryMock.Object, contactPointServiceMock.Object, orderId, currentTime);
 
         // Act
-        var response = await service.RegisterNotificationOrderChain(orderChainRequest);
-
+        Result<NotificationOrderChainResponse, ServiceError> result = await service.RegisterNotificationOrderChain(orderChainRequest);
+       
         // Assert
-        Assert.NotNull(response);
-        Assert.Equal(orderChainId, response.OrderChainId);
-        Assert.Equal(orderId, response.OrderChainReceipt.ShipmentId);
-        Assert.Equal("REF-42DBDAB8281C", response.OrderChainReceipt.SendersReference);
+        result.Match<bool>(
+            result =>
+            {
+                Assert.NotNull(result);
+                Assert.Equal(orderChainId, result.OrderChainId);
+                Assert.Equal(orderId, result.OrderChainReceipt.ShipmentId);
+                Assert.Equal("REF-42DBDAB8281C", result.OrderChainReceipt.SendersReference);
 
-        orderRepositoryMock.Verify(
-            r => r.Create(
-            It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId),
-            It.Is<NotificationOrder>(o =>
-                o.Id == orderId &&
-                o.SendersReference == "REF-42DBDAB8281C" &&
-                o.SendingTimePolicy == SendingTimePolicy.Daytime &&
-                o.NotificationChannel == NotificationChannel.EmailAndSms &&
-                o.Recipients.Any(r => r.OrganizationNumber == "312508729")),
-            It.Is<List<NotificationOrder>>(list => list.Count == 0),
-            It.IsAny<CancellationToken>()),
-            Times.Once);
+                orderRepositoryMock.Verify(
+                    r => r.Create(
+                    It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId),
+                    It.Is<NotificationOrder>(o =>
+                        o.Id == orderId &&
+                        o.SendersReference == "REF-42DBDAB8281C" &&
+                        o.SendingTimePolicy == SendingTimePolicy.Daytime &&
+                        o.NotificationChannel == NotificationChannel.EmailAndSms &&
+                        o.Recipients.Any(r => r.OrganizationNumber == "312508729")),
+                    It.Is<List<NotificationOrder>>(list => list.Count == 0),
+                    It.IsAny<CancellationToken>()),
+                    Times.Once);
 
-        // Verify contact point service was called correctly
-        contactPointServiceMock.Verify(
-            cp => cp.AddEmailAndSmsContactPointsAsync(
-            It.Is<List<Recipient>>(r => r.Any(rec => rec.OrganizationNumber == "312508729")),
-            It.Is<string?>(s => s == "urn:altinn:resource:email-sms-resouce-name")),
-            Times.Once);
+                // Verify contact point service was called correctly
+                contactPointServiceMock.Verify(
+                    cp => cp.AddEmailAndSmsContactPointsAsync(
+                    It.Is<List<Recipient>>(r => r.Any(rec => rec.OrganizationNumber == "312508729")),
+                    It.Is<string?>(s => s == "email-sms-resource-name")), // prefix urn:altinn:resource: is stripped
+                    Times.Once);
+
+                return true;
+            },
+            error =>
+            {
+                Assert.Fail($"Expected success but got error: {error}");
+                return false;
+            });
     }
 
     [Fact]
-    public async Task RegisterNotificationOrderChain_RepositoryReturnsEmptyList_ThrowsInvalidOperationException()
+    public async Task RegisterNotificationOrderChain_RepositoryReturnsEmptyList_ReturnsServiceErrorObjectWithError()
     {
         // Arrange
         Guid orderId = Guid.NewGuid();
@@ -1044,9 +1067,19 @@ public class OrderRequestServiceTests
         var service = GetTestService(repoMock.Object, null, orderId, currentTime);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () => await service.RegisterNotificationOrderChain(orderRequest));
+        var result = await service.RegisterNotificationOrderChain(orderRequest);
 
-        Assert.Equal("Failed to create the notification order chain.", exception.Message);
+        result.Match<bool>(
+            success =>
+            {
+                Assert.Fail("Should not succeed with an empty list.");
+                return false;
+            },
+            error =>
+            {
+                Assert.Equal("Failed to create the notification order chain.", error.ErrorMessage);
+                return true;
+            });
 
         // Verify the repository was called
         repoMock.Verify(r => r.Create(It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId), It.Is<NotificationOrder>(e => e.Id == orderId), It.IsAny<List<NotificationOrder>>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -1330,7 +1363,7 @@ public class OrderRequestServiceTests
     }
 
     [Fact]
-    public async Task CreateNotificationOrder_WithMissingContactInformation_ThrowsInvalidOperationException()
+    public async Task CreateNotificationOrder_WithMissingContactInformation_ReturnsServiceErrorObjectWithMessage()
     {
         // Arrange
         Guid orderId = Guid.NewGuid();
@@ -1364,8 +1397,7 @@ public class OrderRequestServiceTests
         var service = GetTestService(null, contactPointMock.Object, orderId, currentTime);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await service.RegisterNotificationOrderChain(
+        var response = await service.RegisterNotificationOrderChain(
                 new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
                     .SetOrderId(orderId)
                     .SetRecipient(recipient)
@@ -1373,17 +1405,28 @@ public class OrderRequestServiceTests
                     .SetCreator(new Creator("test"))
                     .SetRequestedSendTime(currentTime.AddHours(1))
                     .SetIdempotencyId("C0A3FABE-D65F-48A0-8745-5D4CC6EA7968")
-                    .Build()));
+                    .Build());
 
-        // Verify the exception message contains information about missing contacts
-        Assert.Contains("Missing contact information for recipient", exception.Message);
+        response.Match<bool>(
+            success =>
+            {
+                Assert.Fail("Expected failure but got success");
+                return false;
+            },
+            error =>
+            {
+                // Verify the ServiceError object's message contains information about missing contacts
+                Assert.Contains("Missing contact information for recipient", error.ErrorMessage);
 
-        // Verify the contact point service was called
-        contactPointMock.Verify(
-            contactService => contactService.AddEmailContactPoints(
-                It.Is<List<Recipient>>(r => r.Any(rec => rec.NationalIdentityNumber == "16069412345")),
-                It.Is<string?>(s => s == "urn:altinn:resource:test")),
-            Times.Once);
+                // Verify the contact point service was called
+                contactPointMock.Verify(
+                    contactService => contactService.AddEmailContactPoints(
+                        It.Is<List<Recipient>>(r => r.Any(rec => rec.NationalIdentityNumber == "16069412345")),
+                        It.Is<string?>(s => s == "test")),
+                    Times.Once);
+
+                return true;
+            });
     }
 
     /// <summary>
