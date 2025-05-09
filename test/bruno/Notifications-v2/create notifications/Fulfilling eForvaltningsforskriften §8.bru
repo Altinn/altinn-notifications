@@ -1,0 +1,69 @@
+meta {
+  name: Fulfilling eForvaltningsforskriften §8
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt}}
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "te-123-123",
+    "associationDialogporten": {
+      "dialogueId": "{{dialog-guid}}",
+      "transmissionId": "{{transmissionId-utsending-1}}"
+    },
+     "recipient": {
+      "recipientPerson": {
+        "nationalIdentityNumber": "11122233300",
+        "resourceId": "urn:altinn:resource:te_svc123",
+        "ignoreReservation": false,
+        "channelSchema": "EmailPreferred",
+        "smsSettings": {
+          "sendingTimePolicy": "Daytime",
+          "body": "Du har en ny melding fra TE. Logg inn i Altinn for å gjøre deg kjent med innholdet.",
+          "sender": "test sender"
+        },
+        "emailSettings": {
+          "sendingTimePolicy": "Anytime",
+          "subject": "Ny melding fra TE",
+          "body": "Du har en ny melding fra TE. Logg inn i Altinn for å gjøre deg kjent med innholdet."
+        }
+      }
+    },
+    "reminders": [
+      {
+        "conditionEndpoint": "https://api.te.no/altinn/te-123-123/?seen=true",
+        "sendersReference": "te-123-123",
+        "delayDays": 7,
+        "recipient": {
+          "recipientPerson": {
+            "nationalIdentityNumber": "11122233300",
+            "resourceId": "urn:altinn:resource:te_svc123",
+            "ignoreReservation": true,
+            "channelSchema": "SmsPreferred",
+            "smsSettings": {
+              "sendingTimePolicy": "Daytime",
+              "body": "Du har en melding fra TE som krever handling. Logg inn i Altinn for å gjøre deg kjent med innholdet.",
+              "sender": "test sender"
+            },
+            "emailSettings": {
+              "sendingTimePolicy": "Anytime",
+              "subject": "Påminnelse: Melding fra TE",
+              "body": "Du har en melding fra TE som krever handling. Logg inn i Altinn for å gjøre deg kjent med innholdet."
+            }
+          }
+        }
+      }
+    ]
+  }
+}

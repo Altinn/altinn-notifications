@@ -1,0 +1,30 @@
+meta {
+  name: create order with emailPreferred NIN
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{host}}/notifications/api/v1/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "emailTemplate": {
+      "subject": "test epost altinn 3 ressurs. ",
+      "body": "dette er en <em>test2</em>",
+      "contentType": "Html"
+    },
+    "notificationChannel": "EmailPreferred",
+    "recipients": [
+      {
+        "nationalIdentityNumber": "25892299237"
+      }
+    ],
+    "smsTemplate": {
+      "body": "emailPreferred no email specified"
+    }
+  }
+}

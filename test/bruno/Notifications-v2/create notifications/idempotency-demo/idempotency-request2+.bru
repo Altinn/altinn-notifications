@@ -1,0 +1,33 @@
+meta {
+  name: idempotency-request2+
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "1",
+    "sendersReference": "te-123-123_some-other-ref-than-original",
+    "recipient": {
+      "recipientSms": {      
+        "phoneNumber": "004799999999",
+        "smsSettings": {
+          "sendingTimePolicy": "Daytime",
+          "message": "Husk å levere nå!",
+          "sender": "sendertest",
+          "body": "bodytest"
+        }
+      }
+    }
+  }
+}
+
+docs {
+  Notice how this just references the original request and ignores the new content!
+}
