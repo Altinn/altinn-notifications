@@ -91,7 +91,7 @@ public class OrderRequestService : IOrderRequestService
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        Result<NotificationOrder, ServiceError> result = await CreateNotificationOrder(
+        Result<NotificationOrder, ServiceError> mainOrder = await CreateNotificationOrder(
             orderRequest.Recipient,
             orderRequest.OrderId,
             orderRequest.SendersReference,
@@ -100,12 +100,10 @@ public class OrderRequestService : IOrderRequestService
             currentTime,
             orderRequest.ConditionEndpoint);
 
-        if (result.IsError && result.Error != null)
+        if (mainOrder.IsError && mainOrder.Error != null)
         {
-            return result.Error;
+            return mainOrder.Error;
         }
-
-        var mainOrder = result.Value;
 
         var reminderOrders = await CreateNotificationOrders(
             orderRequest.Reminders,
@@ -113,7 +111,12 @@ public class OrderRequestService : IOrderRequestService
             currentTime,
             cancellationToken);
 
-        List<NotificationOrder> savedOrders = await _repository.Create(orderRequest, mainOrder!, reminderOrders, cancellationToken);
+        if (reminderOrders.IsError && reminderOrders.Error != null)
+        {
+            return reminderOrders.Error;
+        }
+
+        List<NotificationOrder> savedOrders = await _repository.Create(orderRequest, mainOrder.Value!, reminderOrders.Value, cancellationToken);
 
         if (savedOrders == null || savedOrders.Count == 0)
         {
@@ -217,6 +220,8 @@ public class OrderRequestService : IOrderRequestService
             {
                 return resourceId.Replace("urn:altinn:resource:", string.Empty);
             }
+
+            return resourceId;
         }
 
         return null;
