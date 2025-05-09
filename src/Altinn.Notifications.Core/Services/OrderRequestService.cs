@@ -91,7 +91,7 @@ public class OrderRequestService : IOrderRequestService
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        Result<NotificationOrder, ServiceError> result = await CreateNotificationOrder(
+        Result<NotificationOrder, ServiceError> mainOrder = await CreateNotificationOrder(
             orderRequest.Recipient,
             orderRequest.OrderId,
             orderRequest.SendersReference,
@@ -100,12 +100,10 @@ public class OrderRequestService : IOrderRequestService
             currentTime,
             orderRequest.ConditionEndpoint);
 
-        if (result.IsError && result.Error != null)
+        if (mainOrder.IsError && mainOrder.Error != null)
         {
-            return result.Error;
+            return mainOrder.Error;
         }
-
-        var mainOrder = result.Value;
 
         var reminderOrders = await CreateNotificationOrders(
             orderRequest.Reminders,
@@ -113,7 +111,12 @@ public class OrderRequestService : IOrderRequestService
             currentTime,
             cancellationToken);
 
-        List<NotificationOrder> savedOrders = await _repository.Create(orderRequest, mainOrder!, reminderOrders, cancellationToken);
+        if (reminderOrders.IsError && reminderOrders.Error != null)
+        {
+            return reminderOrders.Error;
+        }
+
+        List<NotificationOrder> savedOrders = await _repository.Create(orderRequest, mainOrder.Value!, reminderOrders.Value, cancellationToken);
 
         if (savedOrders == null || savedOrders.Count == 0)
         {
@@ -403,7 +406,8 @@ public class OrderRequestService : IOrderRequestService
     /// A token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.
     /// </param>
     /// <returns>
-    /// A <see cref="Task"/> representing the asynchronous operation, yielding a <see cref="List{NotificationOrder}"/> objects representing reminder orders.
+    /// On success, a <see cref="Task{TResult}"/> containing a list of <see cref="List{NotificationOrder}"/> objects representing reminder orders.
+    /// On failure, a <see cref="ServiceError"/> indicating the reason for the failure.
     /// </returns>
     /// <remarks>
     /// This method iterates through the provided reminders and, for each reminder, invokes 
@@ -439,8 +443,6 @@ public class OrderRequestService : IOrderRequestService
             {
                 return result.Error;
             }
-
-            // xml doc på interface
         }
 
         return reminderOrders;
