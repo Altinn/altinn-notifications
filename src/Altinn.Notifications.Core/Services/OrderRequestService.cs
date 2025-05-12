@@ -172,13 +172,13 @@ public class OrderRequestService : IOrderRequestService
     /// An optional <see cref="Uri"/> that serves as an endpoint to evaluate whether the notification should be sent.
     /// </param>
     /// <returns>
-    /// A <see cref="Task{NotificationOrder}"/> representing the asynchronous operation that returns the newly created notification order.
+    /// On success a <see cref="Task{TResult}"/> containing a <see cref="NotificationOrder"/> returns the newly created notification order.
+    /// On failure, a <see cref="ServiceError"/> indicating the reason for failure.
     /// </returns>
     /// <remarks>
     /// This method extracts the delivery components (such as the recipient list, notification templates,
     /// notification channel, reservation flag, and resource identifier) from the provided <paramref name="recipient"/>.
     /// It performs a recipient lookup to ensure all necessary contact information exists.
-    /// If any required contact data is missing, an <see cref="InvalidOperationException"/> is thrown.
     /// Additionally, default sender information is applied to any templates that lack sender details.
     /// </remarks>
     private async Task<Result<NotificationOrder, ServiceError>> CreateNotificationOrder(NotificationRecipient recipient, Guid orderId, string? sendersReference, DateTime requestedSendTime, Creator creator, DateTime currentTime, Uri? conditionEndpoint)
