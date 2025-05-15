@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Models.Recipients;
+﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models.Recipients;
 
 namespace Altinn.Notifications.Core.Models.Orders;
 
@@ -58,4 +59,12 @@ public class NotificationReminder
     /// A unique identifier used by the sender to correlate this reminder with their internal systems.
     /// </remarks>
     public string? SendersReference { get; set; }
+
+    /// <summary>
+    /// Gets the type of the reminder.
+    /// </summary>
+    /// <remarks>
+    /// Specifies whether this is an initial notification or a reminder.
+    /// </remarks>
+    public OrderTypes Type { get; set; }
 }
