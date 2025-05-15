@@ -7,6 +7,6 @@
   orderstatus JSONB NOT NULL
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_statusfeed_orderid ON notifications.statusfeed(orderid);
+CREATE INDEX IF NOT EXISTS idx_statusfeed_orderid ON notifications.statusfeed(orderid);
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE notifications.statusfeed TO platform_notifications;
