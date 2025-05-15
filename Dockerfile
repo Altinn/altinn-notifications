@@ -14,7 +14,7 @@ RUN dotnet build ./src/DbTools/DbTools.csproj -c Release -o /app_tools
 RUN dotnet publish -c Release -o out ./src/Altinn.Notifications/Altinn.Notifications.csproj
 
 # Build runtime image
-FROM mcr.microsoft.com/dotnet/aspnet:9.0.4-alpine3.21@sha256:3fce6771d84422e2396c77267865df61174a3e503c049f1fe242224c012fde65 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:9.0.4-alpine3.21@sha256:6f67d7bfa9a770ad2f1d62204d51de1afdc96783866b8d89cce34f0f8a69561e AS final
 WORKDIR /app
 EXPOSE 5090
 
