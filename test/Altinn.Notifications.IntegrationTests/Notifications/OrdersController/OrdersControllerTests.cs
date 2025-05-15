@@ -56,7 +56,8 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
             [],
             false,
             null,
-            null);
+            null,
+            OrderTypes.Notification);
 
         _orderWithStatus = new(
             _orderId,
