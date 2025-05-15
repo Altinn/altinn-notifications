@@ -90,15 +90,7 @@ public class OrderRequestService : IOrderRequestService
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        var mainOrder = await CreateNotificationOrder(
-            orderRequest.Recipient,
-            orderRequest.OrderId,
-            orderRequest.SendersReference,
-            orderRequest.RequestedSendTime,
-            orderRequest.Creator,
-            currentTime,
-            orderRequest.ConditionEndpoint,
-            orderRequest.Type);
+        var mainOrder = await CreateNotificationOrder(orderRequest, currentTime);
 
         var reminderOrders = await CreateNotificationOrders(
             orderRequest.Reminders,
@@ -174,9 +166,9 @@ public class OrderRequestService : IOrderRequestService
     /// If any required contact data is missing, an <see cref="InvalidOperationException"/> is thrown.
     /// Additionally, default sender information is applied to any templates that lack sender details.
     /// </remarks>
-    private async Task<NotificationOrder> CreateNotificationOrder(NotificationRecipient recipient, Guid orderId, string? sendersReference, DateTime requestedSendTime, Creator creator, DateTime currentTime, Uri? conditionEndpoint, OrderTypes orderType)
+    private async Task<NotificationOrder> CreateNotificationOrder(NotificationOrderChainRequest orderRequest, DateTime currentTime)
     {
-        var (recipients, templates, channel, ignoreReservation, resourceId, sendingTimePolicyForSms) = ExtractDeliveryComponents(recipient);
+        var (recipients, templates, channel, ignoreReservation, resourceId, sendingTimePolicyForSms) = ExtractDeliveryComponents(orderRequest.Recipient);
 
         var lookupResult = await GetRecipientLookupResult(recipients, channel, resourceId);
         if (lookupResult?.MissingContact?.Count > 0)
@@ -188,19 +180,19 @@ public class OrderRequestService : IOrderRequestService
 
         return new NotificationOrder
         {
-            Id = orderId,
-            SendersReference = sendersReference,
+            Id = orderRequest.OrderId,
+            SendersReference = orderRequest.SendersReference,
             Templates = templates,
-            RequestedSendTime = requestedSendTime,
+            RequestedSendTime = orderRequest.RequestedSendTime,
             NotificationChannel = channel,
-            Creator = creator,
+            Creator = orderRequest.Creator,
             Created = currentTime,
             Recipients = recipients,
             IgnoreReservation = ignoreReservation,
             ResourceId = resourceId,
-            ConditionEndpoint = conditionEndpoint,
+            ConditionEndpoint = orderRequest.ConditionEndpoint,
             SendingTimePolicy = sendingTimePolicyForSms,
-            Type = orderType
+            Type = orderRequest.Type
         };
     }
 
