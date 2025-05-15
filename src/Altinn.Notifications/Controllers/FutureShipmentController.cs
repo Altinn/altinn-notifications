@@ -1,4 +1,5 @@
 ﻿using Altinn.Notifications.Configuration;
+using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
 using Microsoft.AspNetCore.Authorization;
@@ -16,7 +17,7 @@ namespace Altinn.Notifications.Controllers;
 [SwaggerResponse(401, "Caller is unauthorized")]
 [SwaggerResponse(403, "Caller is not authorized to access the requested resource")]
 [Authorize(Policy = AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS)]
-public class FutureShipmentController(IOrderRequestService orderRequestService) : ControllerBase
+public class FutureShipmentController(IStatusFeedService statusFeedService) : ControllerBase
 {
     /// <summary>
     /// Retrieve an array of order status change history.
@@ -34,7 +35,9 @@ public class FutureShipmentController(IOrderRequestService orderRequestService) 
             {
                 return Forbid();
             }
-        
+
+            var result = await statusFeedService.GetStatusFeed(seq, creatorName);
+
             return Ok();
         }
         catch (TaskCanceledException e)
