@@ -1,0 +1,13 @@
+auth {
+  mode: bearer
+}
+
+auth:bearer {
+  token: {{jwt}}
+}
+
+script:pre-request {
+  const { v4: uuidv4 } = require('uuid');
+  bru.setVar("random_idempotency_id", uuidv4());
+  bru.setVar("dialog-guid", uuidv4());
+}
