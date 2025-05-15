@@ -69,7 +69,8 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
             null,
             null,
             null,
-            new ProcessingStatus());
+            new ProcessingStatus(),
+            OrderTypes.Notification);
 
         _requestResponse = new()
         {

@@ -67,7 +67,8 @@ public class NotificationOrderWithStatus : IBaseNotificationOrder
         bool? ignoreReservation,
         string? resourceId,
         Uri? conditionEndpoint,
-        ProcessingStatus processingStatus)
+        ProcessingStatus processingStatus, 
+        OrderTypes type)
     {
         Id = id;
         SendersReference = sendersReference;
@@ -79,6 +80,7 @@ public class NotificationOrderWithStatus : IBaseNotificationOrder
         ResourceId = resourceId;
         ConditionEndpoint = conditionEndpoint;
         ProcessingStatus = processingStatus;
+        Type = type;
     }
 
     /// <summary>

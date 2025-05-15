@@ -307,9 +307,8 @@ public class OrderRepository : IOrderRepository
              reader.GetValue<bool?>("ignorereservation"),
              reader.GetValue<string?>("resourceid"),
              conditionEndpoint,
-             new ProcessingStatus(
-                 reader.GetValue<OrderProcessingStatus>("processedstatus"),
-                 reader.GetValue<DateTime>("processed")));
+             new ProcessingStatus(reader.GetValue<OrderProcessingStatus>("processedstatus"), reader.GetValue<DateTime>("processed")),
+             OrderTypes.Notification);
 
         int generatedEmail = (int)reader.GetValue<long>("generatedEmailCount");
         int succeededEmail = (int)reader.GetValue<long>("succeededEmailCount");
