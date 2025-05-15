@@ -11,6 +11,5 @@
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_orderschain_orderid ON notifications.orderschain(orderid);
-GRANT USAGE, SELECT ON SEQUENCE notifications.statusfeed__id_seq TO platform_notifications;
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE notifications.orderschain TO platform_notifications;
