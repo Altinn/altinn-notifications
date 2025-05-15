@@ -64,7 +64,7 @@ public class NotificationReminder
     /// Gets the type of the reminder.
     /// </summary>
     /// <remarks>
-    /// Specifies whether this is an initial notification or a reminder.
+    /// Specifies that this is a reminder.
     /// </remarks>
-    public OrderTypes Type { get; set; }
+    public OrderTypes Type { get; set; } = OrderTypes.Reminder;
 }
