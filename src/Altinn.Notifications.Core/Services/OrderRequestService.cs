@@ -97,7 +97,8 @@ public class OrderRequestService : IOrderRequestService
             orderRequest.RequestedSendTime,
             orderRequest.Creator,
             currentTime,
-            orderRequest.ConditionEndpoint);
+            orderRequest.ConditionEndpoint,
+            orderRequest.Type);
 
         var reminderOrders = await CreateNotificationOrders(
             orderRequest.Reminders,
@@ -160,6 +161,9 @@ public class OrderRequestService : IOrderRequestService
     /// <param name="conditionEndpoint">
     /// An optional <see cref="Uri"/> that serves as an endpoint to evaluate whether the notification should be sent.
     /// </param>
+    /// <param name="orderType">
+    /// A <see cref="OrderTypes"/> that represents identifies the type of the notification order.
+    /// </param>
     /// <returns>
     /// A <see cref="Task{NotificationOrder}"/> representing the asynchronous operation that returns the newly created notification order.
     /// </returns>
@@ -170,7 +174,7 @@ public class OrderRequestService : IOrderRequestService
     /// If any required contact data is missing, an <see cref="InvalidOperationException"/> is thrown.
     /// Additionally, default sender information is applied to any templates that lack sender details.
     /// </remarks>
-    private async Task<NotificationOrder> CreateNotificationOrder(NotificationRecipient recipient, Guid orderId, string? sendersReference, DateTime requestedSendTime, Creator creator, DateTime currentTime, Uri? conditionEndpoint)
+    private async Task<NotificationOrder> CreateNotificationOrder(NotificationRecipient recipient, Guid orderId, string? sendersReference, DateTime requestedSendTime, Creator creator, DateTime currentTime, Uri? conditionEndpoint, OrderTypes orderType)
     {
         var (recipients, templates, channel, ignoreReservation, resourceId, sendingTimePolicyForSms) = ExtractDeliveryComponents(recipient);
 
@@ -195,7 +199,8 @@ public class OrderRequestService : IOrderRequestService
             IgnoreReservation = ignoreReservation,
             ResourceId = resourceId,
             ConditionEndpoint = conditionEndpoint,
-            SendingTimePolicy = sendingTimePolicyForSms
+            SendingTimePolicy = sendingTimePolicyForSms,
+            Type = orderType
         };
     }
 
@@ -409,7 +414,8 @@ public class OrderRequestService : IOrderRequestService
                 reminder.RequestedSendTime,
                 creator,
                 currentTime,
-                reminder.ConditionEndpoint);
+                reminder.ConditionEndpoint,
+                reminder.Type);
 
             reminderOrders.Add(reminderOrder);
         }

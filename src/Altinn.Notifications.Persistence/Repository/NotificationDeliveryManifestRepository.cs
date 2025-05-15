@@ -19,12 +19,13 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
 {
     private readonly NpgsqlDataSource _dataSource;
 
+    private const string _typeColumnName = "type";
     private const string _statusColumnName = "status";
     private const string _referenceColumnName = "reference";
     private const string _lastUpdateColumnName = "last_update";
     private const string _destinationColumnName = "destination";
 
-    private const string _sqlGetShipmentTrackingInfo = "SELECT * FROM notifications.get_shipment_tracking($1, $2)"; // (_alternateid, _creatorname)
+    private const string _getShipmentTrackingInfoFunction = "SELECT * FROM notifications.get_shipment_tracking_v2($1, $2)"; // (_alternateid, _creatorname)
 
     /// <summary>
     /// Maps database SMS notification result types to ProcessingLifecycle values.
@@ -90,7 +91,7 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
     /// <inheritdoc />
     public async Task<INotificationDeliveryManifest?> GetDeliveryManifestAsync(Guid alternateId, string creatorName, CancellationToken cancellationToken)
     {
-        await using var command = _dataSource.CreateCommand(_sqlGetShipmentTrackingInfo);
+        await using var command = _dataSource.CreateCommand(_getShipmentTrackingInfoFunction);
         command.Parameters.AddWithValue(NpgsqlDbType.Uuid, alternateId);
         command.Parameters.AddWithValue(NpgsqlDbType.Text, creatorName);
 
@@ -103,6 +104,17 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
         await reader.ReadAsync(cancellationToken);
 
         return await CreateNotificationDeliveryManifestAsync(reader, alternateId, cancellationToken);
+    }
+
+    /// <summary>
+    /// Retrieves the order type from the current database record.
+    /// </summary>
+    /// <param name="reader">Database reader positioned at a notification order data row.</param>
+    /// <returns>A string representing the order type (e.g., "Notification", "Reminder").</returns>
+    private static string GetType(NpgsqlDataReader reader)
+    {
+        var typeOrdinal = reader.GetOrdinal(_typeColumnName);
+        return reader.GetString(typeOrdinal);
     }
 
     /// <summary>
@@ -289,6 +301,8 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
     {
         var deliverableEntities = new List<IDeliveryManifest>();
 
+        var type = GetType(reader);
+
         var reference = await GetSenderReferenceAsync(reader, cancellationToken);
 
         var (status, lastUpdate) = await GetStatusAsync(reader, cancellationToken);
@@ -300,7 +314,7 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
 
         return new NotificationDeliveryManifest
         {
-            Type = "Notification",
+            Type = type,
             LastUpdate = lastUpdate,
             ShipmentId = alternateId,
             SendersReference = reference,

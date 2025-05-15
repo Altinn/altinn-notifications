@@ -52,6 +52,7 @@ public static partial class NotificationOrderChainMapper
             .SetReminders(reminders)
             .SetOrderId(Guid.NewGuid())
             .SetOrderChainId(Guid.NewGuid())
+            .SetType(OrderTypes.Notification)
             .SetCreator(new Creator(creatorName))
             .SetDialogportenAssociation(dialogportenAssociation)
             .SetIdempotencyId(notificationOrderChainRequestExt.IdempotencyId)
@@ -107,6 +108,7 @@ public static partial class NotificationOrderChainMapper
             },
 
             OrderId = Guid.NewGuid(),
+            Type = OrderTypes.Reminder,
             RequestedSendTime = requestedSendTime,
             DelayDays = notificationReminderExt.DelayDays,
             SendersReference = notificationReminderExt.SendersReference,

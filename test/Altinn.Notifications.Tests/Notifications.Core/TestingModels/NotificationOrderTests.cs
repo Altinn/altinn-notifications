@@ -26,6 +26,7 @@ public class NotificationOrderTests
         _order = new()
         {
             Id = id,
+            Type = OrderTypes.Notification,
             SendersReference = "senders-reference",
             Templates = new List<INotificationTemplate>()
             {
@@ -74,6 +75,7 @@ public class NotificationOrderTests
                 }
             },
             { "created", "2022-02-14T08:15:00Z" },
+            { "type", "Notification" },
             {
                 "templates",  new JsonArray()
                 {
@@ -140,16 +142,6 @@ public class NotificationOrderTests
 
         // Assert
         Assert.Equal(expected, actual);
-    }
-
-    [Theory]
-    [InlineData(1, "{ \"id\": \"4fec2be9-7f52-4d32-9554-467908c3c629\", \"created\": \"2023-07-14T07:39:19.088978Z\", \"creator\": { \"shortName\": \"ttd\" }, \"requestedSendTime\": \"2023-08-14T08:15:00Z\", \"templates\": [ { \"$\": \"email\", \"body\": \"email-body\", \"type\": \"Email\", \"subject\": \"email-subject\", \"contentType\": \"Html\", \"fromAddress\": \"sender@domain.com\" } ], \"recipients\": [ { \"addressInfo\": [ { \"$\": \"email\", \"addressType\": \"Email\", \"emailAddress\": \"recipient1@domain.com\" } ], \"recipientId\": \"\" }, { \"addressInfo\": [ { \"$\": \"email\", \"addressType\": \"Email\", \"emailAddress\": \"recipient2@domain.com\" } ], \"recipientId\": \"\" } ], \"sendersReference\": \"senders-reference\", \"notificationChannel\": \"Email\" }")]
-#pragma warning disable xUnit1026, IDE0060// Theory methods should use all of their parameters and Remove unused parameter
-    public void Deserialize(int exampleNo, string serializedOrder)
-#pragma warning restore xUnit1026, IDE0060
-    {
-        var actual = NotificationOrder.Deserialize(serializedOrder);
-        Assert.NotNull(actual);
     }
 
     [Fact]

@@ -83,6 +83,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             Id = orderId,
             Creator = new(creator),
             Created = creationDateTime,
+            Type = OrderTypes.Notification,
             SendersReference = senderReference,
             RequestedSendTime = requestedSendTime,
             SendingTimePolicy = SendingTimePolicy.Daytime,
@@ -147,6 +148,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             Id = orderId,
             Creator = new(creator),
             Created = DateTime.UtcNow,
+            Type = OrderTypes.Notification,
             SendersReference = senderReference,
             SendingTimePolicy = SendingTimePolicy.Anytime,
             RequestedSendTime = DateTime.UtcNow.AddMinutes(30),
@@ -219,6 +221,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
 
         // Verify order status
         Assert.Equal(senderReference, deliveryManifest.SendersReference);
+        Assert.Equal(OrderTypes.Notification.ToString(), deliveryManifest.Type);
         Assert.Equal(ProcessingLifecycle.Order_Completed, deliveryManifest.Status);
 
         // Verify recipients collection
@@ -265,6 +268,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             Id = orderId,
             Creator = new(creator),
             Created = creationDateTime,
+            Type = OrderTypes.Notification,
             SendersReference = senderReference,
             RequestedSendTime = requestedSendTime,
             SendingTimePolicy = SendingTimePolicy.Daytime,
@@ -295,9 +299,9 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         Assert.NotNull(deliveryManifest.Type);
         Assert.NotEmpty(deliveryManifest.Type);
         Assert.Equal(orderId, deliveryManifest.ShipmentId);
-        Assert.Equal("Notification", deliveryManifest.Type);
         Assert.True(deliveryManifest.LastUpdate > DateTime.MinValue);
         Assert.Equal(senderReference, deliveryManifest.SendersReference);
+        Assert.Equal(OrderTypes.Notification.ToString(), deliveryManifest.Type);
         Assert.Equal(ProcessingLifecycle.Order_Registered, deliveryManifest.Status);
 
         Assert.NotNull(deliveryManifest.Recipients);
@@ -334,6 +338,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             Id = orderId,
             Creator = new(creator),
             Created = creationDateTime,
+            Type = OrderTypes.Notification,
             SendersReference = senderReference,
             RequestedSendTime = requestedSendTime,
             SendingTimePolicy = SendingTimePolicy.Daytime,
@@ -382,9 +387,9 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         Assert.NotNull(deliveryManifest.Type);
         Assert.NotEmpty(deliveryManifest.Type);
         Assert.Equal(orderId, deliveryManifest.ShipmentId);
-        Assert.Equal("Notification", deliveryManifest.Type);
         Assert.True(deliveryManifest.LastUpdate > DateTime.MinValue);
         Assert.Equal(senderReference, deliveryManifest.SendersReference);
+        Assert.Equal(OrderTypes.Notification.ToString(), deliveryManifest.Type);
         Assert.Equal(ProcessingLifecycle.Order_Registered, deliveryManifest.Status);
 
         Assert.NotNull(deliveryManifest.Recipients);
@@ -427,6 +432,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             Id = orderId,
             Creator = new(creator),
             Created = creationDateTime,
+            Type = OrderTypes.Reminder,
             SendersReference = senderReference,
             RequestedSendTime = requestedSendTime,
             SendingTimePolicy = SendingTimePolicy.Anytime,
@@ -474,9 +480,9 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         Assert.NotNull(deliveryManifest.Type);
         Assert.NotEmpty(deliveryManifest.Type);
         Assert.Equal(orderId, deliveryManifest.ShipmentId);
-        Assert.Equal("Notification", deliveryManifest.Type);
         Assert.True(deliveryManifest.LastUpdate > DateTime.MinValue);
         Assert.Equal(senderReference, deliveryManifest.SendersReference);
+        Assert.Equal(OrderTypes.Reminder.ToString(), deliveryManifest.Type);
         Assert.Equal(ProcessingLifecycle.Order_Registered, deliveryManifest.Status);
 
         Assert.NotNull(deliveryManifest.Recipients);
@@ -514,9 +520,9 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             Creator = new(creator),
             Created = DateTime.UtcNow,
             SendersReference = senderReference,
-            RequestedSendTime = DateTime.UtcNow.AddMinutes(30),
             SendingTimePolicy = SendingTimePolicy.Anytime,
             NotificationChannel = NotificationChannel.Sms,
+            RequestedSendTime = DateTime.UtcNow.AddMinutes(30),
             Templates =
             [
                 new SmsTemplate("Test Sender", "Test SMS message content")
@@ -597,6 +603,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             Id = orderId,
             Creator = new(creator),
             Created = creationDateTime,
+            Type = OrderTypes.Reminder,
             SendersReference = senderReference,
             RequestedSendTime = requestedSendTime,
             SendingTimePolicy = SendingTimePolicy.Daytime,
@@ -664,9 +671,9 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         Assert.NotNull(deliveryManifest.Type);
         Assert.NotEmpty(deliveryManifest.Type);
         Assert.Equal(orderId, deliveryManifest.ShipmentId);
-        Assert.Equal("Notification", deliveryManifest.Type);
         Assert.True(deliveryManifest.LastUpdate > DateTime.MinValue);
         Assert.Equal(senderReference, deliveryManifest.SendersReference);
+        Assert.Equal(OrderTypes.Reminder.ToString(), deliveryManifest.Type);
         Assert.Equal(ProcessingLifecycle.Order_Registered, deliveryManifest.Status);
 
         Assert.NotNull(deliveryManifest.Recipients);
