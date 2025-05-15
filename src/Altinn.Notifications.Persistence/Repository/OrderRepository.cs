@@ -25,7 +25,7 @@ public class OrderRepository : IOrderRepository
 
     private const string _getOrderByIdSql = "select notificationorder from notifications.orders where alternateid=$1 and creatorname=$2";
     private const string _getOrdersBySendersReferenceSql = "select notificationorder from notifications.orders where sendersreference=$1 and creatorname=$2";
-    private const string _insertOrderSql = "select notifications.insertorder($1, $2, $3, $4, $5, $6, $7)"; // (_alternateid, _creatorname, _sendersreference, _created, _requestedsendtime, _notificationorder, _sendingtimepolicy)
+    private const string _insertOrderSql = "select notifications.insertorder($1, $2, $3, $4, $5, $6, $7, $8)"; // (_alternateid, _creatorname, _sendersreference, _created, _requestedsendtime, _notificationorder, _sendingtimepolicy, _type)
     private const string _insertEmailTextSql = "call notifications.insertemailtext($1, $2, $3, $4, $5)"; // (__orderid, _fromaddress, _subject, _body, _contenttype)
     private const string _insertSmsTextSql = "insert into notifications.smstexts(_orderid, sendernumber, body) VALUES ($1, $2, $3)"; // __orderid, _sendernumber, _body
     private const string _setProcessCompleted = "update notifications.orders set processedstatus =$1::orderprocessingstate where alternateid=$2";
@@ -391,7 +391,7 @@ public class OrderRepository : IOrderRepository
 
     private static async Task<long> InsertOrder(NotificationOrder order, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
     {
-        await using NpgsqlCommand pgcom = new NpgsqlCommand(_insertOrderSql, connection, transaction);
+        await using NpgsqlCommand pgcom = new(_insertOrderSql, connection, transaction);
 
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, order.Id);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, order.Creator.ShortName);
@@ -400,6 +400,7 @@ public class OrderRepository : IOrderRepository
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, order.RequestedSendTime);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Jsonb, order);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Integer, (int?)order.SendingTimePolicy ?? (object)DBNull.Value);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, order.Type.ToString());
 
         await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken);
         await reader.ReadAsync(cancellationToken);
