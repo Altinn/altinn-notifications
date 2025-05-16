@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using Altinn.Notifications.Core.Persistence;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -25,7 +26,6 @@ namespace Altinn.Notifications.Persistence.Repository
         /// <param name="creatorName">Name of the service owner</param>
         /// <param name="cancellationToken">Token to cancel the ongoing operation</param>
         /// <returns>List of status feed entries</returns>
-
         public async Task<List<object>> GetStatusFeed(int seq, string creatorName, CancellationToken cancellationToken = default)
         {
             await using NpgsqlCommand command = _dataSource.CreateCommand(GetStatusFeedSql);

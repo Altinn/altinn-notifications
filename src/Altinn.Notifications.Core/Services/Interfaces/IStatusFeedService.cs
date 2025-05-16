@@ -1,7 +1,6 @@
-﻿
-using Altinn.Notifications.Core.Shared;
+﻿using Altinn.Notifications.Core.Shared;
 
-namespace Altinn.Notifications.Core.Services
+namespace Altinn.Notifications.Core.Services.Interfaces
 {
     /// <summary>
     /// Service for handling status feed related operations.
