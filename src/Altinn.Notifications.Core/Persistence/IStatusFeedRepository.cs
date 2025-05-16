@@ -1,4 +1,6 @@
-﻿namespace Altinn.Notifications.Core.Persistence
+﻿using Altinn.Notifications.Core.Models.Status;
+
+namespace Altinn.Notifications.Core.Persistence
 {
     /// <summary>
     /// Repository for handling status feed related operations.
@@ -12,6 +14,6 @@
         /// <param name="creatorName">Name of service owner</param>
         /// <param name="cancellationToken">Token for canceling the current request</param>
         /// <returns></returns>
-        Task<List<object>> GetStatusFeed(int seq, string creatorName, CancellationToken cancellationToken = default);
+        Task<List<OrderStatus>> GetStatusFeed(int seq, string creatorName, CancellationToken cancellationToken = default);
     }
 }

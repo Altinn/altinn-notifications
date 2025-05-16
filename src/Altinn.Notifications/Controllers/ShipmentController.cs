@@ -24,13 +24,54 @@ namespace Altinn.Notifications.Controllers;
 public class ShipmentController : ControllerBase
 {
     private readonly INotificationDeliveryManifestService _notificationDeliveryManifestService;
+    private readonly IStatusFeedService _statusFeedService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ShipmentController"/> class.
     /// </summary>
-    public ShipmentController(INotificationDeliveryManifestService notificationDeliveryManifestService)
+    public ShipmentController(INotificationDeliveryManifestService notificationDeliveryManifestService, IStatusFeedService statusFeedService)
     {
         _notificationDeliveryManifestService = notificationDeliveryManifestService;
+        _statusFeedService = statusFeedService;
+    }
+
+    /// <summary>
+    /// Retrieve an array of order status change history.
+    /// </summary>
+    /// <returns>A <see cref="Task{TResult}"/> representing the result of the asynchronous operation.</returns>
+    [HttpGet("feed")]
+    [Consumes("application/json")]
+    [Produces("application/json")]
+    public async Task<IActionResult> GetStatusFeed([FromQuery] int seq = 1)
+    {
+        try
+        {
+            string? creatorName = HttpContext.GetOrg();
+            if (creatorName == null)
+            {
+                return Forbid();
+            }
+
+            var result = await _statusFeedService.GetStatusFeed(seq, creatorName);
+
+            return result.Match<ActionResult>(
+                statusFeed =>
+                {
+                    return Ok(statusFeed);
+                },
+                error =>
+                {
+                    return StatusCode(error.ErrorCode, new ProblemDetails
+                    {
+                        Status = error.ErrorCode,
+                        Detail = error.ErrorMessage
+                    });
+                });
+        }
+        catch (OperationCanceledException)
+        {
+            return StatusCode(499, "Request terminated - The client disconnected or cancelled the request before the server could complete processing");
+        }
     }
 
     /// <summary>
@@ -43,7 +84,7 @@ public class ShipmentController : ControllerBase
     /// or a 404 Not Found response if no notification order with the specified identifier exists.
     /// </returns>
     [HttpGet]
-    [Route("{id}")]
+    [Route("{id:guid}")]
     [Produces("application/json")]
     [SwaggerResponse(404, "No shipment with the provided identifier was found")]
     [SwaggerResponse(200, "The shipment matching the provided identifier was retrieved successfully", typeof(NotificationDeliveryManifestExt))]
