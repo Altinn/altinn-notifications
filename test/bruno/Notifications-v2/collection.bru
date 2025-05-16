@@ -9,5 +9,7 @@ auth:bearer {
 script:pre-request {
   const { v4: uuidv4 } = require('uuid');
   bru.setVar("random_idempotency_id", uuidv4());
-  bru.setVar("dialog-guid", uuidv4());
+  bru.setVar("dialog_guid", uuidv4());
+  bru.setVar("senders_reference_guid", uuidv4());
+  
 }

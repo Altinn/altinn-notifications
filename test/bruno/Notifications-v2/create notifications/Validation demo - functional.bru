@@ -7,18 +7,14 @@ meta {
 post {
   url: {{host}}/notifications/api/v1/future/orders
   body: json
-  auth: bearer
-}
-
-auth:bearer {
-  token: {{jwt}}
+  auth: inherit
 }
 
 body:json {
     "idempotencyId": "{{random_idempotency_id}}",
     "sendersReference": "te-123-123",
     "associationDialogporten": {
-      "dialogueId": "{{dialog-guid}}",
+      "dialogueId": "{{dialog_guid}}",
       "transmissionId": "{{transmissionId-utsending-1}}"
     },
     "recipient": {
