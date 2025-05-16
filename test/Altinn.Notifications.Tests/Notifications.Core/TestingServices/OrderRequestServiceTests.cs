@@ -636,15 +636,13 @@ public class OrderRequestServiceTests
     /// </summary>
     /// <returns>An asyn task</returns>
     [Fact]
-    public async Task RegisterNotificationOrderChain_ShouldReturnServiceError_WhenMissingRecipients()
+    public async Task RegisterNotificationOrderChain_ShouldReturnServiceError_WhenMissingContactInformation()
     {
         // Arrange
         Guid orderId = Guid.NewGuid();
         Guid orderChainId = Guid.NewGuid();
         DateTime currentTime = DateTime.UtcNow;
 
-        // Create a request with both email and SMS settings
-        // SMS has Daytime policy while Email has Anytime policy
         var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
             .SetOrderId(orderId)
             .SetOrderChainId(orderChainId)
@@ -655,7 +653,7 @@ public class OrderRequestServiceTests
                 RecipientOrganization = new RecipientOrganization
                 {
                     OrgNumber = "312508729",
-                    ChannelSchema = NotificationChannel.EmailAndSms,
+                    ChannelSchema = NotificationChannel.Email,
                     ResourceId = "urn:altinn:resource:email-sms-resource-name",
                     EmailSettings = new EmailSendingOptions
                     {
@@ -675,7 +673,7 @@ public class OrderRequestServiceTests
             .Setup(contactService => contactService.AddEmailAndSmsContactPointsAsync(It.IsAny<List<Recipient>>(), It.IsAny<string?>()))
             .Callback<List<Recipient>, string?>((recipients, _) =>
             {
-                // no recipient info
+                // no contact information
             });
 
         var service = GetTestService(orderRepositoryMock.Object, contactPointServiceMock.Object, orderId, currentTime);
@@ -684,18 +682,25 @@ public class OrderRequestServiceTests
         Result<NotificationOrderChainResponse, ServiceError> result = await service.RegisterNotificationOrderChain(orderChainRequest);
 
         // Assert
-        result.Match<bool>(
+        var match = result.Match(
             result =>
             {
-                Assert.Fail("Expected error but got success");
-                return true;
+                return false;
             },
             error =>
             {
-                Assert.IsType<ServiceError>(error);
-                Assert.Equal("Missing contact information for recipient(s): 312508729", error.ErrorMessage);
-                return false;
+                return true;
             });
+
+        if (match)
+        {
+            Assert.IsType<ServiceError>(result.Error);
+            Assert.Equal("Missing contact information for recipient(s): 312508729", result.Error.ErrorMessage);
+        }
+        else
+        {
+            Assert.Fail("Expected error but got success");
+        }
     }
 
     /// <summary>
@@ -703,15 +708,13 @@ public class OrderRequestServiceTests
     /// </summary>
     /// <returns>An asyn task</returns>
     [Fact]
-    public async Task RegisterNotificationOrderChain_ShouldReturnServiceError_WhenMissingRecipientsForReminder()
+    public async Task RegisterNotificationOrderChain_ShouldReturnServiceError_WhenMissingContactInformationForReminder()
     {
         // Arrange
         Guid orderId = Guid.NewGuid();
         Guid orderChainId = Guid.NewGuid();
         DateTime currentTime = DateTime.UtcNow;
 
-        // Create a request with both email and SMS settings
-        // SMS has Daytime policy while Email has Anytime policy
         var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
             .SetOrderId(orderId)
             .SetOrderChainId(orderChainId)
@@ -722,7 +725,7 @@ public class OrderRequestServiceTests
                 RecipientOrganization = new RecipientOrganization
                 {
                     OrgNumber = "312508729",
-                    ChannelSchema = NotificationChannel.EmailAndSms,
+                    ChannelSchema = NotificationChannel.Email,
                     ResourceId = "urn:altinn:resource:email-sms-resource-name",
                     EmailSettings = new EmailSendingOptions
                     {
@@ -764,7 +767,6 @@ public class OrderRequestServiceTests
                     if (recipient != null && string.Equals(recipient.OrganizationNumber, "312508729", StringComparison.Ordinal))
                     {
                         recipient.AddressInfo.Add(new SmsAddressPoint("+4799999999"));
-                        recipient.IsReserved = false;
                     }
                 }   
             });
@@ -775,18 +777,25 @@ public class OrderRequestServiceTests
         Result<NotificationOrderChainResponse, ServiceError> result = await service.RegisterNotificationOrderChain(orderChainRequest);
 
         // Assert
-        result.Match<bool>(
+        var match = result.Match(
             result =>
             {
-                Assert.Fail("Expected error but got success");
-                return true;
+                return false;
             },
             error =>
             {
-                Assert.IsType<ServiceError>(error);
-                Assert.Equal("Missing contact information for recipient(s): 312508730", error.ErrorMessage);
-                return false;
+                return true;
             });
+
+        if (match)
+        {
+            Assert.IsType<ServiceError>(result.Error);
+            Assert.Equal("Missing contact information for recipient(s): 312508730", result.Error.ErrorMessage);
+        }
+        else
+        {
+            Assert.Fail("Expected error but got success");
+        }
     }
 
     [Theory]
@@ -999,7 +1008,7 @@ public class OrderRequestServiceTests
         Result<NotificationOrderChainResponse, ServiceError> result = await service.RegisterNotificationOrderChain(orderChainRequest);
 
         // Assert
-        result.Match<bool>(
+        result.Match(
             response =>
             {
                 Assert.Equal(orderChainId, response.OrderChainId);
@@ -1153,7 +1162,7 @@ public class OrderRequestServiceTests
         Result<NotificationOrderChainResponse, ServiceError> result = await service.RegisterNotificationOrderChain(orderChainRequest);
 
         // Assert
-        result.Match<bool>(
+        result.Match(
             result =>
             {
                 Assert.NotNull(result);
@@ -1229,7 +1238,7 @@ public class OrderRequestServiceTests
         // Act & Assert
         var result = await service.RegisterNotificationOrderChain(orderRequest);
 
-        result.Match<bool>(
+        result.Match(
             success =>
             {
                 Assert.Fail("Should not succeed with an empty list.");
@@ -1567,7 +1576,7 @@ public class OrderRequestServiceTests
                     .SetIdempotencyId("C0A3FABE-D65F-48A0-8745-5D4CC6EA7968")
                     .Build());
 
-        response.Match<bool>(
+        response.Match(
             success =>
             {
                 Assert.Fail("Expected failure but got success");
