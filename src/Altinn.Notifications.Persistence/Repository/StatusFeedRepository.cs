@@ -1,4 +1,6 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.Data;
+using System.Diagnostics.CodeAnalysis;
+using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Core.Persistence;
 using Npgsql;
 using NpgsqlTypes;
@@ -13,11 +15,16 @@ namespace Altinn.Notifications.Persistence.Repository
     {
         private readonly NpgsqlDataSource _dataSource;
 
-        private const string GetStatusFeedSql = @"
-            SELECT * FROM notifications.statusfeed
-            WHERE seq >= $1 AND seq <= $2
-            ORDER BY seq ASC
-            LIMIT 50;";
+        private const string _getStatusFeedSql = "select orderstatus from notifications.statusfeed where _id > $1 and creatorname=$2";
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="StatusFeedRepository"/> class.
+        /// </summary>
+        /// <param name="dataSource">the npgsql data source</param>
+        public StatusFeedRepository(NpgsqlDataSource dataSource)
+        {
+            _dataSource = dataSource;
+        }
 
         /// <summary>
         /// Get status feed
@@ -26,19 +33,25 @@ namespace Altinn.Notifications.Persistence.Repository
         /// <param name="creatorName">Name of the service owner</param>
         /// <param name="cancellationToken">Token to cancel the ongoing operation</param>
         /// <returns>List of status feed entries</returns>
-        public async Task<List<object>> GetStatusFeed(int seq, string creatorName, CancellationToken cancellationToken = default)
+        public async Task<List<OrderStatus>> GetStatusFeed(int seq, string creatorName, CancellationToken cancellationToken = default)
         {
-            await using NpgsqlCommand command = _dataSource.CreateCommand(GetStatusFeedSql);
+            await using NpgsqlCommand command = _dataSource.CreateCommand(_getStatusFeedSql);
             command.Parameters.AddWithValue(NpgsqlDbType.Integer, seq);
             command.Parameters.AddWithValue(NpgsqlDbType.Varchar, creatorName);
 
-            List<object> statusFeedEntries = new List<object>();
+            List<OrderStatus> statusFeedEntries = new();
 
             await using (NpgsqlDataReader reader = await command.ExecuteReaderAsync(cancellationToken))
             {
-                if (await reader.ReadAsync(cancellationToken))
+                // Process the data from the reader
+                Console.WriteLine("hello");
+                while (await reader.ReadAsync(cancellationToken))
                 {
-                    // Process the data from the reader
+                    var orderStatus = reader.GetFieldValue<OrderStatus>("orderstatus");
+                    if (orderStatus != null)
+                    {
+                        statusFeedEntries.Add(orderStatus);
+                    }
                 }
             }
 

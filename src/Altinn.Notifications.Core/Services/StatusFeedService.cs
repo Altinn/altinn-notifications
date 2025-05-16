@@ -16,8 +16,8 @@ namespace Altinn.Notifications.Core.Services.Interfaces
         /// <returns>List of status feed entries</returns>
         public async Task<Result<object, ServiceError>> GetStatusFeed(int seq, string creatorName)
         {
-            await statusFeedRepository.GetStatusFeed(seq, creatorName);
-            return null;
+            var statusFeedEntries = await statusFeedRepository.GetStatusFeed(seq, creatorName);
+            return statusFeedEntries;           
         }
     }
 }
