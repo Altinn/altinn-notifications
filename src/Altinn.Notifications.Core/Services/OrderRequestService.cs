@@ -48,7 +48,7 @@ public class OrderRequestService : IOrderRequestService
     public async Task<NotificationOrderRequestResponse> RegisterNotificationOrder(NotificationOrderRequest orderRequest)
     {
         Guid orderId = _guid.NewGuid();
-        DateTime currentime = _dateTime.UtcNow();
+        DateTime currentTime = _dateTime.UtcNow();
 
         var lookupResult = await GetRecipientLookupResult(orderRequest.Recipients, orderRequest.NotificationChannel, orderRequest.ResourceId);
 
@@ -59,10 +59,10 @@ public class OrderRequestService : IOrderRequestService
             Id = orderId,
             SendersReference = orderRequest.SendersReference,
             Templates = templates,
-            RequestedSendTime = orderRequest.RequestedSendTime ?? currentime,
+            RequestedSendTime = orderRequest.RequestedSendTime ?? currentTime,
             NotificationChannel = orderRequest.NotificationChannel,
             Creator = orderRequest.Creator,
-            Created = currentime,
+            Created = currentTime,
             Recipients = orderRequest.Recipients,
             IgnoreReservation = orderRequest.IgnoreReservation,
             ResourceId = orderRequest.ResourceId,
