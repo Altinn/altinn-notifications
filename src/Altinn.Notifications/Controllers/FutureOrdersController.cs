@@ -1,5 +1,7 @@
 ﻿using Altinn.Notifications.Configuration;
+using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
@@ -78,13 +80,35 @@ public class FutureOrdersController : ControllerBase
             }
 
             var notificationOrderChainRequest = notificationOrderRequest.MapToNotificationOrderChainRequest(creator);
-            var registeredNotificationOrderChain = await _orderRequestService.RegisterNotificationOrderChain(notificationOrderChainRequest, cancellationToken);
 
-            return Created(registeredNotificationOrderChain.OrderChainId.GetSelfLinkFromOrderChainId(), registeredNotificationOrderChain.MapToNotificationOrderChainResponseExt());
+            Result<NotificationOrderChainResponse, ServiceError> result = await _orderRequestService.RegisterNotificationOrderChain(notificationOrderChainRequest, cancellationToken);
+
+            return result.Match(
+                registeredNotificationOrderChain =>
+                {
+                    return Created(registeredNotificationOrderChain.OrderChainId.GetSelfLinkFromOrderChainId(), registeredNotificationOrderChain.MapToNotificationOrderChainResponseExt());
+                },
+                error =>
+                {
+                    var problemDetails = new ProblemDetails
+                    {
+                        Title = "Notification order chain registration failed",
+                        Detail = error.ErrorMessage,
+                        Status = error.ErrorCode
+                    };
+                    return StatusCode(error.ErrorCode, problemDetails);
+                });
         }
         catch (OperationCanceledException)
         {
-            return StatusCode(499, "Request terminated - The client disconnected or cancelled the request before the server could complete processing");
+            var problemDetails = new ProblemDetails
+            {
+                Title = "Request terminated",
+                Detail = "The client disconnected or cancelled the request before the server could complete processing.",
+                Status = 499
+            };
+
+            return StatusCode(499, problemDetails);
         }
     }
 }
