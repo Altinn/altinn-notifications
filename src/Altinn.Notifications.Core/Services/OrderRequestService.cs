@@ -107,7 +107,7 @@ public class OrderRequestService : IOrderRequestService
             return remindersResult.Error;
         }
 
-        // 4. Create the response
+        // 5. Create the response
         return await CreateChainResponseAsync(orderRequest, mainResult.Value, remindersResult.Value, cancellationToken);
     }
 
@@ -312,13 +312,9 @@ public class OrderRequestService : IOrderRequestService
     private async Task<Result<NotificationOrderChainResponse, ServiceError>> CreateChainResponseAsync(NotificationOrderChainRequest orderRequest, NotificationOrder? mainOrder, List<NotificationOrder>? reminderOrders, CancellationToken cancellationToken)
     {
         var savedOrders = new List<NotificationOrder>();
-        if (mainOrder != null && reminderOrders is not { Count: > 0 })
+        if (mainOrder != null)
         {
             savedOrders = await _repository.Create(orderRequest, mainOrder, reminderOrders, cancellationToken);
-        }
-        else if (mainOrder != null)
-        {
-            savedOrders = await _repository.Create(orderRequest, mainOrder, [], cancellationToken);
         }
 
         if (savedOrders == null || savedOrders.Count == 0)
