@@ -319,7 +319,7 @@ public class OrderRequestService : IOrderRequestService
 
         if (savedOrders == null || savedOrders.Count == 0)
         {
-            return new ServiceError(422, "Failed to create the notification order chain.");
+            return new ServiceError(500, "Failed to create the notification order chain.");
         }
 
         // The first is the main shipment
