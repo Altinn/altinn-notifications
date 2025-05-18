@@ -8,6 +8,7 @@ using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Controllers;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Email;
@@ -599,10 +600,42 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var result = await controller.Post(request);
 
         // Assert
+        // Cast the result as a ProblemDetails object and verify its contents
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        var problemDetails = Assert.IsType<ProblemDetails>(objectResult.Value);
+
+        Assert.NotNull(problemDetails);
+        Assert.Equal("Request terminated", problemDetails.Title);
+        Assert.Equal(499, problemDetails.Status);
+    }
+
+    [Fact]
+    public async Task Post_MissingRecipients_ReturnsProblemDetails422Status()
+    {
+        // Arrange
+        var request = CreateValidRequest();
+        var validatorMock = SetupValidValidator();
+        var orderServiceMock = new Mock<IOrderRequestService>();
+        orderServiceMock.Setup(s => s.RetrieveOrderChainTracking("ttd", request.IdempotencyId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((NotificationOrderChainResponse?)null);
+        orderServiceMock.Setup(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ServiceError(422, "Missing recipients"));
+        var httpContext = new DefaultHttpContext();
+        httpContext.Items["Org"] = "ttd";
+        var controller = new FutureOrdersController(orderServiceMock.Object, validatorMock.Object)
+        {
+            ControllerContext = new ControllerContext { HttpContext = httpContext }
+        };
+        
+        // Act
+        var result = await controller.Post(request);
+        
+        // Assert
         var statusCodeResult = Assert.IsType<ObjectResult>(result.Result);
-        Assert.Equal(499, statusCodeResult.StatusCode);
-        Assert.NotNull(statusCodeResult.Value);
-        Assert.Contains("Request terminated", statusCodeResult.Value.ToString());
+        var problemDetails = Assert.IsType<ProblemDetails>(statusCodeResult.Value);
+        Assert.NotNull(problemDetails);
+        Assert.Equal(422, problemDetails.Status);
+        Assert.Equal("Missing recipients", problemDetails.Detail);
     }
 
     [Fact]
@@ -631,10 +664,13 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var result = await controller.Post(request);
 
         // Assert
+        // Cast the result as a ProblemDetails object and verify its contents
         var statusCodeResult = Assert.IsType<ObjectResult>(result.Result);
-        Assert.Equal(499, statusCodeResult.StatusCode);
-        Assert.NotNull(statusCodeResult.Value);
-        Assert.Contains("Request terminated", statusCodeResult.Value.ToString());
+        var problemDetails = Assert.IsType<ProblemDetails>(statusCodeResult.Value);
+
+        Assert.NotNull(problemDetails);
+        Assert.Equal(499, problemDetails.Status);
+        Assert.Contains("Request terminated", problemDetails.Title);
     }
 
     [Fact]
