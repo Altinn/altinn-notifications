@@ -682,25 +682,18 @@ public class OrderRequestServiceTests
         Result<NotificationOrderChainResponse, ServiceError> result = await service.RegisterNotificationOrderChain(orderChainRequest);
 
         // Assert
-        var match = result.Match(
+        result.Match(
             result =>
             {
+                Assert.Fail("Expected error but got success");
                 return false;
             },
             error =>
             {
+                Assert.IsType<ServiceError>(result.Error);
+                Assert.Equal("Missing contact information for recipient(s): 312508729", result.Error.ErrorMessage);
                 return true;
             });
-
-        if (match)
-        {
-            Assert.IsType<ServiceError>(result.Error);
-            Assert.Equal("Missing contact information for recipient(s): 312508729", result.Error.ErrorMessage);
-        }
-        else
-        {
-            Assert.Fail("Expected error but got success");
-        }
     }
 
     /// <summary>
@@ -737,28 +730,36 @@ public class OrderRequestServiceTests
                     }
                 }
             })
-            .SetReminders(new List<NotificationReminder>
-            {
-                new NotificationReminder
+            .SetReminders(
+            [
+                new() 
                 {
                     DelayDays = 7,
                     Recipient = new NotificationRecipient
                     {
                         RecipientOrganization = new RecipientOrganization
                         {
-                            ChannelSchema = NotificationChannel.EmailAndSms,
+                            ChannelSchema = NotificationChannel.Email,
                             OrgNumber = "312508730",
-                            ResourceId = "urn:altinn:resource:email-sms-resource-name"
+                            ResourceId = "urn:altinn:resource:email-sms-resource-name",
+                            EmailSettings = new EmailSendingOptions
+                            {
+                                Subject = "Annual Report 2025",
+                                ContentType = EmailContentType.Html,
+                                SenderEmailAddress = "no-reply@brreg.no",
+                                SendingTimePolicy = SendingTimePolicy.Anytime,
+                                Body = "<p>Your organization's annual report is due by March 31, 2025. Log in to Altinn to complete it.</p>"
+                            }
                         }
                     }
                 }
-            })
+            ])
             .Build();
 
         var orderRepositoryMock = new Mock<IOrderRepository>();
         var contactPointServiceMock = new Mock<IContactPointService>();
         contactPointServiceMock
-            .Setup(contactService => contactService.AddEmailAndSmsContactPointsAsync(It.IsAny<List<Recipient>>(), It.IsAny<string?>()))
+            .Setup(contactService => contactService.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>()))
             .Callback<List<Recipient>, string?>((recipients, _) =>
             {
                 // no recipient info for the reminder organization
@@ -766,7 +767,7 @@ public class OrderRequestServiceTests
                 {
                     if (recipient != null && string.Equals(recipient.OrganizationNumber, "312508729", StringComparison.Ordinal))
                     {
-                        recipient.AddressInfo.Add(new SmsAddressPoint("+4799999999"));
+                        recipient.AddressInfo.Add(new EmailAddressPoint("recipient@example.com"));
                     }
                 }   
             });
@@ -777,25 +778,19 @@ public class OrderRequestServiceTests
         Result<NotificationOrderChainResponse, ServiceError> result = await service.RegisterNotificationOrderChain(orderChainRequest);
 
         // Assert
-        var match = result.Match(
+        result.Match(
             result =>
             {
+                Assert.Fail("Expected error but got success");
                 return false;
             },
             error =>
             {
+                Assert.IsType<ServiceError>(result.Error);
+                Assert.Equal("Missing contact information for recipient(s): 312508730", result.Error.ErrorMessage);
+
                 return true;
             });
-
-        if (match)
-        {
-            Assert.IsType<ServiceError>(result.Error);
-            Assert.Equal("Missing contact information for recipient(s): 312508730", result.Error.ErrorMessage);
-        }
-        else
-        {
-            Assert.Fail("Expected error but got success");
-        }
     }
 
     [Theory]
@@ -823,9 +818,9 @@ public class OrderRequestServiceTests
             {
                 RecipientPerson = new RecipientPerson
                 {
+                    ResourceId = resourceId,
                     IgnoreReservation = true,
                     NationalIdentityNumber = "29105573746",
-                    ResourceId = resourceId,
                     ChannelSchema = NotificationChannel.EmailPreferred,
 
                     EmailSettings = new EmailSendingOptions
