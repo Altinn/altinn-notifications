@@ -21,7 +21,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers;
 public class FutureOrdersControllerTests
 {
     private readonly FutureOrdersController _controller;
-    private Mock<IOrderRequestService> _orderRequestService;
+    private readonly Mock<IOrderRequestService> _orderRequestService;
 
     public FutureOrdersControllerTests()
     {
