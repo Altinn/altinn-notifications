@@ -7,6 +7,7 @@ using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Models;
 
 using Microsoft.Extensions.Options;
@@ -84,13 +85,13 @@ public class OrderRequestService : IOrderRequestService
     }
 
     /// <inheritdoc/>
-    public async Task<NotificationOrderChainResponse> RegisterNotificationOrderChain(NotificationOrderChainRequest orderRequest, CancellationToken cancellationToken = default)
+    public async Task<Result<NotificationOrderChainResponse, ServiceError>> RegisterNotificationOrderChain(NotificationOrderChainRequest orderRequest, CancellationToken cancellationToken = default)
     {
         DateTime currentTime = _dateTime.UtcNow();
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        var mainOrder = await CreateNotificationOrder(
+        Result<NotificationOrder, ServiceError> mainOrder = await CreateNotificationOrder(
             orderRequest.Recipient,
             orderRequest.OrderId,
             orderRequest.SendersReference,
@@ -99,17 +100,27 @@ public class OrderRequestService : IOrderRequestService
             currentTime,
             orderRequest.ConditionEndpoint);
 
+        if (mainOrder.IsError && mainOrder.Error != null)
+        {
+            return mainOrder.Error;
+        }
+
         var reminderOrders = await CreateNotificationOrders(
             orderRequest.Reminders,
             orderRequest.Creator,
             currentTime,
             cancellationToken);
 
-        List<NotificationOrder> savedOrders = await _repository.Create(orderRequest, mainOrder, reminderOrders, cancellationToken);
+        if (reminderOrders.IsError && reminderOrders.Error != null)
+        {
+            return reminderOrders.Error;
+        }
+
+        List<NotificationOrder> savedOrders = await _repository.Create(orderRequest, mainOrder.Value!, reminderOrders.Value, cancellationToken);
 
         if (savedOrders == null || savedOrders.Count == 0)
         {
-            throw new InvalidOperationException("Failed to create the notification order chain.");
+            return new ServiceError(422, "Failed to create the notification order chain.");
         }
 
         // Get the main order (first in the list)
@@ -161,23 +172,24 @@ public class OrderRequestService : IOrderRequestService
     /// An optional <see cref="Uri"/> that serves as an endpoint to evaluate whether the notification should be sent.
     /// </param>
     /// <returns>
-    /// A <see cref="Task{NotificationOrder}"/> representing the asynchronous operation that returns the newly created notification order.
+    /// On success a <see cref="Task{TResult}"/> containing a <see cref="NotificationOrder"/> returns the newly created notification order.
+    /// On failure, a <see cref="ServiceError"/> indicating the reason for failure.
     /// </returns>
     /// <remarks>
     /// This method extracts the delivery components (such as the recipient list, notification templates,
     /// notification channel, reservation flag, and resource identifier) from the provided <paramref name="recipient"/>.
     /// It performs a recipient lookup to ensure all necessary contact information exists.
-    /// If any required contact data is missing, an <see cref="InvalidOperationException"/> is thrown.
     /// Additionally, default sender information is applied to any templates that lack sender details.
     /// </remarks>
-    private async Task<NotificationOrder> CreateNotificationOrder(NotificationRecipient recipient, Guid orderId, string? sendersReference, DateTime requestedSendTime, Creator creator, DateTime currentTime, Uri? conditionEndpoint)
+    private async Task<Result<NotificationOrder, ServiceError>> CreateNotificationOrder(NotificationRecipient recipient, Guid orderId, string? sendersReference, DateTime requestedSendTime, Creator creator, DateTime currentTime, Uri? conditionEndpoint)
     {
         var (recipients, templates, channel, ignoreReservation, resourceId, sendingTimePolicyForSms) = ExtractDeliveryComponents(recipient);
 
-        var lookupResult = await GetRecipientLookupResult(recipients, channel, resourceId);
+        var lookupResult = await GetRecipientLookupResult(recipients, channel, GetSanitizedResourceId(resourceId));
+
         if (lookupResult?.MissingContact?.Count > 0)
         {
-            throw new InvalidOperationException($"Missing contact information for recipient(s): {string.Join(", ", lookupResult.MissingContact)}");
+            return new ServiceError(422, $"Missing contact information for recipient(s): {string.Join(", ", lookupResult.MissingContact)}");
         }
 
         templates = SetSenderIfNotDefined(templates);
@@ -197,6 +209,22 @@ public class OrderRequestService : IOrderRequestService
             ConditionEndpoint = conditionEndpoint,
             SendingTimePolicy = sendingTimePolicyForSms
         };
+    }
+
+    private static string? GetSanitizedResourceId(string? resourceId)
+    {
+        if (!string.IsNullOrWhiteSpace(resourceId))
+        {
+            // Only perform replace if the prefix exists
+            if (resourceId.StartsWith("urn:altinn:resource:"))
+            {
+                return resourceId.Replace("urn:altinn:resource:", string.Empty);
+            }
+
+            return resourceId;
+        }
+
+        return null;
     }
 
     private async Task<RecipientLookupResult?> GetRecipientLookupResult(List<Recipient> originalRecipients, NotificationChannel channel, string? resourceId)
@@ -380,16 +408,14 @@ public class OrderRequestService : IOrderRequestService
     /// A token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.
     /// </param>
     /// <returns>
-    /// A <see cref="Task"/> representing the asynchronous operation, yielding a <see cref="List{NotificationOrder}"/> objects representing reminder orders.
+    /// On success, a <see cref="Task{TResult}"/> containing a list of <see cref="List{NotificationOrder}"/> objects representing reminder orders.
+    /// On failure, a <see cref="ServiceError"/> indicating the reason for the failure.
     /// </returns>
     /// <remarks>
     /// This method iterates through the provided reminders and, for each reminder, invokes 
     /// <see cref="CreateNotificationOrder"/> to generate a corresponding reminder order using the reminder's details.
     /// </remarks>
-    /// <exception cref="OperationCanceledException">
-    /// Thrown when the operation is canceled through the provided <paramref name="cancellationToken"/>.
-    /// </exception>
-    private async Task<List<NotificationOrder>> CreateNotificationOrders(List<NotificationReminder>? reminders, Creator creator, DateTime currentTime, CancellationToken cancellationToken = default)
+    private async Task<Result<List<NotificationOrder>, ServiceError>> CreateNotificationOrders(List<NotificationReminder>? reminders, Creator creator, DateTime currentTime, CancellationToken cancellationToken = default)
     {
         var reminderOrders = new List<NotificationOrder>();
 
@@ -402,7 +428,7 @@ public class OrderRequestService : IOrderRequestService
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var reminderOrder = await CreateNotificationOrder(
+            Result<NotificationOrder, ServiceError> result = await CreateNotificationOrder(
                 reminder.Recipient,
                 reminder.OrderId,
                 reminder.SendersReference,
@@ -411,7 +437,14 @@ public class OrderRequestService : IOrderRequestService
                 currentTime,
                 reminder.ConditionEndpoint);
 
-            reminderOrders.Add(reminderOrder);
+            if (result.IsSuccess && result.Value != null)
+            {
+                reminderOrders.Add(result.Value);
+            }
+            else if (result.IsError && result.Error != null)
+            {
+                return result.Error;
+            }
         }
 
         return reminderOrders;
