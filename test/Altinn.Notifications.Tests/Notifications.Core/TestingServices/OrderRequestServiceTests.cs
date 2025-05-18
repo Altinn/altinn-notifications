@@ -732,7 +732,7 @@ public class OrderRequestServiceTests
             })
             .SetReminders(
             [
-                new() 
+                new()
                 {
                     DelayDays = 7,
                     Recipient = new NotificationRecipient
@@ -769,7 +769,7 @@ public class OrderRequestServiceTests
                     {
                         recipient.AddressInfo.Add(new EmailAddressPoint("recipient@example.com"));
                     }
-                }   
+                }
             });
 
         var service = GetTestService(orderRepositoryMock.Object, contactPointServiceMock.Object, orderId, currentTime);
@@ -1611,16 +1611,9 @@ public class OrderRequestServiceTests
         var smsSettings = new SmsSendingOptions
         {
             Body = "Test Body",
-            Sender = "TestSender"
+            Sender = "TestSender",
+            SendingTimePolicy = sendingTimePolicyInput ?? SendingTimePolicy.Daytime
         };
-
-        if (sendingTimePolicyInput != null)
-        {
-            smsSettings = new SmsSendingOptions
-            {
-                SendingTimePolicy = sendingTimePolicyInput.Value
-            };
-        }
 
         var mockResponse = new List<NotificationOrder>
         {
