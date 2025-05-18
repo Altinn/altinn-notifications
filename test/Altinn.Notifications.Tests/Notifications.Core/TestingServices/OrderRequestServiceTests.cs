@@ -637,10 +637,6 @@ public class OrderRequestServiceTests
         repoMock.Verify(r => r.Create(It.IsAny<NotificationOrder>()), Times.Once);
     }
 
-    /// <summary>
-    /// This test verifies that the service returns a ServiceError when contact information is missing.
-    /// </summary>
-    /// <returns>An asyn task</returns>
     [Fact]
     public async Task RegisterNotificationOrderChain_ShouldReturnServiceError_WhenMissingContactInformation()
     {
@@ -652,8 +648,9 @@ public class OrderRequestServiceTests
         var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
             .SetOrderId(orderId)
             .SetOrderChainId(orderChainId)
-            .SetIdempotencyId("idempotencyMockId")
             .SetCreator(new Creator("brg"))
+            .SetType(OrderTypes.Notification)
+            .SetIdempotencyId("idempotencyMockId")
             .SetRecipient(new NotificationRecipient
             {
                 RecipientOrganization = new RecipientOrganization
@@ -702,10 +699,6 @@ public class OrderRequestServiceTests
             });
     }
 
-    /// <summary>
-    /// This test verifies that the service returns a ServiceError when contact information is missing for a reminder.
-    /// </summary>
-    /// <returns>An asyn task</returns>
     [Fact]
     public async Task RegisterNotificationOrderChain_ShouldReturnServiceError_WhenMissingContactInformationForReminder()
     {
@@ -717,8 +710,9 @@ public class OrderRequestServiceTests
         var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
             .SetOrderId(orderId)
             .SetOrderChainId(orderChainId)
-            .SetIdempotencyId("idempotencyMockId")
             .SetCreator(new Creator("brg"))
+            .SetType(OrderTypes.Notification)
+            .SetIdempotencyId("idempotencyMockId")
             .SetRecipient(new NotificationRecipient
             {
                 RecipientOrganization = new RecipientOrganization
@@ -741,12 +735,13 @@ public class OrderRequestServiceTests
                 new()
                 {
                     DelayDays = 7,
+                    Type = OrderTypes.Reminder,
                     Recipient = new NotificationRecipient
                     {
                         RecipientOrganization = new RecipientOrganization
                         {
-                            ChannelSchema = NotificationChannel.Email,
                             OrgNumber = "312508730",
+                            ChannelSchema = NotificationChannel.Email,
                             ResourceId = "urn:altinn:resource:email-sms-resource-name",
                             EmailSettings = new EmailSendingOptions
                             {
@@ -815,6 +810,7 @@ public class OrderRequestServiceTests
             .SetOrderId(mainOrderId)
             .SetOrderChainId(orderChainId)
             .SetCreator(new Creator("skd"))
+            .SetType(OrderTypes.Notification)
             .SetSendersReference("TAX-REMINDER-2025")
             .SetRequestedSendTime(mainOrderSendTime.AddDays(1))
             .SetIdempotencyId("84CD3017-92E3-4C3D-80DE-C10338F30813")
@@ -851,6 +847,7 @@ public class OrderRequestServiceTests
                 {
                     DelayDays = 7,
                     OrderId = firstReminderId,
+                    Type = OrderTypes.Reminder,
                     SendersReference = "TAX-REMINDER-2025-FIRST",
                     RequestedSendTime = mainOrderSendTime.AddDays(7),
                     ConditionEndpoint = new Uri("https://api.skatteetaten.no/conditions/incomplete"),
@@ -883,6 +880,7 @@ public class OrderRequestServiceTests
                 {
                     DelayDays = 14,
                     OrderId = secondReminderId,
+                    Type = OrderTypes.Reminder,
                     SendersReference = "TAX-REMINDER-2025-FINAL",
                     RequestedSendTime = mainOrderSendTime.AddDays(14),
                     ConditionEndpoint = new Uri("https://api.Skatteetaten.no/conditions/incomplete"),
@@ -929,7 +927,8 @@ public class OrderRequestServiceTests
             [new([], "29105573746")],
             true,
             resourceId,
-            new Uri("https://api.skatteetaten.no/conditions/new"));
+            new Uri("https://api.skatteetaten.no/conditions/new"),
+            OrderTypes.Notification);
 
         var expectedFirstReminder = new NotificationOrder(
             firstReminderId,
@@ -945,7 +944,8 @@ public class OrderRequestServiceTests
             [new([], "29105573746")],
             true,
             resourceId,
-            new Uri("https://api.skatteetaten.no/conditions/incomplete"));
+            new Uri("https://api.skatteetaten.no/conditions/incomplete"),
+            OrderTypes.Reminder);
 
         var expectedFinalReminder = new NotificationOrder(
             secondReminderId,
@@ -961,7 +961,8 @@ public class OrderRequestServiceTests
             [new([], "29105573746")],
             true,
             resourceId,
-            new Uri("https://api.Skatteetaten.no/conditions/incomplete"));
+            new Uri("https://api.Skatteetaten.no/conditions/incomplete"),
+            OrderTypes.Reminder);
 
         var orderRepositoryMock = new Mock<IOrderRepository>();
         var contactPointServiceMock = new Mock<IContactPointService>();
@@ -1033,10 +1034,12 @@ public class OrderRequestServiceTests
                         It.Is<NotificationOrderChainRequest>(req =>
                             req.OrderChainId == orderChainId &&
                             req.DialogportenAssociation != null &&
+                            req.Type == OrderTypes.Notification &&
                             req.DialogportenAssociation.DialogId == "20E3D06D5546" &&
                             req.DialogportenAssociation.TransmissionId == "F9D34BB1C65F"),
                         It.Is<NotificationOrder>(o =>
                             o.Id == mainOrderId &&
+                            o.Type == OrderTypes.Notification &&
                             o.SendersReference == "TAX-REMINDER-2025" &&
                             o.ResourceId == resourceId &&
                             o.NotificationChannel == NotificationChannel.EmailPreferred &&
@@ -1044,7 +1047,9 @@ public class OrderRequestServiceTests
                         It.Is<List<NotificationOrder>>(list =>
                             list.Count == 2 &&
                             list[0].Id == firstReminderId &&
-                            list[1].Id == secondReminderId),
+                            list[1].Id == secondReminderId &&
+                            list[0].Type == OrderTypes.Reminder &&
+                            list[1].Type == OrderTypes.Reminder),
                         It.IsAny<CancellationToken>()),
                     Times.Once);
 
@@ -1087,6 +1092,7 @@ public class OrderRequestServiceTests
             .SetOrderId(orderId)
             .SetOrderChainId(orderChainId)
             .SetCreator(new Creator("brg"))
+            .SetType(OrderTypes.Notification)
             .SetSendersReference("REF-42DBDAB8281C")
             .SetRequestedSendTime(currentTime.AddHours(2))
             .SetIdempotencyId("A5B28914-7056-4E3B-9DAF-BEA23321D39C")
@@ -1133,7 +1139,8 @@ public class OrderRequestServiceTests
             [new([], organizationNumber: "312508729")],
             null,
             "urn:altinn:resource:email-sms-resource-name",
-            new Uri("https://api.brreg.no/conditions/notification"));
+            new Uri("https://api.brreg.no/conditions/notification"),
+            OrderTypes.Notification);
 
         var orderRepositoryMock = new Mock<IOrderRepository>();
         orderRepositoryMock.Setup(r => r.Create(
@@ -1176,6 +1183,7 @@ public class OrderRequestServiceTests
                     It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId),
                     It.Is<NotificationOrder>(o =>
                         o.Id == orderId &&
+                        o.Type == OrderTypes.Notification &&
                         o.SendersReference == "REF-42DBDAB8281C" &&
                         o.SendingTimePolicy == SendingTimePolicy.Daytime &&
                         o.NotificationChannel == NotificationChannel.EmailAndSms &&
@@ -1212,6 +1220,7 @@ public class OrderRequestServiceTests
             .SetOrderId(orderId)
             .SetOrderChainId(orderChainId)
             .SetCreator(new Creator("test"))
+            .SetType(OrderTypes.Notification)
             .SetIdempotencyId("test-idempotency-id")
             .SetRecipient(new NotificationRecipient
             {
@@ -1267,6 +1276,7 @@ public class OrderRequestServiceTests
             .SetOrderId(mainOrderId)
             .SetOrderChainId(orderChainId)
             .SetCreator(new Creator("test"))
+            .SetType(OrderTypes.Notification)
             .SetIdempotencyId("test-cancellation-id")
             .SetRequestedSendTime(mainOrderSendTime.AddDays(1))
             .SetRecipient(new NotificationRecipient
@@ -1573,6 +1583,7 @@ public class OrderRequestServiceTests
                     .SetRecipient(recipient)
                     .SetOrderChainId(orderChainId)
                     .SetCreator(new Creator("test"))
+                    .SetType(OrderTypes.Notification)
                     .SetRequestedSendTime(currentTime.AddHours(1))
                     .SetIdempotencyId("C0A3FABE-D65F-48A0-8745-5D4CC6EA7968")
                     .Build());
@@ -1645,9 +1656,10 @@ public class OrderRequestServiceTests
         await service.RegisterNotificationOrderChain(
             new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
                 .SetOrderId(orderId)
-                .SetOrderChainId(orderChainId)
                 .SetRecipient(recipient)
+                .SetOrderChainId(orderChainId)
                 .SetCreator(new Creator("test"))
+                .SetType(OrderTypes.Notification)
                 .SetRequestedSendTime(currentTime.AddHours(1))
                 .SetIdempotencyId("C0A3FABE-D65F-48A0-8745-5D4CC6EA7968")
                 .Build());
