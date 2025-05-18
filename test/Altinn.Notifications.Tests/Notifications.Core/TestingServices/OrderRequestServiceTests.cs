@@ -1324,6 +1324,74 @@ public class OrderRequestServiceTests
     }
 
     [Fact]
+    public async Task RegisterNotificationOrderChain_WithMissingSmsContactInformation_ReturnsServiceError()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        Guid orderChainId = Guid.NewGuid();
+        DateTime currentTime = DateTime.UtcNow;
+
+        var orderChainRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+            .SetOrderId(orderId)
+            .SetOrderChainId(orderChainId)
+            .SetCreator(new Creator("skd"))
+            .SetType(OrderTypes.Notification)
+            .SetIdempotencyId("sms-missing-contact-test-id")
+            .SetRecipient(new NotificationRecipient
+            {
+                RecipientPerson = new RecipientPerson
+                {
+                    NationalIdentityNumber = "16069412345",
+                    ChannelSchema = NotificationChannel.Sms,
+                    ResourceId = "urn:altinn:resource:sms-test",
+                    SmsSettings = new SmsSendingOptions
+                    {
+                        Body = "Test SMS body",
+                        Sender = "TestSender"
+                    }
+                }
+            })
+            .Build();
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        var contactPointServiceMock = new Mock<IContactPointService>();
+        contactPointServiceMock
+            .Setup(contactService => contactService.AddSmsContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>()))
+            .Callback<List<Recipient>, string?>((recipients, _) =>
+            {
+                // Intentionally don't add SMS contact point to simulate missing contact
+            });
+
+        var service = GetTestService(orderRepositoryMock.Object, contactPointServiceMock.Object, orderId, currentTime);
+
+        // Act
+        Result<NotificationOrderChainResponse, ServiceError> result = await service.RegisterNotificationOrderChain(orderChainRequest);
+
+        // Assert
+        result.Match(
+            success =>
+            {
+                Assert.Fail("Expected error but got success result instead");
+                return false;
+            },
+            error =>
+            {
+                Assert.IsType<ServiceError>(result.Error);
+                Assert.Equal(422, error.ErrorCode);
+                Assert.Equal("Missing contact information for recipient(s): 16069412345", error.ErrorMessage);
+
+                // Verify the contact point service was called with SMS channel
+                contactPointServiceMock.Verify(
+                    cp => cp.AddSmsContactPoints(
+                        It.Is<List<Recipient>>(r => r.Any(rec => rec.NationalIdentityNumber == "16069412345")),
+                        It.Is<string?>(s => s == "sms-test")),
+                    Times.Once);
+
+                return true;
+            });
+    }
+
+    [Fact]
     public async Task RetrieveOrderChainTracking_WhenCancellationRequested_ThrowsOperationCanceledException()
     {
         // Arrange
