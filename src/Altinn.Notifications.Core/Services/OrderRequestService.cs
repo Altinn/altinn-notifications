@@ -350,18 +350,12 @@ public class OrderRequestService : IOrderRequestService
 
     private static string? GetSanitizedResourceId(string? resourceId)
     {
-        if (!string.IsNullOrWhiteSpace(resourceId))
+        if (string.IsNullOrWhiteSpace(resourceId))
         {
-            // Only perform replace if the prefix exists
-            if (resourceId.StartsWith("urn:altinn:resource:"))
-            {
-                return resourceId.Replace("urn:altinn:resource:", string.Empty);
-            }
-
-            return resourceId;
+            return null;
         }
 
-        return null;
+        return resourceId.StartsWith("urn:altinn:resource:", StringComparison.Ordinal) ? resourceId["urn:altinn:resource:".Length..] : resourceId;
     }
 
     private async Task<RecipientLookupResult?> GetRecipientLookupResult(List<Recipient> originalRecipients, NotificationChannel channel, string? resourceId)
