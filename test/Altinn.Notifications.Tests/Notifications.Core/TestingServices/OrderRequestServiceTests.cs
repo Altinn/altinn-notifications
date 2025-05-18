@@ -1618,8 +1618,6 @@ public class OrderRequestServiceTests
         {
             smsSettings = new SmsSendingOptions
             {
-                Body = "Test Body",
-                Sender = "TestSender",
                 SendingTimePolicy = sendingTimePolicyInput.Value
             };
         }
