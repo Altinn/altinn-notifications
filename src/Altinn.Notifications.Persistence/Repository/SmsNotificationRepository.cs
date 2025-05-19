@@ -21,7 +21,6 @@ public class SmsNotificationRepository : ISmsNotificationRepository
     private const string _getNewSmsNotificationsSql = "select * from notifications.getsms_statusnew_updatestatus($1)"; // (_sendingtimepolicy) this is now calling an overload function with the sending time policy parameter
     private const string _getSmsNotificationRecipientsSql = "select * from notifications.getsmsrecipients_v2($1)"; // (_orderid)
     private const string _insertNewSmsNotificationSql = "call notifications.insertsmsnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _customizedbody, _result, _smscount, _resulttime, _expirytime)
-    private const string _ordertransitiontofinalstatusSql = "SELECT notifications.ordertransitiontofinalstatus($1)"; // (_alternateid)
 
     private const string _updateSmsNotificationBasedOnIdentifierSql =
         @"UPDATE notifications.smsnotifications 
@@ -130,26 +129,6 @@ public class SmsNotificationRepository : ISmsNotificationRepository
         {
             await UpdateSendStatusByGatewayReference(gatewayReference, result);
         }
-    }
-
-    /// <inheritdoc/>
-    public async Task<bool> TryTransitionOrderToFinalStatus(Guid? notificationId)
-    {
-        if (notificationId is null || notificationId == Guid.Empty)
-        {
-            return false;
-        }
-
-        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_ordertransitiontofinalstatusSql);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId);
-
-        var result = await pgcom.ExecuteScalarAsync();
-        if (result == null)
-        {
-            return false;
-        }
-
-        return (bool)result;
     }
 
     /// <summary>

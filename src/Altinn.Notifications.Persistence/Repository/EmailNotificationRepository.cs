@@ -21,7 +21,6 @@ public class EmailNotificationRepository : IEmailNotificationRepository
     private const string _insertEmailNotificationSql = "call notifications.insertemailnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _toaddress, _customizedbody, _customizedsubject, _result, _resulttime, _expirytime)
     private const string _getEmailNotificationsSql = "select * from notifications.getemails_statusnew_updatestatus()";
     private const string _getEmailRecipients = "select * from notifications.getemailrecipients_v2($1)"; // (_orderid)
-    private const string _ordertransitiontofinalstatusSql = "SELECT notifications.ordertransitiontofinalstatus($1)"; // (_alternateid)
     private const string _updateEmailStatus =
         @"UPDATE notifications.emailnotifications 
         SET result = $1::emailnotificationresulttype, 
@@ -115,25 +114,5 @@ public class EmailNotificationRepository : IEmailNotificationRepository
         }
 
         return searchResult;
-    }
-
-    /// <inheritdoc/>
-    public async Task<bool> TryTransitionOrderToFinalStatus(Guid? notificationId)
-    {
-        if (notificationId is null || notificationId == Guid.Empty)
-        {
-            return false;
-        }
-
-        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_ordertransitiontofinalstatusSql);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId);
-
-        var result = await pgcom.ExecuteScalarAsync();
-        if (result == null)
-        {
-            return false;
-        }
-
-        return (bool)result;
     }
 }
