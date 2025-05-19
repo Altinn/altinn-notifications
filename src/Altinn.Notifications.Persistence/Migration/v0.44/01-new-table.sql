@@ -10,6 +10,7 @@
 
 CREATE INDEX IF NOT EXISTS idx_statusfeed_orderid ON notifications.statusfeed(orderid);
 CREATE INDEX IF NOT EXISTS idx_statusfeed_creatorname ON notifications.statusfeed (creatorname);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_sequencenumber_creatorname ON notifications.statusfeed (sequencenumber, creatorname);
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE notifications.statusfeed TO platform_notifications;
 GRANT USAGE, SELECT ON SEQUENCE notifications.statusfeed__id_seq TO platform_notifications;
