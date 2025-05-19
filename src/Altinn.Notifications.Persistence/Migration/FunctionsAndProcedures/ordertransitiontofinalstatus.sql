@@ -10,7 +10,7 @@ BEGIN
     FROM notifications.smsnotifications 
     WHERE alternateid = notification_id;
     
-    -- If not found in SMS, try the Email notifications table
+    -- If not found, try the Email notifications table
     IF order_id IS NULL THEN
         SELECT _orderid INTO order_id 
         FROM notifications.emailnotifications 
