@@ -1,6 +1,7 @@
 ﻿CREATE TABLE IF NOT EXISTS notifications.statusfeed
 (
   _id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  sequencenumber BIGINT NOT NULL,
   orderid BIGINT NOT NULL,
   creatorname TEXT NOT NULL,
   created TIMESTAMPTZ NOT NULL,
