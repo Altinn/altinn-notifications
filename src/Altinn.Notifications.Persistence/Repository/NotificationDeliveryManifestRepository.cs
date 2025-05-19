@@ -73,6 +73,7 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
     private static readonly Dictionary<string, ProcessingLifecycle> _orderStatusMap = new(StringComparer.OrdinalIgnoreCase)
     {
         { "cancelled", ProcessingLifecycle.Order_Cancelled },
+        { "processed", ProcessingLifecycle.Order_Processed },
         { "completed", ProcessingLifecycle.Order_Completed },
         { "registered", ProcessingLifecycle.Order_Registered },
         { "processing", ProcessingLifecycle.Order_Processing },
