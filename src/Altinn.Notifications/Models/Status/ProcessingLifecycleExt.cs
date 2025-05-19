@@ -72,7 +72,7 @@ public enum ProcessingLifecycleExt
     /// </summary>
     /// <remarks>
     /// In this state, the system has successfully processed the order and generated all required notifications,
-    /// but is still awaiting final delivery status reports from SMS or email service providers.
+    /// but is still awaiting final delivery status reports from SMS and/or email service providers.
     /// This differs from Order_Completed, which indicates all notifications have received their final status.
     /// </remarks>
     Order_Processed = 5,

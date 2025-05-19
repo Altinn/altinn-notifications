@@ -81,7 +81,7 @@ public class SmsNotificationService : ISmsNotificationService
     {
         await _repository.UpdateSendStatus(sendOperationResult.NotificationId, sendOperationResult.SendResult, sendOperationResult.GatewayReference);
 
-        await _repository.TryTransitionOrderToFinalStatus(sendOperationResult.NotificationId.Value);
+        await _repository.TryTransitionOrderToFinalStatus(sendOperationResult.NotificationId);
     }
 
     /// <summary>
