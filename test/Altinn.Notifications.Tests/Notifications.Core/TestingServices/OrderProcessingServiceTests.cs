@@ -204,7 +204,7 @@ public class OrderProcessingServiceTests
         smsMockService.Setup(s => s.ProcessOrder(It.IsAny<NotificationOrder>())).Throws(new Exception());
 
         var repoMock = new Mock<IOrderRepository>();
-        repoMock.Setup(r => r.SetProcessingStatus(It.IsAny<Guid>(), It.Is<OrderProcessingStatus>(s => s.Equals(OrderProcessingStatus.Completed))));
+        repoMock.Setup(r => r.SetProcessingStatus(It.IsAny<Guid>(), It.Is<OrderProcessingStatus>(s => s.Equals(OrderProcessingStatus.Processed))));
 
         var orderProcessingService = GetTestService(repo: repoMock.Object, smsMock: smsMockService.Object);
 
@@ -214,7 +214,7 @@ public class OrderProcessingServiceTests
         // Assert
         smsMockService.Verify(s => s.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Once);
         repoMock.Verify(
-                r => r.SetProcessingStatus(It.IsAny<Guid>(), It.Is<OrderProcessingStatus>(s => s.Equals(OrderProcessingStatus.Completed))),
+                r => r.SetProcessingStatus(It.IsAny<Guid>(), It.Is<OrderProcessingStatus>(s => s.Equals(OrderProcessingStatus.Processed))),
                 Times.Never);
     }
 
@@ -349,7 +349,7 @@ public class OrderProcessingServiceTests
         smsMockService.Setup(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>())).Throws(new Exception());
 
         var repoMock = new Mock<IOrderRepository>();
-        repoMock.Setup(r => r.SetProcessingStatus(It.IsAny<Guid>(), It.Is<OrderProcessingStatus>(s => s.Equals(OrderProcessingStatus.Completed))));
+        repoMock.Setup(r => r.SetProcessingStatus(It.IsAny<Guid>(), It.Is<OrderProcessingStatus>(s => s.Equals(OrderProcessingStatus.Processed))));
 
         var orderProcessingService = GetTestService(repo: repoMock.Object, smsMock: smsMockService.Object);
 
@@ -359,7 +359,7 @@ public class OrderProcessingServiceTests
         // Assert
         smsMockService.Verify(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Once);
         repoMock.Verify(
-                r => r.SetProcessingStatus(It.IsAny<Guid>(), It.Is<OrderProcessingStatus>(s => s.Equals(OrderProcessingStatus.Completed))),
+                r => r.SetProcessingStatus(It.IsAny<Guid>(), It.Is<OrderProcessingStatus>(s => s.Equals(OrderProcessingStatus.Processed))),
                 Times.Never);
     }
 
