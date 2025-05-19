@@ -107,7 +107,7 @@ public class OrderProcessingService : IOrderProcessingService
                 break;
         }
 
-        await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.Completed);
+        await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.Processed);
     }
 
     /// <inheritdoc/>
@@ -141,7 +141,7 @@ public class OrderProcessingService : IOrderProcessingService
                 break;
         }
 
-        await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.Completed);
+        await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.Processed);
     }
 
     /// <summary>
