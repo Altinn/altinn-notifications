@@ -317,6 +317,8 @@ public class EmailNotificationServiceTests
             producer = producerMock.Object;
         }
 
-        return new EmailNotificationService(guidService.Object, dateTimeService.Object, repo, producer, Options.Create(new KafkaSettings { EmailQueueTopicName = _emailQueueTopicName }));
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+
+        return new EmailNotificationService(guidService.Object, dateTimeService.Object, repo, producer, Options.Create(new KafkaSettings { EmailQueueTopicName = _emailQueueTopicName }), orderRepositoryMock.Object);
     }
 }
