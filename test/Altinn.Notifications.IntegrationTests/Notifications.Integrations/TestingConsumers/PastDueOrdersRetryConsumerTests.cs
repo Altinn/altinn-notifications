@@ -15,8 +15,8 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
 
     /// <summary>
     /// When a new order is picked up by the consumer (this will be the retry mechanism), we expect there to be an email notification created for the recipient states in the order.
-    /// We measure the sucess of this test by confirming that a new email notificaiton has been create with a reference to our order id
-    /// as well as confirming that the order now has the status 'Completed' set at its processing status
+    /// We measure the sucess of this test by confirming that a new email notificaiton has been created with a reference to our order id
+    /// as well as confirming that the order now has the status 'Processed' set at its processing status
     /// </summary>
     [Fact]
     public async Task RunTask_ConfirmExpectedSideEffects()
@@ -43,16 +43,16 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
         await consumerRetryService.StopAsync(CancellationToken.None);
 
         // Assert
-        long completedOrderCount = await SelectCompletedOrderCount(orderId);
+        long processedOrderCount = await SelectProcessedOrderCount(orderId);
         long emailNotificationCount = await SelectEmailNotificationCount(orderId);
 
-        Assert.Equal(1, completedOrderCount);
+        Assert.Equal(1, processedOrderCount);
         Assert.Equal(1, emailNotificationCount);
     }
 
     /// <summary>
     /// When a new order is picked up by the consumer and all email notifications are created before processedstatus is changed.
-    /// We measure the sucess of this test by confirming that the processedstatus is completed.
+    /// We measure the sucess of this test by confirming that the processedstatus is Processed.
     /// </summary>
     [Fact]
     public async Task RunTask_ConfirmChangeOfStatus()
@@ -82,7 +82,7 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
         // Assert
         string processedstatus = await SelectProcessStatus(orderId);
 
-        Assert.Equal("Completed", processedstatus);
+        Assert.Equal("Processed", processedstatus);
     }
 
     public async void Dispose()
@@ -98,9 +98,9 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
         await PostgreUtil.DeleteOrderFromDb(_sendersRef);
     }
 
-    private static async Task<long> SelectCompletedOrderCount(Guid orderId)
+    private static async Task<long> SelectProcessedOrderCount(Guid orderId)
     {
-        string sql = $"select count(1) from notifications.orders where processedstatus = 'Completed' and alternateid='{orderId}'";
+        string sql = $"select count(1) from notifications.orders where processedstatus = 'Processed' and alternateid='{orderId}'";
         return await PostgreUtil.RunSqlReturnOutput<long>(sql);
     }
 
