@@ -230,14 +230,14 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         Assert.Single(smsDeliveries);
         var smsDelivery = smsDeliveries[0];
         Assert.Equal(recipientPhone, smsDelivery.Destination);
-        Assert.Equal(ProcessingLifecycle.SMS_Accepted, smsDelivery.Status);
+        Assert.Equal(ProcessingLifecycle.SMS_Delivered, smsDelivery.Status);
 
         // Verify email recipient
         var emailDeliveries = deliveryManifest.Recipients.Where(r => r is EmailDeliveryManifest).ToList();
         Assert.Single(emailDeliveries);
         var emailDelivery = emailDeliveries[0];
         Assert.Equal(recipientEmail, emailDelivery.Destination);
-        Assert.Equal(ProcessingLifecycle.Email_Succeeded, emailDelivery.Status);
+        Assert.Equal(ProcessingLifecycle.Email_Delivered, emailDelivery.Status);
     }
 
     [Fact]
