@@ -94,6 +94,8 @@ public class EmailNotificationService : IEmailNotificationService
         }
 
         await _repository.UpdateSendStatus(sendOperationResult.NotificationId, (EmailNotificationResultType)sendOperationResult.SendResult!, sendOperationResult.OperationId);
+
+        await _repository.TryTransitionOrderToFinalStatus(sendOperationResult.NotificationId);
     }
 
     /// <summary>
