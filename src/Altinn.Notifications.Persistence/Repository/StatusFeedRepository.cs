@@ -1,6 +1,7 @@
 ﻿using System.Data;
 using System.Diagnostics.CodeAnalysis;
-using Altinn.Notifications.Core.Models.Status;
+using System.Text.Json;
+using Altinn.Notifications.Core.Models.Delivery;
 using Altinn.Notifications.Core.Persistence;
 using Npgsql;
 using NpgsqlTypes;
@@ -15,7 +16,7 @@ namespace Altinn.Notifications.Persistence.Repository
     {
         private readonly NpgsqlDataSource _dataSource;
 
-        private const string _getStatusFeedSql = "select orderstatus from notifications.statusfeed where _id > $1 and creatorname=$2";
+        private const string _getStatusFeedSql = "select sequencenumber, orderstatus from notifications.statusfeed where sequencenumber >= $1 and creatorname=$2";
 
         /// <summary>
         /// Initializes a new instance of the <see cref="StatusFeedRepository"/> class.
@@ -33,24 +34,23 @@ namespace Altinn.Notifications.Persistence.Repository
         /// <param name="creatorName">Name of the service owner</param>
         /// <param name="cancellationToken">Token to cancel the ongoing operation</param>
         /// <returns>List of status feed entries</returns>
-        public async Task<List<OrderStatus>> GetStatusFeed(int seq, string creatorName, CancellationToken cancellationToken = default)
+        public async Task<List<StatusFeed>> GetStatusFeed(int seq, string creatorName, CancellationToken cancellationToken = default)
         {
             await using NpgsqlCommand command = _dataSource.CreateCommand(_getStatusFeedSql);
             command.Parameters.AddWithValue(NpgsqlDbType.Integer, seq);
             command.Parameters.AddWithValue(NpgsqlDbType.Varchar, creatorName);
 
-            List<OrderStatus> statusFeedEntries = new();
+            List<StatusFeed> statusFeedEntries = new();
 
             await using (NpgsqlDataReader reader = await command.ExecuteReaderAsync(cancellationToken))
             {
-                // Process the data from the reader
-                Console.WriteLine("hello");
                 while (await reader.ReadAsync(cancellationToken))
                 {
-                    var orderStatus = reader.GetFieldValue<OrderStatus>("orderstatus");
-                    if (orderStatus != null)
+                    var orderStatus = await reader.GetFieldValueAsync<JsonElement>("orderstatus", cancellationToken: cancellationToken);
+                    var sequenceNumber = await reader.GetFieldValueAsync<int>("sequencenumber", cancellationToken: cancellationToken);
+                    if (orderStatus.ValueKind != JsonValueKind.Null)
                     {
-                        statusFeedEntries.Add(orderStatus);
+                        statusFeedEntries.Add(new StatusFeed { OrderStatus = orderStatus, SequenceNumber = sequenceNumber });
                     }
                 }
             }

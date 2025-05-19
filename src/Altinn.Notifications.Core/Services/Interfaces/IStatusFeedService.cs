@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Shared;
+﻿using Altinn.Notifications.Core.Models.Delivery;
+using Altinn.Notifications.Core.Shared;
 
 namespace Altinn.Notifications.Core.Services.Interfaces
 {
@@ -12,7 +13,7 @@ namespace Altinn.Notifications.Core.Services.Interfaces
         /// </summary>
         /// <param name="seq">Starting point of the status feed</param>
         /// <param name="creatorName">Name of the service owner</param>
-        /// <returns></returns>
-        Task<Result<object, ServiceError>> GetStatusFeed(int seq, string creatorName);
+        /// <returns>Result object containing List of order status objects on success, Contains a ServiceError object on failure</returns>
+        Task<Result<List<StatusFeed>, ServiceError>> GetStatusFeed(int seq, string creatorName);
     }
 }

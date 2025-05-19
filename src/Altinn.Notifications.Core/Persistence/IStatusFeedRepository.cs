@@ -1,4 +1,4 @@
-﻿using Altinn.Notifications.Core.Models.Status;
+﻿using Altinn.Notifications.Core.Models.Delivery;
 
 namespace Altinn.Notifications.Core.Persistence
 {
@@ -14,6 +14,6 @@ namespace Altinn.Notifications.Core.Persistence
         /// <param name="creatorName">Name of service owner</param>
         /// <param name="cancellationToken">Token for canceling the current request</param>
         /// <returns></returns>
-        Task<List<OrderStatus>> GetStatusFeed(int seq, string creatorName, CancellationToken cancellationToken = default);
+        Task<List<StatusFeed>> GetStatusFeed(int seq, string creatorName, CancellationToken cancellationToken = default);
     }
 }

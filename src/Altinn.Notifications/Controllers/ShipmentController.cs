@@ -24,54 +24,13 @@ namespace Altinn.Notifications.Controllers;
 public class ShipmentController : ControllerBase
 {
     private readonly INotificationDeliveryManifestService _notificationDeliveryManifestService;
-    private readonly IStatusFeedService _statusFeedService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ShipmentController"/> class.
     /// </summary>
-    public ShipmentController(INotificationDeliveryManifestService notificationDeliveryManifestService, IStatusFeedService statusFeedService)
+    public ShipmentController(INotificationDeliveryManifestService notificationDeliveryManifestService)
     {
         _notificationDeliveryManifestService = notificationDeliveryManifestService;
-        _statusFeedService = statusFeedService;
-    }
-
-    /// <summary>
-    /// Retrieve an array of order status change history.
-    /// </summary>
-    /// <returns>A <see cref="Task{TResult}"/> representing the result of the asynchronous operation.</returns>
-    [HttpGet("feed")]
-    [Consumes("application/json")]
-    [Produces("application/json")]
-    public async Task<IActionResult> GetStatusFeed([FromQuery] int seq = 1)
-    {
-        try
-        {
-            string? creatorName = HttpContext.GetOrg();
-            if (creatorName == null)
-            {
-                return Forbid();
-            }
-
-            var result = await _statusFeedService.GetStatusFeed(seq, creatorName);
-
-            return result.Match<ActionResult>(
-                statusFeed =>
-                {
-                    return Ok(statusFeed);
-                },
-                error =>
-                {
-                    return StatusCode(error.ErrorCode, new ProblemDetails
-                    {
-                        Status = error.ErrorCode,
-                        Detail = error.ErrorMessage
-                    });
-                });
-        }
-        catch (OperationCanceledException)
-        {
-            return StatusCode(499, "Request terminated - The client disconnected or cancelled the request before the server could complete processing");
-        }
     }
 
     /// <summary>
