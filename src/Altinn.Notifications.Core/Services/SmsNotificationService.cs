@@ -20,6 +20,7 @@ public class SmsNotificationService : ISmsNotificationService
     private readonly IGuidService _guid;
     private readonly IDateTimeService _dateTime;
     private readonly ISmsNotificationRepository _repository;
+    private readonly IOrderRepository _orderRepository;
     private readonly IKafkaProducer _producer;
     private readonly string _smsQueueTopicName;
 
@@ -31,13 +32,15 @@ public class SmsNotificationService : ISmsNotificationService
         IDateTimeService dateTime,
         ISmsNotificationRepository repository,
         IKafkaProducer producer,
-        IOptions<KafkaSettings> kafkaSettings)
+        IOptions<KafkaSettings> kafkaSettings,
+        IOrderRepository orderRepository)
     {
         _guid = guid;
         _dateTime = dateTime;
         _repository = repository;
         _producer = producer;
         _smsQueueTopicName = kafkaSettings.Value.SmsQueueTopicName;
+        _orderRepository = orderRepository;
     }
 
     /// <inheritdoc/>
@@ -80,6 +83,27 @@ public class SmsNotificationService : ISmsNotificationService
     public async Task UpdateSendStatus(SmsSendOperationResult sendOperationResult)
     {
         await _repository.UpdateSendStatus(sendOperationResult.NotificationId, sendOperationResult.SendResult, sendOperationResult.GatewayReference);
+
+        switch (sendOperationResult.SendResult)
+        {
+            case SmsNotificationResultType.New:
+            case SmsNotificationResultType.Sending:
+            case SmsNotificationResultType.Accepted:
+                break;
+
+            case SmsNotificationResultType.Failed:
+            case SmsNotificationResultType.Delivered:
+            case SmsNotificationResultType.Failed_Deleted:
+            case SmsNotificationResultType.Failed_Expired:
+            case SmsNotificationResultType.Failed_Rejected:
+            case SmsNotificationResultType.Failed_Undelivered:
+            case SmsNotificationResultType.Failed_BarredReceiver:
+            case SmsNotificationResultType.Failed_InvalidRecipient:
+            case SmsNotificationResultType.Failed_RecipientReserved:
+            case SmsNotificationResultType.Failed_RecipientNotIdentified:
+                await _orderRepository.TryTransitionToFinalStatus(sendOperationResult.NotificationId);
+                break;
+        }
     }
 
     /// <summary>

@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION notifications.ordertransitiontofinalstatus(notification_id uuid)
+CREATE OR REPLACE FUNCTION notifications.ordertransitiontofinalstatus(notificationid uuid)
 RETURNS boolean AS $$
 DECLARE
     order_id bigint;

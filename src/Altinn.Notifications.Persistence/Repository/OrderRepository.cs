@@ -34,6 +34,7 @@ public class OrderRepository : IOrderRepository
     private const string _cancelAndReturnOrder = "select * from notifications.cancelorder($1, $2)"; // _alternateid,  creator
     private const string _insertorderchainSql = "call notifications.insertorderchain($1, $2, $3, $4, $5)"; // (_orderid, _idempotencyid, _creatorname, _created, _orderchain)
     private const string _getOrdersChainTrackingSql = "SELECT * FROM notifications.get_orders_chain_tracking($1, $2)"; // (_creatorname, _idempotencyid)
+    private const string _ordertransitiontofinalstatusSql = "SELECT notifications.ordertransitiontofinalstatus($1)"; // (notificationid)
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderRepository"/> class.
@@ -290,6 +291,26 @@ public class OrderRepository : IOrderRepository
 
         NotificationOrderWithStatus? order = ReadNotificationOrderWithStatus(reader);
         return order!;
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> TryTransitionToFinalStatus(Guid? notificationId)
+    {
+        if (notificationId is null || notificationId == Guid.Empty)
+        {
+            return false;
+        }
+
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_ordertransitiontofinalstatusSql);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId);
+
+        var result = await pgcom.ExecuteScalarAsync();
+        if (result == null)
+        {
+            return false;
+        }
+
+        return (bool)result;
     }
 
     private static NotificationOrderWithStatus? ReadNotificationOrderWithStatus(NpgsqlDataReader reader)

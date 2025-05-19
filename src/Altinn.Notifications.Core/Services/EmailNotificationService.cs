@@ -21,28 +21,26 @@ public class EmailNotificationService : IEmailNotificationService
     private readonly IGuidService _guid;
     private readonly string _emailQueueTopicName;
     private readonly IEmailNotificationRepository _repository;
+    private readonly IOrderRepository _orderRepository;
     private readonly IKafkaProducer _producer;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotificationService"/> class.
     /// </summary>
-    /// <param name="guid">The GUID service.</param>
-    /// <param name="dateTime">The date time service.</param>
-    /// <param name="repository">The email notification repository.</param>
-    /// <param name="producer">The Kafka producer.</param>
-    /// <param name="kafkaSettings">The Kafka settings.</param>
     public EmailNotificationService(
         IGuidService guid,
         IDateTimeService dateTime,
         IEmailNotificationRepository repository,
         IKafkaProducer producer,
-        IOptions<KafkaSettings> kafkaSettings)
+        IOptions<KafkaSettings> kafkaSettings,
+        IOrderRepository orderRepository)
     {
         _guid = guid;
         _dateTime = dateTime;
         _producer = producer;
         _repository = repository;
         _emailQueueTopicName = kafkaSettings.Value.EmailQueueTopicName;
+        _orderRepository = orderRepository;
     }
 
     /// <inheritdoc/>
@@ -93,7 +91,30 @@ public class EmailNotificationService : IEmailNotificationService
             sendOperationResult.SendResult = EmailNotificationResultType.New;
         }
 
-        await _repository.UpdateSendStatus(sendOperationResult.NotificationId, (EmailNotificationResultType)sendOperationResult.SendResult!, sendOperationResult.OperationId);
+        var emailDeliveryStatus = (EmailNotificationResultType)sendOperationResult.SendResult!;
+
+        await _repository.UpdateSendStatus(sendOperationResult.NotificationId, emailDeliveryStatus, sendOperationResult.OperationId);
+
+        switch (emailDeliveryStatus)
+        {
+            case EmailNotificationResultType.New:
+            case EmailNotificationResultType.Sending:
+            case EmailNotificationResultType.Succeeded:
+                break;
+
+            case EmailNotificationResultType.Failed:
+            case EmailNotificationResultType.Delivered:
+            case EmailNotificationResultType.Failed_Bounced:
+            case EmailNotificationResultType.Failed_Quarantined:
+            case EmailNotificationResultType.Failed_FilteredSpam:
+            case EmailNotificationResultType.Failed_TransientError:
+            case EmailNotificationResultType.Failed_RecipientReserved:
+            case EmailNotificationResultType.Failed_InvalidEmailFormat:
+            case EmailNotificationResultType.Failed_SupressedRecipient:
+            case EmailNotificationResultType.Failed_RecipientNotIdentified:
+                await _orderRepository.TryTransitionToFinalStatus(sendOperationResult.NotificationId);
+                break;
+        }
     }
 
     /// <summary>
