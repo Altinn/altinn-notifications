@@ -201,8 +201,8 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         // Directly modify the order status and notification statuses in the database to test status mapping
         // Note: This is typically not recommended in production code but useful for testing
         string updateOrderSql = $@"UPDATE notifications.orders SET processedstatus = 'Completed' WHERE alternateid = '{orderId}'";
-        string updateSmsSql = $@"UPDATE notifications.smsnotifications SET result = 'Accepted' WHERE alternateid = '{smsNotificationId}'";
-        string updateEmailSql = $@"UPDATE notifications.emailnotifications SET result = 'Succeeded' WHERE alternateid = '{emailNotificationId}'";
+        string updateSmsSql = $@"UPDATE notifications.smsnotifications SET result = 'Delivered' WHERE alternateid = '{smsNotificationId}'";
+        string updateEmailSql = $@"UPDATE notifications.emailnotifications SET result = 'Delivered' WHERE alternateid = '{emailNotificationId}'";
 
         await PostgreUtil.RunSql(updateOrderSql);
         await PostgreUtil.RunSql(updateSmsSql);
