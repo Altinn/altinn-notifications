@@ -1,31 +1,36 @@
 ﻿using Altinn.Notifications.Core.Models.Delivery;
 using Altinn.Notifications.Core.Persistence;
+using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
 
-namespace Altinn.Notifications.Core.Services.Interfaces
+namespace Altinn.Notifications.Core.Services;
+
+/// <summary>
+/// Service for handling status feed related operations.
+/// </summary>
+public class StatusFeedService : IStatusFeedService
 {
+    private readonly IStatusFeedRepository _statusFeedRepository;
+
     /// <summary>
-    /// Service for handling status feed related operations.
+    /// Initializes a new instance of the <see cref="StatusFeedService"/> class.
     /// </summary>
-    public class StatusFeedService : IStatusFeedService
+    /// <param name="statusFeedRepository">The repository layer concerned with database integrations</param>
+    public StatusFeedService(IStatusFeedRepository statusFeedRepository)
     {
-        private readonly IStatusFeedRepository _statusFeedRepository;
+        _statusFeedRepository = statusFeedRepository;
+    }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="StatusFeedService"/> class.
-        /// </summary>
-        /// <param name="statusFeedRepository">The repository layer concerned with database integrations</param>
-        public StatusFeedService(IStatusFeedRepository statusFeedRepository)
+    /// <inheritdoc />
+    public async Task<Result<List<StatusFeed>, ServiceError>> GetStatusFeed(int seq, string creatorName, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(creatorName))
         {
-            _statusFeedRepository = statusFeedRepository;
+            return new ServiceError(400, "Missing creator");
         }
 
-        /// <inheritdoc />
-        public async Task<Result<List<StatusFeed>, ServiceError>> GetStatusFeed(int seq, string creatorName)
-        {
-            var statusFeedEntries = await _statusFeedRepository.GetStatusFeed(seq, creatorName);
+        var statusFeedEntries = await _statusFeedRepository.GetStatusFeed(seq, creatorName, cancellationToken);
 
-            return statusFeedEntries;
-        }
+        return statusFeedEntries;
     }
 }
