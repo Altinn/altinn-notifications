@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION notifications.ordertransitiontofinalstatus(notificationid uuid)
+CREATE OR REPLACE FUNCTION notifications.trymarkorderascompleted(notificationid uuid)
 RETURNS boolean AS $$
 DECLARE
     order_id bigint;
@@ -8,13 +8,13 @@ BEGIN
     -- First, try to find order_id from the SMS notifications table
     SELECT _orderid INTO order_id 
     FROM notifications.smsnotifications 
-    WHERE alternateid = notification_id;
+    WHERE alternateid = notificationid;
     
     -- If not found, try the Email notifications table
     IF order_id IS NULL THEN
         SELECT _orderid INTO order_id 
         FROM notifications.emailnotifications 
-        WHERE alternateid = notification_id;
+        WHERE alternateid = notificationid;
         
         -- If still not found, return false (invalid notification identifier)
         IF order_id IS NULL THEN
