@@ -94,10 +94,10 @@ public class OrderRequestService : IOrderRequestService
         cancellationToken.ThrowIfCancellationRequested();
 
         // 3. Create the main order
-        var mainResult = await CreateMainNotificationOrderAsync(orderRequest, currentTime, cancellationToken);
-        if (mainResult.IsError && mainResult.Error != null)
+        var mainOrderResult = await CreateMainNotificationOrderAsync(orderRequest, currentTime, cancellationToken);
+        if (mainOrderResult.IsError && mainOrderResult.Error != null)
         {
-            return mainResult.Error;
+            return mainOrderResult.Error;
         }
 
         // 4. Create reminders
@@ -108,7 +108,7 @@ public class OrderRequestService : IOrderRequestService
         }
 
         // 5. Create the response
-        return await CreateChainResponseAsync(orderRequest, mainResult.Value, remindersResult.Value, cancellationToken);
+        return await CreateChainResponseAsync(orderRequest, mainOrderResult.Value, remindersResult.Value, cancellationToken);
     }
 
     /// <summary>
