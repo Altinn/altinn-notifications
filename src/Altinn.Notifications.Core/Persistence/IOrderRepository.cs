@@ -101,23 +101,16 @@ public interface IOrderRepository
     public Task<Result<NotificationOrderWithStatus, CancellationError>> CancelOrder(Guid id, string creator);
 
     /// <summary>
-    /// Attempts to transition the notification order to its 'Completed' status by examining the state of all related SMS and Email notifications.
+    /// Attempts to mark a notification order as 'Completed' when all its SMS and Email notifications have reached terminal states.
     /// </summary>
-    /// <param name="notificationId">The unique identifier of the SMS notification. Can be null if the operation should be skipped.</param>
+    /// <param name="notificationId">The identifier of the SMS or Email notification that triggered this check. Can be null if the operation should be skipped.</param>
     /// <returns>
-    /// <c>true</c> if the order was successfully transitioned to its final 'Completed' status;
-    /// <c>false</c> if the order remains in its current status (because the associated SMS and Email notification has not reached its final status, or the order was already completed).
+    /// <c>true</c> if the order was transitioned to 'Completed' status; <c>false</c> if it was
+    /// already completed or not all SMS and Email notifications have reached terminal states.
     /// </returns>
     /// <remarks>
-    /// <para>
-    /// The order will only transition to 'Completed' status if all of its associated SMS and Email notifications have reached terminal states 
-    /// (neither 'New', 'Sending', 'Accepted' for SMS nor 'New', 'Sending', 'Succeeded' for Email notifications).
-    /// </para>
-    /// <para>
-    /// This operation is idempotent - calling it multiple times on a notification that's already in its final status will return <c>false</c> 
-    /// indicating no change was needed. The underlying database function uses row locking to ensure thread safety.
-    /// </para>
+    /// This method finds the order associated with the provided notification identifier and checks if all its
+    /// notifications have reached terminal states. If all notifications are complete, the order is marked as 'Completed'.
     /// </remarks>
-    /// <exception cref="ArgumentException">Thrown if a database error occurs during status transition.</exception>
     public Task<bool> TryTransitionToFinalStatus(Guid? notificationId);
 }
