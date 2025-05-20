@@ -15,10 +15,11 @@ public record StatusFeedExt
     /// The sequence number of the status feed entry per creator
     /// </summary>
     [JsonPropertyName("sequenceNumber")]
-    public int SequenceNumber { get; init; }
+    public required int SequenceNumber { get; init; }
 
     /// <summary>
-    /// The string representation of the jsonb object stored in the status feed table
+    /// A JsonElement that represents of the content of the order status object
     /// </summary>
-    public JsonElement OrderStatus { get; init; } = default!;
+    [JsonPropertyName("orderStatus")]
+    public required JsonElement OrderStatus { get; init; }
 }

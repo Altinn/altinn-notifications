@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Configuration;
+﻿using System.ComponentModel.DataAnnotations;
+using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
@@ -22,11 +23,12 @@ public class StatusFeedController(IStatusFeedService statusFeedService) : Contro
     /// <summary>
     /// Retrieve an array of order status change history.
     /// </summary>
+    /// <param name="seq">The sequence number to start fetching status feed entries from</param>
     /// <returns>A <see cref="Task{TResult}"/> representing the result of the asynchronous operation.</returns>
     [HttpGet("feed")]
     [Consumes("application/json")]
     [Produces("application/json")]
-    public async Task<ActionResult<List<StatusFeedExt>>> GetStatusFeed([FromQuery] int seq)
+    public async Task<ActionResult<List<StatusFeedExt>>> GetStatusFeed([FromQuery][Range(1, int.MaxValue)] int seq = 1)
     {
         try
         {
@@ -36,12 +38,12 @@ public class StatusFeedController(IStatusFeedService statusFeedService) : Contro
                 return Forbid();
             }
 
-            var result = await statusFeedService.GetStatusFeed(seq, creatorName);
+            var result = await statusFeedService.GetStatusFeed(seq, creatorName, HttpContext.RequestAborted);
 
             return result.Match<ActionResult>(
                 statusFeed =>
                 {
-                    return Ok(statusFeed.MapToOrderStatusExtList());
+                    return Ok(statusFeed.MapToStatusFeedExtList());
                 },
                 error =>
                 {

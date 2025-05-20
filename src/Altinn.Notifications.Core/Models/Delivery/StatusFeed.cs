@@ -18,5 +18,5 @@ public record StatusFeed
     /// <summary>
     /// The string representation of the jsonb object stored in the status feed table
     /// </summary>
-    public required JsonElement OrderStatus { get; set; }
+    public required string OrderStatus { get; set; }
 }

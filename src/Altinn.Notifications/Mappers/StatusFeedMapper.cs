@@ -1,4 +1,5 @@
 ﻿using System.Collections.Immutable;
+using System.Text.Json;
 using Altinn.Notifications.Core.Models.Delivery;
 using Altinn.Notifications.Models.Delivery;
 using Altinn.Notifications.Models.Status;
@@ -15,17 +16,20 @@ namespace Altinn.Notifications.Mappers
         /// </summary>
         /// <param name="orderStatuses">List of order status domain model objects</param>
         /// <returns></returns>
-        public static List<StatusFeedExt> MapToOrderStatusExtList(this List<StatusFeed> orderStatuses)
+        public static List<StatusFeedExt> MapToStatusFeedExtList(this List<StatusFeed> orderStatuses)
         {
-            return orderStatuses.Select(MapToOrderStatusExt).ToList();
+            return orderStatuses.Select(MapToStatusFeedExt).ToList();
         }
 
-        private static StatusFeedExt MapToOrderStatusExt(StatusFeed status)
+        private static StatusFeedExt MapToStatusFeedExt(StatusFeed status)
         {
+            using JsonDocument jsonDocument = JsonDocument.Parse(status.OrderStatus);
+            var jsonElement = jsonDocument.RootElement.Clone();
+
             return new StatusFeedExt
             {
                 SequenceNumber = status.SequenceNumber,
-                OrderStatus = status.OrderStatus
+                OrderStatus = jsonElement
             };
         }
     }

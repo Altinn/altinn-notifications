@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Altinn.Notifications.Controllers;
@@ -7,7 +8,7 @@ using Altinn.Notifications.Core.Models.Delivery;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Models.Delivery;
-
+using Altinn.Notifications.Tests.TestData;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
@@ -62,22 +63,36 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
         public async Task Get_WithSequenceNumberAndCreatorNameHeader_ReturnsListOfStatusFeedItems()
         {
             // Arrange
-            _statusFeedService.Setup(x => x.GetStatusFeed(It.IsAny<int>(), It.IsAny<string>()))
-                .ReturnsAsync(new List<StatusFeed>());
+            var expectedSequenceNumber = 1;
+            var expectedCreatorName = "ttd";
+            var statusFeedList = new List<StatusFeed>
+            {
+                new() 
+                {
+                    SequenceNumber = expectedSequenceNumber,
+                    OrderStatus = TestDataConstants.OrderStatusFeedTestOrderCompleted,
+                }
+            };
+            _statusFeedService.Setup(x => x.GetStatusFeed(It.IsAny<int>(), expectedCreatorName, CancellationToken.None))
+                .ReturnsAsync(statusFeedList);
 
             // Act
-            var result = await _statusFeedController.GetStatusFeed(1);
+            var result = await _statusFeedController.GetStatusFeed(expectedSequenceNumber);
 
             // Assert
             Assert.NotNull(result);
             Assert.IsType<ActionResult<List<StatusFeedExt>>>(result);
+            _statusFeedService.Verify(x => x.GetStatusFeed(expectedSequenceNumber, expectedCreatorName, CancellationToken.None), Times.Once);
+            var ojectResult = Assert.IsType<OkObjectResult>(result.Result);
+            var returnedItems = Assert.IsType<List<StatusFeedExt>>(ojectResult.Value);
+            Assert.Equal(statusFeedList.Count, returnedItems.Count);
         }
 
         [Fact]
         public async Task Get_WhenServiceThrowsOperationCanceledException_IsCaughtWithCorrectStatusCodeReturned()
         {
             // Arrange
-            _statusFeedService.Setup(x => x.GetStatusFeed(It.IsAny<int>(), It.IsAny<string>()))
+            _statusFeedService.Setup(x => x.GetStatusFeed(It.IsAny<int>(), It.IsAny<string>(), CancellationToken.None))
                 .ThrowsAsync(new OperationCanceledException());
             
             // Act
@@ -95,7 +110,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
         {
             // Arrange
             var error = new ServiceError(400, "Bad request");
-            _statusFeedService.Setup(x => x.GetStatusFeed(It.IsAny<int>(), It.IsAny<string>()))
+            _statusFeedService.Setup(x => x.GetStatusFeed(It.IsAny<int>(), It.IsAny<string>(), CancellationToken.None))
                 .ReturnsAsync(error);
             
             // Act

@@ -29,7 +29,7 @@ public class StatusFeedService : IStatusFeedService
             return new ServiceError(400, "Missing creator");
         }
 
-        var statusFeedEntries = await _statusFeedRepository.GetStatusFeed(seq, creatorName, cancellationToken);
+        var statusFeedEntries = await _statusFeedRepository.GetStatusFeed(seq: seq, creatorName: creatorName, cancellationToken: cancellationToken);
 
         return statusFeedEntries;
     }

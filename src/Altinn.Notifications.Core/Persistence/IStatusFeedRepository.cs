@@ -13,7 +13,8 @@ namespace Altinn.Notifications.Core.Persistence
         /// <param name="seq">Start sequence id for getting array of status feed entries</param>
         /// <param name="creatorName">Name of service owner</param>
         /// <param name="cancellationToken">Token for canceling the current request</param>
+        /// <param name="limit">The total number of entries returned</param>
         /// <returns></returns>
-        Task<List<StatusFeed>> GetStatusFeed(int seq, string creatorName, CancellationToken cancellationToken = default);
+        Task<List<StatusFeed>> GetStatusFeed(int seq, string creatorName, CancellationToken cancellationToken, int limit = 50);
     }
 }
