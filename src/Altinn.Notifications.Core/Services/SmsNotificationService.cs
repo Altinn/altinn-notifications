@@ -101,7 +101,7 @@ public class SmsNotificationService : ISmsNotificationService
             case SmsNotificationResultType.Failed_InvalidRecipient:
             case SmsNotificationResultType.Failed_RecipientReserved:
             case SmsNotificationResultType.Failed_RecipientNotIdentified:
-                await _orderRepository.TryTransitionToFinalStatus(sendOperationResult.NotificationId);
+                await _orderRepository.TryMarkOrderAsCompleted(sendOperationResult.NotificationId);
                 break;
         }
     }

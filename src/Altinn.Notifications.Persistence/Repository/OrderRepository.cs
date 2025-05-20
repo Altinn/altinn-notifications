@@ -294,7 +294,7 @@ public class OrderRepository : IOrderRepository
     }
 
     /// <inheritdoc/>
-    public async Task<bool> TryTransitionToFinalStatus(Guid? notificationId)
+    public async Task<bool> TryMarkOrderAsCompleted(Guid? notificationId)
     {
         if (notificationId is null || notificationId == Guid.Empty)
         {

@@ -112,7 +112,7 @@ public class EmailNotificationService : IEmailNotificationService
             case EmailNotificationResultType.Failed_InvalidEmailFormat:
             case EmailNotificationResultType.Failed_SupressedRecipient:
             case EmailNotificationResultType.Failed_RecipientNotIdentified:
-                await _orderRepository.TryTransitionToFinalStatus(sendOperationResult.NotificationId);
+                await _orderRepository.TryMarkOrderAsCompleted(sendOperationResult.NotificationId);
                 break;
         }
     }

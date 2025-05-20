@@ -112,5 +112,5 @@ public interface IOrderRepository
     /// This method finds the order associated with the provided notification identifier and checks if all its
     /// notifications have reached terminal states. If all notifications are complete, the order is marked as 'Completed'.
     /// </remarks>
-    public Task<bool> TryTransitionToFinalStatus(Guid? notificationId);
+    public Task<bool> TryMarkOrderAsCompleted(Guid? notificationId);
 }
