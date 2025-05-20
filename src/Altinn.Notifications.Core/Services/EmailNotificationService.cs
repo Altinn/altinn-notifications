@@ -39,8 +39,8 @@ public class EmailNotificationService : IEmailNotificationService
         _dateTime = dateTime;
         _producer = producer;
         _repository = repository;
-        _emailQueueTopicName = kafkaSettings.Value.EmailQueueTopicName;
         _orderRepository = orderRepository;
+        _emailQueueTopicName = kafkaSettings.Value.EmailQueueTopicName;
     }
 
     /// <inheritdoc/>
@@ -100,6 +100,7 @@ public class EmailNotificationService : IEmailNotificationService
             case EmailNotificationResultType.New:
             case EmailNotificationResultType.Sending:
             case EmailNotificationResultType.Succeeded:
+            case EmailNotificationResultType.Failed_TransientError:
                 break;
 
             case EmailNotificationResultType.Failed:
@@ -107,7 +108,6 @@ public class EmailNotificationService : IEmailNotificationService
             case EmailNotificationResultType.Failed_Bounced:
             case EmailNotificationResultType.Failed_Quarantined:
             case EmailNotificationResultType.Failed_FilteredSpam:
-            case EmailNotificationResultType.Failed_TransientError:
             case EmailNotificationResultType.Failed_RecipientReserved:
             case EmailNotificationResultType.Failed_InvalidEmailFormat:
             case EmailNotificationResultType.Failed_SupressedRecipient:
