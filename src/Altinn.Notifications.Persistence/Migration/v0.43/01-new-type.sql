@@ -2,8 +2,8 @@ DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 
                    FROM pg_type
-                   WHERE typname = 'notificationordertypes'
+                   WHERE typname = 'notificationordertype'
                    AND typnamespace = 'public'::regnamespace) THEN
-        CREATE TYPE public.notificationordertypes AS ENUM ('Notification', 'Reminder');
+        CREATE TYPE public.notificationordertype AS ENUM ('Notification', 'Reminder');
     END IF;
 END $$;
