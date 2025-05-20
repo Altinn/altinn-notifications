@@ -53,6 +53,11 @@ public interface IBaseNotificationOrder
     public SendingTimePolicy? SendingTimePolicy { get; }
 
     /// <summary>
+    /// Gets the type of the notification order.
+    /// </summary>
+    public OrderType Type { get; }
+
+    /// <summary>
     /// Gets or sets the condition endpoint used to check the send condition
     /// </summary>
     public Uri? ConditionEndpoint { get; set; }
