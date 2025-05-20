@@ -15,14 +15,14 @@ BEGIN
         SELECT _orderid INTO order_id 
         FROM notifications.emailnotifications 
         WHERE alternateid = notificationid;
-        
-        -- If still not found, return false (invalid notification identifier)
-        IF order_id IS NULL THEN
-            RETURN false;
-        END IF;
     END IF;
+               
+    -- If order_id is not found, return false (invalid notification identifier)
+     IF order_id IS NULL THEN
+         RETURN false;
+     END IF;
     
-    -- Check if order is already completed - WITH ROW LOCK to prevent concurrent modifications
+    -- Check if order is already completed
     SELECT processedstatus INTO order_status
     FROM notifications.orders
     WHERE _id = order_id
