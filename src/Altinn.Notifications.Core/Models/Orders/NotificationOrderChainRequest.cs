@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Models.Recipients;
+﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models.Recipients;
 
 namespace Altinn.Notifications.Core.Models.Orders;
 
@@ -96,11 +97,20 @@ public class NotificationOrderChainRequest
     public string? SendersReference { get; private set; }
 
     /// <summary>
+    /// Gets the type of the order.
+    /// </summary>
+    /// <remarks>
+    /// Specifies whether this is an initial notification or a reminder.
+    /// </remarks>
+    public OrderType Type { get; private set; }
+
+    /// <summary>
     /// Builder class for <see cref="NotificationOrderChainRequest"/>.
     /// </summary>
     public class NotificationOrderChainRequestBuilder
     {
         private Guid _orderId;
+        private OrderType _type;
         private Guid _orderChainId;
         private Uri? _conditionEndpoint;
         private string? _sendersReference;
@@ -110,6 +120,17 @@ public class NotificationOrderChainRequest
         private NotificationRecipient _recipient = new();
         private DateTime _requestedSendTime = DateTime.UtcNow;
         private DialogportenIdentifiers? _dialogportenAssociation;
+
+        /// <summary>
+        /// Sets the type of the order.
+        /// </summary>
+        /// <param name="type">The order's type.</param>
+        /// <returns></returns>
+        public NotificationOrderChainRequestBuilder SetType(OrderType type)
+        {
+            _type = type;
+            return this;
+        }
 
         /// <summary>
         /// Sets the order identifier for the notification request.
@@ -216,6 +237,11 @@ public class NotificationOrderChainRequest
                 throw new InvalidOperationException("OrderChainId must be set.");
             }
 
+            if (_type != OrderType.Notification)
+            {
+                throw new InvalidOperationException("Invalid type used.");
+            }
+
             if (string.IsNullOrEmpty(_idempotencyId))
             {
                 throw new InvalidOperationException("IdempotencyId must be set.");
@@ -228,6 +254,7 @@ public class NotificationOrderChainRequest
 
             return new NotificationOrderChainRequest
             {
+                Type = _type,
                 OrderId = _orderId,
                 Creator = _creator,
                 Reminders = _reminders,
