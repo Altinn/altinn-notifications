@@ -8,7 +8,7 @@ namespace Altinn.Notifications.Mappers
     /// <summary>
     /// Provides mapping functionality between domain models and their corresponding external data transfer models.
     /// </summary>
-    public static class OrderStatusMapper
+    public static class StatusFeedMapper
     {
         /// <summary>
         /// Maps a list of domain order statuses to their external representation for API responses.
