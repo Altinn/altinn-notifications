@@ -227,11 +227,6 @@ public class NotificationOrderChainRequest
         /// </summary>
         public NotificationOrderChainRequest Build()
         {
-            if (_type != OrderType.Notification)
-            {
-                throw new InvalidOperationException("Invalid type used.");
-            }
-
             if (_orderId == Guid.Empty)
             {
                 throw new InvalidOperationException("OrderId must be set.");
@@ -240,6 +235,11 @@ public class NotificationOrderChainRequest
             if (_orderChainId == Guid.Empty)
             {
                 throw new InvalidOperationException("OrderChainId must be set.");
+            }
+
+            if (_type != OrderType.Notification)
+            {
+                throw new InvalidOperationException("Invalid type used.");
             }
 
             if (string.IsNullOrEmpty(_idempotencyId))

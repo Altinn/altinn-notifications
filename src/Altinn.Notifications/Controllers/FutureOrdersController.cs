@@ -99,6 +99,16 @@ public class FutureOrdersController : ControllerBase
                     return StatusCode(error.ErrorCode, problemDetails);
                 });
         }
+        catch (InvalidOperationException ex)
+        {
+            var problemDetails = new ProblemDetails
+            {
+                Status = 400,
+                Detail = ex.Message,
+                Title = "Invalid notification order request"
+            };
+            return StatusCode(400, problemDetails);
+        }
         catch (OperationCanceledException)
         {
             var problemDetails = new ProblemDetails
