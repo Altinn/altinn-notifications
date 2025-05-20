@@ -57,7 +57,7 @@ public class NotificationOrderChainMapperTests
         // Verify NotificationOrderChainRequest properties
         Assert.NotEqual(Guid.Empty, result.OrderId);
         Assert.NotEqual(Guid.Empty, result.OrderChainId);
-        Assert.Equal(OrderTypes.Notification, result.Type);
+        Assert.Equal(OrderType.Notification, result.Type);
         Assert.Equal(creatorName, result.Creator.ShortName);
         Assert.NotEqual(result.OrderId, result.OrderChainId);
         Assert.Equal("ref-AB12CD34", result.SendersReference);
@@ -172,7 +172,7 @@ public class NotificationOrderChainMapperTests
         // Verify NotificationOrderChainRequest properties
         Assert.NotEqual(Guid.Empty, result.OrderId);
         Assert.NotEqual(Guid.Empty, result.OrderChainId);
-        Assert.Equal(OrderTypes.Notification, result.Type);
+        Assert.Equal(OrderType.Notification, result.Type);
         Assert.Equal(creatorName, result.Creator.ShortName);
         Assert.NotEqual(result.OrderId, result.OrderChainId);
         Assert.Equal("ref-D1E4B80C", result.SendersReference);
@@ -200,7 +200,7 @@ public class NotificationOrderChainMapperTests
         var firstReminder = result.Reminders[0];
         Assert.Equal(3, firstReminder.DelayDays);
         Assert.NotEqual(Guid.Empty, firstReminder.OrderId);
-        Assert.Equal(OrderTypes.Reminder, firstReminder.Type);
+        Assert.Equal(OrderType.Reminder, firstReminder.Type);
         Assert.NotEqual(result.OrderId, firstReminder.OrderId);
         Assert.NotEqual(result.OrderChainId, firstReminder.OrderId);
         Assert.Equal("12236E1A-C7D9-4334-8CEE-873DAA64467F", firstReminder.SendersReference);
@@ -226,7 +226,7 @@ public class NotificationOrderChainMapperTests
         var secondReminder = result.Reminders[1];
         Assert.Equal(5, secondReminder.DelayDays);
         Assert.NotEqual(Guid.Empty, secondReminder.OrderId);
-        Assert.Equal(OrderTypes.Reminder, secondReminder.Type);
+        Assert.Equal(OrderType.Reminder, secondReminder.Type);
         Assert.NotEqual(result.OrderId, secondReminder.OrderId);
         Assert.NotEqual(result.OrderChainId, secondReminder.OrderId);
         Assert.Equal("7B1A786D-4767-4113-8401-836D1D176BC2", secondReminder.SendersReference);
@@ -291,7 +291,7 @@ public class NotificationOrderChainMapperTests
         // Verify NotificationOrderChainRequest properties
         Assert.NotEqual(Guid.Empty, result.OrderId);
         Assert.NotEqual(Guid.Empty, result.OrderChainId);
-        Assert.Equal(OrderTypes.Notification, result.Type);
+        Assert.Equal(OrderType.Notification, result.Type);
         Assert.Equal(creatorName, result.Creator.ShortName);
         Assert.NotEqual(result.OrderId, result.OrderChainId);
         Assert.Equal("ref-D1E4B80C", result.SendersReference);
@@ -398,7 +398,7 @@ public class NotificationOrderChainMapperTests
         Assert.NotNull(result);
         Assert.NotEqual(Guid.Empty, result.OrderId);
         Assert.NotEqual(Guid.Empty, result.OrderChainId);
-        Assert.Equal(OrderTypes.Notification, result.Type);
+        Assert.Equal(OrderType.Notification, result.Type);
         Assert.Equal(creatorName, result.Creator.ShortName);
         Assert.NotEqual(result.OrderId, result.OrderChainId);
         Assert.Equal(requestExt.ConditionEndpoint, result.ConditionEndpoint);
@@ -480,7 +480,7 @@ public class NotificationOrderChainMapperTests
         Assert.NotNull(result);
         Assert.NotEqual(Guid.Empty, result.OrderId);
         Assert.NotEqual(Guid.Empty, result.OrderChainId);
-        Assert.Equal(OrderTypes.Notification, result.Type);
+        Assert.Equal(OrderType.Notification, result.Type);
         Assert.Equal(creatorName, result.Creator.ShortName);
         Assert.NotEqual(result.OrderId, result.OrderChainId);
         Assert.Equal("ref-4617F6FFBE7D", result.SendersReference);
@@ -619,7 +619,7 @@ public class NotificationOrderChainMapperTests
         // Main order verification
         Assert.NotEqual(Guid.Empty, result.OrderId);
         Assert.NotEqual(Guid.Empty, result.OrderChainId);
-        Assert.Equal(OrderTypes.Notification, result.Type);
+        Assert.Equal(OrderType.Notification, result.Type);
         Assert.NotEqual(result.OrderId, result.OrderChainId);
         Assert.Equal(baseTime.ToUniversalTime(), result.RequestedSendTime);
         Assert.Equal("4567890A-BCDE-F123-4567-89ABCDEF1234", result.SendersReference);
@@ -651,7 +651,7 @@ public class NotificationOrderChainMapperTests
         // First reminder verification
         var firstReminder = result.Reminders[0];
         Assert.Equal(3, firstReminder.DelayDays);
-        Assert.Equal(OrderTypes.Reminder, firstReminder.Type);
+        Assert.Equal(OrderType.Reminder, firstReminder.Type);
         Assert.Equal("5C6D7E8F-9A0B-1C2D-3E4F-5A6B7C8D9E0F", firstReminder.SendersReference);
         Assert.Equal(requestExt.Reminders[0].ConditionEndpoint, firstReminder.ConditionEndpoint);
 
@@ -687,7 +687,7 @@ public class NotificationOrderChainMapperTests
         // Second reminder verification
         var secondReminder = result.Reminders[1];
         Assert.Equal(7, secondReminder.DelayDays);
-        Assert.Equal(OrderTypes.Reminder, secondReminder.Type);
+        Assert.Equal(OrderType.Reminder, secondReminder.Type);
         Assert.Equal("1C2D3E4F-5A6B-7C8D-9E0F-1A2B3C4D5E6F", secondReminder.SendersReference);
         Assert.Equal(requestExt.Reminders[1].ConditionEndpoint, secondReminder.ConditionEndpoint);
 
@@ -766,7 +766,7 @@ public class NotificationOrderChainMapperTests
         Assert.NotNull(result);
         Assert.NotEqual(Guid.Empty, result.OrderId);
         Assert.NotEqual(Guid.Empty, result.OrderChainId);
-        Assert.Equal(OrderTypes.Notification, result.Type);
+        Assert.Equal(OrderType.Notification, result.Type);
         Assert.Equal(creatorName, result.Creator.ShortName);
         Assert.NotEqual(result.OrderId, result.OrderChainId);
         Assert.Equal("ref-4617F6FFBE7D", result.SendersReference);
@@ -903,7 +903,7 @@ public class NotificationOrderChainMapperTests
         Assert.NotNull(result);
         Assert.NotEqual(Guid.Empty, result.OrderId);
         Assert.NotEqual(Guid.Empty, result.OrderChainId);
-        Assert.Equal(OrderTypes.Notification, result.Type);
+        Assert.Equal(OrderType.Notification, result.Type);
         Assert.Equal("ref-F1E2D3C4B5A6", result.SendersReference);
         Assert.Equal(baseTime.ToUniversalTime(), result.RequestedSendTime);
 
@@ -934,7 +934,7 @@ public class NotificationOrderChainMapperTests
         // First reminder verification
         var firstReminder = result.Reminders[0];
         Assert.Equal(3, firstReminder.DelayDays);
-        Assert.Equal(OrderTypes.Reminder, firstReminder.Type);
+        Assert.Equal(OrderType.Reminder, firstReminder.Type);
         Assert.Equal("ref-A1B2C3D4E5F6", firstReminder.SendersReference);
         Assert.Equal(requestExt.Reminders[0].ConditionEndpoint, firstReminder.ConditionEndpoint);
 
@@ -961,7 +961,7 @@ public class NotificationOrderChainMapperTests
         // Second reminder verification
         var secondReminder = result.Reminders[1];
         Assert.Equal(7, secondReminder.DelayDays);
-        Assert.Equal(OrderTypes.Reminder, secondReminder.Type);
+        Assert.Equal(OrderType.Reminder, secondReminder.Type);
         Assert.Equal("ref-G1H2I3J4K5L6", secondReminder.SendersReference);
         Assert.Equal(requestExt.Reminders[1].ConditionEndpoint, secondReminder.ConditionEndpoint);
 
@@ -1025,7 +1025,7 @@ public class NotificationOrderChainMapperTests
         Assert.NotNull(result);
         Assert.NotEqual(Guid.Empty, result.OrderId);
         Assert.NotEqual(Guid.Empty, result.OrderChainId);
-        Assert.Equal(OrderTypes.Notification, result.Type);
+        Assert.Equal(OrderType.Notification, result.Type);
         Assert.Equal(creatorName, result.Creator.ShortName);
         Assert.NotEqual(result.OrderId, result.OrderChainId);
         Assert.Equal("ref-9B8D303243B6", result.SendersReference);
@@ -1138,7 +1138,7 @@ public class NotificationOrderChainMapperTests
         // Verify NotificationOrderChainRequest properties
         Assert.NotEqual(Guid.Empty, result.OrderId);
         Assert.NotEqual(Guid.Empty, result.OrderChainId);
-        Assert.Equal(OrderTypes.Notification, result.Type);
+        Assert.Equal(OrderType.Notification, result.Type);
         Assert.Equal(creatorName, result.Creator.ShortName);
         Assert.NotEqual(result.OrderId, result.OrderChainId);
         Assert.Equal("ref-D3C9BA54", result.SendersReference);
@@ -1164,7 +1164,7 @@ public class NotificationOrderChainMapperTests
         var firstReminder = result.Reminders[0];
         Assert.Equal(3, firstReminder.DelayDays);
         Assert.NotEqual(Guid.Empty, firstReminder.OrderId);
-        Assert.Equal(OrderTypes.Reminder, firstReminder.Type);
+        Assert.Equal(OrderType.Reminder, firstReminder.Type);
         Assert.NotEqual(result.OrderId, firstReminder.OrderId);
         Assert.NotEqual(result.OrderChainId, firstReminder.OrderId);
         Assert.Equal("ref-reminder-A3BCFE4284D6", firstReminder.SendersReference);
@@ -1189,7 +1189,7 @@ public class NotificationOrderChainMapperTests
         var secondReminder = result.Reminders[1];
         Assert.Equal(7, secondReminder.DelayDays);
         Assert.NotEqual(Guid.Empty, secondReminder.OrderId);
-        Assert.Equal(OrderTypes.Reminder, secondReminder.Type);
+        Assert.Equal(OrderType.Reminder, secondReminder.Type);
         Assert.NotEqual(result.OrderId, secondReminder.OrderId);
         Assert.NotEqual(result.OrderChainId, secondReminder.OrderId);
         Assert.Equal("ref-reminder-F2491E785C2D", secondReminder.SendersReference);
@@ -1250,7 +1250,7 @@ public class NotificationOrderChainMapperTests
         // Verify NotificationOrderChainRequest properties
         Assert.NotEqual(Guid.Empty, result.OrderId);
         Assert.NotEqual(Guid.Empty, result.OrderChainId);
-        Assert.Equal(OrderTypes.Notification, result.Type);
+        Assert.Equal(OrderType.Notification, result.Type);
         Assert.Equal(creatorName, result.Creator.ShortName);
         Assert.NotEqual(result.OrderId, result.OrderChainId);
         Assert.Equal("ref-4617F6FFBE7D", result.SendersReference);
@@ -1317,7 +1317,7 @@ public class NotificationOrderChainMapperTests
         // Verify other properties are correctly mapped
         Assert.NotEqual(Guid.Empty, result.OrderId);
         Assert.NotEqual(Guid.Empty, result.OrderChainId);
-        Assert.Equal(OrderTypes.Notification, result.Type);
+        Assert.Equal(OrderType.Notification, result.Type);
         Assert.Equal(creatorName, result.Creator.ShortName);
         Assert.NotEqual(result.OrderId, result.OrderChainId);
         Assert.Equal("BC47D9EA-3CD5-48A6-B5B7-CF5B95D53F9B", result.IdempotencyId);
@@ -1369,7 +1369,7 @@ public class NotificationOrderChainMapperTests
         Assert.NotNull(result);
         Assert.NotEqual(Guid.Empty, result.OrderId);
         Assert.NotEqual(Guid.Empty, result.OrderChainId);
-        Assert.Equal(OrderTypes.Notification, result.Type);
+        Assert.Equal(OrderType.Notification, result.Type);
         Assert.Equal(creatorName, result.Creator.ShortName);
         Assert.NotEqual(result.OrderId, result.OrderChainId);
         Assert.Equal(requestExt.ConditionEndpoint, result.ConditionEndpoint);
@@ -1442,7 +1442,7 @@ public class NotificationOrderChainMapperTests
         Assert.NotNull(result);
         Assert.NotEqual(Guid.Empty, result.OrderId);
         Assert.NotEqual(Guid.Empty, result.OrderChainId);
-        Assert.Equal(OrderTypes.Notification, result.Type);
+        Assert.Equal(OrderType.Notification, result.Type);
         Assert.Equal(creatorName, result.Creator.ShortName);
         Assert.NotEqual(result.OrderId, result.OrderChainId);
         Assert.Equal("ref-9B8D303243B6", result.SendersReference);
@@ -1522,7 +1522,7 @@ public class NotificationOrderChainMapperTests
         Assert.NotNull(result);
         Assert.NotEqual(Guid.Empty, result.OrderId);
         Assert.NotEqual(Guid.Empty, result.OrderChainId);
-        Assert.Equal(OrderTypes.Notification, result.Type);
+        Assert.Equal(OrderType.Notification, result.Type);
         Assert.Equal(creatorName, result.Creator.ShortName);
         Assert.NotEqual(result.OrderId, result.OrderChainId);
         Assert.Equal("ref-4617F6FFBE7D", result.SendersReference);
@@ -1666,7 +1666,7 @@ public class NotificationOrderChainMapperTests
         Assert.NotNull(result);
         Assert.NotEqual(Guid.Empty, result.OrderId);
         Assert.NotEqual(Guid.Empty, result.OrderChainId);
-        Assert.Equal(OrderTypes.Notification, result.Type);
+        Assert.Equal(OrderType.Notification, result.Type);
         Assert.NotEqual(result.OrderId, result.OrderChainId);
         Assert.Equal("ref-F1E2D3C4B5A6", result.SendersReference);
         Assert.Equal(baseTime.ToUniversalTime(), result.RequestedSendTime);
@@ -1699,7 +1699,7 @@ public class NotificationOrderChainMapperTests
         // First reminder verification
         var firstReminder = result.Reminders[0];
         Assert.Equal(3, firstReminder.DelayDays);
-        Assert.Equal(OrderTypes.Reminder, firstReminder.Type);
+        Assert.Equal(OrderType.Reminder, firstReminder.Type);
         Assert.Equal("ref-A1B2C3D4E5F6", firstReminder.SendersReference);
         Assert.Equal(requestExt.Reminders[0].ConditionEndpoint, firstReminder.ConditionEndpoint);
 
@@ -1727,7 +1727,7 @@ public class NotificationOrderChainMapperTests
         // Second reminder verification
         var secondReminder = result.Reminders[1];
         Assert.Equal(7, secondReminder.DelayDays);
-        Assert.Equal(OrderTypes.Reminder, secondReminder.Type);
+        Assert.Equal(OrderType.Reminder, secondReminder.Type);
         Assert.Equal("ref-G1H2I3J4K5L6", secondReminder.SendersReference);
         Assert.Equal(requestExt.Reminders[1].ConditionEndpoint, secondReminder.ConditionEndpoint);
 
@@ -1934,7 +1934,7 @@ public class NotificationOrderChainMapperTests
         // Arrange
         var builder = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
             .SetOrderId(Guid.NewGuid())
-            .SetType(OrderTypes.Reminder)
+            .SetType(OrderType.Reminder)
             .SetCreator(new Creator("ttd"))
             .SetOrderChainId(Guid.NewGuid())
             .SetRecipient(new NotificationRecipient())

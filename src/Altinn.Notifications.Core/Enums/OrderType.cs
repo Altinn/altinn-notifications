@@ -3,7 +3,7 @@
 /// <summary>
 /// Defines the different types of an order.
 /// </summary>
-public enum OrderTypes : uint
+public enum OrderType : uint
 {
     /// <summary>
     /// Represents a notification order that should be initiated immediately.

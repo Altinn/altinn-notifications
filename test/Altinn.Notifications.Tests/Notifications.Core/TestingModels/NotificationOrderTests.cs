@@ -26,7 +26,7 @@ public class NotificationOrderTests
         _order = new()
         {
             Id = id,
-            Type = OrderTypes.Notification,
+            Type = OrderType.Notification,
             SendersReference = "senders-reference",
             Templates = new List<INotificationTemplate>()
             {

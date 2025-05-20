@@ -34,7 +34,7 @@ public class NotificationOrderWithStatus : IBaseNotificationOrder
     public string? ResourceId { get; internal set; }
 
     /// <inheritdoc/>
-    public OrderTypes Type { get; internal set; }
+    public OrderType Type { get; internal set; }
 
     /// <inheritdoc/>>
     public Uri? ConditionEndpoint { get; set; }
@@ -68,7 +68,7 @@ public class NotificationOrderWithStatus : IBaseNotificationOrder
         string? resourceId,
         Uri? conditionEndpoint,
         ProcessingStatus processingStatus, 
-        OrderTypes type)
+        OrderType type)
     {
         Id = id;
         SendersReference = sendersReference;

@@ -57,7 +57,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
             false,
             null,
             null,
-            OrderTypes.Notification);
+            OrderType.Notification);
 
         _orderWithStatus = new(
             _orderId,
@@ -70,7 +70,7 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
             null,
             null,
             new ProcessingStatus(),
-            OrderTypes.Notification);
+            OrderType.Notification);
 
         _requestResponse = new()
         {

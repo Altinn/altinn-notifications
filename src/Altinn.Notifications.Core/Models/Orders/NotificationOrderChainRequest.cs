@@ -102,7 +102,7 @@ public class NotificationOrderChainRequest
     /// <remarks>
     /// Specifies whether this is an initial notification or a reminder.
     /// </remarks>
-    public OrderTypes Type { get; private set; }
+    public OrderType Type { get; private set; }
 
     /// <summary>
     /// Builder class for <see cref="NotificationOrderChainRequest"/>.
@@ -110,7 +110,7 @@ public class NotificationOrderChainRequest
     public class NotificationOrderChainRequestBuilder
     {
         private Guid _orderId;
-        private OrderTypes _type;
+        private OrderType _type;
         private Guid _orderChainId;
         private Uri? _conditionEndpoint;
         private string? _sendersReference;
@@ -126,7 +126,7 @@ public class NotificationOrderChainRequest
         /// </summary>
         /// <param name="type">The order's type.</param>
         /// <returns></returns>
-        public NotificationOrderChainRequestBuilder SetType(OrderTypes type)
+        public NotificationOrderChainRequestBuilder SetType(OrderType type)
         {
             _type = type;
             return this;
@@ -227,7 +227,7 @@ public class NotificationOrderChainRequest
         /// </summary>
         public NotificationOrderChainRequest Build()
         {
-            if (_type != OrderTypes.Notification)
+            if (_type != OrderType.Notification)
             {
                 throw new InvalidOperationException("Invalid type used.");
             }

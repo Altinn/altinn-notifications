@@ -83,7 +83,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             Id = orderId,
             Creator = new(creator),
             Created = creationDateTime,
-            Type = OrderTypes.Notification,
+            Type = OrderType.Notification,
             SendersReference = senderReference,
             RequestedSendTime = requestedSendTime,
             SendingTimePolicy = SendingTimePolicy.Daytime,
@@ -148,7 +148,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             Id = orderId,
             Creator = new(creator),
             Created = DateTime.UtcNow,
-            Type = OrderTypes.Notification,
+            Type = OrderType.Notification,
             SendersReference = senderReference,
             SendingTimePolicy = SendingTimePolicy.Anytime,
             RequestedSendTime = DateTime.UtcNow.AddMinutes(30),
@@ -221,7 +221,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
 
         // Verify order status
         Assert.Equal(senderReference, deliveryManifest.SendersReference);
-        Assert.Equal(OrderTypes.Notification.ToString(), deliveryManifest.Type);
+        Assert.Equal(OrderType.Notification.ToString(), deliveryManifest.Type);
         Assert.Equal(ProcessingLifecycle.Order_Completed, deliveryManifest.Status);
 
         // Verify recipients collection
@@ -268,7 +268,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             Id = orderId,
             Creator = new(creator),
             Created = creationDateTime,
-            Type = OrderTypes.Notification,
+            Type = OrderType.Notification,
             SendersReference = senderReference,
             RequestedSendTime = requestedSendTime,
             SendingTimePolicy = SendingTimePolicy.Daytime,
@@ -301,7 +301,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         Assert.Equal(orderId, deliveryManifest.ShipmentId);
         Assert.True(deliveryManifest.LastUpdate > DateTime.MinValue);
         Assert.Equal(senderReference, deliveryManifest.SendersReference);
-        Assert.Equal(OrderTypes.Notification.ToString(), deliveryManifest.Type);
+        Assert.Equal(OrderType.Notification.ToString(), deliveryManifest.Type);
         Assert.Equal(ProcessingLifecycle.Order_Registered, deliveryManifest.Status);
 
         Assert.NotNull(deliveryManifest.Recipients);
@@ -338,7 +338,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             Id = orderId,
             Creator = new(creator),
             Created = creationDateTime,
-            Type = OrderTypes.Notification,
+            Type = OrderType.Notification,
             SendersReference = senderReference,
             RequestedSendTime = requestedSendTime,
             SendingTimePolicy = SendingTimePolicy.Daytime,
@@ -389,7 +389,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         Assert.Equal(orderId, deliveryManifest.ShipmentId);
         Assert.True(deliveryManifest.LastUpdate > DateTime.MinValue);
         Assert.Equal(senderReference, deliveryManifest.SendersReference);
-        Assert.Equal(OrderTypes.Notification.ToString(), deliveryManifest.Type);
+        Assert.Equal(OrderType.Notification.ToString(), deliveryManifest.Type);
         Assert.Equal(ProcessingLifecycle.Order_Registered, deliveryManifest.Status);
 
         Assert.NotNull(deliveryManifest.Recipients);
@@ -432,7 +432,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             Id = orderId,
             Creator = new(creator),
             Created = creationDateTime,
-            Type = OrderTypes.Reminder,
+            Type = OrderType.Reminder,
             SendersReference = senderReference,
             RequestedSendTime = requestedSendTime,
             SendingTimePolicy = SendingTimePolicy.Anytime,
@@ -482,7 +482,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         Assert.Equal(orderId, deliveryManifest.ShipmentId);
         Assert.True(deliveryManifest.LastUpdate > DateTime.MinValue);
         Assert.Equal(senderReference, deliveryManifest.SendersReference);
-        Assert.Equal(OrderTypes.Reminder.ToString(), deliveryManifest.Type);
+        Assert.Equal(OrderType.Reminder.ToString(), deliveryManifest.Type);
         Assert.Equal(ProcessingLifecycle.Order_Registered, deliveryManifest.Status);
 
         Assert.NotNull(deliveryManifest.Recipients);
@@ -603,7 +603,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             Id = orderId,
             Creator = new(creator),
             Created = creationDateTime,
-            Type = OrderTypes.Reminder,
+            Type = OrderType.Reminder,
             SendersReference = senderReference,
             RequestedSendTime = requestedSendTime,
             SendingTimePolicy = SendingTimePolicy.Daytime,
@@ -673,7 +673,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         Assert.Equal(orderId, deliveryManifest.ShipmentId);
         Assert.True(deliveryManifest.LastUpdate > DateTime.MinValue);
         Assert.Equal(senderReference, deliveryManifest.SendersReference);
-        Assert.Equal(OrderTypes.Reminder.ToString(), deliveryManifest.Type);
+        Assert.Equal(OrderType.Reminder.ToString(), deliveryManifest.Type);
         Assert.Equal(ProcessingLifecycle.Order_Registered, deliveryManifest.Status);
 
         Assert.NotNull(deliveryManifest.Recipients);

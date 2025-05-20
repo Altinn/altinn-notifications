@@ -274,7 +274,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 .SetOrderId(orderId)
                 .SetOrderChainId(orderChainId)
                 .SetCreator(new Creator("skd"))
-                .SetType(OrderTypes.Notification)
+                .SetType(OrderType.Notification)
                 .SetRequestedSendTime(requestedSendTime)
                 .SetConditionEndpoint(new Uri("https://vg.no/condition"))
                 .SetIdempotencyId("EBEF8B94-3F8C-444E-BF94-6F6B1FA0417C")
@@ -301,7 +301,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 Id = orderId,
                 Creator = new("skd"),
                 Created = creationDateTime,
-                Type = OrderTypes.Notification,
+                Type = OrderType.Notification,
                 RequestedSendTime = requestedSendTime,
                 NotificationChannel = NotificationChannel.Email,
                 ConditionEndpoint = new Uri("https://vg.no/condition"),
@@ -359,7 +359,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 .SetOrderId(mainOrderId)
                 .SetOrderChainId(orderChainId)
                 .SetCreator(new Creator("ttd"))
-                .SetType(OrderTypes.Notification)
+                .SetType(OrderType.Notification)
                 .SetSendersReference("ref-D3C9BA54")
                 .SetRequestedSendTime(requestedSendTime)
                 .SetIdempotencyId("F1E2D3C4-B5A6-9876-5432-1098ABCDEF01")
@@ -381,7 +381,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                     new NotificationReminder
                     {
                         DelayDays = 3,
-                        Type = OrderTypes.Reminder,
+                        Type = OrderType.Reminder,
                         OrderId = firstReminderOrderId,
                         SendersReference = "ref-reminder-A3BCFE4284D6",
                         RequestedSendTime = requestedSendTime.AddDays(3),
@@ -403,7 +403,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                     new NotificationReminder
                     {
                         DelayDays = 7,
-                        Type = OrderTypes.Reminder,
+                        Type = OrderType.Reminder,
                         OrderId = secondReminderOrderId,
                         SendersReference = "ref-reminder-F2491E785C2D",
                         RequestedSendTime = requestedSendTime.AddDays(7),
@@ -430,7 +430,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 Id = mainOrderId,
                 Creator = new("ttd"),
                 Created = creationDateTime,
-                Type = OrderTypes.Notification,
+                Type = OrderType.Notification,
                 SendersReference = "ref-D3C9BA54",
                 RequestedSendTime = requestedSendTime,
                 NotificationChannel = NotificationChannel.Sms,
@@ -451,7 +451,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                     Creator = new("ttd"),
                     Id = firstReminderOrderId,
                     Created = creationDateTime,
-                    Type = OrderTypes.Reminder,
+                    Type = OrderType.Reminder,
                     RequestedSendTime = requestedSendTime.AddDays(3),
                     SendersReference = "ref-reminder-A3BCFE4284D6",
                     NotificationChannel = NotificationChannel.Sms,
@@ -470,7 +470,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                     Creator = new("ttd"),
                     Id = secondReminderOrderId,
                     Created = creationDateTime,
-                    Type = OrderTypes.Reminder,
+                    Type = OrderType.Reminder,
                     NotificationChannel = NotificationChannel.Sms,
                     SendersReference = "ref-reminder-F2491E785C2D",
                     RequestedSendTime = requestedSendTime.AddDays(7),
@@ -542,7 +542,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 .SetOrderId(mainOrderId)
                 .SetOrderChainId(orderChainId)
                 .SetCreator(new Creator("ttd"))
-                .SetType(OrderTypes.Notification)
+                .SetType(OrderType.Notification)
                 .SetRequestedSendTime(requestTime)
                 .SetSendersReference("ref-P5Q7R9S1")
                 .SetIdempotencyId("A1B2C3D4-E5F6-G7H8-I9J0-K1L2M3N4O5P6")
@@ -577,7 +577,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                     new NotificationReminder
                     {
                         DelayDays = 3,
-                        Type = OrderTypes.Reminder,
+                        Type = OrderType.Reminder,
                         OrderId = firstReminderOrderId,
                         RequestedSendTime = requestTime.AddDays(3),
                         SendersReference = "ref-reminder-B4C6D8E0",
@@ -611,7 +611,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                     new NotificationReminder
                     {
                         DelayDays = 7,
-                        Type = OrderTypes.Reminder,
+                        Type = OrderType.Reminder,
                         OrderId = secondReminderOrderId,
                         RequestedSendTime = requestTime.AddDays(7),
                         SendersReference = "ref-reminder-F8G0H2I4",
@@ -651,7 +651,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 Creator = new("ttd"),
                 IgnoreReservation = true,
                 Created = creationDateTime,
-                Type = OrderTypes.Notification,
+                Type = OrderType.Notification,
                 RequestedSendTime = requestTime,
                 SendersReference = "ref-P5Q7R9S1",
                 ResourceId = "urn:altinn:resource:D208D0E6E5B4",
@@ -676,7 +676,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                     IgnoreReservation = true,
                     Id = firstReminderOrderId,
                     Created = creationDateTime,
-                    Type = OrderTypes.Reminder,
+                    Type = OrderType.Reminder,
                     RequestedSendTime = requestTime.AddDays(3),
                     SendersReference = "ref-reminder-B4C6D8E0",
                     ResourceId = "urn:altinn:resource:D208D0E6E5B4",
@@ -698,7 +698,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                     IgnoreReservation = false,
                     Created = creationDateTime,
                     Id = secondReminderOrderId,
-                    Type = OrderTypes.Reminder,
+                    Type = OrderType.Reminder,
                     RequestedSendTime = requestTime.AddDays(7),
                     SendersReference = "ref-reminder-F8G0H2I4",
                     ResourceId = "urn:altinn:resource:D208D0E6E5B4",
@@ -796,7 +796,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 .SetOrderId(mainOrderId)
                 .SetOrderChainId(orderChainId)
                 .SetCreator(new Creator("ttd"))
-                .SetType(OrderTypes.Notification)
+                .SetType(OrderType.Notification)
                 .SetRequestedSendTime(requestTime)
                 .SetSendersReference("ref-ORG-A2B4C6D8")
                 .SetIdempotencyId("E1F2G3H4-I5J6-K7L8-M9N0-O1P2Q3R4S5T6")
@@ -830,7 +830,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                     new NotificationReminder
                     {
                         DelayDays = 3,
-                        Type = OrderTypes.Reminder,
+                        Type = OrderType.Reminder,
                         OrderId = firstReminderOrderId,
                         RequestedSendTime = requestTime.AddDays(3),
                         SendersReference = "ref-reminder-ORG-X2Y4Z6",
@@ -863,7 +863,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                     new NotificationReminder
                     {
                         DelayDays = 7,
-                        Type = OrderTypes.Reminder,
+                        Type = OrderType.Reminder,
                         OrderId = secondReminderOrderId,
                         RequestedSendTime = requestTime.AddDays(7),
                         SendersReference = "ref-reminder-ORG-U2V4W6",
@@ -901,7 +901,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 Id = mainOrderId,
                 Creator = new("ttd"),
                 Created = creationDateTime,
-                Type = OrderTypes.Notification,
+                Type = OrderType.Notification,
                 RequestedSendTime = requestTime,
                 SendersReference = "ref-ORG-A2B4C6D8",
                 ResourceId = "urn:altinn:resource:T482D7F1A93C",
@@ -925,7 +925,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                     Creator = new("ttd"),
                     Id = firstReminderOrderId,
                     Created = creationDateTime,
-                    Type = OrderTypes.Reminder,
+                    Type = OrderType.Reminder,
                     RequestedSendTime = requestTime.AddDays(3),
                     SendersReference = "ref-reminder-ORG-X2Y4Z6",
                     ResourceId = "urn:altinn:resource:T482D7F1A93C",
@@ -946,7 +946,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                     Creator = new("ttd"),
                     Created = creationDateTime,
                     Id = secondReminderOrderId,
-                    Type = OrderTypes.Reminder,
+                    Type = OrderType.Reminder,
                     RequestedSendTime = requestTime.AddDays(7),
                     SendersReference = "ref-reminder-ORG-U2V4W6",
                     ResourceId = "urn:altinn:resource:T482D7F1A93C",
@@ -1043,7 +1043,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 .SetOrderId(orderId)
                 .SetOrderChainId(orderChainId)
                 .SetCreator(new Creator("skd"))
-                .SetType(OrderTypes.Notification)
+                .SetType(OrderType.Notification)
                 .SetIdempotencyId("EXCEPTION-TEST-ID")
                 .SetRequestedSendTime(requestedSendTime)
                 .SetSendersReference("EXCEPTION-TEST-REF")
@@ -1070,7 +1070,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 Id = orderId,
                 Creator = new("skd"),
                 Created = creationDateTime,
-                Type = OrderTypes.Notification,
+                Type = OrderType.Notification,
                 RequestedSendTime = requestedSendTime,
                 NotificationChannel = NotificationChannel.Email,
                 SendersReference = "EXCEPTION-TEST-REF",
@@ -1104,7 +1104,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 .SetOrderId(orderId)
                 .SetOrderChainId(orderChainId)
                 .SetCreator(new Creator("skd"))
-                .SetType(OrderTypes.Notification)
+                .SetType(OrderType.Notification)
                 .SetRequestedSendTime(requestedSendTime)
                 .SetIdempotencyId("CANCELLATION-TEST-ID")
                 .SetSendersReference("CANCELLATION-TEST-REF")
@@ -1130,7 +1130,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 Id = orderId,
                 Creator = new("skd"),
                 Created = creationDateTime,
-                Type = OrderTypes.Notification,
+                Type = OrderType.Notification,
                 RequestedSendTime = requestedSendTime,
                 SendersReference = "CANCELLATION-TEST-REF",
                 NotificationChannel = NotificationChannel.Email,
@@ -1208,7 +1208,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 .SetOrderId(orderId)
                 .SetOrderChainId(orderChainId)
                 .SetIdempotencyId(idempotencyId)
-                .SetType(OrderTypes.Notification)
+                .SetType(OrderType.Notification)
                 .SetCreator(new Creator(creator))
                 .SetRequestedSendTime(requestedSendTime)
                 .SetRecipient(new NotificationRecipient
@@ -1233,7 +1233,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 Id = orderId,
                 Creator = new(creator),
                 Created = creationDateTime,
-                Type = OrderTypes.Notification,
+                Type = OrderType.Notification,
                 RequestedSendTime = requestedSendTime,
                 NotificationChannel = NotificationChannel.Email,
                 Templates =
@@ -1282,7 +1282,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 .SetOrderId(mainOrderId)
                 .SetOrderChainId(orderChainId)
                 .SetIdempotencyId(idempotencyId)
-                .SetType(OrderTypes.Notification)
+                .SetType(OrderType.Notification)
                 .SetCreator(new Creator(creator))
                 .SetRequestedSendTime(requestedSendTime)
                 .SetSendersReference("MAIN-ORDER-REF-NO-REMINDER-REF")
@@ -1307,7 +1307,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                     {
                         DelayDays = 3,
                         OrderId = reminderId,
-                        Type = OrderTypes.Reminder,
+                        Type = OrderType.Reminder,
                         RequestedSendTime = requestedSendTime.AddDays(3),
                         Recipient = new NotificationRecipient
                         {
@@ -1334,7 +1334,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 Id = mainOrderId,
                 Creator = new(creator),
                 Created = creationDateTime,
-                Type = OrderTypes.Notification,
+                Type = OrderType.Notification,
                 RequestedSendTime = requestedSendTime,
                 NotificationChannel = NotificationChannel.Email,
                 SendersReference = "MAIN-ORDER-REF-NO-REMINDER-REF",
@@ -1356,7 +1356,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                     Id = reminderId,
                     Creator = new(creator),
                     Created = creationDateTime,
-                    Type = OrderTypes.Reminder,
+                    Type = OrderType.Reminder,
                     RequestedSendTime = requestedSendTime.AddDays(3),
                     NotificationChannel = NotificationChannel.Email,
                     Templates =
@@ -1414,7 +1414,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 .SetOrderChainId(orderChainId)
                 .SetIdempotencyId(idempotencyId)
                 .SetCreator(new Creator(creator))
-                .SetType(OrderTypes.Notification)
+                .SetType(OrderType.Notification)
                 .SetSendersReference("MAIN-ORDER-REF")
                 .SetRequestedSendTime(requestedSendTime)
                 .SetRecipient(new NotificationRecipient
@@ -1438,7 +1438,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                     {
                         DelayDays = 3,
                         OrderId = firstReminderId,
-                        Type = OrderTypes.Reminder,
+                        Type = OrderType.Reminder,
                         SendersReference = "FIRST-REMINDER-REF",
                         RequestedSendTime = requestedSendTime.AddDays(3),
                         Recipient = new NotificationRecipient
@@ -1461,7 +1461,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                     {
                         DelayDays = 7,
                         OrderId = secondReminderId,
-                        Type = OrderTypes.Reminder,
+                        Type = OrderType.Reminder,
                         SendersReference = "SECOND-REMINDER-REF",
                         RequestedSendTime = requestedSendTime.AddDays(7),
                         Recipient = new NotificationRecipient
@@ -1489,7 +1489,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 Id = mainOrderId,
                 Creator = new(creator),
                 Created = creationDateTime,
-                Type = OrderTypes.Notification,
+                Type = OrderType.Notification,
                 RequestedSendTime = requestedSendTime,
                 NotificationChannel = NotificationChannel.Email,
                 SendersReference = "MAIN-ORDER-REF",
@@ -1511,7 +1511,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                     Id = firstReminderId,
                     Creator = new(creator),
                     Created = creationDateTime,
-                    Type = OrderTypes.Reminder,
+                    Type = OrderType.Reminder,
                     RequestedSendTime = requestedSendTime.AddDays(3),
                     NotificationChannel = NotificationChannel.Email,
                     SendersReference = "FIRST-REMINDER-REF",
@@ -1529,7 +1529,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                     Id = secondReminderId,
                     Creator = new(creator),
                     Created = creationDateTime,
-                    Type = OrderTypes.Reminder,
+                    Type = OrderType.Reminder,
                     RequestedSendTime = requestedSendTime.AddDays(7),
                     NotificationChannel = NotificationChannel.Email,
                     SendersReference = "SECOND-REMINDER-REF",
@@ -1592,7 +1592,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 .SetOrderChainId(orderChainId)
                 .SetIdempotencyId(idempotencyId)
                 .SetCreator(new Creator(creator))
-                .SetType(OrderTypes.Notification)
+                .SetType(OrderType.Notification)
                 .SetRequestedSendTime(requestedSendTime)
                 .SetSendersReference("TRACKING-C69C615A8412")
                 .SetRecipient(new NotificationRecipient
@@ -1617,7 +1617,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 Id = orderId,
                 Creator = new(creator),
                 Created = creationDateTime,
-                Type = OrderTypes.Reminder,
+                Type = OrderType.Reminder,
                 RequestedSendTime = requestedSendTime,
                 NotificationChannel = NotificationChannel.Email,
                 SendersReference = "TRACKING-C69C615A8412",

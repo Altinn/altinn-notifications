@@ -66,5 +66,5 @@ public class NotificationReminder
     /// <remarks>
     /// Specifies that this is a reminder.
     /// </remarks>
-    public OrderTypes Type { get; set; } = OrderTypes.Reminder;
+    public OrderType Type { get; set; } = OrderType.Reminder;
 }

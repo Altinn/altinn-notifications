@@ -41,7 +41,7 @@ public class NotificationOrder : IBaseNotificationOrder
     public SendingTimePolicy? SendingTimePolicy { get; internal set; }
 
     /// <inheritdoc/>
-    public OrderTypes Type { get; internal set; }
+    public OrderType Type { get; internal set; }
 
     /// <summary>
     /// Gets the templates to create notifications based of
@@ -68,7 +68,7 @@ public class NotificationOrder : IBaseNotificationOrder
         bool? ignoreReservation,
         string? resourceId,
         Uri? conditionEndpoint,
-        OrderTypes type)
+        OrderType type)
     {
         Id = id;
         SendersReference = sendersReference;
