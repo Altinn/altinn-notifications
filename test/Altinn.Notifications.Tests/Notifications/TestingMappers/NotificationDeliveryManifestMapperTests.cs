@@ -266,6 +266,7 @@ public class NotificationDeliveryManifestMapperTests
     [Theory]
     [InlineData(ProcessingLifecycle.Order_Completed, ProcessingLifecycleExt.Order_Completed)]
     [InlineData(ProcessingLifecycle.Order_Cancelled, ProcessingLifecycleExt.Order_Cancelled)]
+    [InlineData(ProcessingLifecycle.Order_Processed, ProcessingLifecycleExt.Order_Processed)]
     [InlineData(ProcessingLifecycle.Order_Registered, ProcessingLifecycleExt.Order_Registered)]
     [InlineData(ProcessingLifecycle.Order_Processing, ProcessingLifecycleExt.Order_Processing)]
     [InlineData(ProcessingLifecycle.Order_SendConditionNotMet, ProcessingLifecycleExt.Order_SendConditionNotMet)]
