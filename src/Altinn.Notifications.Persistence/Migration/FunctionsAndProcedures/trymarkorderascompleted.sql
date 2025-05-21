@@ -1,64 +1,87 @@
-CREATE OR REPLACE FUNCTION notifications.trymarkorderascompleted(notificationid uuid)
+CREATE OR REPLACE FUNCTION notifications.updateorderstatus(_alternateid uuid, _alternateidsource text)
 RETURNS boolean AS $$
 DECLARE
     order_id bigint;
     order_status orderprocessingstate;
     has_pending_notifications boolean := false;
 BEGIN
-    -- First, try to find order_id from the SMS notifications table
-    SELECT _orderid INTO order_id 
-    FROM notifications.smsnotifications 
-    WHERE alternateid = notificationid;
-    
-    -- If not found, try the Email notifications table
-    IF order_id IS NULL THEN
-        SELECT _orderid INTO order_id 
-        FROM notifications.emailnotifications 
-        WHERE alternateid = notificationid;
+    IF _alternateid IS NULL THEN
+        RAISE EXCEPTION 'Notification ID cannot be null';
     END IF;
-               
-    -- If order_id is not found, return false (invalid notification identifier)
-     IF order_id IS NULL THEN
-         RETURN false;
-     END IF;
     
-    -- Check if order is already completed
+    IF _alternateidsource IS NULL OR LENGTH(TRIM(_alternateidsource)) = 0 THEN
+        RAISE EXCEPTION 'Notification type cannot be null or empty';
+    END IF;
+    
+    -- Convert notification type to uppercase for case-insensitive comparison
+    _alternateidsource := UPPER(TRIM(_alternateidsource));
+    
+    -- Step 2: Find the order ID based on notification type
+    CASE _alternateidsource
+        WHEN 'SMS' THEN
+            SELECT _orderid INTO order_id 
+            FROM notifications.smsnotifications 
+            WHERE alternateid = _alternateid
+            LIMIT 1;
+            
+        WHEN 'EMAIL' THEN
+            SELECT _orderid INTO order_id 
+            FROM notifications.emailnotifications 
+            WHERE alternateid = _alternateid
+            LIMIT 1;
+            
+        WHEN 'ORDER' THEN
+            SELECT _id INTO order_id
+            FROM notifications.orders
+            WHERE alternateid = _alternateid
+            LIMIT 1;
+            
+        ELSE
+            RAISE EXCEPTION 'Invalid notification type: %. Must be one of: Order, SMS, Email', _alternateidsource;
+    END CASE;
+
+    -- Step 3: Validate order ID exists
+    IF order_id IS NULL THEN
+        RAISE EXCEPTION 'No order found for notification ID % with source type %', _alternateid, _alternateidsource;
+    END IF;
+
+    -- Step 4: Check if order is already completed (with row lock)
     SELECT processedstatus INTO order_status
     FROM notifications.orders
     WHERE _id = order_id
-    FOR UPDATE; -- This locks the row until transaction ends
+    FOR UPDATE;
     
-    -- If order is already completed, return false (no change needed)
-    IF order_status = 'Completed'::orderprocessingstate THEN
+    IF order_status IS NULL OR order_status = 'Completed'::orderprocessingstate THEN
         RETURN false;
     END IF;
     
-    -- Check if any SMS or Email notifications are still pending
-    SELECT EXISTS(
-        SELECT 1 
+    -- Step 5: Check if any notifications are still pending
+    WITH pending_notifications AS (
+        SELECT 1 AS is_pending
         FROM notifications.smsnotifications 
         WHERE _orderid = order_id 
         AND result::TEXT IN ('New', 'Sending', 'Accepted')
+        LIMIT 1
         
-        UNION
+        UNION ALL
         
-        SELECT 1
+        SELECT 1 AS is_pending
         FROM notifications.emailnotifications 
         WHERE _orderid = order_id 
         AND result::TEXT IN ('New', 'Sending', 'Succeeded')
-    ) INTO has_pending_notifications;
+        LIMIT 1
+    )
+    SELECT EXISTS(SELECT 1 FROM pending_notifications) INTO has_pending_notifications;
     
-    -- If any notifications still pending, return false (no change needed)
-    IF has_pending_notifications THEN
-        RETURN false;
-    END IF;
-    
-    -- No pending Email and SMS notifications, update order status to Completed
+    -- Step 6: Update order status based on notification states
     UPDATE notifications.orders
-    SET processedstatus = 'Completed'::orderprocessingstate,
-        processed = now()
+    SET processedstatus = CASE 
+                            WHEN has_pending_notifications THEN 'Processed'
+                            ELSE 'Completed'
+                          END::orderprocessingstate,
+        processed = CURRENT_TIMESTAMP
     WHERE _id = order_id;
     
-    RETURN true;
+    RETURN NOT has_pending_notifications;
 END;
 $$ LANGUAGE plpgsql;
