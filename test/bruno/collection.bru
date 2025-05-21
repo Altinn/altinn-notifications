@@ -1,0 +1,29 @@
+auth {
+  mode: bearer
+}
+
+auth:bearer {
+  token: {{jwt}}
+}
+
+script:pre-request {
+  const { v4: uuidv4 } = require('uuid');
+  bru.setVar("random_idempotency_id", uuidv4());
+  bru.setVar("dialog_guid", uuidv4());
+  bru.setVar("senders_reference_guid", uuidv4());
+  
+  //Auto-fetch a valid auth-token
+  if(   bru.getEnvVar("jwt") === "" //no token
+     || bru.getEnvVar("jwt_env") !== bru.getEnvVar("Environment") //new env
+     || (bru.getEnvVar("jwt_from") + 15*60*1000) < Date.now() // old token (expired)
+    ){
+    const requestResponse = await bru.runRequest("test-util/new auth token"
+  );
+    
+    if(requestResponse.status == 200){
+      console.log('Automatically (re)-aquired a JWT');
+    }else{
+      console.log('Failed automatically (re)-aquirering a JWT');
+    }
+  }
+}
