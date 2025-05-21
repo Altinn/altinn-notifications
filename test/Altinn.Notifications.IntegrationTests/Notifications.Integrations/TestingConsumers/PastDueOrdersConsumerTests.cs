@@ -14,12 +14,10 @@ public class PastDueOrdersConsumerTests : IDisposable
     private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
 
     /// <summary>
-    /// When a new order is picked up by the consumer, we expect there to be an email notification created for the recipient states in the order.
-    /// We measure the sucess of this test by confirming that a new email notificaiton has been created with a reference to our order id
-    /// as well as confirming that the order now has the status 'Processed' set at its processing status
+    /// Verifies that the consumer handles new notification orders and updates their status to "Processed".
     /// </summary>
     [Fact]
-    public async Task RunTask_ConfirmExpectedSideEffects()
+    public async Task Consumer_UpdatesOrderStatusToProcessed()
     {
         // Arrange
         Dictionary<string, string> vars = new()
@@ -29,10 +27,11 @@ public class PastDueOrdersConsumerTests : IDisposable
         };
 
         using PastDueOrdersConsumer consumerService = (PastDueOrdersConsumer)ServiceUtil
-                                                    .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
+                                                    .GetServices([typeof(IHostedService)], vars)
                                                     .First(s => s.GetType() == typeof(PastDueOrdersConsumer))!;
 
         NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithEmailOrder(sendersReference: _sendersRef);
+
         await KafkaUtil.PublishMessageOnTopic(_pastDueOrdersTopicName, persistedOrder.Serialize());
 
         Guid orderId = persistedOrder.Id;
@@ -43,7 +42,7 @@ public class PastDueOrdersConsumerTests : IDisposable
         await consumerService.StopAsync(CancellationToken.None);
 
         // Assert
-        long processedOrderCount = await SelectProcessedOrderCount(orderId);
+        long processedOrderCount = await SelectOrderCount(orderId, "Processed");
         long emailNotificationCount = await SelectEmailNotificationCount(orderId);
 
         Assert.Equal(1, processedOrderCount);
@@ -51,8 +50,7 @@ public class PastDueOrdersConsumerTests : IDisposable
     }
 
     /// <summary>
-    /// When a new order is picked up by the consumer and all email notifications are created before processedstatus is changed.
-    /// We measure the success of this test by confirming that the processedstatus is Completed.
+    /// Verifies that the consumer handles new notification orders and updates their status to "Completed".
     /// </summary>
     [Fact]
     public async Task Consumer_UpdatesOrderStatusToCompleted()
@@ -65,10 +63,10 @@ public class PastDueOrdersConsumerTests : IDisposable
         };
 
         using PastDueOrdersConsumer consumerRetryService = (PastDueOrdersConsumer)ServiceUtil
-                                                    .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
+                                                    .GetServices([typeof(IHostedService)], vars)
                                                     .First(s => s.GetType() == typeof(PastDueOrdersConsumer))!;
 
-        NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithOrderAndSmsNotificationForReservedRecipient(sendersReference: _sendersRef);
+        NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithSmsOrderForReservedRecipient(sendersReference: _sendersRef);
 
         await KafkaUtil.PublishMessageOnTopic(_pastDueOrdersTopicName, persistedOrder.Serialize());
 
@@ -80,9 +78,11 @@ public class PastDueOrdersConsumerTests : IDisposable
         await consumerRetryService.StopAsync(CancellationToken.None);
 
         // Assert
-        string processedstatus = await SelectProcessStatus(orderId);
+        long smsNotificationCount = await SelectSmsNotificationCount(orderId);
+        long completedOrderCount = await SelectOrderCount(orderId, "Completed");
 
-        Assert.Equal("Completed", processedstatus);
+        Assert.Equal(1, completedOrderCount);
+        Assert.Equal(1, smsNotificationCount);
     }
 
     public async void Dispose()
@@ -98,15 +98,12 @@ public class PastDueOrdersConsumerTests : IDisposable
         await KafkaUtil.DeleteTopicAsync(_pastDueOrdersTopicName);
     }
 
-    private static async Task<string> SelectProcessStatus(Guid orderId)
+    private static async Task<long> SelectSmsNotificationCount(Guid orderId)
     {
-        string sql = $"select processedstatus from notifications.orders where alternateid='{orderId}'";
-        return await PostgreUtil.RunSqlReturnOutput<string>(sql);
-    }
-
-    private static async Task<long> SelectProcessedOrderCount(Guid orderId)
-    {
-        string sql = $"select count(1) from notifications.orders where processedstatus = 'Processed' and alternateid='{orderId}'";
+        string sql = $"select count(1) " +
+                   "from notifications.smsnotifications e " +
+                   "join notifications.orders o on e._orderid=o._id " +
+                   $"where e._orderid = o._id and o.alternateid ='{orderId}'";
         return await PostgreUtil.RunSqlReturnOutput<long>(sql);
     }
 
@@ -116,6 +113,12 @@ public class PastDueOrdersConsumerTests : IDisposable
                    "from notifications.emailnotifications e " +
                    "join notifications.orders o on e._orderid=o._id " +
                    $"where e._orderid = o._id and o.alternateid ='{orderId}'";
+        return await PostgreUtil.RunSqlReturnOutput<long>(sql);
+    }
+
+    private static async Task<long> SelectOrderCount(Guid orderId, string status)
+    {
+        string sql = $"select count(1) from notifications.orders where processedstatus = '{status}' and alternateid='{orderId}'";
         return await PostgreUtil.RunSqlReturnOutput<long>(sql);
     }
 }
