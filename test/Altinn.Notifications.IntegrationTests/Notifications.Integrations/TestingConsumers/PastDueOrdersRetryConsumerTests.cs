@@ -14,46 +14,16 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
     private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
 
     /// <summary>
-    /// When a new order is picked up by the consumer (this will be the retry mechanism), we expect there to be an email notification created for the recipient states in the order.
-    /// We measure the sucess of this test by confirming that a new email notificaiton has been created with a reference to our order id
-    /// as well as confirming that the order now has the status 'Processed' set at its processing status
+    /// Verifies that the retry consumer creates email notifications and updates
+    /// the order status to "Processed" after the email service has processed the email notification.
     /// </summary>
-    [Fact]
-    public async Task RunTask_ConfirmExpectedSideEffects()
-    {
-        // Arrange
-        Dictionary<string, string> vars = new()
-        {
-            { "KafkaSettings__PastDueOrdersRetryTopicName", _retryTopicName },
-            { "KafkaSettings__Admin__TopicList", $"[\"{_retryTopicName}\"]" }
-        };
-
-        using PastDueOrdersRetryConsumer consumerRetryService = (PastDueOrdersRetryConsumer)ServiceUtil
-                                                    .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
-                                                    .First(s => s.GetType() == typeof(PastDueOrdersRetryConsumer))!;
-
-        NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithEmailOrder(sendersReference: _sendersRef);
-        await KafkaUtil.PublishMessageOnTopic(_retryTopicName, persistedOrder.Serialize());
-
-        Guid orderId = persistedOrder.Id;
-
-        // Act
-        await consumerRetryService.StartAsync(CancellationToken.None);
-        await Task.Delay(10000);
-        await consumerRetryService.StopAsync(CancellationToken.None);
-
-        // Assert
-        long processedOrderCount = await SelectProcessedOrderCount(orderId);
-        long emailNotificationCount = await SelectEmailNotificationCount(orderId);
-
-        Assert.Equal(1, processedOrderCount);
-        Assert.Equal(1, emailNotificationCount);
-    }
-
-    /// <summary>
-    /// When a new order is picked up by the consumer and all email notifications are created before processedstatus is changed.
-    /// We measure the success of this test by confirming that the processedstatus is Processed.
-    /// </summary>
+    /// <remarks>
+    /// This test:
+    /// 1. Creates an email notification order in the database
+    /// 2. Publishes this order to the retry topic for processing
+    /// 3. Verifies that email notification is created for the recipients in the order
+    /// 4. Confirms that the order's processing status is updated to "Processed" because the email notification has not reached final state yet
+    /// </remarks>
     [Fact]
     public async Task RetryConsumer_UpdatesOrderStatusToProcessed()
     {
@@ -65,7 +35,7 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
         };
 
         using PastDueOrdersRetryConsumer consumerRetryService = (PastDueOrdersRetryConsumer)ServiceUtil
-                                                    .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
+                                                    .GetServices([typeof(IHostedService)], vars)
                                                     .First(s => s.GetType() == typeof(PastDueOrdersRetryConsumer))!;
 
         NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithOrderAndEmailNotificationReturnOrder(sendersReference: _sendersRef);
@@ -81,14 +51,25 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
 
         // Assert
         string processedstatus = await SelectProcessStatus(orderId);
+        long processedOrderCount = await SelectProcessedOrderCount(orderId);
+        long emailNotificationCount = await SelectEmailNotificationCount(orderId);
 
+        Assert.Equal(1, processedOrderCount);
+        Assert.Equal(1, emailNotificationCount);
         Assert.Equal("Processed", processedstatus);
     }
 
     /// <summary>
-    /// When a new order is picked up by the consumer and all email notifications are created before processedstatus is changed.
-    /// We measure the success of this test by confirming that the processedstatus is Completed.
+    /// Verifies that the retry consumer creates email notifications and updates
+    /// the order status to "Completed" after the email service has processed the email notification.
     /// </summary>
+    /// <remarks>
+    /// This test:
+    /// 1. Creates an email notification order in the database
+    /// 2. Publishes this order to the retry topic for processing
+    /// 3. Verifies that email notification is created for the recipients in the order
+    /// 4. Confirms that the order's processing status is updated to "Completed" because the email notification has reached final state yet
+    /// </remarks>
     [Fact]
     public async Task RetryConsumer_UpdatesOrderStatusToCompleted()
     {
@@ -100,7 +81,7 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
         };
 
         using PastDueOrdersRetryConsumer consumerRetryService = (PastDueOrdersRetryConsumer)ServiceUtil
-                                                    .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
+                                                    .GetServices([typeof(IHostedService)], vars)
                                                     .First(s => s.GetType() == typeof(PastDueOrdersRetryConsumer))!;
 
         NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithOrderAndEmailNotificationForReservedRecipient(sendersReference: _sendersRef);
@@ -116,7 +97,11 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
 
         // Assert
         string processedstatus = await SelectProcessStatus(orderId);
+        long processedOrderCount = await SelectProcessedOrderCount(orderId);
+        long emailNotificationCount = await SelectEmailNotificationCount(orderId);
 
+        Assert.Equal(1, processedOrderCount);
+        Assert.Equal(1, emailNotificationCount);
         Assert.Equal("Completed", processedstatus);
     }
 
@@ -129,8 +114,8 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
 
     protected virtual async Task Dispose(bool disposing)
     {
-        await KafkaUtil.DeleteTopicAsync(_retryTopicName);
         await PostgreUtil.DeleteOrderFromDb(_sendersRef);
+        await KafkaUtil.DeleteTopicAsync(_retryTopicName);
     }
 
     private static async Task<long> SelectProcessedOrderCount(Guid orderId)
