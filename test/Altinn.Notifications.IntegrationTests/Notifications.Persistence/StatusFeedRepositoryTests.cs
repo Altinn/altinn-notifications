@@ -22,7 +22,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
         }
 
         [Fact]
-        public async Task ReadStatusFeed()
+        public async Task ReadStatusFeedWithTestCreatorName()
         {
             // Arrange
             var sqlInsert = $@"INSERT INTO notifications.statusfeed(
@@ -42,6 +42,21 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             Assert.True(results.Count > 0);
             Assert.Equal(1, results[0].SequenceNumber);
             Assert.Contains("validjson", results[0].OrderStatus.ToString());
+        }
+
+        [Fact]
+        public async Task ReadStatusFeedWithEmptyCreatorName()
+        {
+            // Arrange
+            StatusFeedRepository statusFeedRepository = (StatusFeedRepository)ServiceUtil
+                .GetServices([typeof(IStatusFeedRepository)])
+                .First(i => i.GetType() == typeof(StatusFeedRepository));
+            
+            // Act
+            var results = await statusFeedRepository.GetStatusFeed(1, string.Empty, CancellationToken.None);
+            
+            // Assert
+            Assert.Empty(results);
         }
     }
 }

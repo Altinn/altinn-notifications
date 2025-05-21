@@ -65,7 +65,7 @@ public class StatusFeedServiceTests
             error =>
             {
                 Assert.Equal(400, error.ErrorCode);
-                Assert.Equal("Missing creator", error.ErrorMessage);
+                Assert.Equal("Creator name cannot be null or empty", error.ErrorMessage);
                 return true;
             });
     }
