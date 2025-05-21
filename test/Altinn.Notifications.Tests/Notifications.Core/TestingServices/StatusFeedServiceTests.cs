@@ -5,7 +5,8 @@ using Altinn.Notifications.Core.Models.Delivery;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Tests.TestData;
-
+using Castle.Core.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
 
@@ -21,7 +22,7 @@ public class StatusFeedServiceTests
         statusFeedRepository.Setup(x => x.GetStatusFeed(It.IsAny<int>(), It.IsAny<string>(), CancellationToken.None, It.IsAny<int>()))
             .ReturnsAsync([new StatusFeed() { SequenceNumber = 1, OrderStatus = TestDataConstants.OrderStatusFeedTestOrderCompleted }]);
 
-        var statusFeedService = new StatusFeedService(statusFeedRepository.Object);
+        var statusFeedService = new StatusFeedService(statusFeedRepository.Object, new NullLogger<StatusFeedService>());
         int seq = 1;
         string creatorName = "ttd";
 
@@ -48,7 +49,7 @@ public class StatusFeedServiceTests
     {
         // Arrange
         Mock<IStatusFeedRepository> statusFeedRepository = new();
-        var statusFeedService = new StatusFeedService(statusFeedRepository.Object);
+        var statusFeedService = new StatusFeedService(statusFeedRepository.Object, new NullLogger<StatusFeedService>());
         int seq = 1;
         string creatorName = string.Empty;
         

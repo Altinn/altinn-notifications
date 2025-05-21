@@ -17,6 +17,7 @@ namespace Altinn.Notifications.Controllers;
 [Route("notifications/api/v1/future/shipment")]
 [SwaggerResponse(401, "Caller is unauthorized")]
 [SwaggerResponse(403, "Caller is not authorized to access the requested resource")]
+[SwaggerResponse(499, "The operation was cancelled by the caller")]
 [Authorize(Policy = AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS)]
 public class StatusFeedController(IStatusFeedService statusFeedService) : ControllerBase
 {

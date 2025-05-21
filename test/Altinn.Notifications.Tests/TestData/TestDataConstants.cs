@@ -1,5 +1,8 @@
 ﻿namespace Altinn.Notifications.Tests.TestData
 {
+    /// <summary>
+    /// This class contains test data properties, such as JSON strings used in unit tests.
+    /// </summary>
     internal class TestDataConstants
     {
         public static string OrderStatusFeedTestOrderCompleted => @"{
