@@ -24,13 +24,27 @@ public class StatusFeedService : IStatusFeedService
     /// <inheritdoc />
     public async Task<Result<List<StatusFeed>, ServiceError>> GetStatusFeed(int seq, string creatorName, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(creatorName))
+        if (seq < 0)
         {
-            return new ServiceError(400, "Missing creator");
+            return new ServiceError(400, "Sequence number cannot be negative");
         }
 
-        var statusFeedEntries = await _statusFeedRepository.GetStatusFeed(seq: seq, creatorName: creatorName, cancellationToken: cancellationToken);
+        if (string.IsNullOrWhiteSpace(creatorName))
+        {
+            return new ServiceError(400, "Creator name cannot be null or empty");
+        }
 
-        return statusFeedEntries;
+        try
+        {
+            var statusFeedEntries = await _statusFeedRepository.GetStatusFeed(
+                seq: seq,
+                creatorName: creatorName,
+                cancellationToken: cancellationToken);
+            return statusFeedEntries;
+        }
+        catch (Exception ex)
+        {
+            return new ServiceError(500, $"Failed to retrieve status feed: {ex.Message}");
+        }
     }
 }
