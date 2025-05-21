@@ -946,7 +946,6 @@ BEGIN
         FROM notifications.smsnotifications 
         WHERE _orderid = order_id 
         AND result::TEXT IN ('New', 'Sending', 'Accepted')
-        LIMIT 1
         
         UNION ALL
         
@@ -954,7 +953,6 @@ BEGIN
         FROM notifications.emailnotifications 
         WHERE _orderid = order_id 
         AND result::TEXT IN ('New', 'Sending', 'Succeeded')
-        LIMIT 1
     )
     SELECT EXISTS(SELECT 1 FROM pending_notifications) INTO has_pending_notifications;
     
