@@ -294,7 +294,7 @@ public class EmailNotificationServiceTests
         repoMock.Verify();
     }
 
-    private static EmailNotificationService GetTestService(IEmailNotificationRepository? repo = null, IKafkaProducer? producer = null, Guid? guidOutput = null, DateTime? dateTimeOutput = null)
+    private static EmailNotificationService GetTestService(IEmailNotificationRepository? repo = null, IKafkaProducer? producer = null, Guid? guidOutput = null, DateTime? dateTimeOutput = null, IOrderRepository? orderRepository = null)
     {
         var guidService = new Mock<IGuidService>();
         guidService
@@ -317,8 +317,12 @@ public class EmailNotificationServiceTests
             producer = producerMock.Object;
         }
 
-        var orderRepositoryMock = new Mock<IOrderRepository>();
+        if (orderRepository == null)
+        {
+            var orderRepositoryMock = new Mock<IOrderRepository>();
+            orderRepository = orderRepositoryMock.Object;
+        }
 
-        return new EmailNotificationService(guidService.Object, dateTimeService.Object, repo, producer, Options.Create(new KafkaSettings { EmailQueueTopicName = _emailQueueTopicName }), orderRepositoryMock.Object);
+        return new EmailNotificationService(guidService.Object, dateTimeService.Object, repo, producer, Options.Create(new KafkaSettings { EmailQueueTopicName = _emailQueueTopicName }), orderRepository);
     }
 }
