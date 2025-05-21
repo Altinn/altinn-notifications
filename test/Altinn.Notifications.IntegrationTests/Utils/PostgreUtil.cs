@@ -139,6 +139,25 @@ public static class PostgreUtil
         pgcom.ExecuteNonQuery();
     }
 
+    public static async Task<NotificationOrder> PopulateDBWithOrderAndSmsNotificationForReservedRecipient(string? sendersReference = null)
+    {
+        (NotificationOrder o, SmsNotification e) = TestdataUtil.GetSmsNotificationOrderForReservedRecipient();
+        var serviceList = ServiceUtil.GetServices([typeof(IOrderRepository), typeof(ISmsNotificationRepository)]);
+
+        OrderRepository orderRepo = (OrderRepository)serviceList.First(i => i.GetType() == typeof(OrderRepository));
+        SmsNotificationRepository notificationRepo = (SmsNotificationRepository)serviceList.First(i => i.GetType() == typeof(SmsNotificationRepository));
+
+        if (sendersReference != null)
+        {
+            o.SendersReference = sendersReference;
+        }
+
+        await orderRepo.Create(o);
+        await notificationRepo.AddNotification(e, DateTime.UtcNow.AddDays(1), 1);
+
+        return o;
+    }
+
     public static async Task<NotificationOrder> PopulateDBWithOrderAndEmailNotificationForReservedRecipient(string? sendersReference = null)
     {
         (NotificationOrder o, EmailNotification e) = TestdataUtil.GetEmailNotificationOrderForReservedRecipient();

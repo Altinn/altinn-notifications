@@ -50,6 +50,41 @@ public class PastDueOrdersConsumerTests : IDisposable
         Assert.Equal(1, emailNotificationCount);
     }
 
+    /// <summary>
+    /// When a new order is picked up by the consumer and all email notifications are created before processedstatus is changed.
+    /// We measure the success of this test by confirming that the processedstatus is Completed.
+    /// </summary>
+    [Fact]
+    public async Task Consumer_UpdatesOrderStatusToCompleted()
+    {
+        // Arrange
+        Dictionary<string, string> vars = new()
+        {
+            { "KafkaSettings__PastDueOrdersTopicName", _pastDueOrdersTopicName },
+            { "KafkaSettings__Admin__TopicList", $"[\"{_pastDueOrdersTopicName}\"]" }
+        };
+
+        using PastDueOrdersConsumer consumerRetryService = (PastDueOrdersConsumer)ServiceUtil
+                                                    .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
+                                                    .First(s => s.GetType() == typeof(PastDueOrdersConsumer))!;
+
+        NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithOrderAndSmsNotificationForReservedRecipient(sendersReference: _sendersRef);
+
+        await KafkaUtil.PublishMessageOnTopic(_pastDueOrdersTopicName, persistedOrder.Serialize());
+
+        Guid orderId = persistedOrder.Id;
+
+        // Act
+        await consumerRetryService.StartAsync(CancellationToken.None);
+        await Task.Delay(10000);
+        await consumerRetryService.StopAsync(CancellationToken.None);
+
+        // Assert
+        string processedstatus = await SelectProcessStatus(orderId);
+
+        Assert.Equal("Completed", processedstatus);
+    }
+
     public async void Dispose()
     {
         await Dispose(true);
@@ -61,6 +96,12 @@ public class PastDueOrdersConsumerTests : IDisposable
     {
         await PostgreUtil.DeleteOrderFromDb(_sendersRef);
         await KafkaUtil.DeleteTopicAsync(_pastDueOrdersTopicName);
+    }
+
+    private static async Task<string> SelectProcessStatus(Guid orderId)
+    {
+        string sql = $"select processedstatus from notifications.orders where alternateid='{orderId}'";
+        return await PostgreUtil.RunSqlReturnOutput<string>(sql);
     }
 
     private static async Task<long> SelectProcessedOrderCount(Guid orderId)
