@@ -52,7 +52,7 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
 
     /// <summary>
     /// When a new order is picked up by the consumer and all email notifications are created before processedstatus is changed.
-    /// We measure the sucess of this test by confirming that the processedstatus is Processed.
+    /// We measure the success of this test by confirming that the processedstatus is Processed.
     /// </summary>
     [Fact]
     public async Task RunTask_ConfirmChangeOfStatus()
