@@ -883,7 +883,7 @@ END;
 $BODY$;
 
 -- trymarkorderascompleted.sql:
-CREATE OR REPLACE FUNCTION notifications.updateorderstatus(_alternateid uuid, _alternateidsource text)
+CREATE OR REPLACE FUNCTION notifications.trymarkorderascompleted(_alternateid uuid, _alternateidsource text)
 RETURNS boolean AS $$
 DECLARE
     order_id bigint;
