@@ -137,4 +137,147 @@ public static class TestdataUtil
             SendingTimePolicy = SendingTimePolicy.Daytime
         };
     }
+
+    /// <summary>
+    /// NOTE! Overwrite id with a new GUID to ensure it is unique in the test scope.
+    /// </summary>
+    public static NotificationOrder GetSmsNotificationForOneReservedRecipient()
+    {
+        return new NotificationOrder()
+        {
+            ResourceId = null,
+            Creator = new("ttd"),
+            ConditionEndpoint = null,
+            IgnoreReservation = false,
+            Created = DateTime.UtcNow,
+            Type = OrderType.Notification,
+            SendersReference = "local-testing",
+            RequestedSendTime = DateTime.UtcNow,
+            NotificationChannel = NotificationChannel.Sms,
+            SendingTimePolicy = SendingTimePolicy.Daytime,
+
+            Templates =
+            [
+                new SmsTemplate()
+                {
+                    Body = "sms-body",
+                    SenderNumber = "Altinn local test"
+                }
+            ],
+
+            Recipients =
+            [
+                new Recipient()
+                {
+                    IsReserved = true,
+                    OrganizationNumber = null,
+                    NationalIdentityNumber = null,
+
+                    AddressInfo =
+                    [
+                        new SmsAddressPoint()
+                        {
+                            MobileNumber = "+4799999999",
+                            AddressType = AddressType.Sms
+                        }
+                    ]
+                }
+            ]
+        };
+    }
+
+    /// <summary>
+    /// NOTE! Overwrite id with a new GUID to ensure it is unique in the test scope.
+    /// </summary>
+    public static NotificationOrder GetEmailNotificationForOneReservedRecipient()
+    {
+        return new NotificationOrder()
+        {
+            ResourceId = null,
+            Creator = new("ttd"),
+            ConditionEndpoint = null,
+            IgnoreReservation = false,
+            Created = DateTime.UtcNow,
+            Type = OrderType.Notification,
+            SendersReference = "local-testing",
+            RequestedSendTime = DateTime.UtcNow,
+            NotificationChannel = NotificationChannel.Sms,
+            SendingTimePolicy = SendingTimePolicy.Daytime,
+
+            Templates =
+            [
+                new EmailTemplate()
+                {
+                    Body = "email-body",
+                    Subject = "email-subject",
+                    FromAddress = "sender@domain.com",
+                    ContentType = EmailContentType.Html
+                }
+            ],
+            Recipients =
+            [
+                new Recipient()
+                {
+                    IsReserved = true,
+                    OrganizationNumber = null,
+                    NationalIdentityNumber = null,
+
+                    AddressInfo =
+                    [
+                        new EmailAddressPoint()
+                        {
+                            AddressType = AddressType.Email,
+                            EmailAddress = "recipient1@domain.com"
+                        }
+                    ],
+                }
+            ]
+        };
+    }
+
+    public static (NotificationOrder Order, SmsNotification Notification) GetSmsNotificationOrderForReservedRecipient()
+    {
+        NotificationOrder order = GetSmsNotificationForOneReservedRecipient();
+        order.Id = Guid.NewGuid();
+
+        var recipient = order.Recipients[0];
+        SmsAddressPoint? addressPoint = recipient.AddressInfo.Find(a => a.AddressType == AddressType.Sms) as SmsAddressPoint;
+
+        var smsNotification = new SmsNotification()
+        {
+            OrderId = order.Id,
+            Id = Guid.NewGuid(),
+            RequestedSendTime = order.RequestedSendTime,
+            SendResult = new(SmsNotificationResultType.Failed_RecipientReserved, DateTime.UtcNow),
+            Recipient = new()
+            {
+                MobileNumber = addressPoint!.MobileNumber,
+            }
+        };
+
+        return (order, smsNotification);
+    }
+
+    public static (NotificationOrder Order, EmailNotification Notification) GetEmailNotificationOrderForReservedRecipient()
+    {
+        NotificationOrder order = GetEmailNotificationForOneReservedRecipient();
+        order.Id = Guid.NewGuid();
+
+        var recipient = order.Recipients[0];
+        EmailAddressPoint? addressPoint = recipient.AddressInfo.Find(a => a.AddressType == AddressType.Email) as EmailAddressPoint;
+
+        var emailNotification = new EmailNotification()
+        {
+            OrderId = order.Id,
+            Id = Guid.NewGuid(),
+            RequestedSendTime = order.RequestedSendTime,
+            SendResult = new(EmailNotificationResultType.Failed_RecipientReserved, DateTime.UtcNow),
+            Recipient = new()
+            {
+                ToAddress = addressPoint!.EmailAddress
+            }
+        };
+
+        return (order, emailNotification);
+    }
 }
