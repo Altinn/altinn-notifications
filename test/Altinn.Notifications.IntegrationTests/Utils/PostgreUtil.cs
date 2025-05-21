@@ -106,25 +106,6 @@ public static class PostgreUtil
         return (o, e);
     }
 
-    public static async Task<NotificationOrder> PopulateDBWithOrderAndEmailNotificationReturnOrder(string? sendersReference = null)
-    {
-        (NotificationOrder o, EmailNotification e) = TestdataUtil.GetOrderAndEmailNotification();
-        var serviceList = ServiceUtil.GetServices([typeof(IOrderRepository), typeof(IEmailNotificationRepository)]);
-
-        OrderRepository orderRepo = (OrderRepository)serviceList.First(i => i.GetType() == typeof(OrderRepository));
-        EmailNotificationRepository notificationRepo = (EmailNotificationRepository)serviceList.First(i => i.GetType() == typeof(EmailNotificationRepository));
-
-        if (sendersReference != null)
-        {
-            o.SendersReference = sendersReference;
-        }
-
-        await orderRepo.Create(o);
-        await notificationRepo.AddNotification(e, DateTime.UtcNow.AddDays(1));
-
-        return o;
-    }
-
     public static async Task<(NotificationOrder Order, SmsNotification SmsNotification)> PopulateDBWithOrderAndSmsNotification(string? sendersReference = null, SendingTimePolicy? sendingTimePolicy = null)
     {
         (NotificationOrder order, SmsNotification smsNotification) = TestdataUtil.GetOrderAndSmsNotification(sendingTimePolicy);
