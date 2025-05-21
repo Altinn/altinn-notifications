@@ -201,8 +201,8 @@ public static class TestdataUtil
             Type = OrderType.Notification,
             SendersReference = "local-testing",
             RequestedSendTime = DateTime.UtcNow,
-            NotificationChannel = NotificationChannel.Sms,
-            SendingTimePolicy = SendingTimePolicy.Daytime,
+            SendingTimePolicy = SendingTimePolicy.Anytime,
+            NotificationChannel = NotificationChannel.Email,
 
             Templates =
             [
