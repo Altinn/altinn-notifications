@@ -65,81 +65,42 @@ public static class TestdataUtil
     {
         return new NotificationOrder()
         {
+            ResourceId = null,
+            Creator = new("ttd"),
+            ConditionEndpoint = null,
+            IgnoreReservation = null,
+            Type = OrderType.Notification,
             SendersReference = "local-testing",
-            Templates = new List<INotificationTemplate>()
-            {
+            NotificationChannel = NotificationChannel.Sms,
+            SendingTimePolicy = SendingTimePolicy.Daytime,
+            Created = new DateTime(2023, 06, 16, 08, 45, 00, DateTimeKind.Utc),
+            RequestedSendTime = new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc),
+
+            Templates =
+            [
                 new SmsTemplate()
                 {
                     Body = "sms-body",
                     SenderNumber = "Altinn local test"
                 }
-            },
-            RequestedSendTime = new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc),
-            NotificationChannel = NotificationChannel.Sms,
-            Creator = new("ttd"),
-            Created = new DateTime(2023, 06, 16, 08, 45, 00, DateTimeKind.Utc),
-            Recipients = new List<Recipient>()
-            {
-                new Recipient()
-                {
-                    AddressInfo = new()
-                    {
-                        new SmsAddressPoint()
-                        {
-                            AddressType = AddressType.Sms,
-                            MobileNumber = "+4799999999"
-                        }
-                    }
-                }
-            },
-            Type = OrderType.Notification,
-            SendingTimePolicy = SendingTimePolicy.Daytime
-        };
-    }
-
-    /// <summary>
-    /// NOTE! Overwrite id with a new GUID to ensure it is unique in the test scope.
-    /// </summary>
-    public static NotificationOrder NotificationOrder_EmailTemplate_OneRecipient()
-    {
-        return new NotificationOrder()
-        {
-            ResourceId = null,
-            Creator = new("ttd"),
-            ConditionEndpoint = null,
-            IgnoreReservation = false,
-            Created = DateTime.UtcNow,
-            Type = OrderType.Notification,
-            SendersReference = "local-testing",
-            RequestedSendTime = DateTime.UtcNow,
-            SendingTimePolicy = SendingTimePolicy.Anytime,
-            NotificationChannel = NotificationChannel.Email,
-
-            Templates =
-            [
-                new EmailTemplate()
-                {
-                    Body = "email-body",
-                    Subject = "email-subject",
-                    FromAddress = "sender@domain.com",
-                    ContentType = EmailContentType.Html
-                }
             ],
+
             Recipients =
             [
                 new Recipient()
                 {
+                    IsReserved = null,
                     OrganizationNumber = null,
                     NationalIdentityNumber = null,
 
                     AddressInfo =
                     [
-                        new EmailAddressPoint()
+                        new SmsAddressPoint()
                         {
-                            AddressType = AddressType.Email,
-                            EmailAddress = "recipient1@domain.com"
+                            MobileNumber = "+4799999999",
+                            AddressType = AddressType.Sms
                         }
-                    ],
+                    ]
                 }
             ]
         };
@@ -155,13 +116,13 @@ public static class TestdataUtil
             ResourceId = null,
             Creator = new("ttd"),
             ConditionEndpoint = null,
-            IgnoreReservation = false,
-            Created = DateTime.UtcNow,
+            IgnoreReservation = null,
             Type = OrderType.Notification,
             SendersReference = "local-testing",
-            RequestedSendTime = DateTime.UtcNow,
             NotificationChannel = NotificationChannel.Sms,
             SendingTimePolicy = SendingTimePolicy.Daytime,
+            Created = new DateTime(2023, 06, 16, 08, 45, 00, DateTimeKind.Utc),
+            RequestedSendTime = new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc),
 
             Templates =
             [
@@ -196,6 +157,54 @@ public static class TestdataUtil
     /// <summary>
     /// NOTE! Overwrite id with a new GUID to ensure it is unique in the test scope.
     /// </summary>
+    public static NotificationOrder NotificationOrder_EmailTemplate_OneRecipient()
+    {
+        return new NotificationOrder()
+        {
+            ResourceId = null,
+            Creator = new("ttd"),
+            ConditionEndpoint = null,
+            IgnoreReservation = null,
+            Type = OrderType.Notification,
+            SendersReference = "local-testing",
+            SendingTimePolicy = SendingTimePolicy.Anytime,
+            NotificationChannel = NotificationChannel.Email,
+            Created = new DateTime(2023, 06, 16, 08, 45, 00, DateTimeKind.Utc),
+            RequestedSendTime = new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc),
+
+            Templates =
+            [
+                new EmailTemplate()
+                {
+                    Body = "email-body",
+                    Subject = "email-subject",
+                    FromAddress = "sender@domain.com",
+                    ContentType = EmailContentType.Html
+                }
+            ],
+            Recipients =
+            [
+                new Recipient()
+                {
+                    OrganizationNumber = null,
+                    NationalIdentityNumber = null,
+
+                    AddressInfo =
+                    [
+                        new EmailAddressPoint()
+                        {
+                            AddressType = AddressType.Email,
+                            EmailAddress = "recipient1@domain.com"
+                        }
+                    ],
+                }
+            ]
+        };
+    }
+
+    /// <summary>
+    /// NOTE! Overwrite id with a new GUID to ensure it is unique in the test scope.
+    /// </summary>
     public static NotificationOrder GetEmailNotificationForOneReservedRecipient()
     {
         return new NotificationOrder()
@@ -203,13 +212,13 @@ public static class TestdataUtil
             ResourceId = null,
             Creator = new("ttd"),
             ConditionEndpoint = null,
-            IgnoreReservation = false,
-            Created = DateTime.UtcNow,
+            IgnoreReservation = null,
             Type = OrderType.Notification,
             SendersReference = "local-testing",
-            RequestedSendTime = DateTime.UtcNow,
             SendingTimePolicy = SendingTimePolicy.Anytime,
             NotificationChannel = NotificationChannel.Email,
+            Created = new DateTime(2023, 06, 16, 08, 45, 00, DateTimeKind.Utc),
+            RequestedSendTime = new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc),
 
             Templates =
             [
