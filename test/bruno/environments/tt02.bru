@@ -1,12 +1,7 @@
 vars {
   host: https://platform.{{Environment}}.altinn.no
-  Environment: tt02
-  TokenGeneratorUserName: TOKEN_BASIC_AUTH_USER=
-{{process.env.TOKEN_BASIC_AUTH_USER}}
-  TokenGeneratorPassword: TOKEN_BASIC_AUTH_USER=
-{{process.env.TOKEN_BASIC_AUTH_PW}}
+  Environment: tt02  
 }
 vars:secret [
-  TokenGeneratorBaseUrl,
   jwt
 ]
