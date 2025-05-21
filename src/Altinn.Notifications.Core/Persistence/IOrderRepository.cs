@@ -101,17 +101,17 @@ public interface IOrderRepository
     public Task<Result<NotificationOrderWithStatus, CancellationError>> CancelOrder(Guid id, string creator);
 
     /// <summary>
-    /// Attempts to mark a notification order as 'Completed' when all its SMS and Email notifications have reached terminal states.
+    /// Marks a notification order as 'Completed' when all its SMS and Email notifications have reached final states.
     /// </summary>
-    /// <param name="notificationId">The identifier of the SMS or Email notification that triggered this check. Can be null if the operation should be skipped.</param>
+    /// <param name="notificationId">The identifier of the order, SMS or Email notification that triggered this check. Can be null if the operation should be skipped.</param>
     /// <param name="source">The source type of the alternate identifier.</param>
     /// <returns>
-    /// <c>true</c> if the order was transitioned to 'Completed' status; <c>false</c> if it was
-    /// already completed or not all SMS and Email notifications have reached terminal states.
+    /// <c>true</c> if the order status was updated to 'Completed'; <c>false</c> if the order was
+    /// already completed or not all notifications have reached terminal states.
     /// </returns>
     /// <remarks>
-    /// This method finds the order associated with the provided notification identifier and checks if all its
-    /// notifications have reached terminal states. If all notifications are complete, the order is marked as 'Completed'.
+    /// The method locates the order associated with the provided notification identifier and checks if all its
+    /// notifications have reached terminal states. Status update to 'Completed' only occurs when all notifications are complete.
     /// </remarks>
     public Task<bool> TryMarkOrderAsCompleted(Guid? notificationId, AlternateIdentifierSource source);
 }
