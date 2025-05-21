@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
 {
-    public class StatusFeedRepositioryTests : IAsyncLifetime
+    public class StatusFeedRepositoryTests : IAsyncLifetime
     {
         private readonly string _creatorName = "testcase";
 
@@ -39,9 +39,9 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             var results = await statusFeedRepository.GetStatusFeed(1, _creatorName, CancellationToken.None);
 
             // Assert
-            Assert.NotNull(results);
             Assert.True(results.Count > 0);
             Assert.Equal(1, results[0].SequenceNumber);
+            Assert.Contains("validjson", results[0].OrderStatus.ToString());
         }
     }
 }
