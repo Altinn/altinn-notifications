@@ -429,6 +429,72 @@ public class OrderProcessingServiceTests
         Assert.True(actual);
     }
 
+    [Fact]
+    public async Task ProcessOrder_CompletedSuccessfully_TriesToMarkOrderAsCompleted()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        NotificationOrder order = new()
+        {
+            Id = orderId,
+            NotificationChannel = NotificationChannel.Sms
+        };
+
+        var repoMock = new Mock<IOrderRepository>();
+        repoMock.Setup(r => r.TryMarkOrderAsCompleted(
+            It.Is<Guid?>(id => id == orderId),
+            It.Is<AlternateIdentifierSource>(s => s == AlternateIdentifierSource.Order)))
+            .ReturnsAsync(true);
+
+        var smsMockService = new Mock<ISmsOrderProcessingService>();
+        smsMockService.Setup(s => s.ProcessOrder(It.IsAny<NotificationOrder>())).Returns(Task.CompletedTask);
+
+        var orderProcessingService = GetTestService(repo: repoMock.Object, smsMock: smsMockService.Object);
+
+        // Act
+        await orderProcessingService.ProcessOrder(order);
+
+        // Assert
+        repoMock.Verify(
+            r => r.TryMarkOrderAsCompleted(
+                It.Is<Guid?>(id => id == orderId),
+                It.Is<AlternateIdentifierSource>(s => s == AlternateIdentifierSource.Order)),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ProcessOrderRetry_CompletedSuccessfully_TriesToMarkOrderAsCompleted()
+    {
+        // Arrange
+        Guid orderId = Guid.NewGuid();
+        NotificationOrder order = new()
+        {
+            Id = orderId,
+            NotificationChannel = NotificationChannel.Email
+        };
+
+        var repoMock = new Mock<IOrderRepository>();
+        repoMock.Setup(r => r.TryMarkOrderAsCompleted(
+            It.Is<Guid?>(id => id == orderId),
+            It.Is<AlternateIdentifierSource>(s => s == AlternateIdentifierSource.Order)))
+            .ReturnsAsync(true);
+
+        var emailMockService = new Mock<IEmailOrderProcessingService>();
+        emailMockService.Setup(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>())).Returns(Task.CompletedTask);
+
+        var orderProcessingService = GetTestService(repo: repoMock.Object, emailMock: emailMockService.Object);
+
+        // Act
+        await orderProcessingService.ProcessOrderRetry(order);
+
+        // Assert
+        repoMock.Verify(
+            r => r.TryMarkOrderAsCompleted(
+                It.Is<Guid?>(id => id == orderId),
+                It.Is<AlternateIdentifierSource>(s => s == AlternateIdentifierSource.Order)),
+            Times.Once);
+    }
+
     private static OrderProcessingService GetTestService(
         IOrderRepository? repo = null,
         IEmailOrderProcessingService? emailMock = null,
