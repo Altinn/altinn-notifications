@@ -67,12 +67,26 @@ public class ShipmentController : ControllerBase
                 },
                 error =>
                 {
-                    return StatusCode(error.ErrorCode, error.ErrorMessage);
+                    var problemDetails = new ProblemDetails
+                    {
+                        Title = "Failed to retrieve shipment information",
+                        Detail = error.ErrorMessage,
+                        Status = error.ErrorCode
+                    };
+
+                    return StatusCode(error.ErrorCode, problemDetails);
                 });
         }
         catch (OperationCanceledException)
         {
-            return StatusCode(499, "Request terminated - The client disconnected or cancelled the request before the server could complete processing");
+            var problemDetails = new ProblemDetails
+            {
+                Title = "Request terminated",
+                Detail = "The client disconnected or cancelled the request before the server could complete processing.",
+                Status = 499
+            };
+
+            return StatusCode(499, problemDetails);
         }
     }
 }
