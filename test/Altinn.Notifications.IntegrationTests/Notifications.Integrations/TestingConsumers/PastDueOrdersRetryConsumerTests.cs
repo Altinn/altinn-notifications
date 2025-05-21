@@ -55,7 +55,7 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
     /// We measure the success of this test by confirming that the processedstatus is Processed.
     /// </summary>
     [Fact]
-    public async Task RunTask_ConfirmChangeOfStatus()
+    public async Task RetryConsumer_UpdatesOrderStatusToProcessed()
     {
         // Arrange
         Dictionary<string, string> vars = new()
@@ -83,6 +83,41 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
         string processedstatus = await SelectProcessStatus(orderId);
 
         Assert.Equal("Processed", processedstatus);
+    }
+
+    /// <summary>
+    /// When a new order is picked up by the consumer and all email notifications are created before processedstatus is changed.
+    /// We measure the success of this test by confirming that the processedstatus is Completed.
+    /// </summary>
+    [Fact]
+    public async Task RetryConsumer_UpdatesOrderStatusToCompleted()
+    {
+        // Arrange
+        Dictionary<string, string> vars = new()
+        {
+            { "KafkaSettings__PastDueOrdersRetryTopicName", _retryTopicName },
+            { "KafkaSettings__Admin__TopicList", $"[\"{_retryTopicName}\"]" }
+        };
+
+        using PastDueOrdersRetryConsumer consumerRetryService = (PastDueOrdersRetryConsumer)ServiceUtil
+                                                    .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
+                                                    .First(s => s.GetType() == typeof(PastDueOrdersRetryConsumer))!;
+
+        NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithOrderAndEmailNotificationForReservedRecipient(sendersReference: _sendersRef);
+
+        await KafkaUtil.PublishMessageOnTopic(_retryTopicName, persistedOrder.Serialize());
+
+        Guid orderId = persistedOrder.Id;
+
+        // Act
+        await consumerRetryService.StartAsync(CancellationToken.None);
+        await Task.Delay(10000);
+        await consumerRetryService.StopAsync(CancellationToken.None);
+
+        // Assert
+        string processedstatus = await SelectProcessStatus(orderId);
+
+        Assert.Equal("Completed", processedstatus);
     }
 
     public async void Dispose()
