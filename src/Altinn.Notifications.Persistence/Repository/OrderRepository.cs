@@ -307,15 +307,8 @@ public class OrderRepository : IOrderRepository
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, sourceType);
 
-        try
-        {
-            var result = await pgcom.ExecuteScalarAsync();
-            return result != null && (bool)result;
-        }
-        catch
-        {
-            return false;
-        }
+        var result = await pgcom.ExecuteScalarAsync();
+        return result != null && (bool)result;
     }
 
     private static NotificationOrderWithStatus? ReadNotificationOrderWithStatus(NpgsqlDataReader reader)
