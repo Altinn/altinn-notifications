@@ -294,23 +294,28 @@ public class OrderRepository : IOrderRepository
     }
 
     /// <inheritdoc/>
-    public async Task<bool> TryMarkOrderAsCompleted(Guid? notificationId)
+    public async Task<bool> TryMarkOrderAsCompleted(Guid? notificationId, AlternateIdentifierSource source)
     {
         if (notificationId is null || notificationId == Guid.Empty)
         {
             return false;
         }
 
+        string sourceType = source.ToString().ToUpperInvariant();
+
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_tryMarkOrderAsCompletedSql);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, sourceType);
 
-        var result = await pgcom.ExecuteScalarAsync();
-        if (result == null)
+        try
+        {
+            var result = await pgcom.ExecuteScalarAsync();
+            return result != null && (bool)result;
+        }
+        catch
         {
             return false;
         }
-
-        return (bool)result;
     }
 
     private static NotificationOrderWithStatus? ReadNotificationOrderWithStatus(NpgsqlDataReader reader)
