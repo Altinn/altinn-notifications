@@ -93,7 +93,9 @@ public static class TestdataUtil
                         }
                     }
                 }
-            }
+            },
+            Type = OrderType.Notification,
+            SendingTimePolicy = SendingTimePolicy.Anytime
         };
     }
 
