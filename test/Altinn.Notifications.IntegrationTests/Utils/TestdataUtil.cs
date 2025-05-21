@@ -61,47 +61,6 @@ public static class TestdataUtil
     /// <summary>
     /// NOTE! Overwrite id with a new GUID to ensure it is unique in the test scope.
     /// </summary>
-    public static NotificationOrder NotificationOrder_EmailTemplate_OneRecipient()
-    {
-        return new NotificationOrder()
-        {
-            SendersReference = "local-testing",
-            Templates = new List<INotificationTemplate>()
-            {
-                new EmailTemplate()
-                {
-                    FromAddress = "sender@domain.com",
-                    Subject = "email-subject",
-                    Body = "email-body",
-                    ContentType = EmailContentType.Html
-                }
-            },
-            RequestedSendTime = new DateTime(2023, 06, 16, 08, 50, 00, DateTimeKind.Utc),
-            NotificationChannel = NotificationChannel.Email,
-            Creator = new("ttd"),
-            Created = new DateTime(2023, 06, 16, 08, 45, 00, DateTimeKind.Utc),
-            Recipients = new List<Recipient>()
-            {
-                new Recipient()
-                {
-                    AddressInfo = new()
-                    {
-                        new EmailAddressPoint()
-                        {
-                            AddressType = AddressType.Email,
-                            EmailAddress = "recipient1@domain.com"
-                        }
-                    }
-                }
-            },
-            Type = OrderType.Notification,
-            SendingTimePolicy = SendingTimePolicy.Anytime
-        };
-    }
-
-    /// <summary>
-    /// NOTE! Overwrite id with a new GUID to ensure it is unique in the test scope.
-    /// </summary>
     public static NotificationOrder NotificationOrder_SmsTemplate_OneRecipient()
     {
         return new NotificationOrder()
@@ -135,6 +94,54 @@ public static class TestdataUtil
             },
             Type = OrderType.Notification,
             SendingTimePolicy = SendingTimePolicy.Daytime
+        };
+    }
+
+    /// <summary>
+    /// NOTE! Overwrite id with a new GUID to ensure it is unique in the test scope.
+    /// </summary>
+    public static NotificationOrder NotificationOrder_EmailTemplate_OneRecipient()
+    {
+        return new NotificationOrder()
+        {
+            ResourceId = null,
+            Creator = new("ttd"),
+            ConditionEndpoint = null,
+            IgnoreReservation = false,
+            Created = DateTime.UtcNow,
+            Type = OrderType.Notification,
+            SendersReference = "local-testing",
+            RequestedSendTime = DateTime.UtcNow,
+            SendingTimePolicy = SendingTimePolicy.Anytime,
+            NotificationChannel = NotificationChannel.Email,
+
+            Templates =
+            [
+                new EmailTemplate()
+                {
+                    Body = "email-body",
+                    Subject = "email-subject",
+                    FromAddress = "sender@domain.com",
+                    ContentType = EmailContentType.Html
+                }
+            ],
+            Recipients =
+            [
+                new Recipient()
+                {
+                    OrganizationNumber = null,
+                    NationalIdentityNumber = null,
+
+                    AddressInfo =
+                    [
+                        new EmailAddressPoint()
+                        {
+                            AddressType = AddressType.Email,
+                            EmailAddress = "recipient1@domain.com"
+                        }
+                    ],
+                }
+            ]
         };
     }
 
@@ -233,51 +240,5 @@ public static class TestdataUtil
                 }
             ]
         };
-    }
-
-    public static (NotificationOrder Order, SmsNotification Notification) GetSmsNotificationOrderForReservedRecipient()
-    {
-        NotificationOrder order = GetSmsNotificationForOneReservedRecipient();
-        order.Id = Guid.NewGuid();
-
-        var recipient = order.Recipients[0];
-        SmsAddressPoint? addressPoint = recipient.AddressInfo.Find(a => a.AddressType == AddressType.Sms) as SmsAddressPoint;
-
-        var smsNotification = new SmsNotification()
-        {
-            OrderId = order.Id,
-            Id = Guid.NewGuid(),
-            RequestedSendTime = order.RequestedSendTime,
-            SendResult = new(SmsNotificationResultType.Failed_RecipientReserved, DateTime.UtcNow),
-            Recipient = new()
-            {
-                MobileNumber = addressPoint!.MobileNumber,
-            }
-        };
-
-        return (order, smsNotification);
-    }
-
-    public static (NotificationOrder Order, EmailNotification Notification) GetEmailNotificationOrderForReservedRecipient()
-    {
-        NotificationOrder order = GetEmailNotificationForOneReservedRecipient();
-        order.Id = Guid.NewGuid();
-
-        var recipient = order.Recipients[0];
-        EmailAddressPoint? addressPoint = recipient.AddressInfo.Find(a => a.AddressType == AddressType.Email) as EmailAddressPoint;
-
-        var emailNotification = new EmailNotification()
-        {
-            OrderId = order.Id,
-            Id = Guid.NewGuid(),
-            RequestedSendTime = order.RequestedSendTime,
-            SendResult = new(EmailNotificationResultType.Failed_RecipientReserved, DateTime.UtcNow),
-            Recipient = new()
-            {
-                ToAddress = addressPoint!.EmailAddress
-            }
-        };
-
-        return (order, emailNotification);
     }
 }
