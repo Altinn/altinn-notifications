@@ -32,7 +32,7 @@ public class OrderProcessingServiceTests
 
         var repoMock = new Mock<IOrderRepository>();
         repoMock.Setup(r => r.GetPastDueOrdersAndSetProcessingState())
-        .ReturnsAsync(new List<NotificationOrder>() { order, order, order, order });
+        .ReturnsAsync([order, order, order, order]);
 
         var producerMock = new Mock<IKafkaProducer>();
         producerMock.Setup(p => p.ProduceAsync(It.Is<string>(s => s.Equals(_pastDueTopicName)), It.IsAny<string>()));
@@ -56,20 +56,24 @@ public class OrderProcessingServiceTests
             NotificationChannel = NotificationChannel.Email,
         };
 
-        var emailMockService = new Mock<IEmailOrderProcessingService>();
-        emailMockService.Setup(e => e.ProcessOrder(It.IsAny<NotificationOrder>()));
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock.Setup(r => r.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>())).ReturnsAsync(It.IsAny<bool>);
 
         var smsMockService = new Mock<ISmsOrderProcessingService>();
         smsMockService.Setup(s => s.ProcessOrder(It.IsAny<NotificationOrder>()));
 
-        var orderProcessingService = GetTestService(emailMock: emailMockService.Object, smsMock: smsMockService.Object);
+        var emailMockService = new Mock<IEmailOrderProcessingService>();
+        emailMockService.Setup(e => e.ProcessOrder(It.IsAny<NotificationOrder>()));
+
+        var orderProcessingService = GetTestService(emailMock: emailMockService.Object, smsMock: smsMockService.Object, repo: orderRepositoryMock.Object);
 
         // Act
         await orderProcessingService.ProcessOrder(order);
 
         // Assert
-        emailMockService.Verify(e => e.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Once);
         smsMockService.Verify(s => s.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Never);
+        emailMockService.Verify(e => e.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Once);
+        orderRepositoryMock.Verify(e => e.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>()), Times.Once);
     }
 
     [Fact]
@@ -81,13 +85,16 @@ public class OrderProcessingServiceTests
             NotificationChannel = NotificationChannel.Sms,
         };
 
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock.Setup(r => r.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>())).ReturnsAsync(It.IsAny<bool>);
+
         var smsMockService = new Mock<ISmsOrderProcessingService>();
         smsMockService.Setup(s => s.ProcessOrder(It.IsAny<NotificationOrder>()));
 
         var emailMockService = new Mock<IEmailOrderProcessingService>();
         emailMockService.Setup(e => e.ProcessOrder(It.IsAny<NotificationOrder>()));
 
-        var orderProcessingService = GetTestService(emailMock: emailMockService.Object, smsMock: smsMockService.Object);
+        var orderProcessingService = GetTestService(emailMock: emailMockService.Object, smsMock: smsMockService.Object, repo: orderRepositoryMock.Object);
 
         // Act
         await orderProcessingService.ProcessOrder(order);
@@ -95,11 +102,12 @@ public class OrderProcessingServiceTests
         // Assert
         smsMockService.Verify(s => s.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Once);
         emailMockService.Verify(e => e.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Never);
+        orderRepositoryMock.Verify(e => e.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>()), Times.Once);
     }
 
     [Theory]
-    [InlineData(NotificationChannel.EmailPreferred)]
     [InlineData(NotificationChannel.SmsPreferred)]
+    [InlineData(NotificationChannel.EmailPreferred)]
     public async Task ProcessOrder_EmailOrSmsPreferredOrder_PreferredServiceCalled(NotificationChannel notificationChannel)
     {
         // Arrange 
@@ -107,6 +115,9 @@ public class OrderProcessingServiceTests
         {
             NotificationChannel = notificationChannel,
         };
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock.Setup(r => r.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>())).ReturnsAsync(It.IsAny<bool>);
 
         var emailMockService = new Mock<IEmailOrderProcessingService>();
         emailMockService.Setup(e => e.ProcessOrder(It.IsAny<NotificationOrder>()));
@@ -117,15 +128,16 @@ public class OrderProcessingServiceTests
         var preferredMockService = new Mock<IPreferredChannelProcessingService>();
         preferredMockService.Setup(e => e.ProcessOrder(It.IsAny<NotificationOrder>()));
 
-        var orderProcessingService = GetTestService(emailMock: emailMockService.Object, smsMock: smsMockService.Object, preferredMock: preferredMockService.Object);
+        var orderProcessingService = GetTestService(emailMock: emailMockService.Object, smsMock: smsMockService.Object, preferredMock: preferredMockService.Object, repo: orderRepositoryMock.Object);
 
         // Act
         await orderProcessingService.ProcessOrder(order);
 
         // Assert
-        emailMockService.Verify(e => e.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Never);
         smsMockService.Verify(s => s.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Never);
+        emailMockService.Verify(e => e.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Never);
         preferredMockService.Verify(s => s.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Once);
+        orderRepositoryMock.Verify(e => e.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>()), Times.Once);
     }
 
     [Fact]
@@ -137,6 +149,9 @@ public class OrderProcessingServiceTests
             NotificationChannel = NotificationChannel.EmailAndSms
         };
 
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock.Setup(r => r.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>())).ReturnsAsync(It.IsAny<bool>);
+
         var emailAndSmsMockService = new Mock<IEmailAndSmsOrderProcessingService>();
         emailAndSmsMockService.Setup(e => e.ProcessOrderAsync(It.IsAny<NotificationOrder>())).Returns(Task.CompletedTask);
 
@@ -144,7 +159,12 @@ public class OrderProcessingServiceTests
         var emailMockService = new Mock<IEmailOrderProcessingService>();
         var preferredChannelMockService = new Mock<IPreferredChannelProcessingService>();
 
-        var orderProcessingService = GetTestService(emailMock: emailMockService.Object, smsMock: smsMockService.Object, emailAndSmsMock: emailAndSmsMockService.Object, preferredMock: preferredChannelMockService.Object);
+        var orderProcessingService = GetTestService(
+            smsMock: smsMockService.Object,
+            repo: orderRepositoryMock.Object,
+            emailMock: emailMockService.Object,
+            emailAndSmsMock: emailAndSmsMockService.Object,
+            preferredMock: preferredChannelMockService.Object);
 
         // Act
         await orderProcessingService.ProcessOrder(order);
@@ -156,6 +176,7 @@ public class OrderProcessingServiceTests
         smsMockService.Verify(s => s.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Never);
         emailMockService.Verify(e => e.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Never);
         preferredChannelMockService.Verify(e => e.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Never);
+        orderRepositoryMock.Verify(e => e.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>()), Times.Once);
     }
 
     [Fact]
@@ -165,34 +186,30 @@ public class OrderProcessingServiceTests
         NotificationOrder order = new()
         {
             Id = Guid.NewGuid(),
-            NotificationChannel = NotificationChannel.Sms,
-            ConditionEndpoint = new Uri("https://vg.no")
+            ConditionEndpoint = new Uri("https://vg.no"),
+            NotificationChannel = NotificationChannel.Sms
         };
 
         Mock<IConditionClient> clientMock = new();
         clientMock.Setup(c => c.CheckSendCondition(It.IsAny<Uri>())).ReturnsAsync(false);
 
-        Mock<IOrderRepository> repoMock = new();
-        repoMock.Setup(r => r.SetProcessingStatus(
-            It.Is<Guid>(g => g.Equals(order.Id)),
-            It.Is<OrderProcessingStatus>(ops => ops == OrderProcessingStatus.SendConditionNotMet)));
-        var orderProcessingService = GetTestService(conditionClient: clientMock.Object, repo: repoMock.Object);
+        Mock<IOrderRepository> orderRepositoryMock = new();
+        orderRepositoryMock.Setup(r => r.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>())).ReturnsAsync(It.IsAny<bool>);
+        orderRepositoryMock.Setup(r => r.SetProcessingStatus(It.Is<Guid>(g => g.Equals(order.Id)), It.Is<OrderProcessingStatus>(ops => ops == OrderProcessingStatus.SendConditionNotMet)));
+
+        var orderProcessingService = GetTestService(conditionClient: clientMock.Object, repo: orderRepositoryMock.Object);
 
         // Act
         await orderProcessingService.ProcessOrder(order);
 
         // Assert
-        clientMock.Verify(
-            c => c.CheckSendCondition(It.IsAny<Uri>()),
-            Times.Once);
-
-        repoMock.Verify(
-            r => r.SetProcessingStatus(It.Is<Guid>(g => g.Equals(order.Id)), It.Is<OrderProcessingStatus>(ops => ops == OrderProcessingStatus.SendConditionNotMet)),
-            Times.Once);
+        clientMock.Verify(c => c.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
+        orderRepositoryMock.Verify(e => e.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>()), Times.Never);
+        orderRepositoryMock.Verify(r => r.SetProcessingStatus(It.Is<Guid>(g => g.Equals(order.Id)), It.Is<OrderProcessingStatus>(ops => ops == OrderProcessingStatus.SendConditionNotMet)), Times.Never);
     }
 
     [Fact]
-    public async Task ProcessOrder_SerivceThrowsException_ProcessingStatusIsNotSet()
+    public async Task ProcessOrder_SmsOrder_SmsServiceThrowsException_ProcessingStatusIsNotSet()
     {
         // Arrange 
         NotificationOrder order = new()
@@ -203,19 +220,19 @@ public class OrderProcessingServiceTests
         var smsMockService = new Mock<ISmsOrderProcessingService>();
         smsMockService.Setup(s => s.ProcessOrder(It.IsAny<NotificationOrder>())).Throws(new Exception());
 
-        var repoMock = new Mock<IOrderRepository>();
-        repoMock.Setup(r => r.SetProcessingStatus(It.IsAny<Guid>(), It.Is<OrderProcessingStatus>(s => s.Equals(OrderProcessingStatus.Completed))));
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock.Setup(r => r.SetProcessingStatus(It.IsAny<Guid>(), It.Is<OrderProcessingStatus>(s => s.Equals(OrderProcessingStatus.Completed))));
+        orderRepositoryMock.Setup(r => r.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>())).ReturnsAsync(It.IsAny<bool>);
 
-        var orderProcessingService = GetTestService(repo: repoMock.Object, smsMock: smsMockService.Object);
+        var orderProcessingService = GetTestService(repo: orderRepositoryMock.Object, smsMock: smsMockService.Object);
 
         // Act      
         await Assert.ThrowsAsync<Exception>(async () => await orderProcessingService.ProcessOrder(order));
 
         // Assert
         smsMockService.Verify(s => s.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Once);
-        repoMock.Verify(
-                r => r.SetProcessingStatus(It.IsAny<Guid>(), It.Is<OrderProcessingStatus>(s => s.Equals(OrderProcessingStatus.Completed))),
-                Times.Never);
+        orderRepositoryMock.Verify(e => e.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>()), Times.Once);
+        orderRepositoryMock.Verify(r => r.SetProcessingStatus(It.IsAny<Guid>(), It.Is<OrderProcessingStatus>(s => s.Equals(OrderProcessingStatus.Completed))), Times.Never);
     }
 
     [Fact]
@@ -227,13 +244,16 @@ public class OrderProcessingServiceTests
             NotificationChannel = NotificationChannel.Sms,
         };
 
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock.Setup(r => r.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>())).ReturnsAsync(It.IsAny<bool>);
+
         var smsMockService = new Mock<ISmsOrderProcessingService>();
         smsMockService.Setup(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>()));
 
         var emailMockService = new Mock<IEmailOrderProcessingService>();
         emailMockService.Setup(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>()));
 
-        var orderProcessingService = GetTestService(emailMock: emailMockService.Object, smsMock: smsMockService.Object);
+        var orderProcessingService = GetTestService(emailMock: emailMockService.Object, smsMock: smsMockService.Object, repo: orderRepositoryMock.Object);
 
         // Act
         await orderProcessingService.ProcessOrderRetry(order);
@@ -241,6 +261,7 @@ public class OrderProcessingServiceTests
         // Assert
         smsMockService.Verify(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Once);
         emailMockService.Verify(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Never);
+        orderRepositoryMock.Verify(e => e.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>()), Times.Once);
     }
 
     [Theory]
@@ -253,6 +274,10 @@ public class OrderProcessingServiceTests
         {
             NotificationChannel = notificationChannel,
         };
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock.Setup(r => r.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>())).ReturnsAsync(It.IsAny<bool>);
+
         var emailMockService = new Mock<IEmailOrderProcessingService>();
         emailMockService.Setup(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>()));
 
@@ -262,7 +287,7 @@ public class OrderProcessingServiceTests
         var preferredMockService = new Mock<IPreferredChannelProcessingService>();
         preferredMockService.Setup(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>()));
 
-        var orderProcessingService = GetTestService(emailMock: emailMockService.Object, smsMock: smsMockService.Object, preferredMock: preferredMockService.Object);
+        var orderProcessingService = GetTestService(emailMock: emailMockService.Object, smsMock: smsMockService.Object, preferredMock: preferredMockService.Object, repo: orderRepositoryMock.Object);
 
         // Act
         await orderProcessingService.ProcessOrderRetry(order);
@@ -271,6 +296,7 @@ public class OrderProcessingServiceTests
         smsMockService.Verify(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Never);
         emailMockService.Verify(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Never);
         preferredMockService.Verify(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Once);
+        orderRepositoryMock.Verify(e => e.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>()), Times.Once);
     }
 
     [Fact]
@@ -282,6 +308,9 @@ public class OrderProcessingServiceTests
             NotificationChannel = NotificationChannel.EmailAndSms,
         };
 
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock.Setup(r => r.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>())).ReturnsAsync(It.IsAny<bool>);
+
         var emailAndSmsMockService = new Mock<IEmailAndSmsOrderProcessingService>();
         emailAndSmsMockService.Setup(e => e.ProcessOrderRetryAsync(It.IsAny<NotificationOrder>())).Returns(Task.CompletedTask);
 
@@ -289,7 +318,12 @@ public class OrderProcessingServiceTests
         var emailMockService = new Mock<IEmailOrderProcessingService>();
         var preferredChannelMockService = new Mock<IPreferredChannelProcessingService>();
 
-        var orderProcessingService = GetTestService(emailMock: emailMockService.Object, smsMock: smsMockService.Object, emailAndSmsMock: emailAndSmsMockService.Object, preferredMock: preferredChannelMockService.Object);
+        var orderProcessingService = GetTestService(
+            smsMock: smsMockService.Object,
+            repo: orderRepositoryMock.Object,
+            emailMock: emailMockService.Object,
+            emailAndSmsMock: emailAndSmsMockService.Object,
+            preferredMock: preferredChannelMockService.Object);
 
         // Act
         await orderProcessingService.ProcessOrderRetry(order);
@@ -297,10 +331,10 @@ public class OrderProcessingServiceTests
         // Assert
         emailAndSmsMockService.Verify(e => e.ProcessOrderRetryAsync(order), Times.Once);
 
-        // Individual email and SMS services should not be called
         smsMockService.Verify(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Never);
         emailMockService.Verify(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Never);
         preferredChannelMockService.Verify(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Never);
+        orderRepositoryMock.Verify(e => e.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>()), Times.Once);
     }
 
     [Fact]
@@ -317,23 +351,18 @@ public class OrderProcessingServiceTests
         Mock<IConditionClient> clientMock = new();
         clientMock.Setup(c => c.CheckSendCondition(It.IsAny<Uri>())).ReturnsAsync(false);
 
-        Mock<IOrderRepository> repoMock = new();
-        repoMock.Setup(r => r.SetProcessingStatus(
-            It.Is<Guid>(g => g.Equals(order.Id)),
-            It.Is<OrderProcessingStatus>(ops => ops == OrderProcessingStatus.SendConditionNotMet)));
-        var orderProcessingService = GetTestService(conditionClient: clientMock.Object, repo: repoMock.Object);
+        Mock<IOrderRepository> orderRepositoryMock = new();
+        orderRepositoryMock.Setup(r => r.SetProcessingStatus(It.Is<Guid>(g => g.Equals(order.Id)), It.Is<OrderProcessingStatus>(ops => ops == OrderProcessingStatus.SendConditionNotMet)));
+
+        var orderProcessingService = GetTestService(conditionClient: clientMock.Object, repo: orderRepositoryMock.Object);
 
         // Act
         await orderProcessingService.ProcessOrderRetry(order);
 
         // Assert
-        clientMock.Verify(
-            c => c.CheckSendCondition(It.IsAny<Uri>()),
-            Times.Once);
-
-        repoMock.Verify(
-            r => r.SetProcessingStatus(It.Is<Guid>(g => g.Equals(order.Id)), It.Is<OrderProcessingStatus>(ops => ops == OrderProcessingStatus.SendConditionNotMet)),
-            Times.Once);
+        clientMock.Verify(c => c.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
+        orderRepositoryMock.Verify(e => e.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>()), Times.Once);
+        orderRepositoryMock.Verify(r => r.SetProcessingStatus(It.Is<Guid>(g => g.Equals(order.Id)), It.Is<OrderProcessingStatus>(ops => ops == OrderProcessingStatus.SendConditionNotMet)), Times.Never);
     }
 
     [Fact]
@@ -348,19 +377,19 @@ public class OrderProcessingServiceTests
         var smsMockService = new Mock<ISmsOrderProcessingService>();
         smsMockService.Setup(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>())).Throws(new Exception());
 
-        var repoMock = new Mock<IOrderRepository>();
-        repoMock.Setup(r => r.SetProcessingStatus(It.IsAny<Guid>(), It.Is<OrderProcessingStatus>(s => s.Equals(OrderProcessingStatus.Completed))));
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock.Setup(r => r.SetProcessingStatus(It.IsAny<Guid>(), It.Is<OrderProcessingStatus>(s => s.Equals(OrderProcessingStatus.Completed))));
+        orderRepositoryMock.Setup(r => r.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>())).ReturnsAsync(It.IsAny<bool>);
 
-        var orderProcessingService = GetTestService(repo: repoMock.Object, smsMock: smsMockService.Object);
+        var orderProcessingService = GetTestService(repo: orderRepositoryMock.Object, smsMock: smsMockService.Object);
 
         // Act      
         await Assert.ThrowsAsync<Exception>(async () => await orderProcessingService.ProcessOrderRetry(order));
 
         // Assert
         smsMockService.Verify(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Once);
-        repoMock.Verify(
-                r => r.SetProcessingStatus(It.IsAny<Guid>(), It.Is<OrderProcessingStatus>(s => s.Equals(OrderProcessingStatus.Completed))),
-                Times.Never);
+        orderRepositoryMock.Verify(e => e.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>()), Times.Never);
+        orderRepositoryMock.Verify(r => r.SetProcessingStatus(It.IsAny<Guid>(), It.Is<OrderProcessingStatus>(s => s.Equals(OrderProcessingStatus.Completed))), Times.Never);
     }
 
     [Fact]
