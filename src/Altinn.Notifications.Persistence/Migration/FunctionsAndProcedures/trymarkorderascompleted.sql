@@ -56,18 +56,18 @@ BEGIN
     END IF;
 
     -- Step 5: Check if any notifications are still pending
-    WITH pending_notifications AS (
+    WITH pending_notifications AS (    WITH pending_notifications AS (
         SELECT 1 AS is_pending
         FROM notifications.smsnotifications 
         WHERE _orderid = order_id 
-        AND result::TEXT IN ('New', 'Sending', 'Accepted')
+        AND result IN ('New'::smsnotificationresulttype, 'Sending'::smsnotificationresulttype, 'Accepted'::smsnotificationresulttype)
 
         UNION ALL
 
         SELECT 1 AS is_pending
         FROM notifications.emailnotifications 
         WHERE _orderid = order_id 
-        AND result::TEXT IN ('New', 'Sending', 'Succeeded')
+        AND result::TEXT IN ('New'::emailnotificationresulttype, 'Sending'::emailnotificationresulttype, 'Succeeded'::emailnotificationresulttype)
     )
     SELECT EXISTS(SELECT 1 FROM pending_notifications) INTO has_pending_notifications;
 
