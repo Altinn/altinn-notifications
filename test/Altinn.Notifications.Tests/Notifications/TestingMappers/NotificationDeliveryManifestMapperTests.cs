@@ -17,7 +17,17 @@ namespace Altinn.Notifications.Tests.Notifications.TestingMappers;
 public class NotificationDeliveryManifestMapperTests
 {
     [Fact]
-    public void MapToNotificationDeliveryManifestExt_WithRecipients_MapsCorrectly()
+    public void MapToNotificationDeliveryManifestExt_NullManifest_ThrowsArgumentNullException()
+    {
+        // Arrange
+        INotificationDeliveryManifest? manifest = null;
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(manifest!.MapToNotificationDeliveryManifestExt);
+    }
+
+    [Fact]
+    public void MapToNotificationDeliveryManifestExt_WithProcessedOrder_ReturnsCompletelyMappedManifest()
     {
         // Arrange
         var smsDeliveryManifest = new SmsDeliveryManifest
@@ -42,7 +52,7 @@ public class NotificationDeliveryManifestMapperTests
             Recipients = recipients,
             ShipmentId = Guid.NewGuid(),
             LastUpdate = DateTime.UtcNow,
-            Status = ProcessingLifecycle.Order_Completed,
+            Status = ProcessingLifecycle.Order_Processed,
             SendersReference = "74DDBD31-7C43-4AF0-8A8A-803DED6CCC6D"
         };
 
@@ -52,7 +62,7 @@ public class NotificationDeliveryManifestMapperTests
         // Assert
         Assert.NotNull(result);
         Assert.Equal(notificationDeliveryManifest.Type, result.Type);
-        Assert.Equal(ProcessingLifecycleExt.Order_Completed, result.Status);
+        Assert.Equal(ProcessingLifecycleExt.Order_Processed, result.Status);
         Assert.Equal(notificationDeliveryManifest.LastUpdate, result.LastUpdate);
         Assert.Equal(notificationDeliveryManifest.ShipmentId, result.ShipmentId);
         Assert.Equal(notificationDeliveryManifest.SendersReference, result.SendersReference);
@@ -77,7 +87,49 @@ public class NotificationDeliveryManifestMapperTests
     }
 
     [Fact]
-    public void MapToNotificationDeliveryManifestExt_WithoutRecipients_MapsCorrectly()
+    public void MapToNotificationDeliveryManifestExt_WithNullRecipientInList_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var mockManifest = new Mock<INotificationDeliveryManifest>();
+        mockManifest.Setup(m => m.Type).Returns("Notification");
+        mockManifest.Setup(m => m.ShipmentId).Returns(Guid.NewGuid());
+        mockManifest.Setup(m => m.LastUpdate).Returns(DateTime.UtcNow);
+        mockManifest.Setup(m => m.Status).Returns(ProcessingLifecycle.Order_Processing);
+
+        var mockRecipients = new List<IDeliveryManifest> { null! }.ToImmutableList();
+        mockManifest.Setup(m => m.Recipients).Returns(mockRecipients);
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(mockManifest.Object.MapToNotificationDeliveryManifestExt);
+    }
+
+    [Fact]
+    public void MapToNotificationDeliveryManifestExt_WithUnsupportedRecipientType_ThrowsArgumentException()
+    {
+        // Arrange
+        var unknownDeliverableEntity = new Mock<IDeliveryManifest>();
+        unknownDeliverableEntity.Setup(e => e.LastUpdate).Returns(DateTime.UtcNow);
+        unknownDeliverableEntity.Setup(e => e.Destination).Returns("unknown destination");
+        unknownDeliverableEntity.Setup(e => e.Status).Returns(ProcessingLifecycle.Order_Processing);
+
+        var recipients = ImmutableList.Create(unknownDeliverableEntity.Object);
+
+        var shipmentDeliveryManifest = new NotificationDeliveryManifest
+        {
+            Type = "Notification",
+            Recipients = recipients,
+            ShipmentId = Guid.NewGuid(),
+            LastUpdate = DateTime.UtcNow,
+            SendersReference = "TEST-UNSUPPORTED",
+            Status = ProcessingLifecycle.Order_Processing
+        };
+
+        // Act & Assert
+        Assert.Throws<ArgumentException>(shipmentDeliveryManifest.MapToNotificationDeliveryManifestExt);
+    }
+
+    [Fact]
+    public void MapToNotificationDeliveryManifestExt_WithRegisteredOrder_ReturnsManifestWithEmptyRecipients()
     {
         // Arrange
         var shipmentDeliveryManifest = new NotificationDeliveryManifest
@@ -85,7 +137,7 @@ public class NotificationDeliveryManifestMapperTests
             Type = "Notification",
             ShipmentId = Guid.NewGuid(),
             LastUpdate = DateTime.UtcNow,
-            Status = ProcessingLifecycle.Order_Completed,
+            Status = ProcessingLifecycle.Order_Registered,
             Recipients = ImmutableList<IDeliveryManifest>.Empty,
             SendersReference = "F883C29A-CA66-4830-B4A1-CB23B11F268D",
         };
@@ -97,14 +149,14 @@ public class NotificationDeliveryManifestMapperTests
         Assert.NotNull(result);
         Assert.Empty(result.Recipients);
         Assert.Equal(shipmentDeliveryManifest.Type, result.Type);
-        Assert.Equal(ProcessingLifecycleExt.Order_Completed, result.Status);
+        Assert.Equal(ProcessingLifecycleExt.Order_Registered, result.Status);
         Assert.Equal(shipmentDeliveryManifest.LastUpdate, result.LastUpdate);
         Assert.Equal(shipmentDeliveryManifest.ShipmentId, result.ShipmentId);
         Assert.Equal(shipmentDeliveryManifest.SendersReference, result.SendersReference);
     }
 
     [Fact]
-    public void MapToNotificationDeliveryManifestExt_MixedDeliveryTypes_MapsCorrectly()
+    public void MapToNotificationDeliveryManifestExt_WithMultipleChannelRecipients_MapsAllRecipientsCorrectly()
     {
         // Arrange
         var emailDeliveryManifest = new EmailDeliveryManifest
@@ -117,15 +169,15 @@ public class NotificationDeliveryManifestMapperTests
         var firstSmsDeliveryManifest = new SmsDeliveryManifest
         {
             Destination = "+4799999999",
-            LastUpdate = DateTime.UtcNow,
+            LastUpdate = DateTime.UtcNow.AddDays(-1),
             Status = ProcessingLifecycle.SMS_Delivered
         };
 
         var secondSmsDeliveryManifest = new SmsDeliveryManifest
         {
             Destination = "+4788888888",
-            LastUpdate = DateTime.UtcNow,
-            Status = ProcessingLifecycle.SMS_Failed
+            Status = ProcessingLifecycle.SMS_Failed,
+            LastUpdate = DateTime.UtcNow.AddDays(-2)
         };
 
         var recipients = ImmutableList.Create<IDeliveryManifest>(firstSmsDeliveryManifest, emailDeliveryManifest, secondSmsDeliveryManifest);
@@ -137,7 +189,7 @@ public class NotificationDeliveryManifestMapperTests
             ShipmentId = Guid.NewGuid(),
             LastUpdate = DateTime.UtcNow,
             SendersReference = "REF-MIXED",
-            Status = ProcessingLifecycle.Order_Completed
+            Status = ProcessingLifecycle.Order_Processed
         };
 
         // Act
@@ -163,7 +215,7 @@ public class NotificationDeliveryManifestMapperTests
     }
 
     [Fact]
-    public void MapToNotificationDeliveryManifestExt_WithNullSendersReference_MapsCorrectly()
+    public void MapToNotificationDeliveryManifestExt_WithProcessingOrder_ReturnsManifestWithNullSendersReference()
     {
         // Arrange
         var shipmentDeliveryManifest = new NotificationDeliveryManifest
@@ -189,7 +241,7 @@ public class NotificationDeliveryManifestMapperTests
     }
 
     [Fact]
-    public void MapToNotificationDeliveryManifestExt_WithNullRecipients_MapsToEmptyCollection()
+    public void MapToNotificationDeliveryManifestExt_WithNullRecipients_ProcessingNotificationOrder_MapsToEmptyCollection()
     {
         // Arrange
         var shipmentDeliveryManifest = new NotificationDeliveryManifest
@@ -211,65 +263,14 @@ public class NotificationDeliveryManifestMapperTests
         Assert.Empty(result.Recipients);
     }
 
-    [Fact]
-    public void MapToNotificationDeliveryManifestExt_NullManifest_ThrowsArgumentNullException()
-    {
-        // Arrange
-        INotificationDeliveryManifest? manifest = null;
-
-        // Act & Assert
-        Assert.Throws<ArgumentNullException>(manifest!.MapToNotificationDeliveryManifestExt);
-    }
-
-    [Fact]
-    public void MapToNotificationDeliveryManifestExt_NullSmsRecipient_ThrowsArgumentNullException()
-    {
-        // Arrange
-        var mockManifest = new Mock<INotificationDeliveryManifest>();
-        mockManifest.Setup(m => m.Type).Returns("Notification");
-        mockManifest.Setup(m => m.ShipmentId).Returns(Guid.NewGuid());
-        mockManifest.Setup(m => m.LastUpdate).Returns(DateTime.UtcNow);
-        mockManifest.Setup(m => m.Status).Returns(ProcessingLifecycle.Order_Processing);
-
-        var mockRecipients = new List<IDeliveryManifest> { null! }.ToImmutableList();
-        mockManifest.Setup(m => m.Recipients).Returns(mockRecipients);
-
-        // Act & Assert
-        Assert.Throws<ArgumentNullException>(mockManifest.Object.MapToNotificationDeliveryManifestExt);
-    }
-
-    [Fact]
-    public void MapToNotificationDeliveryManifestExt_UnsupportedDeliverableEntityType_ThrowsArgumentException()
-    {
-        // Arrange
-        var unknownDeliverableEntity = new Mock<IDeliveryManifest>();
-        unknownDeliverableEntity.Setup(e => e.LastUpdate).Returns(DateTime.UtcNow);
-        unknownDeliverableEntity.Setup(e => e.Destination).Returns("unknown destination");
-        unknownDeliverableEntity.Setup(e => e.Status).Returns(ProcessingLifecycle.Order_Processing);
-
-        var recipients = ImmutableList.Create(unknownDeliverableEntity.Object);
-
-        var shipmentDeliveryManifest = new NotificationDeliveryManifest
-        {
-            Type = "Notification",
-            Recipients = recipients,
-            ShipmentId = Guid.NewGuid(),
-            LastUpdate = DateTime.UtcNow,
-            SendersReference = "TEST-UNSUPPORTED",
-            Status = ProcessingLifecycle.Order_Processing
-        };
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(shipmentDeliveryManifest.MapToNotificationDeliveryManifestExt);
-    }
-
     [Theory]
     [InlineData(ProcessingLifecycle.Order_Completed, ProcessingLifecycleExt.Order_Completed)]
     [InlineData(ProcessingLifecycle.Order_Cancelled, ProcessingLifecycleExt.Order_Cancelled)]
+    [InlineData(ProcessingLifecycle.Order_Processed, ProcessingLifecycleExt.Order_Processed)]
     [InlineData(ProcessingLifecycle.Order_Registered, ProcessingLifecycleExt.Order_Registered)]
     [InlineData(ProcessingLifecycle.Order_Processing, ProcessingLifecycleExt.Order_Processing)]
     [InlineData(ProcessingLifecycle.Order_SendConditionNotMet, ProcessingLifecycleExt.Order_SendConditionNotMet)]
-    public void MapToNotificationDeliveryManifestExt_OrderStatuses_MapsCorrectly(ProcessingLifecycle status, ProcessingLifecycleExt expected)
+    public void MapToNotificationDeliveryManifestExt_WithVariousOrderStatuses_MapsToCorrespondingExtendedEnums(ProcessingLifecycle status, ProcessingLifecycleExt expected)
     {
         // Arrange
         var manifest = new NotificationDeliveryManifest
@@ -303,7 +304,7 @@ public class NotificationDeliveryManifestMapperTests
     [InlineData(ProcessingLifecycle.SMS_Failed_InvalidRecipient, ProcessingLifecycleExt.SMS_Failed_InvalidRecipient)]
     [InlineData(ProcessingLifecycle.SMS_Failed_RecipientReserved, ProcessingLifecycleExt.SMS_Failed_RecipientReserved)]
     [InlineData(ProcessingLifecycle.SMS_Failed_RecipientNotIdentified, ProcessingLifecycleExt.SMS_Failed_RecipientNotIdentified)]
-    public void MapToNotificationDeliveryManifestExt_SmsStatuses_MapsCorrectly(ProcessingLifecycle status, ProcessingLifecycleExt expected)
+    public void MapToNotificationDeliveryManifestExt_WithVariousSmsStatuses_MapsToCorrespondingExtendedEnums(ProcessingLifecycle status, ProcessingLifecycleExt expected)
     {
         // Arrange
         var smsDeliveryManifest = new SmsDeliveryManifest
@@ -348,7 +349,7 @@ public class NotificationDeliveryManifestMapperTests
     [InlineData(ProcessingLifecycle.Email_Failed_RecipientReserved, ProcessingLifecycleExt.Email_Failed_RecipientReserved)]
     [InlineData(ProcessingLifecycle.Email_Failed_SuppressedRecipient, ProcessingLifecycleExt.Email_Failed_SuppressedRecipient)]
     [InlineData(ProcessingLifecycle.Email_Failed_RecipientNotIdentified, ProcessingLifecycleExt.Email_Failed_RecipientNotIdentified)]
-    public void MapToNotificationDeliveryManifestExt_EmailStatuses_MapsCorrectly(ProcessingLifecycle status, ProcessingLifecycleExt expected)
+    public void MapToNotificationDeliveryManifestExt_WithVariousEmailStatuses_MapsToCorrespondingExtendedEnums(ProcessingLifecycle status, ProcessingLifecycleExt expected)
     {
         // Arrange
         var emailDeliveryManifest = new EmailDeliveryManifest
