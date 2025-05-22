@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Models.Orders;
+﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.IntegrationTests.Utils;
 
@@ -23,19 +24,20 @@ public class PastDueOrdersConsumerTests : IDisposable
     {
         // Arrange
         Dictionary<string, string> vars = new()
-    {
-        { "KafkaSettings__PastDueOrdersTopicName", _pastDueOrdersTopicName },
-        { "KafkaSettings__Admin__TopicList", $"[\"{_pastDueOrdersTopicName}\"]" }
-    };
+        {
+            { "KafkaSettings__PastDueOrdersTopicName", _pastDueOrdersTopicName },
+            { "KafkaSettings__Admin__TopicList", $"[\"{_pastDueOrdersTopicName}\"]" }
+        };
 
         using PastDueOrdersConsumer consumerService = (PastDueOrdersConsumer)ServiceUtil
                                                     .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
                                                     .First(s => s.GetType() == typeof(PastDueOrdersConsumer))!;
 
         NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithEmailOrder(sendersReference: _sendersRef);
+
         await KafkaUtil.PublishMessageOnTopic(_pastDueOrdersTopicName, persistedOrder.Serialize());
 
-        Guid orderId = persistedOrder.Id;
+        await UpdateProcessingStatus(persistedOrder.Id, OrderProcessingStatus.Processing);
 
         // Act
         await consumerService.StartAsync(CancellationToken.None);
@@ -43,8 +45,8 @@ public class PastDueOrdersConsumerTests : IDisposable
         await consumerService.StopAsync(CancellationToken.None);
 
         // Assert
-        long processedOrderCount = await SelectProcessedOrderCount(orderId);
-        long emailNotificationCount = await SelectEmailNotificationCount(orderId);
+        long processedOrderCount = await SelectProcessedOrderCount(persistedOrder.Id);
+        long emailNotificationCount = await SelectEmailNotificationCount(persistedOrder.Id);
 
         Assert.Equal(1, processedOrderCount);
         Assert.Equal(1, emailNotificationCount);
@@ -71,10 +73,13 @@ public class PastDueOrdersConsumerTests : IDisposable
 
     private static async Task<long> SelectEmailNotificationCount(Guid orderId)
     {
-        string sql = $"select count(1) " +
-                   "from notifications.emailnotifications e " +
-                   "join notifications.orders o on e._orderid=o._id " +
-                   $"where e._orderid = o._id and o.alternateid ='{orderId}'";
+        string sql = $"select count(1) from notifications.emailnotifications e join notifications.orders o on e._orderid = o._id where o.alternateid ='{orderId}'";
         return await PostgreUtil.RunSqlReturnOutput<long>(sql);
+    }
+
+    private static async Task UpdateProcessingStatus(Guid orderId, OrderProcessingStatus orderProcessingStatus)
+    {
+        string sql = $"UPDATE notifications.orders SET processedstatus = '{orderProcessingStatus}' WHERE alternateid='{orderId}'";
+        await PostgreUtil.RunSql(sql);
     }
 }
