@@ -84,3 +84,27 @@ BEGIN
     RETURN NOT has_pending_notifications;
 END;
 $$ LANGUAGE plpgsql;
+
+COMMENT ON FUNCTION notifications.trymarkorderascompleted IS 
+'Attempts to mark a notification order as completed based on the status
+of its associated SMS and Email notifications. The function updates the order''s
+status to ''Completed'' only if all associated notifications are no longer pending.
+
+Parameters:
+  _alternateid uuid       - The UUID identifier for the SMS, Email notifications or order
+  _alternateidsource text - The source type, must be one of: ''SMS'', ''EMAIL'', or ''ORDER'' (case-insensitive)
+
+Returns:
+  boolean - TRUE if the order was successfully marked as completed
+          FALSE if the order cannot be completed (already completed or has pending notifications)
+
+Side Effects:
+  - Updates the processedstatus and processed timestamp in notifications.orders table
+  - Sets order status to ''Completed'' when no pending notifications exist
+  - Sets order status to ''Processed'' when pending notifications still exist
+
+Throws:
+  - Exception if _alternateid is NULL
+  - Exception if _alternateidsource is NULL or empty
+  - Exception if _alternateidsource is not one of: ''SMS'', ''EMAIL'', ''ORDER''
+  - Exception if no order is found for the given notification ID and source';
