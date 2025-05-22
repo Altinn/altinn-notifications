@@ -16,7 +16,7 @@ public class PastDueOrdersConsumerTests : IDisposable
     /// <summary>
     /// When a new order is picked up by the consumer, we expect there to be an email notification created for the recipient states in the order.
     /// We measure the sucess of this test by confirming that a new email notificaiton has been create with a reference to our order id
-    /// as well as confirming that the order now has the status 'Completed' set at its processing status
+    /// as well as confirming that the order now has the status 'Processed' set at its processing status
     /// </summary>
     [Fact]
     public async Task RunTask_ConfirmExpectedSideEffects()
@@ -43,10 +43,10 @@ public class PastDueOrdersConsumerTests : IDisposable
         await consumerService.StopAsync(CancellationToken.None);
 
         // Assert
-        long completedOrderCount = await SelectCompletedOrderCount(orderId);
+        long processedOrderCount = await SelectProcessedOrderCount(orderId);
         long emailNotificationCount = await SelectEmailNotificationCount(orderId);
 
-        Assert.Equal(1, completedOrderCount);
+        Assert.Equal(1, processedOrderCount);
         Assert.Equal(1, emailNotificationCount);
     }
 
@@ -63,9 +63,9 @@ public class PastDueOrdersConsumerTests : IDisposable
         await KafkaUtil.DeleteTopicAsync(_pastDueOrdersTopicName);
     }
 
-    private static async Task<long> SelectCompletedOrderCount(Guid orderId)
+    private static async Task<long> SelectProcessedOrderCount(Guid orderId)
     {
-        string sql = $"select count(1) from notifications.orders where processedstatus = 'Completed' and alternateid='{orderId}'";
+        string sql = $"select count(1) from notifications.orders where processedstatus = 'Processed' and alternateid='{orderId}'";
         return await PostgreUtil.RunSqlReturnOutput<long>(sql);
     }
 
