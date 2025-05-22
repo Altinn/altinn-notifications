@@ -164,11 +164,12 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             ]
         };
 
-        // Create the order and notifications
+        // Save the order and set its status.
         OrderRepository orderRepository = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
         await orderRepository.Create(order);
+        await orderRepository.SetProcessingStatus(orderId, OrderProcessingStatus.Completed);
 
-        // Add SMS notification
+        // Add an SMS notification to the order, and set its staus.
         SmsNotification smsNotification = new()
         {
             OrderId = orderId,
@@ -179,12 +180,12 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
                 MobileNumber = recipientPhone
             }
         };
-
         SmsNotificationRepository smsRepository = (SmsNotificationRepository)ServiceUtil.GetServices([typeof(ISmsNotificationRepository)])
             .First(i => i.GetType() == typeof(SmsNotificationRepository));
         await smsRepository.AddNotification(smsNotification, DateTime.UtcNow.AddMinutes(45), 1);
+        await smsRepository.UpdateSendStatus(smsNotificationId, SmsNotificationResultType.Delivered, "80A55089-025B-48AB-AC5D-FB81E92169A4");
 
-        // Add email notification
+        // Add an Email notification to the order, and set its staus.
         EmailNotification emailNotification = new()
         {
             OrderId = orderId,
@@ -199,20 +200,11 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         EmailNotificationRepository emailRepository = (EmailNotificationRepository)ServiceUtil.GetServices([typeof(IEmailNotificationRepository)])
             .First(i => i.GetType() == typeof(EmailNotificationRepository));
         await emailRepository.AddNotification(emailNotification, DateTime.UtcNow);
-
-        // Directly modify the order status and notification statuses in the database to test status mapping
-        // Note: This is typically not recommended in production code but useful for testing
-        string updateOrderSql = $@"UPDATE notifications.orders SET processedstatus = 'Completed' WHERE alternateid = '{orderId}'";
-        string updateSmsSql = $@"UPDATE notifications.smsnotifications SET result = 'Accepted' WHERE alternateid = '{smsNotificationId}'";
-        string updateEmailSql = $@"UPDATE notifications.emailnotifications SET result = 'Succeeded' WHERE alternateid = '{emailNotificationId}'";
-
-        await PostgreUtil.RunSql(updateOrderSql);
-        await PostgreUtil.RunSql(updateSmsSql);
-        await PostgreUtil.RunSql(updateEmailSql);
+        await emailRepository.UpdateSendStatus(emailNotificationId, EmailNotificationResultType.Failed_RecipientReserved);
 
         // Act
-        NotificationDeliveryManifestRepository deliveryManifestRepository = (NotificationDeliveryManifestRepository)ServiceUtil.GetServices([typeof(INotificationDeliveryManifestRepository)])
-            .First(i => i.GetType() == typeof(NotificationDeliveryManifestRepository));
+        NotificationDeliveryManifestRepository deliveryManifestRepository =
+            (NotificationDeliveryManifestRepository)ServiceUtil.GetServices([typeof(INotificationDeliveryManifestRepository)]).First(i => i.GetType() == typeof(NotificationDeliveryManifestRepository));
 
         INotificationDeliveryManifest? deliveryManifest = await deliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, CancellationToken.None);
 
@@ -233,14 +225,14 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         Assert.Single(smsDeliveries);
         var smsDelivery = smsDeliveries[0];
         Assert.Equal(recipientPhone, smsDelivery.Destination);
-        Assert.Equal(ProcessingLifecycle.SMS_Accepted, smsDelivery.Status);
+        Assert.Equal(ProcessingLifecycle.SMS_Delivered, smsDelivery.Status);
 
         // Verify email recipient
         var emailDeliveries = deliveryManifest.Recipients.Where(r => r is EmailDeliveryManifest).ToList();
         Assert.Single(emailDeliveries);
         var emailDelivery = emailDeliveries[0];
         Assert.Equal(recipientEmail, emailDelivery.Destination);
-        Assert.Equal(ProcessingLifecycle.Email_Succeeded, emailDelivery.Status);
+        Assert.Equal(ProcessingLifecycle.Email_Failed_RecipientReserved, emailDelivery.Status);
     }
 
     [Fact]
