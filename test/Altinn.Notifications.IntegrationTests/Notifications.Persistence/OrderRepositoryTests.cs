@@ -1673,9 +1673,9 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             // Arrange
             OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
 
-            Guid notificationOrderÌd = Guid.NewGuid();
+            Guid notificationOrderId = Guid.NewGuid();
 
-            _orderIdsToDelete.Add(notificationOrderÌd);
+            _orderIdsToDelete.Add(notificationOrderId);
 
             var creationDateTime = DateTime.UtcNow;
             var requestedSendTime = DateTime.UtcNow.AddMinutes(5);
@@ -1684,7 +1684,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             {
                 Creator = new("ttd"),
                 IgnoreReservation = true,
-                Id = notificationOrderÌd,
+                Id = notificationOrderId,
                 Created = creationDateTime,
                 Type = OrderType.Notification,
                 SendersReference = "ref-P5Q7R9S1",
@@ -1707,11 +1707,11 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             };
 
             var orderCreationResult = await repo.Create(notificationOrder);
-            await repo.SetProcessingStatus(notificationOrderÌd, currentStatus);
+            await repo.SetProcessingStatus(notificationOrderId, currentStatus);
 
             // Act
-            bool statusUpdatingResult = await repo.TryCompleteOrderBasedOnNotificationsState(notificationOrderÌd, AlternateIdentifierSource.Order);
-            string mainOrderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{notificationOrderÌd}' and type = 'Notification' and processedstatus = '{expectedStatus}'";
+            bool statusUpdatingResult = await repo.TryCompleteOrderBasedOnNotificationsState(notificationOrderId, AlternateIdentifierSource.Order);
+            string mainOrderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{notificationOrderId}' and type = 'Notification' and processedstatus = '{expectedStatus}'";
             int mainOrderCount = await PostgreUtil.RunSqlReturnOutput<int>(mainOrderSql);
 
             // Assert
