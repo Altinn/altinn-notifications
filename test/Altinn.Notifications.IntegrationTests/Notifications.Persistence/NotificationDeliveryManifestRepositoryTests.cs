@@ -167,7 +167,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         await orderRepository.Create(order);
         await orderRepository.SetProcessingStatus(orderId, OrderProcessingStatus.Completed);
 
-        // Add an SMS notification to the order, and set its staus.
+        // Add an SMS notification to the order, and set its status.
         SmsNotification smsNotification = new()
         {
             OrderId = orderId,
@@ -654,7 +654,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         await emailRepository.AddNotification(emailNotification, DateTime.UtcNow.AddMinutes(-5));
         await emailRepository.UpdateSendStatus(emailNotificationId, EmailNotificationResultType.Delivered);
 
-        // Add an SMS notification to the order, and set its staus.
+        // Add an SMS notification to the order, and set its status.
         SmsNotificationRepository smsRepository = (SmsNotificationRepository)ServiceUtil.GetServices([typeof(ISmsNotificationRepository)])
             .First(i => i.GetType() == typeof(SmsNotificationRepository));
         await smsRepository.AddNotification(smsNotification, DateTime.UtcNow.AddMinutes(-15), 1);
