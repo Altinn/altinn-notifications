@@ -1665,8 +1665,8 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
         [InlineData(OrderProcessingStatus.Processed, OrderProcessingStatus.Completed, true)]
         [InlineData(OrderProcessingStatus.Cancelled, OrderProcessingStatus.Cancelled, false)]
         [InlineData(OrderProcessingStatus.Completed, OrderProcessingStatus.Completed, false)]
+        [InlineData(OrderProcessingStatus.Processing, OrderProcessingStatus.Processed, false)]
         [InlineData(OrderProcessingStatus.Registered, OrderProcessingStatus.Registered, false)]
-        [InlineData(OrderProcessingStatus.Processing, OrderProcessingStatus.Processing, false)]
         [InlineData(OrderProcessingStatus.SendConditionNotMet, OrderProcessingStatus.SendConditionNotMet, false)]
         public async Task TryCompleteOrderBasedOnNotificationsState_VerifiesStateTransitionRules(OrderProcessingStatus currentStatus, OrderProcessingStatus expectedStatus, bool shouldUpdateStatus)
         {
