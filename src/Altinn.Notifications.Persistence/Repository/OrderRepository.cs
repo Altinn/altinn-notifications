@@ -34,6 +34,7 @@ public class OrderRepository : IOrderRepository
     private const string _cancelAndReturnOrder = "select * from notifications.cancelorder($1, $2)"; // _alternateid,  creator
     private const string _insertorderchainSql = "call notifications.insertorderchain($1, $2, $3, $4, $5)"; // (_orderid, _idempotencyid, _creatorname, _created, _orderchain)
     private const string _getOrdersChainTrackingSql = "SELECT * FROM notifications.get_orders_chain_tracking($1, $2)"; // (_creatorname, _idempotencyid)
+    private const string _tryMarkOrderAsCompletedSql = "SELECT notifications.trymarkorderascompleted($1, $2)"; // (_alternateid, _alternateidsource)
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderRepository"/> class.
@@ -290,6 +291,24 @@ public class OrderRepository : IOrderRepository
 
         NotificationOrderWithStatus? order = ReadNotificationOrderWithStatus(reader);
         return order!;
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> TryCompleteOrderBasedOnNotificationsState(Guid? notificationId, AlternateIdentifierSource source)
+    {
+        if (notificationId is null || notificationId == Guid.Empty)
+        {
+            return false;
+        }
+
+        string sourceType = source.ToString().ToUpperInvariant();
+
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_tryMarkOrderAsCompletedSql);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, sourceType);
+
+        var result = await pgcom.ExecuteScalarAsync();
+        return result != null && (bool)result;
     }
 
     private static NotificationOrderWithStatus? ReadNotificationOrderWithStatus(NpgsqlDataReader reader)

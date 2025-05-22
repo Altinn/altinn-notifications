@@ -1644,5 +1644,21 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             Assert.Equal(orderId, result.OrderChainReceipt.ShipmentId);
             Assert.Equal("TRACKING-C69C615A8412", result.OrderChainReceipt.SendersReference);
         }
+
+        [Theory]
+        [InlineData(AlternateIdentifierSource.Sms)]
+        [InlineData(AlternateIdentifierSource.Email)]
+        [InlineData(AlternateIdentifierSource.Order)]
+        public async Task TryCompleteOrderBasedOnNotificationsState_WithNullNotificationId_ReturnsFalse(AlternateIdentifierSource alternateIdentifierSource)
+        {
+            // Arrange
+            OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+            // Act
+            bool result = await repo.TryCompleteOrderBasedOnNotificationsState(null, alternateIdentifierSource);
+
+            // Assert
+            Assert.False(result);
+        }
     }
 }
