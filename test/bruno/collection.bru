@@ -12,4 +12,5 @@ script:pre-request {
   bru.setVar("dialog_guid", uuidv4());
   bru.setVar("senders_reference_guid", uuidv4());
   
+  //Don't put script to auto-refresh the auth token here, it will create a recursion!
 }

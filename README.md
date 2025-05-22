@@ -87,3 +87,9 @@ The Notifications components can be run locally when developing/debugging. Follo
 
 The notifications solution is now available locally at http://localhost:5090/.
 To access swagger use http://localhost:5090/swagger.
+
+### Testing
+There is a Bruno (https://www.usebruno.com/) collection in ```<project root>/test/bruno``` with examples and testcases for the API.
+
+Before running any tests, remember to prepare an ```.env``` file. See ```<project root>/test/bruno/.env.sample``` for an example of how to set it up.
+

@@ -1,0 +1,26 @@
+meta {
+  name: v1
+}
+
+script:pre-request {
+  //Auto-fetch a valid auth-token
+  if(   
+    //no token
+    bru.getEnvVar("jwt") === "" || bru.getEnvVar("jwt") === "null" ||
+    
+    //new env
+    bru.getEnvVar("jwt_env") !== bru.getEnvVar("Environment") ||
+    
+    //old token (expired)
+    (bru.getEnvVar("jwt_from") + 15*60*1000) < Date.now() 
+    ){
+    const requestResponse = await bru.runRequest("test-util/new auth token"
+  );
+  
+    if(requestResponse.status == 200){
+      console.log('Automatically (re)-aquired a JWT');
+    }else{
+      console.log('Failed automatically (re)-aquirering a JWT');
+    }
+  }
+}
