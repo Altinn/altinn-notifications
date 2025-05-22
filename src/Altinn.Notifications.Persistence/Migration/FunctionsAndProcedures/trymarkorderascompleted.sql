@@ -79,7 +79,7 @@ BEGIN
                           END::orderprocessingstate,
         processed = CURRENT_TIMESTAMP
     WHERE _id = order_id
-    AND processedstatus IS DISTINCT FROM (CASE WHEN has_pending_notifications THEN 'Processed' ELSE 'Completed' END::orderprocessingstate   );
+    AND processedstatus IS DISTINCT FROM (CASE WHEN has_pending_notifications THEN 'Processed' ELSE 'Completed' END::orderprocessingstate);
 
     RETURN NOT has_pending_notifications;
 END;
