@@ -129,7 +129,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetDeliveryManifestAsync_WithVariousOrderStatuses_MapsStatusesCorrectly()
+    public async Task GetDeliveryManifestAsync_WithVariousStatuses_MapsStatusesCorrectly()
     {
         // Arrange
         Guid orderId = Guid.NewGuid();
