@@ -37,7 +37,7 @@ BEGIN
             LIMIT 1;
 
         ELSE
-            RAISE EXCEPTION 'Invalid notification type: %. Must be one of: Order, SMS, Email', _alternateidsource;
+            RAISE EXCEPTION 'Invalid notification type: %. Must be one of: SMS, EMAIL, ORDER', _alternateidsource;
     END CASE;
 
     -- Step 3: Validate order ID exists
@@ -78,7 +78,8 @@ BEGIN
                             ELSE 'Completed'
                           END::orderprocessingstate,
         processed = CURRENT_TIMESTAMP
-    WHERE _id = order_id;
+    WHERE _id = order_id
+    AND processedstatus IS DISTINCT FROM (CASE WHEN has_pending_notifications THEN 'Processed' ELSE 'Completed' END::orderprocessingstate   );
 
     RETURN NOT has_pending_notifications;
 END;
