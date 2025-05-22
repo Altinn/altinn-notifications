@@ -30,11 +30,16 @@ public enum ProcessingLifecycle
     Order_Processing,
 
     /// <summary>
-    /// All processing for the order has been completed, regardless of individual notification outcomes.
+    /// The order has been successfully completed and all notifications have reached their final status.
     /// </summary>
     /// <remarks>
-    /// This state indicates that all notifications within the order have been registered in the system,
-    /// though individual notifications may have their own status.
+    /// This is the ultimate terminal state for an order, indicating that:
+    /// 1. All processing activities have been completed
+    /// 2. All notifications have received their final status reports from service providers
+    /// 3. No further status changes are expected
+    /// 
+    /// This differs from Order_Processed, where notifications have been generated but are still awaiting
+    /// final delivery status reports.
     /// </remarks>
     Order_Completed,
 
@@ -55,6 +60,16 @@ public enum ProcessingLifecycle
     /// like exceeding retry limits or detection of system-wide issues.
     /// </remarks>
     Order_Cancelled,
+
+    /// <summary>
+    /// The order has been processed, but its final delivery status is pending.
+    /// </summary>
+    /// <remarks>
+    /// In this state, the system has successfully processed the order and generated all required notifications,
+    /// but is still awaiting final delivery status reports from SMS and/or email service providers.
+    /// This differs from Order_Completed, which indicates all notifications have received their final status.
+    /// </remarks>
+    Order_Processed,
 
     /// <summary>
     /// The SMS notification has been received and registered in the system but processing has not yet begun.
