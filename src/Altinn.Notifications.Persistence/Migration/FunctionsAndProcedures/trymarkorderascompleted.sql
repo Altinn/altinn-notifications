@@ -51,7 +51,7 @@ BEGIN
     WHERE _id = order_id
     FOR UPDATE;
 
-    IF order_status IS NULL OR order_status = 'Completed'::orderprocessingstate THEN
+    IF order_status IS NULL OR order_status <> 'Processed'::orderprocessingstate THEN
         RETURN false;
     END IF;
 
