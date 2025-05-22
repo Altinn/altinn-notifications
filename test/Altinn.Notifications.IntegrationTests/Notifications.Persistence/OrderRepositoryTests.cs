@@ -1660,5 +1660,64 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             // Assert
             Assert.False(result);
         }
+
+        [Theory]
+        [InlineData(OrderProcessingStatus.Processed, OrderProcessingStatus.Completed, true)]
+        [InlineData(OrderProcessingStatus.Cancelled, OrderProcessingStatus.Cancelled, false)]
+        [InlineData(OrderProcessingStatus.Completed, OrderProcessingStatus.Completed, false)]
+        [InlineData(OrderProcessingStatus.Registered, OrderProcessingStatus.Registered, false)]
+        [InlineData(OrderProcessingStatus.Processing, OrderProcessingStatus.Processing, false)]
+        [InlineData(OrderProcessingStatus.SendConditionNotMet, OrderProcessingStatus.SendConditionNotMet, false)]
+        public async Task TryCompleteOrderBasedOnNotificationsState_OrdersInDifferentStates_MaintainsExpectedStatus(OrderProcessingStatus currentStatus, OrderProcessingStatus expectedStatus, bool shouldUpdateStatus)
+        {
+            // Arrange
+            OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+            Guid notificationOrderÌd = Guid.NewGuid();
+
+            _orderIdsToDelete.Add(notificationOrderÌd);
+
+            var creationDateTime = DateTime.UtcNow;
+            var requestedSendTime = DateTime.UtcNow.AddMinutes(5);
+
+            NotificationOrder notificationOrder = new()
+            {
+                Creator = new("ttd"),
+                IgnoreReservation = true,
+                Id = notificationOrderÌd,
+                Created = creationDateTime,
+                Type = OrderType.Notification,
+                SendersReference = "ref-P5Q7R9S1",
+                RequestedSendTime = requestedSendTime,
+                SendingTimePolicy = SendingTimePolicy.Anytime,
+                ResourceId = "urn:altinn:resource:D208D0E6E5B4",
+                ConditionEndpoint = new Uri("https://vg.no/condition"),
+                NotificationChannel = NotificationChannel.EmailPreferred,
+
+                Templates =
+                [
+                    new SmsTemplate("Main SMS sender", "Main SMS body"),
+                    new EmailTemplate("Main email sender address", "Main email subject", "Main email body", EmailContentType.Plain)
+                ],
+
+                Recipients =
+                [
+                    new Recipient([], null, "18874198354")
+                ]
+            };
+
+            var orderCreationResult = await repo.Create(notificationOrder);
+            await repo.SetProcessingStatus(notificationOrderÌd, currentStatus);
+
+            // Act
+            bool statusUpdatingResult = await repo.TryCompleteOrderBasedOnNotificationsState(notificationOrderÌd, AlternateIdentifierSource.Order);
+            string mainOrderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{notificationOrderÌd}' and type = 'Notification' and processedstatus = '{expectedStatus}'";
+            int mainOrderCount = await PostgreUtil.RunSqlReturnOutput<int>(mainOrderSql);
+
+            // Assert
+            Assert.Equal(1, mainOrderCount);
+            Assert.NotNull(orderCreationResult);
+            Assert.Equal(shouldUpdateStatus, statusUpdatingResult);
+        }
     }
 }
