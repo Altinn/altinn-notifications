@@ -1668,7 +1668,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
         [InlineData(OrderProcessingStatus.Registered, OrderProcessingStatus.Registered, false)]
         [InlineData(OrderProcessingStatus.Processing, OrderProcessingStatus.Processing, false)]
         [InlineData(OrderProcessingStatus.SendConditionNotMet, OrderProcessingStatus.SendConditionNotMet, false)]
-        public async Task TryCompleteOrderBasedOnNotificationsState_OrdersInDifferentStates_MaintainsExpectedStatus(OrderProcessingStatus currentStatus, OrderProcessingStatus expectedStatus, bool shouldUpdateStatus)
+        public async Task TryCompleteOrderBasedOnNotificationsState_VerifiesStateTransitionRules(OrderProcessingStatus currentStatus, OrderProcessingStatus expectedStatus, bool shouldUpdateStatus)
         {
             // Arrange
             OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
