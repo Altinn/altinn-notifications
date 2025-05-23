@@ -55,8 +55,7 @@ public static class PostgreUtil
         return persistedOrder;
     }
 
-    public static async Task<(NotificationOrder Order, EmailNotification EmailNotification)>
-        PopulateDBWithOrderAndEmailNotification(string? sendersReference = null)
+    public static async Task<(NotificationOrder Order, EmailNotification EmailNotification)> PopulateDBWithOrderAndEmailNotification(string? sendersReference = null)
     {
         (NotificationOrder o, EmailNotification e) = TestdataUtil.GetOrderAndEmailNotification();
         var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IOrderRepository), typeof(IEmailNotificationRepository) });
@@ -131,8 +130,13 @@ public static class PostgreUtil
 
     public static async Task DeleteOrderFromDb(string sendersRef)
     {
-        string sql = $"delete from notifications.orders where sendersreference = '{sendersRef}'";
-        await RunSql(sql);
+        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
+        string sql = "DELETE FROM notifications.orders WHERE sendersreference = @sendersRef";
+
+        await using NpgsqlCommand pgcom = dataSource.CreateCommand(sql);
+        pgcom.Parameters.AddWithValue("@sendersRef", sendersRef);
+
+        await pgcom.ExecuteNonQueryAsync();
     }
 
     public static async Task<T> RunSqlReturnOutput<T>(string query)
@@ -150,9 +154,9 @@ public static class PostgreUtil
 
     public static async Task RunSql(string query)
     {
-        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
+        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices([typeof(NpgsqlDataSource)])[0]!;
 
         await using NpgsqlCommand pgcom = dataSource.CreateCommand(query);
-        pgcom.ExecuteNonQuery();
+        await pgcom.ExecuteNonQueryAsync();
     }
 }
