@@ -28,7 +28,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
                                                     .GetServices([typeof(IHostedService)], vars)
                                                     .First(s => s.GetType() == typeof(EmailStatusConsumer))!;
 
-        (_, EmailNotification notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(_sendersRef);
+        (_, EmailNotification notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(_sendersRef, simulateCronJob: true);
 
         EmailSendOperationResult sendOperationResult = new()
         {

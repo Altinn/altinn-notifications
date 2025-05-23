@@ -56,7 +56,7 @@ public class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFact
     public async Task GetWithStatusById_SingleMatchInDbAndOneEmail_ReturnsOk()
     {
         // Arrange
-        (NotificationOrder persistedOrder, _) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(sendersReference: _sendersRef);
+        (NotificationOrder persistedOrder, _) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(sendersReference: _sendersRef, simulateCronJob: true, simulateConsumers: true);
 
         string refLinkBase = "http://localhost:5090/notifications/api/v1/orders";
 
