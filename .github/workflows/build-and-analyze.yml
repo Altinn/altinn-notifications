@@ -48,6 +48,9 @@ jobs:
         run: |
           chmod +x dbsetup.sh
           ./dbsetup.sh
+      - name: Restart database to enable config changes
+        run: |
+          docker restart $(docker ps -q)    
       - name: Set up Kafka
         uses: ybyzek/cp-all-in-one-action@58cb2014706e386a7207356586a4fd64b6a9f7ab # v0.2.1
         with:
