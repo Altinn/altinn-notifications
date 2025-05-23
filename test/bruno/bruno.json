@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "name": "Examples - Notification-v2",
+  "name": "Altinn Notification",
   "type": "collection",
   "ignore": [
     "node_modules",
