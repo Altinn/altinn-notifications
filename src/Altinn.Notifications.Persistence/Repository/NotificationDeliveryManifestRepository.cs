@@ -75,6 +75,7 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
     {
         { "cancelled", ProcessingLifecycle.Order_Cancelled },
         { "completed", ProcessingLifecycle.Order_Completed },
+        { "processed", ProcessingLifecycle.Order_Processed },
         { "registered", ProcessingLifecycle.Order_Registered },
         { "processing", ProcessingLifecycle.Order_Processing },
         { "sendconditionnotmet", ProcessingLifecycle.Order_SendConditionNotMet }
