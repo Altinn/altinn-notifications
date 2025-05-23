@@ -89,7 +89,8 @@ public static class PostgreUtil
         }
         else
         {
-            throw new InvalidOperationException("The provided combination of simulateCronJob and simulateConsumers would result in an invalid state for the notification order.");
+            await orderRepo.Create(o);
+            await notificationRepo.AddNotification(e, DateTime.UtcNow.AddDays(1));
         }
 
         return (o, e);
@@ -148,7 +149,8 @@ public static class PostgreUtil
         }
         else
         {
-            throw new InvalidOperationException("The provided combination of simulateCronJob and simulateConsumers would result in an invalid state for the notification order.");
+            await orderRepo.Create(order);
+            await notificationRepo.AddNotification(smsNotification, DateTime.UtcNow.AddDays(1), 1);
         }
 
         return (order, smsNotification);
