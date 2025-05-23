@@ -8,6 +8,7 @@ using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Controllers;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Email;
@@ -599,10 +600,42 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var result = await controller.Post(request);
 
         // Assert
+        // Cast the result as a ProblemDetails object and verify its contents
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        var problemDetails = Assert.IsType<ProblemDetails>(objectResult.Value);
+
+        Assert.NotNull(problemDetails);
+        Assert.Equal("Request terminated", problemDetails.Title);
+        Assert.Equal(499, problemDetails.Status);
+    }
+
+    [Fact]
+    public async Task Post_MissingRecipients_ReturnsProblemDetails422Status()
+    {
+        // Arrange
+        var request = CreateValidRequest();
+        var validatorMock = SetupValidValidator();
+        var orderServiceMock = new Mock<IOrderRequestService>();
+        orderServiceMock.Setup(s => s.RetrieveOrderChainTracking("ttd", request.IdempotencyId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((NotificationOrderChainResponse?)null);
+        orderServiceMock.Setup(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ServiceError(422, "Missing recipients"));
+        var httpContext = new DefaultHttpContext();
+        httpContext.Items["Org"] = "ttd";
+        var controller = new FutureOrdersController(orderServiceMock.Object, validatorMock.Object)
+        {
+            ControllerContext = new ControllerContext { HttpContext = httpContext }
+        };
+
+        // Act
+        var result = await controller.Post(request);
+
+        // Assert
         var statusCodeResult = Assert.IsType<ObjectResult>(result.Result);
-        Assert.Equal(499, statusCodeResult.StatusCode);
-        Assert.NotNull(statusCodeResult.Value);
-        Assert.Contains("Request terminated", statusCodeResult.Value.ToString());
+        var problemDetails = Assert.IsType<ProblemDetails>(statusCodeResult.Value);
+        Assert.NotNull(problemDetails);
+        Assert.Equal(422, problemDetails.Status);
+        Assert.Equal("Missing recipients", problemDetails.Detail);
     }
 
     [Fact]
@@ -631,10 +664,13 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var result = await controller.Post(request);
 
         // Assert
+        // Cast the result as a ProblemDetails object and verify its contents
         var statusCodeResult = Assert.IsType<ObjectResult>(result.Result);
-        Assert.Equal(499, statusCodeResult.StatusCode);
-        Assert.NotNull(statusCodeResult.Value);
-        Assert.Contains("Request terminated", statusCodeResult.Value.ToString());
+        var problemDetails = Assert.IsType<ProblemDetails>(statusCodeResult.Value);
+
+        Assert.NotNull(problemDetails);
+        Assert.Equal(499, problemDetails.Status);
+        Assert.Contains("Request terminated", problemDetails.Title);
     }
 
     [Fact]
@@ -753,6 +789,57 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         orderServiceMock.Verify(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), cancellationToken), Times.Once);
     }
 
+    [Fact]
+    public async Task Post_BuildThrowsInvalidOperationException_ReturnsBadRequestWithProblemDetails()
+    {
+        // Arrange
+        var request = new NotificationOrderChainRequestExt
+        {
+            // Setting the IdempotencyId to empty string intentionally to create a scenario where the validator passes but mapping fails.
+            IdempotencyId = string.Empty,
+            Recipient = new NotificationRecipientExt
+            {
+                RecipientEmail = new RecipientEmailExt
+                {
+                    EmailAddress = "test@example.com",
+                    Settings = new EmailSendingOptionsExt
+                    {
+                        Body = "Test body",
+                        Subject = "Test subject"
+                    }
+                }
+            }
+        };
+
+        var validatorMock = new Mock<IValidator<NotificationOrderChainRequestExt>>();
+        validatorMock.Setup(v => v.Validate(It.IsAny<NotificationOrderChainRequestExt>()))
+            .Returns(new ValidationResult()); // Return valid result to bypass validation
+
+        var orderServiceMock = new Mock<IOrderRequestService>();
+
+        var httpContext = new DefaultHttpContext();
+        httpContext.Items["Org"] = "ttd";
+
+        var controller = new FutureOrdersController(orderServiceMock.Object, validatorMock.Object)
+        {
+            ControllerContext = new ControllerContext { HttpContext = httpContext }
+        };
+
+        // Act
+        var result = await controller.Post(request);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(400, objectResult.StatusCode);
+
+        var problemDetails = Assert.IsType<ProblemDetails>(objectResult.Value);
+        Assert.Equal("Invalid notification order request", problemDetails.Title);
+        Assert.Equal(400, problemDetails.Status);
+        Assert.Contains("IdempotencyId must be set", problemDetails.Detail);
+
+        orderServiceMock.Verify(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     /// <summary>
     /// Creates a valid notification order chain request for testing.
     /// </summary>
@@ -840,10 +927,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     /// <param name="reminderCount">The number of reminder shipments to include.</param>
     /// <param name="sendersReference">Custom sender's reference for the main notification.</param>
     /// <returns>A configured <see cref="NotificationOrderChainResponse"/> for testing.</returns>
-    private static NotificationOrderChainResponse CreateNotificationOrderChainResponse(
-        Guid orderId,
-        int reminderCount = 0,
-        string sendersReference = "notification-ref")
+    private static NotificationOrderChainResponse CreateNotificationOrderChainResponse(Guid orderId, int reminderCount = 0, string sendersReference = "notification-ref")
     {
         List<NotificationOrderChainShipment>? reminders = null;
 
@@ -879,9 +963,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     /// <param name="expectedResponse">Specific response to be returned by the mock service.</param>
     /// <param name="orderRequestService">Pre-configured order request service.</param>
     /// <returns>An HTTP client configured for testing.</returns>
-    private HttpClient GetTestClient(
-        NotificationOrderChainResponse? expectedResponse = null,
-        IOrderRequestService? orderRequestService = null)
+    private HttpClient GetTestClient(NotificationOrderChainResponse? expectedResponse = null, IOrderRequestService? orderRequestService = null)
     {
         if (orderRequestService == null)
         {

@@ -33,6 +33,9 @@ public class NotificationOrderWithStatus : IBaseNotificationOrder
     /// <inheritdoc/>>
     public string? ResourceId { get; internal set; }
 
+    /// <inheritdoc/>
+    public OrderType Type { get; internal set; }
+
     /// <inheritdoc/>>
     public Uri? ConditionEndpoint { get; set; }
 
@@ -64,7 +67,8 @@ public class NotificationOrderWithStatus : IBaseNotificationOrder
         bool? ignoreReservation,
         string? resourceId,
         Uri? conditionEndpoint,
-        ProcessingStatus processingStatus)
+        ProcessingStatus processingStatus, 
+        OrderType type)
     {
         Id = id;
         SendersReference = sendersReference;
@@ -76,6 +80,7 @@ public class NotificationOrderWithStatus : IBaseNotificationOrder
         ResourceId = resourceId;
         ConditionEndpoint = conditionEndpoint;
         ProcessingStatus = processingStatus;
+        Type = type;
     }
 
     /// <summary>
