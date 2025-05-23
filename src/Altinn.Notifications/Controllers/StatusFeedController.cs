@@ -19,7 +19,7 @@ namespace Altinn.Notifications.Controllers;
 [SwaggerResponse(403, "Caller is not authorized to access the requested resource")]
 [SwaggerResponse(499, "The operation was cancelled by the caller")]
 [Authorize(Policy = AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS)]
-public class StatusFeedController(IStatusFeedService statusFeedService) : ControllerBase
+public class StatusFeedController(IStatusFeedService statusFeedService, ILogger<StatusFeedController> logger) : ControllerBase
 {
     /// <summary>
     /// Retrieve an array of order status change history.
@@ -44,7 +44,7 @@ public class StatusFeedController(IStatusFeedService statusFeedService) : Contro
             return result.Match<ActionResult>(
                 statusFeed =>
                 {
-                    return Ok(statusFeed.MapToStatusFeedExtList());
+                    return Ok(statusFeed.MapToStatusFeedExtList(logger));
                 },
                 error =>
                 {

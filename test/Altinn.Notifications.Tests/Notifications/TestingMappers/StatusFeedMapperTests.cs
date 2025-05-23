@@ -5,6 +5,8 @@ using Altinn.Notifications.Core.Models.Delivery;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models.Delivery;
 using Altinn.Notifications.Tests.TestData;
+using Castle.Core.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.TestingMappers
@@ -41,11 +43,27 @@ namespace Altinn.Notifications.Tests.Notifications.TestingMappers
             };
 
             // Act
-            var result = statusFeeds.MapToStatusFeedExtList();
+            var result = statusFeeds.MapToStatusFeedExtList(NullLogger<StatusFeedMapperTests>.Instance);
             
             // Assert
             Assert.NotNull(result);
             Assert.Equivalent(statusFeedExtList, result);
+        }
+
+        [Fact]
+        public void MapToOrderStatusExt_WithInvalidJson_ReturnsEmptyJsonElement()
+        {
+            // Arrange
+            var statusFeeds = new List<StatusFeed> { new() { SequenceNumber = 1, OrderStatus = "Invalid JSON" } };
+
+            // Act
+            var results = statusFeeds.MapToStatusFeedExtList(NullLogger<StatusFeedMapperTests>.Instance);
+
+            // Assert
+            Assert.NotNull(results);
+            var singleResult = Assert.Single(results);
+            Assert.Equal(1, singleResult.SequenceNumber);
+            Assert.Equal("{}", singleResult.OrderStatus.ToString()); // Check if the OrderStatus is an empty JSON object
         }
     }
 }

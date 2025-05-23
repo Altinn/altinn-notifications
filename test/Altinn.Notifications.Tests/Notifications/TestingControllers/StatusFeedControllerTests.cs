@@ -11,6 +11,7 @@ using Altinn.Notifications.Models.Delivery;
 using Altinn.Notifications.Tests.TestData;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
 
@@ -24,7 +25,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
         public StatusFeedControllerTests()
         {
             _statusFeedService = new Mock<IStatusFeedService>();
-            _statusFeedController = new StatusFeedController(_statusFeedService.Object)
+            _statusFeedController = new StatusFeedController(_statusFeedService.Object, NullLogger<StatusFeedController>.Instance)
             {
                 ControllerContext = new ControllerContext
                 {
@@ -43,7 +44,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
         public async Task Get_WithNoOrgSetInHttpContext_ReturnsForbidden()
         {
             // Arrange
-            var controller = new StatusFeedController(_statusFeedService.Object)
+            var controller = new StatusFeedController(_statusFeedService.Object, NullLogger<StatusFeedController>.Instance)
             {
                 ControllerContext =
                 {
