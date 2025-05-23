@@ -1665,7 +1665,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
         [InlineData(OrderProcessingStatus.Processed, OrderProcessingStatus.Completed, true)]
         [InlineData(OrderProcessingStatus.Cancelled, OrderProcessingStatus.Cancelled, false)]
         [InlineData(OrderProcessingStatus.Completed, OrderProcessingStatus.Completed, false)]
-        [InlineData(OrderProcessingStatus.Processing, OrderProcessingStatus.Processed, false)]
+        [InlineData(OrderProcessingStatus.Processing, OrderProcessingStatus.Completed, true)]
         [InlineData(OrderProcessingStatus.Registered, OrderProcessingStatus.Registered, false)]
         [InlineData(OrderProcessingStatus.SendConditionNotMet, OrderProcessingStatus.SendConditionNotMet, false)]
         public async Task TryCompleteOrderBasedOnNotificationsState_VerifiesStateTransitionRules(OrderProcessingStatus currentStatus, OrderProcessingStatus expectedStatus, bool shouldUpdateStatus)
@@ -1707,7 +1707,19 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             };
 
             var orderCreationResult = await repo.Create(notificationOrder);
-            await repo.SetProcessingStatus(notificationOrderId, currentStatus);
+            switch (currentStatus)
+            {
+                case OrderProcessingStatus.Registered:
+                    break;
+
+                case OrderProcessingStatus.Completed:
+                case OrderProcessingStatus.Cancelled:
+                case OrderProcessingStatus.Processed:
+                case OrderProcessingStatus.Processing:
+                case OrderProcessingStatus.SendConditionNotMet:
+                    await repo.SetProcessingStatus(notificationOrderId, currentStatus);
+                    break;
+            }
 
             // Act
             bool statusUpdatingResult = await repo.TryCompleteOrderBasedOnNotificationsState(notificationOrderId, AlternateIdentifierSource.Order);
