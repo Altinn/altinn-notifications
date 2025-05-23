@@ -362,7 +362,7 @@ public class OrderProcessingServiceTests
         // Assert
         clientMock.Verify(c => c.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
         orderRepositoryMock.Verify(e => e.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>()), Times.Never);
-        orderRepositoryMock.Verify(r => r.SetProcessingStatus(It.Is<Guid>(g => g.Equals(order.Id)), It.Is<OrderProcessingStatus>(ops => ops == OrderProcessingStatus.SendConditionNotMet)), Times.Never);
+        orderRepositoryMock.Verify(r => r.SetProcessingStatus(It.Is<Guid>(g => g.Equals(order.Id)), It.Is<OrderProcessingStatus>(ops => ops == OrderProcessingStatus.SendConditionNotMet)), Times.Once);
     }
 
     [Fact]
