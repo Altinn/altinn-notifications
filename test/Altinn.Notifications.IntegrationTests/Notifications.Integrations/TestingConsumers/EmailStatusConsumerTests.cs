@@ -11,8 +11,8 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
 
 public class EmailStatusConsumerTests : IAsyncLifetime
 {
-    private readonly string _statusUpdatedTopicName = Guid.NewGuid().ToString();
     private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
+    private readonly string _statusUpdatedTopicName = Guid.NewGuid().ToString();
 
     [Fact]
     public async Task RunTask_ConfirmExpectedSideEffects()
@@ -25,7 +25,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         };
 
         using EmailStatusConsumer consumerService = (EmailStatusConsumer)ServiceUtil
-                                                    .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
+                                                    .GetServices([typeof(IHostedService)], vars)
                                                     .First(s => s.GetType() == typeof(EmailStatusConsumer))!;
 
         (_, EmailNotification notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(_sendersRef);
@@ -46,6 +46,9 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         // Assert
         string emailNotificationStatus = await SelectEmailNotificationStatus(notification.Id);
         Assert.Equal(EmailNotificationResultType.Succeeded.ToString(), emailNotificationStatus);
+
+        long processedOrderCount = await SelectProcessedOrderCount(notification.Id);
+        Assert.Equal(1, processedOrderCount);
     }
 
     public Task InitializeAsync()
@@ -62,6 +65,12 @@ public class EmailStatusConsumerTests : IAsyncLifetime
     {
         await PostgreUtil.DeleteOrderFromDb(_sendersRef);
         await KafkaUtil.DeleteTopicAsync(_statusUpdatedTopicName);
+    }
+
+    private static async Task<long> SelectProcessedOrderCount(Guid notificationId)
+    {
+        string sql = $"SELECT count (1) FROM notifications.orders o join notifications.emailnotifications e on e._orderid = o._id where e.alternateid = '{notificationId}' and o.processedstatus = '{OrderProcessingStatus.Processed}'";
+        return await PostgreUtil.RunSqlReturnOutput<long>(sql);
     }
 
     private static async Task<string> SelectEmailNotificationStatus(Guid notificationId)
