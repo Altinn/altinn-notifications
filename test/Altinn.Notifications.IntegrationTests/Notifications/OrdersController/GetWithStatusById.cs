@@ -71,8 +71,8 @@ public class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFact
             ProcessingStatus = new()
             {
                 LastUpdate = persistedOrder.Created,
-                Status = "Registered",
-                StatusDescription = "Order has been registered and is awaiting requested send time before processing."
+                Status = "Processed",
+                StatusDescription = "Order processing is processed. Notifications have been generated."
             },
             NotificationsStatusSummary = new NotificationsStatusSummaryExt()
             {
@@ -123,9 +123,9 @@ public class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFact
             RequestedSendTime = persistedOrder.RequestedSendTime,
             ProcessingStatus = new()
             {
+                Status = "Processed",
                 LastUpdate = persistedOrder.Created,
-                Status = "Registered",
-                StatusDescription = "Order has been registered and is awaiting requested send time before processing."
+                StatusDescription = "Order processing is processed. Notifications have been generated."
             },
             NotificationsStatusSummary = new NotificationsStatusSummaryExt()
             {
