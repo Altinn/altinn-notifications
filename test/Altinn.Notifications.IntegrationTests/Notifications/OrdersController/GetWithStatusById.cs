@@ -72,7 +72,7 @@ public class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFact
             {
                 LastUpdate = persistedOrder.Created,
                 Status = "Processed",
-                StatusDescription = "Order processing is processed. Notifications have been generated."
+                StatusDescription = "Order processing is done. Notifications have been successfully generated."
             },
             NotificationsStatusSummary = new NotificationsStatusSummaryExt()
             {
@@ -109,7 +109,7 @@ public class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFact
     public async Task GetWithStatusById_SingleMatchInDbAndOneSms_ReturnsOk()
     {
         // Arrange
-        (NotificationOrder persistedOrder, _) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendersReference: _sendersRef);
+        (NotificationOrder persistedOrder, _) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendersReference: _sendersRef, simulateConsumers: true);
 
         string refLinkBase = "http://localhost:5090/notifications/api/v1/orders";
 
@@ -125,7 +125,7 @@ public class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFact
             {
                 Status = "Processed",
                 LastUpdate = persistedOrder.Created,
-                StatusDescription = "Order processing is processed. Notifications have been generated."
+                StatusDescription = "Order processing is done. Notifications have been successfully generated."
             },
             NotificationsStatusSummary = new NotificationsStatusSummaryExt()
             {
