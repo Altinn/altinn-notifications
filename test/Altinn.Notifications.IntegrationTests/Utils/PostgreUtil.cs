@@ -115,8 +115,16 @@ public static class PostgreUtil
             order.SendersReference = sendersReference;
         }
 
+        /*
+         * Notes for creating notification orders for testing purposes:
+         * 1. When a new notification order is created in the database, its processing status is 'Registered'.
+         * 2. When handling of a registered order begins, its processing status should be updated to 'Processing'.
+         * 3. Once handling of a notification order in the 'Processing' state is done, its processing status should be updated to 'Processed'.
+         */
         await orderRepo.Create(order);
+        await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
         await notificationRepo.AddNotification(smsNotification, DateTime.UtcNow.AddDays(1), 1);
+        await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processed);
 
         return (order, smsNotification);
     }
