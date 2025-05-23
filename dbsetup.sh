@@ -3,7 +3,7 @@ export PGPASSWORD=Password
 
 # alter max connections
 psql -h localhost -p 5432 -U platform_notifications_admin -d notificationsdb  \
--c "ALTER SYSTEM SET max_connections TO '200';"
+-c "ALTER SYSTEM SET max_connections TO '300';"
 
 # set up platform_notifications role
 psql -h localhost -p 5432 -U platform_notifications_admin -d notificationsdb \
