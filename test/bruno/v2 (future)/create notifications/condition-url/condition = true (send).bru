@@ -1,29 +1,28 @@
 meta {
-  name: SMS access code
+  name: condition = true (send)
   type: http
-  seq: 1
+  seq: 2
 }
 
 post {
   url: {{host}}/notifications/api/v1/future/orders
   body: json
-  auth: bearer
-}
-
-auth:bearer {
-  token: {{jwt}}
+  auth: inherit
 }
 
 body:json {
   {
     "idempotencyId": "{{random_idempotency_id}}",
     "sendersReference": "te-123-123",
+    "conditionEndpoint": "{{process.env.TESTDATA_URL_CONDITION_TRUE}}",
     "recipient": {
-      "recipientSms": {
+      "recipientSms": {      
         "phoneNumber": "004799999999",
         "smsSettings": {
-          "body": "Engangskode fra TE: 123456",
-          "sendingTimePolicy": "Anytime"
+          "sendingTimePolicy": "Daytime",
+          "message": "Husk å levere",
+          "sender": "Test",
+          "body": "This is a test"
         }
       }
     }
