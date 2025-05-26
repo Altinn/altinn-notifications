@@ -1,0 +1,30 @@
+meta {
+  name: non-200 condition (send)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "te-123-123",
+    "conditionEndpoint": "{{process.env.TESTDATA_URL_CONDITION_CORRUPT}}",
+    "recipient": {
+      "recipientSms": {      
+        "phoneNumber": "004799999999",
+        "smsSettings": {
+          "sendingTimePolicy": "Daytime",
+          "message": "Husk å levere",
+          "sender": "Test",
+          "body": "This is a test"
+        }
+      }
+    }
+  }
+}
