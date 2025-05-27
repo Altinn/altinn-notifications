@@ -55,8 +55,7 @@ public static class PostgreUtil
         return persistedOrder;
     }
 
-    public static async Task<(NotificationOrder Order, EmailNotification EmailNotification)>
-        PopulateDBWithOrderAndEmailNotification(string? sendersReference = null)
+    public static async Task<(NotificationOrder Order, EmailNotification EmailNotification)> PopulateDBWithOrderAndEmailNotification(string? sendersReference = null, bool simulateCronJob = false, bool simulateConsumers = false)
     {
         (NotificationOrder o, EmailNotification e) = TestdataUtil.GetOrderAndEmailNotification();
         var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IOrderRepository), typeof(IEmailNotificationRepository) });
@@ -69,8 +68,30 @@ public static class PostgreUtil
             o.SendersReference = sendersReference;
         }
 
-        await orderRepo.Create(o);
-        await notificationRepo.AddNotification(e, DateTime.UtcNow.AddDays(1));
+        /*
+         * Notes:
+         * 1. When a new notification order is created in the database, its processing status is 'Registered'.
+         * 2. When handling of a registered order begins, its processing status should be updated to 'Processing'.
+         * 3. Once handling of a notification order in the 'Processing' state is done, its processing status should be updated to 'Processed'.
+         */
+        if (simulateCronJob && simulateConsumers)
+        {
+            await orderRepo.Create(o);
+            await orderRepo.SetProcessingStatus(o.Id, OrderProcessingStatus.Processing);
+            await notificationRepo.AddNotification(e, DateTime.UtcNow.AddDays(1));
+            await orderRepo.SetProcessingStatus(o.Id, OrderProcessingStatus.Processed);
+        }
+        else if (simulateCronJob && !simulateConsumers)
+        {
+            await orderRepo.Create(o);
+            await orderRepo.SetProcessingStatus(o.Id, OrderProcessingStatus.Processing);
+            await notificationRepo.AddNotification(e, DateTime.UtcNow.AddDays(1));
+        }
+        else
+        {
+            await orderRepo.Create(o);
+            await notificationRepo.AddNotification(e, DateTime.UtcNow.AddDays(1));
+        }
 
         return (o, e);
     }
@@ -94,7 +115,7 @@ public static class PostgreUtil
         return o;
     }
 
-    public static async Task<(NotificationOrder Order, SmsNotification SmsNotification)> PopulateDBWithOrderAndSmsNotification(string? sendersReference = null, SendingTimePolicy? sendingTimePolicy = null)
+    public static async Task<(NotificationOrder Order, SmsNotification SmsNotification)> PopulateDBWithOrderAndSmsNotification(string? sendersReference = null, SendingTimePolicy? sendingTimePolicy = null, bool simulateCronJob = false, bool simulateConsumers = false)
     {
         (NotificationOrder order, SmsNotification smsNotification) = TestdataUtil.GetOrderAndSmsNotification(sendingTimePolicy);
         var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IOrderRepository), typeof(ISmsNotificationRepository) });
@@ -107,16 +128,43 @@ public static class PostgreUtil
             order.SendersReference = sendersReference;
         }
 
-        await orderRepo.Create(order);
-        await notificationRepo.AddNotification(smsNotification, DateTime.UtcNow.AddDays(1), 1);
+        /*
+        * Notes:
+        * 1. When a new notification order is created in the database, its processing status is 'Registered'.
+        * 2. When handling of a registered order begins, its processing status should be updated to 'Processing'.
+        * 3. Once handling of a notification order in the 'Processing' state is done, its processing status should be updated to 'Processed'.
+        */
+        if (simulateCronJob && simulateConsumers)
+        {
+            await orderRepo.Create(order);
+            await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
+            await notificationRepo.AddNotification(smsNotification, DateTime.UtcNow.AddDays(1), 1);
+            await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processed);
+        }
+        else if (simulateCronJob && !simulateConsumers)
+        {
+            await orderRepo.Create(order);
+            await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
+            await notificationRepo.AddNotification(smsNotification, DateTime.UtcNow.AddDays(1), 1);
+        }
+        else
+        {
+            await orderRepo.Create(order);
+            await notificationRepo.AddNotification(smsNotification, DateTime.UtcNow.AddDays(1), 1);
+        }
 
         return (order, smsNotification);
     }
 
     public static async Task DeleteOrderFromDb(string sendersRef)
     {
-        string sql = $"delete from notifications.orders where sendersreference = '{sendersRef}'";
-        await RunSql(sql);
+        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
+        string sql = "DELETE FROM notifications.orders WHERE sendersreference = @sendersRef";
+
+        await using NpgsqlCommand pgcom = dataSource.CreateCommand(sql);
+        pgcom.Parameters.AddWithValue("@sendersRef", sendersRef);
+
+        await pgcom.ExecuteNonQueryAsync();
     }
 
     public static async Task<T> RunSqlReturnOutput<T>(string query)
@@ -134,9 +182,9 @@ public static class PostgreUtil
 
     public static async Task RunSql(string query)
     {
-        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
+        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices([typeof(NpgsqlDataSource)])[0]!;
 
         await using NpgsqlCommand pgcom = dataSource.CreateCommand(query);
-        pgcom.ExecuteNonQuery();
+        await pgcom.ExecuteNonQueryAsync();
     }
 }

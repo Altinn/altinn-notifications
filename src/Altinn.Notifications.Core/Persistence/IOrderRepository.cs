@@ -99,4 +99,23 @@ public interface IOrderRepository
     /// <param name="creator">The short name of the order creator</param>
     /// <returns>If successful the cancelled notification order with status info. If error a cancellation error type.</returns>
     public Task<Result<NotificationOrderWithStatus, CancellationError>> CancelOrder(Guid id, string creator);
+
+    /// <summary>
+    /// Updates the status of a notification order to 'Completed' when all associated SMS and Email notifications have reached their respective terminal states.
+    /// </summary>
+    /// <param name="notificationId">
+    /// The identifier of the notification (SMS or Email) that triggered the evaluation. If null, the operation is skipped.
+    /// </param>
+    /// <param name="source">
+    /// The source type of the alternate identifier.
+    /// </param>
+    /// <returns>
+    /// <c>true</c> if the order status was successfully updated to 'Completed';
+    /// <c>false</c> if the order was already completed or if not all notifications have reached terminal states.
+    /// </returns>
+    /// <remarks>
+    /// This method locates the order linked to the provided notification identifier and verifies whether all
+    /// related notifications have reached terminal states. The status is only updated to 'Completed' if this condition is met.
+    /// </remarks>
+    public Task<bool> TryCompleteOrderBasedOnNotificationsState(Guid? notificationId, AlternateIdentifierSource source);
 }

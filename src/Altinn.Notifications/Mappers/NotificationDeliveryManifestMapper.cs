@@ -47,6 +47,7 @@ public static class NotificationDeliveryManifestMapper
             // Order statuses
             ProcessingLifecycle.Order_Completed => ProcessingLifecycleExt.Order_Completed,
             ProcessingLifecycle.Order_Cancelled => ProcessingLifecycleExt.Order_Cancelled,
+            ProcessingLifecycle.Order_Processed => ProcessingLifecycleExt.Order_Processed,
             ProcessingLifecycle.Order_Registered => ProcessingLifecycleExt.Order_Registered,
             ProcessingLifecycle.Order_Processing => ProcessingLifecycleExt.Order_Processing,
             ProcessingLifecycle.Order_SendConditionNotMet => ProcessingLifecycleExt.Order_SendConditionNotMet,

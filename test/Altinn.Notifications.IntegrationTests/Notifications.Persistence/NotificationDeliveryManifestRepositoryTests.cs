@@ -1,6 +1,4 @@
-﻿using System.Data;
-
-using Altinn.Notifications.Core.Enums;
+﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Delivery;
@@ -129,7 +127,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetDeliveryManifestAsync_WithVariousOrderStatuses_MapsStatusesCorrectly()
+    public async Task GetDeliveryManifestAsync_WithVariousStatuses_MapsStatusesCorrectly()
     {
         // Arrange
         Guid orderId = Guid.NewGuid();
@@ -164,11 +162,12 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             ]
         };
 
-        // Create the order and notifications
+        // Save the order and set its status.
         OrderRepository orderRepository = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
         await orderRepository.Create(order);
+        await orderRepository.SetProcessingStatus(orderId, OrderProcessingStatus.Completed);
 
-        // Add SMS notification
+        // Add an SMS notification to the order, and set its status.
         SmsNotification smsNotification = new()
         {
             OrderId = orderId,
@@ -179,12 +178,12 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
                 MobileNumber = recipientPhone
             }
         };
-
         SmsNotificationRepository smsRepository = (SmsNotificationRepository)ServiceUtil.GetServices([typeof(ISmsNotificationRepository)])
             .First(i => i.GetType() == typeof(SmsNotificationRepository));
         await smsRepository.AddNotification(smsNotification, DateTime.UtcNow.AddMinutes(45), 1);
+        await smsRepository.UpdateSendStatus(smsNotificationId, SmsNotificationResultType.Delivered, "80A55089-025B-48AB-AC5D-FB81E92169A4");
 
-        // Add email notification
+        // Add an Email notification to the order, and set its staus.
         EmailNotification emailNotification = new()
         {
             OrderId = orderId,
@@ -199,20 +198,11 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         EmailNotificationRepository emailRepository = (EmailNotificationRepository)ServiceUtil.GetServices([typeof(IEmailNotificationRepository)])
             .First(i => i.GetType() == typeof(EmailNotificationRepository));
         await emailRepository.AddNotification(emailNotification, DateTime.UtcNow);
-
-        // Directly modify the order status and notification statuses in the database to test status mapping
-        // Note: This is typically not recommended in production code but useful for testing
-        string updateOrderSql = $@"UPDATE notifications.orders SET processedstatus = 'Completed' WHERE alternateid = '{orderId}'";
-        string updateSmsSql = $@"UPDATE notifications.smsnotifications SET result = 'Accepted' WHERE alternateid = '{smsNotificationId}'";
-        string updateEmailSql = $@"UPDATE notifications.emailnotifications SET result = 'Succeeded' WHERE alternateid = '{emailNotificationId}'";
-
-        await PostgreUtil.RunSql(updateOrderSql);
-        await PostgreUtil.RunSql(updateSmsSql);
-        await PostgreUtil.RunSql(updateEmailSql);
+        await emailRepository.UpdateSendStatus(emailNotificationId, EmailNotificationResultType.Failed_RecipientReserved);
 
         // Act
-        NotificationDeliveryManifestRepository deliveryManifestRepository = (NotificationDeliveryManifestRepository)ServiceUtil.GetServices([typeof(INotificationDeliveryManifestRepository)])
-            .First(i => i.GetType() == typeof(NotificationDeliveryManifestRepository));
+        NotificationDeliveryManifestRepository deliveryManifestRepository =
+            (NotificationDeliveryManifestRepository)ServiceUtil.GetServices([typeof(INotificationDeliveryManifestRepository)]).First(i => i.GetType() == typeof(NotificationDeliveryManifestRepository));
 
         INotificationDeliveryManifest? deliveryManifest = await deliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, CancellationToken.None);
 
@@ -233,14 +223,14 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         Assert.Single(smsDeliveries);
         var smsDelivery = smsDeliveries[0];
         Assert.Equal(recipientPhone, smsDelivery.Destination);
-        Assert.Equal(ProcessingLifecycle.SMS_Accepted, smsDelivery.Status);
+        Assert.Equal(ProcessingLifecycle.SMS_Delivered, smsDelivery.Status);
 
         // Verify email recipient
         var emailDeliveries = deliveryManifest.Recipients.Where(r => r is EmailDeliveryManifest).ToList();
         Assert.Single(emailDeliveries);
         var emailDelivery = emailDeliveries[0];
         Assert.Equal(recipientEmail, emailDelivery.Destination);
-        Assert.Equal(ProcessingLifecycle.Email_Succeeded, emailDelivery.Status);
+        Assert.Equal(ProcessingLifecycle.Email_Failed_RecipientReserved, emailDelivery.Status);
     }
 
     [Fact]
@@ -272,8 +262,8 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             SendersReference = senderReference,
             RequestedSendTime = requestedSendTime,
             SendingTimePolicy = SendingTimePolicy.Daytime,
-            NotificationChannel = NotificationChannel.EmailPreferred,
             ConditionEndpoint = new Uri(conditionEndpoint),
+            NotificationChannel = NotificationChannel.EmailPreferred,
             Templates =
             [
                 new SmsTemplate(smsSender, smsMessageBody),
@@ -365,11 +355,12 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             }
         };
 
-        OrderRepository orderRepository = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)])
-            .First(i => i.GetType() == typeof(OrderRepository));
+        // Save the order and set its status.
+        OrderRepository orderRepository = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
         await orderRepository.Create(order);
+        await orderRepository.SetProcessingStatus(orderId, OrderProcessingStatus.Processed);
 
-        // Insert the SMS notification order
+        // Add a new SMS notification to the order.
         SmsNotificationRepository smsRepository = (SmsNotificationRepository)ServiceUtil.GetServices([typeof(ISmsNotificationRepository)])
             .First(i => i.GetType() == typeof(SmsNotificationRepository));
         await smsRepository.AddNotification(smsNotification, DateTime.UtcNow.AddMinutes(45), 1);
@@ -390,7 +381,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         Assert.True(deliveryManifest.LastUpdate > DateTime.MinValue);
         Assert.Equal(senderReference, deliveryManifest.SendersReference);
         Assert.Equal(OrderType.Notification.ToString(), deliveryManifest.Type);
-        Assert.Equal(ProcessingLifecycle.Order_Registered, deliveryManifest.Status);
+        Assert.Equal(ProcessingLifecycle.Order_Processed, deliveryManifest.Status);
 
         Assert.NotNull(deliveryManifest.Recipients);
         Assert.Single(deliveryManifest.Recipients);
@@ -459,10 +450,13 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             }
         };
 
+        // Save the order and set its status.
         OrderRepository orderRepository = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)])
             .First(i => i.GetType() == typeof(OrderRepository));
         await orderRepository.Create(notificationOrder);
+        await orderRepository.SetProcessingStatus(orderId, OrderProcessingStatus.Processed);
 
+        // Add a new Email notification to the order.
         EmailNotificationRepository emailRepository = (EmailNotificationRepository)ServiceUtil.GetServices([typeof(IEmailNotificationRepository)])
             .First(i => i.GetType() == typeof(EmailNotificationRepository));
         await emailRepository.AddNotification(emailNotification, DateTime.UtcNow);
@@ -471,8 +465,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         NotificationDeliveryManifestRepository deliveryManifestRepository = (NotificationDeliveryManifestRepository)ServiceUtil.GetServices([typeof(INotificationDeliveryManifestRepository)])
             .First(i => i.GetType() == typeof(NotificationDeliveryManifestRepository));
 
-        INotificationDeliveryManifest? deliveryManifest =
-            await deliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, CancellationToken.None);
+        INotificationDeliveryManifest? deliveryManifest = await deliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, CancellationToken.None);
 
         // Assert
         Assert.NotNull(deliveryManifest);
@@ -483,7 +476,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         Assert.True(deliveryManifest.LastUpdate > DateTime.MinValue);
         Assert.Equal(senderReference, deliveryManifest.SendersReference);
         Assert.Equal(OrderType.Reminder.ToString(), deliveryManifest.Type);
-        Assert.Equal(ProcessingLifecycle.Order_Registered, deliveryManifest.Status);
+        Assert.Equal(ProcessingLifecycle.Order_Processed, deliveryManifest.Status);
 
         Assert.NotNull(deliveryManifest.Recipients);
         Assert.Single(deliveryManifest.Recipients);
@@ -544,10 +537,13 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             }
         };
 
+        // Save the order and set its status.
         OrderRepository orderRepository = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)])
             .First(i => i.GetType() == typeof(OrderRepository));
         await orderRepository.Create(order);
+        await orderRepository.SetProcessingStatus(orderId, OrderProcessingStatus.Processed);
 
+        // Add a new SMS notification to the order.
         SmsNotificationRepository smsRepository = (SmsNotificationRepository)ServiceUtil.GetServices([typeof(ISmsNotificationRepository)])
             .First(i => i.GetType() == typeof(SmsNotificationRepository));
         await smsRepository.AddNotification(smsNotification, DateTime.UtcNow.AddMinutes(45), 1);
@@ -646,17 +642,23 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
             }
         };
 
+        // Save the order and set its status.
         OrderRepository orderRepository = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)])
             .First(i => i.GetType() == typeof(OrderRepository));
         await orderRepository.Create(order);
+        await orderRepository.SetProcessingStatus(orderId, OrderProcessingStatus.Completed);
 
+        // Add an Email notification to the order, and set its staus.
         EmailNotificationRepository emailRepository = (EmailNotificationRepository)ServiceUtil.GetServices([typeof(IEmailNotificationRepository)])
             .First(i => i.GetType() == typeof(EmailNotificationRepository));
-        await emailRepository.AddNotification(emailNotification, DateTime.UtcNow);
+        await emailRepository.AddNotification(emailNotification, DateTime.UtcNow.AddMinutes(-5));
+        await emailRepository.UpdateSendStatus(emailNotificationId, EmailNotificationResultType.Delivered);
 
+        // Add an SMS notification to the order, and set its status.
         SmsNotificationRepository smsRepository = (SmsNotificationRepository)ServiceUtil.GetServices([typeof(ISmsNotificationRepository)])
             .First(i => i.GetType() == typeof(SmsNotificationRepository));
-        await smsRepository.AddNotification(smsNotification, DateTime.UtcNow.AddMinutes(45), 1);
+        await smsRepository.AddNotification(smsNotification, DateTime.UtcNow.AddMinutes(-15), 1);
+        await smsRepository.UpdateSendStatus(smsNotificationId, SmsNotificationResultType.Delivered, "FEF0E7BF-686A-4A6A-A9A1-11B788AD7A95");
 
         // Act
         NotificationDeliveryManifestRepository deliveryManifestRepository = (NotificationDeliveryManifestRepository)ServiceUtil.GetServices([typeof(INotificationDeliveryManifestRepository)])
@@ -674,7 +676,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         Assert.True(deliveryManifest.LastUpdate > DateTime.MinValue);
         Assert.Equal(senderReference, deliveryManifest.SendersReference);
         Assert.Equal(OrderType.Reminder.ToString(), deliveryManifest.Type);
-        Assert.Equal(ProcessingLifecycle.Order_Registered, deliveryManifest.Status);
+        Assert.Equal(ProcessingLifecycle.Order_Completed, deliveryManifest.Status);
 
         Assert.NotNull(deliveryManifest.Recipients);
         Assert.Equal(2, deliveryManifest.Recipients.Count);
@@ -686,7 +688,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         var emailDelivery = emailDeliveries[0];
         Assert.True(emailDelivery.LastUpdate > DateTime.MinValue);
         Assert.Equal(recipientEmailAddress, emailDelivery.Destination);
-        Assert.Equal(ProcessingLifecycle.Email_New, emailDelivery.Status);
+        Assert.Equal(ProcessingLifecycle.Email_Delivered, emailDelivery.Status);
 
         // Check SMS notification
         var smsDeliveries = deliveryManifest.Recipients.Where(r => r is SmsDeliveryManifest).ToList();
@@ -695,6 +697,6 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
         var smsDelivery = smsDeliveries[0];
         Assert.True(smsDelivery.LastUpdate > DateTime.MinValue);
         Assert.Equal(recipientPhoneNumber, smsDelivery.Destination);
-        Assert.Equal(ProcessingLifecycle.SMS_New, smsDelivery.Status);
+        Assert.Equal(ProcessingLifecycle.SMS_Delivered, smsDelivery.Status);
     }
 }
