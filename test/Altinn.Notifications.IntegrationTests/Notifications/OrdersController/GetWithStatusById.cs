@@ -109,7 +109,7 @@ public class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFact
     public async Task GetWithStatusById_SingleMatchInDbAndOneSms_ReturnsOk()
     {
         // Arrange
-        (NotificationOrder persistedOrder, _) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendersReference: _sendersRef, simulateConsumers: true);
+        (NotificationOrder persistedOrder, _) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendersReference: _sendersRef, simulateCronJob: true, simulateConsumers: true);
 
         string refLinkBase = "http://localhost:5090/notifications/api/v1/orders";
 

@@ -65,7 +65,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
                                             .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
                                             .First(s => s.GetType() == typeof(SmsStatusConsumer))!;
 
-        (_, SmsNotification notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(_sendersRef, simulateCronJob: true);
+        (_, SmsNotification notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(_sendersRef, simulateCronJob: true, simulateConsumers: true);
 
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, string.Empty);
 
