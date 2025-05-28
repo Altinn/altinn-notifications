@@ -92,4 +92,33 @@ public class StatusFeedServiceTests
                 return true;
             });
     }
+
+    [Fact]
+    public async Task GetStatusFeed_RepositoryThrowsException_ReturnsServiceError()
+    {
+        // Arrange
+        Mock<IStatusFeedRepository> statusFeedRepository = new();
+        statusFeedRepository.Setup(x => x.GetStatusFeed(It.IsAny<int>(), It.IsAny<string>(), CancellationToken.None, It.IsAny<int>()))
+            .ThrowsAsync(new Exception("Database error"));
+        var statusFeedService = new StatusFeedService(statusFeedRepository.Object, new NullLogger<StatusFeedService>());
+        int seq = 1;
+        string creatorName = "ttd";
+        
+        // Act
+        var result = await statusFeedService.GetStatusFeed(seq, creatorName, CancellationToken.None);
+        
+        // Assert
+        result.Match(
+            success =>
+            {
+                Assert.Fail("Expected error but got success");
+                return false;
+            },
+            error =>
+            {
+                Assert.Equal(500, error.ErrorCode);
+                Assert.Equal("Failed to retrieve status feed: Database error", error.ErrorMessage);
+                return true;
+            });
+    }
 }
