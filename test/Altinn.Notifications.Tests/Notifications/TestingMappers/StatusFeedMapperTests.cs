@@ -95,7 +95,7 @@ public class StatusFeedMapperTests
         };
 
         // Act  
-        var result = statusFeeds.MapToStatusFeedExtList(_logger);
+        var result = statusFeeds.MapToStatusFeedExtList();
 
         // Assert  
         Assert.NotNull(result);
@@ -109,7 +109,7 @@ public class StatusFeedMapperTests
         var statusFeeds = new List<StatusFeed>();
 
         // Act  
-        var results = statusFeeds.MapToStatusFeedExtList(_logger);
+        var results = statusFeeds.MapToStatusFeedExtList();
 
         // Assert  
         Assert.NotNull(results);

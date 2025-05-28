@@ -1,9 +1,11 @@
 ﻿using System.ComponentModel.DataAnnotations;
+
 using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models.Status;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -44,7 +46,7 @@ public class StatusFeedController(IStatusFeedService statusFeedService, ILogger<
             return result.Match<ActionResult>(
                 statusFeed =>
                 {
-                    return Ok(statusFeed.MapToStatusFeedExtList(logger));
+                    return Ok(statusFeed.MapToStatusFeedExtList());
                 },
                 error =>
                 {

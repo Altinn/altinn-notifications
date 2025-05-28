@@ -13,19 +13,18 @@ namespace Altinn.Notifications.Mappers
         /// Maps a list of domain order statuses to their external representation for API responses.
         /// </summary>
         /// <param name="orderStatuses">List of order status domain model objects</param>
-        /// <param name="logger">The logger used for logging errors</param>
         /// <returns></returns>
-        public static List<StatusFeedExt> MapToStatusFeedExtList<T>(this List<StatusFeed> orderStatuses, ILogger<T> logger)
+        public static List<StatusFeedExt> MapToStatusFeedExtList(this List<StatusFeed> orderStatuses)
         {
             if (orderStatuses == null || orderStatuses.Count == 0)
             {
                 return [];
             }
 
-            return [.. orderStatuses.Select(x => MapToStatusFeedExt(x, logger))];
+            return [.. orderStatuses.Select(MapToStatusFeedExt)];
         }
 
-        private static StatusFeedExt MapToStatusFeedExt<T>(StatusFeed status, ILogger<T> logger)
+        private static StatusFeedExt MapToStatusFeedExt(StatusFeed status)
         {
             return new StatusFeedExt
             {
@@ -38,7 +37,7 @@ namespace Altinn.Notifications.Mappers
             };
         }
 
-        private static IImmutableList<RecipientExt> ToRecipientsExt(this IImmutableList<Recipient> recipients)
+        private static ImmutableList<RecipientExt> ToRecipientsExt(this IImmutableList<Recipient> recipients)
         {
             if (recipients == null || recipients.Count == 0)
             {
