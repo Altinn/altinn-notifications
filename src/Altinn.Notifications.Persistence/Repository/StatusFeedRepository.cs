@@ -1,8 +1,10 @@
 ﻿using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
-using Altinn.Notifications.Core.Models.Delivery;
+using System.Text.Json.Serialization;
+using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Core.Persistence;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -15,16 +17,32 @@ namespace Altinn.Notifications.Persistence.Repository
     public class StatusFeedRepository : IStatusFeedRepository
     {
         private readonly NpgsqlDataSource _dataSource;
+        private readonly ILogger<StatusFeedRepository> _logger;
 
-        private const string _getStatusFeedSql = "select sequencenumber, orderstatus from notifications.statusfeed where sequencenumber >= @seq and creatorname=@creatorName order by sequencenumber limit @limit";
+        // the created column is used to only return entries that are older than 2 seconds, to avoid returning entries that are still being processed
+        private const string _getStatusFeedSql = @"SELECT _id, orderstatus
+                                                   FROM notifications.statusfeed
+                                                   WHERE _id > @seq
+                                                     AND creatorname = @creatorName
+                                                     AND created < (NOW() - INTERVAL '2 seconds')
+                                                   ORDER BY _id
+                                                   LIMIT @limit;";
+
+        private readonly JsonSerializerOptions _jsonSerializerOptions = new()
+        {
+            PropertyNameCaseInsensitive = true,
+            Converters = { new JsonStringEnumConverter() }
+        };
 
         /// <summary>
         /// Initializes a new instance of the <see cref="StatusFeedRepository"/> class.
         /// </summary>
         /// <param name="dataSource">the npgsql data source</param>
-        public StatusFeedRepository(NpgsqlDataSource dataSource)
+        /// <param name="logger">The logger associated with this implementation</param>
+        public StatusFeedRepository(NpgsqlDataSource dataSource, ILogger<StatusFeedRepository> logger)
         {
             _dataSource = dataSource;
+            _logger = logger;
         }
 
         /// <inheritdoc/>
@@ -35,17 +53,34 @@ namespace Altinn.Notifications.Persistence.Repository
             command.Parameters.AddWithValue("@creatorName", NpgsqlDbType.Varchar, creatorName);
             command.Parameters.AddWithValue("@limit", NpgsqlDbType.Integer, limit);
 
-            List<StatusFeed> statusFeedEntries = [];
+            List<StatusFeed> statusFeedEntries = new();
 
             await using (NpgsqlDataReader reader = await command.ExecuteReaderAsync(cancellationToken))
             {
                 while (await reader.ReadAsync(cancellationToken))
                 {
-                    var orderStatus = await reader.GetFieldValueAsync<string>("orderstatus", cancellationToken: cancellationToken);
-                    var sequenceNumber = await reader.GetFieldValueAsync<int>("sequencenumber", cancellationToken: cancellationToken);
-                    if (!string.IsNullOrWhiteSpace(orderStatus))
+                    try
                     {
-                        statusFeedEntries.Add(new StatusFeed { OrderStatus = orderStatus, SequenceNumber = sequenceNumber });
+                        var sequenceNumber = await reader.GetFieldValueAsync<int>("_id", cancellationToken: cancellationToken);
+                        var orderStatus = await reader.GetFieldValueAsync<string>("orderstatus", cancellationToken: cancellationToken);
+                        var orderStatusObj = JsonSerializer.Deserialize<OrderStatus>(orderStatus, _jsonSerializerOptions);
+
+                        if (orderStatusObj == null)
+                        {
+                            _logger.LogError("Deserialized OrderStatus is null for sequence number {SequenceNumber}. Skipping entry.", sequenceNumber);
+                            continue;
+                        }
+
+                        statusFeedEntries.Add(new StatusFeed
+                        {
+                            SequenceNumber = sequenceNumber,
+                            OrderStatus = orderStatusObj
+                        });
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogError(e, "Error reading status feed entry from database. Skipping entry.");
+                        continue;
                     }
                 }
             }

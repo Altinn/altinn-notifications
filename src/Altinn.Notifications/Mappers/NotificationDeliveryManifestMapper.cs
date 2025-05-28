@@ -40,7 +40,7 @@ public static class NotificationDeliveryManifestMapper
     /// </summary>
     /// <param name="status">The internal processing lifecycle status to map.</param>
     /// <returns>The corresponding external processing lifecycle status.</returns>
-    private static ProcessingLifecycleExt MapProcessingLifecycle(ProcessingLifecycle status)
+    internal static ProcessingLifecycleExt MapProcessingLifecycle(ProcessingLifecycle status)
     {
         return status switch
         {

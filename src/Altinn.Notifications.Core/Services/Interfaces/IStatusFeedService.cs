@@ -1,4 +1,4 @@
-﻿using Altinn.Notifications.Core.Models.Delivery;
+﻿using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Core.Shared;
 
 namespace Altinn.Notifications.Core.Services.Interfaces

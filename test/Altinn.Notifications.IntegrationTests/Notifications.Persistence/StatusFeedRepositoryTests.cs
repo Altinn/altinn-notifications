@@ -25,9 +25,29 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
         public async Task ReadStatusFeedWithTestCreatorName()
         {
             // Arrange
+            var orderStatusFeedTestOrderCompleted = @"{
+              ""Status"": ""Order_Completed"",
+              ""Recipients"": [
+                {
+                  ""Type"": ""Email"",
+                  ""Status"": ""Email_Delivered"",
+                  ""Destination"": ""navn.navnesen@example.com""
+                },
+                {
+                  ""Type"": ""SMS"",
+                  ""Status"": ""SMS_Delivered"",
+                  ""Destination"": ""+4799999999""
+                }
+              ],
+              ""ShipmentId"": ""f5d51690-87c8-4df8-a980-15f4554337e8"",
+              ""LastUpdated"": ""2025-03-28T16:24:17.8182889+01:00"",
+              ""ShipmentType"": ""Notification"",
+              ""SendersReference"": ""Random-Senders-Reference-55027""
+            }";
+
             var sqlInsert = $@"INSERT INTO notifications.statusfeed(
-                              sequencenumber, orderid, creatorname, created, orderstatus)
-                              VALUES(1, 123, '{_creatorName}', '2025-05-21', '{{""validjson"":""true""}}')";
+                              orderid, creatorname, created, orderstatus)
+                              VALUES(123, '{_creatorName}', '2025-05-21', '{orderStatusFeedTestOrderCompleted}')";
 
             await PostgreUtil.RunSql(sqlInsert);
 
@@ -36,12 +56,12 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 .First(i => i.GetType() == typeof(StatusFeedRepository));
 
             // Act
-            var results = await statusFeedRepository.GetStatusFeed(1, _creatorName, CancellationToken.None);
+            var results = await statusFeedRepository.GetStatusFeed(0, _creatorName, CancellationToken.None);
 
             // Assert
-            Assert.True(results.Count > 0);
-            Assert.Equal(1, results[0].SequenceNumber);
-            Assert.Contains("validjson", results[0].OrderStatus.ToString());
+            var item = Assert.Single(results);
+            Assert.True(item.SequenceNumber > 0);
+            Assert.Equal(Altinn.Notifications.Core.Enums.ProcessingLifecycle.Order_Completed, item.OrderStatus.Status);
         }
 
         [Fact]

@@ -1,14 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Altinn.Notifications.Controllers;
-using Altinn.Notifications.Core.Models.Delivery;
+using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
-using Altinn.Notifications.Models.Delivery;
-using Altinn.Notifications.Tests.TestData;
+using Altinn.Notifications.Models.Status;
+
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -68,14 +70,29 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
             var expectedCreatorName = "ttd";
             var statusFeedList = new List<StatusFeed>
             {
-                new() 
+                new StatusFeed
                 {
                     SequenceNumber = expectedSequenceNumber,
-                    OrderStatus = TestDataConstants.OrderStatusFeedTestOrderCompleted,
+                    OrderStatus = new OrderStatus
+                    {
+                        Recipients = new List<Recipient>
+                            {
+                                new Recipient
+                                {
+                                    Destination = "noreply@altinn.no",
+                                    Status = ProcessingLifecycle.Order_Completed,
+                                    LastUpdate = DateTime.UtcNow
+                                }
+                            }.ToImmutableList(),
+                        ShipmentId = Guid.NewGuid(),
+                        SendersReference = "ref123",
+                        LastUpdated = DateTime.UtcNow,
+                        ShipmentType = "Notification"
+                    }
                 }
             };
             _statusFeedService.Setup(x => x.GetStatusFeed(It.IsAny<int>(), expectedCreatorName, CancellationToken.None))
-                .ReturnsAsync(statusFeedList);
+                    .ReturnsAsync(statusFeedList);
 
             // Act
             var result = await _statusFeedController.GetStatusFeed(expectedSequenceNumber);
@@ -95,10 +112,10 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
             // Arrange
             _statusFeedService.Setup(x => x.GetStatusFeed(It.IsAny<int>(), It.IsAny<string>(), CancellationToken.None))
                 .ThrowsAsync(new OperationCanceledException());
-            
+
             // Act
             var result = await _statusFeedController.GetStatusFeed(1);
-            
+
             // Assert
             Assert.NotNull(result);
             var statusCodeResult = Assert.IsType<ObjectResult>(result.Result);
@@ -113,10 +130,10 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
             var error = new ServiceError(400, "Bad request");
             _statusFeedService.Setup(x => x.GetStatusFeed(It.IsAny<int>(), It.IsAny<string>(), CancellationToken.None))
                 .ReturnsAsync(error);
-            
+
             // Act
             var result = await _statusFeedController.GetStatusFeed(1);
-            
+
             // Assert
             Assert.NotNull(result);
             var statusCodeResult = Assert.IsType<ObjectResult>(result.Result);

@@ -1,11 +1,14 @@
-﻿using System.Threading;
+﻿using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Threading;
 using System.Threading.Tasks;
 
-using Altinn.Notifications.Core.Models.Delivery;
+using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
-using Altinn.Notifications.Tests.TestData;
-using Castle.Core.Logging;
+
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
@@ -20,7 +23,26 @@ public class StatusFeedServiceTests
         // Arrange
         Mock<IStatusFeedRepository> statusFeedRepository = new();
         statusFeedRepository.Setup(x => x.GetStatusFeed(It.IsAny<int>(), It.IsAny<string>(), CancellationToken.None, It.IsAny<int>()))
-            .ReturnsAsync([new StatusFeed() { SequenceNumber = 1, OrderStatus = TestDataConstants.OrderStatusFeedTestOrderCompleted }]);
+            .ReturnsAsync([new StatusFeed()
+            {
+                SequenceNumber = 1,
+                OrderStatus = new OrderStatus
+                {
+                    LastUpdated = DateTime.UtcNow,
+                    SendersReference = "ref123",
+                    ShipmentId = Guid.NewGuid(),
+                    Recipients = new List<Recipient>
+                    {
+                        new() 
+                        {
+                            Destination = "noreply@altinn.no",
+                            Status = ProcessingLifecycle.Order_Completed,
+                            LastUpdate = DateTime.UtcNow
+                        }
+                    }.ToImmutableList(),
+                }
+            }
+                ]);
 
         var statusFeedService = new StatusFeedService(statusFeedRepository.Object, new NullLogger<StatusFeedService>());
         int seq = 1;
@@ -52,10 +74,10 @@ public class StatusFeedServiceTests
         var statusFeedService = new StatusFeedService(statusFeedRepository.Object, new NullLogger<StatusFeedService>());
         int seq = 1;
         string creatorName = string.Empty;
-        
+
         // Act
         var result = await statusFeedService.GetStatusFeed(seq, creatorName, CancellationToken.None);
-        
+
         // Assert
         result.Match(
             success =>

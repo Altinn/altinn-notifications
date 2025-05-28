@@ -1,6 +1,6 @@
-﻿using System.Text.Json;
-using Altinn.Notifications.Core.Models.Delivery;
-using Altinn.Notifications.Models.Delivery;
+﻿using System.Collections.Immutable;
+using Altinn.Notifications.Core.Models.Status;
+using Altinn.Notifications.Models.Status;
 
 namespace Altinn.Notifications.Mappers
 {
@@ -27,31 +27,30 @@ namespace Altinn.Notifications.Mappers
 
         private static StatusFeedExt MapToStatusFeedExt<T>(StatusFeed status, ILogger<T> logger)
         {
-            try
+            return new StatusFeedExt
             {
-                using JsonDocument jsonDocument = JsonDocument.Parse(status.OrderStatus);
-                var jsonElement = jsonDocument.RootElement.Clone();
+                ShipmentId = status.OrderStatus.ShipmentId,
+                LastUpdated = status.OrderStatus.LastUpdated,
+                SendersReference = status.OrderStatus.SendersReference,
+                SequenceNumber = status.SequenceNumber,
+                Recipients = status.OrderStatus.Recipients.ToRecipientsExt(),
+                Status = NotificationDeliveryManifestMapper.MapProcessingLifecycle(status.OrderStatus.Status)
+            };
+        }
 
-                return new StatusFeedExt
-                {
-                    SequenceNumber = status.SequenceNumber,
-                    OrderStatus = jsonElement
-                };
-            }
-            catch (Exception e)
+        private static IImmutableList<RecipientExt> ToRecipientsExt(this IImmutableList<Recipient> recipients)
+        {
+            if (recipients == null || recipients.Count == 0)
             {
-                // Log or handle the exception as needed
-                logger.LogError(e, "Failed to parse OrderStatus JSON for SequenceNumber {SequenceNumber}", status.SequenceNumber);
-
-                using JsonDocument jsonDocument = JsonDocument.Parse("{}");
-                var emptyJsonElement = jsonDocument.RootElement.Clone();
-
-                return new StatusFeedExt
-                {
-                    SequenceNumber = status.SequenceNumber,
-                    OrderStatus = emptyJsonElement
-                };
+                return ImmutableList<RecipientExt>.Empty;
             }
+
+            return [.. recipients.Select(r => new RecipientExt
+            {
+               Destination = r.Destination,
+               Status = NotificationDeliveryManifestMapper.MapProcessingLifecycle(r.Status),
+               LastUpdate = r.LastUpdate
+            })];
         }
     }
 }

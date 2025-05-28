@@ -3,7 +3,7 @@ using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
-using Altinn.Notifications.Models.Delivery;
+using Altinn.Notifications.Models.Status;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -29,7 +29,7 @@ public class StatusFeedController(IStatusFeedService statusFeedService, ILogger<
     [HttpGet("feed")]
     [Consumes("application/json")]
     [Produces("application/json")]
-    public async Task<ActionResult<List<StatusFeedExt>>> GetStatusFeed([FromQuery][Range(1, int.MaxValue)] int seq = 1)
+    public async Task<ActionResult<List<StatusFeedExt>>> GetStatusFeed([FromQuery][Range(0, int.MaxValue)] int seq = 1)
     {
         try
         {

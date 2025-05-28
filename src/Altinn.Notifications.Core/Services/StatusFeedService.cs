@@ -1,4 +1,4 @@
-﻿using Altinn.Notifications.Core.Models.Delivery;
+﻿using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
@@ -28,9 +28,9 @@ public class StatusFeedService : IStatusFeedService
     /// <inheritdoc />
     public async Task<Result<List<StatusFeed>, ServiceError>> GetStatusFeed(int seq, string creatorName, CancellationToken cancellationToken)
     {
-        if (seq < 1)
+        if (seq < 0)
         {
-            return new ServiceError(400, "Sequence number cannot be less than 1");
+            return new ServiceError(400, "Sequence number cannot be less than 0");
         }
 
         if (string.IsNullOrWhiteSpace(creatorName))
