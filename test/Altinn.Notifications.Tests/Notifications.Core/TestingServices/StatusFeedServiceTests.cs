@@ -67,6 +67,33 @@ public class StatusFeedServiceTests
     }
 
     [Fact]
+    public async Task GetStatusFeed_InvalidSequenceNumber_ReturnsServiceErrorResult()
+    {
+        // Arrange
+        Mock<IStatusFeedRepository> statusFeedRepository = new();
+        var sut = new StatusFeedService(statusFeedRepository.Object, new NullLogger<StatusFeedService>());
+        int seq = -1; // Invalid sequence number
+        string creatorName = "ttd";
+        
+        // Act
+        var result = await sut.GetStatusFeed(seq, creatorName, CancellationToken.None);
+        
+        // Assert
+        result.Match(
+            success =>
+            {
+                Assert.Fail("Expected error but got success");
+                return false;
+            },
+            error =>
+            {
+                Assert.Equal(400, error.ErrorCode);
+                Assert.Equal("Sequence number cannot be less than 0", error.ErrorMessage);
+                return true;
+            });
+    }
+
+    [Fact]
     public async Task GetStatusFeed_MissingCreatorName_ReturnsError()
     {
         // Arrange

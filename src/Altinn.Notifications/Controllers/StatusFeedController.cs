@@ -17,11 +17,12 @@ namespace Altinn.Notifications.Controllers;
 /// </summary>
 [ApiController]
 [Route("notifications/api/v1/future/shipment")]
+[SwaggerResponse(200, "Successfully retrieved status feed entries", typeof(List<StatusFeedExt>))]
 [SwaggerResponse(401, "Caller is unauthorized")]
 [SwaggerResponse(403, "Caller is not authorized to access the requested resource")]
 [SwaggerResponse(499, "The operation was cancelled by the caller")]
 [Authorize(Policy = AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS)]
-public class StatusFeedController(IStatusFeedService statusFeedService, ILogger<StatusFeedController> logger) : ControllerBase
+public class StatusFeedController(IStatusFeedService statusFeedService) : ControllerBase
 {
     /// <summary>
     /// Retrieve an array of order status change history.
@@ -31,7 +32,7 @@ public class StatusFeedController(IStatusFeedService statusFeedService, ILogger<
     [HttpGet("feed")]
     [Consumes("application/json")]
     [Produces("application/json")]
-    public async Task<ActionResult<List<StatusFeedExt>>> GetStatusFeed([FromQuery][Range(0, int.MaxValue)] int seq = 1)
+    public async Task<ActionResult<List<StatusFeedExt>>> GetStatusFeed([FromQuery][Range(0, int.MaxValue)] int seq = 0)
     {
         try
         {

@@ -27,7 +27,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
         public StatusFeedControllerTests()
         {
             _statusFeedService = new Mock<IStatusFeedService>();
-            _statusFeedController = new StatusFeedController(_statusFeedService.Object, NullLogger<StatusFeedController>.Instance)
+            _statusFeedController = new StatusFeedController(_statusFeedService.Object)
             {
                 ControllerContext = new ControllerContext
                 {
@@ -46,7 +46,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
         public async Task Get_WithNoOrgSetInHttpContext_ReturnsForbidden()
         {
             // Arrange
-            var controller = new StatusFeedController(_statusFeedService.Object, NullLogger<StatusFeedController>.Instance)
+            var controller = new StatusFeedController(_statusFeedService.Object)
             {
                 ControllerContext =
                 {
