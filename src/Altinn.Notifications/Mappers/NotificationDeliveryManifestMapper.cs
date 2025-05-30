@@ -40,7 +40,7 @@ public static class NotificationDeliveryManifestMapper
     /// </summary>
     /// <param name="status">The internal processing lifecycle status to map.</param>
     /// <returns>The corresponding external processing lifecycle status.</returns>
-    private static ProcessingLifecycleExt MapProcessingLifecycle(ProcessingLifecycle status)
+    internal static ProcessingLifecycleExt MapProcessingLifecycle(ProcessingLifecycle status)
     {
         return status switch
         {
@@ -156,7 +156,7 @@ public static class NotificationDeliveryManifestMapper
     /// An immutable list of external delivery manifests, each converted to its appropriate type-specific implementation,
     /// or an empty collection if no entities are present.
     /// </returns>
-    private static IImmutableList<IDeliveryManifestExt> MapToDeliveryManifestExtObjects(this IImmutableList<IDeliveryManifest> entities)
+    public static IImmutableList<IDeliveryManifestExt> MapToDeliveryManifestExtObjects(this IImmutableList<IDeliveryManifest> entities)
     {
         return entities.Count > 0 ? [.. entities.Select(MapToDeliveryManifestExt)] : [];
     }
