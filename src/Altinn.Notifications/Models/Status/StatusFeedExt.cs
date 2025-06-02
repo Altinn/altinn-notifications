@@ -8,7 +8,7 @@ namespace Altinn.Notifications.Models.Status;
 public record StatusFeedExt : OrderStatusExt
 {
     /// <summary>
-    /// The sequence number of the status feed entry per creator
+    /// The sequence number of the status feed 
     /// </summary>
     [JsonPropertyName("sequenceNumber")]
     public required int SequenceNumber { get; init; }

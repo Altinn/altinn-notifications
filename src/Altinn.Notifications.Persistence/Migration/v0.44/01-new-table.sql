@@ -1,4 +1,4 @@
-﻿CREATE TABLE IF NOT EXISTS notifications.statusfeed
+CREATE TABLE IF NOT EXISTS notifications.statusfeed
 (
   _id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   orderid BIGINT NOT NULL,

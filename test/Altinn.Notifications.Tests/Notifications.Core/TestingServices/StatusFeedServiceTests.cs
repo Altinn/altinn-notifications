@@ -44,19 +44,20 @@ public class StatusFeedServiceTests
             }
                 ]);
 
-        var statusFeedService = new StatusFeedService(statusFeedRepository.Object, new NullLogger<StatusFeedService>());
+        var sut = new StatusFeedService(statusFeedRepository.Object, new NullLogger<StatusFeedService>());
         int seq = 1;
         string creatorName = "ttd";
 
         // Act
-        var result = await statusFeedService.GetStatusFeed(seq, creatorName, CancellationToken.None);
+        var result = await sut.GetStatusFeed(seq, creatorName, CancellationToken.None);
 
         // Assert
         result.Match(
             success =>
             {
                 Assert.NotNull(success);
-                Assert.Equal(1, success[0].SequenceNumber);
+                var entry = Assert.Single(success);
+                Assert.Equal(1, entry.SequenceNumber);
                 return true;
             },
             error =>
@@ -98,12 +99,12 @@ public class StatusFeedServiceTests
     {
         // Arrange
         Mock<IStatusFeedRepository> statusFeedRepository = new();
-        var statusFeedService = new StatusFeedService(statusFeedRepository.Object, new NullLogger<StatusFeedService>());
+        var sut = new StatusFeedService(statusFeedRepository.Object, new NullLogger<StatusFeedService>());
         int seq = 1;
         string creatorName = string.Empty;
 
         // Act
-        var result = await statusFeedService.GetStatusFeed(seq, creatorName, CancellationToken.None);
+        var result = await sut.GetStatusFeed(seq, creatorName, CancellationToken.None);
 
         // Assert
         result.Match(
@@ -127,12 +128,12 @@ public class StatusFeedServiceTests
         Mock<IStatusFeedRepository> statusFeedRepository = new();
         statusFeedRepository.Setup(x => x.GetStatusFeed(It.IsAny<int>(), It.IsAny<string>(), CancellationToken.None, It.IsAny<int>()))
             .ThrowsAsync(new Exception("Database error"));
-        var statusFeedService = new StatusFeedService(statusFeedRepository.Object, new NullLogger<StatusFeedService>());
+        var sut = new StatusFeedService(statusFeedRepository.Object, new NullLogger<StatusFeedService>());
         int seq = 1;
         string creatorName = "ttd";
         
         // Act
-        var result = await statusFeedService.GetStatusFeed(seq, creatorName, CancellationToken.None);
+        var result = await sut.GetStatusFeed(seq, creatorName, CancellationToken.None);
         
         // Assert
         result.Match(

@@ -156,7 +156,7 @@ public static class NotificationDeliveryManifestMapper
     /// An immutable list of external delivery manifests, each converted to its appropriate type-specific implementation,
     /// or an empty collection if no entities are present.
     /// </returns>
-    public static IImmutableList<IDeliveryManifestExt> MapToDeliveryManifestExtObjects(this IImmutableList<IDeliveryManifest> entities)
+    private static IImmutableList<IDeliveryManifestExt> MapToDeliveryManifestExtObjects(this IImmutableList<IDeliveryManifest> entities)
     {
         return entities.Count > 0 ? [.. entities.Select(MapToDeliveryManifestExt)] : [];
     }

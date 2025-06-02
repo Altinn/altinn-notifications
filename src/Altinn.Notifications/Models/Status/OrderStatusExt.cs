@@ -35,7 +35,7 @@ public record OrderStatusExt
     public ProcessingLifecycleExt Status { get; init; }
 
     /// <summary>
-    /// Gets the date and time when the status was last updated.
+    /// Gets the date and time when the status was was created.
     /// </summary>
     [JsonPropertyName("lastUpdate")]
     public DateTime LastUpdated { get; init; }

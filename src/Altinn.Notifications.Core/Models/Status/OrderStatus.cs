@@ -19,7 +19,7 @@ public record OrderStatus
     public string? SendersReference { get; init; }
 
     /// <summary>
-    /// Gets the type of status represented by this entry (e.g., order, SMS, or email).
+    /// Gets the type of notification represented by this entry (e.g. notification or reminder).
     /// </summary>
     public string? ShipmentType { get; init; }
 
@@ -34,7 +34,7 @@ public record OrderStatus
     public ProcessingLifecycle Status { get; init; }
 
     /// <summary>
-    /// Gets the date and time when the status was last updated.
+    /// Gets the date and time when the status entry was created.
     /// </summary>
     public DateTime LastUpdated { get; init; }
 }
