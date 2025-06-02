@@ -37,14 +37,14 @@ namespace Altinn.Notifications.Mappers
             };
         }
 
-        private static ImmutableList<RecipientExt> ToRecipientsExt(this IImmutableList<Recipient> recipients)
+        private static ImmutableList<StatusFeedRecipientExt> ToRecipientsExt(this IImmutableList<Recipient> recipients)
         {
             if (recipients == null || recipients.Count == 0)
             {
-                return ImmutableList<RecipientExt>.Empty;
+                return ImmutableList<StatusFeedRecipientExt>.Empty;
             }
 
-            return [.. recipients.Select(r => new RecipientExt
+            return [.. recipients.Select(r => new StatusFeedRecipientExt
             {
                Destination = r.Destination,
                Status = NotificationDeliveryManifestMapper.MapProcessingLifecycle(r.Status),

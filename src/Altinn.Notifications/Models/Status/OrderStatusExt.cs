@@ -26,7 +26,7 @@ public record OrderStatusExt
     /// Gets the list of recipients and their delivery status information for this order.
     /// </summary>
     [JsonPropertyName("recipients")]
-    public required IImmutableList<RecipientExt> Recipients { get; init; }
+    public required IImmutableList<StatusFeedRecipientExt> Recipients { get; init; }
 
     /// <summary>
     /// Gets the current lifecycle status of the order.

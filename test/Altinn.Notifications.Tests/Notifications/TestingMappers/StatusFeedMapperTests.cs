@@ -69,9 +69,9 @@ public class StatusFeedMapperTests
                 SequenceNumber = 1,
                 ShipmentId = mockShipmentId,
                 SendersReference = sendersReferenceMock,
-                Recipients = new List<RecipientExt>
+                Recipients = new List<StatusFeedRecipientExt>
                 {
-                    new RecipientExt
+                    new StatusFeedRecipientExt
                     {
                         Destination = "noreply@altinn.no",
                         Status = ProcessingLifecycleExt.Order_Completed
@@ -83,9 +83,9 @@ public class StatusFeedMapperTests
                 SequenceNumber = 2,
                 ShipmentId = mockShipmentId2,
                 SendersReference = sendersReferenceMock,
-                Recipients = new List<RecipientExt>
+                Recipients = new List<StatusFeedRecipientExt>
                 {
-                    new RecipientExt
+                    new StatusFeedRecipientExt
                     {
                         Destination = "noreply@altinn.no",
                         Status = ProcessingLifecycleExt.Email_Failed_TransientError

@@ -6,7 +6,7 @@ namespace Altinn.Notifications.Models.Status;
 /// Agnostic representation of the delivery manifest interface
 /// 
 /// </summary>
-public class RecipientExt : IDeliveryManifestExt
+public class StatusFeedRecipientExt : IDeliveryManifestExt
 {
     /// <summary>
     /// The recipient destination, supporting both email and SMS formats.
