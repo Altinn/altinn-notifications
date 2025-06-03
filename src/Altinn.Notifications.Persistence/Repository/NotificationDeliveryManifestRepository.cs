@@ -250,16 +250,14 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
     private static async Task PopulateDeliveryManifestEntitiesAsync(NpgsqlDataReader reader, List<IDeliveryManifest> deliveryManifestEntities, CancellationToken cancellationToken)
     {
         var statusOrdinal = reader.GetOrdinal(_statusColumnName);
-        var referenceOrdinal = reader.GetOrdinal(_referenceColumnName);
         var lastUpdateOrdinal = reader.GetOrdinal(_lastUpdateColumnName);
         var destinationOrdinal = reader.GetOrdinal(_destinationColumnName);
 
         var isStatusNull = await reader.IsDBNullAsync(statusOrdinal, cancellationToken);
-        var isReferenceNull = await reader.IsDBNullAsync(referenceOrdinal, cancellationToken);
         var isTimestampNull = await reader.IsDBNullAsync(lastUpdateOrdinal, cancellationToken);
         var isDestinationNull = await reader.IsDBNullAsync(destinationOrdinal, cancellationToken);
 
-        if (isStatusNull || isTimestampNull || isDestinationNull || isReferenceNull)
+        if (isStatusNull || isTimestampNull || isDestinationNull)
         {
             return;
         }
