@@ -54,9 +54,15 @@ public class EmailStatusConsumer : KafkaConsumerBase<EmailStatusConsumer>
             return;
         }
 
-        await _emailNotificationsService.UpdateSendStatus(result);
-
-        await _orderRepository.TryCompleteOrderBasedOnNotificationsState(result.NotificationId, Core.Enums.AlternateIdentifierSource.Email);
+        try
+        {
+            await _emailNotificationsService.UpdateSendStatus(result);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Could not update email send status for message: {Message}", message);
+            throw;
+        }
     }
 
     private async Task RetryStatus(string message)

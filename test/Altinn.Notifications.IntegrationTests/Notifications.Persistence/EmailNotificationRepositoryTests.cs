@@ -140,6 +140,39 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task UpdateSendStatusDelivered_WithNotificationId_OrderStatusIsSetToCompleted()
+    {
+        // Arrange
+        (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(simulateConsumers: true, simulateCronJob: true);
+        _orderIdsToDelete.Add(order.Id);
+
+        EmailNotificationRepository repo = (EmailNotificationRepository)ServiceUtil
+          .GetServices(new List<Type>() { typeof(IEmailNotificationRepository) })
+          .First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        string operationId = Guid.NewGuid().ToString();
+
+        // Act
+        await repo.UpdateSendStatus(emailNotification.Id, EmailNotificationResultType.Delivered, operationId);
+
+        // Assert
+        string sql = $@"SELECT count(1) 
+              FROM notifications.emailnotifications email
+              WHERE email.alternateid = '{emailNotification.Id}' 
+              AND email.result  = '{EmailNotificationResultType.Delivered}' 
+              AND email.operationid = '{operationId}'";
+
+        int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
+
+        sql = $@"SELECT processedstatus FROM notifications.orders o
+                 WHERE o.alternateid = '{order.Id}'";
+
+        var processedStatus = await PostgreUtil.RunSqlReturnOutput<string>(sql);
+
+        Assert.Equal(1, actualCount);
+    }
+
+    [Fact]
     public async Task UpdateSendStatus_WithoutNotificationId_WithGatewayRef()
     {
         // Arrange
