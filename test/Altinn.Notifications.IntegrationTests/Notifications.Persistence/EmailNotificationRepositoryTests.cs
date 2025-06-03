@@ -8,7 +8,6 @@ using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
 
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
@@ -112,7 +111,7 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UpdateSendStatus_WithNotificationId_WithGatewayRef()
+    public async Task UpdateSendStatus_WithNotificationId()
     {
         // Arrange
         (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
@@ -173,7 +172,7 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UpdateSendStatus_WithoutNotificationId_WithGatewayRef()
+    public async Task UpdateSendStatus_WithoutNotificationId()
     {
         // Arrange
         (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();

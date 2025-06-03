@@ -16,7 +16,6 @@ public class EmailStatusConsumer : KafkaConsumerBase<EmailStatusConsumer>
 {
     private readonly string _retryTopicName;
     private readonly IKafkaProducer _producer;
-    private readonly IOrderRepository _orderRepository;
     private readonly ILogger<EmailStatusConsumer> _logger;
     private readonly IEmailNotificationService _emailNotificationsService;
 
@@ -33,7 +32,6 @@ public class EmailStatusConsumer : KafkaConsumerBase<EmailStatusConsumer>
     {
         _logger = logger;
         _producer = producer;
-        _orderRepository = orderRepository;
         _emailNotificationsService = emailNotificationsService;
         _retryTopicName = settings.Value.EmailStatusUpdatedTopicName;
     }

@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using System.Linq.Expressions;
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Orders;
@@ -263,6 +264,63 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
 
         int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
 
+        Assert.Equal(1, actualCount);
+    }
+
+    [Fact]
+    public async Task UpdateSendStatusDelivered_WithNotificationId_OrderStatusIsSetToCompleted()
+    {
+        // Arrange
+        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(simulateConsumers: true, simulateCronJob: true);
+        _orderIdsToDelete.Add(order.Id);
+
+        SmsNotificationRepository repo = (SmsNotificationRepository)ServiceUtil
+          .GetServices(new List<Type>() { typeof(ISmsNotificationRepository) })
+          .First(i => i.GetType() == typeof(SmsNotificationRepository));
+
+        // Act
+        await repo.UpdateSendStatus(smsNotification.Id, SmsNotificationResultType.Delivered);
+
+        // Assert
+        string sql = $@"SELECT count(1) 
+              FROM notifications.orders o
+              WHERE o.alternateid = '{order.Id}'
+              AND o.processedstatus = '{OrderProcessingStatus.Completed}'";
+
+        int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
+
+        Assert.Equal(1, actualCount);
+    }
+
+    [Fact]
+    public async Task UpdateSendStatusDelivered_WithGatewayRef_OrderStatusIsSetToCompleted()
+    {         
+        // Arrange
+        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(simulateConsumers: true, simulateCronJob: true);
+        _orderIdsToDelete.Add(order.Id);
+        
+        SmsNotificationRepository repo = (SmsNotificationRepository)ServiceUtil
+          .GetServices(new List<Type>() { typeof(ISmsNotificationRepository) })
+          .First(i => i.GetType() == typeof(SmsNotificationRepository));
+        string gatewayReference = Guid.NewGuid().ToString();
+        
+        string setGateqwaySql = $@"Update notifications.smsnotifications 
+                SET gatewayreference = '{gatewayReference}'
+                WHERE alternateid = '{smsNotification.Id}'";
+
+        await PostgreUtil.RunSql(setGateqwaySql);
+
+        // Act
+        await repo.UpdateSendStatus(null, SmsNotificationResultType.Delivered, gatewayReference);
+        
+        // Assert
+        string sql = $@"SELECT count(1) 
+              FROM notifications.orders o
+              WHERE o.alternateid = '{order.Id}'
+              AND o.processedstatus = '{OrderProcessingStatus.Completed}'";
+        
+        int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
+        
         Assert.Equal(1, actualCount);
     }
 }

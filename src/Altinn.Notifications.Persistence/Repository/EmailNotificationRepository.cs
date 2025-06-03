@@ -84,13 +84,8 @@ public class EmailNotificationRepository : IEmailNotificationRepository
         return searchResult;
     }
 
-    private static async Task<bool> TryCompleteOrderBasedOnNotificationsState(Guid? notificationId, NpgsqlConnection connection, NpgsqlTransaction transaction)
+    private static async Task<bool> TryCompleteOrderBasedOnNotificationsState(Guid notificationId, NpgsqlConnection connection, NpgsqlTransaction transaction)
     {
-        if (notificationId is null || notificationId == Guid.Empty)
-        {
-            return false;
-        }
-
         await using NpgsqlCommand pgcom = new(_tryMarkOrderAsCompletedSql, connection, transaction);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, "EMAIL");
@@ -115,7 +110,12 @@ public class EmailNotificationRepository : IEmailNotificationRepository
 
             var parseResult = Guid.TryParse(alternateId?.ToString(), out Guid alternateIdGuid);
 
-            await TryCompleteOrderBasedOnNotificationsState(parseResult ? alternateIdGuid : notificationId, connection, transaction);
+            if (!parseResult)
+            {
+                throw new InvalidOperationException($"Guid could not be parsed");
+            }
+
+            await TryCompleteOrderBasedOnNotificationsState(alternateIdGuid, connection, transaction);
 
             await transaction.CommitAsync();
         }

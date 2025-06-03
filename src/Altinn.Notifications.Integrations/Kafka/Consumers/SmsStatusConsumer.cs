@@ -16,7 +16,6 @@ public class SmsStatusConsumer : KafkaConsumerBase<SmsStatusConsumer>
 {
     private readonly string _retryTopicName;
     private readonly IKafkaProducer _producer;
-    private readonly IOrderRepository _orderRepository;
     private readonly ILogger<SmsStatusConsumer> _logger;
     private readonly ISmsNotificationService _smsNotificationsService;
 
@@ -33,7 +32,6 @@ public class SmsStatusConsumer : KafkaConsumerBase<SmsStatusConsumer>
     {
         _logger = logger;
         _producer = producer;
-        _orderRepository = orderRepository;
         _smsNotificationsService = smsNotificationsService;
         _retryTopicName = settings.Value.SmsStatusUpdatedTopicName;
     }
@@ -54,9 +52,15 @@ public class SmsStatusConsumer : KafkaConsumerBase<SmsStatusConsumer>
             return;
         }
 
-        await _smsNotificationsService.UpdateSendStatus(result);
-
-        await _orderRepository.TryCompleteOrderBasedOnNotificationsState(result.NotificationId, Core.Enums.AlternateIdentifierSource.Sms);
+        try
+        {
+            await _smsNotificationsService.UpdateSendStatus(result);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Could not update SMS send status for message: {Message}", message);
+            throw;
+        }
     }
 
     private async Task RetryStatus(string message)
