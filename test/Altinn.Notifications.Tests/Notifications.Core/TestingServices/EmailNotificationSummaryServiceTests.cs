@@ -35,7 +35,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         [InlineData(EmailNotificationResultType.Failed_SupressedRecipient, "The email was not sent because the recipient’s email address is suppressed by the third party email service.")]
         [InlineData(EmailNotificationResultType.Failed_TransientError, "The email was not sent due to a transient error. We will retry sending the email.")]
         [InlineData(EmailNotificationResultType.Failed_Bounced, "The email hard bounced, which may have happened because the email address does not exist or the domain is invalid.")]
-        [InlineData(EmailNotificationResultType.Failed_FilteredSpam, "The email was was identified as spam, and was rejected or blocked (not quarantined).")]
+        [InlineData(EmailNotificationResultType.Failed_FilteredSpam, "The email was identified as spam, and was rejected or blocked (not quarantined).")]
         [InlineData(EmailNotificationResultType.Failed_Quarantined, "The email was quarantined (as spam, bulk mail, or phising).")]
         public void GetResultDescription_ExpectedDescription(EmailNotificationResultType result, string expected)
         {

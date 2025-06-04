@@ -13,13 +13,14 @@ public class GetOrderService : IGetOrderService
 {
     private readonly IOrderRepository _repo;
     private readonly static Dictionary<OrderProcessingStatus, string> _descriptions = new()
-        {
-            { OrderProcessingStatus.Registered, "Order has been registered and is awaiting requested send time before processing." },
-            { OrderProcessingStatus.Processing, "Order processing is ongoing. Notifications are being generated." },
-            { OrderProcessingStatus.Completed, "Order processing is completed. All notifications have been generated." },
-            { OrderProcessingStatus.SendConditionNotMet, "Order processing was stopped due to send condition not being met." },
-            { OrderProcessingStatus.Cancelled, "Order processing was stopped due to order being cancelled." }
-        };
+    {
+        { OrderProcessingStatus.Cancelled, "Order processing was stopped due to order being cancelled." },
+        { OrderProcessingStatus.Processing, "Order processing is ongoing. Notifications are being generated." },
+        { OrderProcessingStatus.Processed, "Order processing is done. Notifications have been successfully generated." },
+        { OrderProcessingStatus.Completed, "Order processing is completed. All notifications have a final status." },
+        { OrderProcessingStatus.SendConditionNotMet, "Order processing was stopped due to send condition not being met." },
+        { OrderProcessingStatus.Registered, "Order has been registered and is awaiting requested send time before processing." },
+    };
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GetOrderService"/> class.

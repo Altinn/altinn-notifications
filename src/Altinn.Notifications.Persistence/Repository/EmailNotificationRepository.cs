@@ -4,7 +4,6 @@ using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Extensions;
-
 using Npgsql;
 
 using NpgsqlTypes;
@@ -16,17 +15,19 @@ namespace Altinn.Notifications.Persistence.Repository;
 /// </summary>
 public class EmailNotificationRepository : IEmailNotificationRepository
 {
+    private const string _emailSourceIdentifier = "EMAIL";
     private readonly NpgsqlDataSource _dataSource;
-
     private const string _insertEmailNotificationSql = "call notifications.insertemailnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _toaddress, _customizedbody, _customizedsubject, _result, _resulttime, _expirytime)
     private const string _getEmailNotificationsSql = "select * from notifications.getemails_statusnew_updatestatus()";
     private const string _getEmailRecipients = "select * from notifications.getemailrecipients_v2($1)"; // (_orderid)
+    private const string _tryMarkOrderAsCompletedSql = "SELECT notifications.trymarkorderascompleted($1, $2)"; // (_alternateid, _alternateidsource)
     private const string _updateEmailStatus =
         @"UPDATE notifications.emailnotifications 
         SET result = $1::emailnotificationresulttype, 
             resulttime = now(), 
             operationid = $2
-        WHERE alternateid = $3 OR operationid = $2;";    // (_result, _operationid, _alternateid)
+        WHERE alternateid = $3 OR operationid = $2
+        RETURNING alternateid;"; // (_result, _operationid, _alternateid)
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotificationRepository"/> class.
@@ -83,14 +84,46 @@ public class EmailNotificationRepository : IEmailNotificationRepository
         return searchResult;
     }
 
+    private static async Task<bool> TryCompleteOrderBasedOnNotificationsState(Guid notificationId, NpgsqlConnection connection, NpgsqlTransaction transaction)
+    {
+        await using NpgsqlCommand pgcom = new(_tryMarkOrderAsCompletedSql, connection, transaction);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, _emailSourceIdentifier);
+
+        var result = await pgcom.ExecuteScalarAsync();
+        return result != null && (bool)result;
+    }
+
     /// <inheritdoc/>
     public async Task UpdateSendStatus(Guid? notificationId, EmailNotificationResultType status, string? operationId = null)
     {
-        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_updateEmailStatus);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, operationId ?? (object)DBNull.Value);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId ?? (object)DBNull.Value);
-        await pgcom.ExecuteNonQueryAsync();
+        await using var connection = await _dataSource.OpenConnectionAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+
+        try
+        {
+            await using NpgsqlCommand pgcom = new(_updateEmailStatus, connection, transaction);
+            pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
+            pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, operationId ?? (object)DBNull.Value);
+            pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId ?? (object)DBNull.Value);
+            var alternateId = await pgcom.ExecuteScalarAsync();
+
+            var parseResult = Guid.TryParse(alternateId?.ToString(), out Guid alternateIdGuid);
+
+            if (!parseResult)
+            {
+                throw new InvalidOperationException($"Guid could not be parsed");
+            }
+
+            await TryCompleteOrderBasedOnNotificationsState(alternateIdGuid, connection, transaction);
+
+            await transaction.CommitAsync();
+        }
+        catch (Exception)
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 
     /// <inheritdoc/>

@@ -1644,5 +1644,92 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             Assert.Equal(orderId, result.OrderChainReceipt.ShipmentId);
             Assert.Equal("TRACKING-C69C615A8412", result.OrderChainReceipt.SendersReference);
         }
+
+        [Theory]
+        [InlineData(AlternateIdentifierSource.Sms)]
+        [InlineData(AlternateIdentifierSource.Email)]
+        [InlineData(AlternateIdentifierSource.Order)]
+        public async Task TryCompleteOrderBasedOnNotificationsState_WithNullNotificationId_ReturnsFalse(AlternateIdentifierSource alternateIdentifierSource)
+        {
+            // Arrange
+            OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+            // Act
+            bool result = await repo.TryCompleteOrderBasedOnNotificationsState(null, alternateIdentifierSource);
+
+            // Assert
+            Assert.False(result);
+        }
+
+        [Theory]
+        [InlineData(OrderProcessingStatus.Processed, OrderProcessingStatus.Completed, true)]
+        [InlineData(OrderProcessingStatus.Cancelled, OrderProcessingStatus.Cancelled, false)]
+        [InlineData(OrderProcessingStatus.Completed, OrderProcessingStatus.Completed, false)]
+        [InlineData(OrderProcessingStatus.Processing, OrderProcessingStatus.Completed, true)]
+        [InlineData(OrderProcessingStatus.Registered, OrderProcessingStatus.Registered, false)]
+        [InlineData(OrderProcessingStatus.SendConditionNotMet, OrderProcessingStatus.SendConditionNotMet, false)]
+        public async Task TryCompleteOrderBasedOnNotificationsState_VerifiesStateTransitionRules(OrderProcessingStatus currentStatus, OrderProcessingStatus expectedStatus, bool shouldUpdateStatus)
+        {
+            // Arrange
+            OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+            Guid notificationOrderId = Guid.NewGuid();
+
+            _orderIdsToDelete.Add(notificationOrderId);
+
+            var creationDateTime = DateTime.UtcNow;
+            var requestedSendTime = DateTime.UtcNow.AddMinutes(5);
+
+            NotificationOrder notificationOrder = new()
+            {
+                Creator = new("ttd"),
+                IgnoreReservation = true,
+                Id = notificationOrderId,
+                Created = creationDateTime,
+                Type = OrderType.Notification,
+                SendersReference = "ref-P5Q7R9S1",
+                RequestedSendTime = requestedSendTime,
+                SendingTimePolicy = SendingTimePolicy.Anytime,
+                ResourceId = "urn:altinn:resource:D208D0E6E5B4",
+                ConditionEndpoint = new Uri("https://vg.no/condition"),
+                NotificationChannel = NotificationChannel.EmailPreferred,
+
+                Templates =
+                [
+                    new SmsTemplate("Main SMS sender", "Main SMS body"),
+                    new EmailTemplate("Main email sender address", "Main email subject", "Main email body", EmailContentType.Plain)
+                ],
+
+                Recipients =
+                [
+                    new Recipient([], null, "18874198354")
+                ]
+            };
+
+            var orderCreationResult = await repo.Create(notificationOrder);
+            switch (currentStatus)
+            {
+                case OrderProcessingStatus.Registered:
+                    break;
+
+                case OrderProcessingStatus.Completed:
+                case OrderProcessingStatus.Cancelled:
+                case OrderProcessingStatus.Processed:
+                case OrderProcessingStatus.Processing:
+                case OrderProcessingStatus.SendConditionNotMet:
+                    await repo.SetProcessingStatus(notificationOrderId, currentStatus);
+                    break;
+            }
+
+            // Act
+            bool statusUpdatingResult = await repo.TryCompleteOrderBasedOnNotificationsState(notificationOrderId, AlternateIdentifierSource.Order);
+            string mainOrderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{notificationOrderId}' and type = 'Notification' and processedstatus = '{expectedStatus}'";
+            int mainOrderCount = await PostgreUtil.RunSqlReturnOutput<int>(mainOrderSql);
+
+            // Assert
+            Assert.Equal(1, mainOrderCount);
+            Assert.NotNull(orderCreationResult);
+            Assert.Equal(shouldUpdateStatus, statusUpdatingResult);
+        }
     }
 }

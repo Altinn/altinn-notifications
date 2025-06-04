@@ -26,17 +26,12 @@ public class EmailNotificationService : IEmailNotificationService
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotificationService"/> class.
     /// </summary>
-    /// <param name="guid">The GUID service.</param>
-    /// <param name="dateTime">The date time service.</param>
-    /// <param name="repository">The email notification repository.</param>
-    /// <param name="producer">The Kafka producer.</param>
-    /// <param name="kafkaSettings">The Kafka settings.</param>
     public EmailNotificationService(
         IGuidService guid,
-        IDateTimeService dateTime,
-        IEmailNotificationRepository repository,
         IKafkaProducer producer,
-        IOptions<KafkaSettings> kafkaSettings)
+        IDateTimeService dateTime,
+        IOptions<KafkaSettings> kafkaSettings,
+        IEmailNotificationRepository repository)
     {
         _guid = guid;
         _dateTime = dateTime;

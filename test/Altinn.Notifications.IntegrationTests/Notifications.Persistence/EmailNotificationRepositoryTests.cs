@@ -8,7 +8,6 @@ using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
 
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
@@ -112,7 +111,7 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UpdateSendStatus_WithNotificationId_WithGatewayRef()
+    public async Task UpdateSendStatus_WithNotificationId()
     {
         // Arrange
         (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
@@ -140,7 +139,45 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UpdateSendStatus_WithoutNotificationId_WithGatewayRef()
+    public async Task UpdateSendStatusDelivered_WithNotificationId_OrderStatusIsSetToCompleted()
+    {
+        // Arrange
+        (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(simulateConsumers: true, simulateCronJob: true);
+        _orderIdsToDelete.Add(order.Id);
+
+        EmailNotificationRepository repo = (EmailNotificationRepository)ServiceUtil
+          .GetServices(new List<Type>() { typeof(IEmailNotificationRepository) })
+          .First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        string operationId = Guid.NewGuid().ToString();
+
+        // Act
+        await repo.UpdateSendStatus(emailNotification.Id, EmailNotificationResultType.Delivered, operationId);
+
+        // Assert
+        string sql = $@"SELECT count(1) 
+              FROM notifications.emailnotifications email
+              WHERE email.alternateid = '{emailNotification.Id}' 
+              AND email.result  = '{EmailNotificationResultType.Delivered}' 
+              AND email.operationid = '{operationId}'";
+
+        int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
+
+        sql = $@"SELECT processedstatus FROM notifications.orders o
+                 WHERE o.alternateid = '{order.Id}'";
+
+        var processedStatus = await PostgreUtil.RunSqlReturnOutput<string>(sql);
+
+        Assert.Equal(1, actualCount);
+        
+        // Verify that the order status was updated based on notification delivery
+        // Initial state is "Registered", final state should be "Completed"
+        Assert.NotEqual("Registered", processedStatus);
+        Assert.Equal("Completed", processedStatus);
+    }
+
+    [Fact]
+    public async Task UpdateSendStatus_WithoutNotificationId()
     {
         // Arrange
         (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();

@@ -24,16 +24,16 @@ public class SmsStatusConsumerTests : IAsyncLifetime
         };
 
         using SmsStatusConsumer consumerService = (SmsStatusConsumer)ServiceUtil
-                                            .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
-                                            .First(s => s.GetType() == typeof(SmsStatusConsumer))!;
+                                                  .GetServices([typeof(IHostedService)], vars)
+                                                  .First(s => s.GetType() == typeof(SmsStatusConsumer))!;
 
-        (_, SmsNotification notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(_sendersRef);
+        (_, SmsNotification notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(_sendersRef, simulateCronJob: true);
 
         SmsSendOperationResult sendOperationResult = new()
         {
             NotificationId = notification.Id,
-            SendResult = SmsNotificationResultType.Accepted,
-            GatewayReference = Guid.NewGuid().ToString()
+            GatewayReference = Guid.NewGuid().ToString(),
+            SendResult = SmsNotificationResultType.Accepted
         };
 
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
@@ -46,6 +46,9 @@ public class SmsStatusConsumerTests : IAsyncLifetime
         // Assert
         string smsNotificationStatus = await SelectSmsNotificationStatus(notification.Id);
         Assert.Equal(SmsNotificationResultType.Accepted.ToString(), smsNotificationStatus);
+
+        long processedOrderCount = await SelectProcessedOrderCount(notification.Id);
+        Assert.Equal(1, processedOrderCount);
     }
 
     [Fact]
@@ -62,7 +65,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
                                             .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
                                             .First(s => s.GetType() == typeof(SmsStatusConsumer))!;
 
-        (_, SmsNotification notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(_sendersRef);
+        (_, SmsNotification notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(_sendersRef, simulateCronJob: true, simulateConsumers: true);
 
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, string.Empty);
 
@@ -74,6 +77,9 @@ public class SmsStatusConsumerTests : IAsyncLifetime
         // Assert
         string smsNotificationStatus = await SelectSmsNotificationStatus(notification.Id);
         Assert.Equal(SmsNotificationResultType.New.ToString(), smsNotificationStatus);
+
+        long processedOrderCount = await SelectProcessedOrderCount(notification.Id);
+        Assert.Equal(1, processedOrderCount);
     }
 
     public Task InitializeAsync()
@@ -90,6 +96,12 @@ public class SmsStatusConsumerTests : IAsyncLifetime
     {
         await PostgreUtil.DeleteOrderFromDb(_sendersRef);
         await KafkaUtil.DeleteTopicAsync(_statusUpdatedTopicName);
+    }
+
+    private static async Task<long> SelectProcessedOrderCount(Guid notificationId)
+    {
+        string sql = $"SELECT count (1) FROM notifications.orders o join notifications.smsnotifications e on e._orderid = o._id where e.alternateid = '{notificationId}' and o.processedstatus = '{OrderProcessingStatus.Processed}'";
+        return await PostgreUtil.RunSqlReturnOutput<long>(sql);
     }
 
     private static async Task<string> SelectSmsNotificationStatus(Guid notificationId)

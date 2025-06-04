@@ -56,7 +56,7 @@ public class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFact
     public async Task GetWithStatusById_SingleMatchInDbAndOneEmail_ReturnsOk()
     {
         // Arrange
-        (NotificationOrder persistedOrder, _) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(sendersReference: _sendersRef);
+        (NotificationOrder persistedOrder, _) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(sendersReference: _sendersRef, simulateCronJob: true, simulateConsumers: true);
 
         string refLinkBase = "http://localhost:5090/notifications/api/v1/orders";
 
@@ -71,8 +71,8 @@ public class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFact
             ProcessingStatus = new()
             {
                 LastUpdate = persistedOrder.Created,
-                Status = "Registered",
-                StatusDescription = "Order has been registered and is awaiting requested send time before processing."
+                Status = "Processed",
+                StatusDescription = "Order processing is done. Notifications have been successfully generated."
             },
             NotificationsStatusSummary = new NotificationsStatusSummaryExt()
             {
@@ -109,7 +109,7 @@ public class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFact
     public async Task GetWithStatusById_SingleMatchInDbAndOneSms_ReturnsOk()
     {
         // Arrange
-        (NotificationOrder persistedOrder, _) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendersReference: _sendersRef);
+        (NotificationOrder persistedOrder, _) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendersReference: _sendersRef, simulateCronJob: true, simulateConsumers: true);
 
         string refLinkBase = "http://localhost:5090/notifications/api/v1/orders";
 
@@ -123,9 +123,9 @@ public class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFact
             RequestedSendTime = persistedOrder.RequestedSendTime,
             ProcessingStatus = new()
             {
+                Status = "Processed",
                 LastUpdate = persistedOrder.Created,
-                Status = "Registered",
-                StatusDescription = "Order has been registered and is awaiting requested send time before processing."
+                StatusDescription = "Order processing is done. Notifications have been successfully generated."
             },
             NotificationsStatusSummary = new NotificationsStatusSummaryExt()
             {

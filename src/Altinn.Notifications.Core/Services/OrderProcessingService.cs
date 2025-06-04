@@ -85,9 +85,7 @@ public class OrderProcessingService : IOrderProcessingService
             return;
         }
 
-        NotificationChannel ch = order.NotificationChannel;
-
-        switch (ch)
+        switch (order.NotificationChannel)
         {
             case NotificationChannel.Email:
                 await _emailProcessingService.ProcessOrder(order);
@@ -107,7 +105,7 @@ public class OrderProcessingService : IOrderProcessingService
                 break;
         }
 
-        await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.Completed);
+        await _orderRepository.TryCompleteOrderBasedOnNotificationsState(order.Id, AlternateIdentifierSource.Order);
     }
 
     /// <inheritdoc/>
@@ -141,7 +139,7 @@ public class OrderProcessingService : IOrderProcessingService
                 break;
         }
 
-        await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.Completed);
+        await _orderRepository.TryCompleteOrderBasedOnNotificationsState(order.Id, AlternateIdentifierSource.Order);
     }
 
     /// <summary>

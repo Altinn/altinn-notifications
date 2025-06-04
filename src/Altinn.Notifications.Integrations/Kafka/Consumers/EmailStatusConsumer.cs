@@ -1,5 +1,6 @@
 ﻿using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.Notification;
+using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Integrations.Configuration;
 
@@ -13,25 +14,26 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers;
 /// </summary>
 public class EmailStatusConsumer : KafkaConsumerBase<EmailStatusConsumer>
 {
-    private readonly IEmailNotificationService _emailNotificationsService;
-    private readonly IKafkaProducer _producer;
     private readonly string _retryTopicName;
+    private readonly IKafkaProducer _producer;
     private readonly ILogger<EmailStatusConsumer> _logger;
+    private readonly IEmailNotificationService _emailNotificationsService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailStatusConsumer"/> class.
     /// </summary>
     public EmailStatusConsumer(
-        IEmailNotificationService emailNotificationsService,
-        IKafkaProducer producer, 
-        IOptions<KafkaSettings> settings, 
-        ILogger<EmailStatusConsumer> logger)
+        IKafkaProducer producer,
+        IOrderRepository orderRepository,
+        IOptions<KafkaSettings> settings,
+        ILogger<EmailStatusConsumer> logger,
+        IEmailNotificationService emailNotificationsService)
         : base(settings, logger, settings.Value.EmailStatusUpdatedTopicName)
     {
-        _emailNotificationsService = emailNotificationsService;
-        _producer = producer;
-        _retryTopicName = settings.Value.EmailStatusUpdatedTopicName;
         _logger = logger;
+        _producer = producer;
+        _emailNotificationsService = emailNotificationsService;
+        _retryTopicName = settings.Value.EmailStatusUpdatedTopicName;
     }
 
     /// <inheritdoc/>
@@ -50,7 +52,15 @@ public class EmailStatusConsumer : KafkaConsumerBase<EmailStatusConsumer>
             return;
         }
 
-        await _emailNotificationsService.UpdateSendStatus(result);
+        try
+        {
+            await _emailNotificationsService.UpdateSendStatus(result);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Could not update email send status for message: {Message}", message);
+            throw;
+        }
     }
 
     private async Task RetryStatus(string message)
