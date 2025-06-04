@@ -43,7 +43,7 @@ public class ShipmentController : ControllerBase
     /// or a 404 Not Found response if no notification order with the specified identifier exists.
     /// </returns>
     [HttpGet]
-    [Route("{id}")]
+    [Route("{id:guid}")]
     [Produces("application/json")]
     [SwaggerResponse(404, "No shipment with the provided identifier was found")]
     [SwaggerResponse(200, "The shipment matching the provided identifier was retrieved successfully", typeof(NotificationDeliveryManifestExt))]

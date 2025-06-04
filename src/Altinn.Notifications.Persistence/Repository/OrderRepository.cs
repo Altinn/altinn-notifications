@@ -1,6 +1,7 @@
 ﻿using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
+
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
