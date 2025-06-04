@@ -168,7 +168,6 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
         Assert.Equal(1, actualCount);
     }
 
-
     [Fact]
     public async Task UpdateSendStatus_WithNotificationId_WithGatewayRef()
     {

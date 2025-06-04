@@ -169,6 +169,11 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
         var processedStatus = await PostgreUtil.RunSqlReturnOutput<string>(sql);
 
         Assert.Equal(1, actualCount);
+        
+        // Verify that the order status was updated based on notification delivery
+        // Initial state is "Registered", final state should be "Completed"
+        Assert.NotEqual("Registered", processedStatus);
+        Assert.Equal("Completed", processedStatus);
     }
 
     [Fact]

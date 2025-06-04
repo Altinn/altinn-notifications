@@ -4,7 +4,6 @@ using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Extensions;
-using Microsoft.Extensions.Logging;
 using Npgsql;
 
 using NpgsqlTypes;
