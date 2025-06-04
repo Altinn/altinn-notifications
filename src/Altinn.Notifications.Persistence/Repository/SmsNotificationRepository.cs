@@ -16,6 +16,7 @@ namespace Altinn.Notifications.Persistence.Repository;
 /// </summary>
 public class SmsNotificationRepository : ISmsNotificationRepository
 {
+    private const string _smsSourceIdentifier = "SMS";
     private readonly NpgsqlDataSource _dataSource;
 
     private const string _getNewSmsNotificationsSql = "select * from notifications.getsms_statusnew_updatestatus($1)"; // (_sendingtimepolicy) this is now calling an overload function with the sending time policy parameter
@@ -175,7 +176,7 @@ public class SmsNotificationRepository : ISmsNotificationRepository
     {
         await using NpgsqlCommand pgcom = new(_tryMarkOrderAsCompletedSql, connection, transaction);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, "SMS");
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, _smsSourceIdentifier);
 
         var result = await pgcom.ExecuteScalarAsync();
         return result != null && (bool)result;

@@ -15,13 +15,11 @@ body:json {
     "sendersReference": "{{random_idempotency_id}}-notif",
     "idempotencyId": "{{random_idempotency_id}}",
     "recipient": {
-      "recipientEmail": {
-        "emailAddress": "{{process.env.TESTDATA_MY_EMAIL}}",
-        "emailSettings": {        
-          "subject": "Multiline\nEmail Subject - \r\nCovering\n\rall\rplatforms",
-          "body": "Multiline\nEmail Body - \r\nCovering\n\rall\rplatforms",
-          "contentType": "Plain",
-          "sendingTimePolicy": "Anytime"
+       "recipientSms": {
+        "phoneNumber": "{{process.env.TESTDATA_MY_PHONE}}",
+        "smsSettings": {
+          "body": "This is a plain test body for testing SMS services",
+          "sendingTimePolicy": "Daytime"
         }
       }
     }

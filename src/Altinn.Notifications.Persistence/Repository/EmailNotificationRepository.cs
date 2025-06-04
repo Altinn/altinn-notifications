@@ -16,6 +16,7 @@ namespace Altinn.Notifications.Persistence.Repository;
 /// </summary>
 public class EmailNotificationRepository : IEmailNotificationRepository
 {
+    private const string _emailSourceIdentifier = "EMAIL";
     private readonly NpgsqlDataSource _dataSource;
     private const string _insertEmailNotificationSql = "call notifications.insertemailnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _toaddress, _customizedbody, _customizedsubject, _result, _resulttime, _expirytime)
     private const string _getEmailNotificationsSql = "select * from notifications.getemails_statusnew_updatestatus()";
@@ -88,7 +89,7 @@ public class EmailNotificationRepository : IEmailNotificationRepository
     {
         await using NpgsqlCommand pgcom = new(_tryMarkOrderAsCompletedSql, connection, transaction);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, "EMAIL");
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, _emailSourceIdentifier);
 
         var result = await pgcom.ExecuteScalarAsync();
         return result != null && (bool)result;
