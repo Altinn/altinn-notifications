@@ -47,8 +47,49 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         string emailNotificationStatus = await SelectEmailNotificationStatus(notification.Id);
         Assert.Equal(EmailNotificationResultType.Succeeded.ToString(), emailNotificationStatus);
 
-        long processedOrderCount = await SelectProcessedOrderCount(notification.Id);
+        long processedOrderCount = await SelectProcessingStatusOrderCount(notification.Id, OrderProcessingStatus.Processed);
         Assert.Equal(1, processedOrderCount);
+    }
+
+    [Theory]
+    [InlineData(EmailNotificationResultType.Failed_RecipientNotIdentified)]
+    [InlineData(EmailNotificationResultType.Failed_RecipientReserved)]
+    [InlineData(EmailNotificationResultType.Failed_InvalidEmailFormat)]
+    [InlineData(EmailNotificationResultType.Failed_SupressedRecipient)]
+    [InlineData(EmailNotificationResultType.Failed_Bounced)]
+    [InlineData(EmailNotificationResultType.Failed_FilteredSpam)]
+    [InlineData(EmailNotificationResultType.Failed_Quarantined)]
+    [InlineData(EmailNotificationResultType.Failed)]
+    public async Task ParseEmailSendOperationResult_StatusFailed_ShouldUpdateOrderStatusToCompleted(EmailNotificationResultType resultType)
+    {
+        // Arrange
+        Dictionary<string, string> vars = new()
+        {
+            { "KafkaSettings__EmailStatusUpdatedTopicName", _statusUpdatedTopicName },
+            { "KafkaSettings__Admin__TopicList", $"[\"{_statusUpdatedTopicName}\"]" }
+        };
+        using EmailStatusConsumer sut = (EmailStatusConsumer)ServiceUtil
+                                                    .GetServices([typeof(IHostedService)], vars)
+                                                    .First(s => s.GetType() == typeof(EmailStatusConsumer))!;
+        (_, EmailNotification notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(_sendersRef, simulateCronJob: true);
+        EmailSendOperationResult sendOperationResult = new()
+        {
+            NotificationId = notification.Id,
+            OperationId = Guid.NewGuid().ToString(),
+            SendResult = resultType
+        };
+        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
+        
+        // Act
+        await sut.StartAsync(CancellationToken.None);
+        await Task.Delay(10000);
+        await sut.StopAsync(CancellationToken.None);
+        
+        // Assert
+        string emailNotificationStatus = await SelectEmailNotificationStatus(notification.Id);
+        Assert.Equal(resultType.ToString(), emailNotificationStatus);
+        long cancelledCount = await SelectProcessingStatusOrderCount(notification.Id, OrderProcessingStatus.Completed);
+        Assert.Equal(1, cancelledCount);
     }
 
     public Task InitializeAsync()
@@ -67,9 +108,9 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         await KafkaUtil.DeleteTopicAsync(_statusUpdatedTopicName);
     }
 
-    private static async Task<long> SelectProcessedOrderCount(Guid notificationId)
+    private static async Task<long> SelectProcessingStatusOrderCount(Guid notificationId, OrderProcessingStatus orderProcessingStatus)
     {
-        string sql = $"SELECT count (1) FROM notifications.orders o join notifications.emailnotifications e on e._orderid = o._id where e.alternateid = '{notificationId}' and o.processedstatus = '{OrderProcessingStatus.Processed}'";
+        string sql = $"SELECT count (1) FROM notifications.orders o join notifications.emailnotifications e on e._orderid = o._id where e.alternateid = '{notificationId}' and o.processedstatus = '{orderProcessingStatus}'";
         return await PostgreUtil.RunSqlReturnOutput<long>(sql);
     }
 

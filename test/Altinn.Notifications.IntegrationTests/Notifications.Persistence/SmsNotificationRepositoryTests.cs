@@ -1,5 +1,4 @@
-﻿using System.Linq.Expressions;
-using Altinn.Notifications.Core.Enums;
+﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Orders;
@@ -133,6 +132,42 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
         Assert.Equal(expectedRecipient.NationalIdentityNumber, actualRecipient.NationalIdentityNumber);
         Assert.Equal(expectedRecipient.OrganizationNumber, actualRecipient.OrganizationNumber);
     }
+
+    [Theory]
+    [InlineData(SmsNotificationResultType.Failed)]
+    [InlineData(SmsNotificationResultType.Failed_BarredReceiver)]
+    [InlineData(SmsNotificationResultType.Failed_InvalidRecipient)]
+    [InlineData(SmsNotificationResultType.Failed_Deleted)]
+    [InlineData(SmsNotificationResultType.Failed_Expired)]
+    [InlineData(SmsNotificationResultType.Failed_RecipientReserved)]
+    [InlineData(SmsNotificationResultType.Failed_Rejected)]
+    [InlineData(SmsNotificationResultType.Failed_Undelivered)]
+    [InlineData(SmsNotificationResultType.Failed_RecipientNotIdentified)]
+    public async Task ParseSmsSendOperationResult_StatusFailed_ShouldUpdateOrderStatusToCompleted(SmsNotificationResultType resultType)
+    {
+        // Arrange
+        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendersReference: null, simulateCronJob: true);
+        _orderIdsToDelete.Add(order.Id);
+        SmsNotificationRepository repo = (SmsNotificationRepository)ServiceUtil
+          .GetServices(new List<Type>() { typeof(ISmsNotificationRepository) })
+          .First(i => i.GetType() == typeof(SmsNotificationRepository));
+        SmsSendOperationResult sendOperationResult = new()
+        {
+            NotificationId = smsNotification.Id,
+            GatewayReference = Guid.NewGuid().ToString(),
+            SendResult = resultType
+        };
+
+        // Act
+        await repo.UpdateSendStatus(sendOperationResult.NotificationId, sendOperationResult.SendResult, sendOperationResult.GatewayReference);
+
+        // Assert
+        var status = await SelectSmsNotificationStatus(smsNotification.Id);
+        Assert.Equal(resultType.ToString(), status);
+        int actualCount = await SelectOrdersCompletedCount(order);
+        Assert.Equal(1, actualCount);
+    }
+
 
     [Fact]
     public async Task UpdateSendStatus_WithNotificationId_WithGatewayRef()
@@ -294,16 +329,16 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
 
     [Fact]
     public async Task UpdateSendStatusDelivered_WithGatewayRef_OrderStatusIsSetToCompleted()
-    {         
+    {
         // Arrange
         (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(simulateConsumers: true, simulateCronJob: true);
         _orderIdsToDelete.Add(order.Id);
-        
+
         SmsNotificationRepository repo = (SmsNotificationRepository)ServiceUtil
           .GetServices(new List<Type>() { typeof(ISmsNotificationRepository) })
           .First(i => i.GetType() == typeof(SmsNotificationRepository));
         string gatewayReference = Guid.NewGuid().ToString();
-        
+
         string setGateqwaySql = $@"Update notifications.smsnotifications 
                 SET gatewayreference = '{gatewayReference}'
                 WHERE alternateid = '{smsNotification.Id}'";
@@ -312,15 +347,31 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
 
         // Act
         await repo.UpdateSendStatus(null, SmsNotificationResultType.Delivered, gatewayReference);
-        
+
         // Assert
         string sql = $@"SELECT count(1) 
               FROM notifications.orders o
               WHERE o.alternateid = '{order.Id}'
               AND o.processedstatus = '{OrderProcessingStatus.Completed}'";
-        
+
         int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
-        
+
         Assert.Equal(1, actualCount);
+    }
+
+    private static async Task<int> SelectOrdersCompletedCount(NotificationOrder order)
+    {
+        string sql = $@"SELECT count(1) 
+              FROM notifications.orders o
+              WHERE o.alternateid = '{order.Id}'
+              AND o.processedstatus = '{OrderProcessingStatus.Completed}'";
+        int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
+        return actualCount;
+    }
+
+    private static async Task<string> SelectSmsNotificationStatus(Guid notificationId)
+    {
+        string sql = $"select result from notifications.smsnotifications where alternateid = '{notificationId}'";
+        return await PostgreUtil.RunSqlReturnOutput<string>(sql);
     }
 }
