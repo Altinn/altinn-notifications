@@ -111,12 +111,14 @@ public class EmailNotificationRepository : IEmailNotificationRepository
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, operationId ?? (object)DBNull.Value);
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId ?? (object)DBNull.Value);
+
+            _logger.LogInformation("Sql query to update email notification status for {OperationId}: {SqlQuery}", operationId, pgcom.CommandText);
             var alternateId = await pgcom.ExecuteScalarAsync();
 
             if (alternateId == null)
             {
+                _logger.LogInformation("Status type for email notification {NotificationId} with operation id {OperationId} was updated to {Status}. No alternateId was returned from the updateEmailStatus query.", notificationId, operationId, status);
                 await transaction.RollbackAsync();
-                _logger.LogError("No alternateId was returned from the updateEmailStatus query. {NotificationId} {OperationId}", notificationId, operationId);
                 return;
             }
 
