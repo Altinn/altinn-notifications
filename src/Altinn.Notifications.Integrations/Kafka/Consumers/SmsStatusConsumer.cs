@@ -1,6 +1,5 @@
 ﻿using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.Notification;
-using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Integrations.Configuration;
 
@@ -25,7 +24,6 @@ public class SmsStatusConsumer : KafkaConsumerBase<SmsStatusConsumer>
     public SmsStatusConsumer(
         IKafkaProducer producer,
         IOptions<KafkaSettings> settings,
-        IOrderRepository orderRepository,
         ILogger<SmsStatusConsumer> logger,
         ISmsNotificationService smsNotificationsService)
         : base(settings, logger, settings.Value.SmsStatusUpdatedTopicName)

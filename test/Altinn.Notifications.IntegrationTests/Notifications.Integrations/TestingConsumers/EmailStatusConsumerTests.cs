@@ -1,5 +1,8 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using System.Text.Json;
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Notification;
+using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.IntegrationTests.Utils;
 
@@ -90,6 +93,48 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         Assert.Equal(resultType.ToString(), emailNotificationStatus);
         long cancelledCount = await SelectProcessingStatusOrderCount(notification.Id, OrderProcessingStatus.Completed);
         Assert.Equal(1, cancelledCount);
+    }
+
+    [Fact]
+    public async Task InsertStatusFeed_OrderCompleted()
+    {
+        // Arrange
+        Dictionary<string, string> vars = new()
+        {
+            { "KafkaSettings__EmailStatusUpdatedTopicName", _statusUpdatedTopicName },
+            { "KafkaSettings__Admin__TopicList", $"[\"{_statusUpdatedTopicName}\"]" }
+        };
+        using EmailStatusConsumer sut = (EmailStatusConsumer)ServiceUtil
+                                                    .GetServices([typeof(IHostedService)], vars)
+                                                    .First(s => s.GetType() == typeof(EmailStatusConsumer))!;
+        (NotificationOrder order, EmailNotification notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(_sendersRef, simulateCronJob: true);
+        EmailSendOperationResult sendOperationResult = new()
+        {
+            NotificationId = notification.Id,
+            OperationId = Guid.NewGuid().ToString(),
+            SendResult = EmailNotificationResultType.Delivered
+        };
+
+        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
+        
+        // Act
+        await sut.StartAsync(CancellationToken.None);
+        await Task.Delay(10000);
+        await sut.StopAsync(CancellationToken.None);
+
+        // Assert
+        //OrderStatus status = await SelectStatusFeedEntry(order.Id);
+        //Assert.NotNull(status);
+    }
+
+    private static async Task<OrderStatus> SelectStatusFeedEntry(Guid id)
+    {
+        var sql = @$"SELECT * FROM notifications.statusfeed s
+                     INNER JOIN notifications.orders o ON o._id = s.orderid
+                     WHERE o.alternateid = '{id}'";
+        var result = await PostgreUtil.RunSqlReturnOutput<string>(sql);
+
+        return JsonSerializer.Deserialize<OrderStatus>(result, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? throw new InvalidOperationException("Deserialization failed");
     }
 
     public Task InitializeAsync()

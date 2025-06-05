@@ -1,6 +1,5 @@
 ﻿using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.Notification;
-using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Integrations.Configuration;
 
@@ -24,7 +23,6 @@ public class EmailStatusConsumer : KafkaConsumerBase<EmailStatusConsumer>
     /// </summary>
     public EmailStatusConsumer(
         IKafkaProducer producer,
-        IOrderRepository orderRepository,
         IOptions<KafkaSettings> settings,
         ILogger<EmailStatusConsumer> logger,
         IEmailNotificationService emailNotificationsService)
