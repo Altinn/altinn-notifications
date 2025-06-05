@@ -27,6 +27,11 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
 
     public async Task DisposeAsync()
     {
+        if (_orderIdsToDelete.Count == 0)
+        {
+            return;
+        }
+
         string deleteSql = $@"DELETE from notifications.orders o where o.alternateid in ('{string.Join("','", _orderIdsToDelete)}')";
         await PostgreUtil.RunSql(deleteSql);
     }
@@ -169,7 +174,7 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
         var processedStatus = await PostgreUtil.RunSqlReturnOutput<string>(sql);
 
         Assert.Equal(1, actualCount);
-        
+
         // Verify that the order status was updated based on notification delivery
         // Initial state is "Registered", final state should be "Completed"
         Assert.NotEqual("Registered", processedStatus);
@@ -233,6 +238,30 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
         int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
 
         Assert.Equal(1, actualCount);
+    }
+
+    [Fact]
+    public async Task UpdateSendStatus_WithNotificationIdThatDoesNotExist_AbortsStatusUpdate()
+    {
+        // Arrange
+        EmailNotificationRepository sut = (EmailNotificationRepository)ServiceUtil
+          .GetServices(new List<Type>() { typeof(IEmailNotificationRepository) })
+          .First(i => i.GetType() == typeof(EmailNotificationRepository));
+        Guid nonExistentNotificationId = Guid.NewGuid();
+
+        // Act 
+        await sut.UpdateSendStatus(nonExistentNotificationId, EmailNotificationResultType.Succeeded);
+
+        // Assert
+        string sql = $@"
+            SELECT count(1)
+            FROM notifications.emailnotifications email
+            WHERE email.alternateid = '{nonExistentNotificationId}'
+            AND email.result = '{EmailNotificationResultType.Succeeded}'";
+
+        int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
+
+        Assert.Equal(0, actualCount);
     }
 
     [Fact]

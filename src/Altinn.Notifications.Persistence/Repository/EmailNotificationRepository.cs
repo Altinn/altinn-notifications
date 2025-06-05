@@ -4,6 +4,7 @@ using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Extensions;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 
 using NpgsqlTypes;
@@ -15,6 +16,8 @@ namespace Altinn.Notifications.Persistence.Repository;
 /// </summary>
 public class EmailNotificationRepository : IEmailNotificationRepository
 {
+    private readonly ILogger<EmailNotificationRepository> _logger;
+    
     private const string _emailSourceIdentifier = "EMAIL";
     private readonly NpgsqlDataSource _dataSource;
     private const string _insertEmailNotificationSql = "call notifications.insertemailnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _toaddress, _customizedbody, _customizedsubject, _result, _resulttime, _expirytime)
@@ -33,9 +36,11 @@ public class EmailNotificationRepository : IEmailNotificationRepository
     /// Initializes a new instance of the <see cref="EmailNotificationRepository"/> class.
     /// </summary>
     /// <param name="dataSource">The npgsql data source.</param>
-    public EmailNotificationRepository(NpgsqlDataSource dataSource)
+    /// <param name="logger">The logger used with this implementation of IEmailNotificationRepository</param>
+    public EmailNotificationRepository(NpgsqlDataSource dataSource, ILogger<EmailNotificationRepository> logger)
     {
         _dataSource = dataSource;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -107,6 +112,13 @@ public class EmailNotificationRepository : IEmailNotificationRepository
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, operationId ?? (object)DBNull.Value);
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId ?? (object)DBNull.Value);
             var alternateId = await pgcom.ExecuteScalarAsync();
+
+            if (alternateId == null)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError("No alternateId was returned from the updateEmailStatus query. {NotificationId} {OperationId}", notificationId, operationId);
+                return;
+            }
 
             var parseResult = Guid.TryParse(alternateId?.ToString(), out Guid alternateIdGuid);
 
