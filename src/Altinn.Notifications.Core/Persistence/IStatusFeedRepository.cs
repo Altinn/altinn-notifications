@@ -16,5 +16,14 @@ namespace Altinn.Notifications.Core.Persistence
         /// <param name="limit">Optional parameter for setting the total number of entries returned</param>
         /// <returns>List of status feed entries</returns>
         Task<List<StatusFeed>> GetStatusFeed(int seq, string creatorName, CancellationToken cancellationToken, int limit = 50);
+
+        /// <summary>
+        /// Insert status feed entry into the database.
+        /// </summary>
+        /// <param name="statusFeed">The wrapper object</param>
+        /// <param name="creatorName">Service owner</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns></returns>
+        Task InsertStatusFeedEntry(StatusFeed statusFeed, string creatorName, CancellationToken cancellationToken);
     }
 }

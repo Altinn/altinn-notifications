@@ -38,6 +38,7 @@ public static class ServiceCollectionExtensions
         .AddNpgsqlDataSource(connectionString, builder =>
             builder.EnableParameterLogging(settings.LogParameters)
                    .EnableDynamicJson()
+                   .EnableRecordsAsTuples()
                    .ConfigureTracing(o => o
                        .ConfigureCommandSpanNameProvider(cmd => cmd.CommandText)
                        .ConfigureCommandFilter(cmd => true)
