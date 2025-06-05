@@ -69,6 +69,25 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task GetShipmentInfo()
+    {
+        // Arrange
+        (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
+        _orderIdsToDelete.Add(order.Id);
+        EmailNotificationRepository sut = (EmailNotificationRepository)ServiceUtil
+          .GetServices(new List<Type>() { typeof(IEmailNotificationRepository) })
+          .First(i => i.GetType() == typeof(EmailNotificationRepository));
+        
+        // Act
+        await sut.GetShipmentTracking(Guid.Parse("d7b073de-68e7-421b-a1c0-bdbf8c4fc522"), "ttd");
+        
+        // Assert
+        //Assert.NotNull(shipmentInfo);
+        //Assert.Equal(emailNotification.Id, shipmentInfo.NotificationId);
+        //Assert.Equal(emailNotification.Recipient.ToAddress, shipmentInfo.ToAddress);
+    }
+
+    [Fact]
     public async Task GetNewNotifications()
     {
         // Arrange

@@ -2,6 +2,7 @@
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
+using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Extensions;
 using Npgsql;
@@ -92,6 +93,56 @@ public class EmailNotificationRepository : IEmailNotificationRepository
 
         var result = await pgcom.ExecuteScalarAsync();
         return result != null && (bool)result;
+    }
+
+    /// <summary>
+    /// Get shipment tracking information for a specific notification based on its alternate ID.
+    /// </summary>
+    /// <param name="alternateId">Guid for order alternate id</param>
+    /// <param name="creatorName">The service owner name</param>
+    /// <returns></returns>
+    public async Task GetShipmentTracking(Guid alternateId, string creatorName)
+    {
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand("SELECT notifications.get_shipment_tracking_v2($1, $2)");
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, alternateId);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, creatorName);
+        OrderStatus orderStatus = null;
+
+        await using var reader = await pgcom.ExecuteReaderAsync();
+        await reader.ReadAsync();
+
+        // read main notification or reminder
+        if (reader.FieldCount == 1 && reader.GetDataTypeName(0) == "record")
+        {
+            var (sendersReference, status, lastUpdated, destination, type) = reader.GetFieldValue<(string, string, DateTime, string, string)>(0);
+            orderStatus = new OrderStatus
+            {
+                LastUpdated = lastUpdated,
+                ShipmentType = type,
+                ShipmentId = alternateId,
+                SendersReference = sendersReference,
+                Recipients = [] // Recipients would need to be populated based on your application logic
+            };
+        }
+
+        // Add recipients to the order status
+        while (await reader.ReadAsync())
+        {
+            if (reader.FieldCount == 1 && reader.GetDataTypeName(0) == "record")
+            {
+                var (sendersReference, status, lastUpdated, destination, type) = reader.GetFieldValue<(string, string, DateTime, string, string)>(0);
+                var recipient = new Core.Models.Status.Recipient
+                {
+                    Destination = destination,
+                    Status = Enum.Parse<ProcessingLifecycle>(status),
+                    LastUpdate = lastUpdated
+                };
+
+                orderStatus?.Recipients.Add(recipient);
+            }
+        }
+
+        Console.WriteLine($"Shipment tracking for alternate ID {alternateId} retrieved successfully.");
     }
 
     /// <inheritdoc/>

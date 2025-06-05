@@ -31,4 +31,12 @@ public interface IEmailNotificationRepository
     /// </summary>
     /// <returns>A list of email recipients</returns>
     public Task<List<EmailRecipient>> GetRecipients(Guid orderId);
+
+    /// <summary>
+    /// Get shipment tracking information for a specific notification based on its alternate ID.
+    /// </summary>
+    /// <param name="alternateId">Guid for identifying an order</param>
+    /// <param name="creatorName">The Service owner identifier</param>
+    /// <returns></returns>
+    Task GetShipmentTracking(Guid alternateId, string creatorName);
 }
