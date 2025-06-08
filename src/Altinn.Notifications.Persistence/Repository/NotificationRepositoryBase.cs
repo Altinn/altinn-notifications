@@ -24,9 +24,14 @@ public class NotificationRepositoryBase
     private const string _getShipmentTrackingEmailSql = @"SELECT notifications.get_shipment_tracking_v2(o.alternateid, o.creatorname), o.alternateid
                                                          FROM notifications.orders o
                                                          INNER JOIN notifications.emailnotifications e ON e._orderid = o._id
-                                                         WHERE e.alternateid = @emailalternateid";
+                                                         WHERE e.alternateid = @notificationalternateid";
     
-    private const string _test = @"SELECT notifications.insertstatusfeed(o._id, o.creatorname, @orderstatus)
+    private const string _getShipmentTrackingSmsSql = @"SELECT notifications.get_shipment_tracking_v2(o.alternateid, o.creatorname), o.alternateid
+                                                         FROM notifications.orders o
+                                                         INNER JOIN notifications.smsnotifications e ON e._orderid = o._id
+                                                         WHERE e.alternateid = @notificationalternateid";
+    
+    private const string _insertStatusFeedEntrySql = @"SELECT notifications.insertstatusfeed(o._id, o.creatorname, @orderstatus)
                                    FROM notifications.orders o
                                    WHERE o.alternateid = @alternateid;"; // This is a test query, not used in production
 
@@ -44,12 +49,19 @@ public class NotificationRepositoryBase
     /// <summary>
     /// Get shipment tracking information for a specific notification based on its alternate ID.
     /// </summary>
-    /// <param name="notificationAlternateId">Guid for the email notification alternate id</param>
+    /// <param name="notificationAlternateId">Guid for the email or sms notification alternate id</param>
     /// <returns>Order status object if the order was found in the database. Otherwise, null</returns>
     public async Task<OrderStatus?> GetShipmentTracking(Guid notificationAlternateId)
     {
-        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getShipmentTrackingEmailSql);
-        pgcom.Parameters.AddWithValue("emailalternateid", NpgsqlDbType.Uuid, notificationAlternateId);
+        string shipmentTrackingSql = this switch
+        {
+            EmailNotificationRepository => _getShipmentTrackingEmailSql,
+            SmsNotificationRepository => _getShipmentTrackingSmsSql,
+            _ => throw new NotSupportedException($"Unsupported repository type: {this.GetType().Name}")
+        };
+
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(shipmentTrackingSql);
+        pgcom.Parameters.AddWithValue("notificationalternateid", NpgsqlDbType.Uuid, notificationAlternateId);
         OrderStatus? orderStatus = null; 
         List<Recipient> recipients = [];
 
@@ -109,7 +121,7 @@ public class NotificationRepositoryBase
     /// <returns>No return value</returns>
     public async Task InsertStatusFeed(OrderStatus orderStatus)
     {
-        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_test);
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_insertStatusFeedEntrySql);
         pgcom.Parameters.AddWithValue("alternateid", NpgsqlDbType.Uuid, orderStatus.ShipmentId);
         pgcom.Parameters.AddWithValue("orderstatus", NpgsqlDbType.Jsonb, JsonSerializer.Serialize(orderStatus, _serializerOptions));
         await pgcom.ExecuteNonQueryAsync();

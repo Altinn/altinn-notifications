@@ -4,7 +4,7 @@ using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Extensions;
-
+using Microsoft.Extensions.Logging;
 using Npgsql;
 
 using NpgsqlTypes;
@@ -14,11 +14,11 @@ namespace Altinn.Notifications.Persistence.Repository;
 /// <summary>
 /// Implements the repository logic for SMS notifications.
 /// </summary>
-public class SmsNotificationRepository : ISmsNotificationRepository
+public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotificationRepository
 {
     private const string _smsSourceIdentifier = "SMS";
     private readonly NpgsqlDataSource _dataSource;
-
+    private readonly ILogger<SmsNotificationRepository> _logger;
     private const string _getNewSmsNotificationsSql = "select * from notifications.getsms_statusnew_updatestatus($1)"; // (_sendingtimepolicy) this is now calling an overload function with the sending time policy parameter
     private const string _getSmsNotificationRecipientsSql = "select * from notifications.getsmsrecipients_v2($1)"; // (_orderid)
     private const string _insertNewSmsNotificationSql = "call notifications.insertsmsnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _customizedbody, _result, _smscount, _resulttime, _expirytime)
@@ -42,9 +42,11 @@ public class SmsNotificationRepository : ISmsNotificationRepository
     /// Initializes a new instance of the <see cref="SmsNotificationRepository"/> class.
     /// </summary>
     /// <param name="dataSource">The Npgsql data source.</param>
-    public SmsNotificationRepository(NpgsqlDataSource dataSource)
+    /// <param name="logger">The logger associated with this implementation of the SmsNotificationRepository</param>
+    public SmsNotificationRepository(NpgsqlDataSource dataSource, ILogger<SmsNotificationRepository> logger) : base(dataSource, logger)
     {
         _dataSource = dataSource;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
