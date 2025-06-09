@@ -74,16 +74,4 @@ public class StatusFeedRepository : IStatusFeedRepository
 
         return statusFeedEntries;
     }
-
-    /// <inheritdoc/>
-    public async Task InsertStatusFeedEntry(StatusFeed statusFeed, string creatorName, CancellationToken cancellationToken)
-    {
-        const string insertSql = @"INSERT INTO notifications.statusfeed (_id, orderstatus, creatorname)
-                                       VALUES (@seq, @orderStatus, @creatorName);";
-        await using NpgsqlCommand command = _dataSource.CreateCommand(insertSql);
-        command.Parameters.AddWithValue("@seq", NpgsqlDbType.Integer, statusFeed.SequenceNumber);
-        command.Parameters.AddWithValue("@orderStatus", NpgsqlDbType.Jsonb, JsonSerializer.Serialize(statusFeed.OrderStatus, _jsonSerializerOptions));
-        command.Parameters.AddWithValue("@creatorName", NpgsqlDbType.Varchar, creatorName);
-        await command.ExecuteNonQueryAsync(cancellationToken);
-    }
 }
