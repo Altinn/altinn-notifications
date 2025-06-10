@@ -19,9 +19,20 @@ namespace Altinn.Notifications.Persistence.Repository;
 /// </summary>
 public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNotificationRepository
 {
+    /// <summary>
+    /// Gets the SQL query used to retrieve shipment tracking information joining with email.
+    /// </summary>
+    protected override string GetShipmentTrackingSql => _getShipmentTrackingEmailSql;
+
     private const string _emailSourceIdentifier = "EMAIL";
     private readonly NpgsqlDataSource _dataSource;
     private readonly ILogger<EmailNotificationRepository> _logger;
+
+    private const string _getShipmentTrackingEmailSql = @"SELECT notifications.get_shipment_tracking_v2(o.alternateid, o.creatorname), o.alternateid
+                                                         FROM notifications.orders o
+                                                         INNER JOIN notifications.emailnotifications e ON e._orderid = o._id
+                                                         WHERE e.alternateid = @notificationalternateid";
+
     private const string _insertEmailNotificationSql = "call notifications.insertemailnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _toaddress, _customizedbody, _customizedsubject, _result, _resulttime, _expirytime)
     private const string _getEmailNotificationsSql = "select * from notifications.getemails_statusnew_updatestatus()";
     private const string _getEmailRecipients = "select * from notifications.getemailrecipients_v2($1)"; // (_orderid)
@@ -123,7 +134,7 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
                 return;
             }
 
-            var parseResult = Guid.TryParse(alternateId?.ToString(), out Guid emailNotificationAlternateId);
+            var parseResult = Guid.TryParse(alternateId.ToString(), out Guid emailNotificationAlternateId);
 
             if (!parseResult)
             {

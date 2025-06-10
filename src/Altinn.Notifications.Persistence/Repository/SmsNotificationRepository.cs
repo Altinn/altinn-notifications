@@ -15,6 +15,16 @@ namespace Altinn.Notifications.Persistence.Repository;
 /// </summary>
 public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotificationRepository
 {
+    /// <summary>
+    /// Gets the SQL query used to retrieve shipment tracking information using sms identifier.
+    /// </summary>
+    protected override string GetShipmentTrackingSql => _getShipmentTrackingSmsSql;
+
+    private const string _getShipmentTrackingSmsSql = @"SELECT notifications.get_shipment_tracking_v2(o.alternateid, o.creatorname), o.alternateid
+                                                         FROM notifications.orders o
+                                                         INNER JOIN notifications.smsnotifications e ON e._orderid = o._id
+                                                         WHERE e.alternateid = @notificationalternateid";
+
     private const string _smsSourceIdentifier = "SMS";
     private readonly NpgsqlDataSource _dataSource;
     private readonly ILogger<SmsNotificationRepository> _logger;

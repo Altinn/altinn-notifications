@@ -5,7 +5,7 @@ namespace Altinn.Notifications.Persistence.Mappers;
 /// <summary>
 /// Helper class for mapping processing life cycle related data to and from the database.
 /// </summary>
-public class ProcessingLifecycleMapper
+internal static class ProcessingLifecycleMapper
 {
     /// <summary>
     /// Maps database SMS notification result types to ProcessingLifecycle values.

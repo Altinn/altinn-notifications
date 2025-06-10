@@ -12,28 +12,24 @@ namespace Altinn.Notifications.Persistence.Repository;
 /// <summary>
 /// Base class for notification repositories.
 /// </summary>
-public class NotificationRepositoryBase
+public abstract class NotificationRepositoryBase
 {
-    private JsonSerializerOptions _serializerOptions = new()
+    private readonly JsonSerializerOptions _serializerOptions = new()
     {
         Converters = { new JsonStringEnumConverter() }
     };
 
-    private NpgsqlDataSource _dataSource;
-    private ILogger _logger;
-    private const string _getShipmentTrackingEmailSql = @"SELECT notifications.get_shipment_tracking_v2(o.alternateid, o.creatorname), o.alternateid
-                                                         FROM notifications.orders o
-                                                         INNER JOIN notifications.emailnotifications e ON e._orderid = o._id
-                                                         WHERE e.alternateid = @notificationalternateid";
-    
-    private const string _getShipmentTrackingSmsSql = @"SELECT notifications.get_shipment_tracking_v2(o.alternateid, o.creatorname), o.alternateid
-                                                         FROM notifications.orders o
-                                                         INNER JOIN notifications.smsnotifications e ON e._orderid = o._id
-                                                         WHERE e.alternateid = @notificationalternateid";
+    /// <summary>
+    /// Gets the SQL query used to retrieve shipment tracking information.
+    /// </summary>
+    protected abstract string GetShipmentTrackingSql { get; }
+
+    private readonly NpgsqlDataSource _dataSource;
+    private readonly ILogger _logger;
     
     private const string _insertStatusFeedEntrySql = @"SELECT notifications.insertstatusfeed(o._id, o.creatorname, @orderstatus)
                                    FROM notifications.orders o
-                                   WHERE o.alternateid = @alternateid;"; // This is a test query, not used in production
+                                   WHERE o.alternateid = @alternateid;"; 
 
     /// <summary>
     /// Constructor for the NotificationRepositoryBase class.
@@ -55,14 +51,7 @@ public class NotificationRepositoryBase
     /// <returns>Order status object if the order was found in the database. Otherwise, null</returns>
     protected async Task<OrderStatus?> GetShipmentTracking(Guid notificationAlternateId, NpgsqlConnection connection, NpgsqlTransaction transaction)
     {
-        string shipmentTrackingSql = this switch
-        {
-            EmailNotificationRepository => _getShipmentTrackingEmailSql,
-            SmsNotificationRepository => _getShipmentTrackingSmsSql,
-            _ => throw new NotSupportedException($"Unsupported repository type: {this.GetType().Name}")
-        };
-
-        await using NpgsqlCommand pgcom = new(shipmentTrackingSql, connection, transaction);
+        await using NpgsqlCommand pgcom = new(GetShipmentTrackingSql, connection, transaction);
         pgcom.Parameters.AddWithValue("notificationalternateid", NpgsqlDbType.Uuid, notificationAlternateId);
         OrderStatus? orderStatus = null; 
         List<Recipient> recipients = [];
@@ -73,9 +62,9 @@ public class NotificationRepositoryBase
         // read main notification or reminder
         if (reader.FieldCount == 2 && reader.GetDataTypeName(0) == "record")
         {
-            var alternateId = reader.GetFieldValue<Guid>(1);
+            var alternateId = await reader.GetFieldValueAsync<Guid>(1);
 
-            var (sendersReference, status, lastUpdated, destination, type) = reader.GetFieldValue<(string, string, DateTime, string, string)>(0);
+            var (sendersReference, status, lastUpdated, _, type) = await reader.GetFieldValueAsync<(string, string, DateTime, string, string)>(0);
             orderStatus = new OrderStatus
             {
                 LastUpdated = lastUpdated,
@@ -92,7 +81,7 @@ public class NotificationRepositoryBase
         {
             if (reader.FieldCount == 2 && reader.GetDataTypeName(0) == "record")
             {
-                var (sendersReference, status, lastUpdated, destination, type) = reader.GetFieldValue<(string, string, DateTime, string, string)>(0);
+                var (_, status, lastUpdated, destination, _) = await reader.GetFieldValueAsync<(string, string, DateTime, string, string)>(0);
 
                 var recipient = new Recipient
                 {
@@ -112,7 +101,7 @@ public class NotificationRepositoryBase
         }
         else
         {
-            var maskedAlternateId = notificationAlternateId.ToString().Substring(0, 8) + "****";
+            var maskedAlternateId = string.Concat(notificationAlternateId.ToString().AsSpan(0, 8), "****");
             _logger.LogWarning("No shipment tracking information found for alternate ID {AlternateId}.", maskedAlternateId);
             return null; // Return null if no order status was found
         }
