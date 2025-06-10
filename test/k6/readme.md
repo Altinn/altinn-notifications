@@ -38,7 +38,7 @@ Run the test suite by specifying the filename.
 For example:
 
 ```bash
-$> podman compose run k6 run /src/tests/orders_email.js \
+$> podman compose run k6 run /src/tests/orders-email.js \
     -e tokenGeneratorUserName=*** \
     -e tokenGeneratorUserPwd=*** \
     -e env=*** \
@@ -50,7 +50,7 @@ $> podman compose run k6 run /src/tests/orders_email.js \
 ### Command Breakdown
 
 1. **`podman compose run`**: Runs the test in a Docker container.
-2. **`k6 run {path to test file}`**: Points to the test file you want to run, e.g., `/src/tests/orders_email.js`.
+2. **`k6 run {path to test file}`**: Points to the test file you want to run, e.g., `/src/tests/orders-email.js`.
 3. **Script parameters**: Provided as environment variables for the container:
    ```bash
    -e tokenGeneratorUserName=***
@@ -74,7 +74,7 @@ For example:
 Run a test with 10 virtual users (VUs) for 5 minutes:
 
 ```bash
-$> k6 run /src/tests/orders_email.js \
+$> k6 run /src/tests/orders-email.js \
     -e tokenGeneratorUserName=*** \
     -e tokenGeneratorUserPwd=*** \
     -e env=*** \
@@ -84,7 +84,7 @@ $> k6 run /src/tests/orders_email.js \
 
 ### Notes
 
-The `orders_org_no.js` script contains a detailed list of organization numbers specifically tailored for the yt01 environment. For all other environments, the script uses the provided organization number, ensuring the test functions correctly for its intended purpose of functional validation.
+The `orders-org-no.js` script contains a detailed list of organization numbers specifically tailored for the yt01 environment. For all other environments, the script uses the provided organization number, ensuring the test functions correctly for its intended purpose of functional validation.
 
 ---
 
