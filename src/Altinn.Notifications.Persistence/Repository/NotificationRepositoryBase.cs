@@ -50,8 +50,10 @@ public class NotificationRepositoryBase
     /// Get shipment tracking information for a specific notification based on its alternate ID.
     /// </summary>
     /// <param name="notificationAlternateId">Guid for the email or sms notification alternate id</param>
+    /// <param name="connection">The database connection t obe used for the query execution</param>
+    /// <param name="transaction">The database transaction to be used for the query execution.</param>
     /// <returns>Order status object if the order was found in the database. Otherwise, null</returns>
-    public async Task<OrderStatus?> GetShipmentTracking(Guid notificationAlternateId)
+    public async Task<OrderStatus?> GetShipmentTracking(Guid notificationAlternateId, NpgsqlConnection connection, NpgsqlTransaction transaction)
     {
         string shipmentTrackingSql = this switch
         {
@@ -60,7 +62,7 @@ public class NotificationRepositoryBase
             _ => throw new NotSupportedException($"Unsupported repository type: {this.GetType().Name}")
         };
 
-        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(shipmentTrackingSql);
+        await using NpgsqlCommand pgcom = new(shipmentTrackingSql, connection, transaction);
         pgcom.Parameters.AddWithValue("notificationalternateid", NpgsqlDbType.Uuid, notificationAlternateId);
         OrderStatus? orderStatus = null; 
         List<Recipient> recipients = [];
@@ -80,6 +82,7 @@ public class NotificationRepositoryBase
                 ShipmentType = type,
                 ShipmentId = alternateId,
                 SendersReference = sendersReference,
+                Status = ProcessingLifecycleMapper.GetOrderLifecycleStage(status),
                 Recipients = [] // Initialize with an empty immutable list
             };
         }

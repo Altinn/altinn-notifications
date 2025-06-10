@@ -128,7 +128,7 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
 
             if (orderIsSetAsCompleted)
             {
-                var orderStatus = await GetShipmentTracking(emailNotificationAlternateId);
+                var orderStatus = await GetShipmentTracking(emailNotificationAlternateId, connection, transaction);
                 if (orderStatus != null)
                 {
                     await InsertStatusFeed(orderStatus);

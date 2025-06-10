@@ -167,7 +167,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
 
             if (orderIsSetAsCompleted)
             {
-                var orderStatus = await GetShipmentTracking(smsNotificationAlternateId);
+                var orderStatus = await GetShipmentTracking(smsNotificationAlternateId, connection, transaction);
                 if (orderStatus != null)
                 {
                     await InsertStatusFeed(orderStatus);
