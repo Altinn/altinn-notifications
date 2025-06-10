@@ -53,7 +53,7 @@ public class NotificationRepositoryBase
     /// <param name="connection">The database connection t obe used for the query execution</param>
     /// <param name="transaction">The database transaction to be used for the query execution.</param>
     /// <returns>Order status object if the order was found in the database. Otherwise, null</returns>
-    public async Task<OrderStatus?> GetShipmentTracking(Guid notificationAlternateId, NpgsqlConnection connection, NpgsqlTransaction transaction)
+    protected async Task<OrderStatus?> GetShipmentTracking(Guid notificationAlternateId, NpgsqlConnection connection, NpgsqlTransaction transaction)
     {
         string shipmentTrackingSql = this switch
         {
