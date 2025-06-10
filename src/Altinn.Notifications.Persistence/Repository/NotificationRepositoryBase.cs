@@ -112,7 +112,8 @@ public class NotificationRepositoryBase
         }
         else
         {
-            _logger.LogWarning("No shipment tracking information found for alternate ID {AlternateId}.", notificationAlternateId);
+            var maskedAlternateId = notificationAlternateId.ToString().Substring(0, 8) + "****";
+            _logger.LogWarning("No shipment tracking information found for alternate ID {AlternateId}.", maskedAlternateId);
             return null; // Return null if no order status was found
         }
     }
