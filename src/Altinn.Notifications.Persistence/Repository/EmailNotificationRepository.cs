@@ -103,7 +103,6 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     }
 
     /// <inheritdoc/>
-    /// todo: update doc
     public async Task UpdateSendStatus(Guid? notificationId, EmailNotificationResultType status, string? operationId = null)
     {
         await using var connection = await _dataSource.OpenConnectionAsync();
@@ -116,6 +115,13 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, operationId ?? (object)DBNull.Value);
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId ?? (object)DBNull.Value);
             var alternateId = await pgcom.ExecuteScalarAsync();
+
+            if (alternateId == null)
+            {
+                _logger.LogInformation("Status type for email notification {NotificationId} with operation id {OperationId} was updated to {Status}. No alternateId was returned from the updateEmailStatus query.", notificationId, operationId, status);
+                await transaction.RollbackAsync();
+                return;
+            }
 
             var parseResult = Guid.TryParse(alternateId?.ToString(), out Guid emailNotificationAlternateId);
 

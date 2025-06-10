@@ -6,7 +6,6 @@ using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Extensions;
 using Microsoft.Extensions.Logging;
 using Npgsql;
-
 using NpgsqlTypes;
 
 namespace Altinn.Notifications.Persistence.Repository;
@@ -221,6 +220,14 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, gatewayReference);
 
             var alternateId = await pgcom.ExecuteScalarAsync();
+
+            if (alternateId == null)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError("No alternateId was returned from the updateSmsStatus query. {GatewayReference}", gatewayReference);
+                return;
+            }
+
             var parseResult = Guid.TryParse(alternateId?.ToString(), out Guid alternateIdGuid);
 
             if (parseResult)

@@ -105,7 +105,7 @@ public class NotificationRepositoryBase
             }
         }
 
-        if (orderStatus != null) // Ensure orderStatus is not null before dereferencing
+        if (orderStatus != null) 
         {
             var updatedOrderStatus = orderStatus with { Recipients = recipients.ToImmutableList() };
             return updatedOrderStatus;
