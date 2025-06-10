@@ -51,6 +51,21 @@ public class ProcessingLifecycleMapperTests
     }
 
     [Theory]
+    [InlineData("delivered", ProcessingLifecycle.Email_Delivered)]
+    [InlineData("failed_bounced", ProcessingLifecycle.Email_Failed_Bounced)]
+    [InlineData("failed", ProcessingLifecycle.Email_Failed)]
+    [InlineData("succeeded", ProcessingLifecycle.Email_Succeeded)]
+    [InlineData("sending", ProcessingLifecycle.Email_Sending)]
+    public void GetEmailLifecycleStage_WithValidStatus_ReturnsExpectedEnum(string status, ProcessingLifecycle expected)
+    {
+        // Act
+        var result = ProcessingLifecycleMapper.GetEmailLifecycleStage(status);
+
+        // Assert
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
     [InlineData("cancelled",    ProcessingLifecycle.Order_Cancelled)]
     [InlineData("completed",    ProcessingLifecycle.Order_Completed)]
     [InlineData("processed",    ProcessingLifecycle.Order_Processed)]

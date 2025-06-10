@@ -51,7 +51,7 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     /// <param name="dataSource">The npgsql data source.</param>
     /// <param name="logger">The logger associated with this implementation of the IEmailNotificationRepository</param>
     public EmailNotificationRepository(NpgsqlDataSource dataSource, ILogger<EmailNotificationRepository> logger)
-    : base(dataSource, logger) // Pass required parameters to the base class constructor
+    : base(logger) // Pass required parameters to the base class constructor
     {
         _dataSource = dataSource;
         _logger = logger;
@@ -148,12 +148,13 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
                 var orderStatus = await GetShipmentTracking(emailNotificationAlternateId, connection, transaction);
                 if (orderStatus != null)
                 {
-                    await InsertStatusFeed(orderStatus);
+                    await InsertStatusFeed(orderStatus, connection, transaction);
                 }
                 else
                 {
-                    // order status could not be retrieved, but we still commit the transaction to update the email notification, and order status
+                    // order status could not be retrieved, we roll back the transaction and throw an exception
                     _logger.LogError("Order status could not be retrieved for the specified alternate ID.");
+                    throw new InvalidOperationException("Order status could not be retrieved for the specified alternate ID.");
                 }
             }
 

@@ -1,8 +1,10 @@
 ﻿using System.Collections.Immutable;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Persistence.Mappers;
+
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using NpgsqlTypes;
@@ -24,21 +26,21 @@ public abstract class NotificationRepositoryBase
     /// </summary>
     protected abstract string GetShipmentTrackingSql { get; }
 
-    private readonly NpgsqlDataSource _dataSource;
     private readonly ILogger _logger;
-    
+
     private const string _insertStatusFeedEntrySql = @"SELECT notifications.insertstatusfeed(o._id, o.creatorname, @orderstatus)
                                    FROM notifications.orders o
-                                   WHERE o.alternateid = @alternateid;"; 
+                                   WHERE o.alternateid = @alternateid;";
+
+    private const int _expectedFieldCount = 2;
+    private const string _expectedColumnDataType = "record";
 
     /// <summary>
     /// Constructor for the NotificationRepositoryBase class.
     /// </summary>
-    /// <param name="dataSource">The datasource inherited from above</param>
     /// <param name="logger">The logger associated with the above implementation</param>
-    public NotificationRepositoryBase(NpgsqlDataSource dataSource, ILogger logger)
+    protected NotificationRepositoryBase(ILogger logger)
     {
-        _dataSource = dataSource;
         _logger = logger;
     }
 
@@ -46,7 +48,7 @@ public abstract class NotificationRepositoryBase
     /// Get shipment tracking information for a specific notification based on its alternate ID.
     /// </summary>
     /// <param name="notificationAlternateId">Guid for the email or sms notification alternate id</param>
-    /// <param name="connection">The database connection t obe used for the query execution</param>
+    /// <param name="connection">The database connection to be used for the query execution</param>
     /// <param name="transaction">The database transaction to be used for the query execution.</param>
     /// <returns>Order status object if the order was found in the database. Otherwise, null</returns>
     protected async Task<OrderStatus?> GetShipmentTracking(Guid notificationAlternateId, NpgsqlConnection connection, NpgsqlTransaction transaction)
@@ -78,29 +80,36 @@ public abstract class NotificationRepositoryBase
         }
     }
 
-    private static async Task ReadRecipients(List<Recipient> recipients, NpgsqlDataReader reader)
+    private async Task ReadRecipients(List<Recipient> recipients, NpgsqlDataReader reader)
     {
         while (await reader.ReadAsync())
         {
-            if (reader.FieldCount == 2 && reader.GetDataTypeName(0) == "record")
+            if (reader.FieldCount == _expectedFieldCount && reader.GetDataTypeName(0) == _expectedColumnDataType)
             {
                 var (_, status, lastUpdated, destination, _) = await reader.GetFieldValueAsync<(string, string, DateTime, string, string)>(0);
 
                 var recipient = new Recipient
                 {
                     Destination = destination,
-                    Status = Utilities.Helpers.MobileNumbersRegex().IsMatch(destination) ? ProcessingLifecycleMapper.GetSmsLifecycleStage(status) : ProcessingLifecycleMapper.GetEmailLifecycleStage(status),
+                    Status = _mobileNumberRegex.IsMatch(destination) ? ProcessingLifecycleMapper.GetSmsLifecycleStage(status) : ProcessingLifecycleMapper.GetEmailLifecycleStage(status),
                     LastUpdate = lastUpdated
                 };
 
                 recipients.Add(recipient);
             }
+            else
+            {
+                // Log unexpected schema
+                _logger.LogError("Unexpected schema in ReadRecipients: FieldCount={FieldCount}, DataTypeName={DataTypeName}", reader.FieldCount, reader.FieldCount > 0 ? reader.GetDataTypeName(0) : "N/A");
+            }
         }
     }
 
+    private static readonly Regex _mobileNumberRegex = Utilities.Helpers.MobileNumbersRegex();
+
     private static async Task<OrderStatus?> ReadMainNotification(OrderStatus? orderStatus, NpgsqlDataReader reader)
     {
-        if (reader.FieldCount == 2 && reader.GetDataTypeName(0) == "record")
+        if (reader.FieldCount == _expectedFieldCount && reader.GetDataTypeName(0) == _expectedColumnDataType)
         {
             var alternateId = await reader.GetFieldValueAsync<Guid>(1);
 
@@ -123,10 +132,12 @@ public abstract class NotificationRepositoryBase
     /// Inserts a new status feed entry for an order.
     /// </summary>
     /// <param name="orderStatus">The status object that should be serialized as jsonb</param>
+    /// <param name="connection">The connection used with this transaction</param>
+    /// <param name="transaction">The transaction used with this transaction enclosing order status update</param>
     /// <returns>No return value</returns>
-    protected async Task InsertStatusFeed(OrderStatus orderStatus)
+    protected async Task InsertStatusFeed(OrderStatus orderStatus, NpgsqlConnection connection, NpgsqlTransaction transaction)
     {
-        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_insertStatusFeedEntrySql);
+        await using NpgsqlCommand pgcom = new(_insertStatusFeedEntrySql, connection, transaction);
         pgcom.Parameters.AddWithValue("alternateid", NpgsqlDbType.Uuid, orderStatus.ShipmentId);
         pgcom.Parameters.AddWithValue("orderstatus", NpgsqlDbType.Jsonb, JsonSerializer.Serialize(orderStatus, _serializerOptions));
         await pgcom.ExecuteNonQueryAsync();
