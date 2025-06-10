@@ -121,20 +121,10 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         await sut.StopAsync(CancellationToken.None);
 
         // Assert
-        int count = await SelectStatusFeedEntry(order.Id);
+        int count = await PostgreUtil.SelectStatusFeedEntry(order.Id);
         Assert.Equal(1, count);
     }
-
-    private static async Task<int> SelectStatusFeedEntry(Guid id)
-    {
-        var sql = @$"SELECT COUNT(*) FROM notifications.statusfeed s
-                     INNER JOIN notifications.orders o ON o._id = s.orderid
-                     WHERE o.alternateid = '{id}'";
-        var result = await PostgreUtil.RunSqlReturnOutput<int>(sql);
-
-        return result;
-    }
-
+  
     public Task InitializeAsync()
     {
         return Task.CompletedTask;
@@ -148,6 +138,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
     protected virtual async Task Dispose(bool disposing)
     {
         await PostgreUtil.DeleteStatusFeedFromDb(_sendersRef);
+        await PostgreUtil.DeleteNotificationsFromDb(_sendersRef);
         await PostgreUtil.DeleteOrderFromDb(_sendersRef);
         await KafkaUtil.DeleteTopicAsync(_statusUpdatedTopicName);
     }

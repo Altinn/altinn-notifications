@@ -168,6 +168,16 @@ public static class PostgreUtil
         await pgcom.ExecuteNonQueryAsync();
     }
 
+    public static async Task<int> SelectStatusFeedEntry(Guid id)
+    {
+        var sql = @$"SELECT COUNT(*) FROM notifications.statusfeed s
+                     INNER JOIN notifications.orders o ON o._id = s.orderid
+                     WHERE o.alternateid = '{id}'";
+        var result = await PostgreUtil.RunSqlReturnOutput<int>(sql);
+
+        return result;
+    }
+
     public static async Task DeleteStatusFeedFromDb(string sendersRef)
     {
         NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
@@ -175,7 +185,31 @@ public static class PostgreUtil
                        USING notifications.orders o
                        WHERE s.orderid = o._id AND o.sendersreference = @sendersRef;";
         await using NpgsqlCommand pgcom = dataSource.CreateCommand(sql);
-        pgcom.Parameters.AddWithValue("@sendersRef", sendersRef);
+        pgcom.Parameters.AddWithValue("sendersRef", sendersRef);
+        await pgcom.ExecuteNonQueryAsync();
+    }
+
+    public static async Task DeleteNotificationsFromDb(string sendersRef)
+    {         
+        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
+        string sql = @"
+                        BEGIN;
+
+                        -- First, delete from SMS notifications
+                        DELETE FROM notifications.smsnotifications s
+                        USING notifications.orders o
+                        WHERE s._orderid = o._id
+                          AND o.sendersreference = @sendersRef;
+
+                        -- Second, delete from Email notifications
+                        DELETE FROM notifications.emailnotifications e
+                        USING notifications.orders o
+                        WHERE e._orderid = o._id
+                          AND o.sendersreference = @sendersRef;
+
+                        COMMIT;";
+        await using NpgsqlCommand pgcom = dataSource.CreateCommand(sql);
+        pgcom.Parameters.AddWithValue("sendersRef", sendersRef);
         await pgcom.ExecuteNonQueryAsync();
     }
 

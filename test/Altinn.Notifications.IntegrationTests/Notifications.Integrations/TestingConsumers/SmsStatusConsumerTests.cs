@@ -1,5 +1,6 @@
 ﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Notification;
+using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Microsoft.Extensions.Hosting;
@@ -82,6 +83,38 @@ public class SmsStatusConsumerTests : IAsyncLifetime
         Assert.Equal(1, processedOrderCount);
     }
 
+    [Fact]
+    public async Task InsertStatusFeed_OrderCompleted()
+    {
+        // Arrange
+        Dictionary<string, string> vars = new()
+        {
+            { "KafkaSettings__SmsStatusUpdatedTopicName", _statusUpdatedTopicName },
+            { "KafkaSettings__Admin__TopicList", $"[\"{_statusUpdatedTopicName}\"]" }
+        };
+        using SmsStatusConsumer sut = (SmsStatusConsumer)ServiceUtil
+                                                    .GetServices([typeof(IHostedService)], vars)
+                                                    .First(s => s.GetType() == typeof(SmsStatusConsumer))!;
+        (NotificationOrder order, SmsNotification notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(_sendersRef, simulateCronJob: true);
+        SmsSendOperationResult sendOperationResult = new()
+        {
+            NotificationId = notification.Id,
+            GatewayReference = Guid.NewGuid().ToString(),
+            SendResult = SmsNotificationResultType.Delivered
+        };
+
+        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
+
+        // Act
+        await sut.StartAsync(CancellationToken.None);
+        await Task.Delay(10000);
+        await sut.StopAsync(CancellationToken.None);
+
+        // Assert
+        int count = await PostgreUtil.SelectStatusFeedEntry(order.Id);
+        Assert.Equal(1, count);
+    }
+
     public Task InitializeAsync()
     {
         return Task.CompletedTask;
@@ -94,6 +127,8 @@ public class SmsStatusConsumerTests : IAsyncLifetime
 
     protected virtual async Task Dispose(bool disposing)
     {
+        await PostgreUtil.DeleteStatusFeedFromDb(_sendersRef);
+        await PostgreUtil.DeleteNotificationsFromDb(_sendersRef);
         await PostgreUtil.DeleteOrderFromDb(_sendersRef);
         await KafkaUtil.DeleteTopicAsync(_statusUpdatedTopicName);
     }

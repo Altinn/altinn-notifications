@@ -139,14 +139,14 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     /// <summary>
     /// Updates the send status of an SMS notification based on its identifier and sets the gateway reference.
     /// </summary>
-    /// <param name="id">The unique identifier of the SMS notification.</param>
+    /// <param name="smsNotificationAlternateId">The unique identifier of the SMS notification.</param>
     /// <param name="result">The result status of sending the SMS notification.</param>
     /// <param name="gatewayReference">The gateway reference (optional). If provided, it will be updated in the database.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     /// <exception cref="ArgumentException">Thrown when the provided SMS identifier is invalid.</exception>
-    private async Task UpdateSendStatusById(Guid id, SmsNotificationResultType result, string? gatewayReference = null)
+    private async Task UpdateSendStatusById(Guid smsNotificationAlternateId, SmsNotificationResultType result, string? gatewayReference = null)
     {
-        if (id == Guid.Empty)
+        if (smsNotificationAlternateId == Guid.Empty)
         {
             throw new ArgumentException("The provided SMS identifier is invalid.");
         }
@@ -159,11 +159,24 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
             await using NpgsqlCommand pgcom = new(_updateSmsNotificationBasedOnIdentifierSql, connection, transaction);
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, result.ToString());
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(gatewayReference) ? DBNull.Value : gatewayReference);
-            pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, id);
+            pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, smsNotificationAlternateId);
 
             await pgcom.ExecuteNonQueryAsync();
 
-            await TryCompleteOrderBasedOnNotificationsState(id, connection, transaction);
+            var orderIsSetAsCompleted = await TryCompleteOrderBasedOnNotificationsState(smsNotificationAlternateId, connection, transaction);
+
+            if (orderIsSetAsCompleted)
+            {
+                var orderStatus = await GetShipmentTracking(smsNotificationAlternateId);
+                if (orderStatus != null)
+                {
+                    await InsertStatusFeed(orderStatus);
+                }
+                else
+                {
+                    _logger.LogError("Order status could not be retrieved for alternate ID {AlternateId}.", smsNotificationAlternateId);
+                }
+            }
 
             await transaction.CommitAsync();
         }
