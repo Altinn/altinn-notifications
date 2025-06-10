@@ -52,7 +52,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     /// </summary>
     /// <param name="dataSource">The Npgsql data source.</param>
     /// <param name="logger">The logger associated with this implementation of the SmsNotificationRepository</param>
-    public SmsNotificationRepository(NpgsqlDataSource dataSource, ILogger<SmsNotificationRepository> logger) : base(dataSource, logger)
+    public SmsNotificationRepository(NpgsqlDataSource dataSource, ILogger<SmsNotificationRepository> logger) : base(logger)
     {
         _dataSource = dataSource;
         _logger = logger;
@@ -179,7 +179,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
                 var orderStatus = await GetShipmentTracking(smsNotificationAlternateId, connection, transaction);
                 if (orderStatus != null)
                 {
-                    await InsertStatusFeed(orderStatus);
+                    await InsertStatusFeed(orderStatus, connection, transaction);
                 }
                 else
                 {
