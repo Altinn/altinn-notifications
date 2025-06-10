@@ -53,30 +53,33 @@ public abstract class NotificationRepositoryBase
     {
         await using NpgsqlCommand pgcom = new(GetShipmentTrackingSql, connection, transaction);
         pgcom.Parameters.AddWithValue("notificationalternateid", NpgsqlDbType.Uuid, notificationAlternateId);
-        OrderStatus? orderStatus = null; 
+        OrderStatus? orderStatus = null;
         List<Recipient> recipients = [];
 
         await using var reader = await pgcom.ExecuteReaderAsync();
         await reader.ReadAsync();
 
         // read main notification or reminder
-        if (reader.FieldCount == 2 && reader.GetDataTypeName(0) == "record")
-        {
-            var alternateId = await reader.GetFieldValueAsync<Guid>(1);
-
-            var (sendersReference, status, lastUpdated, _, type) = await reader.GetFieldValueAsync<(string, string, DateTime, string, string)>(0);
-            orderStatus = new OrderStatus
-            {
-                LastUpdated = lastUpdated,
-                ShipmentType = type,
-                ShipmentId = alternateId,
-                SendersReference = sendersReference,
-                Status = ProcessingLifecycleMapper.GetOrderLifecycleStage(status),
-                Recipients = [] // Initialize with an empty immutable list
-            };
-        }
+        orderStatus = await ReadMainNotification(orderStatus, reader);
 
         // Add recipients to the order status
+        await ReadRecipients(recipients, reader);
+
+        if (orderStatus != null)
+        {
+            var updatedOrderStatus = orderStatus with { Recipients = recipients.ToImmutableList() };
+            return updatedOrderStatus;
+        }
+        else
+        {
+            var maskedAlternateId = string.Concat(notificationAlternateId.ToString().AsSpan(0, 8), "****");
+            _logger.LogWarning("No shipment tracking information found for alternate ID {AlternateId}.", maskedAlternateId);
+            return null; // Return null if no order status was found
+        }
+    }
+
+    private static async Task ReadRecipients(List<Recipient> recipients, NpgsqlDataReader reader)
+    {
         while (await reader.ReadAsync())
         {
             if (reader.FieldCount == 2 && reader.GetDataTypeName(0) == "record")
@@ -93,18 +96,27 @@ public abstract class NotificationRepositoryBase
                 recipients.Add(recipient);
             }
         }
+    }
 
-        if (orderStatus != null) 
+    private static async Task<OrderStatus?> ReadMainNotification(OrderStatus? orderStatus, NpgsqlDataReader reader)
+    {
+        if (reader.FieldCount == 2 && reader.GetDataTypeName(0) == "record")
         {
-            var updatedOrderStatus = orderStatus with { Recipients = recipients.ToImmutableList() };
-            return updatedOrderStatus;
+            var alternateId = await reader.GetFieldValueAsync<Guid>(1);
+
+            var (sendersReference, status, lastUpdated, _, type) = await reader.GetFieldValueAsync<(string, string, DateTime, string, string)>(0);
+            orderStatus = new OrderStatus
+            {
+                LastUpdated = lastUpdated,
+                ShipmentType = type,
+                ShipmentId = alternateId,
+                SendersReference = sendersReference,
+                Status = ProcessingLifecycleMapper.GetOrderLifecycleStage(status),
+                Recipients = [] // Initialize with an empty immutable list
+            };
         }
-        else
-        {
-            var maskedAlternateId = string.Concat(notificationAlternateId.ToString().AsSpan(0, 8), "****");
-            _logger.LogWarning("No shipment tracking information found for alternate ID {AlternateId}.", maskedAlternateId);
-            return null; // Return null if no order status was found
-        }
+
+        return orderStatus;
     }
 
     /// <summary>
@@ -112,7 +124,7 @@ public abstract class NotificationRepositoryBase
     /// </summary>
     /// <param name="orderStatus">The status object that should be serialized as jsonb</param>
     /// <returns>No return value</returns>
-    public async Task InsertStatusFeed(OrderStatus orderStatus)
+    protected async Task InsertStatusFeed(OrderStatus orderStatus)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_insertStatusFeedEntrySql);
         pgcom.Parameters.AddWithValue("alternateid", NpgsqlDbType.Uuid, orderStatus.ShipmentId);

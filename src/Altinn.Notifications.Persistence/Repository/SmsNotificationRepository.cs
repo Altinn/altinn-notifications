@@ -183,7 +183,8 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
                 }
                 else
                 {
-                    _logger.LogError("Order status could not be retrieved for alternate ID {AlternateId}.", smsNotificationAlternateId);
+                    // order status could not be retrieved, but we still commit the transaction to set the SMS notification, and order status
+                    _logger.LogError("Order status could not be retrieved for alternate ID");
                 }
             }
 

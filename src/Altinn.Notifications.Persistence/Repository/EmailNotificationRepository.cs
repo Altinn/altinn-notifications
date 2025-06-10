@@ -152,6 +152,7 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
                 }
                 else
                 {
+                    // order status could not be retrieved, but we still commit the transaction to update the email notification, and order status
                     _logger.LogError("Order status could not be retrieved for the specified alternate ID.");
                 }
             }
