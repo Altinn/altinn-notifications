@@ -2,7 +2,6 @@
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
-using Altinn.Notifications.Core.Models.Status;
 
 namespace Altinn.Notifications.Core.Persistence;
 
@@ -32,4 +31,12 @@ public interface IEmailNotificationRepository
     /// </summary>
     /// <returns>A list of email recipients</returns>
     public Task<List<EmailRecipient>> GetRecipients(Guid orderId);
+    
+    /// <summary>
+    /// Terminates any active notifications that have exceeded their expected duration or are no longer valid.
+    /// </summary>
+    /// <remarks>This method is typically used to clean up notifications that are stuck in a hanging state. It
+    /// ensures that resources associated with such notifications are released properly.</remarks>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public Task TerminateHangingNotifications();
 }

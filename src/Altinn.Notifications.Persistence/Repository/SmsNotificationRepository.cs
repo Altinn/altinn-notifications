@@ -20,18 +20,32 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     /// </summary>
     protected override string GetShipmentTrackingSql => _getShipmentTrackingSmsSql;
 
+    /// <inheritdoc/>
+    protected override string UpdateNotificationStatusSql => _updateStatusAcceptedSql;
+
+    /// <inheritdoc/>
+    protected override string SourceIdentifier => "SMS";
+
     private const string _getShipmentTrackingSmsSql = @"SELECT notifications.get_shipment_tracking_v2(o.alternateid, o.creatorname), o.alternateid
                                                          FROM notifications.orders o
                                                          INNER JOIN notifications.smsnotifications e ON e._orderid = o._id
                                                          WHERE e.alternateid = @notificationalternateid";
 
-    private const string _smsSourceIdentifier = "SMS";
     private readonly NpgsqlDataSource _dataSource;
     private readonly ILogger<SmsNotificationRepository> _logger;
     private const string _getNewSmsNotificationsSql = "select * from notifications.getsms_statusnew_updatestatus($1)"; // (_sendingtimepolicy) this is now calling an overload function with the sending time policy parameter
     private const string _getSmsNotificationRecipientsSql = "select * from notifications.getsmsrecipients_v2($1)"; // (_orderid)
     private const string _insertNewSmsNotificationSql = "call notifications.insertsmsnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _customizedbody, _result, _smscount, _resulttime, _expirytime)
-    private const string _tryMarkOrderAsCompletedSql = "SELECT notifications.trymarkorderascompleted($1, $2)"; // (_alternateid, _alternateidsource)
+    private const string _updateStatusAcceptedSql = @"UPDATE notifications.smsnotifications
+                                                    SET result = 'Failed_Expired'
+                                                    WHERE _id IN (
+                                                        SELECT _id
+                                                        FROM notifications.smsnotifications
+                                                        WHERE result = 'Accepted' AND expirytime < (now() - INTERVAL '48 hours')
+                                                        ORDER BY _id ASC
+                                                        LIMIT @limit
+                                                    )
+                                                    RETURNING alternateid;";
 
     private const string _updateSmsNotificationBasedOnIdentifierSql =
         @"UPDATE notifications.smsnotifications 
@@ -52,7 +66,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     /// </summary>
     /// <param name="dataSource">The Npgsql data source.</param>
     /// <param name="logger">The logger associated with this implementation of the SmsNotificationRepository</param>
-    public SmsNotificationRepository(NpgsqlDataSource dataSource, ILogger<SmsNotificationRepository> logger) : base(logger)
+    public SmsNotificationRepository(NpgsqlDataSource dataSource, ILogger<SmsNotificationRepository> logger) : base(dataSource, logger)
     {
         _dataSource = dataSource;
         _logger = logger;
@@ -195,16 +209,6 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
             await transaction.RollbackAsync();
             throw;
         }
-    }
-
-    private static async Task<bool> TryCompleteOrderBasedOnNotificationsState(Guid notificationId, NpgsqlConnection connection, NpgsqlTransaction transaction)
-    {
-        await using NpgsqlCommand pgcom = new(_tryMarkOrderAsCompletedSql, connection, transaction);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, _smsSourceIdentifier);
-
-        var result = await pgcom.ExecuteScalarAsync();
-        return result != null && (bool)result;
     }
 
     /// <summary>

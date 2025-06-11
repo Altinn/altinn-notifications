@@ -62,6 +62,12 @@ public class SmsNotificationService : ISmsNotificationService
         }
     }
 
+    /// <inheritdoc />
+    public Task ProcessHangingNotifications()
+    {
+        throw new NotImplementedException();
+    }
+
     /// <inheritdoc/>
     public async Task SendNotifications(SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime)
     {

@@ -2,6 +2,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+
 using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Persistence.Mappers;
 
@@ -26,6 +27,18 @@ public abstract class NotificationRepositoryBase
     /// </summary>
     protected abstract string GetShipmentTrackingSql { get; }
 
+    /// <summary>
+    /// Gets the SQL query used to update the status of a hanging notification in the database.
+    /// </summary>
+    protected abstract string UpdateNotificationStatusSql { get; }
+
+    /// <summary>
+    /// Used to identify what type of notification source this repository is handling, e.g. SMS or Email.
+    /// </summary>
+    protected abstract string SourceIdentifier { get; }
+
+    private const string _tryMarkOrderAsCompletedSql = "SELECT notifications.trymarkorderascompleted($1, $2)"; // (_alternateid, _alternateidsource)
+    private readonly NpgsqlDataSource _dataSource;
     private readonly ILogger _logger;
 
     private const string _insertStatusFeedEntrySql = @"SELECT notifications.insertstatusfeed(o._id, o.creatorname, @orderstatus)
@@ -40,8 +53,9 @@ public abstract class NotificationRepositoryBase
     /// </summary>
     /// <param name="dataSource">The datasource inherited from above</param>
     /// <param name="logger">The logger associated with the above implementation</param>
-    protected NotificationRepositoryBase(ILogger logger)
+    protected NotificationRepositoryBase(NpgsqlDataSource dataSource, ILogger logger)
     {
+        _dataSource = dataSource;
         _logger = logger;
     }
 
@@ -79,6 +93,81 @@ public abstract class NotificationRepositoryBase
             _logger.LogWarning("No shipment tracking information found for alternate ID {AlternateId}.", maskedAlternateId);
             return null; // Return null if no order status was found
         }
+    }
+
+    /// <summary>
+    /// Terminates hanging email/sms notifications by updating their status and attempting to complete associated orders.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> that represents the asynchronous operation.</returns>
+    /// <exception cref="InvalidOperationException">Thrown if the alternate ID returned from the database cannot be parsed as a valid <see cref="Guid"/>.</exception>
+    public async Task TerminateHangingNotifications()
+    {
+        await using var connection = await _dataSource.OpenConnectionAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+
+        try
+        {
+            List<Guid> expiredIds = [];
+            await using NpgsqlCommand pgcom = new(UpdateNotificationStatusSql, connection, transaction);
+            pgcom.Parameters.AddWithValue("limit", NpgsqlDbType.Integer, 10);
+
+            // Use ExecuteReaderAsync since the RETURNING clause provides a result set.
+            await using var reader = await pgcom.ExecuteReaderAsync();
+
+            // Loop through the results as long as there are rows to read.
+            while (await reader.ReadAsync())
+            {
+                // Read the value from the first column (index 0) of the result set
+                // and add it to our list.
+                // Assuming alternateid is a string. Use GetGuid(), GetInt32(), etc., if it's another type.
+                var alternateId = reader.GetGuid(0);
+
+                var orderIsSetAsCompleted = await TryCompleteOrderBasedOnNotificationsState(alternateId, connection, transaction);
+
+                if (orderIsSetAsCompleted)
+                {
+                    var orderStatus = await GetShipmentTracking(alternateId, connection, transaction);
+                    if (orderStatus != null)
+                    {
+                        await InsertStatusFeed(orderStatus, connection, transaction);
+                    }
+                    else
+                    {
+                        // order status could not be retrieved, but we still commit the transaction to update the email notification, and order status
+                        _logger.LogError("Order status could not be retrieved for the specified alternate ID.");
+                    }
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "An error occurred while terminating hanging notifications.");
+            await transaction.RollbackAsync();
+            throw;
+        }
+
+        await transaction.CommitAsync();
+    }
+
+    /// <summary>
+    /// Attempts to mark an order as completed based on the state of a notification.
+    /// </summary>
+    /// <remarks>This method executes a database command to update the order's state based on the provided
+    /// notification ID. Ensure that the <paramref name="connection"/> is open and the <paramref name="transaction"/> is
+    /// active before calling this method.</remarks>
+    /// <param name="notificationId">The unique identifier of the notification associated with the order.</param>
+    /// <param name="connection">The open <see cref="NpgsqlConnection"/> to the database.</param>
+    /// <param name="transaction">The active <see cref="NpgsqlTransaction"/> to use for the operation.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result is <see langword="true"/> if the order was
+    /// successfully marked as completed; otherwise, <see langword="false"/>.</returns>
+    protected async Task<bool> TryCompleteOrderBasedOnNotificationsState(Guid notificationId, NpgsqlConnection connection, NpgsqlTransaction transaction)
+    {
+        await using NpgsqlCommand pgcom = new(_tryMarkOrderAsCompletedSql, connection, transaction);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, SourceIdentifier);
+
+        var result = await pgcom.ExecuteScalarAsync();
+        return result != null && (bool)result;
     }
 
     private async Task ReadRecipients(List<Recipient> recipients, NpgsqlDataReader reader)

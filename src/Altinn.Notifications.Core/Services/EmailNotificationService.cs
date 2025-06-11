@@ -65,6 +65,13 @@ public class EmailNotificationService : IEmailNotificationService
     }
 
     /// <inheritdoc/>
+    public async Task ProcessHangingNotifications()
+    {
+        // process hanging notifications that have been set to succeeded, but never reached a final stage
+        await _repository.TerminateHangingNotifications();
+    }
+
+    /// <inheritdoc/>
     public async Task SendNotifications()
     {
         List<Email> emails = await _repository.GetNewNotifications();
