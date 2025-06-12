@@ -57,6 +57,22 @@ public class TriggerController : ControllerBase
     }
 
     /// <summary>
+    /// Endpoint for terminating expired notifications
+    /// </summary>
+    /// <returns>A <see cref="Task{TResult}"/> representing the result of the asynchronous operation.</returns>
+    [HttpPost]
+    [Consumes("application/json")]
+    [Route("terminateexpirednotifications")]
+    public async Task<ActionResult> Trigger_TerminateExpiredNotifications()
+    {
+        var task1 = _emailNotificationService.TerminateExpiredNotifications();
+        var task2 = _smsNotificationService.TerminateExpiredNotifications();
+
+        await Task.WhenAll(task1, task2);
+        return Ok();
+    }   
+
+    /// <summary>
     /// Endpoint for starting the processing of sms that are ready to be sent with policy daytime
     /// Automatically filtered to process daytime sms only
     /// </summary>

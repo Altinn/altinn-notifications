@@ -8,7 +8,7 @@ namespace Altinn.Notifications.Core.Persistence;
 /// <summary>
 /// Defines the repository operations related to SMS notifications.
 /// </summary>
-public interface ISmsNotificationRepository
+public interface ISmsNotificationRepository : INotificationRepository
 {
     /// <summary>
     /// Adds a new SMS notification to the database.

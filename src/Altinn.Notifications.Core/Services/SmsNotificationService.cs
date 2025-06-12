@@ -62,12 +62,6 @@ public class SmsNotificationService : ISmsNotificationService
         }
     }
 
-    /// <inheritdoc />
-    public Task ProcessHangingNotifications()
-    {
-        throw new NotImplementedException();
-    }
-
     /// <inheritdoc/>
     public async Task SendNotifications(SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime)
     {
@@ -80,6 +74,12 @@ public class SmsNotificationService : ISmsNotificationService
                 await _repository.UpdateSendStatus(sms.NotificationId, SmsNotificationResultType.New);
             }
         }
+    }
+
+    /// <inheritdoc/>
+    public async Task TerminateExpiredNotifications()
+    {
+        await _repository.TerminateExpiredNotifications();
     }
 
     /// <inheritdoc/>

@@ -30,6 +30,8 @@ public abstract class NotificationRepositoryBase
 
     private readonly string _updateExpiredNotifications = "SELECT * FROM notifications.updateexpirednotifications(@source, @limit)";
     private const string _getShipmentForStatusFeedSql = "SELECT * FROM notifications.getshipmentforstatusfeed(@alternateid)";
+    private const string _tryMarkOrderAsCompletedSql = "SELECT notifications.trymarkorderascompleted(@notificationid, @sourceidentifier)";
+
     private readonly NpgsqlDataSource _dataSource;
     private readonly ILogger _logger;
 
@@ -94,7 +96,7 @@ public abstract class NotificationRepositoryBase
     /// </summary>
     /// <returns>A <see cref="Task"/> that represents the asynchronous operation.</returns>
     /// <exception cref="InvalidOperationException">Thrown if the alternate ID returned from the database cannot be parsed as a valid <see cref="Guid"/>.</exception>
-    public async Task TerminateHangingNotifications()
+    public async Task TerminateExpiredNotifications()
     {
         await using var connection = await _dataSource.OpenConnectionAsync();
         await using var transaction = await connection.BeginTransactionAsync();
@@ -152,11 +154,11 @@ public abstract class NotificationRepositoryBase
     /// <param name="transaction">The active <see cref="NpgsqlTransaction"/> to use for the operation.</param>
     /// <returns>A task that represents the asynchronous operation. The task result is <see langword="true"/> if the order was
     /// successfully marked as completed; otherwise, <see langword="false"/>.</returns>
-    protected static async Task<bool> TryCompleteOrderBasedOnNotificationsState(Guid notificationId, NpgsqlConnection connection, NpgsqlTransaction transaction)
+    protected async Task<bool> TryCompleteOrderBasedOnNotificationsState(Guid notificationId, NpgsqlConnection connection, NpgsqlTransaction transaction)
     {
         await using NpgsqlCommand pgcom = new(_tryMarkOrderAsCompletedSql, connection, transaction);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, SourceIdentifier);
+        pgcom.Parameters.AddWithValue("notificationid", NpgsqlDbType.Uuid, notificationId);
+        pgcom.Parameters.AddWithValue("sourceidentifier", NpgsqlDbType.Text, SourceIdentifier);
 
         var result = await pgcom.ExecuteScalarAsync();
         return result != null && (bool)result;

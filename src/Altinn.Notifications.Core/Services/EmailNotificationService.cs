@@ -68,7 +68,7 @@ public class EmailNotificationService : IEmailNotificationService
     public async Task TerminateExpiredNotifications()
     {
         // process hanging notifications that have been set to succeeded, but never reached a final stage
-        await _repository.TerminateHangingNotifications();
+        await _repository.TerminateExpiredNotifications();
     }
 
     /// <inheritdoc/>

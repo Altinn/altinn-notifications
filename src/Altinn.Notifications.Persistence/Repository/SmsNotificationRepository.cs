@@ -45,7 +45,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     /// </summary>
     /// <param name="dataSource">The Npgsql data source.</param>
     /// <param name="logger">The logger associated with this implementation of the SmsNotificationRepository</param>
-    public SmsNotificationRepository(NpgsqlDataSource dataSource, ILogger<SmsNotificationRepository> logger) : base(logger)
+    public SmsNotificationRepository(NpgsqlDataSource dataSource, ILogger<SmsNotificationRepository> logger) : base(dataSource, logger)
     {
         _dataSource = dataSource;
         _logger = logger;

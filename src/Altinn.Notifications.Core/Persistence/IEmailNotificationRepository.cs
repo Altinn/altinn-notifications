@@ -39,5 +39,5 @@ public interface IEmailNotificationRepository
     /// <remarks>This method is typically used to clean up notifications that are stuck in a hanging state. It
     /// ensures that resources associated with such notifications are released properly.</remarks>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    public Task TerminateHangingNotifications();
+    public Task TerminateExpiredNotifications();
 }
