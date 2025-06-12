@@ -1,34 +1,42 @@
-﻿CREATE OR REPLACE FUNCTION notifications.getshipmentforstatusfeed(
-    _alternateid UUID
+﻿CREATE OR REPLACE FUNCTION notifications.getshipmentforstatusfeed(_alternateid uuid)
+RETURNS TABLE(
+    alternateid uuid,
+    reference text,
+    status text,
+    last_update timestamp with time zone,
+    destination text,
+    type text
 )
-RETURNS TABLE (
-    alternateid UUID,
-    reference TEXT,
-    status TEXT,
-    last_update TIMESTAMPTZ,
-    destination TEXT,
-    type TEXT
-) AS $$
+LANGUAGE 'plpgsql'
+COST 100
+VOLATILE PARALLEL UNSAFE
+ROWS 1000
+AS $BODY$
 BEGIN
     RETURN QUERY
+    WITH distinct_orders AS (
+        SELECT DISTINCT ON (o._id) o.*
+        FROM notifications.orders o
+        LEFT JOIN notifications.emailnotifications e ON e._orderid = o._id
+        LEFT JOIN notifications.smsnotifications s ON s._orderid = o._id
+        WHERE e.alternateid = _alternateid OR s.alternateid = _alternateid
+    )
     SELECT
         o.alternateid,
-        tracking_data.*
+        t.reference,      
+        t.status,
+        t.last_update,
+        t.destination,
+        t.type
     FROM
-        notifications.orders o
-    -- Use LEFT JOIN to find orders that might have only one type of notification
-    LEFT JOIN
-        notifications.emailnotifications e ON e._orderid = o._id
-    LEFT JOIN
-        notifications.smsnotifications s ON s._orderid = o._id
-    -- The LATERAL join calls the function for each row produced by the join above.
-    CROSS JOIN LATERAL
-        notifications.get_shipment_tracking_v2(o.alternateid, o.creatorname) AS tracking_data
-    WHERE
-        -- This WHERE clause now correctly filters the results of the LEFT JOINs
-        e.alternateid = _alternateid OR s.alternateid = _alternateid;
+        distinct_orders o
+        CROSS JOIN LATERAL notifications.get_shipment_tracking_v2(o.alternateid, o.creatorname) AS t;
 
 END;
-$$ LANGUAGE plpgsql SECURITY INVOKER;
+$BODY$;
 
-COMMENT ON FUNCTION notifications.getshipmentforstatusfeed(UUID) IS 'Retrieves combined order and shipment tracking data based on an email or sms notification alternateid.';
+ALTER FUNCTION notifications.getshipmentforstatusfeed(uuid)
+    OWNER TO platform_notifications_admin;
+
+COMMENT ON FUNCTION notifications.getshipmentforstatusfeed(uuid)
+    IS 'Retrieves combined order and shipment tracking data based on an email or sms notification alternateid.';

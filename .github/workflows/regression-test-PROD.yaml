@@ -14,17 +14,17 @@ jobs:
       - name: Run email notification order regression tests
         uses: grafana/k6-action@e4714b734f2b0afaabeb7b4a69142745548ab9ec # v0.3.1
         with:
-          filename: test/k6/src/tests/orders_email.js
+          filename: test/k6/src/tests/orders-email.js
           flags: -e runFullTestSet=true -e env=${{ vars.ENV }} -e emailRecipient=${{ secrets.AUTOMATEDTEST_EMAILRECIPIENT }} -e ninRecipient=${{ secrets.AUTOMATEDTEST_NINRECIPIENT}} -e mpClientId=${{ secrets.MP_CLIENT_ID }} -e mpKid=${{ secrets.MP_KID }} -e encodedJwk=${{ secrets.MP_ENCODEDJWK }} -e subscriptionKey=${{ secrets.AUTOMATEDTEST_APIM_SUBSCRIPTION_KEY}}
       - name: Run contact(s) lookup by organization number regression tests with generating an email notification
         uses: grafana/k6-action@e4714b734f2b0afaabeb7b4a69142745548ab9ec # v0.3.1
         with:
-          filename: test/k6/src/tests/orders_org_no.js
+          filename: test/k6/src/tests/orders-org-no.js
           flags: -e runFullTestSet=true -e env=${{ vars.ENV }} -e orgNoRecipient=${{ secrets.AUTOMATEDTEST_ORG_NO_RECIPIENT}} -e resourceId=${{ secrets.AUTOMATEDTEST_RESOURCE_ID}} -e mpClientId=${{ secrets.MP_CLIENT_ID }} -e mpKid=${{ secrets.MP_KID }} -e encodedJwk=${{ secrets.MP_ENCODEDJWK }}
       - name: Run sms notification order use case tests
         uses: grafana/k6-action@e4714b734f2b0afaabeb7b4a69142745548ab9ec # v0.3.1
         with:
-          filename: test/k6/src/tests/orders_sms.js
+          filename: test/k6/src/tests/orders-sms.js
           flags: -e runFullTestSet=true -e env=${{ vars.ENV }} -e smsRecipient=${{ secrets.AUTOMATEDTEST_SMSRECIPIENT }} -e mpClientId=${{ secrets.MP_CLIENT_ID }} -e mpKid=${{ secrets.MP_KID }} -e encodedJwk=${{ secrets.MP_ENCODEDJWK }}
       - name: Build failure report
         if: failure()

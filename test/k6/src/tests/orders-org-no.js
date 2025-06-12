@@ -2,7 +2,7 @@
     Test script for Platform Notifications API using an organization token.
 
     Command:
-    podman compose run k6 run /src/tests/orders_org_no.js \
+    podman compose run k6 run /src/tests/orders-org-no.js \
         -e tokenGeneratorUserName={the user name to access the token generator} \
         -e tokenGeneratorUserPwd={the password to access the token generator} \
         -e mpClientId={the id of an integration defined in maskinporten} \

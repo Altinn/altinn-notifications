@@ -1,9 +1,12 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using System.Collections.Immutable;
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
+using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Extensions;
+using Altinn.Notifications.Persistence.Mappers;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 
