@@ -16,24 +16,9 @@ namespace Altinn.Notifications.Persistence.Repository;
 /// </summary>
 public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNotificationRepository
 {
-    /// <summary>
-    /// Gets the SQL query used to retrieve shipment tracking information joining with email.
-    /// </summary>
-    protected override string GetShipmentTrackingSql => _getShipmentTrackingEmailSql;
-
-    /// <inheritdoc/>
-    protected override string UpdateNotificationStatusSql => _updateStatusAcceptedSql;
-
-    /// <inheritdoc/>
-    protected override string SourceIdentifier => "EMAIL";
-
+    private const string _emailSourceIdentifier = "EMAIL";
     private readonly NpgsqlDataSource _dataSource;
     private readonly ILogger<EmailNotificationRepository> _logger;
-
-    private const string _getShipmentTrackingEmailSql = @"SELECT notifications.get_shipment_tracking_v2(o.alternateid, o.creatorname), o.alternateid
-                                                         FROM notifications.orders o
-                                                         INNER JOIN notifications.emailnotifications e ON e._orderid = o._id
-                                                         WHERE e.alternateid = @notificationalternateid";
 
     private const string _insertEmailNotificationSql = "call notifications.insertemailnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _toaddress, _customizedbody, _customizedsubject, _result, _resulttime, _expirytime)
     private const string _getEmailNotificationsSql = "select * from notifications.getemails_statusnew_updatestatus()";
@@ -63,7 +48,7 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     /// <param name="dataSource">The npgsql data source.</param>
     /// <param name="logger">The logger associated with this implementation of the IEmailNotificationRepository</param>
     public EmailNotificationRepository(NpgsqlDataSource dataSource, ILogger<EmailNotificationRepository> logger)
-    : base(dataSource, logger) // Pass required parameters to the base class constructor
+    : base(logger) // Pass required parameters to the base class constructor
     {
         _dataSource = dataSource;
         _logger = logger;
@@ -154,8 +139,9 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
                 }
                 else
                 {
-                    // order status could not be retrieved, but we still commit the transaction to update the email notification, and order status
+                    // order status could not be retrieved, we roll back the transaction and throw an exception
                     _logger.LogError("Order status could not be retrieved for the specified alternate ID.");
+                    throw new InvalidOperationException("Order status could not be retrieved for the specified alternate ID.");
                 }
             }
 

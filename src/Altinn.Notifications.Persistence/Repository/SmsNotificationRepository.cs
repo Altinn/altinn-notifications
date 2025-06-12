@@ -15,24 +15,10 @@ namespace Altinn.Notifications.Persistence.Repository;
 /// </summary>
 public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotificationRepository
 {
-    /// <summary>
-    /// Gets the SQL query used to retrieve shipment tracking information using sms identifier.
-    /// </summary>
-    protected override string GetShipmentTrackingSql => _getShipmentTrackingSmsSql;
-
-    /// <inheritdoc/>
-    protected override string UpdateNotificationStatusSql => _updateStatusAcceptedSql;
-
-    /// <inheritdoc/>
-    protected override string SourceIdentifier => "SMS";
-
-    private const string _getShipmentTrackingSmsSql = @"SELECT notifications.get_shipment_tracking_v2(o.alternateid, o.creatorname), o.alternateid
-                                                         FROM notifications.orders o
-                                                         INNER JOIN notifications.smsnotifications e ON e._orderid = o._id
-                                                         WHERE e.alternateid = @notificationalternateid";
-
+    private const string _smsSourceIdentifier = "SMS";
     private readonly NpgsqlDataSource _dataSource;
     private readonly ILogger<SmsNotificationRepository> _logger;
+
     private const string _getNewSmsNotificationsSql = "select * from notifications.getsms_statusnew_updatestatus($1)"; // (_sendingtimepolicy) this is now calling an overload function with the sending time policy parameter
     private const string _getSmsNotificationRecipientsSql = "select * from notifications.getsmsrecipients_v2($1)"; // (_orderid)
     private const string _insertNewSmsNotificationSql = "call notifications.insertsmsnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _customizedbody, _result, _smscount, _resulttime, _expirytime)
@@ -66,7 +52,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     /// </summary>
     /// <param name="dataSource">The Npgsql data source.</param>
     /// <param name="logger">The logger associated with this implementation of the SmsNotificationRepository</param>
-    public SmsNotificationRepository(NpgsqlDataSource dataSource, ILogger<SmsNotificationRepository> logger) : base(dataSource, logger)
+    public SmsNotificationRepository(NpgsqlDataSource dataSource, ILogger<SmsNotificationRepository> logger) : base(logger)
     {
         _dataSource = dataSource;
         _logger = logger;
@@ -190,16 +176,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
 
             if (orderIsSetAsCompleted)
             {
-                var orderStatus = await GetShipmentTracking(smsNotificationAlternateId, connection, transaction);
-                if (orderStatus != null)
-                {
-                    await InsertStatusFeed(orderStatus, connection, transaction);
-                }
-                else
-                {
-                    // order status could not be retrieved, but we still commit the transaction to set the SMS notification, and order status
-                    _logger.LogError("Order status could not be retrieved for alternate ID");
-                }
+               await InsertStatusFeedBasedOnShipmentTracking(connection, transaction, smsNotificationAlternateId);
             }
 
             await transaction.CommitAsync();
@@ -247,7 +224,12 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
 
             if (parseResult)
             {
-                await TryCompleteOrderBasedOnNotificationsState(alternateIdGuid, connection, transaction);
+                var orderIsSetAsCompleted = await TryCompleteOrderBasedOnNotificationsState(alternateIdGuid, connection, transaction);
+                if (orderIsSetAsCompleted)
+                {
+                    await InsertStatusFeedBasedOnShipmentTracking(connection, transaction, alternateIdGuid);
+                }
+
                 await transaction.CommitAsync();
             }
             else
@@ -259,6 +241,21 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
         {
             await transaction.RollbackAsync();
             throw;
+        }
+    }
+
+    private async Task InsertStatusFeedBasedOnShipmentTracking(NpgsqlConnection connection, NpgsqlTransaction transaction, Guid alternateIdGuid)
+    {
+        var orderStatus = await GetShipmentTracking(alternateIdGuid, connection, transaction);
+        if (orderStatus != null)
+        {
+            await InsertStatusFeed(orderStatus, connection, transaction);
+        }
+        else
+        {
+            // order status could not be retrieved, we roll back the transaction and throw an exception
+            _logger.LogError("Order status could not be retrieved for alternate ID");
+            throw new InvalidOperationException("Order status could not be retrieved for the specified alternate ID.");
         }
     }
 }
