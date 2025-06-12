@@ -1,9 +1,12 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using System.Collections.Immutable;
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
+using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Extensions;
+using Altinn.Notifications.Persistence.Mappers;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 
@@ -14,12 +17,12 @@ namespace Altinn.Notifications.Persistence.Repository;
 /// <summary>
 /// Implementation of email notification repository logic
 /// </summary>
-public class EmailNotificationRepository : IEmailNotificationRepository
+public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNotificationRepository
 {
-    private readonly ILogger<EmailNotificationRepository> _logger;
-    
     private const string _emailSourceIdentifier = "EMAIL";
     private readonly NpgsqlDataSource _dataSource;
+    private readonly ILogger<EmailNotificationRepository> _logger;
+
     private const string _insertEmailNotificationSql = "call notifications.insertemailnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _toaddress, _customizedbody, _customizedsubject, _result, _resulttime, _expirytime)
     private const string _getEmailNotificationsSql = "select * from notifications.getemails_statusnew_updatestatus()";
     private const string _getEmailRecipients = "select * from notifications.getemailrecipients_v2($1)"; // (_orderid)
@@ -36,8 +39,9 @@ public class EmailNotificationRepository : IEmailNotificationRepository
     /// Initializes a new instance of the <see cref="EmailNotificationRepository"/> class.
     /// </summary>
     /// <param name="dataSource">The npgsql data source.</param>
-    /// <param name="logger">The logger used with this implementation of IEmailNotificationRepository</param>
+    /// <param name="logger">The logger associated with this implementation of the IEmailNotificationRepository</param>
     public EmailNotificationRepository(NpgsqlDataSource dataSource, ILogger<EmailNotificationRepository> logger)
+    : base(logger) // Pass required parameters to the base class constructor
     {
         _dataSource = dataSource;
         _logger = logger;
@@ -111,8 +115,6 @@ public class EmailNotificationRepository : IEmailNotificationRepository
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, operationId ?? (object)DBNull.Value);
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId ?? (object)DBNull.Value);
-
-            _logger.LogInformation("Sql query to update email notification status for {OperationId}: {SqlQuery}", operationId, pgcom.CommandText);
             var alternateId = await pgcom.ExecuteScalarAsync();
 
             if (alternateId == null)
@@ -122,14 +124,29 @@ public class EmailNotificationRepository : IEmailNotificationRepository
                 return;
             }
 
-            var parseResult = Guid.TryParse(alternateId?.ToString(), out Guid alternateIdGuid);
+            var parseResult = Guid.TryParse(alternateId.ToString(), out Guid emailNotificationAlternateId);
 
             if (!parseResult)
             {
                 throw new InvalidOperationException($"Guid could not be parsed");
             }
 
-            await TryCompleteOrderBasedOnNotificationsState(alternateIdGuid, connection, transaction);
+            var orderIsSetAsCompleted = await TryCompleteOrderBasedOnNotificationsState(emailNotificationAlternateId, connection, transaction);
+
+            if (orderIsSetAsCompleted)
+            {
+                var orderStatus = await GetShipmentTracking(emailNotificationAlternateId, connection, transaction);
+                if (orderStatus != null)
+                {
+                    await InsertStatusFeed(orderStatus, connection, transaction);
+                }
+                else
+                {
+                    // order status could not be retrieved, we roll back the transaction and throw an exception
+                    _logger.LogError("Order status could not be retrieved for the specified alternate ID.");
+                    throw new InvalidOperationException("Order status could not be retrieved for the specified alternate ID.");
+                }
+            }
 
             await transaction.CommitAsync();
         }
