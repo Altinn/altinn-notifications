@@ -23,8 +23,14 @@ public abstract class NotificationRepositoryBase
         Converters = { new JsonStringEnumConverter() }
     };
 
-    private const string _getShipmentForStatusFeedSql = "SELECT * FROM notifications.getshipmentforstatusfeed(@alternateid)";
+    /// <summary>
+    /// Gets the unique identifier for the source associated with the derived class e.g. sms or email.
+    /// </summary>
+    protected abstract string SourceIdentifier { get; }
 
+    private readonly string _updateExpiredNotifications = "SELECT * FROM notifications.updateexpirednotifications(@source, @limit)";
+    private const string _getShipmentForStatusFeedSql = "SELECT * FROM notifications.getshipmentforstatusfeed(@alternateid)";
+    private readonly NpgsqlDataSource _dataSource;
     private readonly ILogger _logger;
 
     private const string _insertStatusFeedEntrySql = @"SELECT notifications.insertstatusfeed(o._id, o.creatorname, @orderstatus)
@@ -34,9 +40,11 @@ public abstract class NotificationRepositoryBase
     /// <summary>
     /// Constructor for the NotificationRepositoryBase class.
     /// </summary>
+    /// <param name="dataSource">The datasource used to integrate with the database</param>
     /// <param name="logger">The logger associated with the above implementation</param>
-    protected NotificationRepositoryBase(ILogger logger)
+    protected NotificationRepositoryBase(NpgsqlDataSource dataSource, ILogger logger)
     {
+        _dataSource = dataSource;
         _logger = logger;
     }
 
@@ -94,7 +102,8 @@ public abstract class NotificationRepositoryBase
         try
         {
             List<Guid> expiredIds = [];
-            await using NpgsqlCommand pgcom = new(UpdateNotificationStatusSql, connection, transaction);
+            await using NpgsqlCommand pgcom = new(_updateExpiredNotifications, connection, transaction);
+            pgcom.Parameters.AddWithValue("source", NpgsqlDbType.Text, SourceIdentifier); // Source identifier for the notifications
             pgcom.Parameters.AddWithValue("limit", NpgsqlDbType.Integer, 10);
 
             // Use ExecuteReaderAsync since the RETURNING clause provides a result set.
@@ -103,10 +112,7 @@ public abstract class NotificationRepositoryBase
             // Loop through the results as long as there are rows to read.
             while (await reader.ReadAsync())
             {
-                // Read the value from the first column (index 0) of the result set
-                // and add it to our list.
-                // Assuming alternateid is a string. Use GetGuid(), GetInt32(), etc., if it's another type.
-                var alternateId = reader.GetGuid(0);
+                var alternateId = await reader.GetFieldValueAsync<Guid>(0);
 
                 var orderIsSetAsCompleted = await TryCompleteOrderBasedOnNotificationsState(alternateId, connection, transaction);
 
@@ -146,7 +152,7 @@ public abstract class NotificationRepositoryBase
     /// <param name="transaction">The active <see cref="NpgsqlTransaction"/> to use for the operation.</param>
     /// <returns>A task that represents the asynchronous operation. The task result is <see langword="true"/> if the order was
     /// successfully marked as completed; otherwise, <see langword="false"/>.</returns>
-    protected async Task<bool> TryCompleteOrderBasedOnNotificationsState(Guid notificationId, NpgsqlConnection connection, NpgsqlTransaction transaction)
+    protected static async Task<bool> TryCompleteOrderBasedOnNotificationsState(Guid notificationId, NpgsqlConnection connection, NpgsqlTransaction transaction)
     {
         await using NpgsqlCommand pgcom = new(_tryMarkOrderAsCompletedSql, connection, transaction);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId);

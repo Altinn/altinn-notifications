@@ -31,16 +31,8 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
         WHERE alternateid = $3 OR operationid = $2
         RETURNING alternateid;"; // (_result, _operationid, _alternateid)
 
-    private const string _updateStatusAcceptedSql = @"UPDATE notifications.emailnotifications
-                                                    SET result = 'Failed'
-                                                    WHERE _id IN (
-                                                        SELECT _id
-                                                        FROM notifications.emailnotifications
-                                                        WHERE result = 'Succeeded' AND expirytime < (now() - INTERVAL '48 hours')
-                                                        ORDER BY _id ASC
-                                                        LIMIT @limit
-                                                    )
-                                                    RETURNING alternateid;";
+    /// <inheritdoc/>
+    protected override string SourceIdentifier => _emailSourceIdentifier;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotificationRepository"/> class.

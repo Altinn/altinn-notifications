@@ -9,5 +9,5 @@ public interface INotificationService
     /// Processes hanging notifications that have been set to accepted or succeeded, but never reached a final stage.
     /// </summary>
     /// <returns></returns>
-    Task ProcessHangingNotifications();
+    Task TerminateExpiredNotifications();
 }

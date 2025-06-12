@@ -22,17 +22,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     private const string _getNewSmsNotificationsSql = "select * from notifications.getsms_statusnew_updatestatus($1)"; // (_sendingtimepolicy) this is now calling an overload function with the sending time policy parameter
     private const string _getSmsNotificationRecipientsSql = "select * from notifications.getsmsrecipients_v2($1)"; // (_orderid)
     private const string _insertNewSmsNotificationSql = "call notifications.insertsmsnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _customizedbody, _result, _smscount, _resulttime, _expirytime)
-    private const string _updateStatusAcceptedSql = @"UPDATE notifications.smsnotifications
-                                                    SET result = 'Failed_Expired'
-                                                    WHERE _id IN (
-                                                        SELECT _id
-                                                        FROM notifications.smsnotifications
-                                                        WHERE result = 'Accepted' AND expirytime < (now() - INTERVAL '48 hours')
-                                                        ORDER BY _id ASC
-                                                        LIMIT @limit
-                                                    )
-                                                    RETURNING alternateid;";
-
+  
     private const string _updateSmsNotificationBasedOnIdentifierSql =
         @"UPDATE notifications.smsnotifications 
             SET result = $1::smsnotificationresulttype, 
@@ -46,6 +36,9 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
                 resulttime = now() 
             WHERE gatewayreference = $2
             RETURNING alternateid"; // (_result, _gatewayreference)
+
+    /// <inheritdoc/>
+    protected override string SourceIdentifier => _smsSourceIdentifier;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsNotificationRepository"/> class.
