@@ -384,6 +384,50 @@ RETURN QUERY
 END;
 $BODY$;
 
+-- getshipmentforstatusfeed.sql:
+CREATE OR REPLACE FUNCTION notifications.getshipmentforstatusfeed(_alternateid uuid)
+RETURNS TABLE(
+    alternateid uuid,
+    reference text,
+    status text,
+    last_update timestamp with time zone,
+    destination text,
+    type text
+)
+LANGUAGE 'plpgsql'
+COST 100
+VOLATILE PARALLEL UNSAFE
+ROWS 1000
+AS $BODY$
+BEGIN
+    RETURN QUERY
+    WITH distinct_orders AS (
+        SELECT DISTINCT ON (o._id) o.*
+        FROM notifications.orders o
+        LEFT JOIN notifications.emailnotifications e ON e._orderid = o._id
+        LEFT JOIN notifications.smsnotifications s ON s._orderid = o._id
+        WHERE e.alternateid = _alternateid OR s.alternateid = _alternateid
+    )
+    SELECT
+        o.alternateid,
+        t.reference,      
+        t.status,
+        t.last_update,
+        t.destination,
+        t.type
+    FROM
+        distinct_orders o
+        CROSS JOIN LATERAL notifications.get_shipment_tracking_v2(o.alternateid, o.creatorname) AS t;
+
+END;
+$BODY$;
+
+ALTER FUNCTION notifications.getshipmentforstatusfeed(uuid)
+    OWNER TO platform_notifications_admin;
+
+COMMENT ON FUNCTION notifications.getshipmentforstatusfeed(uuid)
+    IS 'Retrieves combined order and shipment tracking data based on an email or sms notification alternateid.';
+
 -- getshipmenttracking.sql:
 CREATE OR REPLACE FUNCTION notifications.get_shipment_tracking(
     _alternateid UUID,
@@ -672,6 +716,45 @@ AS $BODY$
         END IF;
 	END;
 $BODY$;
+
+-- getstatusfeed.sql:
+CREATE OR REPLACE FUNCTION notifications.getstatusfeed(
+    _sequencenumber BIGINT,
+    _creatorname TEXT,
+    _limit INTEGER
+)
+RETURNS TABLE(_id BIGINT, orderstatus jsonb) AS $$
+BEGIN
+    /*
+     * This function retrieves recent status feed entries for a specific creator.
+     *
+     * PARAMETERS:
+     * _sequencenumber: The ID to look after. The function will return rows where _id > this value.
+     * _creator_name:   The name of the creator to filter by.
+     * _limit:          The maximum number of rows to return.
+     *
+     * RETURNS:
+     * A table with two columns: _id (BIGINT) and orderstatus (TEXT).
+     */
+    RETURN QUERY
+    SELECT
+        sf._id,
+        sf.orderstatus
+    FROM
+        notifications.statusfeed AS sf
+    WHERE
+        sf._id > _sequencenumber
+        AND sf.creatorname = _creatorname
+        AND sf.created < (NOW() - INTERVAL '2 seconds')
+    ORDER BY
+        sf._id ASC
+    LIMIT
+        _limit;
+END;
+$$ LANGUAGE plpgsql SECURITY INVOKER;
+
+COMMENT ON FUNCTION notifications.getstatusfeed(BIGINT, TEXT, INTEGER) IS 'Retrieves a limited number of statusfeed entries created more than 2 seconds ago for a specific creator, starting after a given sequence number.';
+
 
 -- insertemailnotification.sql:
 CREATE OR REPLACE PROCEDURE notifications.insertemailnotification(

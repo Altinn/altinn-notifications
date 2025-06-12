@@ -15,19 +15,10 @@ namespace Altinn.Notifications.Persistence.Repository;
 /// </summary>
 public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotificationRepository
 {
-    /// <summary>
-    /// Gets the SQL query used to retrieve shipment tracking information using sms identifier.
-    /// </summary>
-    protected override string GetShipmentTrackingSql => _getShipmentTrackingSmsSql;
-
-    private const string _getShipmentTrackingSmsSql = @"SELECT notifications.get_shipment_tracking_v2(o.alternateid, o.creatorname), o.alternateid
-                                                         FROM notifications.orders o
-                                                         INNER JOIN notifications.smsnotifications e ON e._orderid = o._id
-                                                         WHERE e.alternateid = @notificationalternateid";
-
     private const string _smsSourceIdentifier = "SMS";
     private readonly NpgsqlDataSource _dataSource;
     private readonly ILogger<SmsNotificationRepository> _logger;
+
     private const string _getNewSmsNotificationsSql = "select * from notifications.getsms_statusnew_updatestatus($1)"; // (_sendingtimepolicy) this is now calling an overload function with the sending time policy parameter
     private const string _getSmsNotificationRecipientsSql = "select * from notifications.getsmsrecipients_v2($1)"; // (_orderid)
     private const string _insertNewSmsNotificationSql = "call notifications.insertsmsnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _customizedbody, _result, _smscount, _resulttime, _expirytime)

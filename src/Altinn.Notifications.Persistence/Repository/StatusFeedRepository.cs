@@ -18,13 +18,7 @@ public class StatusFeedRepository : IStatusFeedRepository
     private readonly NpgsqlDataSource _dataSource;
 
     // the created column is used to only return entries that are older than 2 seconds, to avoid returning entries that are still being processed
-    private const string _getStatusFeedSql = @"SELECT _id, orderstatus
-                                                   FROM notifications.statusfeed
-                                                   WHERE _id > @seq
-                                                     AND creatorname = @creatorName
-                                                     AND created < (NOW() - INTERVAL '2 seconds')
-                                                   ORDER BY _id
-                                                   LIMIT @limit;";
+    private const string _getStatusFeedSql = @"SELECT * FROM notifications.getstatusfeed(@seq, @creatorname, @limit)";
 
     private readonly JsonSerializerOptions _jsonSerializerOptions = new()
     {
@@ -45,11 +39,11 @@ public class StatusFeedRepository : IStatusFeedRepository
     public async Task<List<StatusFeed>> GetStatusFeed(int seq, string creatorName, CancellationToken cancellationToken, int limit = 50)
     {
         await using NpgsqlCommand command = _dataSource.CreateCommand(_getStatusFeedSql);
-        command.Parameters.AddWithValue("@seq", NpgsqlDbType.Integer, seq);
-        command.Parameters.AddWithValue("@creatorName", NpgsqlDbType.Varchar, creatorName);
-        command.Parameters.AddWithValue("@limit", NpgsqlDbType.Integer, limit);
+        command.Parameters.AddWithValue("seq", NpgsqlDbType.Integer, seq);
+        command.Parameters.AddWithValue("creatorName", NpgsqlDbType.Varchar, creatorName);
+        command.Parameters.AddWithValue("limit", NpgsqlDbType.Integer, limit);
 
-        List<StatusFeed> statusFeedEntries = new();
+        List<StatusFeed> statusFeedEntries = [];
 
         await using (NpgsqlDataReader reader = await command.ExecuteReaderAsync(cancellationToken))
         {

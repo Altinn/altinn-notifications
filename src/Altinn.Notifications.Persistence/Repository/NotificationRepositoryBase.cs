@@ -1,7 +1,9 @@
 ﻿using System.Collections.Immutable;
+using System.Data;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+
 using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Persistence.Mappers;
 
@@ -21,19 +23,13 @@ public abstract class NotificationRepositoryBase
         Converters = { new JsonStringEnumConverter() }
     };
 
-    /// <summary>
-    /// Gets the SQL query used to retrieve shipment tracking information.
-    /// </summary>
-    protected abstract string GetShipmentTrackingSql { get; }
+    private const string _getShipmentForStatusFeedSql = "SELECT * FROM notifications.getshipmentforstatusfeed(@alternateid)";
 
     private readonly ILogger _logger;
 
     private const string _insertStatusFeedEntrySql = @"SELECT notifications.insertstatusfeed(o._id, o.creatorname, @orderstatus)
-                                   FROM notifications.orders o
-                                   WHERE o.alternateid = @alternateid;";
-
-    private const int _expectedFieldCount = 2;
-    private const string _expectedColumnDataType = "record";
+                                                       FROM notifications.orders o
+                                                       WHERE o.alternateid = @alternateid;";
 
     /// <summary>
     /// Constructor for the NotificationRepositoryBase class.
@@ -53,16 +49,21 @@ public abstract class NotificationRepositoryBase
     /// <returns>Order status object if the order was found in the database. Otherwise, null</returns>
     protected async Task<OrderStatus?> GetShipmentTracking(Guid notificationAlternateId, NpgsqlConnection connection, NpgsqlTransaction transaction)
     {
-        await using NpgsqlCommand pgcom = new(GetShipmentTrackingSql, connection, transaction);
-        pgcom.Parameters.AddWithValue("notificationalternateid", NpgsqlDbType.Uuid, notificationAlternateId);
-        OrderStatus? orderStatus = null;
+        await using NpgsqlCommand pgcom = new(_getShipmentForStatusFeedSql, connection, transaction);
+        pgcom.Parameters.AddWithValue("alternateid", NpgsqlDbType.Uuid, notificationAlternateId);
         List<Recipient> recipients = [];
 
         await using var reader = await pgcom.ExecuteReaderAsync();
-        await reader.ReadAsync();
+        var hasRows = await reader.ReadAsync();
+
+        if (!hasRows)
+        {
+            _logger.LogWarning("No shipment tracking information found for alternate ID {AlternateId}.", notificationAlternateId);
+            return null; // Return null if no rows were found
+        }
 
         // read main notification or reminder
-        orderStatus = await ReadMainNotification(orderStatus, reader);
+        var orderStatus = await ReadMainNotification(reader);
 
         // Add recipients to the order status
         await ReadRecipients(recipients, reader);
@@ -80,50 +81,35 @@ public abstract class NotificationRepositoryBase
         }
     }
 
-    private async Task ReadRecipients(List<Recipient> recipients, NpgsqlDataReader reader)
+    private static async Task ReadRecipients(List<Recipient> recipients, NpgsqlDataReader reader)
     {
         while (await reader.ReadAsync())
         {
-            if (reader.FieldCount == _expectedFieldCount && reader.GetDataTypeName(0) == _expectedColumnDataType)
+            string destination = await reader.GetFieldValueAsync<string>("destination");
+            string status = await reader.GetFieldValueAsync<string>("status");
+            var recipient = new Recipient
             {
-                var (_, status, lastUpdated, destination, _) = await reader.GetFieldValueAsync<(string, string, DateTime, string, string)>(0);
-
-                var recipient = new Recipient
-                {
-                    Destination = destination,
-                    Status = _mobileNumberRegex.IsMatch(destination) ? ProcessingLifecycleMapper.GetSmsLifecycleStage(status) : ProcessingLifecycleMapper.GetEmailLifecycleStage(status),
-                    LastUpdate = lastUpdated
-                };
-
-                recipients.Add(recipient);
-            }
-            else
-            {
-                // Log unexpected schema
-                _logger.LogError("Unexpected schema in ReadRecipients: FieldCount={FieldCount}, DataTypeName={DataTypeName}", reader.FieldCount, reader.FieldCount > 0 ? reader.GetDataTypeName(0) : "N/A");
-            }
+                Destination = destination,
+                Status = _mobileNumberRegex.IsMatch(destination) ? ProcessingLifecycleMapper.GetSmsLifecycleStage(status) : ProcessingLifecycleMapper.GetEmailLifecycleStage(status),
+                LastUpdate = await reader.GetFieldValueAsync<DateTime>("last_update"),
+            };
+            recipients.Add(recipient);
         }
     }
 
     private static readonly Regex _mobileNumberRegex = Utilities.Helpers.MobileNumbersRegex();
 
-    private static async Task<OrderStatus?> ReadMainNotification(OrderStatus? orderStatus, NpgsqlDataReader reader)
+    private static async Task<OrderStatus?> ReadMainNotification(NpgsqlDataReader reader)
     {
-        if (reader.FieldCount == _expectedFieldCount && reader.GetDataTypeName(0) == _expectedColumnDataType)
+        var orderStatus = new OrderStatus
         {
-            var alternateId = await reader.GetFieldValueAsync<Guid>(1);
-
-            var (sendersReference, status, lastUpdated, _, type) = await reader.GetFieldValueAsync<(string, string, DateTime, string, string)>(0);
-            orderStatus = new OrderStatus
-            {
-                LastUpdated = lastUpdated,
-                ShipmentType = type,
-                ShipmentId = alternateId,
-                SendersReference = sendersReference,
-                Status = ProcessingLifecycleMapper.GetOrderLifecycleStage(status),
-                Recipients = [] // Initialize with an empty immutable list
-            };
-        }
+            LastUpdated = await reader.GetFieldValueAsync<DateTime>("last_update"),
+            ShipmentType = await reader.GetFieldValueAsync<string>("type"),
+            ShipmentId = await reader.GetFieldValueAsync<Guid>("alternateid"),
+            SendersReference = await reader.GetFieldValueAsync<string>("reference"),
+            Status = ProcessingLifecycleMapper.GetOrderLifecycleStage(await reader.GetFieldValueAsync<string>("status")),
+            Recipients = [] // Initialize with an empty immutable list
+        };
 
         return orderStatus;
     }
