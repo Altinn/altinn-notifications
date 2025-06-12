@@ -101,7 +101,7 @@ public class NotificationOrderChainRequestValidatorTests
         var result = _validator.TestValidate(request);
 
         // Assert
-        result.ShouldHaveAnyValidationError().WithErrorMessage("Recipient phone number is not a valid mobile number.");
+        result.ShouldHaveValidationErrors().WithErrorMessage("Recipient phone number is not a valid mobile number.");
     }
 
     [Fact]
@@ -325,7 +325,7 @@ public class NotificationOrderChainRequestValidatorTests
         var result = _validator.TestValidate(order);
 
         // Assert
-        result.ShouldHaveAnyValidationError().WithErrorMessage("RequestedSendTime must be greater than or equal to now.");
+        result.ShouldHaveValidationErrors().WithErrorMessage("RequestedSendTime must be greater than or equal to now.");
     }
 
     [Fact]
@@ -357,7 +357,7 @@ public class NotificationOrderChainRequestValidatorTests
         var result = _validator.TestValidate(order);
 
         // Assert
-        result.ShouldHaveAnyValidationError().WithErrorMessage("EmailSettings must be set when ChannelSchema is EmailAndSms");
+        result.ShouldHaveValidationErrors().WithErrorMessage("EmailSettings must be set when ChannelSchema is EmailAndSms");
     }
 
     [Fact]
@@ -391,6 +391,6 @@ public class NotificationOrderChainRequestValidatorTests
         var result = _validator.TestValidate(order);
 
         // Assert
-        result.ShouldHaveAnyValidationError().WithErrorMessage("SmsSettings must be set when ChannelSchema is EmailAndSms");
+        result.ShouldHaveValidationErrors().WithErrorMessage("SmsSettings must be set when ChannelSchema is EmailAndSms");
     }
 }
