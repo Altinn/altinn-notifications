@@ -2,7 +2,7 @@
     Test script for Platform Notifications API using an application owner token.
 
     Command:
-    podman compose run k6 run /src/tests/orders_email.js \
+    podman compose run k6 run /src/tests/orders-email.js \
     -e tokenGeneratorUserName={the user name to access the token generator} \
     -e tokenGeneratorUserPwd={the password to access the token generator} \
     -e mpClientId={the id of an integration defined in maskinporten} \
