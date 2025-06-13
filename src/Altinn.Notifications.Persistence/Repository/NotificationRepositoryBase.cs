@@ -110,11 +110,17 @@ public abstract class NotificationRepositoryBase
             // Use ExecuteReaderAsync since the RETURNING clause provides a result set.
             await using var reader = await pgcom.ExecuteReaderAsync();
 
-            // Loop through the results as long as there are rows to read.
+            // Buffer all IDs first, then dispose the reader before issuing further commands.
+            var expiredIds = new List<Guid>(10);
             while (await reader.ReadAsync())
             {
-                var alternateId = await reader.GetFieldValueAsync<Guid>(0);
+                expiredIds.Add(await reader.GetFieldValueAsync<Guid>(0));
+            }
 
+            await reader.DisposeAsync();
+
+            foreach (var alternateId in expiredIds)
+            {
                 var orderIsSetAsCompleted = await TryCompleteOrderBasedOnNotificationsState(alternateId, connection, transaction);
                 if (orderIsSetAsCompleted)
                 {
