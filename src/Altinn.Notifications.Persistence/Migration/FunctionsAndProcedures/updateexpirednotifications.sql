@@ -10,32 +10,42 @@ BEGIN
     IF lower(_source) = 'email' THEN
         -- If the type is 'email', run the update on the emailnotifications table
         RETURN QUERY
-        UPDATE notifications.emailnotifications
-        SET result = 'Failed',
-            resulttime = now()
-        WHERE _id IN (
-            SELECT _id
-            FROM notifications.emailnotifications
-            WHERE result = 'Succeeded' AND expirytime < (now() - INTERVAL '48 hours')
-            ORDER BY _id DESC
-            LIMIT GREATEST(_limit, 1) -- Use the input parameter for the limit
+        WITH updated_rows AS (
+            UPDATE notifications.emailnotifications
+            SET result = 'Failed',
+                resulttime = now()
+            WHERE _id IN (
+                SELECT _id
+                FROM notifications.emailnotifications
+                WHERE result = 'Succeeded' AND expirytime < (now() - INTERVAL '48 hours')
+                ORDER BY _id DESC
+                LIMIT GREATEST(_limit, 1) -- Use the input parameter for the limit
+            )
+            RETURNING alternateid -- Return all alternateids from updated rows
         )
-        RETURNING DISTINCT alternateid;
+        -- Select the unique alternateids from the CTE
+        SELECT DISTINCT alternateid
+        FROM updated_rows;
 
     ELSIF lower(_source) = 'sms' THEN
         -- If the type is 'sms', run the update on the smsnotifications table
         RETURN QUERY
-        UPDATE notifications.smsnotifications
-        SET result = 'Failed',
-            resulttime = now()
-        WHERE _id IN (
-            SELECT _id
-            FROM notifications.smsnotifications
-            WHERE result = 'Accepted' AND expirytime < (now() - INTERVAL '48 hours')
-            ORDER BY _id DESC
-            LIMIT GREATEST(_limit, 1) -- Use the input parameter for the limit
+        WITH updated_rows AS (
+            UPDATE notifications.smsnotifications
+            SET result = 'Failed',
+                resulttime = now()
+            WHERE _id IN (
+                SELECT _id
+                FROM notifications.smsnotifications
+                WHERE result = 'Accepted' AND expirytime < (now() - INTERVAL '48 hours')
+                ORDER BY _id DESC
+                LIMIT GREATEST(_limit, 1) -- Use the input parameter for the limit
+            )
+            RETURNING alternateid -- Return all alternateids from updated rows
         )
-        RETURNING DISTINCT alternateid;
+        -- Select the unique alternateids from the CTE
+        SELECT DISTINCT alternateid
+        FROM updated_rows;
         
     ELSE
         -- Inform the user if an invalid type was provided. The function will return an empty set.
@@ -49,4 +59,4 @@ $$;
 COMMENT ON FUNCTION notifications.updateexpirednotifications(TEXT, INT) IS 
 'Updates the result of expired email or sms notifications to ''Failed''. 
 Parameters: notification_type (TEXT: ''email'' or ''sms''), update_limit (INT).
-Returns a set of alternateid for the updated records.';
+Returns a set of unique alternateid for the updated records.';
