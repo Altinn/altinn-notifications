@@ -248,6 +248,37 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task TerminateExpiredNotifications_ShouldSetNotificationToFailedAndInsertToFeed()
+    {
+        // Arrange
+        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(simulateConsumers: true, simulateCronJob: true);
+        _orderIdsToDelete.Add(order.Id);
+
+        SmsNotificationRepository sut = (SmsNotificationRepository)ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .First(i => i.GetType() == typeof(SmsNotificationRepository));
+
+        // modify the notification to simulate an expired notification
+        string sql = $@"
+            UPDATE notifications.smsnotifications 
+            SET result = 'Accepted', 
+                expirytime = NOW() - INTERVAL '3 day' 
+            WHERE alternateid = '{smsNotification.Id}';";
+
+        await PostgreUtil.RunSql(sql);
+        
+        // Act
+        await sut.TerminateExpiredNotifications();
+
+        // Assert
+        var result = await SelectSmsNotificationStatus(smsNotification.Id);
+        var count = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+        Assert.NotNull(result);
+        Assert.Equal(SmsNotificationResultType.Failed.ToString(), result);
+        Assert.Equal(1, count); // Ensure that the status feed entry was created
+    }
+
+    [Fact]
     public async Task UpdateSendStatus_WithEmptyGuid_ThrowsArgumentException()
     {
         // Arrange

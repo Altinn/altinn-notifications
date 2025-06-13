@@ -168,7 +168,7 @@ public static class PostgreUtil
         await pgcom.ExecuteNonQueryAsync();
     }
 
-    public static async Task<int> SelectStatusFeedEntry(Guid id)
+    public static async Task<int> SelectStatusFeedEntryCount(Guid id)
     {
         var sql = @$"SELECT COUNT(*) FROM notifications.statusfeed s
                      INNER JOIN notifications.orders o ON o._id = s.orderid
