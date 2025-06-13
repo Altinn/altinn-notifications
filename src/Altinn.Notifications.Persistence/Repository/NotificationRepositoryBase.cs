@@ -103,7 +103,6 @@ public abstract class NotificationRepositoryBase
 
         try
         {
-            List<Guid> expiredIds = [];
             await using NpgsqlCommand pgcom = new(_updateExpiredNotifications, connection, transaction);
             pgcom.Parameters.AddWithValue("source", NpgsqlDbType.Text, SourceIdentifier); // Source identifier for the notifications
             pgcom.Parameters.AddWithValue("limit", NpgsqlDbType.Integer, 10);

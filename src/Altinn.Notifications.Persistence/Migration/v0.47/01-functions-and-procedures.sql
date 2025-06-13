@@ -1163,7 +1163,7 @@ BEGIN
         
     ELSE
         -- Inform the user if an invalid type was provided. The function will return an empty set.
-        RAISE NOTICE 'Invalid notification type: %. Allowed values are ''email'' or ''sms''.', notification_type;
+        RAISE NOTICE 'Invalid notification type: %. Allowed values are ''email'' or ''sms''.', _source;
     END IF;
 
 END;

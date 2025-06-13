@@ -4,9 +4,9 @@ using System.Threading.Tasks;
 using Altinn.Notifications.Controllers;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Services.Interfaces;
-
+using Castle.Core.Logging;
 using Microsoft.AspNetCore.Mvc;
-
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
 using Xunit;
@@ -29,7 +29,8 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
                 new Mock<IOrderProcessingService>().Object,
                 new Mock<IEmailNotificationService>().Object,
                 _smsNotificationServiceMock.Object,
-                _notificationScheduleMock.Object);
+                _notificationScheduleMock.Object,
+                NullLogger<TriggerController>.Instance);
         }
 
         [Fact]
