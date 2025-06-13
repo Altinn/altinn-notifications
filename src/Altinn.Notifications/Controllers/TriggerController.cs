@@ -63,14 +63,22 @@ public class TriggerController : ControllerBase
     [HttpPost]
     [Consumes("application/json")]
     [Route("terminateexpirednotifications")]
-    public async Task<ActionResult> Trigger_TerminateExpiredNotifications()
+    [Authorize(Policy = "Internal")]
+    public async Task<IActionResult> Trigger_TerminateExpiredNotifications(CancellationToken ct)
     {
-        var task1 = _emailNotificationService.TerminateExpiredNotifications();
-        var task2 = _smsNotificationService.TerminateExpiredNotifications();
-
-        await Task.WhenAll(task1, task2);
-        return Ok();
-    }   
+        try
+        {
+            await Task.WhenAll(
+                _emailNotificationService.TerminateExpiredNotifications(ct),
+                _smsNotificationService.TerminateExpiredNotifications(ct));
+            return Accepted(); // 202
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to terminate expired notifications");
+            return StatusCode(500, "Failed to terminate expired notifications");
+        }
+    }
 
     /// <summary>
     /// Endpoint for starting the processing of sms that are ready to be sent with policy daytime
