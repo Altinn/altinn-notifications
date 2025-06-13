@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Altinn.Notifications.Controllers;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Services.Interfaces;
-using Castle.Core.Logging;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -37,7 +36,6 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
         public async Task Trigger_SendSmsNotifications_AfterBusinessHours_ServiceNotCalled()
         {
             // Arrange
-            var afterBusinessHours = new DateTime(2022, 1, 1, 20, 0, 0, DateTimeKind.Utc);
             _notificationScheduleMock.Setup(x => x.CanSendSmsNotifications()).Returns(false);
 
             // Act
@@ -52,7 +50,6 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
         public async Task Trigger_SendSmsNotifications_BeforeBusinessHours_ServiceNotCalled()
         {
             // Arrange
-            var afterBusinessHours = new DateTime(2022, 1, 1, 04, 0, 0, DateTimeKind.Utc);
             _notificationScheduleMock.Setup(x => x.CanSendSmsNotifications()).Returns(false);
 
             // Act
