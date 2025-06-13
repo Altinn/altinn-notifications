@@ -116,30 +116,40 @@ public abstract class NotificationRepositoryBase
                 var alternateId = await reader.GetFieldValueAsync<Guid>(0);
 
                 var orderIsSetAsCompleted = await TryCompleteOrderBasedOnNotificationsState(alternateId, connection, transaction);
-
                 if (orderIsSetAsCompleted)
                 {
-                    var orderStatus = await GetShipmentTracking(alternateId, connection, transaction);
-                    if (orderStatus != null)
-                    {
-                        await InsertStatusFeed(orderStatus, connection, transaction);
-                    }
-                    else
-                    {
-                        // order status could not be retrieved, but we still commit the transaction to update the email notification, and order status
-                        _logger.LogError("Order status could not be retrieved for the specified alternate ID.");
-                    }
+                    await InsertOrderStatusCompletedOrder(connection, transaction, alternateId);
                 }
             }
+
+            await transaction.CommitAsync();
         }
-        catch (Exception e)
+        catch (Exception)
         {
-            _logger.LogError(e, "An error occurred while terminating hanging notifications.");
             await transaction.RollbackAsync();
             throw;
         }
+    }
 
-        await transaction.CommitAsync();
+    /// <summary>
+    /// Inserts the status feed for a completed order based on the specified alternate ID.
+    /// </summary>
+    /// <param name="connection">The <see cref="NpgsqlConnection"/> used to interact with the database.</param>
+    /// <param name="transaction">The <see cref="NpgsqlTransaction"/> associated with the database operation.</param>
+    /// <param name="alternateId">The unique identifier for the order, used to retrieve its status.</param>
+    protected async Task InsertOrderStatusCompletedOrder(NpgsqlConnection connection, NpgsqlTransaction transaction, Guid alternateId)
+    {
+        var orderStatus = await GetShipmentTracking(alternateId, connection, transaction);
+        if (orderStatus != null)
+        {
+            await InsertStatusFeed(orderStatus, connection, transaction);
+        }
+        else
+        {
+            // order status could not be retrieved, but we still commit the transaction to update the email notification, and order status
+            _logger.LogError("Order status could not be retrieved for the specified alternate ID.");
+            throw new InvalidOperationException("Order status could not be retrieved for the specified alternate ID.");
+        }
     }
 
     /// <summary>
@@ -163,7 +173,7 @@ public abstract class NotificationRepositoryBase
         return result != null && (bool)result;
     }
 
-    private async Task ReadRecipients(List<Recipient> recipients, NpgsqlDataReader reader)
+    private static async Task ReadRecipients(List<Recipient> recipients, NpgsqlDataReader reader)
     {
         while (await reader.ReadAsync())
         {

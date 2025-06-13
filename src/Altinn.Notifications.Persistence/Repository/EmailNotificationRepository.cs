@@ -124,17 +124,7 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
 
             if (orderIsSetAsCompleted)
             {
-                var orderStatus = await GetShipmentTracking(emailNotificationAlternateId, connection, transaction);
-                if (orderStatus != null)
-                {
-                    await InsertStatusFeed(orderStatus, connection, transaction);
-                }
-                else
-                {
-                    // order status could not be retrieved, we roll back the transaction and throw an exception
-                    _logger.LogError("Order status could not be retrieved for the specified alternate ID.");
-                    throw new InvalidOperationException("Order status could not be retrieved for the specified alternate ID.");
-                }
+                await InsertOrderStatusCompletedOrder(connection, transaction, emailNotificationAlternateId);
             }
 
             await transaction.CommitAsync();

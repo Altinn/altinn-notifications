@@ -169,7 +169,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
 
             if (orderIsSetAsCompleted)
             {
-               await InsertStatusFeedBasedOnShipmentTracking(connection, transaction, smsNotificationAlternateId);
+               await InsertOrderStatusCompletedOrder(connection, transaction, smsNotificationAlternateId);
             }
 
             await transaction.CommitAsync();
@@ -220,7 +220,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
                 var orderIsSetAsCompleted = await TryCompleteOrderBasedOnNotificationsState(alternateIdGuid, connection, transaction);
                 if (orderIsSetAsCompleted)
                 {
-                    await InsertStatusFeedBasedOnShipmentTracking(connection, transaction, alternateIdGuid);
+                    await InsertOrderStatusCompletedOrder(connection, transaction, alternateIdGuid);
                 }
 
                 await transaction.CommitAsync();
@@ -234,21 +234,6 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
         {
             await transaction.RollbackAsync();
             throw;
-        }
-    }
-
-    private async Task InsertStatusFeedBasedOnShipmentTracking(NpgsqlConnection connection, NpgsqlTransaction transaction, Guid alternateIdGuid)
-    {
-        var orderStatus = await GetShipmentTracking(alternateIdGuid, connection, transaction);
-        if (orderStatus != null)
-        {
-            await InsertStatusFeed(orderStatus, connection, transaction);
-        }
-        else
-        {
-            // order status could not be retrieved, we roll back the transaction and throw an exception
-            _logger.LogError("Order status could not be retrieved for alternate ID");
-            throw new InvalidOperationException("Order status could not be retrieved for the specified alternate ID.");
         }
     }
 }
