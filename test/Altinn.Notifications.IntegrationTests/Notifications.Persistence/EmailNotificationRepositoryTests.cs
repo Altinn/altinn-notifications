@@ -3,6 +3,7 @@ using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
+using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
@@ -265,7 +266,7 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task TerminateExpiredNotifications_ShouldSetNotificationToFailedAndInsertToFeed()
+    public async Task TerminateExpiredNotifications_ShouldSetNotificationToFailed_CompleteOrder_AndInsertToFeed()
     {
         // Arrange
         (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(simulateConsumers: true, simulateCronJob: true);
@@ -290,9 +291,12 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
         // Assert
         var result = await SelectEmailNotificationStatus(emailNotification.Id);
         var count = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+        var orderStatus = await PostgreUtil.RunSqlReturnOutput<string>($"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'");
+        
         Assert.NotNull(result);
         Assert.Equal(EmailNotificationResultType.Failed.ToString(), result);
-        Assert.Equal(1, count); // Ensure that the status feed entry was created
+        Assert.Equal(1, count);
+        Assert.Equal(OrderProcessingStatus.Completed.ToString(), orderStatus);
     }
 
     [Fact]
