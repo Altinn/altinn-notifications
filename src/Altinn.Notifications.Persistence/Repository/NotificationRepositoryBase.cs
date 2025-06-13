@@ -121,13 +121,20 @@ public abstract class NotificationRepositoryBase
 
             foreach (var alternateId in expiredIds)
             {
-                var orderIsSetAsCompleted = await TryCompleteOrderBasedOnNotificationsState(alternateId, connection, transaction);
-                if (orderIsSetAsCompleted)
+                try
                 {
-                    await InsertOrderStatusCompletedOrder(connection, transaction, alternateId);
+                    if (await TryCompleteOrderBasedOnNotificationsState(alternateId, connection, transaction))
+                    {
+                        await InsertOrderStatusCompletedOrder(connection, transaction, alternateId);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex,
+                        "Failed to finalise order state for notification {AlternateId}. Skipping and continuing.", alternateId);
+                    // optionally record a dead-letter table entry here
                 }
             }
-
             await transaction.CommitAsync();
         }
         catch (Exception)
