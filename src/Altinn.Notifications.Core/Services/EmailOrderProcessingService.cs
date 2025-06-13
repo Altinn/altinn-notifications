@@ -79,11 +79,12 @@ public class EmailOrderProcessingService : IEmailOrderProcessingService
 
             var matchedEmailRecipient = FindEmailRecipient(allEmailRecipients, recipient);
             var emailRecipient = matchedEmailRecipient ?? new EmailRecipient { IsReserved = recipient.IsReserved };
+            List<EmailAddressPoint> emailAddresses = addressPoint != null ? [addressPoint] : [];
 
             await _emailService.CreateNotification(
                 order.Id,
                 order.RequestedSendTime,
-                [addressPoint],
+                emailAddresses,
                 emailRecipient,
                 order.IgnoreReservation ?? false);
         }
