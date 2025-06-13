@@ -1,5 +1,6 @@
 ﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Notification;
+using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.IntegrationTests.Utils;
 
@@ -79,12 +80,12 @@ public class EmailStatusConsumerTests : IAsyncLifetime
             SendResult = resultType
         };
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
-        
+
         // Act
         await sut.StartAsync(CancellationToken.None);
         await Task.Delay(10000);
         await sut.StopAsync(CancellationToken.None);
-        
+
         // Assert
         string emailNotificationStatus = await SelectEmailNotificationStatus(notification.Id);
         Assert.Equal(resultType.ToString(), emailNotificationStatus);
@@ -92,6 +93,38 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         Assert.Equal(1, cancelledCount);
     }
 
+    [Fact]
+    public async Task InsertStatusFeed_OrderCompleted()
+    {
+        // Arrange
+        Dictionary<string, string> vars = new()
+        {
+            { "KafkaSettings__EmailStatusUpdatedTopicName", _statusUpdatedTopicName },
+            { "KafkaSettings__Admin__TopicList", $"[\"{_statusUpdatedTopicName}\"]" }
+        };
+        using EmailStatusConsumer sut = (EmailStatusConsumer)ServiceUtil
+                                                    .GetServices([typeof(IHostedService)], vars)
+                                                    .First(s => s.GetType() == typeof(EmailStatusConsumer))!;
+        (NotificationOrder order, EmailNotification notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(_sendersRef, simulateCronJob: true);
+        EmailSendOperationResult sendOperationResult = new()
+        {
+            NotificationId = notification.Id,
+            OperationId = Guid.NewGuid().ToString(),
+            SendResult = EmailNotificationResultType.Delivered
+        };
+
+        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
+
+        // Act
+        await sut.StartAsync(CancellationToken.None);
+        await Task.Delay(10000);
+        await sut.StopAsync(CancellationToken.None);
+
+        // Assert
+        int count = await PostgreUtil.SelectStatusFeedEntry(order.Id);
+        Assert.Equal(1, count);
+    }
+  
     public Task InitializeAsync()
     {
         return Task.CompletedTask;
@@ -104,6 +137,8 @@ public class EmailStatusConsumerTests : IAsyncLifetime
 
     protected virtual async Task Dispose(bool disposing)
     {
+        await PostgreUtil.DeleteStatusFeedFromDb(_sendersRef);
+        await PostgreUtil.DeleteNotificationsFromDb(_sendersRef);
         await PostgreUtil.DeleteOrderFromDb(_sendersRef);
         await KafkaUtil.DeleteTopicAsync(_statusUpdatedTopicName);
     }

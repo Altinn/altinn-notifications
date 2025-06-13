@@ -4,7 +4,6 @@ using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Extensions;
-
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using NpgsqlTypes;
@@ -14,11 +13,12 @@ namespace Altinn.Notifications.Persistence.Repository;
 /// <summary>
 /// Implements the repository logic for SMS notifications.
 /// </summary>
-public class SmsNotificationRepository : ISmsNotificationRepository
+public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotificationRepository
 {
     private const string _smsSourceIdentifier = "SMS";
     private readonly NpgsqlDataSource _dataSource;
     private readonly ILogger<SmsNotificationRepository> _logger;
+
     private const string _getNewSmsNotificationsSql = "select * from notifications.getsms_statusnew_updatestatus($1)"; // (_sendingtimepolicy) this is now calling an overload function with the sending time policy parameter
     private const string _getSmsNotificationRecipientsSql = "select * from notifications.getsmsrecipients_v2($1)"; // (_orderid)
     private const string _insertNewSmsNotificationSql = "call notifications.insertsmsnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _customizedbody, _result, _smscount, _resulttime, _expirytime)
@@ -42,8 +42,8 @@ public class SmsNotificationRepository : ISmsNotificationRepository
     /// Initializes a new instance of the <see cref="SmsNotificationRepository"/> class.
     /// </summary>
     /// <param name="dataSource">The Npgsql data source.</param>
-    /// <param name="logger">The logger associated with this implementation of the ISmsNotifactionRepository</param>
-    public SmsNotificationRepository(NpgsqlDataSource dataSource, ILogger<SmsNotificationRepository> logger)
+    /// <param name="logger">The logger associated with this implementation of the SmsNotificationRepository</param>
+    public SmsNotificationRepository(NpgsqlDataSource dataSource, ILogger<SmsNotificationRepository> logger) : base(logger)
     {
         _dataSource = dataSource;
         _logger = logger;
@@ -139,14 +139,14 @@ public class SmsNotificationRepository : ISmsNotificationRepository
     /// <summary>
     /// Updates the send status of an SMS notification based on its identifier and sets the gateway reference.
     /// </summary>
-    /// <param name="id">The unique identifier of the SMS notification.</param>
+    /// <param name="smsNotificationAlternateId">The unique identifier of the SMS notification.</param>
     /// <param name="result">The result status of sending the SMS notification.</param>
     /// <param name="gatewayReference">The gateway reference (optional). If provided, it will be updated in the database.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     /// <exception cref="ArgumentException">Thrown when the provided SMS identifier is invalid.</exception>
-    private async Task UpdateSendStatusById(Guid id, SmsNotificationResultType result, string? gatewayReference = null)
+    private async Task UpdateSendStatusById(Guid smsNotificationAlternateId, SmsNotificationResultType result, string? gatewayReference = null)
     {
-        if (id == Guid.Empty)
+        if (smsNotificationAlternateId == Guid.Empty)
         {
             throw new ArgumentException("The provided SMS identifier is invalid.");
         }
@@ -159,11 +159,16 @@ public class SmsNotificationRepository : ISmsNotificationRepository
             await using NpgsqlCommand pgcom = new(_updateSmsNotificationBasedOnIdentifierSql, connection, transaction);
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, result.ToString());
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(gatewayReference) ? DBNull.Value : gatewayReference);
-            pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, id);
+            pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, smsNotificationAlternateId);
 
             await pgcom.ExecuteNonQueryAsync();
 
-            await TryCompleteOrderBasedOnNotificationsState(id, connection, transaction);
+            var orderIsSetAsCompleted = await TryCompleteOrderBasedOnNotificationsState(smsNotificationAlternateId, connection, transaction);
+
+            if (orderIsSetAsCompleted)
+            {
+               await InsertStatusFeedBasedOnShipmentTracking(connection, transaction, smsNotificationAlternateId);
+            }
 
             await transaction.CommitAsync();
         }
@@ -220,7 +225,12 @@ public class SmsNotificationRepository : ISmsNotificationRepository
 
             if (parseResult)
             {
-                await TryCompleteOrderBasedOnNotificationsState(alternateIdGuid, connection, transaction);
+                var orderIsSetAsCompleted = await TryCompleteOrderBasedOnNotificationsState(alternateIdGuid, connection, transaction);
+                if (orderIsSetAsCompleted)
+                {
+                    await InsertStatusFeedBasedOnShipmentTracking(connection, transaction, alternateIdGuid);
+                }
+
                 await transaction.CommitAsync();
             }
             else
@@ -232,6 +242,21 @@ public class SmsNotificationRepository : ISmsNotificationRepository
         {
             await transaction.RollbackAsync();
             throw;
+        }
+    }
+
+    private async Task InsertStatusFeedBasedOnShipmentTracking(NpgsqlConnection connection, NpgsqlTransaction transaction, Guid alternateIdGuid)
+    {
+        var orderStatus = await GetShipmentTracking(alternateIdGuid, connection, transaction);
+        if (orderStatus != null)
+        {
+            await InsertStatusFeed(orderStatus, connection, transaction);
+        }
+        else
+        {
+            // order status could not be retrieved, we roll back the transaction and throw an exception
+            _logger.LogError("Order status could not be retrieved for alternate ID");
+            throw new InvalidOperationException("Order status could not be retrieved for the specified alternate ID.");
         }
     }
 }
