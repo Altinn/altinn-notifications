@@ -70,9 +70,8 @@ public class TriggerController : ControllerBase
     {
         try
         {
-            await Task.WhenAll(
-                _emailNotificationService.TerminateExpiredNotifications(),
-                _smsNotificationService.TerminateExpiredNotifications());
+            await _emailNotificationService.TerminateExpiredNotifications();
+            await _smsNotificationService.TerminateExpiredNotifications();
             return Ok(); 
         }
         catch (Exception ex)

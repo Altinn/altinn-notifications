@@ -108,6 +108,6 @@ public class SmsNotificationService : ISmsNotificationService
             SendResult = new(resultType, _dateTime.UtcNow())
         };
 
-        await _repository.AddNotification(smsNotification, requestedSendTime.AddHours(1), count);
+        await _repository.AddNotification(smsNotification, requestedSendTime.AddHours(48), count);
     }
 }

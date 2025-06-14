@@ -125,7 +125,7 @@ public class EmailNotificationService : IEmailNotificationService
         }
         else
         {
-            expiry = requestedSendTime.AddHours(1);
+            expiry = requestedSendTime.AddHours(48);
         }
 
         await _repository.AddNotification(emailNotification, expiry);
