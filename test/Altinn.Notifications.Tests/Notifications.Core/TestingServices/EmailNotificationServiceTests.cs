@@ -119,6 +119,9 @@ public class EmailNotificationServiceTests
         Guid orderId = Guid.NewGuid();
         DateTime requestedSendTime = DateTime.UtcNow;
         DateTime dateTimeOutput = DateTime.UtcNow;
+        DateTime now = DateTime.UtcNow;
+        DateTime requestedSendTime = now;
+        DateTime dateTimeOutput   = now;
         DateTime expectedExpiry = requestedSendTime.AddHours(48);
         var emailRecipient = new EmailRecipient() { IsReserved = true };
         var emailAddressPoints = new List<EmailAddressPoint>() { new("skd@norge.no") };
