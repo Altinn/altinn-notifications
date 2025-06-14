@@ -38,7 +38,7 @@ public abstract class NotificationRepositoryBase
     private const string _insertStatusFeedEntrySql = @"SELECT notifications.insertstatusfeed(o._id, o.creatorname, @orderstatus)
                                                        FROM notifications.orders o
                                                        WHERE o.alternateid = @alternateid;";
-    
+
     private const int _numberOfRowsTerminatedPerFunctionCall = 100;
 
     /// <summary>
@@ -95,6 +95,8 @@ public abstract class NotificationRepositoryBase
 
     /// <summary>
     /// Terminates hanging email/sms notifications by updating their status and attempting to complete associated orders.
+    /// Updates rows in a batch of 100 per function call. All subsequent processing happens in the same transaction.
+    /// All 100 or nothing is committed to the database.
     /// </summary>
     /// <returns>A <see cref="Task"/> that represents the asynchronous operation.</returns>
     /// <exception cref="InvalidOperationException">Thrown if the alternate ID returned from the database cannot be parsed as a valid <see cref="Guid"/>.</exception>
@@ -109,30 +111,23 @@ public abstract class NotificationRepositoryBase
             pgcom.Parameters.AddWithValue("source", NpgsqlDbType.Text, SourceIdentifier); // Source identifier for the notifications
             pgcom.Parameters.AddWithValue("limit", NpgsqlDbType.Integer, _numberOfRowsTerminatedPerFunctionCall);
 
-            // Use ExecuteReaderAsync since the RETURNING clause provides a result set.
             await using var reader = await pgcom.ExecuteReaderAsync();
 
-            // Buffer all IDs first, then dispose the reader before issuing further commands.
+            // Buffer all IDs 
             var expiredIds = new List<Guid>(10);
             while (await reader.ReadAsync())
             {
                 expiredIds.Add(await reader.GetFieldValueAsync<Guid>(0));
             }
 
-            await reader.DisposeAsync();
+            // close the reader to release the connection for the next operation
+            await reader.CloseAsync();
 
             foreach (var alternateId in expiredIds)
             {
-                try
+                if (await TryCompleteOrderBasedOnNotificationsState(alternateId, connection, transaction))
                 {
-                    if (await TryCompleteOrderBasedOnNotificationsState(alternateId, connection, transaction))
-                    {
-                        await InsertOrderStatusCompletedOrder(connection, transaction, alternateId);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to finalise order state for notification {AlternateId}. Skipping and continuing.", alternateId);
+                    await InsertOrderStatusCompletedOrder(connection, transaction, alternateId);
                 }
             }
 
@@ -160,7 +155,6 @@ public abstract class NotificationRepositoryBase
         }
         else
         {
-            // order status could not be retrieved, but we still commit the transaction to update the email notification, and order status
             _logger.LogError("Order status could not be retrieved for the specified alternate ID.");
             throw new InvalidOperationException("Order status could not be retrieved for the specified alternate ID.");
         }

@@ -35,7 +35,7 @@ public class SmsNotificationServiceTests
         Guid orderId = Guid.NewGuid();
         DateTime requestedSendTime = DateTime.UtcNow;
         DateTime dateTimeOutput = DateTime.UtcNow;
-        DateTime expectedExpiry = requestedSendTime.AddHours(1);
+        DateTime expectedExpiry = requestedSendTime.AddHours(48);
 
         SmsNotification expected = new()
         {
@@ -69,7 +69,7 @@ public class SmsNotificationServiceTests
         Guid orderId = Guid.NewGuid();
         DateTime requestedSendTime = DateTime.UtcNow;
         DateTime dateTimeOutput = DateTime.UtcNow;
-        DateTime expectedExpiry = requestedSendTime.AddHours(1);
+        DateTime expectedExpiry = requestedSendTime.AddHours(48);
 
         SmsNotification expected = new()
         {
@@ -103,7 +103,7 @@ public class SmsNotificationServiceTests
         Guid orderId = Guid.NewGuid();
         DateTime requestedSendTime = DateTime.UtcNow;
         DateTime dateTimeOutput = DateTime.UtcNow;
-        DateTime expectedExpiry = requestedSendTime.AddHours(1);
+        DateTime expectedExpiry = requestedSendTime.AddHours(48);
 
         SmsNotification expected = new()
         {
