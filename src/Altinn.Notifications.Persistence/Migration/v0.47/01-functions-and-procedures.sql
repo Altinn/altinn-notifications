@@ -1143,7 +1143,7 @@ BEGIN
             WHERE _id IN (
                 SELECT _id
                 FROM notifications.emailnotifications
-                WHERE result = 'Succeeded' AND expirytime < (now() - INTERVAL '48 hours')
+                WHERE result = 'Succeeded' AND expirytime < now()
                 ORDER BY _id DESC
                 LIMIT GREATEST(_limit, 1) -- Use the input parameter for the limit
             )
@@ -1163,7 +1163,7 @@ BEGIN
             WHERE _id IN (
                 SELECT _id
                 FROM notifications.smsnotifications
-                WHERE result = 'Accepted' AND expirytime < (now() - INTERVAL '48 hours')
+                WHERE result = 'Accepted' AND expirytime < now()
                 ORDER BY _id DESC
                 LIMIT GREATEST(_limit, 1) -- Use the input parameter for the limit
             )

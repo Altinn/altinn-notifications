@@ -38,6 +38,8 @@ public abstract class NotificationRepositoryBase
     private const string _insertStatusFeedEntrySql = @"SELECT notifications.insertstatusfeed(o._id, o.creatorname, @orderstatus)
                                                        FROM notifications.orders o
                                                        WHERE o.alternateid = @alternateid;";
+    
+    private const int _numberOfRowsTerminatedPerFunctionCall = 100;
 
     /// <summary>
     /// Constructor for the NotificationRepositoryBase class.
@@ -105,7 +107,7 @@ public abstract class NotificationRepositoryBase
         {
             await using NpgsqlCommand pgcom = new(_updateExpiredNotifications, connection, transaction);
             pgcom.Parameters.AddWithValue("source", NpgsqlDbType.Text, SourceIdentifier); // Source identifier for the notifications
-            pgcom.Parameters.AddWithValue("limit", NpgsqlDbType.Integer, 10);
+            pgcom.Parameters.AddWithValue("limit", NpgsqlDbType.Integer, _numberOfRowsTerminatedPerFunctionCall);
 
             // Use ExecuteReaderAsync since the RETURNING clause provides a result set.
             await using var reader = await pgcom.ExecuteReaderAsync();
@@ -130,11 +132,10 @@ public abstract class NotificationRepositoryBase
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex,
-                        "Failed to finalise order state for notification {AlternateId}. Skipping and continuing.", alternateId);
-                    // optionally record a dead-letter table entry here
+                    _logger.LogWarning(ex, "Failed to finalise order state for notification {AlternateId}. Skipping and continuing.", alternateId);
                 }
             }
+
             await transaction.CommitAsync();
         }
         catch (Exception)
