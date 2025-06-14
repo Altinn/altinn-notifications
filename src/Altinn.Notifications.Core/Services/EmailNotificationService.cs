@@ -65,6 +65,13 @@ public class EmailNotificationService : IEmailNotificationService
     }
 
     /// <inheritdoc/>
+    public async Task TerminateExpiredNotifications()
+    {
+        // process hanging notifications that have been set to succeeded, but never reached a final stage
+        await _repository.TerminateExpiredNotifications();
+    }
+
+    /// <inheritdoc/>
     public async Task SendNotifications()
     {
         List<Email> emails = await _repository.GetNewNotifications();
@@ -118,7 +125,7 @@ public class EmailNotificationService : IEmailNotificationService
         }
         else
         {
-            expiry = requestedSendTime.AddHours(1);
+            expiry = requestedSendTime.AddHours(48);
         }
 
         await _repository.AddNotification(emailNotification, expiry);

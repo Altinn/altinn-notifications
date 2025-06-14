@@ -16,6 +16,7 @@ public class TriggerController : ControllerBase
     private readonly IEmailNotificationService _emailNotificationService;
     private readonly ISmsNotificationService _smsNotificationService;
     private readonly INotificationScheduleService _scheduleService;
+    private readonly ILogger<TriggerController> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TriggerController"/> class.
@@ -24,12 +25,14 @@ public class TriggerController : ControllerBase
         IOrderProcessingService orderProcessingService,
         IEmailNotificationService emailNotificationService,
         ISmsNotificationService smsNotificationService,
-        INotificationScheduleService scheduleService)
+        INotificationScheduleService scheduleService,
+        ILogger<TriggerController> logger)
     {
         _orderProcessingService = orderProcessingService;
         _emailNotificationService = emailNotificationService;
         _smsNotificationService = smsNotificationService;
         _scheduleService = scheduleService;
+        _logger = logger;
     }
 
     /// <summary>
@@ -54,6 +57,28 @@ public class TriggerController : ControllerBase
     {
         await _emailNotificationService.SendNotifications();
         return Ok();
+    }
+
+    /// <summary>
+    /// Endpoint for terminating expired notifications
+    /// </summary>
+    /// <returns>A <see cref="Task{TResult}"/> representing the result of the asynchronous operation.</returns>
+    [HttpPost]
+    [Consumes("application/json")]
+    [Route("terminateexpirednotifications")]
+    public async Task<IActionResult> Trigger_TerminateExpiredNotifications()
+    {
+        try
+        {
+            await _emailNotificationService.TerminateExpiredNotifications();
+            await _smsNotificationService.TerminateExpiredNotifications();
+            return Ok(); 
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to terminate expired notifications");
+            return StatusCode(500, "Failed to terminate expired notifications");
+        }
     }
 
     /// <summary>

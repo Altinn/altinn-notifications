@@ -8,7 +8,7 @@ namespace Altinn.Notifications.Core.Services.Interfaces;
 /// <summary>
 /// Defines the contract for the SMS notification service.
 /// </summary>
-public interface ISmsNotificationService
+public interface ISmsNotificationService : INotificationService
 {
     /// <summary>
     /// Creates a new SMS notification based on the provided order identifier, requested send time, address points, and recipient details.

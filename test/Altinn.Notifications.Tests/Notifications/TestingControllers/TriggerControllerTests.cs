@@ -4,9 +4,8 @@ using System.Threading.Tasks;
 using Altinn.Notifications.Controllers;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Services.Interfaces;
-
 using Microsoft.AspNetCore.Mvc;
-
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
 using Xunit;
@@ -29,14 +28,14 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
                 new Mock<IOrderProcessingService>().Object,
                 new Mock<IEmailNotificationService>().Object,
                 _smsNotificationServiceMock.Object,
-                _notificationScheduleMock.Object);
+                _notificationScheduleMock.Object,
+                NullLogger<TriggerController>.Instance);
         }
 
         [Fact]
         public async Task Trigger_SendSmsNotifications_AfterBusinessHours_ServiceNotCalled()
         {
             // Arrange
-            var afterBusinessHours = new DateTime(2022, 1, 1, 20, 0, 0, DateTimeKind.Utc);
             _notificationScheduleMock.Setup(x => x.CanSendSmsNotifications()).Returns(false);
 
             // Act
@@ -51,7 +50,6 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
         public async Task Trigger_SendSmsNotifications_BeforeBusinessHours_ServiceNotCalled()
         {
             // Arrange
-            var afterBusinessHours = new DateTime(2022, 1, 1, 04, 0, 0, DateTimeKind.Utc);
             _notificationScheduleMock.Setup(x => x.CanSendSmsNotifications()).Returns(false);
 
             // Act
