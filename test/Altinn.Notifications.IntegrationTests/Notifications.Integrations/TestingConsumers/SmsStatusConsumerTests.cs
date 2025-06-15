@@ -111,7 +111,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
         await sut.StopAsync(CancellationToken.None);
 
         // Assert
-        int count = await PostgreUtil.SelectStatusFeedEntry(order.Id);
+        int count = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
         Assert.Equal(1, count);
     }
 

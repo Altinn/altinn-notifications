@@ -7,7 +7,7 @@ namespace Altinn.Notifications.Core.Services.Interfaces;
 /// <summary>
 /// Interface for the email notification service.
 /// </summary>
-public interface IEmailNotificationService
+public interface IEmailNotificationService : INotificationService
 {
     /// <summary>
     /// Creates a new email notification.

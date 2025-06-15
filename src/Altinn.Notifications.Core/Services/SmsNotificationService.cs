@@ -77,6 +77,12 @@ public class SmsNotificationService : ISmsNotificationService
     }
 
     /// <inheritdoc/>
+    public async Task TerminateExpiredNotifications()
+    {
+        await _repository.TerminateExpiredNotifications();
+    }
+
+    /// <inheritdoc/>
     public async Task UpdateSendStatus(SmsSendOperationResult sendOperationResult)
     {
         await _repository.UpdateSendStatus(sendOperationResult.NotificationId, sendOperationResult.SendResult, sendOperationResult.GatewayReference);
@@ -102,6 +108,6 @@ public class SmsNotificationService : ISmsNotificationService
             SendResult = new(resultType, _dateTime.UtcNow())
         };
 
-        await _repository.AddNotification(smsNotification, requestedSendTime.AddHours(1), count);
+        await _repository.AddNotification(smsNotification, requestedSendTime.AddHours(48), count);
     }
 }
