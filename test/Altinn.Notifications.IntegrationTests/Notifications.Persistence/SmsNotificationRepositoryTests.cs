@@ -276,7 +276,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
         var orderStatus = await PostgreUtil.RunSqlReturnOutput<string>(
             $"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'");
         Assert.NotNull(result);
-        Assert.Equal(SmsNotificationResultType.Failed.ToString(), result);
+        Assert.Equal(SmsNotificationResultType.Failed_TTL.ToString(), result);
         Assert.Equal(1, count); // Ensure that the status feed entry was created
         Assert.Equal(OrderProcessingStatus.Completed.ToString(), orderStatus);
     }

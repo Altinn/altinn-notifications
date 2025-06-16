@@ -1183,7 +1183,7 @@ $$;
 
 -- Add a comment to the function for documentation purposes
 COMMENT ON FUNCTION notifications.updateexpirednotifications(TEXT, INT) IS 
-'Updates the result of expired email or sms notifications to ''Failed''. 
+'Updates the result of expired email or sms notifications to ''Failed_TTL''. 
 Parameters: notification_type (TEXT: ''email'' or ''sms''), update_limit (INT).
 Returns a set of unique alternateid for the updated records.';
 

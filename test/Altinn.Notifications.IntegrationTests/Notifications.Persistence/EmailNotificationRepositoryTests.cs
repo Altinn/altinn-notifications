@@ -294,7 +294,7 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
         var orderStatus = await PostgreUtil.RunSqlReturnOutput<string>($"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'");
         
         Assert.NotNull(result);
-        Assert.Equal(EmailNotificationResultType.Failed.ToString(), result);
+        Assert.Equal(EmailNotificationResultType.Failed_TTL.ToString(), result);
         Assert.Equal(1, count);
         Assert.Equal(OrderProcessingStatus.Completed.ToString(), orderStatus);
     }

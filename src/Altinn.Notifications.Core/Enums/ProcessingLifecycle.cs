@@ -277,5 +277,15 @@ public enum ProcessingLifecycle
     /// <remarks>
     /// The message was flagged by security systems for manual review before potential delivery.
     /// </remarks>
-    Email_Failed_Quarantined
+    Email_Failed_Quarantined,
+
+    /// <summary>
+    /// The sms notification failed to reach the delivered state during the time-to-live (TTL) timeframe.
+    /// </summary>
+    SMS_Failed_TTL,
+
+    /// <summary>
+    /// The email notification failed to reach the delivered state during the time-to-live (TTL) timeframe.
+    /// </summary>
+    Email_Failed_TTL
 }

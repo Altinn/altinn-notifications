@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Altinn.Notifications.Controllers;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -94,7 +95,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
             _emailNotificationServiceMock.Verify(x => x.TerminateExpiredNotifications(), Times.Once);
             Assert.IsType<ObjectResult>(result);
             var statusCodeResult = (ObjectResult)result;
-            Assert.Equal(500, statusCodeResult.StatusCode);
+            Assert.Equal(StatusCodes.Status500InternalServerError, statusCodeResult.StatusCode);
         }
 
         [Fact]
@@ -112,7 +113,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
             _smsNotificationServiceMock.Verify(x => x.TerminateExpiredNotifications(), Times.Once);
             Assert.IsType<ObjectResult>(result);
             var statusCodeResult = (ObjectResult)result;
-            Assert.Equal(500, statusCodeResult.StatusCode);
+            Assert.Equal(StatusCodes.Status500InternalServerError, statusCodeResult.StatusCode);
         }
     }
 }
