@@ -12,7 +12,7 @@ BEGIN
         RETURN QUERY
         WITH updated_rows AS (
             UPDATE notifications.emailnotifications
-            SET result = 'Failed',
+            SET result = 'Failed_TTL',
                 resulttime = now()
             WHERE _id IN (
                 SELECT _id
@@ -32,7 +32,7 @@ BEGIN
         RETURN QUERY
         WITH updated_rows AS (
             UPDATE notifications.smsnotifications
-            SET result = 'Failed',
+            SET result = 'Failed_TTL',
                 resulttime = now()
             WHERE _id IN (
                 SELECT _id

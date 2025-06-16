@@ -71,5 +71,10 @@ public enum EmailNotificationResultType
     /// <summary>
     /// Failed, quarantined
     /// </summary>
-    Failed_Quarantined
+    Failed_Quarantined,
+
+    /// <summary>
+    /// Time to live (TTL) for email notification has expired 
+    /// </summary>
+    Failed_TTL
 }
