@@ -71,7 +71,7 @@ public class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFact
             ProcessingStatus = new()
             {
                 LastUpdate = persistedOrder.Created,
-                Status = "Processed",
+                Status = "Completed",
                 StatusDescription = "Order processing is done. Notifications have been successfully generated."
             },
             NotificationsStatusSummary = new NotificationsStatusSummaryExt()
@@ -123,7 +123,7 @@ public class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFact
             RequestedSendTime = persistedOrder.RequestedSendTime,
             ProcessingStatus = new()
             {
-                Status = "Processed",
+                Status = "Completed",
                 LastUpdate = persistedOrder.Created,
                 StatusDescription = "Order processing is done. Notifications have been successfully generated."
             },
