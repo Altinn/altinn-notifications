@@ -159,7 +159,7 @@ public static partial class OrderMapper
         orderExt.ProcessingStatus = new()
         {
             LastUpdate = order.ProcessingStatus.LastUpdate,
-            Status = order.ProcessingStatus.Status.ToString(),
+            Status = PerformStatusMappingForV1Endpoints(order),
             StatusDescription = order.ProcessingStatus.StatusDescription
         };
 
@@ -194,6 +194,18 @@ public static partial class OrderMapper
         }
 
         return orderExt;
+    }
+
+    private static string PerformStatusMappingForV1Endpoints(NotificationOrderWithStatus order)
+    {
+        // Adding the Processed status is a breaking change, so we need to return the old status
+        // which was Completed.
+        if (order.ProcessingStatus.Status == OrderProcessingStatus.Processed)
+        {
+            return OrderProcessingStatus.Completed.ToString();
+        }
+
+        return order.ProcessingStatus.Status.ToString();
     }
 
     /// <summary>
