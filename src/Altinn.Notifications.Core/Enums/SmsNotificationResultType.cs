@@ -68,5 +68,10 @@ public enum SmsNotificationResultType
     /// <summary>
     /// Indicates that the SMS send operation failed because the message was rejected.
     /// </summary>
-    Failed_Rejected
+    Failed_Rejected,
+
+    /// <summary>
+    /// Time to Live (TTL) for the SMS notification has expired.
+    /// </summary>
+    Failed_TTL
 }

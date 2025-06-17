@@ -1,12 +1,9 @@
-﻿using System.Collections.Immutable;
-using Altinn.Notifications.Core.Enums;
+﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
-using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Extensions;
-using Altinn.Notifications.Persistence.Mappers;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 
@@ -26,7 +23,6 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     private const string _insertEmailNotificationSql = "call notifications.insertemailnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _toaddress, _customizedbody, _customizedsubject, _result, _resulttime, _expirytime)
     private const string _getEmailNotificationsSql = "select * from notifications.getemails_statusnew_updatestatus()";
     private const string _getEmailRecipients = "select * from notifications.getemailrecipients_v2($1)"; // (_orderid)
-    private const string _tryMarkOrderAsCompletedSql = "SELECT notifications.trymarkorderascompleted($1, $2)"; // (_alternateid, _alternateidsource)
     private const string _updateEmailStatus =
         @"UPDATE notifications.emailnotifications 
         SET result = $1::emailnotificationresulttype, 
@@ -35,13 +31,16 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
         WHERE alternateid = $3 OR operationid = $2
         RETURNING alternateid;"; // (_result, _operationid, _alternateid)
 
+    /// <inheritdoc/>
+    protected override string SourceIdentifier => _emailSourceIdentifier;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotificationRepository"/> class.
     /// </summary>
     /// <param name="dataSource">The npgsql data source.</param>
     /// <param name="logger">The logger associated with this implementation of the IEmailNotificationRepository</param>
     public EmailNotificationRepository(NpgsqlDataSource dataSource, ILogger<EmailNotificationRepository> logger)
-    : base(logger) // Pass required parameters to the base class constructor
+    : base(dataSource, logger) // Pass required parameters to the base class constructor
     {
         _dataSource = dataSource;
         _logger = logger;
@@ -93,16 +92,6 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
         return searchResult;
     }
 
-    private static async Task<bool> TryCompleteOrderBasedOnNotificationsState(Guid notificationId, NpgsqlConnection connection, NpgsqlTransaction transaction)
-    {
-        await using NpgsqlCommand pgcom = new(_tryMarkOrderAsCompletedSql, connection, transaction);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, _emailSourceIdentifier);
-
-        var result = await pgcom.ExecuteScalarAsync();
-        return result != null && (bool)result;
-    }
-
     /// <inheritdoc/>
     public async Task UpdateSendStatus(Guid? notificationId, EmailNotificationResultType status, string? operationId = null)
     {
@@ -135,17 +124,7 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
 
             if (orderIsSetAsCompleted)
             {
-                var orderStatus = await GetShipmentTracking(emailNotificationAlternateId, connection, transaction);
-                if (orderStatus != null)
-                {
-                    await InsertStatusFeed(orderStatus, connection, transaction);
-                }
-                else
-                {
-                    // order status could not be retrieved, we roll back the transaction and throw an exception
-                    _logger.LogError("Order status could not be retrieved for the specified alternate ID.");
-                    throw new InvalidOperationException("Order status could not be retrieved for the specified alternate ID.");
-                }
+                await InsertOrderStatusCompletedOrder(connection, transaction, emailNotificationAlternateId);
             }
 
             await transaction.CommitAsync();

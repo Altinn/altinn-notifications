@@ -25,7 +25,8 @@ internal static class ProcessingLifecycleMapper
         { "failed_invalidreceiver", ProcessingLifecycle.SMS_Failed_InvalidRecipient },
         { "failed_invalidrecipient", ProcessingLifecycle.SMS_Failed_InvalidRecipient },
         { "failed_recipientreserved", ProcessingLifecycle.SMS_Failed_RecipientReserved },
-        { "failed_recipientnotidentified", ProcessingLifecycle.SMS_Failed_RecipientNotIdentified }
+        { "failed_recipientnotidentified", ProcessingLifecycle.SMS_Failed_RecipientNotIdentified },
+        { "failed_ttl", ProcessingLifecycle.SMS_Failed_TTL }
     };
 
     /// <summary>
@@ -45,7 +46,8 @@ internal static class ProcessingLifecycleMapper
         { "failed_invalidemailformat", ProcessingLifecycle.Email_Failed_InvalidFormat },
         { "failed_recipientreserved", ProcessingLifecycle.Email_Failed_RecipientReserved },
         { "failed_supressedrecipient", ProcessingLifecycle.Email_Failed_SuppressedRecipient },
-        { "failed_recipientnotidentified", ProcessingLifecycle.Email_Failed_RecipientNotIdentified }
+        { "failed_recipientnotidentified", ProcessingLifecycle.Email_Failed_RecipientNotIdentified },
+        { "failed_ttl", ProcessingLifecycle.Email_Failed_TTL }
     };
 
     /// <summary>

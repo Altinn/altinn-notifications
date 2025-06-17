@@ -3,6 +3,7 @@ using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
+using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
@@ -265,6 +266,40 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task TerminateExpiredNotifications_ShouldSetNotificationToFailed_CompleteOrder_AndInsertToFeed()
+    {
+        // Arrange
+        (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(simulateConsumers: true, simulateCronJob: true);
+        _orderIdsToDelete.Add(order.Id);
+
+        EmailNotificationRepository sut = (EmailNotificationRepository)ServiceUtil
+            .GetServices([typeof(IEmailNotificationRepository)])
+            .First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        // modify the notification to simulate an expired notification
+        string sql = $@"
+            UPDATE notifications.emailnotifications 
+            SET result = 'Succeeded', 
+                expirytime = NOW() - INTERVAL '3 day' 
+            WHERE alternateid = '{emailNotification.Id}';";
+
+        await PostgreUtil.RunSql(sql);
+
+        // Act
+        await sut.TerminateExpiredNotifications();
+
+        // Assert
+        var result = await SelectEmailNotificationStatus(emailNotification.Id);
+        var count = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+        var orderStatus = await PostgreUtil.RunSqlReturnOutput<string>($"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'");
+        
+        Assert.NotNull(result);
+        Assert.Equal(EmailNotificationResultType.Failed_TTL.ToString(), result);
+        Assert.Equal(1, count);
+        Assert.Equal(OrderProcessingStatus.Completed.ToString(), orderStatus);
+    }
+
+    [Fact]
     public async Task SetEmailResult_AllEnumValuesExistInDb()
     {
         // Arrange
@@ -288,5 +323,11 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
                 Assert.Fail($"Exception thrown for EmailNotificationResultType: {resultType}. Exception: {ex.Message}");
             }
         }
+    }
+
+    private static async Task<string> SelectEmailNotificationStatus(Guid notificationId)
+    {
+        string sql = $"select result from notifications.emailnotifications where alternateid = '{notificationId}'";
+        return await PostgreUtil.RunSqlReturnOutput<string>(sql);
     }
 }

@@ -22,8 +22,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     private const string _getNewSmsNotificationsSql = "select * from notifications.getsms_statusnew_updatestatus($1)"; // (_sendingtimepolicy) this is now calling an overload function with the sending time policy parameter
     private const string _getSmsNotificationRecipientsSql = "select * from notifications.getsmsrecipients_v2($1)"; // (_orderid)
     private const string _insertNewSmsNotificationSql = "call notifications.insertsmsnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _customizedbody, _result, _smscount, _resulttime, _expirytime)
-    private const string _tryMarkOrderAsCompletedSql = "SELECT notifications.trymarkorderascompleted($1, $2)"; // (_alternateid, _alternateidsource)
-
+  
     private const string _updateSmsNotificationBasedOnIdentifierSql =
         @"UPDATE notifications.smsnotifications 
             SET result = $1::smsnotificationresulttype, 
@@ -38,12 +37,15 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
             WHERE gatewayreference = $2
             RETURNING alternateid"; // (_result, _gatewayreference)
 
+    /// <inheritdoc/>
+    protected override string SourceIdentifier => _smsSourceIdentifier;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsNotificationRepository"/> class.
     /// </summary>
     /// <param name="dataSource">The Npgsql data source.</param>
     /// <param name="logger">The logger associated with this implementation of the SmsNotificationRepository</param>
-    public SmsNotificationRepository(NpgsqlDataSource dataSource, ILogger<SmsNotificationRepository> logger) : base(logger)
+    public SmsNotificationRepository(NpgsqlDataSource dataSource, ILogger<SmsNotificationRepository> logger) : base(dataSource, logger)
     {
         _dataSource = dataSource;
         _logger = logger;
@@ -167,7 +169,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
 
             if (orderIsSetAsCompleted)
             {
-               await InsertStatusFeedBasedOnShipmentTracking(connection, transaction, smsNotificationAlternateId);
+               await InsertOrderStatusCompletedOrder(connection, transaction, smsNotificationAlternateId);
             }
 
             await transaction.CommitAsync();
@@ -177,16 +179,6 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
             await transaction.RollbackAsync();
             throw;
         }
-    }
-
-    private static async Task<bool> TryCompleteOrderBasedOnNotificationsState(Guid notificationId, NpgsqlConnection connection, NpgsqlTransaction transaction)
-    {
-        await using NpgsqlCommand pgcom = new(_tryMarkOrderAsCompletedSql, connection, transaction);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, _smsSourceIdentifier);
-
-        var result = await pgcom.ExecuteScalarAsync();
-        return result != null && (bool)result;
     }
 
     /// <summary>
@@ -228,7 +220,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
                 var orderIsSetAsCompleted = await TryCompleteOrderBasedOnNotificationsState(alternateIdGuid, connection, transaction);
                 if (orderIsSetAsCompleted)
                 {
-                    await InsertStatusFeedBasedOnShipmentTracking(connection, transaction, alternateIdGuid);
+                    await InsertOrderStatusCompletedOrder(connection, transaction, alternateIdGuid);
                 }
 
                 await transaction.CommitAsync();
@@ -242,21 +234,6 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
         {
             await transaction.RollbackAsync();
             throw;
-        }
-    }
-
-    private async Task InsertStatusFeedBasedOnShipmentTracking(NpgsqlConnection connection, NpgsqlTransaction transaction, Guid alternateIdGuid)
-    {
-        var orderStatus = await GetShipmentTracking(alternateIdGuid, connection, transaction);
-        if (orderStatus != null)
-        {
-            await InsertStatusFeed(orderStatus, connection, transaction);
-        }
-        else
-        {
-            // order status could not be retrieved, we roll back the transaction and throw an exception
-            _logger.LogError("Order status could not be retrieved for alternate ID");
-            throw new InvalidOperationException("Order status could not be retrieved for the specified alternate ID.");
         }
     }
 }

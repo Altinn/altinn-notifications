@@ -26,7 +26,8 @@ namespace Altinn.Notifications.Core.Services
                 { EmailNotificationResultType.Failed_TransientError, "The email was not sent due to a transient error. We will retry sending the email." },
                 { EmailNotificationResultType.Failed_Bounced, "The email hard bounced, which may have happened because the email address does not exist or the domain is invalid." },
                 { EmailNotificationResultType.Failed_FilteredSpam, "The email was identified as spam, and was rejected or blocked (not quarantined)." },
-                { EmailNotificationResultType.Failed_Quarantined, "The email was quarantined (as spam, bulk mail, or phising)." }
+                { EmailNotificationResultType.Failed_Quarantined, "The email was quarantined (as spam, bulk mail, or phising)." },
+                { EmailNotificationResultType.Failed_TTL, "The email was in indefinite state Succeeded for too long (TTL), and was subsequently set to failed." }
             };
 
         private readonly static List<EmailNotificationResultType> _successResults = new()
