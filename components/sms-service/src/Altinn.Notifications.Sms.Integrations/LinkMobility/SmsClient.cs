@@ -17,6 +17,7 @@ namespace Altinn.Notifications.Sms.Integrations.LinkMobility
     /// </summary>
     public class SmsClient : ISmsClient
     {
+        private const int TimeToLifeHours = 48;
         private readonly IAltinnGatewayClient _client;
         private readonly ILogger<ISmsClient> _logger;
 
@@ -34,7 +35,11 @@ namespace Altinn.Notifications.Sms.Integrations.LinkMobility
         /// <inheritdoc />
         public async Task<Result<string, SmsClientErrorResponse>> SendAsync(Core.Sending.Sms sms)
         {
-            MessageResult result = await _client.SendAsync(new LinkMobilityModel.Sms(sms.Sender, sms.Recipient, sms.Message));
+            LinkMobilityModel.Sms linkMobilityModelSms = new(sms.Sender, sms.Recipient, sms.Message)
+            {
+                TimeToLive = TimeSpan.FromHours(TimeToLifeHours)
+            };
+            MessageResult result = await _client.SendAsync(linkMobilityModelSms);
 
             if (result.IsStatusOk)
             {
