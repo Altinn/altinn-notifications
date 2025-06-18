@@ -47,9 +47,9 @@ public static partial class OrderMapper
         List<INotificationTemplate> templateList = [];
 
         if (extRequest.EmailTemplate != null)
-        {
+        {   
             var emailTemplate = new EmailTemplate(
-                null,
+                extRequest.EmailTemplate.FromAddress,
                 NormalizeLineEndingsRegex().Replace(extRequest.EmailTemplate.Subject, SingleWhiteSpace),
                 extRequest.EmailTemplate.Body,
                 (EmailContentType)extRequest.EmailTemplate.ContentType);
