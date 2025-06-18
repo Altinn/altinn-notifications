@@ -66,6 +66,7 @@ public static class NotificationDeliveryManifestMapper
             ProcessingLifecycle.SMS_Failed_InvalidRecipient => ProcessingLifecycleExt.SMS_Failed_InvalidRecipient,
             ProcessingLifecycle.SMS_Failed_RecipientReserved => ProcessingLifecycleExt.SMS_Failed_RecipientReserved,
             ProcessingLifecycle.SMS_Failed_RecipientNotIdentified => ProcessingLifecycleExt.SMS_Failed_RecipientNotIdentified,
+            ProcessingLifecycle.SMS_Failed_TTL => ProcessingLifecycleExt.SMS_Failed_TTL,
 
             // Email statuses
             ProcessingLifecycle.Email_New => ProcessingLifecycleExt.Email_New,
@@ -81,6 +82,7 @@ public static class NotificationDeliveryManifestMapper
             ProcessingLifecycle.Email_Failed_RecipientReserved => ProcessingLifecycleExt.Email_Failed_RecipientReserved,
             ProcessingLifecycle.Email_Failed_SuppressedRecipient => ProcessingLifecycleExt.Email_Failed_SuppressedRecipient,
             ProcessingLifecycle.Email_Failed_RecipientNotIdentified => ProcessingLifecycleExt.Email_Failed_RecipientNotIdentified,
+            ProcessingLifecycle.Email_Failed_TTL => ProcessingLifecycleExt.Email_Failed_TTL,
 
             // In case a new status is added to the enum but not to this mapping:
             _ => throw new ArgumentOutOfRangeException(nameof(status), $"Unsupported status: {status}")

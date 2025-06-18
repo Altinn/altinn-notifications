@@ -182,6 +182,11 @@ public enum ProcessingLifecycleExt
     SMS_Failed_Rejected = 37,
 
     /// <summary>
+    /// The SMS notification failed because it exceeded the time-to-live (TTL) limit set by the service provider.
+    /// </summary>
+    SMS_Failed_TTL = 38,
+
+    /// <summary>
     /// The email notification has been received and registered in the system but processing has not yet begun.
     /// </summary>
     /// <remarks>
@@ -283,5 +288,10 @@ public enum ProcessingLifecycleExt
     /// <remarks>
     /// The message was flagged by security systems for manual review before potential delivery.
     /// </remarks>
-    Email_Failed_Quarantined = 62
+    Email_Failed_Quarantined = 62,
+
+    /// <summary>
+    /// The email notification failed because it exceeded the time-to-live (TTL) limit set by the service provider.
+    /// </summary>
+    Email_Failed_TTL = 63
 }
