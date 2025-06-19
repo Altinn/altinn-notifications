@@ -56,7 +56,7 @@ public static class PostgreUtil
         return persistedOrder;
     }
 
-    public static async Task<(NotificationOrder Order, EmailNotification EmailNotification)> PopulateDBWithOrderAndEmailNotification(string? sendersReference = null, bool simulateCronJob = false, bool simulateConsumers = false)
+    public static async Task<(NotificationOrder Order, EmailNotification EmailNotification)> PopulateDBWithOrderAndEmailNotification(string? sendersReference = null, bool simulateCronJob = false, bool simulateConsumers = false, bool forceSendersReferenceToBeNull = false)
     {
         (NotificationOrder o, EmailNotification e) = TestdataUtil.GetOrderAndEmailNotification();
         var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IOrderRepository), typeof(IEmailNotificationRepository) });
@@ -67,6 +67,12 @@ public static class PostgreUtil
         if (sendersReference != null)
         {
             o.SendersReference = sendersReference;
+        }
+
+        if (forceSendersReferenceToBeNull)
+        {             
+            // Force the senders reference to be null, even if a value is provided
+            o.SendersReference = null;
         }
 
         /*
@@ -116,7 +122,7 @@ public static class PostgreUtil
         return o;
     }
 
-    public static async Task<(NotificationOrder Order, SmsNotification SmsNotification)> PopulateDBWithOrderAndSmsNotification(string? sendersReference = null, SendingTimePolicy? sendingTimePolicy = null, bool simulateCronJob = false, bool simulateConsumers = false)
+    public static async Task<(NotificationOrder Order, SmsNotification SmsNotification)> PopulateDBWithOrderAndSmsNotification(string? sendersReference = null, SendingTimePolicy? sendingTimePolicy = null, bool simulateCronJob = false, bool simulateConsumers = false, bool forceSendersReferenceToBeNull = false)
     {
         (NotificationOrder order, SmsNotification smsNotification) = TestdataUtil.GetOrderAndSmsNotification(sendingTimePolicy);
         var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IOrderRepository), typeof(ISmsNotificationRepository) });
@@ -127,6 +133,12 @@ public static class PostgreUtil
         if (sendersReference != null)
         {
             order.SendersReference = sendersReference;
+        }
+
+        if (forceSendersReferenceToBeNull)
+        {
+            // Force the senders reference to be null, even if a value is provided
+            order.SendersReference = null;
         }
 
         /*
@@ -164,6 +176,17 @@ public static class PostgreUtil
 
         await using NpgsqlCommand pgcom = dataSource.CreateCommand(sql);
         pgcom.Parameters.AddWithValue("@sendersRef", sendersRef);
+
+        await pgcom.ExecuteNonQueryAsync();
+    }
+
+    public static async Task DeleteOrderFromDb(Guid id)
+    {
+        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
+        string sql = "DELETE FROM notifications.orders WHERE alternateid = @id";
+
+        await using NpgsqlCommand pgcom = dataSource.CreateCommand(sql);
+        pgcom.Parameters.AddWithValue("id", id);
 
         await pgcom.ExecuteNonQueryAsync();
     }

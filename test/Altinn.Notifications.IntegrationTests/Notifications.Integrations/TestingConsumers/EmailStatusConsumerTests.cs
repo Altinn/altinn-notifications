@@ -124,7 +124,42 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         int count = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
         Assert.Equal(1, count);
     }
-  
+
+    [Fact]
+    public async Task InsertStatusFeed_SendersReferenceIsNull_OrderCompleted()
+    {
+        // Arrange
+        Dictionary<string, string> vars = new()
+        {
+            { "KafkaSettings__EmailStatusUpdatedTopicName", _statusUpdatedTopicName },
+            { "KafkaSettings__Admin__TopicList", $"[\"{_statusUpdatedTopicName}\"]" }
+        };
+        using EmailStatusConsumer sut = (EmailStatusConsumer)ServiceUtil
+                                                    .GetServices([typeof(IHostedService)], vars)
+                                                    .First(s => s.GetType() == typeof(EmailStatusConsumer))!;
+        (NotificationOrder order, EmailNotification notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(forceSendersReferenceToBeNull: true, simulateCronJob: true);
+        EmailSendOperationResult sendOperationResult = new()
+        {
+            NotificationId = notification.Id,
+            OperationId = Guid.NewGuid().ToString(),
+            SendResult = EmailNotificationResultType.Delivered
+        };
+
+        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
+
+        // Act
+        await sut.StartAsync(CancellationToken.None);
+        await Task.Delay(10000);
+        await sut.StopAsync(CancellationToken.None);
+
+        // Assert
+        int count = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+        Assert.Equal(1, count);
+
+        // cleanup
+        await PostgreUtil.DeleteOrderFromDb(order.Id);
+    }
+
     public Task InitializeAsync()
     {
         return Task.CompletedTask;
