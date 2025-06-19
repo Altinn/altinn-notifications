@@ -49,11 +49,26 @@ namespace Altinn.Notifications.Mappers
                 },
                 SendStatus = new()
                 {
-                    Status = notification.ResultStatus.Result.ToString(),
+                    Status = MapStatus(notification),
                     StatusDescription = notification.ResultStatus.ResultDescription,
                     LastUpdate = notification.ResultStatus.ResultTime
                 }
             };
+        }
+
+        /// <summary>
+        /// This will map future FailedTTL status to Failed for v1 API.
+        /// </summary>
+        /// <param name="notification">The notification to be mapped</param>
+        /// <returns></returns>
+        private static string MapStatus(SmsNotificationWithResult notification)
+        {
+            if (notification.ResultStatus.Result == Core.Enums.SmsNotificationResultType.Failed_TTL)
+            {
+                return Core.Enums.SmsNotificationResultType.Failed.ToString();
+            }
+
+            return notification.ResultStatus.Result.ToString();
         }
     }
 }

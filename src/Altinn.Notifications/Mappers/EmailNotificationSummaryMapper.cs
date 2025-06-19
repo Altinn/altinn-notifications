@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Models.Notification;
+﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models.Notification;
 
 namespace Altinn.Notifications.Mappers
 {
@@ -49,11 +50,26 @@ namespace Altinn.Notifications.Mappers
                 },
                 SendStatus = new()
                 {
-                    Status = notification.ResultStatus.Result.ToString(),
+                    Status = MapStatus(notification),
                     StatusDescription = notification.ResultStatus.ResultDescription,
                     LastUpdate = notification.ResultStatus.ResultTime
                 }
             };
+        }
+
+        /// <summary>
+        /// This will map future FailedTTL status to Failed for v1 API.
+        /// </summary>
+        /// <param name="notification">The notification to be mapped</param>
+        /// <returns></returns>
+        private static string MapStatus(EmailNotificationWithResult notification)
+        {
+            if (notification.ResultStatus.Result == EmailNotificationResultType.Failed_TTL)
+            {
+                return EmailNotificationResultType.Failed.ToString();
+            }
+
+            return notification.ResultStatus.Result.ToString();
         }
     }
 }
