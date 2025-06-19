@@ -115,6 +115,41 @@ public class SmsStatusConsumerTests : IAsyncLifetime
         Assert.Equal(1, count);
     }
 
+    [Fact]
+    public async Task InsertStatusFeed_SendersReferenceIsNull_OrderCompleted()
+    {
+        // Arrange
+        Dictionary<string, string> vars = new()
+        {
+            { "KafkaSettings__SmsStatusUpdatedTopicName", _statusUpdatedTopicName },
+            { "KafkaSettings__Admin__TopicList", $"[\"{_statusUpdatedTopicName}\"]" }
+        };
+        using SmsStatusConsumer sut = (SmsStatusConsumer)ServiceUtil
+                                                    .GetServices([typeof(IHostedService)], vars)
+                                                    .First(s => s.GetType() == typeof(SmsStatusConsumer))!;
+        (NotificationOrder order, SmsNotification notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(forceSendersReferenceToBeNull: true, simulateCronJob: true);
+        SmsSendOperationResult sendOperationResult = new()
+        {
+            NotificationId = notification.Id,
+            GatewayReference = Guid.NewGuid().ToString(),
+            SendResult = SmsNotificationResultType.Delivered
+        };
+
+        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
+
+        // Act
+        await sut.StartAsync(CancellationToken.None);
+        await Task.Delay(10000);
+        await sut.StopAsync(CancellationToken.None);
+
+        // Assert
+        int count = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+        Assert.Equal(1, count);
+
+        // cleanup
+        await PostgreUtil.DeleteOrderFromDb(order.Id);
+    }
+
     public Task InitializeAsync()
     {
         return Task.CompletedTask;

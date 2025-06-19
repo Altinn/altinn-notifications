@@ -40,6 +40,9 @@ public abstract class NotificationRepositoryBase
                                                        WHERE o.alternateid = @alternateid;";
 
     private const int _numberOfRowsTerminatedPerFunctionCall = 100;
+    private const string _referenceColumnName = "reference";
+    private const string _typeColumnName = "type";
+    private const string _statusColumnName = "status";
 
     /// <summary>
     /// Constructor for the NotificationRepositoryBase class.
@@ -201,13 +204,19 @@ public abstract class NotificationRepositoryBase
 
     private static async Task<OrderStatus?> ReadMainNotification(NpgsqlDataReader reader)
     {
+        var referenceOrdinal = reader.GetOrdinal(_referenceColumnName);
+        var typeOrdinal = reader.GetOrdinal(_typeColumnName);
+        var statusOrdinal = reader.GetOrdinal(_statusColumnName);
+
+        var status = await reader.IsDBNullAsync(statusOrdinal) ? string.Empty : await reader.GetFieldValueAsync<string>(statusOrdinal);
+
         var orderStatus = new OrderStatus
         {
             LastUpdated = await reader.GetFieldValueAsync<DateTime>("last_update"),
-            ShipmentType = await reader.GetFieldValueAsync<string>("type"),
+            ShipmentType = await reader.IsDBNullAsync(typeOrdinal) ? null : await reader.GetFieldValueAsync<string>(_typeColumnName),
             ShipmentId = await reader.GetFieldValueAsync<Guid>("alternateid"),
-            SendersReference = await reader.GetFieldValueAsync<string>("reference"),
-            Status = ProcessingLifecycleMapper.GetOrderLifecycleStage(await reader.GetFieldValueAsync<string>("status")),
+            SendersReference = await reader.IsDBNullAsync(referenceOrdinal) ? null : await reader.GetFieldValueAsync<string?>(_referenceColumnName),
+            Status = ProcessingLifecycleMapper.GetOrderLifecycleStage(status),
             Recipients = [] // Initialize with an empty immutable list
         };
 
