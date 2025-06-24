@@ -40,7 +40,8 @@ public class StatusFeedMapperTests
                         }
                     }.ToImmutableList(),
                     SendersReference = sendersReferenceMock,
-                    ShipmentId = mockShipmentId
+                    ShipmentId = mockShipmentId,
+                    ShipmentType = "Notification"
                 }
             },
             new()
@@ -57,7 +58,8 @@ public class StatusFeedMapperTests
                         }
                     }.ToImmutableList(),
                     SendersReference = sendersReferenceMock,
-                    ShipmentId = mockShipmentId2
+                    ShipmentId = mockShipmentId2,
+                    ShipmentType = "Reminder"
                 }
             }
         };
@@ -68,6 +70,7 @@ public class StatusFeedMapperTests
             {
                 SequenceNumber = 1,
                 ShipmentId = mockShipmentId,
+                ShipmentType = "Notification",
                 SendersReference = sendersReferenceMock,
                 Recipients = new List<StatusFeedRecipientExt>
                 {
@@ -82,6 +85,7 @@ public class StatusFeedMapperTests
             {
                 SequenceNumber = 2,
                 ShipmentId = mockShipmentId2,
+                ShipmentType = "Reminder",
                 SendersReference = sendersReferenceMock,
                 Recipients = new List<StatusFeedRecipientExt>
                 {

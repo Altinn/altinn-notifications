@@ -104,6 +104,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
             var ojectResult = Assert.IsType<OkObjectResult>(result.Result);
             var returnedItems = Assert.IsType<List<StatusFeedExt>>(ojectResult.Value);
             Assert.Equal(statusFeedList.Count, returnedItems.Count);
+            Assert.Equal("Notification", returnedItems[0].ShipmentType);
         }
 
         [Fact]
