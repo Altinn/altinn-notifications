@@ -80,26 +80,28 @@ public class OrderProcessingService : IOrderProcessingService
     /// <inheritdoc/>
     public async Task<NotificationOrderProcessingResult> ProcessOrder(NotificationOrder order)
     {
-        var isRetryRequired = true;
-        var sendConditionEvaluationResult = await EvaluateSendingCondition(order, false);
+        var isRetryNeeded = true;
+        var sendingConditionEvaluationResult = await EvaluateSendingCondition(order, false);
 
-        switch (sendConditionEvaluationResult)
+        switch (sendingConditionEvaluationResult)
         {
             case { IsRetryNeeded: false, IsSendingConditionMet: false }:
+
+                isRetryNeeded = false;
                 await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
-                isRetryRequired = false;
+
                 break;
 
             case { IsRetryNeeded: false, IsSendingConditionMet: true }:
 
                 switch (order.NotificationChannel)
                 {
-                    case NotificationChannel.Email:
-                        await _emailProcessingService.ProcessOrder(order);
-                        break;
-
                     case NotificationChannel.Sms:
                         await _smsProcessingService.ProcessOrder(order);
+                        break;
+
+                    case NotificationChannel.Email:
+                        await _emailProcessingService.ProcessOrder(order);
                         break;
 
                     case NotificationChannel.EmailAndSms:
@@ -112,23 +114,24 @@ public class OrderProcessingService : IOrderProcessingService
                         break;
                 }
 
+                isRetryNeeded = false;
                 await _orderRepository.TryCompleteOrderBasedOnNotificationsState(order.Id, AlternateIdentifierSource.Order);
-                isRetryRequired = false;
+
                 break;
         }
 
         return new NotificationOrderProcessingResult
         {
-            IsRetryRequired = isRetryRequired
+            IsRetryRequired = isRetryNeeded
         };
     }
 
     /// <inheritdoc/>
     public async Task<NotificationOrderProcessingResult> ProcessOrderRetry(NotificationOrder order)
     {
-        var sendConditionEvaluationResult = await EvaluateSendingCondition(order, true);
+        var sendingConditionEvaluationResult = await EvaluateSendingCondition(order, true);
 
-        switch (sendConditionEvaluationResult)
+        switch (sendingConditionEvaluationResult)
         {
             case { IsRetryNeeded: false, IsSendingConditionMet: false }:
                 await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
