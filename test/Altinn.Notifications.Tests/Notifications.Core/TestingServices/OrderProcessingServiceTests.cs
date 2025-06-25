@@ -143,8 +143,43 @@ public class OrderProcessingServiceTests
         orderRepositoryMock.Verify(e => e.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>()), Times.Once);
     }
 
+    [Theory]
+    [InlineData(NotificationChannel.SmsPreferred)]
+    [InlineData(NotificationChannel.EmailPreferred)]
+    public async Task ProcessOrder_PreferredChannelWithoutCondition_CompletesSuccessfully(NotificationChannel notificationChannel)
+    {
+        // Arrange 
+        NotificationOrder order = new()
+        {
+            NotificationChannel = notificationChannel
+        };
+
+        var conditionClientMock = new Mock<IConditionClient>();
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+
+        var preferredChannelProcessingServiceMock = new Mock<IPreferredChannelProcessingService>();
+
+        var orderProcessingService = GetTestService(preferredChannelProcessingService: preferredChannelProcessingServiceMock.Object, orderRepository: orderRepositoryMock.Object, conditionClient: conditionClientMock.Object);
+
+        // Act
+        var processingResult = await orderProcessingService.ProcessOrder(order);
+
+        // Assert
+        Assert.NotNull(processingResult);
+        Assert.False(processingResult.IsRetryRequired);
+
+        conditionClientMock.Verify(e => e.CheckSendCondition(It.IsAny<Uri>()), Times.Never);
+
+        preferredChannelProcessingServiceMock.Verify(e => e.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Once);
+
+        orderRepositoryMock.Verify(e => e.SetProcessingStatus(It.IsAny<Guid>(), It.IsAny<OrderProcessingStatus>()), Times.Never);
+
+        orderRepositoryMock.Verify(e => e.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>()), Times.Once);
+    }
+
     [Fact]
-    public async Task ProcessOrder_SmsOrderWithTrueSendingCondition_CompletesSuccessfully()
+    public async Task ProcessOrder_SmsOrderWithMetSendingCondition_CompletesSuccessfully()
     {
         // Arrange 
         NotificationOrder order = new()
@@ -179,7 +214,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessOrder_EmailOrderWithTrueSendingCondition_CompletesSuccessfully()
+    public async Task ProcessOrder_EmailOrderWithMetSendingCondition_CompletesSuccessfully()
     {
         // Arrange 
         NotificationOrder order = new()
@@ -214,77 +249,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessOrder_SmsOrderWithFalseSendingCondition_SmsOrderProcessingStops()
-    {
-        // Arrange 
-        NotificationOrder order = new()
-        {
-            NotificationChannel = NotificationChannel.Sms,
-            ConditionEndpoint = new Uri("https://sendingCondition.no")
-        };
-
-        var conditionClientMock = new Mock<IConditionClient>();
-        conditionClientMock.Setup(e => e.CheckSendCondition(It.Is<Uri>(e => e == order.ConditionEndpoint))).ReturnsAsync(false);
-
-        var orderRepositoryMock = new Mock<IOrderRepository>();
-
-        var smsProcessingServiceMock = new Mock<ISmsOrderProcessingService>();
-
-        var orderProcessingService = GetTestService(smsOrderProcessingService: smsProcessingServiceMock.Object, orderRepository: orderRepositoryMock.Object, conditionClient: conditionClientMock.Object);
-
-        // Act
-        var processingResult = await orderProcessingService.ProcessOrder(order);
-
-        // Assert
-        Assert.NotNull(processingResult);
-        Assert.False(processingResult.IsRetryRequired);
-
-        conditionClientMock.Verify(e => e.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
-
-        smsProcessingServiceMock.Verify(e => e.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Never);
-
-        orderRepositoryMock.Verify(e => e.SetProcessingStatus(It.IsAny<Guid>(), It.IsAny<OrderProcessingStatus>()), Times.Once);
-
-        orderRepositoryMock.Verify(e => e.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task ProcessOrder_EmailOrderWithFalseSendingCondition_EmailOrderProcessingStops()
-    {
-        // Arrange 
-        NotificationOrder order = new()
-        {
-            NotificationChannel = NotificationChannel.Email,
-            ConditionEndpoint = new Uri("https://sendingCondition.no")
-        };
-
-        var conditionClientMock = new Mock<IConditionClient>();
-        conditionClientMock.Setup(e => e.CheckSendCondition(It.Is<Uri>(e => e == order.ConditionEndpoint))).ReturnsAsync(false);
-
-        var orderRepositoryMock = new Mock<IOrderRepository>();
-
-        var emailProcessingServiceMock = new Mock<IEmailOrderProcessingService>();
-
-        var orderProcessingService = GetTestService(emailOrderProcessingService: emailProcessingServiceMock.Object, orderRepository: orderRepositoryMock.Object, conditionClient: conditionClientMock.Object);
-
-        // Act
-        var processingResult = await orderProcessingService.ProcessOrder(order);
-
-        // Assert
-        Assert.NotNull(processingResult);
-        Assert.False(processingResult.IsRetryRequired);
-
-        conditionClientMock.Verify(e => e.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
-
-        emailProcessingServiceMock.Verify(e => e.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Never);
-
-        orderRepositoryMock.Verify(e => e.SetProcessingStatus(It.IsAny<Guid>(), It.IsAny<OrderProcessingStatus>()), Times.Once);
-
-        orderRepositoryMock.Verify(e => e.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task ProcessOrder_EmailAndSmsOrderWithTrueSendingCondition_CompletesSuccessfully()
+    public async Task ProcessOrder_EmailAndSmsOrderWithMetSendingCondition_CompletesSuccessfully()
     {
         // Arrange 
         NotificationOrder order = new()
@@ -318,8 +283,115 @@ public class OrderProcessingServiceTests
         orderRepositoryMock.Verify(e => e.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>()), Times.Once);
     }
 
+    [Theory]
+    [InlineData(NotificationChannel.SmsPreferred)]
+    [InlineData(NotificationChannel.EmailPreferred)]
+    public async Task ProcessOrder_PreferredChannelWithMetSendingCondition_CompletesSuccessfully(NotificationChannel notificationChannel)
+    {
+        // Arrange 
+        NotificationOrder order = new()
+        {
+            NotificationChannel = notificationChannel,
+            ConditionEndpoint = new Uri("https://sendingCondition.no")
+        };
+
+        var conditionClientMock = new Mock<IConditionClient>();
+        conditionClientMock.Setup(e => e.CheckSendCondition(It.Is<Uri>(e => e == order.ConditionEndpoint))).ReturnsAsync(true);
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+
+        var preferredChannelProcessingServiceMock = new Mock<IPreferredChannelProcessingService>();
+
+        var orderProcessingService = GetTestService(preferredChannelProcessingService: preferredChannelProcessingServiceMock.Object, orderRepository: orderRepositoryMock.Object, conditionClient: conditionClientMock.Object);
+
+        // Act
+        var processingResult = await orderProcessingService.ProcessOrder(order);
+
+        // Assert
+        Assert.NotNull(processingResult);
+        Assert.False(processingResult.IsRetryRequired);
+
+        conditionClientMock.Verify(e => e.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
+
+        preferredChannelProcessingServiceMock.Verify(e => e.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Once);
+
+        orderRepositoryMock.Verify(e => e.SetProcessingStatus(It.IsAny<Guid>(), It.IsAny<OrderProcessingStatus>()), Times.Never);
+
+        orderRepositoryMock.Verify(e => e.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>()), Times.Once);
+    }
+
     [Fact]
-    public async Task ProcessOrder_EmailAndSmsOrderWithFalseSendingCondition_EmailOrderProcessingStops()
+    public async Task ProcessOrder_SmsOrderWithUnmetSendingCondition_OrderProcessingStops()
+    {
+        // Arrange 
+        NotificationOrder order = new()
+        {
+            NotificationChannel = NotificationChannel.Sms,
+            ConditionEndpoint = new Uri("https://sendingCondition.no")
+        };
+
+        var conditionClientMock = new Mock<IConditionClient>();
+        conditionClientMock.Setup(e => e.CheckSendCondition(It.Is<Uri>(e => e == order.ConditionEndpoint))).ReturnsAsync(false);
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+
+        var smsProcessingServiceMock = new Mock<ISmsOrderProcessingService>();
+
+        var orderProcessingService = GetTestService(smsOrderProcessingService: smsProcessingServiceMock.Object, orderRepository: orderRepositoryMock.Object, conditionClient: conditionClientMock.Object);
+
+        // Act
+        var processingResult = await orderProcessingService.ProcessOrder(order);
+
+        // Assert
+        Assert.NotNull(processingResult);
+        Assert.False(processingResult.IsRetryRequired);
+
+        conditionClientMock.Verify(e => e.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
+
+        smsProcessingServiceMock.Verify(e => e.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Never);
+
+        orderRepositoryMock.Verify(e => e.SetProcessingStatus(It.IsAny<Guid>(), It.IsAny<OrderProcessingStatus>()), Times.Once);
+
+        orderRepositoryMock.Verify(e => e.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ProcessOrder_EmailOrderWithUnmetSendingCondition_OrderProcessingStops()
+    {
+        // Arrange 
+        NotificationOrder order = new()
+        {
+            NotificationChannel = NotificationChannel.Email,
+            ConditionEndpoint = new Uri("https://sendingCondition.no")
+        };
+
+        var conditionClientMock = new Mock<IConditionClient>();
+        conditionClientMock.Setup(e => e.CheckSendCondition(It.Is<Uri>(e => e == order.ConditionEndpoint))).ReturnsAsync(false);
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+
+        var emailProcessingServiceMock = new Mock<IEmailOrderProcessingService>();
+
+        var orderProcessingService = GetTestService(emailOrderProcessingService: emailProcessingServiceMock.Object, orderRepository: orderRepositoryMock.Object, conditionClient: conditionClientMock.Object);
+
+        // Act
+        var processingResult = await orderProcessingService.ProcessOrder(order);
+
+        // Assert
+        Assert.NotNull(processingResult);
+        Assert.False(processingResult.IsRetryRequired);
+
+        conditionClientMock.Verify(e => e.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
+
+        emailProcessingServiceMock.Verify(e => e.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Never);
+
+        orderRepositoryMock.Verify(e => e.SetProcessingStatus(It.IsAny<Guid>(), It.IsAny<OrderProcessingStatus>()), Times.Once);
+
+        orderRepositoryMock.Verify(e => e.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ProcessOrder_EmailAndSmsOrderWithUnmetSendingCondition_OrderProcessingStops()
     {
         // Arrange 
         NotificationOrder order = new()
@@ -353,8 +425,45 @@ public class OrderProcessingServiceTests
         orderRepositoryMock.Verify(e => e.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>()), Times.Never);
     }
 
+    [Theory]
+    [InlineData(NotificationChannel.SmsPreferred)]
+    [InlineData(NotificationChannel.EmailPreferred)]
+    public async Task ProcessOrder_PreferredChannelWithUnmetSendingCondition_OrderProcessingStops(NotificationChannel notificationChannel)
+    {
+        // Arrange 
+        NotificationOrder order = new()
+        {
+            NotificationChannel = notificationChannel,
+            ConditionEndpoint = new Uri("https://sendingCondition.no")
+        };
+
+        var conditionClientMock = new Mock<IConditionClient>();
+        conditionClientMock.Setup(e => e.CheckSendCondition(It.Is<Uri>(e => e == order.ConditionEndpoint))).ReturnsAsync(false);
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+
+        var preferredChannelProcessingServiceMock = new Mock<IPreferredChannelProcessingService>();
+
+        var orderProcessingService = GetTestService(preferredChannelProcessingService: preferredChannelProcessingServiceMock.Object, orderRepository: orderRepositoryMock.Object, conditionClient: conditionClientMock.Object);
+
+        // Act
+        var processingResult = await orderProcessingService.ProcessOrder(order);
+
+        // Assert
+        Assert.NotNull(processingResult);
+        Assert.False(processingResult.IsRetryRequired);
+
+        conditionClientMock.Verify(e => e.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
+
+        preferredChannelProcessingServiceMock.Verify(e => e.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Never);
+
+        orderRepositoryMock.Verify(e => e.SetProcessingStatus(It.IsAny<Guid>(), It.IsAny<OrderProcessingStatus>()), Times.Once);
+
+        orderRepositoryMock.Verify(e => e.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>()), Times.Never);
+    }
+
     [Fact]
-    public async Task ProcessOrder_SmsOrderWithInvalidConditionResult_RetryIsRequired_OrderProcessingStops()
+    public async Task ProcessOrder_SmsOrderWithInvalidConditionResult_OrderProcessingStops_RetryIsRequired()
     {
         // Arrange 
         NotificationOrder order = new()
@@ -389,7 +498,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessOrder_EmailOrderWithInvalidConditionResult_RetryIsRequired_OrderProcessingStops()
+    public async Task ProcessOrder_EmailOrderWithInvalidConditionResult_OrderProcessingStops_RetryIsRequired()
     {
         // Arrange 
         NotificationOrder order = new()
@@ -424,7 +533,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessOrder_EmailAndSmsOrderWithInvalidConditionResult_RetryIsRequired_OrderProcessingStops()
+    public async Task ProcessOrder_EmailAndSmsOrderWithInvalidConditionResult_OrderProcessingStops_RetryIsRequired()
     {
         // Arrange 
         NotificationOrder order = new()
@@ -452,6 +561,43 @@ public class OrderProcessingServiceTests
         conditionClientMock.Verify(c => c.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
 
         emailAndSmsOrderProcessingServiceMock.Verify(e => e.ProcessOrderAsync(It.IsAny<NotificationOrder>()), Times.Never);
+
+        orderRepositoryMock.Verify(e => e.SetProcessingStatus(It.IsAny<Guid>(), It.IsAny<OrderProcessingStatus>()), Times.Never);
+
+        orderRepositoryMock.Verify(e => e.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData(NotificationChannel.SmsPreferred)]
+    [InlineData(NotificationChannel.EmailPreferred)]
+    public async Task ProcessOrder_PreferredChannelWithInvalidConditionResult_OrderProcessingStops_RetryIsRequired(NotificationChannel notificationChannel)
+    {
+        // Arrange 
+        NotificationOrder order = new()
+        {
+            NotificationChannel = notificationChannel,
+            ConditionEndpoint = new Uri("https://sendingCondition.no")
+        };
+
+        var conditionClientMock = new Mock<IConditionClient>();
+        conditionClientMock.Setup(e => e.CheckSendCondition(It.Is<Uri>(e => e == order.ConditionEndpoint))).ReturnsAsync(new ConditionClientError());
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+
+        var preferredChannelProcessingServiceMock = new Mock<IPreferredChannelProcessingService>();
+
+        var orderProcessingService = GetTestService(preferredChannelProcessingService: preferredChannelProcessingServiceMock.Object, orderRepository: orderRepositoryMock.Object, conditionClient: conditionClientMock.Object);
+
+        // Act
+        var processingResult = await orderProcessingService.ProcessOrder(order);
+
+        // Assert
+        Assert.NotNull(processingResult);
+        Assert.True(processingResult.IsRetryRequired);
+
+        conditionClientMock.Verify(c => c.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
+
+        preferredChannelProcessingServiceMock.Verify(e => e.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Never);
 
         orderRepositoryMock.Verify(e => e.SetProcessingStatus(It.IsAny<Guid>(), It.IsAny<OrderProcessingStatus>()), Times.Never);
 
