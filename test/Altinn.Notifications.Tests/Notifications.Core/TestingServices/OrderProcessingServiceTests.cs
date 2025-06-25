@@ -168,16 +168,16 @@ public class OrderProcessingServiceTests
 
         // Assert
         emailAndSmsMockService.Verify(e => e.ProcessOrderAsync(order), Times.Once);
+        orderRepositoryMock.Verify(e => e.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>()), Times.Once);
 
         // Individual email and SMS services should not be called
         smsMockService.Verify(s => s.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Never);
         emailMockService.Verify(e => e.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Never);
         preferredChannelMockService.Verify(e => e.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Never);
-        orderRepositoryMock.Verify(e => e.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>()), Times.Once);
     }
 
     [Fact]
-    public async Task ProcessOrder_SendConditionNotMet_ProcessingStops()
+    public async Task ProcessOrder_SmsOrder_SendConditionIsNotMet_SetProcessingStatusCalled()
     {
         // Arrange 
         NotificationOrder order = new()
