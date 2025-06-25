@@ -141,20 +141,20 @@ public class OrderProcessingService : IOrderProcessingService
                 switch (order.NotificationChannel)
                 {
                     case NotificationChannel.Email:
-                        await _emailProcessingService.ProcessOrder(order);
+                        await _emailProcessingService.ProcessOrderRetry(order);
                         break;
 
                     case NotificationChannel.Sms:
-                        await _smsProcessingService.ProcessOrder(order);
+                        await _smsProcessingService.ProcessOrderRetry(order);
                         break;
 
                     case NotificationChannel.EmailAndSms:
-                        await _emailAndSmsProcessingService.ProcessOrderAsync(order);
+                        await _emailAndSmsProcessingService.ProcessOrderRetryAsync(order);
                         break;
 
                     case NotificationChannel.SmsPreferred:
                     case NotificationChannel.EmailPreferred:
-                        await _preferredChannelProcessingService.ProcessOrder(order);
+                        await _preferredChannelProcessingService.ProcessOrderRetry(order);
                         break;
                 }
 
