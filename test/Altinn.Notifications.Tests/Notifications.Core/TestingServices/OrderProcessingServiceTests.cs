@@ -53,6 +53,9 @@ public class OrderProcessingServiceTests
             NotificationChannel = NotificationChannel.Sms
         };
 
+        var conditionClientMock = new Mock<IConditionClient>();
+        conditionClientMock.Setup(e => e.CheckSendCondition(It.IsAny<Uri>()));
+
         var orderRepositoryMock = new Mock<IOrderRepository>();
         orderRepositoryMock
             .Setup(e => e.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>()))
@@ -61,7 +64,7 @@ public class OrderProcessingServiceTests
         var smsProcessingServiceMock = new Mock<ISmsOrderProcessingService>();
         smsProcessingServiceMock.Setup(e => e.ProcessOrder(It.IsAny<NotificationOrder>()));
 
-        var orderProcessingService = GetTestService(smsOrderProcessingService: smsProcessingServiceMock.Object, orderRepository: orderRepositoryMock.Object);
+        var orderProcessingService = GetTestService(smsOrderProcessingService: smsProcessingServiceMock.Object, orderRepository: orderRepositoryMock.Object, conditionClient: conditionClientMock.Object);
 
         // Act
         var processingResult = await orderProcessingService.ProcessOrder(order);
@@ -69,6 +72,8 @@ public class OrderProcessingServiceTests
         // Assert
         Assert.NotNull(processingResult);
         Assert.False(processingResult.IsRetryRequired);
+
+        conditionClientMock.Verify(e => e.CheckSendCondition(It.IsAny<Uri>()), Times.Never);
 
         smsProcessingServiceMock.Verify(e => e.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Once);
 
@@ -86,6 +91,9 @@ public class OrderProcessingServiceTests
             NotificationChannel = NotificationChannel.Email
         };
 
+        var conditionClientMock = new Mock<IConditionClient>();
+        conditionClientMock.Setup(e => e.CheckSendCondition(It.IsAny<Uri>()));
+
         var orderRepositoryMock = new Mock<IOrderRepository>();
         orderRepositoryMock
             .Setup(e => e.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>()))
@@ -94,7 +102,7 @@ public class OrderProcessingServiceTests
         var emailProcessingServiceMock = new Mock<IEmailOrderProcessingService>();
         emailProcessingServiceMock.Setup(e => e.ProcessOrder(It.IsAny<NotificationOrder>()));
 
-        var orderProcessingService = GetTestService(emailOrderProcessingService: emailProcessingServiceMock.Object, orderRepository: orderRepositoryMock.Object);
+        var orderProcessingService = GetTestService(emailOrderProcessingService: emailProcessingServiceMock.Object, orderRepository: orderRepositoryMock.Object, conditionClient: conditionClientMock.Object);
 
         // Act
         var processingResult = await orderProcessingService.ProcessOrder(order);
@@ -102,6 +110,8 @@ public class OrderProcessingServiceTests
         // Assert
         Assert.NotNull(processingResult);
         Assert.False(processingResult.IsRetryRequired);
+
+        conditionClientMock.Verify(e => e.CheckSendCondition(It.IsAny<Uri>()), Times.Never);
 
         emailProcessingServiceMock.Verify(e => e.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Once);
 
@@ -120,7 +130,7 @@ public class OrderProcessingServiceTests
             ConditionEndpoint = new Uri("https://sendingCondition.no")
         };
 
-        Mock<IConditionClient> conditionClientMock = new();
+        var conditionClientMock = new Mock<IConditionClient>();
         conditionClientMock.Setup(e => e.CheckSendCondition(It.Is<Uri>(e => e == order.ConditionEndpoint))).ReturnsAsync(true);
 
         var orderRepositoryMock = new Mock<IOrderRepository>();
@@ -159,7 +169,7 @@ public class OrderProcessingServiceTests
             ConditionEndpoint = new Uri("https://sendingCondition.no")
         };
 
-        Mock<IConditionClient> conditionClientMock = new();
+        var conditionClientMock = new Mock<IConditionClient>();
         conditionClientMock.Setup(e => e.CheckSendCondition(It.Is<Uri>(e => e == order.ConditionEndpoint))).ReturnsAsync(true);
 
         var orderRepositoryMock = new Mock<IOrderRepository>();
@@ -198,7 +208,7 @@ public class OrderProcessingServiceTests
             ConditionEndpoint = new Uri("https://sendingCondition.no")
         };
 
-        Mock<IConditionClient> conditionClientMock = new();
+        var conditionClientMock = new Mock<IConditionClient>();
         conditionClientMock.Setup(e => e.CheckSendCondition(It.Is<Uri>(e => e == order.ConditionEndpoint))).ReturnsAsync(false);
 
         var orderRepositoryMock = new Mock<IOrderRepository>();
@@ -233,7 +243,7 @@ public class OrderProcessingServiceTests
             ConditionEndpoint = new Uri("https://sendingCondition.no")
         };
 
-        Mock<IConditionClient> conditionClientMock = new();
+        var conditionClientMock = new Mock<IConditionClient>();
         conditionClientMock.Setup(e => e.CheckSendCondition(It.Is<Uri>(e => e == order.ConditionEndpoint))).ReturnsAsync(false);
 
         var orderRepositoryMock = new Mock<IOrderRepository>();
@@ -268,7 +278,7 @@ public class OrderProcessingServiceTests
             ConditionEndpoint = new Uri("https://sendingCondition.no")
         };
 
-        Mock<IConditionClient> conditionClientMock = new();
+        var conditionClientMock = new Mock<IConditionClient>();
         conditionClientMock.Setup(e => e.CheckSendCondition(It.Is<Uri>(e => e == order.ConditionEndpoint))).ReturnsAsync(new ConditionClientError());
 
         var orderRepositoryMock = new Mock<IOrderRepository>();
@@ -303,7 +313,7 @@ public class OrderProcessingServiceTests
             ConditionEndpoint = new Uri("https://sendingCondition.no")
         };
 
-        Mock<IConditionClient> conditionClientMock = new();
+        var conditionClientMock = new Mock<IConditionClient>();
         conditionClientMock.Setup(e => e.CheckSendCondition(It.Is<Uri>(e => e == order.ConditionEndpoint))).ReturnsAsync(new ConditionClientError());
 
         var orderRepositoryMock = new Mock<IOrderRepository>();
