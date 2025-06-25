@@ -747,7 +747,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessOrderRetry_SmsOrderWithUnmetSendingCondition_CompletesSuccessfully()
+    public async Task ProcessOrderRetry_SmsOrderWithUnmetSendingCondition_OrderProcessingStops()
     {
         // Arrange 
         NotificationOrder order = new()
