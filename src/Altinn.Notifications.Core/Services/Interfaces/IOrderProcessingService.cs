@@ -15,10 +15,10 @@ public interface IOrderProcessingService
     /// <summary>
     /// Processes a notification order
     /// </summary>
-    public Task ProcessOrder(NotificationOrder order);
+    public Task<NotificationOrderProcessingResult> ProcessOrder(NotificationOrder order);
 
     /// <summary>
     /// Retry processing of an order
     /// </summary>
-    public Task ProcessOrderRetry(NotificationOrder order);
+    public Task<NotificationOrderProcessingResult> ProcessOrderRetry(NotificationOrder order);
 }
