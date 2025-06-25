@@ -5,6 +5,7 @@ using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Models.SendCondition;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
 
@@ -79,81 +80,110 @@ public class OrderProcessingService : IOrderProcessingService
     /// <inheritdoc/>
     public async Task ProcessOrder(NotificationOrder order)
     {
-        if (!await IsSendConditionMet(order, false))
+        var sendConditionEvaluationResult = await IsSendConditionMet(order, false);
+
+        switch (sendConditionEvaluationResult)
         {
-            await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
-            return;
+            case { IsRetryNeeded: false, IsSendingConditionMet: false }:
+                await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
+                break;
+
+            case { IsRetryNeeded: false, IsSendingConditionMet: true }:
+
+                switch (order.NotificationChannel)
+                {
+                    case NotificationChannel.Email:
+                        await _emailProcessingService.ProcessOrder(order);
+                        break;
+
+                    case NotificationChannel.Sms:
+                        await _smsProcessingService.ProcessOrder(order);
+                        break;
+
+                    case NotificationChannel.EmailAndSms:
+                        await _emailAndSmsProcessingService.ProcessOrderAsync(order);
+                        break;
+
+                    case NotificationChannel.SmsPreferred:
+                    case NotificationChannel.EmailPreferred:
+                        await _preferredChannelProcessingService.ProcessOrder(order);
+                        break;
+                }
+
+                await _orderRepository.TryCompleteOrderBasedOnNotificationsState(order.Id, AlternateIdentifierSource.Order);
+                break;
         }
-
-        switch (order.NotificationChannel)
-        {
-            case NotificationChannel.Email:
-                await _emailProcessingService.ProcessOrder(order);
-                break;
-
-            case NotificationChannel.Sms:
-                await _smsProcessingService.ProcessOrder(order);
-                break;
-
-            case NotificationChannel.EmailAndSms:
-                await _emailAndSmsProcessingService.ProcessOrderAsync(order);
-                break;
-
-            case NotificationChannel.SmsPreferred:
-            case NotificationChannel.EmailPreferred:
-                await _preferredChannelProcessingService.ProcessOrder(order);
-                break;
-        }
-
-        await _orderRepository.TryCompleteOrderBasedOnNotificationsState(order.Id, AlternateIdentifierSource.Order);
     }
 
     /// <inheritdoc/>
     public async Task ProcessOrderRetry(NotificationOrder order)
     {
-        if (!await IsSendConditionMet(order, isRetry: true))
+        var sendConditionEvaluationResult = await IsSendConditionMet(order, true);
+
+        switch (sendConditionEvaluationResult)
         {
-            await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
-            return;
+            case { IsRetryNeeded: false, IsSendingConditionMet: false }:
+                await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
+                break;
+
+            case { IsRetryNeeded: false, IsSendingConditionMet: true }:
+
+                switch (order.NotificationChannel)
+                {
+                    case NotificationChannel.Email:
+                        await _emailProcessingService.ProcessOrder(order);
+                        break;
+
+                    case NotificationChannel.Sms:
+                        await _smsProcessingService.ProcessOrder(order);
+                        break;
+
+                    case NotificationChannel.EmailAndSms:
+                        await _emailAndSmsProcessingService.ProcessOrderAsync(order);
+                        break;
+
+                    case NotificationChannel.SmsPreferred:
+                    case NotificationChannel.EmailPreferred:
+                        await _preferredChannelProcessingService.ProcessOrder(order);
+                        break;
+                }
+
+                await _orderRepository.TryCompleteOrderBasedOnNotificationsState(order.Id, AlternateIdentifierSource.Order);
+                break;
         }
-
-        NotificationChannel ch = order.NotificationChannel;
-
-        switch (ch)
-        {
-            case NotificationChannel.Email:
-                await _emailProcessingService.ProcessOrderRetry(order);
-                break;
-
-            case NotificationChannel.Sms:
-                await _smsProcessingService.ProcessOrderRetry(order);
-                break;
-
-            case NotificationChannel.EmailAndSms:
-                await _emailAndSmsProcessingService.ProcessOrderRetryAsync(order);
-                break;
-
-            case NotificationChannel.SmsPreferred:
-            case NotificationChannel.EmailPreferred:
-                await _preferredChannelProcessingService.ProcessOrderRetry(order);
-                break;
-        }
-
-        await _orderRepository.TryCompleteOrderBasedOnNotificationsState(order.Id, AlternateIdentifierSource.Order);
     }
 
     /// <summary>
-    /// Checks the send condition provided by the order request to determine if condition is met
+    /// Evaluates whether a notification order should be processed based on its configured condition endpoint.
     /// </summary>
-    /// <param name="order">The notification order to check</param>
-    /// <param name="isRetry">Boolean indicating if this is a retry attempt</param>
-    /// <returns>True if condition is met and processing should continue</returns>
-    /// <exception cref="OrderProcessingException">Throws an exception if failure on first attempt ot check condition</exception>
-    internal async Task<bool> IsSendConditionMet(NotificationOrder order, bool isRetry)
+    /// <param name="order">The notification order containing the condition endpoint to be checked.</param>
+    /// <param name="isRetry">A boolean flag indicating whether this evaluation is part of a retry attempt.</param>
+    /// <returns>
+    /// A <see cref="SendConditionEvaluationResult"/> that contains:
+    /// <list type="bullet">
+    ///   <item><description>Whether the sending condition was met (<see cref="SendConditionEvaluationResult.IsSendingConditionMet"/>)</description></item>
+    ///   <item><description>Whether a retry should be attempted (<see cref="SendConditionEvaluationResult.IsRetryNeeded"/>)</description></item>
+    /// </list>
+    /// </returns>
+    /// <remarks>
+    /// <para>
+    /// If no condition endpoint is specified in the order,
+    /// the method returnsa result indicating the condition is met and no retry is needed.
+    /// </para>
+    /// <para>
+    /// During the first attempt (when <paramref name="isRetry"/> is <c>false</c>),
+    /// if the condition check fails due to connectivity or server issues, the method recommends a retry.
+    /// </para>
+    /// <para>
+    /// During a retry attempt (when <paramref name="isRetry"/> is <c>true</c>),
+    /// if the condition check fails, the method allows the order to be processed anyway, assuming the failure is transient.
+    /// </para>
+    /// </remarks>
+    internal async Task<SendConditionEvaluationResult> IsSendConditionMet(NotificationOrder order, bool isRetry)
     {
         if (order.ConditionEndpoint == null)
         {
-            return true;
+            return new SendConditionEvaluationResult { IsRetryNeeded = false, IsSendingConditionMet = true };
         }
 
         var conditionCheckResult = await _conditionClient.CheckSendCondition(order.ConditionEndpoint);
@@ -176,11 +206,22 @@ public class OrderProcessingService : IOrderProcessingService
                         order.ConditionEndpoint);
                 }
 
-                return successResult;
+                return new SendConditionEvaluationResult { IsSendingConditionMet = successResult };
             },
             errorResult =>
             {
-                if (!isRetry)
+                if (isRetry)
+                {
+                    _logger.LogInformation(
+                        "// OrderProcessingService // IsSendConditionMet // Condition check failed on retry for order with ID '{OrderId}' at endpoint '{Endpoint}'. Status code: {StatusCode}. Error message: '{ErrorMessage}'. Processing the order regardless.",
+                        order.Id,
+                        order.ConditionEndpoint,
+                        errorResult.StatusCode,
+                        errorResult.Message ?? "No error message provided");
+
+                    return new SendConditionEvaluationResult { IsSendingConditionMet = true };
+                }
+                else
                 {
                     _logger.LogInformation(
                         "// OrderProcessingService // IsSendConditionMet // Condition check failed for order '{OrderId}' at endpoint '{Endpoint}'. Status code: {StatusCode}. Error message: '{ErrorMessage}'. Order will be sent to retry queue.",
@@ -189,20 +230,8 @@ public class OrderProcessingService : IOrderProcessingService
                         errorResult.StatusCode,
                         errorResult.Message ?? "No error message provided");
 
-                    // Exception is caught by consumer and message is moved to retry topic
-                    throw new OrderProcessingException(
-                        $"// OrderProcessingService // IsSendConditionMet // Condition check for order with ID '{order.Id}' failed with HTTP status code '{errorResult.StatusCode}' at endpoint '{order.ConditionEndpoint}'");
+                    return new SendConditionEvaluationResult { IsRetryNeeded = true, IsSendingConditionMet = null };
                 }
-
-                _logger.LogInformation(
-                    "// OrderProcessingService // IsSendConditionMet // Condition check failed on retry for order with ID '{OrderId}' at endpoint '{Endpoint}'. Status code: {StatusCode}. Error message: '{ErrorMessage}'. Processing the order regardless.",
-                    order.Id,
-                    order.ConditionEndpoint,
-                    errorResult.StatusCode,
-                    errorResult.Message ?? "No error message provided");
-
-                // On retry, notifications should be sent even if condition check fails
-                return true;
             });
     }
 }
