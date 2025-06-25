@@ -142,7 +142,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             _orderIdsToDelete.Add(order.Id);
             await repo.Create(order);
 
-            foreach (OrderProcessingStatus statusType in Enum.GetValues(typeof(OrderProcessingStatus)))
+            foreach (OrderProcessingStatus statusType in Enum.GetValues<OrderProcessingStatus>())
             {
                 // Act
                 await repo.SetProcessingStatus(order.Id, statusType);
