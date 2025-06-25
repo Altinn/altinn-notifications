@@ -81,7 +81,7 @@ public class OrderProcessingService : IOrderProcessingService
     public async Task<NotificationOrderProcessingResult> ProcessOrder(NotificationOrder order)
     {
         var isRetryRequired = true;
-        var sendConditionEvaluationResult = await IsSendConditionMet(order, false);
+        var sendConditionEvaluationResult = await EvaluateSendingCondition(order, false);
 
         switch (sendConditionEvaluationResult)
         {
@@ -126,7 +126,7 @@ public class OrderProcessingService : IOrderProcessingService
     /// <inheritdoc/>
     public async Task<NotificationOrderProcessingResult> ProcessOrderRetry(NotificationOrder order)
     {
-        var sendConditionEvaluationResult = await IsSendConditionMet(order, true);
+        var sendConditionEvaluationResult = await EvaluateSendingCondition(order, true);
 
         switch (sendConditionEvaluationResult)
         {
@@ -180,31 +180,28 @@ public class OrderProcessingService : IOrderProcessingService
     /// </returns>
     /// <remarks>
     /// <para>
-    /// If no condition endpoint is specified in the order,
-    /// the method returnsa result indicating the condition is met and no retry is needed.
+    /// If no condition endpoint is specified, the method returnsa result indicating the condition is met and no retry is needed.
     /// </para>
     /// <para>
-    /// During the first attempt (when <paramref name="isRetry"/> is <c>false</c>),
-    /// if the condition check fails due to connectivity or server issues, the method recommends a retry.
+    /// During the first attempt (when <paramref name="isRetry"/> is <c>false</c>), if the condition check fails, the method recommends a retry.
     /// </para>
     /// <para>
-    /// During a retry attempt (when <paramref name="isRetry"/> is <c>true</c>),
-    /// if the condition check fails, the method allows the order to be processed anyway, assuming the failure is transient.
+    /// During a retry attempt (when <paramref name="isRetry"/> is <c>true</c>), if the condition check fails, the method allows the order to be processed anyway.
     /// </para>
     /// </remarks>
-    internal async Task<SendConditionEvaluationResult> IsSendConditionMet(NotificationOrder order, bool isRetry)
+    private async Task<SendConditionEvaluationResult> EvaluateSendingCondition(NotificationOrder order, bool isRetry)
     {
         if (order.ConditionEndpoint == null)
         {
             return new SendConditionEvaluationResult { IsRetryNeeded = false, IsSendingConditionMet = true };
         }
 
-        var conditionCheckResult = await _conditionClient.CheckSendCondition(order.ConditionEndpoint);
+        var evaluatationResult = await _conditionClient.CheckSendCondition(order.ConditionEndpoint);
 
-        return conditionCheckResult.Match(
-            successResult =>
+        return evaluatationResult.Match(
+            checkResult =>
             {
-                if (successResult)
+                if (checkResult)
                 {
                     _logger.LogDebug(
                         "// OrderProcessingService // IsSendConditionMet // Condition check yield true for order '{OrderId}' at endpoint '{Endpoint}'.",
@@ -219,7 +216,7 @@ public class OrderProcessingService : IOrderProcessingService
                         order.ConditionEndpoint);
                 }
 
-                return new SendConditionEvaluationResult { IsSendingConditionMet = successResult };
+                return new SendConditionEvaluationResult { IsSendingConditionMet = checkResult };
             },
             errorResult =>
             {
