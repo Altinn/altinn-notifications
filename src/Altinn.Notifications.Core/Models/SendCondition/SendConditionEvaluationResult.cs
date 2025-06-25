@@ -17,12 +17,11 @@ public record SendConditionEvaluationResult
     public bool? IsSendingConditionMet { get; init; }
 
     /// <summary>
-    /// Gets a value indicating whether the sending condition should be checked again.
+    /// Gets a value indicating whether the sending condition should be evaluated again.
     /// </summary>
     /// <remarks>
-    /// A value of <c>true</c> indicates that the previous evaluation attempt encountered a 
-    /// transient issue (such as network timeout, temporary service unavailability, or server overload),
-    /// and the Notifications API should retry the condition check after an appropriate delay.
+    /// A value of <c>true</c> indicates that the previous evaluation attempt
+    /// encountered an issue, and a retry is needed after an appropriate delay.
     /// 
     /// A value of <c>false</c> indicates that no retry is necessary, either because the 
     /// condition was successfully evaluated or because the failure was non-transient.
