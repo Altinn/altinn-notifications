@@ -262,8 +262,8 @@ public class OrderProcessingServiceTests
     }
 
     [Theory]
-    [InlineData(NotificationChannel.EmailPreferred)]
     [InlineData(NotificationChannel.SmsPreferred)]
+    [InlineData(NotificationChannel.EmailPreferred)]
     public async Task ProcessOrderRetry_EmailOrSmsPreferredOrder_PreferredServiceCalled(NotificationChannel notificationChannel)
     {
         // Arrange 
@@ -297,7 +297,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessOrderRetry_EmailAndSmsOrder_EmailAndSmsOrderProcessingServiceCalled()
+    public async Task ProcessOrderRetry_EmailAndSmsOrder_EmailAndSmsServiceCalled()
     {
         // Arrange 
         NotificationOrder order = new()
@@ -327,11 +327,11 @@ public class OrderProcessingServiceTests
 
         // Assert
         emailAndSmsMockService.Verify(e => e.ProcessOrderRetryAsync(order), Times.Once);
+        orderRepositoryMock.Verify(e => e.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>()), Times.Once);
 
         smsMockService.Verify(s => s.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Never);
         emailMockService.Verify(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Never);
         preferredChannelMockService.Verify(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Never);
-        orderRepositoryMock.Verify(e => e.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>()), Times.Once);
     }
 
     [Fact]
