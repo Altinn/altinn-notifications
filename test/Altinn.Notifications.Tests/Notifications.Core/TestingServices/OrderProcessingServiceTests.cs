@@ -177,7 +177,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessOrder_SmsOrder_SendConditionIsNotMet_SetProcessingStatusCalled()
+    public async Task ProcessOrder_SmsOrder_SendConditionIsNotMet_ProcessingStatusIsSet()
     {
         // Arrange 
         NotificationOrder order = new()
