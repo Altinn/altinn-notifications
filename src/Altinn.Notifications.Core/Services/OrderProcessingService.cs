@@ -78,14 +78,16 @@ public class OrderProcessingService : IOrderProcessingService
     }
 
     /// <inheritdoc/>
-    public async Task ProcessOrder(NotificationOrder order)
+    public async Task<NotificationOrderProcessingResult> ProcessOrder(NotificationOrder order)
     {
+        var isRetryRequired = true;
         var sendConditionEvaluationResult = await IsSendConditionMet(order, false);
 
         switch (sendConditionEvaluationResult)
         {
             case { IsRetryNeeded: false, IsSendingConditionMet: false }:
                 await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
+                isRetryRequired = false;
                 break;
 
             case { IsRetryNeeded: false, IsSendingConditionMet: true }:
@@ -111,12 +113,18 @@ public class OrderProcessingService : IOrderProcessingService
                 }
 
                 await _orderRepository.TryCompleteOrderBasedOnNotificationsState(order.Id, AlternateIdentifierSource.Order);
+                isRetryRequired = false;
                 break;
         }
+
+        return new NotificationOrderProcessingResult
+        {
+            IsRetryRequired = isRetryRequired
+        };
     }
 
     /// <inheritdoc/>
-    public async Task ProcessOrderRetry(NotificationOrder order)
+    public async Task<NotificationOrderProcessingResult> ProcessOrderRetry(NotificationOrder order)
     {
         var sendConditionEvaluationResult = await IsSendConditionMet(order, true);
 
@@ -151,6 +159,11 @@ public class OrderProcessingService : IOrderProcessingService
                 await _orderRepository.TryCompleteOrderBasedOnNotificationsState(order.Id, AlternateIdentifierSource.Order);
                 break;
         }
+
+        return new NotificationOrderProcessingResult
+        {
+            IsRetryRequired = false
+        };
     }
 
     /// <summary>
