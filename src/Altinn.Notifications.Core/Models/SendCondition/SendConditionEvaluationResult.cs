@@ -2,7 +2,7 @@
 
 /// <summary>
 /// Represents the outcome of evaluating a sending condition.
-/// It is tracking the actual result of the sending condition check and whether a retry is needed.
+/// It tracks the actual result of the sending condition check and whether a retry is needed.
 /// </summary>
 public record SendConditionEvaluationResult
 {

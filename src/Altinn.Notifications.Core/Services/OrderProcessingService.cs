@@ -182,7 +182,7 @@ public class OrderProcessingService : IOrderProcessingService
     /// </returns>
     /// <remarks>
     /// <para>
-    /// If no condition endpoint is specified, the method returnsa result indicating the condition is met and no retry is needed.
+    /// If no condition endpoint is specified, the method returns a result indicating the condition is met and no retry is needed.
     /// </para>
     /// <para>
     /// During the first attempt (when <paramref name="isRetry"/> is <c>false</c>), if the condition check fails, the method recommends a retry.
