@@ -7,7 +7,7 @@
 public record SendConditionEvaluationResult
 {
     /// <summary>
-    /// Gets or sets the result of evaluating the sending condition.
+    /// Gets the result of evaluating the sending condition.
     /// </summary>
     /// <remarks>
     /// A value of <c>true</c> means the sending criteria were met.
@@ -17,7 +17,7 @@ public record SendConditionEvaluationResult
     public bool? IsSendingConditionMet { get; init; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether the sending condition should be checked again.
+    /// Gets a value indicating whether the sending condition should be checked again.
     /// </summary>
     /// <remarks>
     /// A value of <c>true</c> indicates that the previous evaluation attempt encountered a 
