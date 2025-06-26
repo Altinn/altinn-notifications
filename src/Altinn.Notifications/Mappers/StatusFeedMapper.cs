@@ -30,6 +30,7 @@ namespace Altinn.Notifications.Mappers
             {
                 ShipmentId = status.OrderStatus.ShipmentId,
                 LastUpdated = status.OrderStatus.LastUpdated,
+                ShipmentType = status.OrderStatus.ShipmentType,
                 SendersReference = status.OrderStatus.SendersReference,
                 SequenceNumber = status.SequenceNumber,
                 Recipients = status.OrderStatus.Recipients.ToRecipientsExt(),
