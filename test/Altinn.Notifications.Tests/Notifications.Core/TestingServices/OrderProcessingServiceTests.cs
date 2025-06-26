@@ -45,7 +45,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessOrder_SmsOrderWithoutCondition_CompletesSuccessfully()
+    public async Task ProcessOrder_SmsOrderWithoutCondition_ProcessedSuccessfully()
     {
         // Arrange 
         NotificationOrder order = new()
@@ -78,7 +78,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessOrder_EmailOrderWithoutCondition_CompletesSuccessfully()
+    public async Task ProcessOrder_EmailOrderWithoutCondition_ProcessedSuccessfully()
     {
         // Arrange 
         NotificationOrder order = new()
@@ -111,7 +111,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessOrder_EmailAndSmsOrderWithoutCondition_CompletesSuccessfully()
+    public async Task ProcessOrder_EmailAndSmsOrderWithoutCondition_ProcessedSuccessfully()
     {
         // Arrange 
         NotificationOrder order = new()
@@ -146,7 +146,7 @@ public class OrderProcessingServiceTests
     [Theory]
     [InlineData(NotificationChannel.SmsPreferred)]
     [InlineData(NotificationChannel.EmailPreferred)]
-    public async Task ProcessOrder_PreferredChannelWithoutCondition_CompletesSuccessfully(NotificationChannel notificationChannel)
+    public async Task ProcessOrder_PreferredChannelWithoutCondition_ProcessedSuccessfully(NotificationChannel notificationChannel)
     {
         // Arrange 
         NotificationOrder order = new()
@@ -179,7 +179,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessOrder_SmsOrderWithMetSendingCondition_CompletesSuccessfully()
+    public async Task ProcessOrder_SmsOrderWithMetSendingCondition_ProcessedSuccessfully()
     {
         // Arrange 
         NotificationOrder order = new()
@@ -214,7 +214,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessOrder_EmailOrderWithMetSendingCondition_CompletesSuccessfully()
+    public async Task ProcessOrder_EmailOrderWithMetSendingCondition_ProcessedSuccessfully()
     {
         // Arrange 
         NotificationOrder order = new()
@@ -249,7 +249,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessOrder_EmailAndSmsOrderWithMetSendingCondition_CompletesSuccessfully()
+    public async Task ProcessOrder_EmailAndSmsOrderWithMetSendingCondition_ProcessedSuccessfully()
     {
         // Arrange 
         NotificationOrder order = new()
@@ -286,7 +286,7 @@ public class OrderProcessingServiceTests
     [Theory]
     [InlineData(NotificationChannel.SmsPreferred)]
     [InlineData(NotificationChannel.EmailPreferred)]
-    public async Task ProcessOrder_PreferredChannelWithMetSendingCondition_CompletesSuccessfully(NotificationChannel notificationChannel)
+    public async Task ProcessOrder_PreferredChannelWithMetSendingCondition_ProcessedSuccessfully(NotificationChannel notificationChannel)
     {
         // Arrange 
         NotificationOrder order = new()
@@ -321,7 +321,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessOrder_SmsOrderWithUnmetSendingCondition_OrderProcessingStops()
+    public async Task ProcessOrder_SmsOrderWithUnmetSendingCondition_ProcessingStopped()
     {
         // Arrange 
         NotificationOrder order = new()
@@ -356,7 +356,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessOrder_EmailOrderWithUnmetSendingCondition_OrderProcessingStops()
+    public async Task ProcessOrder_EmailOrderWithUnmetSendingCondition_ProcessingStopped()
     {
         // Arrange 
         NotificationOrder order = new()
@@ -391,7 +391,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessOrder_EmailAndSmsOrderWithUnmetSendingCondition_OrderProcessingStops()
+    public async Task ProcessOrder_EmailAndSmsOrderWithUnmetSendingCondition_ProcessingStopped()
     {
         // Arrange 
         NotificationOrder order = new()
@@ -428,7 +428,7 @@ public class OrderProcessingServiceTests
     [Theory]
     [InlineData(NotificationChannel.SmsPreferred)]
     [InlineData(NotificationChannel.EmailPreferred)]
-    public async Task ProcessOrder_PreferredChannelWithUnmetSendingCondition_OrderProcessingStops(NotificationChannel notificationChannel)
+    public async Task ProcessOrder_PreferredChannelWithUnmetSendingCondition_ProcessingStopped(NotificationChannel notificationChannel)
     {
         // Arrange 
         NotificationOrder order = new()
@@ -463,7 +463,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessOrder_SmsOrderWithInvalidConditionResult_OrderProcessingStops_RetryIsRequired()
+    public async Task ProcessOrder_SmsOrderWithInvalidConditionResult_ProcessingStopped_RetryIsRequired()
     {
         // Arrange 
         NotificationOrder order = new()
@@ -488,7 +488,7 @@ public class OrderProcessingServiceTests
         Assert.NotNull(processingResult);
         Assert.True(processingResult.IsRetryRequired);
 
-        conditionClientMock.Verify(c => c.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
+        conditionClientMock.Verify(e => e.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
 
         processingServiceMock.Verify(e => e.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Never);
 
@@ -498,7 +498,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessOrder_EmailOrderWithInvalidConditionResult_OrderProcessingStops_RetryIsRequired()
+    public async Task ProcessOrder_EmailOrderWithInvalidConditionResult_ProcessingStopped_RetryIsRequired()
     {
         // Arrange 
         NotificationOrder order = new()
@@ -523,7 +523,7 @@ public class OrderProcessingServiceTests
         Assert.NotNull(processingResult);
         Assert.True(processingResult.IsRetryRequired);
 
-        conditionClientMock.Verify(c => c.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
+        conditionClientMock.Verify(e => e.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
 
         processingServiceMock.Verify(e => e.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Never);
 
@@ -533,7 +533,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessOrder_EmailAndSmsOrderWithInvalidConditionResult_OrderProcessingStops_RetryIsRequired()
+    public async Task ProcessOrder_EmailAndSmsOrderWithInvalidConditionResult_ProcessingStopped_RetryIsRequired()
     {
         // Arrange 
         NotificationOrder order = new()
@@ -558,7 +558,7 @@ public class OrderProcessingServiceTests
         Assert.NotNull(processingResult);
         Assert.True(processingResult.IsRetryRequired);
 
-        conditionClientMock.Verify(c => c.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
+        conditionClientMock.Verify(e => e.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
 
         processingServiceMock.Verify(e => e.ProcessOrderAsync(It.IsAny<NotificationOrder>()), Times.Never);
 
@@ -570,7 +570,7 @@ public class OrderProcessingServiceTests
     [Theory]
     [InlineData(NotificationChannel.SmsPreferred)]
     [InlineData(NotificationChannel.EmailPreferred)]
-    public async Task ProcessOrder_PreferredChannelWithInvalidConditionResult_OrderProcessingStops_RetryIsRequired(NotificationChannel notificationChannel)
+    public async Task ProcessOrder_PreferredChannelWithInvalidConditionResult_ProcessingStopped_RetryIsRequired(NotificationChannel notificationChannel)
     {
         // Arrange 
         NotificationOrder order = new()
@@ -595,7 +595,7 @@ public class OrderProcessingServiceTests
         Assert.NotNull(processingResult);
         Assert.True(processingResult.IsRetryRequired);
 
-        conditionClientMock.Verify(c => c.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
+        conditionClientMock.Verify(e => e.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
 
         processingServiceMock.Verify(e => e.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Never);
 
@@ -605,7 +605,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessOrder_SmsOrder_ProcessingServiceThrowsException_OrderProcessingStops()
+    public async Task ProcessOrder_SmsOrder_ProcessingServiceThrowsException_ProcessingStopped()
     {
         // Arrange 
         NotificationOrder order = new()
@@ -628,11 +628,11 @@ public class OrderProcessingServiceTests
 
         orderRepositoryMock.Verify(e => e.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>()), Times.Never);
 
-        orderRepositoryMock.Verify(e => e.SetProcessingStatus(It.IsAny<Guid>(), It.Is<OrderProcessingStatus>(s => s.Equals(OrderProcessingStatus.Completed))), Times.Never);
+        orderRepositoryMock.Verify(e => e.SetProcessingStatus(It.IsAny<Guid>(), It.Is<OrderProcessingStatus>(e => e.Equals(OrderProcessingStatus.Completed))), Times.Never);
     }
 
     [Fact]
-    public async Task ProcessOrder_EmailOrder_ProcessingServiceThrowsException_OrderProcessingStops()
+    public async Task ProcessOrder_EmailOrder_ProcessingServiceThrowsException_ProcessingStopped()
     {
         // Arrange 
         NotificationOrder order = new()
@@ -643,7 +643,7 @@ public class OrderProcessingServiceTests
         var orderRepositoryMock = new Mock<IOrderRepository>();
 
         var processingServiceMock = new Mock<IEmailOrderProcessingService>();
-        processingServiceMock.Setup(s => s.ProcessOrder(It.IsAny<NotificationOrder>())).Throws(new Exception());
+        processingServiceMock.Setup(e => e.ProcessOrder(It.IsAny<NotificationOrder>())).Throws(new Exception());
 
         var orderProcessingService = GetTestService(orderRepository: orderRepositoryMock.Object, emailOrderProcessingService: processingServiceMock.Object);
 
@@ -655,11 +655,11 @@ public class OrderProcessingServiceTests
 
         orderRepositoryMock.Verify(e => e.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>()), Times.Never);
 
-        orderRepositoryMock.Verify(e => e.SetProcessingStatus(It.IsAny<Guid>(), It.Is<OrderProcessingStatus>(s => s.Equals(OrderProcessingStatus.Completed))), Times.Never);
+        orderRepositoryMock.Verify(e => e.SetProcessingStatus(It.IsAny<Guid>(), It.Is<OrderProcessingStatus>(e => e.Equals(OrderProcessingStatus.Completed))), Times.Never);
     }
 
     [Fact]
-    public async Task ProcessOrder_EmailAndSmsOrder_ProcessingServiceThrowsException_OrderProcessingStops()
+    public async Task ProcessOrder_EmailAndSmsOrder_ProcessingServiceThrowsException_ProcessingStopped()
     {
         // Arrange 
         NotificationOrder order = new()
@@ -682,13 +682,13 @@ public class OrderProcessingServiceTests
 
         orderRepositoryMock.Verify(e => e.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>()), Times.Never);
 
-        orderRepositoryMock.Verify(e => e.SetProcessingStatus(It.IsAny<Guid>(), It.Is<OrderProcessingStatus>(s => s.Equals(OrderProcessingStatus.Completed))), Times.Never);
+        orderRepositoryMock.Verify(e => e.SetProcessingStatus(It.IsAny<Guid>(), It.Is<OrderProcessingStatus>(e => e.Equals(OrderProcessingStatus.Completed))), Times.Never);
     }
 
     [Theory]
     [InlineData(NotificationChannel.SmsPreferred)]
     [InlineData(NotificationChannel.EmailPreferred)]
-    public async Task ProcessOrder_PreferredChannel_ProcessingServiceThrowsException_OrderProcessingStops(NotificationChannel notificationChannel)
+    public async Task ProcessOrder_PreferredChannel_ProcessingServiceThrowsException_ProcessingStopped(NotificationChannel notificationChannel)
     {
         // Arrange 
         NotificationOrder order = new()
@@ -711,11 +711,11 @@ public class OrderProcessingServiceTests
 
         orderRepositoryMock.Verify(e => e.TryCompleteOrderBasedOnNotificationsState(It.IsAny<Guid>(), It.IsAny<AlternateIdentifierSource>()), Times.Never);
 
-        orderRepositoryMock.Verify(e => e.SetProcessingStatus(It.IsAny<Guid>(), It.Is<OrderProcessingStatus>(s => s.Equals(OrderProcessingStatus.Completed))), Times.Never);
+        orderRepositoryMock.Verify(e => e.SetProcessingStatus(It.IsAny<Guid>(), It.Is<OrderProcessingStatus>(e => e.Equals(OrderProcessingStatus.Completed))), Times.Never);
     }
 
     [Fact]
-    public async Task ProcessOrderRetry_SmsOrderWithMetSendingCondition_CompletesSuccessfully()
+    public async Task ProcessOrderRetry_SmsOrderWithMetSendingCondition_ProcessedSuccessfully()
     {
         // Arrange 
         NotificationOrder order = new()
@@ -750,7 +750,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessOrderRetry_EmailOrderWithMetSendingCondition_CompletesSuccessfully()
+    public async Task ProcessOrderRetry_EmailOrderWithMetSendingCondition_ProcessedSuccessfully()
     {
         // Arrange 
         NotificationOrder order = new()
@@ -785,7 +785,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessOrderRetry_EmailAndSmsOrderWithMetSendingCondition_CompletesSuccessfully()
+    public async Task ProcessOrderRetry_EmailAndSmsOrderWithMetSendingCondition_ProcessedSuccessfully()
     {
         // Arrange 
         NotificationOrder order = new()
@@ -822,7 +822,7 @@ public class OrderProcessingServiceTests
     [Theory]
     [InlineData(NotificationChannel.SmsPreferred)]
     [InlineData(NotificationChannel.EmailPreferred)]
-    public async Task ProcessOrderRetry_PreferredChannelWithMetSendingCondition_CompletesSuccessfully(NotificationChannel notificationChannel)
+    public async Task ProcessOrderRetry_PreferredChannelWithMetSendingCondition_ProcessedSuccessfully(NotificationChannel notificationChannel)
     {
         // Arrange 
         NotificationOrder order = new()
@@ -857,7 +857,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessOrderRetry_SmsOrderWithUnmetSendingCondition_OrderProcessingStops()
+    public async Task ProcessOrderRetry_SmsOrderWithUnmetSendingCondition_ProcessingStopped()
     {
         // Arrange 
         NotificationOrder order = new()
@@ -892,7 +892,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessOrderRetry_EmailOrderWithUnmetSendingCondition_OrderProcessingStops()
+    public async Task ProcessOrderRetry_EmailOrderWithUnmetSendingCondition_ProcessingStopped()
     {
         // Arrange 
         NotificationOrder order = new()
@@ -927,7 +927,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessOrderRetry_EmailAndSmsOrderWithUnmetSendingCondition_OrderProcessingStops()
+    public async Task ProcessOrderRetry_EmailAndSmsOrderWithUnmetSendingCondition_ProcessingStopped()
     {
         // Arrange 
         NotificationOrder order = new()
@@ -964,7 +964,7 @@ public class OrderProcessingServiceTests
     [Theory]
     [InlineData(NotificationChannel.SmsPreferred)]
     [InlineData(NotificationChannel.EmailPreferred)]
-    public async Task ProcessOrderRetry_PreferredChannelWithUnmetSendingCondition_OrderProcessingStops(NotificationChannel notificationChannel)
+    public async Task ProcessOrderRetry_PreferredChannelWithUnmetSendingCondition_ProcessingStopped(NotificationChannel notificationChannel)
     {
         // Arrange 
         NotificationOrder order = new()
@@ -999,7 +999,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessOrderRetry_SmsOrderWithInvalidConditionResult_CompletesSuccessfully()
+    public async Task ProcessOrderRetry_SmsOrderWithInvalidConditionResult_ProcessedSuccessfully()
     {
         // Arrange 
         NotificationOrder order = new()
@@ -1024,7 +1024,7 @@ public class OrderProcessingServiceTests
         Assert.NotNull(processingResult);
         Assert.False(processingResult.IsRetryRequired);
 
-        conditionClientMock.Verify(c => c.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
+        conditionClientMock.Verify(e => e.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
 
         processingServiceMock.Verify(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Once);
 
@@ -1034,7 +1034,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessOrderRetry_EmailOrderWithInvalidConditionResult_CompletesSuccessfully()
+    public async Task ProcessOrderRetry_EmailOrderWithInvalidConditionResult_ProcessedSuccessfully()
     {
         // Arrange 
         NotificationOrder order = new()
@@ -1059,7 +1059,7 @@ public class OrderProcessingServiceTests
         Assert.NotNull(processingResult);
         Assert.False(processingResult.IsRetryRequired);
 
-        conditionClientMock.Verify(c => c.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
+        conditionClientMock.Verify(e => e.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
 
         processingServiceMock.Verify(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Once);
 
@@ -1069,7 +1069,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessOrderRetry_EmailAndSmsOrderWithInvalidConditionResult_CompletesSuccessfully()
+    public async Task ProcessOrderRetry_EmailAndSmsOrderWithInvalidConditionResult_ProcessedSuccessfully()
     {
         // Arrange 
         NotificationOrder order = new()
@@ -1094,7 +1094,7 @@ public class OrderProcessingServiceTests
         Assert.NotNull(processingResult);
         Assert.False(processingResult.IsRetryRequired);
 
-        conditionClientMock.Verify(c => c.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
+        conditionClientMock.Verify(e => e.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
 
         processingServiceMock.Verify(e => e.ProcessOrderRetryAsync(It.IsAny<NotificationOrder>()), Times.Once);
 
@@ -1106,7 +1106,7 @@ public class OrderProcessingServiceTests
     [Theory]
     [InlineData(NotificationChannel.SmsPreferred)]
     [InlineData(NotificationChannel.EmailPreferred)]
-    public async Task ProcessOrderRetry_PreferredChannelWithInvalidConditionResult_CompletesSuccessfully(NotificationChannel notificationChannel)
+    public async Task ProcessOrderRetry_PreferredChannelWithInvalidConditionResult_ProcessedSuccessfully(NotificationChannel notificationChannel)
     {
         // Arrange 
         NotificationOrder order = new()
@@ -1141,7 +1141,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessOrderRetry_SmsOrder_ProcessingServiceThrowsException_OrderProcessingStops()
+    public async Task ProcessOrderRetry_SmsOrder_ProcessingServiceThrowsException_ProcessingStopped()
     {
         // Arrange 
         NotificationOrder order = new()
@@ -1168,7 +1168,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessOrderRetry_EmailOrder_ProcessingServiceThrowsException_OrderProcessingStops()
+    public async Task ProcessOrderRetry_EmailOrder_ProcessingServiceThrowsException_ProcessingStopped()
     {
         // Arrange 
         NotificationOrder order = new()
@@ -1195,7 +1195,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessOrderRetry_EmailAndSmsOrder_ProcessingServiceThrowsException_OrderProcessingStops()
+    public async Task ProcessOrderRetry_EmailAndSmsOrder_ProcessingServiceThrowsException_ProcessingStopped()
     {
         // Arrange 
         NotificationOrder order = new()
@@ -1224,7 +1224,7 @@ public class OrderProcessingServiceTests
     [Theory]
     [InlineData(NotificationChannel.SmsPreferred)]
     [InlineData(NotificationChannel.EmailPreferred)]
-    public async Task ProcessOrderRetry_PreferredChannel_ProcessingServiceThrowsException_OrderProcessingStops(NotificationChannel notificationChannel)
+    public async Task ProcessOrderRetry_PreferredChannel_ProcessingServiceThrowsException_ProcessingStopped(NotificationChannel notificationChannel)
     {
         // Arrange 
         NotificationOrder order = new()
