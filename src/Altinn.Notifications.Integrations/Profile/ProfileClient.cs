@@ -50,7 +50,7 @@ public class ProfileClient : IProfileClient
 
         string responseContent = await response.Content.ReadAsStringAsync();
         List<UserContactPointsDto> contactPoints = JsonSerializer.Deserialize<UserContactPointsList>(responseContent, JsonSerializerOptionsProvider.Options)!.ContactPointsList;
-        
+
         return contactPoints.Select(contactPointDto => contactPointDto.ToUserContactPoint()).ToList();
     }
 
@@ -76,5 +76,12 @@ public class ProfileClient : IProfileClient
         OrgContactPointsList contactPoints = JsonSerializer.Deserialize<OrgContactPointsList>(responseContent, JsonSerializerOptionsProvider.Options)!;
 
         return contactPoints.ContactPointsList;
+    }
+    
+    /// <inheritdoc/>
+    public Task<List<OrganizationContactPoints>> GetOrganizationContactPoints(List<string> organizationNumbers)
+    {
+        List<OrganizationContactPoints> foo = [];
+        return Task.FromResult(foo);
     }
 }
