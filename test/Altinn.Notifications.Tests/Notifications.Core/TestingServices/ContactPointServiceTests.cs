@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -73,12 +72,12 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 }
             ];
 
-            var registerClientMock = new Mock<IRegisterClient>();
-            registerClientMock
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
                 .Setup(p => p.GetOrganizationContactPoints(It.Is<List<string>>(s => s.Contains("12345678901"))))
                 .ReturnsAsync([new OrganizationContactPoints() { OrganizationNumber = "12345678901", MobileNumberList = ["+4799999999"] }]);
 
-            var service = GetTestService(registerClient: registerClientMock.Object);
+            var service = GetTestService(profileClient: profileClientMock.Object);
 
             // Act
             await service.AddSmsContactPoints(input, null);
@@ -108,12 +107,11 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 }
             ];
 
-            var registerClientMock = new Mock<IRegisterClient>();
-            registerClientMock
-                .Setup(r => r.GetOrganizationContactPoints(It.IsAny<List<string>>()))
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(p => p.GetOrganizationContactPoints(It.IsAny<List<string>>()))
                 .ReturnsAsync([new OrganizationContactPoints() { OrganizationNumber = "12345678901", MobileNumberList = ["+4799999999"] }]);
 
-            var profileClientMock = new Mock<IProfileClient>();
             profileClientMock
                 .Setup(p => p.GetUserRegisteredContactPoints(It.IsAny<List<string>>(), It.Is<string>(s => s.Equals("urn:altinn:resource"))))
                 .ReturnsAsync([
@@ -143,13 +141,12 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 .Setup(a => a.AuthorizeUserContactPointsForResource(It.IsAny<List<OrganizationContactPoints>>(), It.Is<string>(s => s.Equals("urn:altinn:resource"))))
                 .ReturnsAsync((List<OrganizationContactPoints> input, string resource) => input);
 
-            var service = GetTestService(profileClientMock.Object, registerClientMock.Object, authorizationServiceMock.Object);
+            var service = GetTestService(profileClientMock.Object, authorizationServiceMock.Object);
 
             // Act
             await service.AddSmsContactPoints(input, resource);
 
             // Assert 
-            registerClientMock.VerifyAll();
             profileClientMock.VerifyAll();
             authorizationServiceMock.VerifyAll();
             Assert.Equivalent(expectedOutput, input);
@@ -208,12 +205,12 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 }
             ];
 
-            var registerClientMock = new Mock<IRegisterClient>();
-            registerClientMock
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
                 .Setup(p => p.GetOrganizationContactPoints(It.Is<List<string>>(s => s.Contains("12345678901"))))
                 .ReturnsAsync([new OrganizationContactPoints() { OrganizationNumber = "12345678901", EmailList = ["email@domain.com"] }]);
 
-            var service = GetTestService(registerClient: registerClientMock.Object);
+            var service = GetTestService(profileClient: profileClientMock.Object);
 
             // Act
             await service.AddEmailContactPoints(input, null);
@@ -243,12 +240,11 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 }
             ];
 
-            var registerClientMock = new Mock<IRegisterClient>();
-            registerClientMock
-                .Setup(r => r.GetOrganizationContactPoints(It.IsAny<List<string>>()))
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(p => p.GetOrganizationContactPoints(It.IsAny<List<string>>()))
                 .ReturnsAsync([]);
 
-            var profileClientMock = new Mock<IProfileClient>();
             profileClientMock
                 .Setup(p => p.GetUserRegisteredContactPoints(It.IsAny<List<string>>(), It.Is<string>(s => s.Equals("urn:altinn:resource"))))
                 .ReturnsAsync([
@@ -282,13 +278,12 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                     return input;
                 });
 
-            var service = GetTestService(profileClientMock.Object, registerClientMock.Object, authorizationServiceMock.Object);
+            var service = GetTestService(profileClientMock.Object, authorizationServiceMock.Object);
 
             // Act
             await service.AddEmailContactPoints(input, resource);
 
             // Assert 
-            registerClientMock.VerifyAll();
             profileClientMock.VerifyAll();
             authorizationServiceMock.VerifyAll();
             Assert.Equivalent(expectedOutput, input);
@@ -315,12 +310,11 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 }
             ];
 
-            var registerClientMock = new Mock<IRegisterClient>();
-            registerClientMock
-                .Setup(r => r.GetOrganizationContactPoints(It.IsAny<List<string>>()))
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(p => p.GetOrganizationContactPoints(It.IsAny<List<string>>()))
                 .ReturnsAsync([new OrganizationContactPoints() { OrganizationNumber = "12345678901", EmailList = ["official@domain.com"] }]);
 
-            var profileClientMock = new Mock<IProfileClient>();
             profileClientMock
                 .Setup(p => p.GetUserRegisteredContactPoints(It.IsAny<List<string>>(), It.Is<string>(s => s.Equals("urn:altinn:resource"))))
                 .ReturnsAsync([
@@ -352,13 +346,12 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                     return input;
                 });
 
-            var service = GetTestService(profileClientMock.Object, registerClientMock.Object, authorizationServiceMock.Object);
+            var service = GetTestService(profileClientMock.Object, authorizationServiceMock.Object);
 
             // Act
             await service.AddEmailContactPoints(input, resource);
 
             // Assert 
-            registerClientMock.VerifyAll();
             profileClientMock.VerifyAll();
             authorizationServiceMock.VerifyAll();
             Assert.Equivalent(expectedOutput, input);
@@ -385,7 +378,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                     new UserContactPoints() { NationalIdentityNumber = "2", Email = "user2@email.com", MobileNumber = "+4799999992" },
                     new UserContactPoints() { NationalIdentityNumber = "3" }]);
 
-            var service = GetTestService(profileClientMock.Object, null, null);
+            var service = GetTestService(profileClient: profileClientMock.Object);
 
             // Act
             await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipients, null);
@@ -431,7 +424,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                     new UserContactPoints() { NationalIdentityNumber = "2", Email = "user2@email.com", MobileNumber = "+4799999992" },
                     new UserContactPoints() { NationalIdentityNumber = "3" }]);
 
-            var service = GetTestService(profileClientMock.Object, null, null);
+            var service = GetTestService(profileClient: profileClientMock.Object);
 
             // Act
             await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipients, null);
@@ -467,16 +460,16 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 new Recipient() { OrganizationNumber = "3" },
             ];
 
-            var registerClientMock = new Mock<IRegisterClient>();
-            registerClientMock
-                .Setup(r => r.GetOrganizationContactPoints(It.IsAny<List<string>>()))
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(p => p.GetOrganizationContactPoints(It.IsAny<List<string>>()))
                 .ReturnsAsync([
                     new OrganizationContactPoints() { OrganizationNumber = "0", EmailList = ["0@org.com"] },
                     new OrganizationContactPoints() { OrganizationNumber = "1", MobileNumberList = ["+4799999991"] },
                     new OrganizationContactPoints() { OrganizationNumber = "2", EmailList = ["2@org.com"], MobileNumberList = ["+4799999992"] },
                     new OrganizationContactPoints() { OrganizationNumber = "3" }]);
 
-            var service = GetTestService(null, registerClientMock.Object, null);
+            var service = GetTestService(profileClient: profileClientMock.Object);
 
             // Act
             await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipients, null);
@@ -512,16 +505,16 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 new Recipient() { OrganizationNumber = "3" },
             ];
 
-            var registerClientMock = new Mock<IRegisterClient>();
-            registerClientMock
-                .Setup(r => r.GetOrganizationContactPoints(It.IsAny<List<string>>()))
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(p => p.GetOrganizationContactPoints(It.IsAny<List<string>>()))
                 .ReturnsAsync([
                     new OrganizationContactPoints() { OrganizationNumber = "0", EmailList = ["0@org.com"] },
                     new OrganizationContactPoints() { OrganizationNumber = "1", MobileNumberList = ["+4799999991"] },
                     new OrganizationContactPoints() { OrganizationNumber = "2", EmailList = ["2@org.com"], MobileNumberList = ["+4799999992"] },
                     new OrganizationContactPoints() { OrganizationNumber = "3" }]);
 
-            var service = GetTestService(null, registerClientMock.Object, null);
+            var service = GetTestService(profileClient: profileClientMock.Object);
 
             // Act
             await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipients, null);
@@ -554,12 +547,10 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 new Recipient() { OrganizationNumber = "0" }
             ];
 
-            var registerClientMock = new Mock<IRegisterClient>();
-            registerClientMock
-                .Setup(r => r.GetOrganizationContactPoints(It.IsAny<List<string>>()))
-                .ReturnsAsync([]);
-
             var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(p => p.GetOrganizationContactPoints(It.IsAny<List<string>>()))
+                .ReturnsAsync([]);
 
             profileClientMock
                 .Setup(p => p.GetUserRegisteredContactPoints(It.IsAny<List<string>>(), It.IsAny<string>()))
@@ -595,7 +586,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                     }
                 ]);
 
-            var service = GetTestService(profileClientMock.Object, registerClientMock.Object, authorizationServiceMock.Object);
+            var service = GetTestService(profileClientMock.Object, authorizationServiceMock.Object);
 
             // Act
             await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipients, "resource");
@@ -616,12 +607,10 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 new Recipient() { OrganizationNumber = "0" }
             ];
 
-            var registerClientMock = new Mock<IRegisterClient>();
-            registerClientMock
-                .Setup(r => r.GetOrganizationContactPoints(It.IsAny<List<string>>()))
-                .ReturnsAsync([]);
-
             var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(p => p.GetOrganizationContactPoints(It.IsAny<List<string>>()))
+                .ReturnsAsync([]);
 
             profileClientMock
                 .Setup(p => p.GetUserRegisteredContactPoints(It.IsAny<List<string>>(), It.IsAny<string>()))
@@ -657,7 +646,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                     }
                 ]);
 
-            var service = GetTestService(profileClientMock.Object, registerClientMock.Object, authorizationServiceMock.Object);
+            var service = GetTestService(profileClientMock.Object, authorizationServiceMock.Object);
 
             // Act
             await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipients, "resource");
@@ -683,9 +672,9 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 new Recipient { OrganizationNumber = organizationNumber }
             ];
 
-            var registerClientMock = new Mock<IRegisterClient>();
-            registerClientMock
-                .Setup(e => e.GetOrganizationContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber))))
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(p => p.GetOrganizationContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber))))
                 .ReturnsAsync(
                 [
                     new OrganizationContactPoints
@@ -696,13 +685,13 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                     }
                 ]);
 
-            var service = GetTestService(registerClient: registerClientMock.Object);
+            var service = GetTestService(profileClient: profileClientMock.Object);
 
             // Act
             await service.AddEmailAndSmsContactPointsAsync(recipients, null);
 
             // Assert
-            registerClientMock.Verify(e => e.GetOrganizationContactPoints(It.Is<List<string>>(s => s.Contains(organizationNumber))), Times.Once);
+            profileClientMock.Verify(e => e.GetOrganizationContactPoints(It.Is<List<string>>(s => s.Contains(organizationNumber))), Times.Once);
 
             Assert.Equal(2, recipients[0].AddressInfo.Count);
             Assert.Equal(organizationNumber, recipients[0].OrganizationNumber);
@@ -791,8 +780,8 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 new Recipient { OrganizationNumber = organizationNumber }
             ];
 
-            var registerClientMock = new Mock<IRegisterClient>();
-            registerClientMock
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
                 .Setup(e => e.GetOrganizationContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber))))
                 .ReturnsAsync(
                 [
@@ -804,7 +793,6 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                     }
                 ]);
 
-            var profileClientMock = new Mock<IProfileClient>();
             profileClientMock.Setup(e => e.GetUserRegisteredContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber)), It.Is<string>(e => e.Equals(resourceId))))
                 .ReturnsAsync(
                 [
@@ -837,13 +825,13 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                     return input;
                 });
 
-            var service = GetTestService(profileClientMock.Object, registerClientMock.Object, authorizationServiceMock.Object);
+            var service = GetTestService(profileClientMock.Object, authorizationServiceMock.Object);
 
             // Act
             await service.AddEmailAndSmsContactPointsAsync(recipients, resourceId);
 
             // Assert
-            registerClientMock.Verify(e => e.GetOrganizationContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber))), Times.Once);
+            profileClientMock.Verify(e => e.GetOrganizationContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber))), Times.Once);
             profileClientMock.Verify(e => e.GetUserRegisteredContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber)), It.Is<string>(e => e.Equals(resourceId))), Times.Once);
             authorizationServiceMock.Verify(e => e.AuthorizeUserContactPointsForResource(It.IsAny<List<OrganizationContactPoints>>(), It.Is<string>(e => e.Equals(resourceId))), Times.Once);
 
@@ -865,7 +853,6 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
         private static ContactPointService GetTestService(
             IProfileClient? profileClient = null,
-            IRegisterClient? registerClient = null,
             IAuthorizationService? authorizationService = null)
         {
             if (profileClient == null)
@@ -874,19 +861,13 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 profileClient = profileClientMock.Object;
             }
 
-            if (registerClient == null)
-            {
-                var registerClientMock = new Mock<IRegisterClient>();
-                registerClient = registerClientMock.Object;
-            }
-
             if (authorizationService == null)
             {
                 var authorizationServiceMock = new Mock<IAuthorizationService>();
                 authorizationService = authorizationServiceMock.Object;
             }
 
-            return new ContactPointService(profileClient, registerClient, authorizationService);
+            return new ContactPointService(profileClient, authorizationService);
         }
     }
 }

@@ -14,16 +14,14 @@ namespace Altinn.Notifications.Core.Services;
 public class ContactPointService : IContactPointService
 {
     private readonly IProfileClient _profileClient;
-    private readonly IRegisterClient _registerClient;
     private readonly IAuthorizationService _authorizationService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactPointService"/> class.
     /// </summary>
-    public ContactPointService(IProfileClient profile, IRegisterClient register, IAuthorizationService authorizationService)
+    public ContactPointService(IProfileClient profile, IAuthorizationService authorizationService)
     {
         _profileClient = profile;
-        _registerClient = register;
         _authorizationService = authorizationService;
     }
 
@@ -296,7 +294,7 @@ public class ContactPointService : IContactPointService
         }
 
         List<OrganizationContactPoints> authorizedUserContactPoints = [];
-        Task<List<OrganizationContactPoints>> registerTask = _registerClient.GetOrganizationContactPoints(orgNos);
+        Task<List<OrganizationContactPoints>> registerTask = _profileClient.GetOrganizationContactPoints(orgNos);
 
         if (!string.IsNullOrEmpty(resourceId))
         {
