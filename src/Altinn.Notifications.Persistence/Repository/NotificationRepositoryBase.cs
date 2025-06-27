@@ -2,12 +2,13 @@
 using System.Data;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Text.RegularExpressions;
 
+using Altinn.Notifications.Core.Helpers;
 using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Persistence.Mappers;
 
 using Microsoft.Extensions.Logging;
+
 using Npgsql;
 using NpgsqlTypes;
 
@@ -193,14 +194,12 @@ public abstract class NotificationRepositoryBase
             var recipient = new Recipient
             {
                 Destination = destination,
-                Status = _mobileNumberRegex.IsMatch(destination) ? ProcessingLifecycleMapper.GetSmsLifecycleStage(status) : ProcessingLifecycleMapper.GetEmailLifecycleStage(status),
                 LastUpdate = await reader.GetFieldValueAsync<DateTime>("last_update"),
+                Status = MobileNumberHelper.IsValidMobileNumber(destination) ? ProcessingLifecycleMapper.GetSmsLifecycleStage(status) : ProcessingLifecycleMapper.GetEmailLifecycleStage(status)
             };
             recipients.Add(recipient);
         }
     }
-
-    private static readonly Regex _mobileNumberRegex = Utilities.Helpers.MobileNumbersRegex();
 
     private static async Task<OrderStatus?> ReadMainNotification(NpgsqlDataReader reader)
     {
