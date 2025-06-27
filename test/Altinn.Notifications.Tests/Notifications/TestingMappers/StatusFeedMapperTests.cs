@@ -19,8 +19,8 @@ public class StatusFeedMapperTests
     [Fact]
     public void MapToOrderStatusExtList_MapsCorrectly()
     {
-        var mockShipmentId = Guid.NewGuid();
-        var mockShipmentId2 = Guid.NewGuid();   
+        var mockShipmentIdNotification = Guid.NewGuid();
+        var mockShipmentIdReminder = Guid.NewGuid();   
         var sendersReferenceMock = "ref123";
 
         // Arrange  
@@ -40,7 +40,8 @@ public class StatusFeedMapperTests
                         }
                     }.ToImmutableList(),
                     SendersReference = sendersReferenceMock,
-                    ShipmentId = mockShipmentId
+                    ShipmentId = mockShipmentIdNotification,
+                    ShipmentType = "Notification"
                 }
             },
             new()
@@ -57,7 +58,8 @@ public class StatusFeedMapperTests
                         }
                     }.ToImmutableList(),
                     SendersReference = sendersReferenceMock,
-                    ShipmentId = mockShipmentId2
+                    ShipmentId = mockShipmentIdReminder,
+                    ShipmentType = "Reminder"
                 }
             }
         };
@@ -67,7 +69,8 @@ public class StatusFeedMapperTests
             new StatusFeedExt
             {
                 SequenceNumber = 1,
-                ShipmentId = mockShipmentId,
+                ShipmentId = mockShipmentIdNotification,
+                ShipmentType = "Notification",
                 SendersReference = sendersReferenceMock,
                 Recipients = new List<StatusFeedRecipientExt>
                 {
@@ -81,7 +84,8 @@ public class StatusFeedMapperTests
             new StatusFeedExt
             {
                 SequenceNumber = 2,
-                ShipmentId = mockShipmentId2,
+                ShipmentId = mockShipmentIdReminder,
+                ShipmentType = "Reminder",
                 SendersReference = sendersReferenceMock,
                 Recipients = new List<StatusFeedRecipientExt>
                 {

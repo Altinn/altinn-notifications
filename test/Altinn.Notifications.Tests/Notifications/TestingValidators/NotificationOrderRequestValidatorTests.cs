@@ -89,6 +89,50 @@ namespace Altinn.Notifications.Tests.Notifications.TestingValidators
             Assert.True(result.IsValid);
         }
 
+        [Theory]
+        [InlineData(" +4799999999")]
+        [InlineData(" +47 99999999")]
+        [InlineData(" +47 9999 9999")]
+        [InlineData(" +47 99 99 99 99")]
+        public void Validate_Sms_MobileNumberWithLeadingSpace_IsInvalid(string invalidPhoneNumber)
+        {
+            // Arrange
+            var model = new NotificationOrderRequestExt()
+            {
+                NotificationChannel = NotificationChannelExt.Sms,
+                SmsTemplate = new SmsTemplateExt { Body = "Test Body" },
+                Recipients = [new RecipientExt { MobileNumber = invalidPhoneNumber }]
+            };
+
+            // Act
+            var result = _validator.Validate(model);
+
+            // Assert
+            Assert.False(result.IsValid);
+        }
+
+        [Theory]
+        [InlineData("+47 99999999")]
+        [InlineData("+47 9999 9999")]
+        [InlineData("+47 99 99 99 99")]
+        [InlineData("+47 99 99 99 99 ")]
+        public void Validate_Sms_MobileNumberContainingNonLeadingSpaces_IsValid(string validPhoneNumber)
+        {
+            // Arrange
+            var model = new NotificationOrderRequestExt()
+            {
+                NotificationChannel = NotificationChannelExt.Sms,
+                SmsTemplate = new SmsTemplateExt { Body = "Test Body" },
+                Recipients = [new RecipientExt { MobileNumber = validPhoneNumber }]
+            };
+
+            // Act
+            var result = _validator.Validate(model);
+
+            // Assert
+            Assert.True(result.IsValid);
+        }
+
         [Fact]
         public void Validate_Email_AllRequiredProps_IsValid()
         {
