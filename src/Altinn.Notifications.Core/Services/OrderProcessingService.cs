@@ -190,7 +190,7 @@ public class OrderProcessingService : IOrderProcessingService
     {
         if (order.ConditionEndpoint == null)
         {
-            return new SendConditionEvaluationResult { IsRetryNeeded = false, IsSendConditionMet = true };
+            return new SendConditionEvaluationResult { IsSendConditionMet = true };
         }
 
         var evaluatationResult = await _conditionClient.CheckSendCondition(order.ConditionEndpoint);
