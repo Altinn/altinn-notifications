@@ -126,7 +126,7 @@ public class OrderProcessingService : IOrderProcessingService
     }
 
     /// <inheritdoc/>
-    public async Task<NotificationOrderProcessingResult> ProcessOrderRetry(NotificationOrder order)
+    public async Task ProcessOrderRetry(NotificationOrder order)
     {
         var sendingConditionEvaluationResult = await EvaluateSendingCondition(order, true);
 
@@ -161,11 +161,6 @@ public class OrderProcessingService : IOrderProcessingService
                 await _orderRepository.TryCompleteOrderBasedOnNotificationsState(order.Id, AlternateIdentifierSource.Order);
                 break;
         }
-
-        return new NotificationOrderProcessingResult
-        {
-            IsRetryRequired = false
-        };
     }
 
     /// <summary>

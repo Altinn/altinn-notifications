@@ -65,5 +65,5 @@ public interface IOrderProcessingService
     /// <returns>
     /// A result indicating whether further retry attempts are required (typically returns <c>false</c>).
     /// </returns>
-    public Task<NotificationOrderProcessingResult> ProcessOrderRetry(NotificationOrder order);
+    public Task ProcessOrderRetry(NotificationOrder order);
 }

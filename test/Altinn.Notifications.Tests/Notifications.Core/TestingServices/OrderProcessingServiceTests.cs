@@ -734,12 +734,9 @@ public class OrderProcessingServiceTests
         var orderProcessingService = GetTestService(smsOrderProcessingService: processingServiceMock.Object, orderRepository: orderRepositoryMock.Object, conditionClient: conditionClientMock.Object);
 
         // Act
-        var processingResult = await orderProcessingService.ProcessOrderRetry(order);
+        await orderProcessingService.ProcessOrderRetry(order);
 
         // Assert
-        Assert.NotNull(processingResult);
-        Assert.False(processingResult.IsRetryRequired);
-
         conditionClientMock.Verify(e => e.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
 
         processingServiceMock.Verify(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Once);
@@ -769,12 +766,9 @@ public class OrderProcessingServiceTests
         var orderProcessingService = GetTestService(emailOrderProcessingService: processingServiceMock.Object, orderRepository: orderRepositoryMock.Object, conditionClient: conditionClientMock.Object);
 
         // Act
-        var processingResult = await orderProcessingService.ProcessOrderRetry(order);
+        await orderProcessingService.ProcessOrderRetry(order);
 
         // Assert
-        Assert.NotNull(processingResult);
-        Assert.False(processingResult.IsRetryRequired);
-
         conditionClientMock.Verify(e => e.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
 
         processingServiceMock.Verify(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Once);
@@ -804,12 +798,9 @@ public class OrderProcessingServiceTests
         var orderProcessingService = GetTestService(emailAndSmsOrderProcessingService: processingServiceMock.Object, orderRepository: orderRepositoryMock.Object, conditionClient: conditionClientMock.Object);
 
         // Act
-        var processingResult = await orderProcessingService.ProcessOrderRetry(order);
+        await orderProcessingService.ProcessOrderRetry(order);
 
         // Assert
-        Assert.NotNull(processingResult);
-        Assert.False(processingResult.IsRetryRequired);
-
         conditionClientMock.Verify(e => e.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
 
         processingServiceMock.Verify(e => e.ProcessOrderRetryAsync(It.IsAny<NotificationOrder>()), Times.Once);
@@ -841,12 +832,9 @@ public class OrderProcessingServiceTests
         var orderProcessingService = GetTestService(preferredChannelProcessingService: processingServiceMock.Object, orderRepository: orderRepositoryMock.Object, conditionClient: conditionClientMock.Object);
 
         // Act
-        var processingResult = await orderProcessingService.ProcessOrderRetry(order);
+        await orderProcessingService.ProcessOrderRetry(order);
 
         // Assert
-        Assert.NotNull(processingResult);
-        Assert.False(processingResult.IsRetryRequired);
-
         conditionClientMock.Verify(e => e.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
 
         processingServiceMock.Verify(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Once);
@@ -876,12 +864,9 @@ public class OrderProcessingServiceTests
         var orderProcessingService = GetTestService(smsOrderProcessingService: processingServiceMock.Object, orderRepository: orderRepositoryMock.Object, conditionClient: conditionClientMock.Object);
 
         // Act
-        var processingResult = await orderProcessingService.ProcessOrderRetry(order);
+        await orderProcessingService.ProcessOrderRetry(order);
 
         // Assert
-        Assert.NotNull(processingResult);
-        Assert.False(processingResult.IsRetryRequired);
-
         conditionClientMock.Verify(e => e.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
 
         processingServiceMock.Verify(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Never);
@@ -911,12 +896,9 @@ public class OrderProcessingServiceTests
         var orderProcessingService = GetTestService(emailOrderProcessingService: processingServiceMock.Object, orderRepository: orderRepositoryMock.Object, conditionClient: conditionClientMock.Object);
 
         // Act
-        var processingResult = await orderProcessingService.ProcessOrderRetry(order);
+        await orderProcessingService.ProcessOrderRetry(order);
 
         // Assert
-        Assert.NotNull(processingResult);
-        Assert.False(processingResult.IsRetryRequired);
-
         conditionClientMock.Verify(e => e.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
 
         processingServiceMock.Verify(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Never);
@@ -946,12 +928,9 @@ public class OrderProcessingServiceTests
         var orderProcessingService = GetTestService(emailAndSmsOrderProcessingService: processingServiceMock.Object, orderRepository: orderRepositoryMock.Object, conditionClient: conditionClientMock.Object);
 
         // Act
-        var processingResult = await orderProcessingService.ProcessOrderRetry(order);
+        await orderProcessingService.ProcessOrderRetry(order);
 
         // Assert
-        Assert.NotNull(processingResult);
-        Assert.False(processingResult.IsRetryRequired);
-
         conditionClientMock.Verify(e => e.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
 
         processingServiceMock.Verify(e => e.ProcessOrderRetryAsync(It.IsAny<NotificationOrder>()), Times.Never);
@@ -983,12 +962,9 @@ public class OrderProcessingServiceTests
         var orderProcessingService = GetTestService(preferredChannelProcessingService: processingServiceMock.Object, orderRepository: orderRepositoryMock.Object, conditionClient: conditionClientMock.Object);
 
         // Act
-        var processingResult = await orderProcessingService.ProcessOrderRetry(order);
+        await orderProcessingService.ProcessOrderRetry(order);
 
         // Assert
-        Assert.NotNull(processingResult);
-        Assert.False(processingResult.IsRetryRequired);
-
         conditionClientMock.Verify(e => e.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
 
         processingServiceMock.Verify(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Never);
@@ -1018,12 +994,9 @@ public class OrderProcessingServiceTests
         var orderProcessingService = GetTestService(smsOrderProcessingService: processingServiceMock.Object, orderRepository: orderRepositoryMock.Object, conditionClient: conditionClientMock.Object);
 
         // Act
-        var processingResult = await orderProcessingService.ProcessOrderRetry(order);
+        await orderProcessingService.ProcessOrderRetry(order);
 
         // Assert
-        Assert.NotNull(processingResult);
-        Assert.False(processingResult.IsRetryRequired);
-
         conditionClientMock.Verify(e => e.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
 
         processingServiceMock.Verify(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Once);
@@ -1053,12 +1026,9 @@ public class OrderProcessingServiceTests
         var orderProcessingService = GetTestService(emailOrderProcessingService: processingServiceMock.Object, orderRepository: orderRepositoryMock.Object, conditionClient: conditionClientMock.Object);
 
         // Act
-        var processingResult = await orderProcessingService.ProcessOrderRetry(order);
+        await orderProcessingService.ProcessOrderRetry(order);
 
         // Assert
-        Assert.NotNull(processingResult);
-        Assert.False(processingResult.IsRetryRequired);
-
         conditionClientMock.Verify(e => e.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
 
         processingServiceMock.Verify(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Once);
@@ -1088,12 +1058,9 @@ public class OrderProcessingServiceTests
         var orderProcessingService = GetTestService(emailAndSmsOrderProcessingService: processingServiceMock.Object, orderRepository: orderRepositoryMock.Object, conditionClient: conditionClientMock.Object);
 
         // Act
-        var processingResult = await orderProcessingService.ProcessOrderRetry(order);
+        await orderProcessingService.ProcessOrderRetry(order);
 
         // Assert
-        Assert.NotNull(processingResult);
-        Assert.False(processingResult.IsRetryRequired);
-
         conditionClientMock.Verify(e => e.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
 
         processingServiceMock.Verify(e => e.ProcessOrderRetryAsync(It.IsAny<NotificationOrder>()), Times.Once);
@@ -1125,12 +1092,9 @@ public class OrderProcessingServiceTests
         var orderProcessingService = GetTestService(preferredChannelProcessingService: processingServiceMock.Object, orderRepository: orderRepositoryMock.Object, conditionClient: conditionClientMock.Object);
 
         // Act
-        var processingResult = await orderProcessingService.ProcessOrderRetry(order);
+        await orderProcessingService.ProcessOrderRetry(order);
 
         // Assert
-        Assert.NotNull(processingResult);
-        Assert.False(processingResult.IsRetryRequired);
-
         conditionClientMock.Verify(e => e.CheckSendCondition(It.IsAny<Uri>()), Times.Once);
 
         processingServiceMock.Verify(e => e.ProcessOrderRetry(It.IsAny<NotificationOrder>()), Times.Once);
