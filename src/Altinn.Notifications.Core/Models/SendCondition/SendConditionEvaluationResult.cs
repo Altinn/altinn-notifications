@@ -14,7 +14,7 @@ public record SendConditionEvaluationResult
     /// A value of <c>false</c> means the sending criteria were not met.
     /// A <c>null</c> value indicates that the condition could not be evaluated.
     /// </remarks>
-    public bool? IsSendingConditionMet { get; init; }
+    public bool? IsSendConditionMet { get; init; }
 
     /// <summary>
     /// Gets a value indicating whether the sending condition should be evaluated again.

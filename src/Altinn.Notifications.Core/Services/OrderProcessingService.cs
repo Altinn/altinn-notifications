@@ -84,14 +84,14 @@ public class OrderProcessingService : IOrderProcessingService
 
         switch (sendingConditionEvaluationResult)
         {
-            case { IsRetryNeeded: false, IsSendingConditionMet: false }:
+            case { IsRetryNeeded: false, IsSendConditionMet: false }:
 
                 isRetryNeeded = false;
                 await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
 
                 break;
 
-            case { IsRetryNeeded: false, IsSendingConditionMet: true }:
+            case { IsRetryNeeded: false, IsSendConditionMet: true }:
 
                 switch (order.NotificationChannel)
                 {
@@ -132,11 +132,11 @@ public class OrderProcessingService : IOrderProcessingService
 
         switch (sendingConditionEvaluationResult)
         {
-            case { IsRetryNeeded: false, IsSendingConditionMet: false }:
+            case { IsRetryNeeded: false, IsSendConditionMet: false }:
                 await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
                 break;
 
-            case { IsRetryNeeded: false, IsSendingConditionMet: true }:
+            case { IsRetryNeeded: false, IsSendConditionMet: true }:
 
                 switch (order.NotificationChannel)
                 {
@@ -176,7 +176,7 @@ public class OrderProcessingService : IOrderProcessingService
     /// <returns>
     /// A <see cref="SendConditionEvaluationResult"/> that contains:
     /// <list type="bullet">
-    ///   <item><description>Whether the sending condition was met (<see cref="SendConditionEvaluationResult.IsSendingConditionMet"/>)</description></item>
+    ///   <item><description>Whether the sending condition was met (<see cref="SendConditionEvaluationResult.IsSendConditionMet"/>)</description></item>
     ///   <item><description>Whether a retry should be attempted (<see cref="SendConditionEvaluationResult.IsRetryNeeded"/>)</description></item>
     /// </list>
     /// </returns>
@@ -195,7 +195,7 @@ public class OrderProcessingService : IOrderProcessingService
     {
         if (order.ConditionEndpoint == null)
         {
-            return new SendConditionEvaluationResult { IsRetryNeeded = false, IsSendingConditionMet = true };
+            return new SendConditionEvaluationResult { IsRetryNeeded = false, IsSendConditionMet = true };
         }
 
         var evaluatationResult = await _conditionClient.CheckSendCondition(order.ConditionEndpoint);
@@ -218,7 +218,7 @@ public class OrderProcessingService : IOrderProcessingService
                         order.ConditionEndpoint);
                 }
 
-                return new SendConditionEvaluationResult { IsSendingConditionMet = checkResult };
+                return new SendConditionEvaluationResult { IsSendConditionMet = checkResult };
             },
             errorResult =>
             {
@@ -231,7 +231,7 @@ public class OrderProcessingService : IOrderProcessingService
                         errorResult.StatusCode,
                         errorResult.Message ?? "No error message provided");
 
-                    return new SendConditionEvaluationResult { IsSendingConditionMet = true };
+                    return new SendConditionEvaluationResult { IsSendConditionMet = true };
                 }
                 else
                 {
@@ -242,7 +242,7 @@ public class OrderProcessingService : IOrderProcessingService
                         errorResult.StatusCode,
                         errorResult.Message ?? "No error message provided");
 
-                    return new SendConditionEvaluationResult { IsRetryNeeded = true, IsSendingConditionMet = null };
+                    return new SendConditionEvaluationResult { IsRetryNeeded = true, IsSendConditionMet = null };
                 }
             });
     }
