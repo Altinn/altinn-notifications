@@ -234,7 +234,11 @@ public class OrderProcessingService : IOrderProcessingService
                         errorResult.StatusCode,
                         errorResult.Message ?? "No error message provided");
 
-                    return new SendConditionEvaluationResult { IsRetryNeeded = true, IsSendConditionMet = null };
+                    return new SendConditionEvaluationResult
+                    {
+                        IsRetryNeeded = true,
+                        IsSendConditionMet = null // Inconclusive due to endpoint failure
+                    };
                 }
             });
     }
