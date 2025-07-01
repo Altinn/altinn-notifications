@@ -83,13 +83,11 @@ public class OrderProcessingService : IOrderProcessingService
 
         switch (sendingConditionEvaluationResult)
         {
-            case { IsRetryNeeded: false, IsSendConditionMet: false }:
-
+            case { IsSendConditionMet: false }:
                 await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
-
                 break;
 
-            case { IsRetryNeeded: false, IsSendConditionMet: true }:
+            case { IsSendConditionMet: true }:
 
                 switch (order.NotificationChannel)
                 {
@@ -112,13 +110,12 @@ public class OrderProcessingService : IOrderProcessingService
                 }
 
                 await _orderRepository.TryCompleteOrderBasedOnNotificationsState(order.Id, AlternateIdentifierSource.Order);
-
                 break;
         }
 
         return new NotificationOrderProcessingResult
         {
-            IsRetryRequired = sendingConditionEvaluationResult.IsRetryNeeded
+            IsRetryRequired = sendingConditionEvaluationResult.IsSendConditionMet is null
         };
     }
 
@@ -129,11 +126,11 @@ public class OrderProcessingService : IOrderProcessingService
 
         switch (sendingConditionEvaluationResult)
         {
-            case { IsRetryNeeded: false, IsSendConditionMet: false }:
+            case { IsSendConditionMet: false }:
                 await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
                 break;
 
-            case { IsRetryNeeded: false, IsSendConditionMet: true }:
+            case { IsSendConditionMet: true }:
 
                 switch (order.NotificationChannel)
                 {
@@ -161,28 +158,27 @@ public class OrderProcessingService : IOrderProcessingService
     }
 
     /// <summary>
-    /// Evaluates whether a notification order should be processed based on its configured condition endpoint.
+    /// Determines if a notification order should proceed based on its configured send condition endpoint.
     /// </summary>
-    /// <param name="order">The notification order containing the condition endpoint to be checked.</param>
-    /// <param name="isRetry">A boolean flag indicating whether this evaluation is part of a retry attempt.</param>
+    /// <param name="order">The notification order containing the optional condition endpoint to evaluate.</param>
+    /// <param name="isRetry">
+    /// Indicates whether this evaluation is part of a retry attempt.
+    /// If <c>false</c>, a failed or inconclusive condition check will result in a retry recommendation.
+    /// If <c>true</c>, the order will be processed even if the condition check fails.
+    /// </param>
     /// <returns>
-    /// A <see cref="SendConditionEvaluationResult"/> that contains:
+    /// A <see cref="SendConditionEvaluationResult"/> indicating:
     /// <list type="bullet">
-    ///   <item><description>Whether the sending condition was met (<see cref="SendConditionEvaluationResult.IsSendConditionMet"/>)</description></item>
-    ///   <item><description>Whether a retry should be attempted (<see cref="SendConditionEvaluationResult.IsRetryNeeded"/>)</description></item>
+    ///   <item>
+    ///     <description>
+    ///       <see cref="SendConditionEvaluationResult.IsSendConditionMet"/>: 
+    ///       <c>true</c> if the send condition is met or no endpoint is specified;
+    ///       <c>false</c> if the condition is not met;
+    ///       <c>null</c> if the condition could not be evaluated due to an error (only on first attempt).
+    ///     </description>
+    ///   </item>
     /// </list>
     /// </returns>
-    /// <remarks>
-    /// <para>
-    /// If no condition endpoint is specified, the method returns a result indicating the condition is met and no retry is needed.
-    /// </para>
-    /// <para>
-    /// During the first attempt (when <paramref name="isRetry"/> is <c>false</c>), if the condition check fails, the method recommends a retry.
-    /// </para>
-    /// <para>
-    /// During a retry attempt (when <paramref name="isRetry"/> is <c>true</c>), if the condition check fails, the method allows the order to be processed anyway.
-    /// </para>
-    /// </remarks>
     private async Task<SendConditionEvaluationResult> EvaluateSendingCondition(NotificationOrder order, bool isRetry)
     {
         if (order.ConditionEndpoint == null)
@@ -236,7 +232,6 @@ public class OrderProcessingService : IOrderProcessingService
 
                     return new SendConditionEvaluationResult
                     {
-                        IsRetryNeeded = true,
                         IsSendConditionMet = null // Inconclusive due to endpoint failure
                     };
                 }
