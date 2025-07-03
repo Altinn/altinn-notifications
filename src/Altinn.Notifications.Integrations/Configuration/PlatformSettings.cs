@@ -14,4 +14,9 @@ public class PlatformSettings
     /// Gets or sets the url for the register API
     /// </summary>
     public string ApiRegisterEndpoint { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the url for the Notifications SMS service API.
+    /// </summary>
+    public string ApiNotificationsSmsEndpoint { get; set; } = string.Empty;
 }
