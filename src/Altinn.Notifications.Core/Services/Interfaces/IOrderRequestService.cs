@@ -67,4 +67,25 @@ public interface IOrderRequestService
     /// Thrown when the operation is canceled through the provided <paramref name="cancellationToken"/>.
     /// </exception>
     Task<NotificationOrderChainResponse?> RetrieveOrderChainTracking(string creatorName, string idempotencyId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Retrieves tracking information for an instant notification order using the creator's name and idempotency identifier.
+    /// </summary>
+    /// <param name="creatorName">
+    /// The short name of the creator who originally submitted the instant notification order.
+    /// </param>
+    /// <param name="idempotencyId">
+    /// The idempotency identifier specified when the instant notification order was created.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A token to monitor for cancellation requests. Defaults to <see cref="CancellationToken.None"/>.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task{TResult}"/> containing an <see cref="InstantNotificationOrderResponse"/> with identifiers and sender references for the instant notification order,
+    /// or <c>null</c> if no matching order is found for the provided parameters.
+    /// </returns>
+    /// <exception cref="OperationCanceledException">
+    /// Thrown if the operation is canceled via the provided <paramref name="cancellationToken"/>.
+    /// </exception>
+    Task<InstantNotificationOrderResponse?> RetrieveInstanOrderTracking(string creatorName, string idempotencyId, CancellationToken cancellationToken = default);
 }

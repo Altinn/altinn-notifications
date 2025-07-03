@@ -36,6 +36,7 @@ public class OrderRepository : IOrderRepository
     private const string _insertorderchainSql = "call notifications.insertorderchain($1, $2, $3, $4, $5)"; // (_orderid, _idempotencyid, _creatorname, _created, _orderchain)
     private const string _getOrdersChainTrackingSql = "SELECT * FROM notifications.get_orders_chain_tracking($1, $2)"; // (_creatorname, _idempotencyid)
     private const string _tryMarkOrderAsCompletedSql = "SELECT notifications.trymarkorderascompleted($1, $2)"; // (_alternateid, _alternateidsource)
+    private const string _getInstantOrderTrackingSql = "SELECT notifications.get_instant_order_tracking($1, $2)"; // (_alternateid, _alternateidsource)
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderRepository"/> class.
@@ -310,6 +311,50 @@ public class OrderRepository : IOrderRepository
 
         var result = await pgcom.ExecuteScalarAsync();
         return result != null && (bool)result;
+    }
+
+    /// <inheritdoc/>
+    public async Task<InstantNotificationOrderResponse?> GetInstantOrderTracking(string creatorName, string idempotencyId, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        await using NpgsqlCommand command = _dataSource.CreateCommand(_getInstantOrderTrackingSql);
+        command.Parameters.AddWithValue(NpgsqlDbType.Text, creatorName);
+        command.Parameters.AddWithValue(NpgsqlDbType.Text, idempotencyId);
+
+        await using NpgsqlDataReader reader = await command.ExecuteReaderAsync(cancellationToken);
+        if (!reader.HasRows)
+        {
+            return null;
+        }
+
+        await reader.ReadAsync(cancellationToken);
+
+        var orderChainId = await reader.GetFieldValueAsync<Guid>(reader.GetOrdinal("orders_chain_id"), cancellationToken);
+        if (orderChainId == Guid.Empty)
+        {
+            return null;
+        }
+
+        var shipmentId = await reader.GetFieldValueAsync<Guid>(reader.GetOrdinal("shipment_id"), cancellationToken);
+        if (shipmentId == Guid.Empty)
+        {
+            return null;
+        }
+
+        string? sendersReference = await reader.IsDBNullAsync(reader.GetOrdinal("senders_reference"), cancellationToken)
+            ? null
+            : reader.GetString(reader.GetOrdinal("senders_reference"));
+
+        return new InstantNotificationOrderResponse
+        {
+            OrderChainId = orderChainId,
+            Notification = new NotificationOrderChainShipment
+            {
+                ShipmentId = shipmentId,
+                SendersReference = sendersReference
+            }
+        };
     }
 
     private static NotificationOrderWithStatus? ReadNotificationOrderWithStatus(NpgsqlDataReader reader)

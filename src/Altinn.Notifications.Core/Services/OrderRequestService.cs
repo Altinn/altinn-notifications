@@ -85,6 +85,12 @@ public class OrderRequestService : IOrderRequestService
     }
 
     /// <inheritdoc/>
+    public async Task<InstantNotificationOrderResponse?> RetrieveInstanOrderTracking(string creatorName, string idempotencyId, CancellationToken cancellationToken = default)
+    {
+        return await _repository.GetInstantOrderTracking(creatorName, idempotencyId, cancellationToken) ?? null;
+    }
+
+    /// <inheritdoc/>
     public async Task<Result<NotificationOrderChainResponse, ServiceError>> RegisterNotificationOrderChain(NotificationOrderChainRequest orderRequest, CancellationToken cancellationToken = default)
     {
         // 1. Get the current time

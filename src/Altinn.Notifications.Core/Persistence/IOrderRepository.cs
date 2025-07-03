@@ -85,6 +85,28 @@ public interface IOrderRepository
     Task<NotificationOrderChainResponse?> GetOrderChainTracking(string creatorName, string idempotencyId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Retrieves tracking information for an instant notification order using the creator's name and idempotency identifier.
+    /// </summary>
+    /// <param name="creatorName">
+    /// The short name of the creator who originally submitted the instant notification order.
+    /// </param>
+    /// <param name="idempotencyId">
+    /// The idempotency identifier specified when the instant notification order was created.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A token to monitor for cancellation requests. Defaults to <see cref="CancellationToken.None"/>.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task{TResult}"/> containing a <see cref="InstantNotificationOrderResponse"/> with identifiers and sender references for the instant notification order,
+    /// or <c>null</c> if no matching order is found for the provided parameters.
+    /// </returns>
+    /// <remarks>
+    /// The returned <see cref="InstantNotificationOrderResponse"/> contains the order chain identifier that uniquely identifies the instant notification sequence,
+    /// along with the <see cref="NotificationOrderChainReceipt"/> that includes shipment identifiers and sender references for the main notification order.
+    /// </remarks>
+    Task<InstantNotificationOrderResponse?> GetInstantOrderTracking(string creatorName, string idempotencyId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets an order based on the provided senders reference within the provided creator scope
     /// </summary>
     /// <param name="sendersReference">The senders reference</param>
