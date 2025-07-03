@@ -8,14 +8,18 @@ namespace Altinn.Notifications.Models.Orders;
 public class InstantNotificationOrderResponseExt
 {
     /// <summary>
-    /// Gets or sets the unique identifier for notification order.
+    /// Gets or sets the unique identifier for the notification order chain.
     /// </summary>
-    [JsonPropertyName("shipmentId")]
-    public required Guid ShipmentId { get; set; }
+    /// <remarks>
+    /// This identifier can be used to reference the entire notification order chain in subsequent operations
+    /// or for tracking purposes.
+    /// </remarks>
+    [JsonPropertyName("notificationOrderId")]
+    public required Guid OrderChainId { get; set; }
 
     /// <summary>
-    /// Gets or sets the sender's reference identifier.
+    /// Gets or sets the unique identifier for notification order.
     /// </summary>
-    [JsonPropertyName("sendersReference")]
-    public string? SendersReference { get; set; }
+    [JsonPropertyName("notification")]
+    public required NotificationOrderChainShipmentExt Notification { get; set; }
 }

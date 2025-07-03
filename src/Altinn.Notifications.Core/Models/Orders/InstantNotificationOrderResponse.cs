@@ -6,12 +6,12 @@
 public class InstantNotificationOrderResponse
 {
     /// <summary>
-    /// Gets or sets the unique identifier for notification order.
+    /// Gets or sets the unique identifier for the notification order chain.
     /// </summary>
-    public required Guid ShipmentId { get; set; }
+    public required Guid OrderChainId { get; set; }
 
     /// <summary>
-    /// Gets or sets the sender's reference identifier.
+    /// Gets or sets the unique identifier for notification order.
     /// </summary>
-    public string? SendersReference { get; set; }
+    public required NotificationOrderChainShipment Notification { get; set; }
 }
