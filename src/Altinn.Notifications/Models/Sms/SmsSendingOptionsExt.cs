@@ -9,7 +9,7 @@ namespace Altinn.Notifications.Models.Sms;
 public record SmsSendingOptionsExt : SmsDetailsExt
 {
     /// <summary>
-    /// Gets or sets the policy controlling when the SMS should be delivered.
+    /// The policy controlling when the SMS should be delivered.
     /// </summary>
     /// <remarks>
     /// Defaults to <see cref="SendingTimePolicyExt.Daytime"/> to respect standard business hours (08:00-17:00 CET).

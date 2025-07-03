@@ -9,7 +9,7 @@ namespace Altinn.Notifications.Models.Sms;
 public record SmsDetailsExt
 {
     /// <summary>
-    /// Gets or sets the sender identifier displayed in the recipient's SMS message.
+    /// The sender identifier displayed in the recipient's SMS message.
     /// </summary>
     /// <remarks>
     /// Can be either a phone number or an alphanumeric sender identifier, subject to carrier and regional restrictions.
@@ -18,7 +18,7 @@ public record SmsDetailsExt
     public string? Sender { get; init; }
 
     /// <summary>
-    /// Gets or sets the text content of the SMS message.
+    /// The text content of the SMS message.
     /// </summary>
     /// <remarks>
     /// Plain text content with length constraints determined by carrier limitations and character encoding.
