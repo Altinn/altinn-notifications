@@ -3,16 +3,15 @@ using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
+using Altinn.Notifications.Examples;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Validators.Extensions;
-
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
-
 using Swashbuckle.AspNetCore.Annotations;
 using Swashbuckle.AspNetCore.Filters;
 
@@ -45,15 +44,20 @@ public class OrdersController : ControllerBase
     }
 
     /// <summary>
-    /// Endpoint for retrieving an order by id.
+    /// Get order details
     /// </summary>
-    /// <param name="id">The order id</param>
-    /// <returns>The order that correspons to the provided id</returns>
+    /// <remarks>
+    /// Endpoint for retrieving details of a notification order, including its template and recipients.
+    /// </remarks>
+    /// <param name="id">The unique identifier of the notification order for which details are to be retrieved.</param>
+    /// <returns>The details of the notification order were successfully retrieved.</returns>
     [HttpGet]
     [Route("{id}")]
     [Produces("application/json")]
-    [SwaggerResponse(200, "The notification order matching the provided id was retrieved successfully", typeof(NotificationOrderExt))]
-    [SwaggerResponse(404, "No order with the provided id was found")]
+    [SwaggerResponse(200, "The details of the notification order were successfully retrieved.", typeof(NotificationOrderExt))]
+    [SwaggerResponse(404, "No order matching the provided ID was found.")]
+    [SwaggerResponse(401, "Indicates a missing, invalid or expired authorization header.")]
+    [SwaggerResponse(403, "Indicates missing or invalid scope or Platform Access Token.")]
     public async Task<ActionResult<NotificationOrderExt>> GetById([FromRoute] Guid id)
     {
         string? expectedCreator = HttpContext.GetOrg();
@@ -100,15 +104,20 @@ public class OrdersController : ControllerBase
     }
 
     /// <summary>
-    /// Endpoint for retrieving an order with processing and notificatio status by id
+    /// Get order status
     /// </summary>
-    /// <param name="id">The order id</param>
-    /// <returns>The order that correspons to the provided id</returns>
+    /// <remarks>
+    /// Endpoint for retrieving the processing status of a notification order, along with a summary of all generated notifications.
+    /// </remarks>
+    /// <param name="id">The unique identifier of the notification order for which status are to be retrieved.</param>
+    /// <returns>The status of the notification order was successfully retrieved.</returns>
     [HttpGet]
     [Route("{id}/status")]
     [Produces("application/json")]
-    [SwaggerResponse(200, "The notification order matching the provided id was retrieved successfully", typeof(NotificationOrderWithStatusExt))]
-    [SwaggerResponse(404, "No order with the provided id was found")]
+    [SwaggerResponse(200, "The status of the notification order was successfully retrieved.", typeof(NotificationOrderWithStatusExt))]
+    [SwaggerResponse(404, "No order matching the provided ID was found.")]
+    [SwaggerResponse(401, "Indicates a missing, invalid or expired authorization header.")]
+    [SwaggerResponse(403, "Indicates missing or invalid scope or Platform Access Token.")]
     public async Task<ActionResult<NotificationOrderWithStatusExt>> GetWithStatusById([FromRoute] Guid id)
     {
         string? expectedCreator = HttpContext.GetOrg();
@@ -128,19 +137,23 @@ public class OrdersController : ControllerBase
     }
 
     /// <summary>
-    /// Add a notification order.
+    /// Send notifications
     /// </summary>
     /// <remarks>
-    /// The API will accept the request after som basic validation of the request.
-    /// The system will also attempt to verify that it will be possible to fulfill the order.
+    /// Endpoint for sending a notification via a selected notification channel to one or more recipient.
     /// </remarks>
     /// <returns>The notification order request response</returns>
     [HttpPost]
     [Consumes("application/json")]
     [Produces("application/json")]
-    [SwaggerResponse(202, "The notification order was accepted", typeof(NotificationOrderRequestResponseExt))]
-    [SwaggerResponse(400, "The notification order is invalid", typeof(ValidationProblemDetails))]
+    [SwaggerResponse(202, "The request was accepted and a notification order has been successfully generated.", typeof(NotificationOrderRequestResponseExt))]
+    [SwaggerResponse(400, "The request was invalid.", typeof(ValidationProblemDetails))]
+    [SwaggerResponse(401, "Indicates a missing, invalid or expired authorization header.")]
+    [SwaggerResponse(403, "Indicates missing or invalid scope or Platform Access Token.")]
     [SwaggerResponseHeader(202, "Location", "string", "Link to access the newly created notification order.")]
+    [SwaggerRequestExample(typeof(NotificationOrderRequestExt), typeof(NotificationOrderRequestExtExample))]
+    [SwaggerRequestExample(typeof(NotificationOrderRequestExt), typeof(NotificationOrderRequestExtKeywordsExample))]
+    [SwaggerResponseExample(202, typeof(NotificationOrderRequestResponseExtExample))]
     public async Task<ActionResult<NotificationOrderRequestResponseExt>> Post(NotificationOrderRequestExt notificationOrderRequest)
     {
         var validationResult = _validator.Validate(notificationOrderRequest);
@@ -166,14 +179,19 @@ public class OrdersController : ControllerBase
     /// <summary>
     /// Cancel a notification order.
     /// </summary>
-    /// <param name="id">The id of the order to cancel.</param>
+    /// <remarks>
+    /// Endpoint for stopping the sending of a registered notification order.
+    /// </remarks>
+    /// <param name="id">The unique identifier of the notification order for which notifications are to be cancelled.</param>
     /// <returns>The cancelled notification order</returns>
     [HttpPut]
     [Route("{id}/cancel")]
     [Produces("application/json")]
     [SwaggerResponse(200, "The notification order was cancelled. No notifications will be sent.", typeof(NotificationOrderWithStatusExt))]
-    [SwaggerResponse(409, "The order cannot be cancelled due to current processing status")]
-    [SwaggerResponse(404, "No order with the provided id was found")]
+    [SwaggerResponse(404, "No order matching the provided ID was found.")]
+    [SwaggerResponse(401, "Indicates a missing, invalid or expired authorization header.")]
+    [SwaggerResponse(403, "Indicates missing or invalid scope or Platform Access Token.")]
+    [SwaggerResponse(409, "The order cannot be cancelled due to current processing status.")]
     public async Task<ActionResult<NotificationOrderWithStatusExt>> CancelOrder([FromRoute] Guid id)
     {
         string? expectedCreator = HttpContext.GetOrg();

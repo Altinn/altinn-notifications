@@ -3,6 +3,9 @@
 Altinn platform microservice for handling notifications (mail, sms, etc)
 This component handles the functionality related to registering and sending notifications.
 
+## Architecture
+Detailed architecture documentation can be found in the [docs/architecture](docs/architecture) folder.
+
 ## Project organization
 This is a backend WebAPI solution written in .NET / C# following the clean architecture principles.
 The solution is into four projects, each with their associated test project.
