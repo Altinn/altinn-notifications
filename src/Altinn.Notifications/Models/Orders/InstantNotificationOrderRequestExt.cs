@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
-using Altinn.Notifications.Core.Models.Recipients;
+using Altinn.Notifications.Models.Sms;
 
 namespace Altinn.Notifications.Models.Orders;
 
@@ -41,5 +41,5 @@ public class InstantNotificationOrderRequestExt
     /// </remarks>
     [Required]
     [JsonPropertyName("recipientSms")]
-    public required RecipientInstantSms RecipientSms { get; init; }
+    public required RecipientInstantSmsExt RecipientSms { get; init; }
 }
