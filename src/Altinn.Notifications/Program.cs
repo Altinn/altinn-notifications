@@ -73,7 +73,27 @@ builder.Services.AddSwaggerGen(options =>
     options.UseInlineDefinitionsForEnums();
     options.SchemaFilter<SwaggerDefaultValues>();
     options.OperationFilter<AddResponseHeadersFilter>();
+    
+    options.ExampleFilters();
+    
+    options.AddServer(new OpenApiServer()
+    {
+        Url = "https://platform.tt02.altinn.no/",
+        Description = "TT02"
+    });
+    options.AddServer(new OpenApiServer()
+    {
+        Url = "https://platform.altinn.no/",
+        Description = "Production"
+    });
+    options.AddServer(new OpenApiServer()
+    {
+        Url = "https://localhost:5090/", //TODO: Pull form config?
+        Description = "Local development"
+    });
 });
+
+builder.Services.AddSwaggerExamplesFromAssemblies(Assembly.GetEntryAssembly());
 
 var app = builder.Build();
 
