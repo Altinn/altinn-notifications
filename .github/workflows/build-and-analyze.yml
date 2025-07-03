@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres: # note that updating this image might break the pipeline if the agent doesn't support the new version
-        image: postgres:17@sha256:6efd0df010dc3cb40d5e33e3ef84acecc5e73161bd3df06029ee8698e5e12c60
+        image: postgres:16@sha256:918e8e72b35b5370901965ce3da5a355c3537cb5e10c38e82c2b6f174b758334
         env:
           POSTGRES_USER: platform_notifications_admin
           POSTGRES_PASSWORD: Password
