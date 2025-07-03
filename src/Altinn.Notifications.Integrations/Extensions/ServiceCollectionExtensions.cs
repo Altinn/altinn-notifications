@@ -59,6 +59,7 @@ public static class ServiceCollectionExtensions
         services.Configure<PlatformSettings>(config.GetSection(nameof(PlatformSettings)));
         services.AddHttpClient<IProfileClient, ProfileClient>();
         services.AddHttpClient<IRegisterClient, RegisterClient>();
+        services.AddHttpClient<INotificationsSmsClient, NotificationsSmsClient>();
     }
 
     /// <summary>
