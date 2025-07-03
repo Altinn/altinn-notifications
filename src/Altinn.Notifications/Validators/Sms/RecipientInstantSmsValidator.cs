@@ -25,17 +25,13 @@ internal sealed class RecipientInstantSmsValidator : AbstractValidator<Recipient
                 .Must(MobileNumberHelper.IsValidMobileNumber)
                 .WithMessage("Recipient phone number is not a valid mobile number.");
 
-            RuleFor(recipient => recipient!.TimeToLiveInSeconds)
+            RuleFor(sms => sms!.TimeToLiveInSeconds)
                 .InclusiveBetween(1, 172800)
                 .WithMessage("Time-to-live must be between 1 and 172800 seconds (48 hours).");
 
-            RuleFor(recipient => recipient!.Details)
+            RuleFor(sms => sms!.Details)
                 .NotNull()
-                .WithMessage("SMS details cannot be null.");
-
-            RuleFor(recipient => recipient!.Details.Body)
-                .NotEmpty()
-                .WithMessage("SMS message body cannot be null or empty.");
+                .SetValidator(new SmsDetailsValidator());
         });
     }
 }
