@@ -6,12 +6,17 @@
 public enum OrderType : uint
 {
     /// <summary>
-    /// Represents a notification order that should be initiated immediately.
+    /// Represents a standard notification order that should be processed according to normal scheduling rules.
     /// </summary>
     Notification = 0,
 
     /// <summary>
-    /// Represents a reminder order that should be initiated after the main order.
+    /// Represents a reminder order that is sent as a follow-up to a previous notification.
     /// </summary>
-    Reminder = 1
+    Reminder = 1,
+
+    /// <summary>
+    /// Represents a notification order intended for immediate processing, bypassing all processing queuing mechanisms
+    /// </summary>
+    InstantNotification = 2
 }
