@@ -1,21 +1,21 @@
 ﻿namespace Altinn.Notifications.Core.Models.Recipients;
 
 /// <summary>
-/// Represents the model for sending an SMS instantly to a specific mobile number.
+/// Represents a model that encapsulates the required information to send a timed SMS to a single recipient.
 /// </summary>
-public record RecipientInstantSms
+public record RecipientTimedSms
 {
     /// <summary>
     /// The recipient's phone number in international format.
     /// </summary>
     /// <remarks>
-    /// This is the destination number where the SMS will be delivered instantly.
+    /// The destination number where the SMS will be delivered.
     /// The phone number should include the country code (e.g., +4799999999).
     /// </remarks>
     public required string PhoneNumber { get; init; }
 
     /// <summary>
-    /// The time-to-live for the SMS message in seconds.
+    /// The time-to-live for the SMS message, in seconds.
     /// </summary>
     /// <remarks>
     /// Specifies how long the message should be kept in the delivery system if it cannot be delivered immediately.

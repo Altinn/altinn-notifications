@@ -11,7 +11,7 @@ namespace Altinn.Notifications.Models.Recipient;
 public class InstantNotificationRecipientExt
 {
     /// <summary>
-    /// Gets the recipient information and SMS envelope.
+    /// The recipient information and SMS envelope.
     /// </summary>
     /// <remarks>
     /// Contains the recipient's phone number, the message content,

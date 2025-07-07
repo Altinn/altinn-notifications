@@ -6,18 +6,18 @@
 public record SmsDetails
 {
     /// <summary>
-    /// The sender identifier displayed to the recipient.
+    /// The sender identifier displayed in the recipient's SMS message.
     /// </summary>
     /// <remarks>
-    /// Can be a phone number or an alphanumeric sender ID, subject to carrier and regional restrictions.
+    /// Can be either a phone number or an alphanumeric sender identifier, subject to carrier and regional restrictions.
     /// </remarks>
     public string? Sender { get; init; }
 
     /// <summary>
-    /// The SMS message content.
+    /// The text content of the SMS message.
     /// </summary>
     /// <remarks>
-    /// Plain text content. Message length and encoding may affect how it is delivered and billed by the carrier.
+    /// Plain text content with length constraints determined by carrier limitations and character encoding.
     /// </remarks>
     public required string Body { get; init; }
 }

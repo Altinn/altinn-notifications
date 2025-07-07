@@ -1,16 +1,16 @@
 ﻿namespace Altinn.Notifications.Core.Models.Recipients;
 
 /// <summary>
-/// Defines a container for specifying the recipient of an instant notification order.
+/// Represents a container for specifying the recipient of a notification order that should be sent instantly.
 /// </summary>
 public class InstantNotificationRecipient
 {
     /// <summary>
-    /// The SMS recipient information and message content.
+    /// The recipient information and SMS envelope.
     /// </summary>
     /// <remarks>
-    /// Contains the destination phone number, message content,
-    /// time-to-live setting, and sender information.
+    /// Contains the recipient's phone number, the message content,
+    /// time-to-live setting, and sender information needed to deliver the SMS.
     /// </remarks>
-    public required RecipientInstantSms RecipientSms { get; init; }
+    public required RecipientTimedSms RecipientSms { get; init; }
 }

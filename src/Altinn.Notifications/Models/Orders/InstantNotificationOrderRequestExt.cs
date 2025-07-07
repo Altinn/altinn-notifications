@@ -11,7 +11,7 @@ namespace Altinn.Notifications.Models.Orders;
 public class InstantNotificationOrderRequestExt
 {
     /// <summary>
-    /// Gets or sets a unique identifier used to ensure the same notification is not processed multiple times.
+    /// The unique identifier used to ensure the same notification is not processed multiple times.
     /// </summary>
     /// <remarks>
     /// This value must be unique for each distinct notification order.
@@ -23,7 +23,7 @@ public class InstantNotificationOrderRequestExt
     public required string IdempotencyId { get; init; }
 
     /// <summary>
-    /// Gets or sets a reference identifier assigned by the sender for tracking purposes.
+    /// The reference identifier assigned by the sender for tracking purposes.
     /// </summary>
     /// <remarks>
     /// This optional value can be used for correlating the notification with the sender's systems
@@ -33,7 +33,7 @@ public class InstantNotificationOrderRequestExt
     public string? SendersReference { get; init; }
 
     /// <summary>
-    /// Gets or sets the recipient information for this notification.
+    /// The recipient information for this notification.
     /// </summary>
     /// <remarks>
     /// Contains all necessary information about the recipient, including contact details

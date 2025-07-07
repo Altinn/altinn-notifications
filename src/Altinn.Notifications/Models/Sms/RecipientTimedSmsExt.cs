@@ -9,7 +9,7 @@ namespace Altinn.Notifications.Models.Sms;
 public record RecipientTimedSmsExt
 {
     /// <summary>
-    /// Gets the recipient's phone number in international format.
+    /// The recipient's phone number in international format.
     /// </summary>
     /// <remarks>
     /// The destination number where the SMS will be delivered.
@@ -20,7 +20,7 @@ public record RecipientTimedSmsExt
     public required string PhoneNumber { get; init; }
 
     /// <summary>
-    /// Gets the time-to-live for the SMS message, in seconds.
+    /// The time-to-live for the SMS message, in seconds.
     /// </summary>
     /// <remarks>
     /// Specifies how long the message should be kept in the delivery system if it cannot be delivered immediately.
@@ -30,7 +30,7 @@ public record RecipientTimedSmsExt
     public required int TimeToLiveInSeconds { get; init; }
 
     /// <summary>
-    /// Gets the content and sender information for the SMS message.
+    /// The content and sender information for the SMS message.
     /// </summary>
     /// <remarks>
     /// Contains the message body text and optional sender information that will be displayed to the recipient.
