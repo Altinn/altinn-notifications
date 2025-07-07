@@ -5,7 +5,6 @@ using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
-using Altinn.Notifications.Models.Orders;
 using Altinn.Notifications.Validators.Extensions;
 
 using FluentValidation;
