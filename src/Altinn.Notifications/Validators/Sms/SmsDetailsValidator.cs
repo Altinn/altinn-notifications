@@ -5,7 +5,7 @@ using FluentValidation;
 namespace Altinn.Notifications.Validators.Sms;
 
 /// <summary>
-/// Represents validation logic for the SMS details.
+/// Represents validation logic for an SMS.
 /// </summary>
 internal sealed class SmsDetailsValidator : AbstractValidator<SmsDetailsExt>
 {
@@ -14,7 +14,7 @@ internal sealed class SmsDetailsValidator : AbstractValidator<SmsDetailsExt>
     /// </summary>
     public SmsDetailsValidator()
     {
-        RuleFor(details => details.Body)
+        RuleFor(sms => sms.Body)
             .NotEmpty()
             .WithMessage("SMS message body cannot be null or empty.");
     }

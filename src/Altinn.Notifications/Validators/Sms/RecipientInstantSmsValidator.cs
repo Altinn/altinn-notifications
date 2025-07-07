@@ -6,7 +6,7 @@ using FluentValidation;
 namespace Altinn.Notifications.Validators.Sms;
 
 /// <summary>
-/// Represents validation rules for the model responsible for immediate SMS delivery to a single recipient.
+/// Represents validation rules for a recipient of an instant SMS.
 /// </summary>
 internal sealed class RecipientInstantSmsValidator : AbstractValidator<RecipientInstantSmsExt?>
 {
@@ -26,8 +26,8 @@ internal sealed class RecipientInstantSmsValidator : AbstractValidator<Recipient
                 .WithMessage("Recipient phone number is not a valid mobile number.");
 
             RuleFor(sms => sms!.TimeToLiveInSeconds)
-                .InclusiveBetween(1, 172800)
-                .WithMessage("Time-to-live must be between 1 and 172800 seconds (48 hours).");
+                .InclusiveBetween(60, 172800)
+                .WithMessage("Time-to-live must be between 60 and 172800 seconds (48 hours).");
 
             RuleFor(sms => sms!.Details)
                 .NotNull()

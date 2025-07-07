@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 namespace Altinn.Notifications.Models.Sms;
 
 /// <summary>
-/// Represents the model for sending an SMS instantly to a specific mobile number.
+/// Represents the model for sending an SMS to a specific mobile number.
 /// </summary>
 public record RecipientInstantSmsExt
 {
@@ -12,7 +12,7 @@ public record RecipientInstantSmsExt
     /// The recipient's phone number in international format.
     /// </summary>
     /// <remarks>
-    /// This is the destination number where the SMS will be delivered instantly.
+    /// This is the destination number where the SMS will be delivered.
     /// The phone number should include the country code (e.g., +4799999999).
     /// </remarks>
     [Required]
