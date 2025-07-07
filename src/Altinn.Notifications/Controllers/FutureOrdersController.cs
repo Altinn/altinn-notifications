@@ -24,27 +24,21 @@ namespace Altinn.Notifications.Controllers;
 [Route("notifications/api/v1/future/orders")]
 [SwaggerResponse(401, "Caller is unauthorized")]
 [SwaggerResponse(403, "Caller is not authorized to access the requested resource")]
-///[Authorize(Policy = AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS)]
+[Authorize(Policy = AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS)]
 public class FutureOrdersController : ControllerBase
 {
     private readonly IOrderRequestService _orderRequestService;
-    private readonly ISmsOrderProcessingService _smsOrderProcessingService;
     private readonly IValidator<NotificationOrderChainRequestExt> _ordersChainValidator;
-    private readonly IValidator<InstantNotificationOrderRequestExt> _instantOrderValidator;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FutureOrdersController"/> class.
     /// </summary>
     public FutureOrdersController(
         IOrderRequestService orderRequestService,
-        ISmsOrderProcessingService smsOrderProcessingService,
-        IValidator<NotificationOrderChainRequestExt> validator,
-        IValidator<InstantNotificationOrderRequestExt> instantOrderValidator)
+        IValidator<NotificationOrderChainRequestExt> validator)
     {
         _ordersChainValidator = validator;
         _orderRequestService = orderRequestService;
-        _instantOrderValidator = instantOrderValidator;
-        _smsOrderProcessingService = smsOrderProcessingService;
     }
 
     /// <summary>
@@ -107,90 +101,6 @@ public class FutureOrdersController : ControllerBase
                     };
                     return StatusCode(error.ErrorCode, problemDetails);
                 });
-        }
-        catch (InvalidOperationException ex)
-        {
-            var problemDetails = new ProblemDetails
-            {
-                Status = 400,
-                Detail = ex.Message,
-                Title = "Invalid notification order request"
-            };
-            return StatusCode(400, problemDetails);
-        }
-        catch (OperationCanceledException)
-        {
-            var problemDetails = new ProblemDetails
-            {
-                Title = "Request terminated",
-                Detail = "The client disconnected or cancelled the request before the server could complete processing.",
-                Status = 499
-            };
-
-            return StatusCode(499, problemDetails);
-        }
-    }
-
-    /// <summary>
-    /// Sends an SMS notification instantly.
-    /// </summary>
-    /// <remarks>
-    /// The API will accept the request after some basic validation of the request.
-    /// </remarks>
-    /// <param name="instantNotificationRequest">The instant notification order request</param>
-    /// <param name="cancellationToken">A token to monitor for cancellation requests</param>
-    /// <returns>Information about the created notification order</returns>
-    [HttpPost("sendinstantly")]
-    [Consumes("application/json")]
-    [Produces("application/json")]
-    [SwaggerResponse(201, "The instant notification was created and sent.", typeof(InstantNotificationOrderResponseExt))]
-    [SwaggerResponse(200, "The notification order was created previously.", typeof(InstantNotificationOrderResponseExt))]
-    [SwaggerResponse(400, "The notification order is invalid", typeof(ValidationProblemDetails))]
-    [SwaggerResponse(422, "The notification order is invalid", typeof(ValidationProblemDetails))]
-    [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request before the server could complete processing")]
-    public async Task<ActionResult<InstantNotificationOrderResponseExt>> SendInstantly([FromBody] InstantNotificationOrderRequestExt instantNotificationRequest, CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            var validationResult = _instantOrderValidator.Validate(instantNotificationRequest);
-            if (!validationResult.IsValid)
-            {
-                validationResult.AddToModelState(ModelState);
-                return ValidationProblem(ModelState);
-            }
-
-            string? creator = "ttd";
-            if (creator == null)
-            {
-                return Forbid();
-            }
-
-            var orderChainTracking = await _orderRequestService.RetrieveOrderChainTracking(creator, instantNotificationRequest.IdempotencyId, cancellationToken);
-            if (orderChainTracking != null)
-            {
-                return Ok(orderChainTracking.MapToNotificationOrderChainResponseExt());
-            }
-
-            var notificationOrderChainRequest = instantNotificationRequest.MapToNotificationOrderChainRequest(creator);
-
-            Result<InstantNotificationOrderResponse, ServiceError> result = await _orderRequestService.RegisterNotificationOrderChain(notificationOrderChainRequest, cancellationToken);
-
-            return result.Match(
-               registeredNotificationOrderChain =>
-               {
-                   return Created(registeredNotificationOrderChain.OrderChainId.GetSelfLinkFromOrderChainId(), registeredNotificationOrderChain.MapToInstantNotificationOrderResponse());
-               },
-               error =>
-               {
-                   var problemDetails = new ProblemDetails
-                   {
-                       Status = error.ErrorCode,
-                       Detail = error.ErrorMessage,
-                       Title = "Notification order chain registration failed"
-                   };
-                   return StatusCode(error.ErrorCode, problemDetails);
-
-               });
         }
         catch (InvalidOperationException ex)
         {
