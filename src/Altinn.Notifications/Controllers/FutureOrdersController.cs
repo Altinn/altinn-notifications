@@ -28,7 +28,7 @@ namespace Altinn.Notifications.Controllers;
 public class FutureOrdersController : ControllerBase
 {
     private readonly IOrderRequestService _orderRequestService;
-    private readonly IValidator<NotificationOrderChainRequestExt> _ordersChainValidator;
+    private readonly IValidator<NotificationOrderChainRequestExt> _validator;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FutureOrdersController"/> class.
@@ -37,7 +37,7 @@ public class FutureOrdersController : ControllerBase
         IOrderRequestService orderRequestService,
         IValidator<NotificationOrderChainRequestExt> validator)
     {
-        _ordersChainValidator = validator;
+        _validator = validator;
         _orderRequestService = orderRequestService;
     }
 
@@ -59,11 +59,11 @@ public class FutureOrdersController : ControllerBase
     [SwaggerResponse(400, "The notification order is invalid", typeof(ValidationProblemDetails))]
     [SwaggerResponse(422, "The notification order is invalid", typeof(ValidationProblemDetails))]
     [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request before the server could complete processing")]
-    public async Task<ActionResult<InstantNotificationOrderResponseExt>> Post(NotificationOrderChainRequestExt notificationOrderRequest, CancellationToken cancellationToken = default)
+    public async Task<ActionResult<NotificationOrderChainResponseExt>> Post(NotificationOrderChainRequestExt notificationOrderRequest, CancellationToken cancellationToken = default)
     {
         try
         {
-            var validationResult = _ordersChainValidator.Validate(notificationOrderRequest);
+            var validationResult = _validator.Validate(notificationOrderRequest);
             if (!validationResult.IsValid)
             {
                 validationResult.AddToModelState(ModelState);
