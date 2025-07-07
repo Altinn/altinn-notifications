@@ -4,9 +4,9 @@ BEGIN
         SELECT 1
         FROM pg_type t
         JOIN pg_enum e ON t.oid = e.enumtypid
-        WHERE t.typname = 'notificationordertype' AND e.enumlabel = 'Instant Notification'
+        WHERE t.typname = 'notificationordertype' AND e.enumlabel = 'InstantNotification'
     ) THEN
-        ALTER TYPE public.notificationordertype ADD VALUE 'Instant Notification';
+        ALTER TYPE public.notificationordertype ADD VALUE 'InstantNotification';
     END IF;
 END;
 $$;

@@ -182,6 +182,45 @@ public class OrderRepository : IOrderRepository
     }
 
     /// <inheritdoc/>
+    public async Task<NotificationOrder> Create(InstantNotificationOrderRequest orderChain, NotificationOrder mainOrder, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        await using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await InsertOrderChainAsync(orderChain, mainOrder.Created, connection, transaction, cancellationToken);
+
+            cancellationToken.ThrowIfCancellationRequested();
+            long mainOrderId = await InsertOrder(mainOrder, connection, transaction, cancellationToken);
+
+            if (mainOrder.Templates.Find(e => e.Type == NotificationTemplateType.Sms) is SmsTemplate mainSmsTemplate)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                await InsertSmsTextAsync(mainOrderId, mainSmsTemplate, connection, transaction, cancellationToken);
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            throw;
+        }
+        catch (Exception)
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            throw;
+        }
+
+        return mainOrder;
+    }
+
+    /// <inheritdoc/>
     public async Task SetProcessingStatus(Guid orderId, OrderProcessingStatus status)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_setProcessCompleted);
@@ -508,6 +547,19 @@ public class OrderRepository : IOrderRepository
     }
 
     private static async Task InsertOrderChainAsync(NotificationOrderChainRequest orderChain, DateTime creationDateTime, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
+    {
+        await using NpgsqlCommand pgcom = new(_insertorderchainSql, connection, transaction);
+
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, orderChain.OrderChainId);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, orderChain.IdempotencyId);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, orderChain.Creator.ShortName);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, creationDateTime);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Jsonb, orderChain);
+
+        await pgcom.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    private static async Task InsertOrderChainAsync(InstantNotificationOrderRequest orderChain, DateTime creationDateTime, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
     {
         await using NpgsqlCommand pgcom = new(_insertorderchainSql, connection, transaction);
 

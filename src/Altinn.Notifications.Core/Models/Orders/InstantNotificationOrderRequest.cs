@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Models.Recipients;
+﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models.Recipients;
 
 namespace Altinn.Notifications.Core.Models.Orders;
 
@@ -11,6 +12,35 @@ namespace Altinn.Notifications.Core.Models.Orders;
 /// </remarks>
 public record InstantNotificationOrderRequest
 {
+    /// <summary>
+    /// Gets the creator of the notification order sequence request.
+    /// </summary>
+    public required Creator Creator { get; init; }
+
+    /// <summary>
+    /// Gets the unique identifier for the main notification order in the sequence.
+    /// </summary>
+    /// <value>
+    /// A <see cref="Guid"/> representing the unique identifier of the main notification order.
+    /// </value>
+    public required Guid OrderId { get; init; }
+
+    /// <summary>
+    /// Gets the unique identifier for the entire notification order chain.
+    /// </summary>
+    /// <value>
+    /// A <see cref="Guid"/> representing the unique identifier of the notification order chain.
+    /// </value>
+    public required Guid OrderChainId { get; init; }
+
+    /// <summary>
+    /// Gets the type of the order.
+    /// </summary>
+    /// <remarks>
+    /// Specifies whether this is an initial notification or a reminder.
+    /// </remarks>
+    public required OrderType Type { get; init; }
+
     /// <summary>
     /// A unique identifier used to ensure the same notification is not processed multiple times.
     /// </summary>
@@ -39,5 +69,5 @@ public record InstantNotificationOrderRequest
     /// and sender information. This data is forwarded directly to the SMS service's
     /// instant delivery endpoint after validation.
     /// </remarks>
-    public required RecipientInstantSms RecipientSms { get; init; }
+    public required InstantNotificationRecipient Recipient { get; init; }
 }

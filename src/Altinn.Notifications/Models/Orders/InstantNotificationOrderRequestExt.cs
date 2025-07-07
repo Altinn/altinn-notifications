@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
-using Altinn.Notifications.Models.Sms;
+using Altinn.Notifications.Models.Recipient;
 
 namespace Altinn.Notifications.Models.Orders;
 
@@ -33,13 +33,14 @@ public class InstantNotificationOrderRequestExt
     public string? SendersReference { get; init; }
 
     /// <summary>
-    /// The SMS recipient information and message content.
+    /// Gets or sets the required recipient information for this reminder.
     /// </summary>
     /// <remarks>
-    /// Contains the destination phone number, message content,
-    /// time-to-live setting, and sender information.
+    /// Specifies the target recipient through one of the supported channels:
+    /// email address, SMS number, national identity number, or organization number.
+    /// The reminder can be directed to a different recipient than the initial notification.
     /// </remarks>
     [Required]
-    [JsonPropertyName("recipientSms")]
-    public required RecipientInstantSmsExt RecipientSms { get; init; }
+    [JsonPropertyName("recipient")]
+    public required InstantNotificationRecipientExt Recipient { get; set; }
 }

@@ -47,6 +47,36 @@ public interface IOrderRequestService
     Task<Result<NotificationOrderChainResponse, ServiceError>> RegisterNotificationOrderChain(NotificationOrderChainRequest orderRequest, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Registers a notification order chain with optional reminders for delayed delivery.
+    /// </summary>
+    /// <param name="orderRequest">
+    /// The notification order chain request containing the primary notification details and any associated reminders with their delivery schedules.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.
+    /// </param>
+    /// <returns>
+    /// On success, a <see cref="Task{TResult}"/> containing a <see cref="NotificationOrderChainResponse"/> with 
+    /// the generated order chain identifier and receipt information for both the main notification and any associated reminders.
+    /// On failure, a <see cref="ServiceError"/> indicating the reason for the failure.
+    /// </returns>
+    /// <remarks>
+    /// This method processes a chain of notifications, consisting of an initial notification and
+    /// optional follow-up reminders. It handles template configuration, recipient lookup, and
+    /// validation before storing the entire sequence for processing.
+    /// 
+    /// The operation is idempotent when using the same <see cref="NotificationOrderChainRequest.IdempotencyId"/>,
+    /// ensuring that repeated calls with identical parameters won't create duplicate notification chains.
+    /// 
+    /// When reminders are specified, they will be scheduled for delivery after the main notification
+    /// according to their respective <see cref="NotificationReminder.DelayDays"/> value.
+    /// </remarks>
+    /// <exception cref="OperationCanceledException">
+    /// Thrown when the operation is canceled through the provided <paramref name="cancellationToken"/>.
+    /// </exception>
+    Task<Result<InstantNotificationOrderResponse, ServiceError>> RegisterNotificationOrderChain(InstantNotificationOrderRequest orderRequest, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Retrieves tracking information for a notification order chain using the creator's name and idempotency identifier.
     /// </summary>
     /// <param name="creatorName">

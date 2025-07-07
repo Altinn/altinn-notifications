@@ -1,5 +1,8 @@
-﻿using Altinn.Notifications.Core.Configuration;
+﻿using System.Web;
+
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
@@ -23,6 +26,8 @@ public class OrderRequestService : IOrderRequestService
     private readonly IContactPointService _contactPointService;
     private readonly IGuidService _guid;
     private readonly IDateTimeService _dateTime;
+    private readonly ISmsNotificationRepository _smsNotificationRepository;
+    private readonly INotificationsSmsClient _notificationsSmsClient;
     private readonly string _defaultEmailFromAddress;
     private readonly string _defaultSmsSender;
 
@@ -31,7 +36,9 @@ public class OrderRequestService : IOrderRequestService
     /// </summary>
     public OrderRequestService(
         IOrderRepository repository,
+        ISmsNotificationRepository smsNotificationRepository,
         IContactPointService contactPointService,
+        INotificationsSmsClient notificationsSmsClient,
         IGuidService guid,
         IDateTimeService dateTime,
         IOptions<NotificationConfig> config)
@@ -40,8 +47,10 @@ public class OrderRequestService : IOrderRequestService
         _contactPointService = contactPointService;
         _guid = guid;
         _dateTime = dateTime;
+        _smsNotificationRepository = smsNotificationRepository;
         _defaultEmailFromAddress = config.Value.DefaultEmailFromAddress;
         _defaultSmsSender = config.Value.DefaultSmsSenderNumber;
+        _notificationsSmsClient = notificationsSmsClient;
     }
 
     /// <inheritdoc/>
@@ -117,6 +126,26 @@ public class OrderRequestService : IOrderRequestService
         return await CreateChainResponseAsync(orderRequest, mainOrderResult.Value, remindersResult.Value, cancellationToken);
     }
 
+    /// <inheritdoc/>
+    public async Task<Result<InstantNotificationOrderResponse, ServiceError>> RegisterNotificationOrderChain(InstantNotificationOrderRequest orderRequest, CancellationToken cancellationToken = default)
+    {
+        // 1. Get the current time
+        DateTime currentTime = _dateTime.UtcNow();
+
+        // 2. Early cancellation if someone’s already cancelled
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // 3. Create the main order
+        var mainOrderResult = CreateMainNotificationOrderAsync(orderRequest, currentTime, cancellationToken);
+        if (mainOrderResult.IsError && mainOrderResult.Error != null)
+        {
+            return mainOrderResult.Error;
+        }
+
+        // 5. Create the response
+        return await CreateChainResponseAsync(orderRequest, mainOrderResult.Value, cancellationToken);
+    }
+
     /// <summary>
     /// Creates the primary <see cref="NotificationOrder"/> for a notification chain by processing
     /// recipient information, validating contact details, and configuring message templates.
@@ -185,6 +214,70 @@ public class OrderRequestService : IOrderRequestService
             SendersReference = orderRequest.SendersReference,
             RequestedSendTime = orderRequest.RequestedSendTime,
             ConditionEndpoint = orderRequest.ConditionEndpoint
+        };
+    }
+
+    /// <summary>
+    /// Creates the primary <see cref="NotificationOrder"/> for a notification chain by processing
+    /// recipient information, validating contact details, and configuring message templates.
+    /// </summary>
+    /// <param name="orderRequest">
+    /// The incoming chain request containing recipient information, templates, and other notification parameters.
+    /// </param>
+    /// <param name="currentTime">
+    /// The UTC timestamp to set as the creation time of the notification order.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A token that can be used to request cancellation of the asynchronous operation.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Result{TValue,TError}"/> containing either:
+    /// <list type="bullet">
+    /// <item>
+    /// <description>A successful result with <see cref="Result{TValue,TError}.Value"/> containing the fully configured
+    /// <see cref="NotificationOrder"/> ready for persistence and processing</description>
+    /// </item>
+    /// <item>
+    /// <description>A failed result with <see cref="Result{TValue,TError}.Error"/> containing a
+    /// <see cref="ServiceError"/> with status code and detailed error message about the failure reason</description>
+    /// </item>
+    /// </list>
+    /// </returns>
+    /// <remarks>
+    /// This method performs recipient validation, template preparation, and order creation:
+    /// <list type="number">
+    /// <item><description>Extracts delivery components from the recipient configuration</description></item>
+    /// <item><description>Validates recipient contact information through lookup services</description></item>
+    /// <item><description>Applies default sender information where needed</description></item>
+    /// <item><description>Constructs a complete notification order with all required properties</description></item>
+    /// </list>
+    /// </remarks>
+    /// <exception cref="OperationCanceledException">
+    /// Thrown when the operation is canceled through the provided <paramref name="cancellationToken"/>.
+    /// </exception>
+    private Result<NotificationOrder, ServiceError> CreateMainNotificationOrderAsync(InstantNotificationOrderRequest orderRequest, DateTime currentTime, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var (recipient, templates, channel, ignoreReservation, sendingTimePolicyForSms) = ExtractDeliveryComponents(orderRequest.Recipient);
+
+        templates = SetSenderIfNotDefined(templates);
+
+        return new NotificationOrder
+        {
+            ResourceId = null,
+            Created = currentTime,
+            Templates = templates,
+            Recipients = [recipient],
+            Type = orderRequest.Type,
+            ConditionEndpoint = null,
+            Id = orderRequest.OrderId,
+            NotificationChannel = channel,
+            Creator = orderRequest.Creator,
+            RequestedSendTime = currentTime,
+            IgnoreReservation = ignoreReservation,
+            SendingTimePolicy = sendingTimePolicyForSms,
+            SendersReference = orderRequest.SendersReference
         };
     }
 
@@ -352,6 +445,91 @@ public class OrderRequestService : IOrderRequestService
         };
 
         return response;
+    }
+
+    /// <summary>
+    /// Persists a notification order chain and builds a response containing tracking information.
+    /// </summary>
+    /// <param name="orderRequest">
+    /// The original chain request containing configuration details and identifiers for the notification sequence.
+    /// </param>
+    /// <param name="mainOrder">
+    /// The primary notification order that should be persisted first and delivered immediately or at the requested time.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A token that can be used to request cancellation of the asynchronous database operation.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Result{TValue,TError}"/> containing either:
+    /// <list type="bullet">
+    /// <item>
+    /// <description>A successful result with <see cref="Result{TValue,TError}.Value"/> containing a 
+    /// <see cref="NotificationOrderChainResponse"/> with the chain identifier and receipt information</description>
+    /// </item>
+    /// <item>
+    /// <description>A failed result with <see cref="Result{TValue,TError}.Error"/> containing a
+    /// <see cref="ServiceError"/> if persistence fails</description>
+    /// </item>
+    /// </list>
+    /// </returns>
+    /// <remarks>
+    /// This method:
+    /// <list type="number">
+    /// <item><description>Persists all orders in the chain as a single atomic transaction</description></item>
+    /// <item><description>Constructs a receipt containing identifiers for both main and reminder shipments</description></item>
+    /// <item><description>Returns a structured response that clients can use to track the notification chain</description></item>
+    /// </list>
+    /// </remarks>
+    /// <exception cref="OperationCanceledException">
+    /// Thrown when the operation is canceled through the provided <paramref name="cancellationToken"/>.
+    /// </exception>
+    private async Task<Result<InstantNotificationOrderResponse, ServiceError>> CreateChainResponseAsync(InstantNotificationOrderRequest orderRequest, NotificationOrder? mainOrder, CancellationToken cancellationToken)
+    {
+        var savedOrder = new NotificationOrder();
+        if (mainOrder != null)
+        {
+            savedOrder = await _repository.Create(orderRequest, mainOrder, cancellationToken);
+        }
+
+        if (savedOrder == null)
+        {
+            return new ServiceError(500, "Failed to create the notification order chain.");
+        }
+
+        var template = savedOrder.Templates.OfType<SmsTemplate>().FirstOrDefault();
+
+        var smsCount = CalculateNumberOfMessages(template.Body);
+
+        var smsNotification = new Models.Notification.SmsNotification()
+        {
+            OrderId = savedOrder.Id,
+            Id = _guid.NewGuid(),
+            Recipient = new SmsRecipient()
+            {
+                IsReserved = false,
+                CustomizedBody = null,
+                OrganizationNumber = null,
+                NationalIdentityNumber = null,
+                MobileNumber = savedOrder.Recipients.FirstOrDefault().AddressInfo.OfType<SmsAddressPoint>().FirstOrDefault()?.MobileNumber,
+            },
+            RequestedSendTime = savedOrder.RequestedSendTime,
+            SendResult = new(SmsNotificationResultType.New, _dateTime.UtcNow())
+        };
+
+        await _smsNotificationRepository.AddNotification(smsNotification, smsNotification.RequestedSendTime.AddHours(48), smsCount);
+
+        var sendiongResult = await _notificationsSmsClient.Send(new InstantSmsPayload { Message = template.Body, Recipient = smsNotification.Recipient.MobileNumber, Sender = template.SenderNumber, NotificationId = smsNotification.Id, TimeToLive = orderRequest.Recipient.RecipientSms.TimeToLiveInSeconds });
+
+        // Build response
+        return new InstantNotificationOrderResponse
+        {
+            OrderChainId = orderRequest.OrderChainId,
+            Notification = new NotificationOrderChainShipment
+            {
+                ShipmentId = savedOrder.Id,
+                SendersReference = savedOrder.SendersReference
+            }
+        };
     }
 
     private static string? GetSanitizedResourceId(string? resourceId)
@@ -617,5 +795,74 @@ public class OrderRequestService : IOrderRequestService
         }
 
         return (recipients, templates, notificationChannel, ignoreReservation, resourceIdentifier, smsSendingTimePolicy);
+    }
+
+    /// <summary>
+    /// Extracts information from a <see cref="NotificationRecipient"/> into notification delivery components.
+    /// </summary>
+    /// <param name="recipient">The notification recipient containing targeting and messaging preferences.</param>
+    /// <returns>
+    /// A tuple containing:
+    /// <list type="bullet">
+    /// <item><description>Recipients - A list of recipients with proper addressing information</description></item>
+    /// <item><description>Templates - Notification templates based on the recipient's configuration</description></item>
+    /// <item><description>Channel - The determined notification channel based on recipient type</description></item>
+    /// <item><description>IgnoreReservation - Flag indicating whether to bypass KRR reservations</description></item>
+    /// <item><description>ResourceId - Optional resource ID for authorization and tracking</description></item>
+    /// <item><description>SmsSendingTimePolicy - The sendingTimePolicy associated with the selected SMS's configuration</description></item>
+    /// </list>
+    /// </returns>
+    /// <remarks>
+    /// This method processes different recipient types (SMS, Email, Person, Organization) and creates
+    /// the appropriate templates and addressing information based on the recipient's configuration.
+    /// The default channel is SMS if the recipient type cannot be determined.
+    /// </remarks>
+    private static (Recipient Recipients, List<INotificationTemplate> Templates, NotificationChannel Channel, bool? IgnoreReservation, SendingTimePolicy? SmsSendingTimePolicy) ExtractDeliveryComponents(InstantNotificationRecipient recipient)
+    {
+        bool? ignoreReservation = null;
+
+        var recipients = new Recipient();
+        var templates = new List<INotificationTemplate>();
+
+        NotificationChannel notificationChannel = NotificationChannel.Sms;
+        SendingTimePolicy? smsSendingTimePolicy = SendingTimePolicy.Anytime;
+
+        if (recipient.RecipientSms?.Details != null)
+        {
+            recipients = new Recipient([new SmsAddressPoint(recipient.RecipientSms.PhoneNumber)]);
+
+            templates.Add(new SmsTemplate(recipient.RecipientSms.Details.Sender, recipient.RecipientSms.Details.Body));
+        }
+
+        return (recipients, templates, notificationChannel, ignoreReservation, smsSendingTimePolicy);
+    }
+
+    /// <summary>
+    /// Calculates the number of messages based on the rules for concatenation of SMS messages in the SMS gateway.
+    /// </summary>
+    private static int CalculateNumberOfMessages(string message)
+    {
+        const int maxCharactersPerMessage = 160;
+        const int maxMessagesPerConcatenation = 16;
+        const int charactersPerConcatenatedMessage = 134;
+
+        string urlEncodedMessage = HttpUtility.UrlEncode(message);
+        int messageLength = urlEncodedMessage.Length;
+
+        if (messageLength <= maxCharactersPerMessage)
+        {
+            return 1;
+        }
+
+        // Calculate the number of messages for messages exceeding 160 characters
+        int numberOfMessages = (int)Math.Ceiling((double)messageLength / charactersPerConcatenatedMessage);
+
+        // Check if the total number of messages exceeds the limit
+        if (numberOfMessages > maxMessagesPerConcatenation)
+        {
+            numberOfMessages = maxMessagesPerConcatenation;
+        }
+
+        return numberOfMessages;
     }
 }
