@@ -18,5 +18,5 @@ public enum OrderType : uint
     /// <summary>
     /// Represents a notification order intended for immediate processing, bypassing all processing queuing mechanisms
     /// </summary>
-    InstantNotification = 2
+    Instant = 2
 }
