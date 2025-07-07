@@ -21,12 +21,12 @@ public class EmailNotificationOrderRequestExtExample : IExamplesProvider<EmailNo
             Subject = "A test email from Altinn Notifications",
             Body = "A message to be sent immediately from an org.",
             ContentType = EmailContentTypeExt.Plain,
-            Recipients =
-            [
+            Recipients = new List<RecipientExt>()
+            {
                 new RecipientExt() { EmailAddress = "testuser@altinn.no" },
                 new RecipientExt() { NationalIdentityNumber = "11876995923" },
                 new RecipientExt() { OrganizationNumber = "311000179" }
-            ]
+            }
         };
     }
 }
@@ -48,7 +48,10 @@ public class EmailNotificationOrderRequestExtKeywordsExample : IExamplesProvider
             Subject = "Important notification regarding your organization, $recipientName$",
             Body = "Dear $recipientName$, this is an official notification regarding your organization, identified by the organization number $recipientNumber$. Please take the necessary actions.",
             ContentType = EmailContentTypeExt.Plain,
-            Recipients = [new RecipientExt() { OrganizationNumber = "311000179" }]
+            Recipients = new List<RecipientExt>()
+            {
+                new RecipientExt() { OrganizationNumber = "311000179" }
+            }
         };
     }
 }
