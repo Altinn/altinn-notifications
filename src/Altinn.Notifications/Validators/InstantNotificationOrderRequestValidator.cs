@@ -6,7 +6,7 @@ using FluentValidation;
 namespace Altinn.Notifications.Validators;
 
 /// <summary>
-/// Represents validation rules for the model that receives data from clients.
+/// Represents validation rules for a request to send a notification immediately to a single recipient.
 /// </summary>
 internal sealed class InstantNotificationOrderRequestValidator : AbstractValidator<InstantNotificationOrderRequestExt>
 {
@@ -16,12 +16,15 @@ internal sealed class InstantNotificationOrderRequestValidator : AbstractValidat
     public InstantNotificationOrderRequestValidator()
     {
         RuleFor(request => request.IdempotencyId)
-            .NotNull()
             .NotEmpty()
             .WithMessage("IdempotencyId cannot be null or empty.");
 
-        RuleFor(request => request.Recipient!.RecipientSms)
+        RuleFor(request => request.Recipient)
+            .NotEmpty()
+            .WithMessage("Recipient information cannot be null or empty.");
+
+        RuleFor(request => request.Recipient!.RecipientTimedSms)
             .NotNull()
-            .SetValidator(new RecipientInstantSmsValidator());
+            .SetValidator(new RecipientTimedSmsValidator());
     }
 }

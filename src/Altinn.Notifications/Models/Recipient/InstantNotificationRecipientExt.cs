@@ -6,18 +6,18 @@ using Altinn.Notifications.Models.Sms;
 namespace Altinn.Notifications.Models.Recipient;
 
 /// <summary>
-/// Defines a container for specifying the recipient of an instant notification order.
+/// Represents a container for specifying the recipient of a notification order that should be sent instantly.
 /// </summary>
 public class InstantNotificationRecipientExt
 {
     /// <summary>
-    /// The SMS recipient information and message content.
+    /// Gets the recipient information and SMS envelope.
     /// </summary>
     /// <remarks>
-    /// Contains the destination phone number, message content,
-    /// time-to-live setting, and sender information.
+    /// Contains the recipient's phone number, the message content,
+    /// time-to-live setting, and sender information needed to deliver the SMS.
     /// </remarks>
     [Required]
     [JsonPropertyName("recipientSms")]
-    public required RecipientInstantSmsExt RecipientSms { get; init; }
+    public required RecipientTimedSmsExt RecipientTimedSms { get; init; }
 }

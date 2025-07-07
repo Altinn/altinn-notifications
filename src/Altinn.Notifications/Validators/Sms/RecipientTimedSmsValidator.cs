@@ -6,14 +6,14 @@ using FluentValidation;
 namespace Altinn.Notifications.Validators.Sms;
 
 /// <summary>
-/// Represents validation rules for a recipient of an instant SMS.
+/// Represents validation rules for a timed SMS that should be to a single recipient.
 /// </summary>
-internal sealed class RecipientInstantSmsValidator : AbstractValidator<RecipientInstantSmsExt?>
+internal sealed class RecipientTimedSmsValidator : AbstractValidator<RecipientTimedSmsExt?>
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="RecipientInstantSmsValidator"/> class.
+    /// Initializes a new instance of the <see cref="RecipientTimedSmsValidator"/> class.
     /// </summary>
-    public RecipientInstantSmsValidator()
+    public RecipientTimedSmsValidator()
     {
         When(options => options != null, () =>
         {
@@ -31,6 +31,7 @@ internal sealed class RecipientInstantSmsValidator : AbstractValidator<Recipient
 
             RuleFor(sms => sms!.Details)
                 .NotNull()
+                .WithMessage("SMS details cannot be null.")
                 .SetValidator(new SmsDetailsValidator());
         });
     }

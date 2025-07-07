@@ -14,8 +14,11 @@ internal sealed class SmsDetailsValidator : AbstractValidator<SmsDetailsExt>
     /// </summary>
     public SmsDetailsValidator()
     {
-        RuleFor(sms => sms.Body)
-            .NotEmpty()
-            .WithMessage("SMS message body cannot be null or empty.");
+        When(sms => sms != null, () =>
+        {
+            RuleFor(sms => sms.Body)
+                .NotEmpty()
+                .WithMessage("SMS message body cannot be null or empty.");
+        });
     }
 }
