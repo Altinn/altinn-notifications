@@ -12,11 +12,11 @@ toc: true
 The following API controllers are defined: 
 - [OrdersController](https://github.com/Altinn/altinn-notifications/blob/main/src/Altinn.Notifications/Controllers/OrdersController.cs):
   API for retrieving one or more orders with or without processing details and notification summaries
-- [EmailNotificationsOrdersController](https://github.com/Altinn/altinn-notifications/blob/main/src/Altinn.Notifications/Controllers/EmailNotificationOrdersController.cs):
+- [EmailNotificationOrdersController](https://github.com/Altinn/altinn-notifications/blob/main/src/Altinn.Notifications/Controllers/EmailNotificationOrdersController.cs):
   API for placing new email notification order requests  
 - [EmailNotificationsController](https://github.com/Altinn/altinn-notifications/blob/main/src/Altinn.Notifications/Controllers/EmailNotificationsController.cs):
   API for retrieving email notifications related to a single order
-- [SmsNotificationsOrdersController](https://github.com/Altinn/altinn-notifications/blob/main/src/Altinn.Notifications/Controllers/SmsNotificationOrdersController.cs):
+- [SmsNotificationOrdersController](https://github.com/Altinn/altinn-notifications/blob/main/src/Altinn.Notifications/Controllers/SmsNotificationOrdersController.cs):
   API for placing new SMS notification order requests  
 - [SmsNotificationsController](https://github.com/Altinn/altinn-notifications/blob/main/src/Altinn.Notifications/Controllers/SmsNotificationsController.cs):
   API for retrieving SMS notifications related to a single order
