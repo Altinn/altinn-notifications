@@ -1,6 +1,5 @@
 ﻿using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core.Services.Interfaces;
-using Altinn.Notifications.Examples;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
@@ -52,9 +51,6 @@ public class EmailNotificationOrdersController : ControllerBase
     [SwaggerResponse(401, "Indicates a missing, invalid or expired authorization header.")]
     [SwaggerResponse(403, "Indicates missing or invalid scope or Platform Access Token.")]
     [SwaggerResponseHeader(202, "Location", "string", "Link to access the newly created notification order.")]
-    [SwaggerRequestExample(typeof(EmailNotificationOrderRequestExt), typeof(EmailNotificationOrderRequestExtExample))]
-    [SwaggerRequestExample(typeof(EmailNotificationOrderRequestExt), typeof(EmailNotificationOrderRequestExtKeywordsExample))]
-    [SwaggerResponseExample(202, typeof(NotificationOrderRequestResponseExtExample))]
     public async Task<ActionResult<NotificationOrderRequestResponseExt>> Post(EmailNotificationOrderRequestExt emailNotificationOrderRequest)
     {
         var validationResult = _validator.Validate(emailNotificationOrderRequest);
