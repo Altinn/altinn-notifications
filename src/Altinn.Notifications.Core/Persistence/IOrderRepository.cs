@@ -17,19 +17,15 @@ public interface IOrderRepository
     public Task<NotificationOrder> Create(NotificationOrder order);
 
     /// <summary>
-    /// Creates a new instant notification order in the database.
+    /// Persists an instant notification order to the database.
     /// </summary>
-    /// <param name="orderRequest">The instant notification order request.</param>
-    /// <param name="order">The notification order that will be processed immediately.</param>
+    /// <param name="instantOrder">The instant notification data.</param>
+    /// <param name="order">The standard notification order details to be persisted alongside the instant request.</param>
     /// <param name="cancellationToken">
     /// A token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.
     /// </param>
-    /// <returns>The persisted <see cref="NotificationOrder"/> object containing the processed instant notification details.</returns>
-    /// <remarks>
-    /// This method persists an instant notification order that bypasses standard queue processing for immediate delivery.
-    /// Unlike chain orders with reminders, instant orders are processed as a single notification with high priority.
-    /// </remarks>
-    public Task<NotificationOrder> Create(InstantNotificationOrderRequest orderRequest, NotificationOrder order, CancellationToken cancellationToken = default);
+    /// <returns>The persisted <see cref="NotificationOrder"/> object with generated IDs and timestamp information.</returns>
+    public Task<NotificationOrder> Create(InstantNotificationOrder instantOrder, NotificationOrder order, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Creates a new notification order chain in the database, consisting of a main notification and optional reminders.
@@ -112,14 +108,10 @@ public interface IOrderRepository
     /// A token to monitor for cancellation requests. Defaults to <see cref="CancellationToken.None"/>.
     /// </param>
     /// <returns>
-    /// A <see cref="Task{TResult}"/> containing a <see cref="InstantNotificationOrderResponse"/> with identifiers and sender references for the instant notification order,
+    /// A <see cref="Task{TResult}"/> containing a <see cref="InstantNotificationOrderTracking"/> with identifiers and sender references for the instant notification order,
     /// or <c>null</c> if no matching order is found for the provided parameters.
     /// </returns>
-    /// <remarks>
-    /// The returned <see cref="InstantNotificationOrderResponse"/> contains the order chain identifier that uniquely identifies the instant notification sequence,
-    /// along with the <see cref="NotificationOrderChainReceipt"/> that includes shipment identifiers and sender references for the main notification order.
-    /// </remarks>
-    Task<InstantNotificationOrderResponse?> GetInstantOrderTracking(string creatorName, string idempotencyId, CancellationToken cancellationToken = default);
+    Task<InstantNotificationOrderTracking?> GetInstantOrderTracking(string creatorName, string idempotencyId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets an order based on the provided senders reference within the provided creator scope

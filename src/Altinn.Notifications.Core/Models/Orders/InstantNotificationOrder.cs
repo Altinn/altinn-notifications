@@ -10,7 +10,7 @@ namespace Altinn.Notifications.Core.Models.Orders;
 /// Unlike regular notifications that are queued for processing, instant notifications are sent immediately
 /// through the SMS service's direct delivery channel. The order and SMS notification are created in a single transaction.
 /// </remarks>
-public record InstantNotificationOrderRequest
+public record InstantNotificationOrder
 {
     /// <summary>
     /// The type of the instant notification order request.

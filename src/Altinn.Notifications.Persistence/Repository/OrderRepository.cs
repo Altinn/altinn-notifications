@@ -115,7 +115,7 @@ public class OrderRepository : IOrderRepository
     }
 
     /// <inheritdoc/>
-    public async Task<NotificationOrder> Create(InstantNotificationOrderRequest orderRequest, NotificationOrder order, CancellationToken cancellationToken = default)
+    public async Task<NotificationOrder> Create(InstantNotificationOrder instantOrder, NotificationOrder order, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -125,7 +125,7 @@ public class OrderRepository : IOrderRepository
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
-            await InsertInstantOrderChainAsync(orderRequest, order.Created, connection, transaction, cancellationToken);
+            await InsertInstantOrderChainAsync(instantOrder, order.Created, connection, transaction, cancellationToken);
 
             cancellationToken.ThrowIfCancellationRequested();
             long mainOrderId = await InsertOrder(order, connection, transaction, cancellationToken);
@@ -353,7 +353,7 @@ public class OrderRepository : IOrderRepository
     }
 
     /// <inheritdoc/>
-    public async Task<InstantNotificationOrderResponse?> GetInstantOrderTracking(string creatorName, string idempotencyId, CancellationToken cancellationToken = default)
+    public async Task<InstantNotificationOrderTracking?> GetInstantOrderTracking(string creatorName, string idempotencyId, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -385,7 +385,7 @@ public class OrderRepository : IOrderRepository
             ? null
             : reader.GetString(reader.GetOrdinal("senders_reference"));
 
-        return new InstantNotificationOrderResponse
+        return new InstantNotificationOrderTracking
         {
             OrderChainId = orderChainId,
             Notification = new NotificationOrderChainShipment
@@ -559,7 +559,7 @@ public class OrderRepository : IOrderRepository
         await pgcom.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    private static async Task InsertInstantOrderChainAsync(InstantNotificationOrderRequest orderChain, DateTime creationDateTime, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
+    private static async Task InsertInstantOrderChainAsync(InstantNotificationOrder orderChain, DateTime creationDateTime, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
     {
         await using NpgsqlCommand pgcom = new(_insertorderchainSql, connection, transaction);
 

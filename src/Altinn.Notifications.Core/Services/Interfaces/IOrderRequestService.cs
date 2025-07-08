@@ -27,13 +27,13 @@ public interface IOrderRequestService
     /// </param>
     /// <returns>
     /// On success, a <see cref="Task{TResult}"/> containing a <see cref="Result{TValue, TError}"/> with 
-    /// the <see cref="InstantNotificationOrderResponse"/> including the generated receipt information.
+    /// the <see cref="InstantNotificationOrderTracking"/> including the generated receipt information.
     /// On failure, a <see cref="ServiceError"/> indicating the reason for the failure.
     /// </returns>
     /// <remarks>
     /// This method processes an instant notification that bypasses standard queue processing for immediate delivery.
     /// 
-    /// The operation is idempotent when using the same <see cref="InstantNotificationOrderRequest.IdempotencyId"/>,
+    /// The operation is idempotent when using the same <see cref="InstantNotificationOrder.IdempotencyId"/>,
     /// ensuring that repeated calls with identical parameters won't create duplicate notifications.
     /// 
     /// Instant notifications are prioritized for immediate delivery through direct service channels
@@ -42,7 +42,7 @@ public interface IOrderRequestService
     /// <exception cref="OperationCanceledException">
     /// Thrown when the operation is canceled through the provided <paramref name="cancellationToken"/>.
     /// </exception>
-    Task<Result<InstantNotificationOrderResponse, ServiceError>> RegisterInstantNotificationOrder(InstantNotificationOrderRequest orderRequest, CancellationToken cancellationToken = default);
+    Task<Result<InstantNotificationOrderTracking, ServiceError>> RegisterInstantNotificationOrder(InstantNotificationOrder orderRequest, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Retrieves tracking information for an instant notification order using the creator's name and idempotency identifier.
@@ -60,7 +60,7 @@ public interface IOrderRequestService
     /// A <see cref="Task{TResult}"/> containing a <see cref="Result{TValue, TError}"/> that:
     /// <list type="bullet">
     ///   <item>
-    ///     <description>On success, contains an <see cref="InstantNotificationOrderResponse"/> with identifiers and sender references for the instant notification order</description>
+    ///     <description>On success, contains an <see cref="InstantNotificationOrderTracking"/> with identifiers and sender references for the instant notification order</description>
     ///   </item>
     ///   <item>
     ///     <description>On failure, contains a <see cref="ServiceError"/> indicating the reason tracking information could not be retrieved</description>
@@ -70,7 +70,7 @@ public interface IOrderRequestService
     /// <exception cref="OperationCanceledException">
     /// Thrown when the operation is canceled through the provided <paramref name="cancellationToken"/>.
     /// </exception>
-    Task<Result<InstantNotificationOrderResponse, ServiceError>> RetrieveInstantNotificationOrderTracking(string creatorName, string idempotencyId, CancellationToken cancellationToken = default);
+    Task<Result<InstantNotificationOrderTracking, ServiceError>> RetrieveInstantNotificationOrderTracking(string creatorName, string idempotencyId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Registers a notification order chain with optional reminders for delayed delivery.

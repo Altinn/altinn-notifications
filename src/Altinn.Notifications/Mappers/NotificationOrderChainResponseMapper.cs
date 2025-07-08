@@ -24,18 +24,6 @@ namespace Altinn.Notifications.Mappers
         }
 
         /// <summary>
-        /// Maps a <see cref="InstantNotificationOrderResponse"/> to a <see cref="InstantNotificationOrderResponseExt"/>
-        /// </summary>
-        public static InstantNotificationOrderResponseExt MapToInstantNotificationOrderResponse(this InstantNotificationOrderResponse response)
-        {
-            return new InstantNotificationOrderResponseExt
-            {
-                OrderChainId = response.OrderChainId,
-                Notification = MapOrderNotificationOrderChainShipment(response.Notification)
-            };
-        }
-
-        /// <summary>
         /// Maps a <see cref="NotificationOrderChainResponse"/> to a <see cref="NotificationOrderChainReceiptExt"/>
         /// </summary>
         private static NotificationOrderChainReceiptExt MapOrderChainReceipt(NotificationOrderChainResponse response)
@@ -45,18 +33,6 @@ namespace Altinn.Notifications.Mappers
                 ShipmentId = response.OrderChainReceipt.ShipmentId,
                 SendersReference = response.OrderChainReceipt.SendersReference,
                 Reminders = MapOrderChainShipments(response.OrderChainReceipt.Reminders),
-            };
-        }
-
-        /// <summary>
-        /// Maps a <see cref="NotificationOrderChainResponse"/> to a <see cref="NotificationOrderChainReceiptExt"/>
-        /// </summary>
-        private static NotificationOrderChainShipmentExt MapOrderNotificationOrderChainShipment(NotificationOrderChainShipment response)
-        {
-            return new NotificationOrderChainShipmentExt
-            {
-                ShipmentId = response.ShipmentId,
-                SendersReference = response.SendersReference
             };
         }
 

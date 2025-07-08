@@ -85,7 +85,7 @@ public class OrderRequestService : IOrderRequestService
     }
 
     /// <inheritdoc/>
-    public async Task<Result<InstantNotificationOrderResponse, ServiceError>> RetrieveInstantNotificationOrderTracking(string creatorName, string idempotencyId, CancellationToken cancellationToken = default)
+    public async Task<Result<InstantNotificationOrderTracking, ServiceError>> RetrieveInstantNotificationOrderTracking(string creatorName, string idempotencyId, CancellationToken cancellationToken = default)
     {
         var tracking = await _repository.GetInstantOrderTracking(creatorName, idempotencyId, cancellationToken);
 
@@ -125,7 +125,7 @@ public class OrderRequestService : IOrderRequestService
     }
 
     /// <inheritdoc/>
-    public async Task<Result<InstantNotificationOrderResponse, ServiceError>> RegisterInstantNotificationOrder(InstantNotificationOrderRequest orderRequest, CancellationToken cancellationToken = default)
+    public async Task<Result<InstantNotificationOrderTracking, ServiceError>> RegisterInstantNotificationOrder(InstantNotificationOrder orderRequest, CancellationToken cancellationToken = default)
     {
         // 1. Get the current time
         DateTime currentTime = _dateTime.UtcNow();
@@ -253,7 +253,7 @@ public class OrderRequestService : IOrderRequestService
     /// <exception cref="OperationCanceledException">
     /// Thrown when the operation is canceled through the provided <paramref name="cancellationToken"/>.
     /// </exception>
-    private Result<NotificationOrder, ServiceError> CreateMainNotificationOrderAsync(InstantNotificationOrderRequest orderRequest, DateTime currentTime, CancellationToken cancellationToken)
+    private Result<NotificationOrder, ServiceError> CreateMainNotificationOrderAsync(InstantNotificationOrder orderRequest, DateTime currentTime, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -481,7 +481,7 @@ public class OrderRequestService : IOrderRequestService
     /// <exception cref="OperationCanceledException">
     /// Thrown when the operation is canceled through the provided <paramref name="cancellationToken"/>.
     /// </exception>
-    private async Task<Result<InstantNotificationOrderResponse, ServiceError>> CreateChainResponseAsync(InstantNotificationOrderRequest orderRequest, NotificationOrder? mainOrder, CancellationToken cancellationToken)
+    private async Task<Result<InstantNotificationOrderTracking, ServiceError>> CreateChainResponseAsync(InstantNotificationOrder orderRequest, NotificationOrder? mainOrder, CancellationToken cancellationToken)
     {
         var savedOrder = new NotificationOrder();
         if (mainOrder != null)
@@ -495,7 +495,7 @@ public class OrderRequestService : IOrderRequestService
         }
 
         // Build response
-        return new InstantNotificationOrderResponse
+        return new InstantNotificationOrderTracking
         {
             OrderChainId = orderRequest.OrderChainId,
             Notification = new NotificationOrderChainShipment

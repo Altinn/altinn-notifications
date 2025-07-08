@@ -1,6 +1,7 @@
 ﻿using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
+using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Orders;
 using Altinn.Notifications.Models.Sms;
 
@@ -12,14 +13,26 @@ namespace Altinn.Notifications.Mappers;
 public static class InstantNotificationOrderMapper
 {
     /// <summary>
-    /// Maps a <see cref="InstantNotificationOrderRequestExt"/> to a <see cref="InstantNotificationOrderRequest"/>.
+    /// Maps a <see cref="InstantNotificationOrderTracking"/> to a <see cref="InstantNotificationOrderResponseExt"/>
+    /// </summary>
+    public static InstantNotificationOrderResponseExt MapToInstantNotificationOrderResponse(this InstantNotificationOrderTracking response)
+    {
+        return new InstantNotificationOrderResponseExt
+        {
+            OrderChainId = response.OrderChainId,
+            Notification = MapOrderNotificationOrderChainShipment(response.Notification)
+        };
+    }
+
+    /// <summary>
+    /// Maps a <see cref="InstantNotificationOrderRequestExt"/> to a <see cref="InstantNotificationOrder"/>.
     /// </summary>
     /// <param name="instantNotificationOrderRequest">The request that contains an instant notification order.</param>
     /// <param name="creatorName">The name of the person or entity who created the notification request.</param>
-    /// <returns>A <see cref="InstantNotificationOrderRequest"/> object mapped from the provided notification order chain request.</returns>
-    public static InstantNotificationOrderRequest MapToNotificationOrderChainRequest(this InstantNotificationOrderRequestExt instantNotificationOrderRequest, string creatorName)
+    /// <returns>A <see cref="InstantNotificationOrder"/> object mapped from the provided notification order chain request.</returns>
+    public static InstantNotificationOrder MapToNotificationOrderChainRequest(this InstantNotificationOrderRequestExt instantNotificationOrderRequest, string creatorName)
     {
-        return new InstantNotificationOrderRequest
+        return new InstantNotificationOrder
         {
             OrderId = Guid.NewGuid(),
             OrderChainId = Guid.NewGuid(),
@@ -55,6 +68,18 @@ public static class InstantNotificationOrderMapper
         {
             Body = smsSendingOptionsExt.Body,
             Sender = smsSendingOptionsExt.Sender?.Trim()
+        };
+    }
+
+    /// <summary>
+    /// Maps a <see cref="NotificationOrderChainResponse"/> to a <see cref="NotificationOrderChainReceiptExt"/>
+    /// </summary>
+    private static NotificationOrderChainShipmentExt MapOrderNotificationOrderChainShipment(NotificationOrderChainShipment response)
+    {
+        return new NotificationOrderChainShipmentExt
+        {
+            ShipmentId = response.ShipmentId,
+            SendersReference = response.SendersReference
         };
     }
 }
