@@ -42,7 +42,6 @@ public class ShortMessageServiceClient : IShortMessageServiceClient
 
             var response = await _httpClient.PostAsync(_sendEndpoint, content);
 
-            // Handle different response scenarios
             if (response.IsSuccessStatusCode)
             {
                 return new ShortMessageSendResult
@@ -60,8 +59,8 @@ public class ShortMessageServiceClient : IShortMessageServiceClient
                 return new ShortMessageSendResult
                 {
                     Success = false,
+                    ErrorDetails = errorDetails,
                     StatusCode = response.StatusCode,
-                    ErrorDetails = errorDetails
                 };
             }
         }
@@ -72,8 +71,8 @@ public class ShortMessageServiceClient : IShortMessageServiceClient
             return new ShortMessageSendResult
             {
                 Success = false,
+                ErrorDetails = ex.Message,
                 StatusCode = ex.StatusCode ?? HttpStatusCode.InternalServerError,
-                ErrorDetails = ex.Message
             };
         }
         catch (Exception ex)
