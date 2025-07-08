@@ -3,23 +3,23 @@
 namespace Altinn.Notifications.Models.Orders;
 
 /// <summary>
-/// Represents the response model for a request to send an SMS notification immediately.
+/// Represents the response model returned after processing a request to send an instant notification to a single recipient.
 /// </summary>
-public class InstantNotificationOrderResponseExt
+public record InstantNotificationOrderResponseExt
 {
     /// <summary>
-    /// Gets or sets the unique identifier for the notification order chain.
+    /// The unique identifier for the notification order chain.
     /// </summary>
     /// <remarks>
     /// This identifier can be used to reference the entire notification order chain in subsequent operations
     /// or for tracking purposes.
     /// </remarks>
     [JsonPropertyName("notificationOrderId")]
-    public required Guid OrderChainId { get; set; }
+    public required Guid OrderChainId { get; init; }
 
     /// <summary>
-    /// Gets or sets the unique identifier for notification order.
+    /// The unique identifier for notification order.
     /// </summary>
     [JsonPropertyName("notification")]
-    public required NotificationOrderChainShipmentExt Notification { get; set; }
+    public required NotificationOrderChainShipmentExt Notification { get; init; }
 }
