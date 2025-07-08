@@ -76,12 +76,11 @@ public static partial class NotificationOrderChainMapper
             OrderId = Guid.NewGuid(),
             OrderChainId = Guid.NewGuid(),
             Creator = new Creator(creatorName),
-            Type = OrderType.InstantNotification,
             IdempotencyId = instantNotificationOrderRequest.IdempotencyId,
             SendersReference = instantNotificationOrderRequest.SendersReference,
             Recipient = new InstantNotificationRecipient
             {
-                RecipientSms = instantNotificationOrderRequest.Recipient.RecipientSms.MapToRecipientSms()
+                RecipientTimedSms = instantNotificationOrderRequest.Recipient.RecipientTimedSms.MapToRecipientSms()
             }
         };
     }
@@ -199,11 +198,11 @@ public static partial class NotificationOrderChainMapper
     }
 
     /// <summary>
-    /// Maps a <see cref="RecipientInstantSmsExt"/> to a <see cref="RecipientSms"/>.
+    /// Maps a <see cref="RecipientTimedSmsExt"/> to a <see cref="RecipientSms"/>.
     /// </summary>
-    private static RecipientInstantSms MapToRecipientSms(this RecipientInstantSmsExt recipientSmsExt)
+    private static RecipientTimedSms MapToRecipientSms(this RecipientTimedSmsExt recipientSmsExt)
     {
-        return new RecipientInstantSms
+        return new RecipientTimedSms
         {
             PhoneNumber = recipientSmsExt.PhoneNumber,
             Details = recipientSmsExt.Details.MapToSmsDetails(),
