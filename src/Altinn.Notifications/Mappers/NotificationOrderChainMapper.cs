@@ -6,7 +6,6 @@ using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Email;
-using Altinn.Notifications.Models.Orders;
 using Altinn.Notifications.Models.Recipient;
 using Altinn.Notifications.Models.Sms;
 
@@ -61,28 +60,6 @@ public static partial class NotificationOrderChainMapper
             .SetConditionEndpoint(notificationOrderChainRequestExt.ConditionEndpoint)
             .SetRequestedSendTime(notificationOrderChainRequestExt.RequestedSendTime.ToUniversalTime())
             .Build();
-    }
-
-    /// <summary>
-    /// Maps a <see cref="InstantNotificationOrderRequestExt"/> to a <see cref="NotificationOrderChainRequest"/>.
-    /// </summary>
-    /// <param name="instantNotificationOrderRequest">The request that contains a notification order and zero or more reminders.</param>
-    /// <param name="creatorName">The name of the person or entity who created the notification request.</param>
-    /// <returns>A <see cref="NotificationOrderChainRequest"/> object mapped from the provided notification order chain request.</returns>
-    public static InstantNotificationOrderRequest MapToNotificationOrderChainRequest(this InstantNotificationOrderRequestExt instantNotificationOrderRequest, string creatorName)
-    {
-        return new InstantNotificationOrderRequest
-        {
-            OrderId = Guid.NewGuid(),
-            OrderChainId = Guid.NewGuid(),
-            Creator = new Creator(creatorName),
-            IdempotencyId = instantNotificationOrderRequest.IdempotencyId,
-            SendersReference = instantNotificationOrderRequest.SendersReference,
-            Recipient = new InstantNotificationRecipient
-            {
-                RecipientTimedSms = instantNotificationOrderRequest.Recipient.RecipientTimedSms.MapToRecipientSms()
-            }
-        };
     }
 
     /// <summary>
@@ -194,31 +171,6 @@ public static partial class NotificationOrderChainMapper
         {
             PhoneNumber = recipientSmsExt.PhoneNumber,
             Settings = recipientSmsExt.Settings.MapToSmsSendingOptions()
-        };
-    }
-
-    /// <summary>
-    /// Maps a <see cref="RecipientTimedSmsExt"/> to a <see cref="RecipientSms"/>.
-    /// </summary>
-    private static RecipientTimedSms MapToRecipientSms(this RecipientTimedSmsExt recipientSmsExt)
-    {
-        return new RecipientTimedSms
-        {
-            PhoneNumber = recipientSmsExt.PhoneNumber,
-            Details = recipientSmsExt.Details.MapToSmsDetails(),
-            TimeToLiveInSeconds = recipientSmsExt.TimeToLiveInSeconds
-        };
-    }
-
-    /// <summary>
-    /// Maps a <see cref="SmsDetailsExt"/> to a <see cref="SmsDetails"/>.
-    /// </summary>
-    private static SmsDetails MapToSmsDetails(this SmsDetailsExt smsSendingOptionsExt)
-    {
-        return new SmsDetails
-        {
-            Body = smsSendingOptionsExt.Body,
-            Sender = smsSendingOptionsExt.Sender?.Trim(),
         };
     }
 
