@@ -520,7 +520,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var validatorMock = SetupValidValidator();
         var orderServiceMock = new Mock<IOrderRequestService>();
 
-        orderServiceMock.Setup(s => s.RetrieveOrderChainTracking("ttd", request.IdempotencyId, It.IsAny<CancellationToken>()))
+        orderServiceMock.Setup(s => s.RetrieveNotificationOrderChainTracking("ttd", request.IdempotencyId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingResponse);
 
         var httpContext = new DefaultHttpContext();
@@ -553,7 +553,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var validatorMock = SetupValidValidator();
         var orderServiceMock = new Mock<IOrderRequestService>();
 
-        orderServiceMock.Setup(s => s.RetrieveOrderChainTracking("ttd", request.IdempotencyId, It.IsAny<CancellationToken>()))
+        orderServiceMock.Setup(s => s.RetrieveNotificationOrderChainTracking("ttd", request.IdempotencyId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((NotificationOrderChainResponse?)null);
 
         orderServiceMock.Setup(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()))
@@ -585,7 +585,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var validatorMock = SetupValidValidator();
         var orderServiceMock = new Mock<IOrderRequestService>();
 
-        orderServiceMock.Setup(s => s.RetrieveOrderChainTracking(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        orderServiceMock.Setup(s => s.RetrieveNotificationOrderChainTracking(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException());
 
         var httpContext = new DefaultHttpContext();
@@ -616,7 +616,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var request = CreateValidRequest();
         var validatorMock = SetupValidValidator();
         var orderServiceMock = new Mock<IOrderRequestService>();
-        orderServiceMock.Setup(s => s.RetrieveOrderChainTracking("ttd", request.IdempotencyId, It.IsAny<CancellationToken>()))
+        orderServiceMock.Setup(s => s.RetrieveNotificationOrderChainTracking("ttd", request.IdempotencyId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((NotificationOrderChainResponse?)null);
         orderServiceMock.Setup(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ServiceError(422, "Missing recipients"));
@@ -646,7 +646,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var validatorMock = SetupValidValidator();
         var orderServiceMock = new Mock<IOrderRequestService>();
 
-        orderServiceMock.Setup(s => s.RetrieveOrderChainTracking("ttd", request.IdempotencyId, It.IsAny<CancellationToken>()))
+        orderServiceMock.Setup(s => s.RetrieveNotificationOrderChainTracking("ttd", request.IdempotencyId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((NotificationOrderChainResponse?)null);
 
         orderServiceMock.Setup(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()))
@@ -725,7 +725,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var validatorMock = SetupValidValidator();
         var orderServiceMock = new Mock<IOrderRequestService>();
 
-        orderServiceMock.Setup(s => s.RetrieveOrderChainTracking("ttd", request.IdempotencyId, It.IsAny<CancellationToken>()))
+        orderServiceMock.Setup(s => s.RetrieveNotificationOrderChainTracking("ttd", request.IdempotencyId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((NotificationOrderChainResponse?)null);
 
         orderServiceMock.Setup(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()))
@@ -765,7 +765,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var cancellationToken = CancellationToken.None;
         var orderServiceMock = new Mock<IOrderRequestService>();
 
-        orderServiceMock.Setup(s => s.RetrieveOrderChainTracking(It.IsAny<string>(), It.IsAny<string>(), cancellationToken))
+        orderServiceMock.Setup(s => s.RetrieveNotificationOrderChainTracking(It.IsAny<string>(), It.IsAny<string>(), cancellationToken))
             .ReturnsAsync((NotificationOrderChainResponse?)null)
             .Verifiable();
 
@@ -785,7 +785,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         await controller.Post(request, cancellationToken);
 
         // Assert
-        orderServiceMock.Verify(s => s.RetrieveOrderChainTracking(It.IsAny<string>(), It.IsAny<string>(), cancellationToken), Times.Once);
+        orderServiceMock.Verify(s => s.RetrieveNotificationOrderChainTracking(It.IsAny<string>(), It.IsAny<string>(), cancellationToken), Times.Once);
         orderServiceMock.Verify(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), cancellationToken), Times.Once);
     }
 
