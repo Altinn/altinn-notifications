@@ -73,7 +73,7 @@ public class FutureOrdersController : ControllerBase
                 return Forbid();
             }
 
-            var orderChainTracking = await _orderRequestService.RetrieveOrderChainTracking(creator, notificationOrderRequest.IdempotencyId, cancellationToken);
+            var orderChainTracking = await _orderRequestService.RetrieveNotificationOrderChainTracking(creator, notificationOrderRequest.IdempotencyId, cancellationToken);
             if (orderChainTracking != null)
             {
                 return Ok(orderChainTracking.MapToNotificationOrderChainResponseExt());

@@ -115,6 +115,45 @@ public class OrderRepository : IOrderRepository
     }
 
     /// <inheritdoc/>
+    public async Task<NotificationOrder> Create(InstantNotificationOrderRequest orderRequest, NotificationOrder order, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        await using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await InsertInstantOrderChainAsync(orderRequest, order.Created, connection, transaction, cancellationToken);
+
+            cancellationToken.ThrowIfCancellationRequested();
+            long mainOrderId = await InsertOrder(order, connection, transaction, cancellationToken);
+
+            if (order.Templates.Find(e => e.Type == NotificationTemplateType.Sms) is SmsTemplate mainSmsTemplate)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                await InsertSmsTextAsync(mainOrderId, mainSmsTemplate, connection, transaction, cancellationToken);
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            throw;
+        }
+        catch (Exception)
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            throw;
+        }
+
+        return order;
+    }
+
+    /// <inheritdoc/>
     public async Task<List<NotificationOrder>> Create(NotificationOrderChainRequest orderChain, NotificationOrder mainOrder, List<NotificationOrder>? reminders, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -179,45 +218,6 @@ public class OrderRepository : IOrderRepository
         }
 
         return reminders == null ? [mainOrder] : [mainOrder, .. reminders];
-    }
-
-    /// <inheritdoc/>
-    public async Task<NotificationOrder> Create(InstantNotificationOrderRequest orderChain, NotificationOrder mainOrder, CancellationToken cancellationToken = default)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-
-        await using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
-        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
-
-        try
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            await InsertOrderChainAsync(orderChain, mainOrder.Created, connection, transaction, cancellationToken);
-
-            cancellationToken.ThrowIfCancellationRequested();
-            long mainOrderId = await InsertOrder(mainOrder, connection, transaction, cancellationToken);
-
-            if (mainOrder.Templates.Find(e => e.Type == NotificationTemplateType.Sms) is SmsTemplate mainSmsTemplate)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                await InsertSmsTextAsync(mainOrderId, mainSmsTemplate, connection, transaction, cancellationToken);
-            }
-
-            cancellationToken.ThrowIfCancellationRequested();
-            await transaction.CommitAsync(cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-            await transaction.RollbackAsync(CancellationToken.None);
-            throw;
-        }
-        catch (Exception)
-        {
-            await transaction.RollbackAsync(CancellationToken.None);
-            throw;
-        }
-
-        return mainOrder;
     }
 
     /// <inheritdoc/>
@@ -559,7 +559,7 @@ public class OrderRepository : IOrderRepository
         await pgcom.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    private static async Task InsertOrderChainAsync(InstantNotificationOrderRequest orderChain, DateTime creationDateTime, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
+    private static async Task InsertInstantOrderChainAsync(InstantNotificationOrderRequest orderChain, DateTime creationDateTime, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
     {
         await using NpgsqlCommand pgcom = new(_insertorderchainSql, connection, transaction);
 

@@ -1415,7 +1415,7 @@ public class OrderRequestServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<OperationCanceledException>(async () =>
-            await service.RetrieveOrderChainTracking(creatorName, idempotencyId, cancellationTokenSource.Token));
+            await service.RetrieveNotificationOrderChainTracking(creatorName, idempotencyId, cancellationTokenSource.Token));
 
         // Verify the repository was called with the cancellation token
         orderRepositoryMock.Verify(
@@ -1457,7 +1457,7 @@ public class OrderRequestServiceTests
         var service = GetTestService(orderRepositoryMock.Object);
 
         // Act
-        var result = await service.RetrieveOrderChainTracking(creatorName, idempotencyId);
+        var result = await service.RetrieveNotificationOrderChainTracking(creatorName, idempotencyId);
 
         // Assert
         Assert.NotNull(result);
@@ -1491,7 +1491,7 @@ public class OrderRequestServiceTests
         var service = GetTestService(orderRepositoryMock.Object);
 
         // Act
-        var result = await service.RetrieveOrderChainTracking(creatorName, idempotencyId);
+        var result = await service.RetrieveNotificationOrderChainTracking(creatorName, idempotencyId);
 
         // Assert
         Assert.Null(result);
@@ -1550,7 +1550,7 @@ public class OrderRequestServiceTests
         var service = GetTestService(orderRepositoryMock.Object);
 
         // Act
-        var result = await service.RetrieveOrderChainTracking(creatorName, idempotencyId);
+        var result = await service.RetrieveNotificationOrderChainTracking(creatorName, idempotencyId);
 
         // Assert
         Assert.NotNull(result);
@@ -1599,7 +1599,7 @@ public class OrderRequestServiceTests
         var cancellationToken = cancellationTokenSource.Token;
 
         // Act
-        await service.RetrieveOrderChainTracking(creatorName, idempotencyId, cancellationToken);
+        await service.RetrieveNotificationOrderChainTracking(creatorName, idempotencyId, cancellationToken);
 
         // Assert
         orderRepositoryMock.Verify(

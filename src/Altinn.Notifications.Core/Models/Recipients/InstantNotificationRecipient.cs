@@ -12,5 +12,5 @@ public class InstantNotificationRecipient
     /// Contains the recipient's phone number, the message content,
     /// time-to-live setting, and sender information needed to deliver the SMS.
     /// </remarks>
-    public required RecipientTimedSms RecipientSms { get; init; }
+    public required RecipientTimedSms RecipientTimedSms { get; init; }
 }

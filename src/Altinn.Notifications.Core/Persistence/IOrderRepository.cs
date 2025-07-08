@@ -17,6 +17,21 @@ public interface IOrderRepository
     public Task<NotificationOrder> Create(NotificationOrder order);
 
     /// <summary>
+    /// Creates a new instant notification order in the database.
+    /// </summary>
+    /// <param name="orderRequest">The instant notification order request.</param>
+    /// <param name="order">The notification order that will be processed immediately.</param>
+    /// <param name="cancellationToken">
+    /// A token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.
+    /// </param>
+    /// <returns>The persisted <see cref="NotificationOrder"/> object containing the processed instant notification details.</returns>
+    /// <remarks>
+    /// This method persists an instant notification order that bypasses standard queue processing for immediate delivery.
+    /// Unlike chain orders with reminders, instant orders are processed as a single notification with high priority.
+    /// </remarks>
+    public Task<NotificationOrder> Create(InstantNotificationOrderRequest orderRequest, NotificationOrder order, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Creates a new notification order chain in the database, consisting of a main notification and optional reminders.
     /// </summary>
     /// <param name="orderChain">The chain containing settings for the notification sequence.</param>
@@ -32,22 +47,6 @@ public interface IOrderRepository
     /// - Zero or more reminder notifications that will be processed after their respective delays.
     /// </remarks>
     public Task<List<NotificationOrder>> Create(NotificationOrderChainRequest orderChain, NotificationOrder mainOrder, List<NotificationOrder>? reminders, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Creates a new notification order chain in the database, consisting of a main notification and optional reminders.
-    /// </summary>
-    /// <param name="orderChain">The chain containing settings for the notification sequence.</param>
-    /// <param name="mainOrder">The primary notification order that will be sent first.</param>
-    /// <param name="cancellationToken">
-    /// A token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.
-    /// </param>
-    /// <returns>A list of <see cref="NotificationOrder"/> objects containing both the main notification order and any scheduled reminders, in the order they were persisted.</returns>
-    /// <remarks>
-    /// This method persists an entire notification chain as an atomic operation. The chain consists of:
-    /// - A main notification order that will be processed first.
-    /// - Zero or more reminder notifications that will be processed after their respective delays.
-    /// </remarks>
-    public Task<NotificationOrder> Create(InstantNotificationOrderRequest orderChain, NotificationOrder mainOrder, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets a list of notification orders where requestedSendTime has passed
