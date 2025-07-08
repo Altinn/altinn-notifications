@@ -1,5 +1,4 @@
 ﻿using Altinn.Notifications.Models.Orders;
-using Altinn.Notifications.Validators.Recipient;
 using Altinn.Notifications.Validators.Sms;
 
 using FluentValidation;
