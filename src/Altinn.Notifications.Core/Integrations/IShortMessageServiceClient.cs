@@ -12,9 +12,9 @@ public interface IShortMessageServiceClient
     /// </summary>
     /// <param name="shortMessage">The message payload.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains:
-    /// - Success: <c>true</c> if the message was successfully accepted by the service provider (HTTP 200)
-    /// - StatusCode: The HTTP status code returned by the service
-    /// - ErrorDetails: Problem details if the request failed (HTTP 400 or 499)
+    /// - Success: <c>true</c> if the message was successfully accepted by the service provider
+    /// - StatusCode: The status code returned by the service
+    /// - ErrorDetails: Problem details if the request failed
     /// </returns>
     public Task<ShortMessageSendResult> SendAsync(ShortMessage shortMessage);
 }
