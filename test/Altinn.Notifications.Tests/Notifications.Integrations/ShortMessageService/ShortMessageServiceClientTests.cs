@@ -179,8 +179,7 @@ public class ShortMessageServiceClientTests
             ShortMessage? message = null;
             try
             {
-                string content = request.Content!.ReadAsStringAsync(token).Result;
-
+                string content = request.Content!.ReadAsStringAsync(token).GetAwaiter().GetResult();
                 message = JsonSerializer.Deserialize<ShortMessage>(content, serializerOptions);
             }
             catch

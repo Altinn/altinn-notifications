@@ -29,8 +29,8 @@ public class ShortMessageServiceClient : IShortMessageServiceClient
     {
         _logger = logger;
         _httpClient = httpClient;
+        _sendEndpoint = new Uri("instantmessage/send", UriKind.Relative);
         _httpClient.BaseAddress = new Uri(platformSettings.Value.ApiShortMessageServiceEndpoint);
-        _sendEndpoint = new Uri($"{platformSettings.Value.ApiShortMessageServiceEndpoint}/instantmessage/send");
     }
 
     /// <inheritdoc/>
