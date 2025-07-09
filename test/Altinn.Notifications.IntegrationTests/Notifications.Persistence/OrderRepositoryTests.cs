@@ -2010,8 +2010,8 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             // Arrange
             OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
 
-            string creatorName = "non-existent-creator";
-            string idempotencyId = "non-existent-idempotency-id";
+            string creatorName = "ttd";
+            string idempotencyId = "1091990A-D05D-4326-A1D7-60420F4E8B1E";
 
             // Act
             var result = await repo.GetInstantOrderTracking(creatorName, idempotencyId);
@@ -2026,8 +2026,8 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             // Arrange
             OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
 
-            string creatorName = "test-creator";
-            string idempotencyId = "test-idempotency-id";
+            string creatorName = "ttd";
+            string idempotencyId = "2C2024D9-0A82-4BA5-A71F-17D33D0EFEC9";
 
             // Create a cancellation token that's already cancelled
             using var cancellationTokenSource = new CancellationTokenSource();
@@ -2038,7 +2038,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
         }
 
         [Fact]
-        public async Task GetInstantOrderTracking_WhenOrderExists_ReturnsCorrectTrackingInformation()
+        public async Task GetInstantOrderTracking_WithValidCreatorAndIdempotencyId_ReturnsExpectedOrderDetails()
         {
             // Arrange
             OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
@@ -2046,11 +2046,11 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             Guid orderId = Guid.NewGuid();
             Guid orderChainId = Guid.NewGuid();
 
-            string creator = "instant-tracking-test";
-            string idempotencyId = "INSTANT-75A1F5B2C8D3";
-            string sendersReference = "TRACKING-REF-9E26D4B8F7A3";
-
             var creationDateTime = DateTime.UtcNow;
+
+            string creator = "ttd";
+            string idempotencyId = "9EFB6947-BBB1-4DF2-9466-CE44CD1A46B0";
+            string sendersReference = "BB69F687-AF95-4790-AB27-DED218B4800B";
 
             _orderIdsToDelete.Add(orderId);
             _ordersChainIdsToDelete.Add(orderChainId);
@@ -2084,9 +2084,9 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 Creator = new(creator),
                 Type = OrderType.Instant,
                 Created = creationDateTime,
+                SendersReference = sendersReference,
                 RequestedSendTime = creationDateTime,
                 NotificationChannel = NotificationChannel.Sms,
-                SendersReference = sendersReference,
                 Templates =
                 [
                     new SmsTemplate("Altinn", "Test message for tracking")
@@ -2111,18 +2111,18 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
         }
 
         [Fact]
-        public async Task GetInstantOrderTracking_WhenOrderExistsWithoutSendersReference_HandlesNullReference()
+        public async Task GetInstantOrderTracking_RequiresMatchingCreatorAndIdempotencyId_ReturnsNullWhenCreatorMismatches()
         {
             // Arrange
-            OrderRepository repo = (OrderRepository)ServiceUtil
-                .GetServices([typeof(IOrderRepository)])
-                .First(i => i.GetType() == typeof(OrderRepository));
+            OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
 
             Guid orderId = Guid.NewGuid();
             Guid orderChainId = Guid.NewGuid();
 
-            string creator = "instant-no-ref-test";
-            string idempotencyId = "INSTANT-NO-REF-12E34F56";
+            string creator = "ttd";
+            string wrongCreator = "not-ttd";
+            string idempotencyId = "08556351-748F-4B05-A42A-1BA91DD5C275";
+            string senderReference = "F15C804E-9C66-4968-916F-9E71C4C6FB63";
 
             var creationDateTime = DateTime.UtcNow;
 
@@ -2136,79 +2136,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 Created = creationDateTime,
                 OrderChainId = orderChainId,
                 IdempotencyId = idempotencyId,
-                Recipient = new InstantNotificationRecipient
-                {
-                    ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
-                    {
-                        PhoneNumber = "+4799999999",
-                        TimeToLiveInSeconds = 3600,
-                        ShortMessageContent = new ShortMessageContent
-                        {
-                            Sender = "Altinn",
-                            Message = "Test message without reference"
-                        }
-                    }
-                }
-            };
-
-            NotificationOrder notificationOrder = new()
-            {
-                Id = orderId,
-                Creator = new(creator),
-                Type = OrderType.Instant,
-                Created = creationDateTime,
-                RequestedSendTime = creationDateTime,
-                NotificationChannel = NotificationChannel.Sms,
-                Templates =
-                [
-                    new SmsTemplate("Altinn", "Test message without reference")
-                ],
-                Recipients =
-                [
-                    new Recipient([new SmsAddressPoint("+4799999999")])
-                ]
-            };
-
-            // Create the order in the database
-            await repo.Create(instantNotificationOrder, notificationOrder);
-
-            // Act
-            var result = await repo.GetInstantOrderTracking(creator, idempotencyId);
-
-            // Assert
-            Assert.NotNull(result);
-            Assert.Equal(orderChainId, result.OrderChainId);
-            Assert.Equal(orderId, result.Notification.ShipmentId);
-            Assert.Null(result.Notification.SendersReference);
-        }
-
-        [Fact]
-        public async Task GetInstantOrderTracking_WithDifferentCreator_ReturnsNull()
-        {
-            // Arrange
-            OrderRepository repo = (OrderRepository)ServiceUtil
-                .GetServices([typeof(IOrderRepository)])
-                .First(i => i.GetType() == typeof(OrderRepository));
-
-            Guid orderId = Guid.NewGuid();
-            Guid orderChainId = Guid.NewGuid();
-
-            string creator = "correct-creator";
-            string wrongCreator = "wrong-creator";
-            string idempotencyId = "INSTANT-WRONG-CREATOR-8A7F6E5D";
-
-            var creationDateTime = DateTime.UtcNow;
-
-            _orderIdsToDelete.Add(orderId);
-            _ordersChainIdsToDelete.Add(orderChainId);
-
-            var instantNotificationOrder = new InstantNotificationOrder
-            {
-                OrderId = orderId,
-                Creator = new(creator),
-                Created = creationDateTime,
-                OrderChainId = orderChainId,
-                IdempotencyId = idempotencyId,
+                SendersReference = senderReference,
                 Recipient = new InstantNotificationRecipient
                 {
                     ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
@@ -2230,6 +2158,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 Creator = new(creator),
                 Type = OrderType.Instant,
                 Created = creationDateTime,
+                SendersReference = senderReference,
                 RequestedSendTime = creationDateTime,
                 NotificationChannel = NotificationChannel.Sms,
                 Templates =
@@ -2253,19 +2182,18 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
         }
 
         [Fact]
-        public async Task GetInstantOrderTracking_WithDifferentIdempotencyId_ReturnsNull()
+        public async Task GetInstantOrderTracking_RequiresMatchingCreatorAndIdempotencyId_ReturnsNullWhenIdempotencyIdMismatches()
         {
             // Arrange
-            OrderRepository repo = (OrderRepository)ServiceUtil
-                .GetServices([typeof(IOrderRepository)])
-                .First(i => i.GetType() == typeof(OrderRepository));
+            OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
 
             Guid orderId = Guid.NewGuid();
             Guid orderChainId = Guid.NewGuid();
 
-            string creator = "correct-idempotency-creator";
-            string idempotencyId = "CORRECT-IDEMPOTENCY";
-            string wrongIdempotencyId = "WRONG-IDEMPOTENCY";
+            string creator = "ttd";
+            string idempotencyId = "7D4DF1D4-4E55-4BDC-ACA1-0331D47AC28F";
+            string senderReference = "CB11C461-8887-4887-9A0B-3878F99D13F6";
+            string wrongIdempotencyId = "720D256D-0A2A-4C5F-BD9A-A32634271CD2";
 
             var creationDateTime = DateTime.UtcNow;
 
@@ -2279,6 +2207,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 Created = creationDateTime,
                 OrderChainId = orderChainId,
                 IdempotencyId = idempotencyId,
+                SendersReference = senderReference,
                 Recipient = new InstantNotificationRecipient
                 {
                     ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
@@ -2300,6 +2229,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 Creator = new(creator),
                 Type = OrderType.Instant,
                 Created = creationDateTime,
+                SendersReference = senderReference,
                 RequestedSendTime = creationDateTime,
                 NotificationChannel = NotificationChannel.Sms,
                 Templates =
