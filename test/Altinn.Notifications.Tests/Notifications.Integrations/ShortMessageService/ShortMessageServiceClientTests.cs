@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 using Altinn.Notifications.Core.Helpers;
@@ -38,9 +39,9 @@ public class ShortMessageServiceClientTests
         var shortMessage = new ShortMessage
         {
             Sender = "Altinn",
+            TimeToLive = 3600,
             Message = "Test message",
             Recipient = "+4799999999",
-            TimeToLiveInSeconds = 3600,
             NotificationId = Guid.NewGuid()
         };
 
@@ -60,8 +61,8 @@ public class ShortMessageServiceClientTests
         var shortMessage = new ShortMessage
         {
             Sender = "Altinn",
+            TimeToLive = 7200,
             Message = "Test message",
-            TimeToLiveInSeconds = 7200,
             NotificationId = Guid.NewGuid(),
             Recipient = "invalid-mobile-number"
         };
@@ -84,8 +85,8 @@ public class ShortMessageServiceClientTests
         var shortMessage = new ShortMessage
         {
             Sender = "Altinn",
+            TimeToLive = 3600,
             Message = "Test message",
-            TimeToLiveInSeconds = 3600,
             Recipient = "client-closed",
             NotificationId = Guid.NewGuid()
         };
@@ -106,8 +107,8 @@ public class ShortMessageServiceClientTests
         var shortMessage = new ShortMessage
         {
             Sender = "Altinn",
+            TimeToLive = 3600,
             Message = "Test message",
-            TimeToLiveInSeconds = 3600,
             Recipient = "network-error",
             NotificationId = Guid.NewGuid()
         };
@@ -137,8 +138,8 @@ public class ShortMessageServiceClientTests
         var shortMessage = new ShortMessage
         {
             Sender = "Altinn",
+            TimeToLive = 3600,
             Message = "Test message",
-            TimeToLiveInSeconds = 3600,
             Recipient = "generic-error",
             NotificationId = Guid.NewGuid()
         };
@@ -162,6 +163,12 @@ public class ShortMessageServiceClientTests
 
     private ShortMessageServiceClient CreateShortMessageServiceTestClient()
     {
+        JsonSerializerOptions serializerOptions = new()
+        {
+            PropertyNameCaseInsensitive = true,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        };
+
         var delegatingHandler = new DelegatingHandlerStub((request, token) =>
         {
             if (!request!.RequestUri!.AbsolutePath.EndsWith("instantmessage/send"))
@@ -174,7 +181,7 @@ public class ShortMessageServiceClientTests
             {
                 string content = request.Content!.ReadAsStringAsync(token).Result;
 
-                message = JsonSerializer.Deserialize<ShortMessage>(content);
+                message = JsonSerializer.Deserialize<ShortMessage>(content, serializerOptions);
             }
             catch
             {
