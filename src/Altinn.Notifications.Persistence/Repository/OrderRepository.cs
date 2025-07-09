@@ -114,6 +114,45 @@ public class OrderRepository : IOrderRepository
     }
 
     /// <inheritdoc/>
+    public async Task<InstantNotificationOrder> Create(InstantNotificationOrder instantNotificationOrder, NotificationOrder notificationOrder, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        await using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await InsertInstantNotificationOrderAsync(instantNotificationOrder, connection, transaction, cancellationToken);
+
+            cancellationToken.ThrowIfCancellationRequested();
+            long mainOrderId = await InsertOrder(notificationOrder, connection, transaction, cancellationToken);
+
+            if (notificationOrder.Templates.Find(e => e.Type == NotificationTemplateType.Sms) is SmsTemplate mainSmsTemplate)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                await InsertSmsTextAsync(mainOrderId, mainSmsTemplate, connection, transaction, cancellationToken);
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            throw;
+        }
+        catch (Exception)
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            throw;
+        }
+
+        return instantNotificationOrder;
+    }
+
+    /// <inheritdoc/>
     public async Task<List<NotificationOrder>> Create(NotificationOrderChainRequest orderChain, NotificationOrder mainOrder, List<NotificationOrder>? reminders, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -458,6 +497,35 @@ public class OrderRepository : IOrderRepository
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, emailTemplate.Subject);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, emailTemplate.Body);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, emailTemplate.ContentType.ToString());
+
+        await pgcom.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Persists an instant notification order to the database as part of a transaction.
+    /// </summary>
+    /// <param name="instantNotificationOrder">
+    /// The high-priority notification order to be persisted, containing recipient and delivery details.
+    /// </param>
+    /// <param name="connection">
+    /// The active PostgreSQL database connection.
+    /// </param>
+    /// <param name="transaction">
+    /// The transaction context within which the database operation executes.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.
+    /// </param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    private static async Task InsertInstantNotificationOrderAsync(InstantNotificationOrder instantNotificationOrder, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
+    {
+        await using NpgsqlCommand pgcom = new(_insertorderchainSql, connection, transaction);
+
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, instantNotificationOrder.OrderChainId);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, instantNotificationOrder.IdempotencyId);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, instantNotificationOrder.Creator.ShortName);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, instantNotificationOrder.Created);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Jsonb, instantNotificationOrder);
 
         await pgcom.ExecuteNonQueryAsync(cancellationToken);
     }
