@@ -1731,5 +1731,277 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             Assert.NotNull(orderCreationResult);
             Assert.Equal(shouldUpdateStatus, statusUpdatingResult);
         }
+
+        [Fact]
+        public async Task Create_InstantNotificationOrder_SuccessfullyPersistedInDatabase()
+        {
+            // Arrange
+            OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+            Guid orderId = Guid.NewGuid();
+            Guid orderChainId = Guid.NewGuid();
+
+            _orderIdsToDelete.Add(orderId);
+            _ordersChainIdsToDelete.Add(orderChainId);
+
+            var creationDateTime = DateTime.UtcNow;
+
+            var instantNotificationOrder = new InstantNotificationOrder
+            {
+                OrderId = orderId,
+                Creator = new("ttd"),
+                Created = creationDateTime,
+                OrderChainId = orderChainId,
+                IdempotencyId = "F6E76FA5-0A53-4195-A702-21ECCC77B9E8",
+                SendersReference = "DAFA7290-27AE-4958-8CAA-A1F97B6B2307",
+
+                Recipient = new InstantNotificationRecipient
+                {
+                    ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
+                    {
+                        PhoneNumber = "+4799999999",
+                        TimeToLiveInSeconds = 3600,
+                        ShortMessageContent = new ShortMessageContent
+                        {
+                            Sender = "Altinn",
+                            Message = "This is an urgent test message"
+                        }
+                    }
+                }
+            };
+
+            NotificationOrder notificationOrder = new()
+            {
+                Id = orderId,
+                Creator = new("ttd"),
+                Type = OrderType.Instant,
+                Created = creationDateTime,
+                RequestedSendTime = creationDateTime,
+                NotificationChannel = NotificationChannel.Sms,
+                SendersReference = "DAFA7290-27AE-4958-8CAA-A1F97B6B2307",
+                Templates =
+                [
+                    new SmsTemplate("Altinn", "This is an urgent test message")
+                ],
+                Recipients =
+                [
+                    new Recipient([new SmsAddressPoint("+4799999999")])
+                ]
+            };
+
+            // Act
+            var result = await repo.Create(instantNotificationOrder, notificationOrder);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(orderId, result.OrderId);
+            Assert.Equal(OrderType.Instant, result.Type);
+            Assert.Equal("ttd", result.Creator.ShortName);
+            Assert.Equal(orderChainId, result.OrderChainId);
+            Assert.Equal("F6E76FA5-0A53-4195-A702-21ECCC77B9E8", result.IdempotencyId);
+            Assert.Equal("DAFA7290-27AE-4958-8CAA-A1F97B6B2307", result.SendersReference);
+
+            // Verify database persistence
+            string orderChainSql = $@"SELECT count(*) FROM notifications.orderschain WHERE orderid = '{orderChainId}'";
+            int orderChainCount = await PostgreUtil.RunSqlReturnOutput<int>(orderChainSql);
+            Assert.Equal(1, orderChainCount);
+
+            string orderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{orderId}' and type = 'Instant'";
+            int orderCount = await PostgreUtil.RunSqlReturnOutput<int>(orderSql);
+            Assert.Equal(1, orderCount);
+
+            string smsTextSql = $@"SELECT count(*) FROM notifications.smstexts as st JOIN notifications.orders o ON st._orderid = o._id WHERE o.alternateid = '{orderId}'";
+            int smsTextCount = await PostgreUtil.RunSqlReturnOutput<int>(smsTextSql);
+            Assert.Equal(1, smsTextCount);
+        }
+
+        [Fact]
+        public async Task Create_InstantNotificationOrder_WithCancellationRequested_ThrowsOperationCanceledException()
+        {
+            // Arrange
+            OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+            Guid orderId = Guid.NewGuid();
+            Guid orderChainId = Guid.NewGuid();
+
+            _orderIdsToDelete.Add(orderId);
+            _ordersChainIdsToDelete.Add(orderChainId);
+
+            var creationDateTime = DateTime.UtcNow;
+
+            var instantNotificationOrder = new InstantNotificationOrder
+            {
+                OrderId = orderId,
+                Creator = new("ttd"),
+                Created = creationDateTime,
+                OrderChainId = orderChainId,
+                IdempotencyId = "INSTANT-CANCEL-1E3CD83E99FD",
+                SendersReference = "INSTANT-CANCEL-4B8FE77B9455",
+                Recipient = new InstantNotificationRecipient
+                {
+                    ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
+                    {
+                        PhoneNumber = "+4799999999",
+                        TimeToLiveInSeconds = 9000,
+                        ShortMessageContent = new ShortMessageContent
+                        {
+                            Sender = "Altinn",
+                            Message = "This message should not be persisted"
+                        }
+                    }
+                }
+            };
+
+            NotificationOrder notificationOrder = new()
+            {
+                Id = orderId,
+                Creator = new("ttd"),
+                Type = OrderType.Instant,
+                Created = creationDateTime,
+                RequestedSendTime = creationDateTime,
+                NotificationChannel = NotificationChannel.Sms,
+                SendersReference = "INSTANT-CANCEL-4B8FE77B9455",
+                Templates =
+                [
+                    new SmsTemplate("Altinn", "This message should not be persisted")
+                ],
+                Recipients =
+                [
+                    new Recipient([new SmsAddressPoint("+4799999999")])
+                ]
+            };
+
+            // Create a cancellation token that's already cancelled
+            using var cancellationTokenSource = new CancellationTokenSource();
+            await cancellationTokenSource.CancelAsync();
+
+            // Act & Assert
+            await Assert.ThrowsAsync<OperationCanceledException>(async () => await repo.Create(instantNotificationOrder, notificationOrder, cancellationTokenSource.Token));
+
+            // Verify nothing was persisted
+            string orderChainSql = $@"SELECT count(*) FROM notifications.orderschain WHERE orderid = '{orderChainId}'";
+            int orderChainCount = await PostgreUtil.RunSqlReturnOutput<int>(orderChainSql);
+            Assert.Equal(0, orderChainCount);
+
+            string orderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{orderId}'";
+            int orderCount = await PostgreUtil.RunSqlReturnOutput<int>(orderSql);
+            Assert.Equal(0, orderCount);
+        }
+
+        [Fact]
+        public async Task Create_InstantNotificationOrder_WithDuplicateIdempotencyId_ThrowsException()
+        {
+            // Arrange
+            OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+            Guid orderChainId = Guid.NewGuid();
+            Guid firstOrderId = Guid.NewGuid();
+            Guid secondOrderId = Guid.NewGuid();
+            string idempotencyId = "DUPLICATE-IDEMPOTENCY-30BC69F09C38";
+
+            _orderIdsToDelete.Add(firstOrderId);
+            _orderIdsToDelete.Add(secondOrderId);
+            _ordersChainIdsToDelete.Add(orderChainId);
+
+            var creationDateTime = DateTime.UtcNow;
+
+            // First instant notification order
+            var firstInstantOrder = new InstantNotificationOrder
+            {
+                Creator = new("ttd"),
+                OrderId = firstOrderId,
+                Created = creationDateTime,
+                OrderChainId = orderChainId,
+                IdempotencyId = idempotencyId,
+                SendersReference = "F4B120EF-7DBD-438A-8402-02D21833602B",
+
+                Recipient = new InstantNotificationRecipient
+                {
+                    ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
+                    {
+                        PhoneNumber = "+4799999999",
+                        TimeToLiveInSeconds = 7200,
+                        ShortMessageContent = new ShortMessageContent
+                        {
+                            Sender = "Altinn",
+                            Message = "First message with duplicate idempotency ID"
+                        }
+                    }
+                }
+            };
+
+            NotificationOrder firstNotificationOrder = new()
+            {
+                Id = firstOrderId,
+                Creator = new("ttd"),
+                Type = OrderType.Instant,
+                Created = creationDateTime,
+                RequestedSendTime = creationDateTime,
+                NotificationChannel = NotificationChannel.Sms,
+                SendersReference = "F4B120EF-7DBD-438A-8402-02D21833602B",
+                Templates =
+                [
+                    new SmsTemplate("Altinn", "First message with duplicate idempotency ID")
+                ],
+                Recipients =
+                [
+                    new Recipient([new SmsAddressPoint("+4799999999")])
+                ]
+            };
+
+            // Save the first order
+            await repo.Create(firstInstantOrder, firstNotificationOrder);
+
+            // Create second order with same idempotency ID
+            var secondInstantOrder = new InstantNotificationOrder
+            {
+                Creator = new("ttd"),
+                OrderId = secondOrderId,
+                IdempotencyId = idempotencyId,
+                OrderChainId = Guid.NewGuid(),
+                Created = creationDateTime.AddMinutes(5),
+                SendersReference = "C075F863-3E89-4688-9B31-D8817FECDF6B",
+                Recipient = new InstantNotificationRecipient
+                {
+                    ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
+                    {
+                        PhoneNumber = "+4788888888",
+                        TimeToLiveInSeconds = 7260,
+                        ShortMessageContent = new ShortMessageContent
+                        {
+                            Sender = "Altinn",
+                            Message = "Second message with duplicate idempotency ID"
+                        }
+                    }
+                }
+            };
+
+            NotificationOrder secondNotificationOrder = new()
+            {
+                Id = secondOrderId,
+                Creator = new("ttd"),
+                Type = OrderType.Instant,
+                Created = creationDateTime.AddMinutes(5),
+                NotificationChannel = NotificationChannel.Sms,
+                RequestedSendTime = creationDateTime.AddMinutes(5),
+                SendersReference = "C075F863-3E89-4688-9B31-D8817FECDF6B",
+                Templates =
+                [
+                    new SmsTemplate("Altinn", "Second message with duplicate idempotency ID")
+                ],
+                Recipients =
+                [
+                    new Recipient([new SmsAddressPoint("+4788888888")])
+                ]
+            };
+
+            // Act & Assert
+            await Assert.ThrowsAnyAsync<Exception>(async () => await repo.Create(secondInstantOrder, secondNotificationOrder));
+
+            // Verify only the first order was persisted
+            string orderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid IN ('{firstOrderId}', '{secondOrderId}')";
+            int orderCount = await PostgreUtil.RunSqlReturnOutput<int>(orderSql);
+            Assert.Equal(1, orderCount);
+        }
     }
 }
