@@ -11,7 +11,7 @@ using Microsoft.Extensions.Options;
 namespace Altinn.Notifications.Integrations.ShortMessageService;
 
 /// <summary>
-/// Client implementation for sending text messages through the Altinn Notifications SMS service.
+/// HTTP Client for sending short text messages through the Altinn Notifications SMS service.
 /// </summary>
 public class ShortMessageServiceClient : IShortMessageServiceClient
 {
@@ -34,7 +34,7 @@ public class ShortMessageServiceClient : IShortMessageServiceClient
     }
 
     /// <inheritdoc/>
-    public async Task<ShortMessageSendResult> Send(ShortMessage shortMessage)
+    public async Task<ShortMessageSendResult> SendAsync(ShortMessage shortMessage)
     {
         try
         {
@@ -54,7 +54,7 @@ public class ShortMessageServiceClient : IShortMessageServiceClient
             {
                 string errorDetails = await response.Content.ReadAsStringAsync();
 
-                _logger.LogWarning("Failed to send short message. Status: {StatusCode}, Details: {ErrorDetails}", response.StatusCode, errorDetails);
+                _logger.LogWarning("Failed to send short message: {MessageContent}. Status: {StatusCode}, Details: {ErrorDetails}", content, response.StatusCode, errorDetails);
 
                 return new ShortMessageSendResult
                 {
