@@ -1,5 +1,4 @@
 ﻿using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace Altinn.Notifications.Core.Models.ShortMessageService;
 
@@ -16,7 +15,7 @@ public record ShortMessage
     /// <summary>
     /// The unique identifier that connects this message to its corresponding notification order.
     /// </summary>
-    public Guid NotificationId { get; init; }
+    public required Guid NotificationId { get; init; }
 
     /// <summary>
     /// The recipient's phone number in the appropriate format.
@@ -32,7 +31,7 @@ public record ShortMessage
     /// The time-to-live duration in seconds.
     /// Defines the maximum period during which delivery attempts should continue before the message expires.
     /// </summary>
-    public int TimeToLive { get; init; }
+    public required int TimeToLive { get; init; }
 
     /// <summary>
     /// Serializes this message to a JSON string for API communication.
