@@ -9,19 +9,14 @@ namespace Altinn.Notifications.Core.Models.Orders;
 public record InstantNotificationOrder
 {
     /// <summary>
-    /// The type of the instant notification order.
+    /// The creator of the instant notification order.
     /// </summary>
-    public OrderType Type { get; } = OrderType.Instant;
+    public required Creator Creator { get; init; }
 
     /// <summary>
-    /// The unique identifier for the instant notification order.
+    /// The date and time for when the instant notification order was created.
     /// </summary>
-    public required Guid OrderId { get; init; }
-
-    /// <summary>
-    /// The unique identifier for the entire notification order chain.
-    /// </summary>
-    public required Guid OrderChainId { get; init; }
+    public DateTime Created { get; init; }
 
     /// <summary>
     /// The unique identifier that is used to ensure the same notification order is not processed multiple times.
@@ -29,17 +24,27 @@ public record InstantNotificationOrder
     public required string IdempotencyId { get; init; }
 
     /// <summary>
-    /// The reference identifier assigned by the sender for tracking purposes.
+    /// The unique identifier for the entire notification order chain.
     /// </summary>
-    public string? SendersReference { get; init; }
+    public required Guid OrderChainId { get; init; }
 
     /// <summary>
-    /// The creator of the instant notification order.
+    /// The unique identifier for the instant notification order.
     /// </summary>
-    public required Creator Creator { get; init; }
+    public required Guid OrderId { get; init; }
 
     /// <summary>
     /// The recipient information and message content.
     /// </summary>
     public required InstantNotificationRecipient Recipient { get; init; }
+
+    /// <summary>
+    /// The reference identifier assigned by the sender for tracking purposes.
+    /// </summary>
+    public string? SendersReference { get; init; }
+
+    /// <summary>
+    /// The type of the instant notification order.
+    /// </summary>
+    public OrderType Type { get; } = OrderType.Instant;
 }
