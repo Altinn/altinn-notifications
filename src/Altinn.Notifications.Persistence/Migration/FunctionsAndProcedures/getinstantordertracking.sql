@@ -19,7 +19,7 @@ BEGIN
         FROM notifications.orderschain 
         WHERE creatorname = _creatorname
         AND idempotencyid = _idempotencyid
-        AND orderchain->>'NotificationType' = 'Instant'
+        AND orderchain->>'Type' = 2
     ) INTO v_record_exists;
 
     IF NOT v_record_exists THEN
@@ -37,7 +37,7 @@ BEGIN
     WHERE 
         oc.creatorname = _creatorname
         AND oc.idempotencyid = _idempotencyid
-        AND oc.orderchain->>'NotificationType' = 'Instant';
+        AND oc.orderchain->>'Type' = 2;
 END;
 $BODY$;
 
