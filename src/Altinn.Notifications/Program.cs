@@ -88,7 +88,7 @@ builder.Services.AddSwaggerGen(options =>
     });
     options.AddServer(new OpenApiServer()
     {
-        Url = "https://localhost:5090/", //TODO: Pull form config?
+        Url = "https://localhost:5090/", // TODO: Pull form config?
         Description = "Local development"
     });
 });
