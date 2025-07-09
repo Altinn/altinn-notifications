@@ -1,7 +1,7 @@
 ﻿namespace Altinn.Notifications.Core.Models.Orders;
 
 /// <summary>
-/// Represents the response model for a request to send an SMS notification immediately.
+/// Represents the tracking information for an instant notification order.
 /// </summary>
 public record InstantNotificationOrderTracking
 {
@@ -11,7 +11,7 @@ public record InstantNotificationOrderTracking
     public required Guid OrderChainId { get; init; }
 
     /// <summary>
-    /// The unique identifier for notification order.
+    /// The unique identifier for notification order shipment.
     /// </summary>
     public required NotificationOrderChainShipment Notification { get; init; }
 }
