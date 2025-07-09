@@ -135,4 +135,22 @@ public interface IOrderRepository
     /// related notifications have reached terminal states. The status is only updated to 'Completed' if this condition is met.
     /// </remarks>
     public Task<bool> TryCompleteOrderBasedOnNotificationsState(Guid? notificationId, AlternateIdentifierSource source);
+
+    /// <summary>
+    /// Retrieves tracking information for an instant notification order using the creator's name and idempotency identifier.
+    /// </summary>
+    /// <param name="creatorName">
+    /// The short name of the creator who originally submitted the instant notification order.
+    /// </param>
+    /// <param name="idempotencyId">
+    /// The idempotency identifier specified when the instant notification order was created.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A token to monitor for cancellation requests. Defaults to <see cref="CancellationToken.None"/>.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task{TResult}"/> containing a <see cref="InstantNotificationOrderTracking"/> with identifiers and sender references for the instant notification order,
+    /// or <c>null</c> if no matching order is found for the provided parameters.
+    /// </returns>
+    Task<InstantNotificationOrderTracking?> GetInstantOrderTracking(string creatorName, string idempotencyId, CancellationToken cancellationToken = default);
 }
