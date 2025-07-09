@@ -273,6 +273,10 @@ public class OrderRepository : IOrderRepository
     /// <inheritdoc/>
     public async Task<NotificationOrderChainResponse?> GetOrderChainTracking(string creatorName, string idempotencyId, CancellationToken cancellationToken = default)
     {
+        string shipmentIdColumnName = "shipment_id";
+        string ordersChainIdColumnName = "orders_chain_id";
+        string senderReferenceColumnName = "senders_reference";
+
         cancellationToken.ThrowIfCancellationRequested();
 
         await using NpgsqlCommand command = _dataSource.CreateCommand(_getOrdersChainTrackingSql);
@@ -288,21 +292,21 @@ public class OrderRepository : IOrderRepository
 
         await reader.ReadAsync(cancellationToken);
 
-        var ordersChainId = await reader.GetFieldValueAsync<Guid>(reader.GetOrdinal("orders_chain_id"), cancellationToken);
+        var ordersChainId = await reader.GetFieldValueAsync<Guid>(reader.GetOrdinal(ordersChainIdColumnName), cancellationToken);
         if (ordersChainId == Guid.Empty)
         {
             return null;
         }
 
-        var mainShipmentId = await reader.GetFieldValueAsync<Guid>(reader.GetOrdinal("shipment_id"), cancellationToken);
+        var mainShipmentId = await reader.GetFieldValueAsync<Guid>(reader.GetOrdinal(shipmentIdColumnName), cancellationToken);
         if (mainShipmentId == Guid.Empty)
         {
             return null;
         }
 
-        string? mainSendersReference = await reader.IsDBNullAsync(reader.GetOrdinal("senders_reference"), cancellationToken) ?
+        string? mainSendersReference = await reader.IsDBNullAsync(reader.GetOrdinal(senderReferenceColumnName), cancellationToken) ?
             null :
-            reader.GetString(reader.GetOrdinal("senders_reference"));
+            reader.GetString(reader.GetOrdinal(senderReferenceColumnName));
 
         var reminderShipments = await ExtractReminderShipmentsTracking(reader, cancellationToken);
 
@@ -355,6 +359,10 @@ public class OrderRepository : IOrderRepository
     /// <inheritdoc/>
     public async Task<InstantNotificationOrderTracking?> GetInstantOrderTracking(string creatorName, string idempotencyId, CancellationToken cancellationToken = default)
     {
+        string shipmentIdColumnName = "shipment_id";
+        string ordersChainIdColumnName = "orders_chain_id";
+        string senderReferenceColumnName = "senders_reference";
+
         cancellationToken.ThrowIfCancellationRequested();
 
         await using NpgsqlCommand command = _dataSource.CreateCommand(_getInstantOrderTrackingSql);
@@ -369,21 +377,21 @@ public class OrderRepository : IOrderRepository
 
         await reader.ReadAsync(cancellationToken);
 
-        var orderChainId = await reader.GetFieldValueAsync<Guid>(reader.GetOrdinal("orders_chain_id"), cancellationToken);
+        var orderChainId = await reader.GetFieldValueAsync<Guid>(reader.GetOrdinal(ordersChainIdColumnName), cancellationToken);
         if (orderChainId == Guid.Empty)
         {
             return null;
         }
 
-        var shipmentId = await reader.GetFieldValueAsync<Guid>(reader.GetOrdinal("shipment_id"), cancellationToken);
+        var shipmentId = await reader.GetFieldValueAsync<Guid>(reader.GetOrdinal(shipmentIdColumnName), cancellationToken);
         if (shipmentId == Guid.Empty)
         {
             return null;
         }
 
-        string? sendersReference = await reader.IsDBNullAsync(reader.GetOrdinal("senders_reference"), cancellationToken)
+        string? sendersReference = await reader.IsDBNullAsync(reader.GetOrdinal(senderReferenceColumnName), cancellationToken)
             ? null
-            : reader.GetString(reader.GetOrdinal("senders_reference"));
+            : reader.GetString(reader.GetOrdinal(senderReferenceColumnName));
 
         return new InstantNotificationOrderTracking
         {
