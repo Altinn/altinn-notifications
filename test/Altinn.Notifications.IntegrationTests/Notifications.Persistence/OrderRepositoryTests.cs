@@ -2003,5 +2003,323 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             int orderCount = await PostgreUtil.RunSqlReturnOutput<int>(orderSql);
             Assert.Equal(1, orderCount);
         }
+
+        [Fact]
+        public async Task GetInstantOrderTracking_WhenNonExistentCreatorAndIdempotencyId_ReturnsNull()
+        {
+            // Arrange
+            OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+            string creatorName = "non-existent-creator";
+            string idempotencyId = "non-existent-idempotency-id";
+
+            // Act
+            var result = await repo.GetInstantOrderTracking(creatorName, idempotencyId);
+
+            // Assert
+            Assert.Null(result);
+        }
+
+        [Fact]
+        public async Task GetInstantOrderTracking_WhenCancellationRequested_ThrowsOperationCanceledException()
+        {
+            // Arrange
+            OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+            string creatorName = "test-creator";
+            string idempotencyId = "test-idempotency-id";
+
+            // Create a cancellation token that's already cancelled
+            using var cancellationTokenSource = new CancellationTokenSource();
+            await cancellationTokenSource.CancelAsync();
+
+            // Act & Assert
+            await Assert.ThrowsAsync<OperationCanceledException>(async () => await repo.GetInstantOrderTracking(creatorName, idempotencyId, cancellationTokenSource.Token));
+        }
+
+        [Fact]
+        public async Task GetInstantOrderTracking_WhenOrderExists_ReturnsCorrectTrackingInformation()
+        {
+            // Arrange
+            OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+            Guid orderId = Guid.NewGuid();
+            Guid orderChainId = Guid.NewGuid();
+
+            string creator = "instant-tracking-test";
+            string idempotencyId = "INSTANT-75A1F5B2C8D3";
+            string sendersReference = "TRACKING-REF-9E26D4B8F7A3";
+
+            var creationDateTime = DateTime.UtcNow;
+
+            _orderIdsToDelete.Add(orderId);
+            _ordersChainIdsToDelete.Add(orderChainId);
+
+            var instantNotificationOrder = new InstantNotificationOrder
+            {
+                OrderId = orderId,
+                Creator = new(creator),
+                Created = creationDateTime,
+                OrderChainId = orderChainId,
+                IdempotencyId = idempotencyId,
+                SendersReference = sendersReference,
+                Recipient = new InstantNotificationRecipient
+                {
+                    ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
+                    {
+                        PhoneNumber = "+4799999999",
+                        TimeToLiveInSeconds = 3600,
+                        ShortMessageContent = new ShortMessageContent
+                        {
+                            Sender = "Altinn",
+                            Message = "Test message for tracking"
+                        }
+                    }
+                }
+            };
+
+            NotificationOrder notificationOrder = new()
+            {
+                Id = orderId,
+                Creator = new(creator),
+                Type = OrderType.Instant,
+                Created = creationDateTime,
+                RequestedSendTime = creationDateTime,
+                NotificationChannel = NotificationChannel.Sms,
+                SendersReference = sendersReference,
+                Templates =
+                [
+                    new SmsTemplate("Altinn", "Test message for tracking")
+                ],
+                Recipients =
+                [
+                    new Recipient([new SmsAddressPoint("+4799999999")])
+                ]
+            };
+
+            // Create the order in the database
+            await repo.Create(instantNotificationOrder, notificationOrder);
+
+            // Act
+            var result = await repo.GetInstantOrderTracking(creator, idempotencyId);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(orderChainId, result.OrderChainId);
+            Assert.Equal(orderId, result.Notification.ShipmentId);
+            Assert.Equal(sendersReference, result.Notification.SendersReference);
+        }
+
+        [Fact]
+        public async Task GetInstantOrderTracking_WhenOrderExistsWithoutSendersReference_HandlesNullReference()
+        {
+            // Arrange
+            OrderRepository repo = (OrderRepository)ServiceUtil
+                .GetServices([typeof(IOrderRepository)])
+                .First(i => i.GetType() == typeof(OrderRepository));
+
+            Guid orderId = Guid.NewGuid();
+            Guid orderChainId = Guid.NewGuid();
+
+            string creator = "instant-no-ref-test";
+            string idempotencyId = "INSTANT-NO-REF-12E34F56";
+
+            var creationDateTime = DateTime.UtcNow;
+
+            _orderIdsToDelete.Add(orderId);
+            _ordersChainIdsToDelete.Add(orderChainId);
+
+            var instantNotificationOrder = new InstantNotificationOrder
+            {
+                OrderId = orderId,
+                Creator = new(creator),
+                Created = creationDateTime,
+                OrderChainId = orderChainId,
+                IdempotencyId = idempotencyId,
+                Recipient = new InstantNotificationRecipient
+                {
+                    ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
+                    {
+                        PhoneNumber = "+4799999999",
+                        TimeToLiveInSeconds = 3600,
+                        ShortMessageContent = new ShortMessageContent
+                        {
+                            Sender = "Altinn",
+                            Message = "Test message without reference"
+                        }
+                    }
+                }
+            };
+
+            NotificationOrder notificationOrder = new()
+            {
+                Id = orderId,
+                Creator = new(creator),
+                Type = OrderType.Instant,
+                Created = creationDateTime,
+                RequestedSendTime = creationDateTime,
+                NotificationChannel = NotificationChannel.Sms,
+                Templates =
+                [
+                    new SmsTemplate("Altinn", "Test message without reference")
+                ],
+                Recipients =
+                [
+                    new Recipient([new SmsAddressPoint("+4799999999")])
+                ]
+            };
+
+            // Create the order in the database
+            await repo.Create(instantNotificationOrder, notificationOrder);
+
+            // Act
+            var result = await repo.GetInstantOrderTracking(creator, idempotencyId);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(orderChainId, result.OrderChainId);
+            Assert.Equal(orderId, result.Notification.ShipmentId);
+            Assert.Null(result.Notification.SendersReference);
+        }
+
+        [Fact]
+        public async Task GetInstantOrderTracking_WithDifferentCreator_ReturnsNull()
+        {
+            // Arrange
+            OrderRepository repo = (OrderRepository)ServiceUtil
+                .GetServices([typeof(IOrderRepository)])
+                .First(i => i.GetType() == typeof(OrderRepository));
+
+            Guid orderId = Guid.NewGuid();
+            Guid orderChainId = Guid.NewGuid();
+
+            string creator = "correct-creator";
+            string wrongCreator = "wrong-creator";
+            string idempotencyId = "INSTANT-WRONG-CREATOR-8A7F6E5D";
+
+            var creationDateTime = DateTime.UtcNow;
+
+            _orderIdsToDelete.Add(orderId);
+            _ordersChainIdsToDelete.Add(orderChainId);
+
+            var instantNotificationOrder = new InstantNotificationOrder
+            {
+                OrderId = orderId,
+                Creator = new(creator),
+                Created = creationDateTime,
+                OrderChainId = orderChainId,
+                IdempotencyId = idempotencyId,
+                Recipient = new InstantNotificationRecipient
+                {
+                    ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
+                    {
+                        PhoneNumber = "+4799999999",
+                        TimeToLiveInSeconds = 3600,
+                        ShortMessageContent = new ShortMessageContent
+                        {
+                            Sender = "Altinn",
+                            Message = "Test message for wrong creator"
+                        }
+                    }
+                }
+            };
+
+            NotificationOrder notificationOrder = new()
+            {
+                Id = orderId,
+                Creator = new(creator),
+                Type = OrderType.Instant,
+                Created = creationDateTime,
+                RequestedSendTime = creationDateTime,
+                NotificationChannel = NotificationChannel.Sms,
+                Templates =
+                [
+                    new SmsTemplate("Altinn", "Test message for wrong creator")
+                ],
+                Recipients =
+                [
+                    new Recipient([new SmsAddressPoint("+4799999999")])
+                ]
+            };
+
+            // Create the order in the database
+            await repo.Create(instantNotificationOrder, notificationOrder);
+
+            // Act
+            var result = await repo.GetInstantOrderTracking(wrongCreator, idempotencyId);
+
+            // Assert
+            Assert.Null(result);
+        }
+
+        [Fact]
+        public async Task GetInstantOrderTracking_WithDifferentIdempotencyId_ReturnsNull()
+        {
+            // Arrange
+            OrderRepository repo = (OrderRepository)ServiceUtil
+                .GetServices([typeof(IOrderRepository)])
+                .First(i => i.GetType() == typeof(OrderRepository));
+
+            Guid orderId = Guid.NewGuid();
+            Guid orderChainId = Guid.NewGuid();
+
+            string creator = "correct-idempotency-creator";
+            string idempotencyId = "CORRECT-IDEMPOTENCY";
+            string wrongIdempotencyId = "WRONG-IDEMPOTENCY";
+
+            var creationDateTime = DateTime.UtcNow;
+
+            _orderIdsToDelete.Add(orderId);
+            _ordersChainIdsToDelete.Add(orderChainId);
+
+            var instantNotificationOrder = new InstantNotificationOrder
+            {
+                OrderId = orderId,
+                Creator = new(creator),
+                Created = creationDateTime,
+                OrderChainId = orderChainId,
+                IdempotencyId = idempotencyId,
+                Recipient = new InstantNotificationRecipient
+                {
+                    ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
+                    {
+                        PhoneNumber = "+4799999999",
+                        TimeToLiveInSeconds = 3600,
+                        ShortMessageContent = new ShortMessageContent
+                        {
+                            Sender = "Altinn",
+                            Message = "Test message for wrong idempotency ID"
+                        }
+                    }
+                }
+            };
+
+            NotificationOrder notificationOrder = new()
+            {
+                Id = orderId,
+                Creator = new(creator),
+                Type = OrderType.Instant,
+                Created = creationDateTime,
+                RequestedSendTime = creationDateTime,
+                NotificationChannel = NotificationChannel.Sms,
+                Templates =
+                [
+                    new SmsTemplate("Altinn", "Test message for wrong idempotency ID")
+                ],
+                Recipients =
+                [
+                    new Recipient([new SmsAddressPoint("+4799999999")])
+                ]
+            };
+
+            // Create the order in the database
+            await repo.Create(instantNotificationOrder, notificationOrder);
+
+            // Act
+            var result = await repo.GetInstantOrderTracking(creator, wrongIdempotencyId);
+
+            // Assert
+            Assert.Null(result);
+        }
     }
 }
