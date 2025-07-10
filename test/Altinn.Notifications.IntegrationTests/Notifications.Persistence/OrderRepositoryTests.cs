@@ -1755,7 +1755,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 IdempotencyId = "F6E76FA5-0A53-4195-A702-21ECCC77B9E8",
                 SendersReference = "DAFA7290-27AE-4958-8CAA-A1F97B6B2307",
 
-                Recipient = new InstantNotificationRecipient
+                InstantNotificationRecipient = new InstantNotificationRecipient
                 {
                     ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
                     {
@@ -1837,7 +1837,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 OrderChainId = orderChainId,
                 IdempotencyId = "INSTANT-CANCEL-1E3CD83E99FD",
                 SendersReference = "INSTANT-CANCEL-4B8FE77B9455",
-                Recipient = new InstantNotificationRecipient
+                InstantNotificationRecipient = new InstantNotificationRecipient
                 {
                     ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
                     {
@@ -1915,7 +1915,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 IdempotencyId = idempotencyId,
                 SendersReference = "F4B120EF-7DBD-438A-8402-02D21833602B",
 
-                Recipient = new InstantNotificationRecipient
+                InstantNotificationRecipient = new InstantNotificationRecipient
                 {
                     ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
                     {
@@ -1961,7 +1961,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 OrderChainId = Guid.NewGuid(),
                 Created = creationDateTime.AddMinutes(5),
                 SendersReference = "C075F863-3E89-4688-9B31-D8817FECDF6B",
-                Recipient = new InstantNotificationRecipient
+                InstantNotificationRecipient = new InstantNotificationRecipient
                 {
                     ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
                     {
@@ -2063,7 +2063,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 OrderChainId = orderChainId,
                 IdempotencyId = idempotencyId,
                 SendersReference = sendersReference,
-                Recipient = new InstantNotificationRecipient
+                InstantNotificationRecipient = new InstantNotificationRecipient
                 {
                     ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
                     {
@@ -2137,7 +2137,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 OrderChainId = orderChainId,
                 IdempotencyId = idempotencyId,
                 SendersReference = senderReference,
-                Recipient = new InstantNotificationRecipient
+                InstantNotificationRecipient = new InstantNotificationRecipient
                 {
                     ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
                     {
@@ -2208,7 +2208,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 OrderChainId = orderChainId,
                 IdempotencyId = idempotencyId,
                 SendersReference = senderReference,
-                Recipient = new InstantNotificationRecipient
+                InstantNotificationRecipient = new InstantNotificationRecipient
                 {
                     ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
                     {

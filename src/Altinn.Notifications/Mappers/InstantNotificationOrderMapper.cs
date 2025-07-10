@@ -1,4 +1,7 @@
-﻿using Altinn.Notifications.Core.Models;
+﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Core.Models.Address;
+using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Models.Orders;
@@ -13,14 +16,62 @@ namespace Altinn.Notifications.Mappers;
 public static class InstantNotificationOrderMapper
 {
     /// <summary>
-    /// Maps an external instant notification order request to a core domain model.
+    /// Maps from an instant notification order domain model to a notification order domain model.
+    /// </summary>
+    /// <param name="source">The instant notification order to map from.</param>
+    /// <param name="creatorShortName">The short name of the creator of the notification.</param>
+    /// <returns>A notification order domain model.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when source or any of its required properties are null.</exception>
+    /// <exception cref="ArgumentException">Thrown when creatorShortName is null or empty.</exception>
+    public static NotificationOrder MapToNotificationOrder(this InstantNotificationOrder source, string creatorShortName)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(source.InstantNotificationRecipient);
+        ArgumentNullException.ThrowIfNull(source.InstantNotificationRecipient.ShortMessageDeliveryDetails);
+        ArgumentNullException.ThrowIfNull(source.InstantNotificationRecipient.ShortMessageDeliveryDetails.ShortMessageContent);
+
+        ArgumentException.ThrowIfNullOrEmpty(creatorShortName);
+
+        var phoneNumber = source.InstantNotificationRecipient.ShortMessageDeliveryDetails.PhoneNumber;
+        var messageContent = source.InstantNotificationRecipient.ShortMessageDeliveryDetails.ShortMessageContent;
+
+        var templates = new List<INotificationTemplate>
+        {
+            new SmsTemplate(messageContent.Sender, messageContent.Message)
+        };
+
+        var recipients = new List<Recipient>
+        {
+            new()
+            {
+                AddressInfo = [new SmsAddressPoint(phoneNumber)]
+            }
+        };
+
+        return new NotificationOrder(
+            resourceId: null,
+            id: source.OrderId,
+            templates: templates,
+            recipients: recipients,
+            created: source.Created,
+            type: OrderType.Instant,
+            conditionEndpoint: null,
+            ignoreReservation: null,
+            requestedSendTime: source.Created,
+            creator: new Creator(creatorShortName),
+            sendersReference: source.SendersReference,
+            notificationChannel: NotificationChannel.Sms);
+    }
+
+    /// <summary>
+    /// Maps from an external instant notification order request to an instant notification order domain model.
     /// </summary>
     /// <param name="source">The external request model to map from.</param>
     /// <param name="creatorShortName">The short name of the creator of the notification.</param>
-    /// <returns>A domain model representing the instant notification order.</returns>
+    /// <returns>An instant notification order domain model.</returns>
     /// <exception cref="ArgumentNullException">Thrown when source is null.</exception>
     /// <exception cref="ArgumentException">Thrown when creatorShortName is null or empty.</exception>
-    public static InstantNotificationOrder ToInstantNotificationOrder(this InstantNotificationOrderRequestExt source, string creatorShortName)
+    public static InstantNotificationOrder MapToInstantNotificationOrder(this InstantNotificationOrderRequestExt source, string creatorShortName)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentException.ThrowIfNullOrEmpty(creatorShortName);
@@ -33,33 +84,16 @@ public static class InstantNotificationOrderMapper
             IdempotencyId = source.IdempotencyId,
             Creator = new Creator(creatorShortName),
             SendersReference = source.SendersReference,
-            Recipient = MapToInstantNotificationRecipient(source.InstantNotificationRecipient)
+            InstantNotificationRecipient = MapToInstantNotificationRecipient(source.InstantNotificationRecipient)
         };
     }
 
     /// <summary>
-    /// Maps an external short message content model to a core domain content model.
-    /// </summary>
-    /// <param name="source">The external short message content model to map from.</param>
-    /// <returns>A domain model representing the short message content.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when source is null.</exception>
-    private static ShortMessageContent MapToShortMessageContent(this ShortMessageContentExt source)
-    {
-        ArgumentNullException.ThrowIfNull(source);
-
-        return new ShortMessageContent
-        {
-            Message = source.Body,
-            Sender = source.Sender
-        };
-    }
-
-    /// <summary>
-    /// Maps an external notification recipient model to a core domain recipient model.
+    /// Maps from an external notification recipient model to a domain recipient model.
     /// </summary>
     /// <param name="source">The external recipient model to map from.</param>
     /// <returns>A domain model representing the notification recipient.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when source is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when source or its required properties are null.</exception>
     private static InstantNotificationRecipient MapToInstantNotificationRecipient(this InstantNotificationRecipientExt source)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -73,6 +107,23 @@ public static class InstantNotificationOrderMapper
                 TimeToLiveInSeconds = source.ShortMessageDeliveryDetails.TimeToLiveInSeconds,
                 ShortMessageContent = MapToShortMessageContent(source.ShortMessageDeliveryDetails.ShortMessageContent)
             }
+        };
+    }
+
+    /// <summary>
+    /// Maps from an external short message content model to a domain content model.
+    /// </summary>
+    /// <param name="source">The external short message content model to map from.</param>
+    /// <returns>A domain model representing the short message content.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when source is null.</exception>
+    private static ShortMessageContent MapToShortMessageContent(this ShortMessageContentExt source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+
+        return new ShortMessageContent
+        {
+            Message = source.Body,
+            Sender = source.Sender
         };
     }
 }
