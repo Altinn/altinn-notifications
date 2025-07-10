@@ -8,7 +8,7 @@ namespace Altinn.Notifications.Models.Orders;
 /// <summary>
 /// Represents a request to send a notification immediately to a single recipient.
 /// </summary>
-public class InstantNotificationOrderRequestExt
+public record InstantNotificationOrderRequestExt
 {
     /// <summary>
     /// The unique identifier used to ensure the same notification is not processed multiple times.
@@ -41,5 +41,5 @@ public class InstantNotificationOrderRequestExt
     /// </remarks>
     [Required]
     [JsonPropertyName("recipient")]
-    public required InstantNotificationRecipientExt Recipient { get; set; }
+    public required InstantNotificationRecipientExt Recipient { get; init; }
 }
