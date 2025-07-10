@@ -14,6 +14,6 @@ public record InstantNotificationRecipientExt
     /// The SMS delivery details including recipient, content, and delivery parameters.
     /// </summary>
     [Required]
-    [JsonPropertyName("recipient")]
+    [JsonPropertyName("recipientSms")]
     public required ShortMessageDeliveryDetailsExt ShortMessageDeliveryDetails { get; init; }
 }
