@@ -19,13 +19,13 @@ public record ShortMessageDeliveryDetailsExt
     /// The time-to-live duration, specified in seconds.
     /// </summary>
     [Required]
-    [JsonPropertyName("timeToLiveInSeconds")] 
+    [JsonPropertyName("timeToLiveInSeconds")]
     public required int TimeToLiveInSeconds { get; init; }
 
     /// <summary>
     /// The content and sender information.
     /// </summary>
     [Required]
-    [JsonPropertyName("smsSettings")] 
+    [JsonPropertyName("smsSettings")]
     public required ShortMessageContentExt ShortMessageContent { get; init; }
 }

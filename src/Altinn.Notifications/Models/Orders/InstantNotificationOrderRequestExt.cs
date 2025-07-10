@@ -41,5 +41,5 @@ public record InstantNotificationOrderRequestExt
     /// </remarks>
     [Required]
     [JsonPropertyName("recipient")]
-    public required InstantNotificationRecipientExt Recipient { get; init; }
+    public required InstantNotificationRecipientExt InstantNotificationRecipient { get; init; }
 }

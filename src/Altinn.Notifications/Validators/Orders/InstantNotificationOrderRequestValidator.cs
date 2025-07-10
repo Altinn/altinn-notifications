@@ -24,7 +24,7 @@ internal sealed class InstantNotificationOrderRequestValidator : AbstractValidat
                     .NotEmpty()
                     .WithMessage("IdempotencyId cannot be null or empty.");
 
-                RuleFor(request => request.Recipient)
+                RuleFor(request => request.InstantNotificationRecipient)
                     .NotNull()
                     .WithMessage("Recipient information cannot be null.")
                     .SetValidator(new InstantNotificationRecipientValidator());
