@@ -5,7 +5,6 @@ using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Email;
 using Altinn.Notifications.Validators.Extensions;
-
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -38,18 +37,19 @@ public class EmailNotificationOrdersController : ControllerBase
     }
 
     /// <summary>
-    /// Add an email notification order.
+    /// Send email notifications
     /// </summary>
     /// <remarks>
-    /// The API will accept the request after som basic validation of the request.
-    /// The system will also attempt to verify that it will be possible to fulfill the order.
+    /// Endpoint for sending an email notification to one or more recipient.
     /// </remarks>
     /// <returns>The notification order request response</returns>
     [HttpPost]
     [Consumes("application/json")]
     [Produces("application/json")]
-    [SwaggerResponse(202, "The notification order was accepted", typeof(NotificationOrderRequestResponseExt))]
-    [SwaggerResponse(400, "The notification order is invalid", typeof(ValidationProblemDetails))]
+    [SwaggerResponse(202, "The request was accepted and a notification order has been successfully generated.", typeof(NotificationOrderRequestResponseExt))]
+    [SwaggerResponse(400, "The request was invalid.", typeof(ValidationProblemDetails))]
+    [SwaggerResponse(401, "Indicates a missing, invalid or expired authorization header.")]
+    [SwaggerResponse(403, "Indicates missing or invalid scope or Platform Access Token.")]
     [SwaggerResponseHeader(202, "Location", "string", "Link to access the newly created notification order.")]
     public async Task<ActionResult<NotificationOrderRequestResponseExt>> Post(EmailNotificationOrderRequestExt emailNotificationOrderRequest)
     {

@@ -73,7 +73,28 @@ builder.Services.AddSwaggerGen(options =>
     options.UseInlineDefinitionsForEnums();
     options.SchemaFilter<SwaggerDefaultValues>();
     options.OperationFilter<AddResponseHeadersFilter>();
+    
+    options.ExampleFilters();
+    
+    options.AddServer(new OpenApiServer()
+    {
+        Url = "https://platform.tt02.altinn.no/",
+        Description = "TT02"
+    });
+    options.AddServer(new OpenApiServer()
+    {
+        Url = "https://platform.altinn.no/",
+        Description = "Production"
+    });
+    options.AddServer(new OpenApiServer()
+    {
+        Url = builder.Configuration.GetValue<string>("GeneralSettings:BaseUri")
+              ?? "https://localhost:5090/",
+        Description = "Local development"
+    });
 });
+
+builder.Services.AddSwaggerExamplesFromAssemblies(Assembly.GetEntryAssembly());
 
 var app = builder.Build();
 
@@ -172,25 +193,25 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     GeneralSettings generalSettings = config.GetSection("GeneralSettings").Get<GeneralSettings>();
     services.Configure<GeneralSettings>(config.GetSection("GeneralSettings"));
     services.AddAuthentication(JwtCookieDefaults.AuthenticationScheme)
-          .AddJwtCookie(JwtCookieDefaults.AuthenticationScheme, options =>
-          {
-              options.JwtCookieName = generalSettings.JwtCookieName;
-              options.MetadataAddress = generalSettings.OpenIdWellKnownEndpoint;
-              options.TokenValidationParameters = new TokenValidationParameters
-              {
-                  ValidateIssuerSigningKey = true,
-                  ValidateIssuer = false,
-                  ValidateAudience = false,
-                  RequireExpirationTime = true,
-                  ValidateLifetime = true,
-                  ClockSkew = TimeSpan.Zero
-              };
+        .AddJwtCookie(JwtCookieDefaults.AuthenticationScheme, options =>
+        {
+            options.JwtCookieName = generalSettings.JwtCookieName;
+            options.MetadataAddress = generalSettings.OpenIdWellKnownEndpoint;
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                ValidateIssuer = false,
+                ValidateAudience = false,
+                RequireExpirationTime = true,
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.Zero
+            };
 
-              if (builder.Environment.IsDevelopment())
-              {
-                  options.RequireHttpsMetadata = false;
-              }
-          });
+            if (builder.Environment.IsDevelopment())
+            {
+                options.RequireHttpsMetadata = false;
+            }
+        });
 
     AddAuthorizationRulesAndHandlers(services, config);
 
