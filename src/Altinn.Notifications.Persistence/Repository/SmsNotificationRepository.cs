@@ -4,7 +4,9 @@ using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Extensions;
+
 using Microsoft.Extensions.Logging;
+
 using Npgsql;
 using NpgsqlTypes;
 
@@ -22,7 +24,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     private const string _getNewSmsNotificationsSql = "select * from notifications.getsms_statusnew_updatestatus($1)"; // (_sendingtimepolicy) this is now calling an overload function with the sending time policy parameter
     private const string _getSmsNotificationRecipientsSql = "select * from notifications.getsmsrecipients_v2($1)"; // (_orderid)
     private const string _insertNewSmsNotificationSql = "call notifications.insertsmsnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _customizedbody, _result, _smscount, _resulttime, _expirytime)
-  
+
     private const string _updateSmsNotificationBasedOnIdentifierSql =
         @"UPDATE notifications.smsnotifications 
             SET result = $1::smsnotificationresulttype, 
@@ -68,6 +70,25 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, expiry);
 
         await pgcom.ExecuteNonQueryAsync();
+    }
+
+    /// <inheritdoc/>
+    public async Task AddNotificationAsync(SmsNotification notification, DateTime expiry, int count, CancellationToken cancellationToken = default)
+    {
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_insertNewSmsNotificationSql);
+
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notification.OrderId);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notification.Id);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.OrganizationNumber ?? (object)DBNull.Value);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.NationalIdentityNumber ?? (object)DBNull.Value);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.MobileNumber);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.CustomizedBody ?? (object)DBNull.Value);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.SendResult.Result.ToString());
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Integer, count);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, notification.SendResult.ResultTime);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, expiry);
+
+        await pgcom.ExecuteNonQueryAsync(cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -169,7 +190,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
 
             if (orderIsSetAsCompleted)
             {
-               await InsertOrderStatusCompletedOrder(connection, transaction, smsNotificationAlternateId);
+                await InsertOrderStatusCompletedOrder(connection, transaction, smsNotificationAlternateId);
             }
 
             await transaction.CommitAsync();

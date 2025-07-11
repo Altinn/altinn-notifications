@@ -20,6 +20,26 @@ public interface ISmsNotificationRepository : INotificationRepository
     Task AddNotification(SmsNotification notification, DateTime expiry, int count);
 
     /// <summary>
+    /// Adds a new SMS notification to the database.
+    /// </summary>
+    /// <param name="notification">
+    /// The <see cref="SmsNotification"/> instance containing the details of the SMS notification.
+    /// </param>
+    /// <param name="expiry">
+    /// The <see cref="DateTime"/> value indicating when the notification expires and should no longer be delivered.
+    /// </param>
+    /// <param name="count">
+    /// The number of SMS messages associated with this notification.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A <see cref="CancellationToken"/> that can be used to cancel the add operation. Defaults to <c>default</c>.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task"/> representing the asynchronous add operation.
+    /// </returns>
+    Task AddNotificationAsync(SmsNotification notification, DateTime expiry, int count, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Retrieves all SMS notifications that have the status 'New'.
     /// </summary>
     /// <param name="sendingTimePolicy">The sending time policy to filter the notifications. Defaults to daytime for sms</param>
