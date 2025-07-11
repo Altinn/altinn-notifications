@@ -37,7 +37,6 @@ public static class ServiceCollectionExtensions
             .AddSingleton<ICancelOrderService, CancelOrderService>()
             .AddSingleton<IContactPointService, ContactPointService>()
             .AddSingleton<IOrderRequestService, OrderRequestService>()
-            .AddSingleton<IInstantOrderService, InstantOrderService>()
             .AddSingleton<ISmsNotificationService, SmsNotificationService>()
             .AddSingleton<IOrderProcessingService, OrderProcessingService>()
             .AddSingleton<IEmailNotificationService, EmailNotificationService>()
