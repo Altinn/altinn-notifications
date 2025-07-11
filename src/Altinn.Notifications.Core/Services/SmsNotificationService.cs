@@ -63,6 +63,21 @@ public class SmsNotificationService : ISmsNotificationService
     }
 
     /// <inheritdoc/>
+    public async Task CreateNotificationAsync(Guid orderId, DateTime requestedSendTime, SmsRecipient recipient, DateTime expiryDateTime, int smsCount, CancellationToken cancellationToken = default)
+    {
+        var smsNotification = new SmsNotification()
+        {
+            OrderId = orderId,
+            Id = _guid.NewGuid(),
+            Recipient = recipient,
+            RequestedSendTime = requestedSendTime,
+            SendResult = new(SmsNotificationResultType.New, _dateTime.UtcNow())
+        };
+
+        await _repository.AddNotificationAsync(smsNotification, expiryDateTime, smsCount, cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public async Task SendNotifications(SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime)
     {
         var smsList = await _repository.GetNewNotifications(sendingTimePolicy);
