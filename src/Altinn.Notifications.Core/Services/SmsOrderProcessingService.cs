@@ -8,6 +8,7 @@ using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Core.Shared;
 
 namespace Altinn.Notifications.Core.Services;
 
@@ -88,6 +89,23 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
                 smsRecipient,
                 smsCount);
         }
+    }
+
+    /// <inheritdoc/>
+    public async Task ProcessInstantOrder(NotificationOrder order, DateTime expiryDateTime, CancellationToken cancellationToken = default)
+    {
+        var recipient = order.Recipients.First(e => e.AddressInfo.Exists(e => e.AddressType == AddressType.Sms));
+
+        var addressPoint = recipient.AddressInfo.OfType<SmsAddressPoint>().First();
+
+        int smsCount = GetSmsCountForOrder(order);
+
+        var smsRecipient = new SmsRecipient()
+        {
+            MobileNumber = addressPoint.MobileNumber
+        };
+
+        await _smsService.CreateNotificationAsync(order.Id, order.RequestedSendTime, smsRecipient, expiryDateTime, smsCount, cancellationToken);
     }
 
     /// <inheritdoc/>

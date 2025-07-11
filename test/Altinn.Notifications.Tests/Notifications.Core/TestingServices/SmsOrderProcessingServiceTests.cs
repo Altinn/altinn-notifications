@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Altinn.Notifications.Core.Enums;
@@ -180,6 +181,58 @@ public class SmsOrderProcessingServiceTests
         // Assert
         smsRepoMock.Verify(e => e.GetRecipients(It.IsAny<Guid>()), Times.Once);
         notificationServiceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<List<SmsAddressPoint>>(), It.IsAny<SmsRecipient>(), It.IsAny<int>(), It.IsAny<bool>()), Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task ProcessInstantOrder_ValidOrder_NotificationIsCreatedAndSent()
+    {
+        // Arrange
+        var smsBody = "Test SMS body";
+        var mobileNumber = "+4799999999";
+
+        var orderId = Guid.NewGuid();
+        var requestedSendTime = DateTime.UtcNow;
+        var expiryDateTime = requestedSendTime.AddMinutes(5);
+
+        var smsTemplate = new SmsTemplate("Altinn", smsBody);
+        var recipient = new Recipient([new SmsAddressPoint(mobileNumber)], nationalIdentityNumber: "31327093862");
+
+        var order = new NotificationOrder
+        {
+            Id = orderId,
+            Recipients = [recipient],
+            Templates = [smsTemplate],
+            RequestedSendTime = requestedSendTime,
+            NotificationChannel = NotificationChannel.Sms
+        };
+
+        var smsNotificationServiceMock = new Mock<ISmsNotificationService>();
+        smsNotificationServiceMock
+            .Setup(s => s.CreateNotificationAsync(
+                orderId,
+                requestedSendTime,
+                It.Is<SmsRecipient>(r => r.MobileNumber == mobileNumber),
+                expiryDateTime,
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask)
+            .Verifiable();
+
+        var service = GetTestService(smsService: smsNotificationServiceMock.Object);
+
+        // Act
+        await service.ProcessInstantOrder(order, expiryDateTime);
+
+        // Assert
+        smsNotificationServiceMock.Verify(
+            s => s.CreateNotificationAsync(
+            orderId,
+            requestedSendTime,
+            It.Is<SmsRecipient>(r => r.MobileNumber == mobileNumber),
+            expiryDateTime,
+            It.IsAny<int>(),
+            It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Theory]
