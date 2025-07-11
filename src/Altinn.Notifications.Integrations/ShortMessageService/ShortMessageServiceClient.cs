@@ -34,13 +34,13 @@ public class ShortMessageServiceClient : IShortMessageServiceClient
     }
 
     /// <inheritdoc/>
-    public async Task<ShortMessageSendResult> SendAsync(ShortMessage shortMessage)
+    public async Task<ShortMessageSendResult> SendAsync(ShortMessage shortMessage, CancellationToken cancellationToken = default)
     {
         try
         {
             var content = new StringContent(shortMessage.Serialize(), Encoding.UTF8, "application/json");
 
-            var response = await _httpClient.PostAsync(_sendEndpoint, content);
+            using var response = await _httpClient.PostAsync(_sendEndpoint, content, cancellationToken);
 
             if (response.IsSuccessStatusCode)
             {
@@ -52,7 +52,7 @@ public class ShortMessageServiceClient : IShortMessageServiceClient
             }
             else
             {
-                string errorDetails = await response.Content.ReadAsStringAsync();
+                string errorDetails = await response.Content.ReadAsStringAsync(cancellationToken);
 
                 _logger.LogWarning("Failed to send short message: {MessageContent}. Status: {StatusCode}, Details: {ErrorDetails}", content, response.StatusCode, errorDetails);
 
@@ -64,6 +64,10 @@ public class ShortMessageServiceClient : IShortMessageServiceClient
                 };
             }
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (HttpRequestException ex)
         {
             _logger.LogError(ex, "HTTP request failed when sending short message");
@@ -72,7 +76,7 @@ public class ShortMessageServiceClient : IShortMessageServiceClient
             {
                 Success = false,
                 ErrorDetails = ex.Message,
-                StatusCode = ex.StatusCode ?? HttpStatusCode.InternalServerError,
+                StatusCode = ex.StatusCode ?? HttpStatusCode.ServiceUnavailable,
             };
         }
         catch (Exception ex)

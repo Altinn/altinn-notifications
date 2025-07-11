@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Altinn.Notifications.Core.Helpers;
@@ -101,6 +102,36 @@ public class ShortMessageServiceClientTests
     }
 
     [Fact]
+    public async Task SendAsync_GenericException_ReturnsFailureWithExceptionDetails()
+    {
+        // Arrange
+        var shortMessage = new ShortMessage
+        {
+            Sender = "Altinn",
+            TimeToLive = 3600,
+            Message = "Test message",
+            Recipient = "generic-error",
+            NotificationId = Guid.NewGuid()
+        };
+
+        // Act
+        var result = await _shortMessageServiceClient.SendAsync(shortMessage);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal(HttpStatusCode.InternalServerError, result.StatusCode);
+        Assert.Contains("An unexpected error occurred", result.ErrorDetails);
+        _loggerMock.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task SendAsync_HttpRequestException_ReturnsFailureWithExceptionDetails()
     {
         // Arrange
@@ -132,7 +163,7 @@ public class ShortMessageServiceClientTests
     }
 
     [Fact]
-    public async Task SendAsync_GenericException_ReturnsFailureWithExceptionDetails()
+    public async Task SendAsync_CancellationTokenCancelsDuringExecution_ThrowsTaskCanceledException()
     {
         // Arrange
         var shortMessage = new ShortMessage
@@ -140,25 +171,32 @@ public class ShortMessageServiceClientTests
             Sender = "Altinn",
             TimeToLive = 3600,
             Message = "Test message",
-            Recipient = "generic-error",
+            Recipient = "+4799999999",
             NotificationId = Guid.NewGuid()
         };
 
-        // Act
-        var result = await _shortMessageServiceClient.SendAsync(shortMessage);
+        // Use a handler that waits before returning to allow cancellation
+        var handler = new DelegatingHandlerStub(async (request, token) =>
+        {
+            await Task.Delay(1000, token);
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
 
-        // Assert
-        Assert.False(result.Success);
-        Assert.Equal(HttpStatusCode.InternalServerError, result.StatusCode);
-        Assert.Contains("An unexpected error occurred", result.ErrorDetails);
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.IsAny<It.IsAnyType>(),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        var settings = new PlatformSettings
+        {
+            ApiShortMessageServiceEndpoint = "http://localhost:5092/notifications/sms/api/v1/"
+        };
+
+        var client = new ShortMessageServiceClient(new HttpClient(handler), _loggerMock.Object, Options.Create(settings));
+
+        using var cts = new CancellationTokenSource();
+        var sendTask = client.SendAsync(shortMessage, cts.Token);
+
+        // Cancel after a short delay
+        cts.CancelAfter(100);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<TaskCanceledException>(async () => await sendTask);
     }
 
     private ShortMessageServiceClient CreateShortMessageServiceTestClient()
