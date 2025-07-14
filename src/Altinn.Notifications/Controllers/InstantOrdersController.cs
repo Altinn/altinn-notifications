@@ -1,6 +1,6 @@
 ﻿using Altinn.Notifications.Configuration;
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Integrations;
-using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
@@ -12,13 +12,13 @@ using FluentValidation;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-
+using Microsoft.Extensions.Options;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Altinn.Notifications.Controllers;
 
 /// <summary>
-/// This controller is responsible for receiving, processing, and responding to client requests concerning instant notifications.
+/// Handles API requests for creating and processing instant notification orders.
 /// </summary>
 [ApiController]
 [Route("notifications/api/v1/orders/instant")]
@@ -27,6 +27,7 @@ namespace Altinn.Notifications.Controllers;
 [Authorize(Policy = AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS)]
 public class InstantOrdersController : ControllerBase
 {
+    private readonly string _defaultSmsSender;
     private readonly IOrderRequestService _orderRequestService;
     private readonly ISmsOrderProcessingService _smsOrderProcessingService;
     private readonly IShortMessageServiceClient _shortMessageServiceClient;
@@ -36,6 +37,7 @@ public class InstantOrdersController : ControllerBase
     /// Initializes a new instance of the <see cref="InstantOrdersController"/> class.
     /// </summary>
     public InstantOrdersController(
+        IOptions<NotificationConfig> config,
         IOrderRequestService orderRequestService,
         ISmsOrderProcessingService smsOrderProcessingService,
         IShortMessageServiceClient shortMessageServiceClient,
@@ -45,18 +47,18 @@ public class InstantOrdersController : ControllerBase
         _orderRequestService = orderRequestService;
         _smsOrderProcessingService = smsOrderProcessingService;
         _shortMessageServiceClient = shortMessageServiceClient;
+        _defaultSmsSender = config.Value.DefaultSmsSenderNumber;
     }
 
     /// <summary>
-    /// Sends a notification instantly to one recipient.
+    /// Creates and sends an instant notification to a single recipient.
     /// </summary>
-    /// <remarks>
-    /// This API endpoint accepts a request to send an instant notification after performing basic validation.
-    /// </remarks>
     /// <param name="request">The request payload containing the details of the instant notification to be sent.</param>
     /// <param name="cancellationToken">A token used to monitor for cancellation requests, allowing the operation to be aborted if needed.</param>
-    /// <returns>Returns tracking information to track the created notification order.</returns>
-    [HttpPost()]
+    /// <returns>
+    /// A response containing tracking information for the created notification order or an error response if the operation fails.
+    /// </returns>
+    [HttpPost]
     [Consumes("application/json")]
     [Produces("application/json")]
     [SwaggerResponse(201, "The instant notification was created and sent.", typeof(InstantNotificationOrderResponseExt))]
@@ -64,61 +66,60 @@ public class InstantOrdersController : ControllerBase
     [SwaggerResponse(400, "The notification order is invalid", typeof(ValidationProblemDetails))]
     [SwaggerResponse(422, "The notification order is invalid", typeof(ValidationProblemDetails))]
     [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request before the server could complete processing")]
+    [SwaggerResponse(500, "An internal server error occurred while processing the notification order.", typeof(ProblemDetails))]
     public async Task<IActionResult> Post([FromBody] InstantNotificationOrderRequestExt request, CancellationToken cancellationToken = default)
     {
-        // Validate the request model
-        var validationResult = _validator.Validate(request);
-        if (!validationResult.IsValid)
-        {
-            validationResult.AddToModelState(ModelState);
-            return ValidationProblem(ModelState);
-        }
-
-        // Retrieve the creator's short name from the HTTP context.
-        var creator = HttpContext.GetOrg();
-        if (string.IsNullOrWhiteSpace(creator))
-        {
-            return Forbid();
-        }
-
         try
         {
-            // Check if the order already exists for the given creator and idempotency identifier.
-            var orderChainTracking = await _orderRequestService.RetrieveInstantNotificationOrderTracking(creator, request.IdempotencyId, cancellationToken);
-            if (orderChainTracking != null)
+            // 1. Validate the request.
+            var validationResult = _validator.Validate(request);
+            if (!validationResult.IsValid)
             {
-                return Ok(orderChainTracking.MapToInstantNotificationOrderResponse());
+                validationResult.AddToModelState(ModelState);
+                return ValidationProblem(ModelState);
             }
 
-            // Create an instant notification order from the request.
-            var instantNotificationOrder = request.MapToInstantNotificationOrder(creator);
+            // 2. Retrieve the creator's short name.
+            var creator = HttpContext.GetOrg();
+            if (string.IsNullOrWhiteSpace(creator))
+            {
+                return Forbid();
+            }
 
-            // Register the notification order.
-            var notificationOrderCreationResult = await _orderRequestService.RegisterInstantNotificationOrder(instantNotificationOrder, cancellationToken);
-            if (notificationOrderCreationResult.IsError || notificationOrderCreationResult.Value == null)
+            // 3. Check if an order with the same idempotency identifier already exists.
+            var trackingInformation = await _orderRequestService.RetrieveInstantOrderTracking(creator, request.IdempotencyId, cancellationToken);
+            if (trackingInformation != null)
+            {
+                return Ok(trackingInformation.MapToInstantNotificationOrderResponse());
+            }
+
+            // 4. Register the instant notification order.
+            var instantNotificationOrder = request.MapToInstantNotificationOrder(creator);
+            var registerationResult = await _orderRequestService.RegisterInstantOrder(instantNotificationOrder, cancellationToken);
+            if (registerationResult.IsError || registerationResult.Value == null)
             {
                 var problemDetails = new ProblemDetails
                 {
                     Status = 500,
-                    Title = "Notification order chain registration failed",
-                    Detail = "Failed to register the instant notification order"
+                    Title = "Instant Notification Registration Failed",
+                    Detail = "Failed to register the instant notification order."
                 };
                 return StatusCode(500, problemDetails);
             }
 
-            // Register the SMS notification.
-            var expiryDateTime = notificationOrderCreationResult.Value.RequestedSendTime.AddSeconds(instantNotificationOrder.InstantNotificationRecipient.ShortMessageDeliveryDetails.TimeToLiveInSeconds);
-            await _smsOrderProcessingService.ProcessInstantOrder(notificationOrderCreationResult.Value, expiryDateTime, cancellationToken);
+            // 5. Register the SMS notification order.
+            var timeToLiveInSeconds = instantNotificationOrder.InstantNotificationRecipient.ShortMessageDeliveryDetails.TimeToLiveInSeconds;
+            await _smsOrderProcessingService.ProcessInstantOrder(registerationResult.Value, timeToLiveInSeconds, cancellationToken);
 
-            // Send the SMS using the short message service client.
-            var smsSendingResult = await _shortMessageServiceClient.SendAsync(instantNotificationOrder.MapToShortMessage(notificationOrderCreationResult.Value.Templates.OfType<SmsTemplate>().First().SenderNumber), cancellationToken);
+            // 6. Send out the SMS using the short message service client.
+            var smsSendingResult = await _shortMessageServiceClient.SendAsync(instantNotificationOrder.MapToShortMessage(_defaultSmsSender), cancellationToken);
             if (!smsSendingResult.Success)
             {
                 var problemDetails = new ProblemDetails
                 {
                     Status = 500,
-                    Title = "SMS sending failed",
-                    Detail = "Failed to send the instant notification SMS"
+                    Title = "SMS Sending Failed",
+                    Detail = $"Failed to send the SMS."
                 };
                 return StatusCode(500, problemDetails);
             }
@@ -128,8 +129,8 @@ public class InstantOrdersController : ControllerBase
                 OrderChainId = instantNotificationOrder.OrderChainId,
                 Notification = new NotificationOrderChainShipmentExt
                 {
-                    ShipmentId = notificationOrderCreationResult.Value.Id,
-                    SendersReference = notificationOrderCreationResult.Value.SendersReference
+                    ShipmentId = registerationResult.Value.Id,
+                    SendersReference = registerationResult.Value.SendersReference
                 }
             });
         }
@@ -147,9 +148,9 @@ public class InstantOrdersController : ControllerBase
         {
             var problemDetails = new ProblemDetails
             {
+                Status = 499,
                 Title = "Request terminated",
-                Detail = "The client disconnected or cancelled the request before the server could complete processing.",
-                Status = 499
+                Detail = "The client disconnected or cancelled the request before the server could complete processing."
             };
 
             return StatusCode(499, problemDetails);
