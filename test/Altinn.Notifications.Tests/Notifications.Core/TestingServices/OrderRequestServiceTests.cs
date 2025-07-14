@@ -1770,6 +1770,114 @@ public class OrderRequestServiceTests
             Times.Once);
     }
 
+    [Fact]
+    public async Task RetrieveInstantOrderTracking_WhenInstantNotificationOrderDoesNotExist_ReturnsNull()
+    {
+        // Arrange
+        string idempotencyId = "non-existent-id";
+        string creatorName = "non-existent-creator";
+
+        var repositoryMock = new Mock<IOrderRepository>();
+        repositoryMock
+            .Setup(r => r.GetInstantOrderTracking(
+                It.Is<string>(s => s == creatorName),
+                It.Is<string>(s => s == idempotencyId),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((InstantNotificationOrderTracking?)null);
+
+        var service = GetTestService(repositoryMock.Object);
+
+        // Act
+        var result = await service.RetrieveInstantOrderTracking(creatorName, idempotencyId);
+
+        // Assert
+        Assert.Null(result);
+
+        repositoryMock.Verify(
+            r => r.GetInstantOrderTracking(
+                It.Is<string>(s => s == creatorName),
+                It.Is<string>(s => s == idempotencyId),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task RetrieveInstantOrderTracking_WhenInstantNotificationOrderExists_ReturnsTrackingInfo()
+    {
+        // Arrange
+        Guid orderChainId = Guid.NewGuid();
+        string creatorName = "test-creator";
+        string idempotencyId = "test-idempotency-id";
+        var expectedTracking = new InstantNotificationOrderTracking
+        {
+            OrderChainId = orderChainId,
+            Notification = new NotificationOrderChainShipment
+            {
+                ShipmentId = Guid.NewGuid(),
+                SendersReference = "test-reference"
+            }
+        };
+
+        var repositoryMock = new Mock<IOrderRepository>();
+        repositoryMock
+            .Setup(r => r.GetInstantOrderTracking(
+                It.Is<string>(s => s == creatorName),
+                It.Is<string>(s => s == idempotencyId),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedTracking);
+
+        var service = GetTestService(repositoryMock.Object);
+
+        // Act
+        var result = await service.RetrieveInstantOrderTracking(creatorName, idempotencyId);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(orderChainId, result.OrderChainId);
+        Assert.Equal(expectedTracking.Notification.ShipmentId, result.Notification.ShipmentId);
+        Assert.Equal(expectedTracking.Notification.SendersReference, result.Notification.SendersReference);
+
+        repositoryMock.Verify(
+            r => r.GetInstantOrderTracking(
+                It.Is<string>(s => s == creatorName),
+                It.Is<string>(s => s == idempotencyId),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task RetrieveInstantOrderTracking_WhenCancellationRequested_ThrowsOperationCanceledException()
+    {
+        // Arrange
+        string creatorName = "test-creator";
+        string idempotencyId = "test-idempotency-id";
+
+        var repositoryMock = new Mock<IOrderRepository>();
+        repositoryMock
+            .Setup(r => r.GetInstantOrderTracking(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<string, string, CancellationToken>((_, _, token) => token.ThrowIfCancellationRequested())
+            .ReturnsAsync((InstantNotificationOrderTracking?)null);
+
+        var service = GetTestService(repositoryMock.Object);
+
+        using var cancellationTokenSource = new CancellationTokenSource();
+        cancellationTokenSource.Cancel();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<OperationCanceledException>(async () =>
+            await service.RetrieveInstantOrderTracking(creatorName, idempotencyId, cancellationTokenSource.Token));
+
+        repositoryMock.Verify(
+            r => r.GetInstantOrderTracking(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.Is<CancellationToken>(token => token.IsCancellationRequested)),
+            Times.Once);
+    }
+
     private static OrderRequestService GetTestService(IOrderRepository? repository = null, IContactPointService? contactPointService = null, Guid? guid = null, DateTime? dateTime = null)
     {
         if (repository == null)
