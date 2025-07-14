@@ -42,6 +42,32 @@ public static class InstantNotificationOrderMapper
     }
 
     /// <summary>
+    /// Maps an <see cref="InstantNotificationOrderTracking"/> domain model to an <see cref="InstantNotificationOrderResponseExt"/> response model.
+    /// </summary>
+    /// <param name="source">The tracking information for the instant notification order.</param>
+    /// <returns>
+    /// An <see cref="InstantNotificationOrderResponseExt"/> containing the order chain identifier and notification shipment details.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="source"/> or its <c>Notification</c> property is <c>null</c>.
+    /// </exception>
+    public static InstantNotificationOrderResponseExt MapToInstantNotificationOrderResponse(this InstantNotificationOrderTracking source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(source.Notification);
+
+        return new InstantNotificationOrderResponseExt
+        {
+            OrderChainId = source.OrderChainId,
+            Notification = new NotificationOrderChainShipmentExt
+            {
+                ShipmentId = source.Notification.ShipmentId,
+                SendersReference = source.Notification.SendersReference
+            }
+        };
+    }
+
+    /// <summary>
     /// Maps from an external instant notification order request to an instant notification order domain model.
     /// </summary>
     /// <param name="source">The external request model to map from.</param>
