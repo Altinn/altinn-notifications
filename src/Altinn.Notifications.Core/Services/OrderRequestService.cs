@@ -111,6 +111,76 @@ public class OrderRequestService : IOrderRequestService
         return await CreateChainResponseAsync(orderRequest, mainOrderResult.Value, remindersResult.Value, cancellationToken);
     }
 
+    /// <inheritdoc/>
+    public async Task<Result<NotificationOrder, ServiceError>> RegisterInstantNotificationOrder(InstantNotificationOrder instantNotificationOrder, CancellationToken cancellationToken = default)
+    {
+        // 1. Get the current time
+        DateTime currentTime = _dateTime.UtcNow();
+
+        // 2. Early cancellation if someone’s already cancelled
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // 3. Instantiate the main order
+        var notificationOrder = CreateMainNotificationOrderAsync(instantNotificationOrder, currentTime);
+
+        // 4. Inserts the instant notification order and the instantiated notification order into the database
+        var savedInstantNotificationOrder = await _repository.Create(instantNotificationOrder, notificationOrder, cancellationToken);
+        if (savedInstantNotificationOrder == null)
+        {
+            return new ServiceError(500, "Failed to create the instant notification order.");
+        }
+
+        return notificationOrder;
+    }
+
+    /// <inheritdoc/>
+    public async Task<InstantNotificationOrderTracking?> RetrieveInstantNotificationOrderTracking(string creatorName, string idempotencyId, CancellationToken cancellationToken = default)
+    {
+        return await _repository.GetInstantOrderTracking(creatorName, idempotencyId, cancellationToken) ?? null;
+    }
+
+    /// <summary>
+    /// Creates the primary <see cref="NotificationOrder"/> for a notification chain by processing
+    /// recipient information, validating contact details, and configuring message templates.
+    /// </summary>
+    /// <param name="orderRequest">
+    /// The incoming chain request containing recipient information, templates, and other notification parameters.
+    /// </param>
+    /// <param name="currentTime">
+    /// The UTC timestamp to set as the creation time of the notification order.
+    /// </param>
+    private NotificationOrder CreateMainNotificationOrderAsync(InstantNotificationOrder orderRequest, DateTime currentTime)
+    {
+        var smsDetails = orderRequest.InstantNotificationRecipient.ShortMessageDeliveryDetails;
+        var smsContent = smsDetails.ShortMessageContent;
+
+        var smsTemplate = new SmsTemplate(smsContent.Sender, smsContent.Message);
+
+        var smsRecipient = new Recipient([new SmsAddressPoint(smsDetails.PhoneNumber)]);
+
+        var recipients = new List<Recipient> { smsRecipient };
+        var templates = new List<INotificationTemplate> { smsTemplate };
+
+        templates = SetSenderIfNotDefined(templates);
+
+        return new NotificationOrder
+        {
+            ResourceId = null,
+            Created = currentTime,
+            Templates = templates,
+            Recipients = recipients,
+            IgnoreReservation = null,
+            Type = orderRequest.Type,
+            ConditionEndpoint = null,
+            Id = orderRequest.OrderId,
+            Creator = orderRequest.Creator,
+            RequestedSendTime = currentTime,
+            SendingTimePolicy = SendingTimePolicy.Anytime,
+            NotificationChannel = NotificationChannel.Sms,
+            SendersReference = orderRequest.SendersReference
+        };
+    }
+
     /// <summary>
     /// Creates the primary <see cref="NotificationOrder"/> for a notification chain by processing
     /// recipient information, validating contact details, and configuring message templates.
