@@ -334,6 +334,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
     {
         smsClient ??= Mock.Of<IShortMessageServiceClient>();
         orderRequestService ??= Mock.Of<IOrderRequestService>();
+        smsOrderProcessingService ??= Mock.Of<ISmsOrderProcessingService>();
 
         return _factory.WithWebHostBuilder(builder =>
         {
