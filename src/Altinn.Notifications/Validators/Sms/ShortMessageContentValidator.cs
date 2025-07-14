@@ -16,12 +16,6 @@ internal sealed class ShortMessageContentValidator : AbstractValidator<ShortMess
     {
         RuleFor(contents => contents)
             .NotNull()
-            .WithMessage("SMS details cannot be null.")
-            .DependentRules(() =>
-            {
-                RuleFor(smsDetails => smsDetails.Body)
-                    .NotEmpty()
-                    .WithMessage("SMS message body cannot be null or empty.");
-            });
+            .WithMessage("SMS content cannot be null.");
     }
 }
