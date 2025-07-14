@@ -6,7 +6,7 @@ namespace Altinn.Notifications.Models.Sms;
 /// <summary>
 /// Represents the content and sender information for an SMS (Short Message Service) message.
 /// </summary>
-public class ShortMessageContentExt
+public record ShortMessageContentExt
 {
     /// <summary>
     /// The sender identifier displayed in the recipient's SMS message.
