@@ -424,7 +424,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
 
         using var cancellationTokenSource = new CancellationTokenSource();
 
-        var addTask = repo.AddNotificationAsync(smsNotification, requestedSendTime.AddMinutes(10), 1, cancellationTokenSource.Token);
+        var addTask = repo.AddNotification(smsNotification, requestedSendTime.AddMinutes(10), 1, cancellationTokenSource.Token);
         cancellationTokenSource.CancelAfter(10); // Cancel after 10ms
 
         // Assert
@@ -469,7 +469,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
         // Act & Assert
         await Assert.ThrowsAsync<TaskCanceledException>(async () =>
         {
-            await repo.AddNotificationAsync(smsNotification, requestedSendTime.AddSeconds(60), 1, cancellationTokenSource.Token);
+            await repo.AddNotification(smsNotification, requestedSendTime.AddSeconds(60), 1, cancellationTokenSource.Token);
         });
 
         // Ensure no data was inserted

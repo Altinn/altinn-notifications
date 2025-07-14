@@ -74,7 +74,7 @@ public class SmsNotificationService : ISmsNotificationService
             SendResult = new(SmsNotificationResultType.New, _dateTime.UtcNow())
         };
 
-        await _repository.AddNotificationAsync(smsNotification, expiryDateTime, smsCount, cancellationToken);
+        await _repository.AddNotification(smsNotification, expiryDateTime, smsCount, cancellationToken);
     }
 
     /// <inheritdoc/>
