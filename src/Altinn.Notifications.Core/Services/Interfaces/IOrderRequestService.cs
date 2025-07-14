@@ -85,7 +85,7 @@ public interface IOrderRequestService
     /// <exception cref="OperationCanceledException">
     /// Thrown when the operation is canceled through the provided <paramref name="cancellationToken"/>.
     /// </exception>
-    Task<Result<NotificationOrder, ServiceError>> RegisterInstantNotificationOrder(InstantNotificationOrder instantNotificationOrder, CancellationToken cancellationToken = default);
+    Task<Result<NotificationOrder, ServiceError>> RegisterInstantOrder(InstantNotificationOrder instantNotificationOrder, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Retrieves tracking information for an instant notification order using the creator's name and idempotency identifier.

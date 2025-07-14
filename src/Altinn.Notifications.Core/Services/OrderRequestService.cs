@@ -112,7 +112,7 @@ public class OrderRequestService : IOrderRequestService
     }
 
     /// <inheritdoc/>
-    public async Task<Result<NotificationOrder, ServiceError>> RegisterInstantNotificationOrder(InstantNotificationOrder instantNotificationOrder, CancellationToken cancellationToken = default)
+    public async Task<Result<NotificationOrder, ServiceError>> RegisterInstantOrder(InstantNotificationOrder instantNotificationOrder, CancellationToken cancellationToken = default)
     {
         // 1. Get the current time
         DateTime currentTime = _dateTime.UtcNow();
