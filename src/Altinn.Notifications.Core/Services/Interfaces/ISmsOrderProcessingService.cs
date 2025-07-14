@@ -23,18 +23,18 @@ public interface ISmsOrderProcessingService
     /// Processes an instant notification order.
     /// </summary>
     /// <param name="order">
-    /// The <see cref="NotificationOrder"/> containing all details about the notification order, including recipients and SMS template.
+    /// The <see cref="NotificationOrder"/> containing all details about the notification, including recipients, SMS template, and metadata.
     /// </param>
-    /// <param name="expiryDateTime">
-    /// The <see cref="DateTime"/> specifying when the notification expires and should no longer be delivered.
+    /// <param name="timeToLiveInSeconds">
+    /// The time-to-live (TTL) for the notification, specified in seconds.
     /// </param>
     /// <param name="cancellationToken">
-    /// A <see cref="CancellationToken"/> that can be used to cancel the processing operation before completion.
+    /// A <see cref="CancellationToken"/> that can be used to cancel the processing operation before it completes.
     /// </param>
     /// <returns>
     /// A <see cref="Task"/> representing the asynchronous operation.
     /// </returns>
-    public Task ProcessInstantOrder(NotificationOrder order, DateTime expiryDateTime, CancellationToken cancellationToken = default);
+    public Task ProcessInstantOrder(NotificationOrder order, int timeToLiveInSeconds, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Retry processing of an order

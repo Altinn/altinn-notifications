@@ -92,7 +92,7 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
     }
 
     /// <inheritdoc/>
-    public async Task ProcessInstantOrder(NotificationOrder order, DateTime expiryDateTime, CancellationToken cancellationToken = default)
+    public async Task ProcessInstantOrder(NotificationOrder order, int timeToLiveInSeconds, CancellationToken cancellationToken = default)
     {
         var recipient = order.Recipients.First(e => e.AddressInfo.Exists(e => e.AddressType == AddressType.Sms));
 
@@ -104,6 +104,8 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
         {
             MobileNumber = addressPoint.MobileNumber
         };
+
+        var expiryDateTime = order.RequestedSendTime.AddSeconds(timeToLiveInSeconds);
 
         await _smsService.CreateNotificationAsync(order.Id, order.RequestedSendTime, smsRecipient, expiryDateTime, smsCount, cancellationToken);
     }

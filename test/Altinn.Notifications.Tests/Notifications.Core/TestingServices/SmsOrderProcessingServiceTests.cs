@@ -191,8 +191,9 @@ public class SmsOrderProcessingServiceTests
         var mobileNumber = "+4799999999";
 
         var orderId = Guid.NewGuid();
+        var timeToLiveInSeconds = 60;
         var requestedSendTime = DateTime.UtcNow;
-        var expiryDateTime = requestedSendTime.AddMinutes(5);
+        var expiryDateTime = requestedSendTime.AddSeconds(timeToLiveInSeconds);
 
         var smsTemplate = new SmsTemplate("Altinn", smsBody);
         var recipient = new Recipient([new SmsAddressPoint(mobileNumber)], nationalIdentityNumber: "31327093862");
@@ -221,7 +222,7 @@ public class SmsOrderProcessingServiceTests
         var service = GetTestService(smsService: smsNotificationServiceMock.Object);
 
         // Act
-        await service.ProcessInstantOrder(order, expiryDateTime);
+        await service.ProcessInstantOrder(order, timeToLiveInSeconds);
 
         // Assert
         smsNotificationServiceMock.Verify(
