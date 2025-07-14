@@ -21,6 +21,8 @@ internal sealed class InstantNotificationRecipientValidator : AbstractValidator<
             .DependentRules(() =>
             {
                 RuleFor(recipient => recipient.ShortMessageDeliveryDetails)
+                    .NotNull()
+                    .WithMessage("SMS delivery details cannot be null.")
                     .SetValidator(new ShortMessageDeliveryDetailsValidator());
             });
     }

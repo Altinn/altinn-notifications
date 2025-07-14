@@ -29,6 +29,8 @@ internal sealed class ShortMessageDeliveryDetailsValidator : AbstractValidator<S
                     .WithMessage("Time-to-live must be between 60 and 172800 seconds (48 hours).");
 
                 RuleFor(recipient => recipient.ShortMessageContent)
+                    .NotNull()
+                    .WithMessage("SMS details cannot be null.")
                     .SetValidator(new ShortMessageContentValidator());
             });
     }
