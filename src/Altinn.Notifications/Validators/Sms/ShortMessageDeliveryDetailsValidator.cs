@@ -15,15 +15,11 @@ internal sealed class ShortMessageDeliveryDetailsValidator : AbstractValidator<S
     /// </summary>
     public ShortMessageDeliveryDetailsValidator()
     {
-        RuleFor(recipient => recipient)
+        RuleFor(details => details)
             .NotNull()
-            .WithMessage("SMS recipient cannot be null.")
+            .WithMessage("SMS delivery details cannot be null.")
             .DependentRules(() =>
             {
-                RuleFor(recipient => recipient.PhoneNumber)
-                    .NotEmpty()
-                    .WithMessage("Recipient phone number cannot be null or empty.");
-
                 RuleFor(recipient => recipient.PhoneNumber)
                     .Must(MobileNumberHelper.IsValidMobileNumber)
                     .WithMessage("Recipient phone number is not a valid mobile number.");
@@ -33,8 +29,6 @@ internal sealed class ShortMessageDeliveryDetailsValidator : AbstractValidator<S
                     .WithMessage("Time-to-live must be between 60 and 172800 seconds (48 hours).");
 
                 RuleFor(recipient => recipient.ShortMessageContent)
-                    .NotNull()
-                    .WithMessage("SMS details cannot be null.")
                     .SetValidator(new ShortMessageContentValidator());
             });
     }
