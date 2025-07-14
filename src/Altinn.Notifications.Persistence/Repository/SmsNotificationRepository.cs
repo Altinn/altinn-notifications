@@ -54,26 +54,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     }
 
     /// <inheritdoc/>
-    public async Task AddNotification(SmsNotification notification, DateTime expiry, int count)
-    {
-        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_insertNewSmsNotificationSql);
-
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notification.OrderId);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notification.Id);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.OrganizationNumber ?? (object)DBNull.Value);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.NationalIdentityNumber ?? (object)DBNull.Value);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.MobileNumber);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.CustomizedBody ?? (object)DBNull.Value);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.SendResult.Result.ToString());
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Integer, count);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, notification.SendResult.ResultTime);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, expiry);
-
-        await pgcom.ExecuteNonQueryAsync();
-    }
-
-    /// <inheritdoc/>
-    public async Task AddNotificationAsync(SmsNotification notification, DateTime expiry, int count, CancellationToken cancellationToken = default)
+    public async Task AddNotification(SmsNotification notification, DateTime expiry, int count, CancellationToken cancellationToken = default)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_insertNewSmsNotificationSql);
 
