@@ -134,7 +134,7 @@ public class OrderRequestService : IOrderRequestService
     }
 
     /// <inheritdoc/>
-    public async Task<InstantNotificationOrderTracking?> RetrieveInstantNotificationOrderTracking(string creatorName, string idempotencyId, CancellationToken cancellationToken = default)
+    public async Task<InstantNotificationOrderTracking?> RetrieveInstantOrderTracking(string creatorName, string idempotencyId, CancellationToken cancellationToken = default)
     {
         return await _repository.GetInstantOrderTracking(creatorName, idempotencyId, cancellationToken) ?? null;
     }
