@@ -13,6 +13,7 @@ using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Altinn.Notifications.Controllers;
