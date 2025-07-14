@@ -79,7 +79,7 @@ public interface IOrderRequestService
     /// </param>
     /// <returns>
     /// A <see cref="Task{TResult}"/> containing a <see cref="Result{TValue, TError}"/>.
-    /// On success, the result contains <see cref="InstantNotificationOrderTracking"/> with tracking information for the instant notification order.
+    /// On success, the result contains a <see cref="NotificationOrder"/> with details about the registered instant notification order.
     /// On failure, the result contains a <see cref="ServiceError"/> describing the reason for failure.
     /// </returns>
     /// <exception cref="OperationCanceledException">
