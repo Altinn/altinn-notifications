@@ -21,23 +21,23 @@ public static class InstantNotificationOrderMapper
     /// Maps from an instant notification order domain model to a short message for SMS delivery.
     /// </summary>
     /// <param name="source">The instant notification order to map from.</param>
+    /// <param name="defaultSenderNumber">The default sender number.</param>
     /// <returns>A short message configured for SMS delivery.</returns>
     /// <exception cref="ArgumentNullException">Thrown when source or any of its required properties are null.</exception>
-    public static ShortMessage MapToShortMessage(this InstantNotificationOrder source)
+    public static ShortMessage MapToShortMessage(this InstantNotificationOrder source, string defaultSenderNumber)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(source.InstantNotificationRecipient);
         ArgumentNullException.ThrowIfNull(source.InstantNotificationRecipient.ShortMessageDeliveryDetails);
         ArgumentNullException.ThrowIfNull(source.InstantNotificationRecipient.ShortMessageDeliveryDetails.ShortMessageContent);
 
-        // What if the sender is null?
         return new ShortMessage
         {
-            Message = source.InstantNotificationRecipient.ShortMessageDeliveryDetails.ShortMessageContent.Message,
             NotificationId = source.OrderId,
             Recipient = source.InstantNotificationRecipient.ShortMessageDeliveryDetails.PhoneNumber,
-            Sender = source.InstantNotificationRecipient.ShortMessageDeliveryDetails.ShortMessageContent.Sender,
-            TimeToLive = source.InstantNotificationRecipient.ShortMessageDeliveryDetails.TimeToLiveInSeconds
+            TimeToLive = source.InstantNotificationRecipient.ShortMessageDeliveryDetails.TimeToLiveInSeconds,
+            Message = source.InstantNotificationRecipient.ShortMessageDeliveryDetails.ShortMessageContent.Message,
+            Sender = source.InstantNotificationRecipient.ShortMessageDeliveryDetails.ShortMessageContent.Sender ?? defaultSenderNumber,
         };
     }
 
