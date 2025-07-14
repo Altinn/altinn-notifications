@@ -1617,7 +1617,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                 Id = orderId,
                 Creator = new(creator),
                 Created = creationDateTime,
-                Type = OrderType.Reminder,
+                Type = OrderType.Notification,
                 RequestedSendTime = requestedSendTime,
                 NotificationChannel = NotificationChannel.Email,
                 SendersReference = "TRACKING-C69C615A8412",
