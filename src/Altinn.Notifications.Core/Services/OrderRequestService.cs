@@ -140,15 +140,12 @@ public class OrderRequestService : IOrderRequestService
     }
 
     /// <summary>
-    /// Creates the primary <see cref="NotificationOrder"/> for a notification chain by processing
-    /// recipient information, validating contact details, and configuring message templates.
+    /// Creates a <see cref="NotificationOrder"/> for an instant notification by processing
+    /// recipient details and configuring the SMS message template.
     /// </summary>
-    /// <param name="orderRequest">
-    /// The incoming chain request containing recipient information, templates, and other notification parameters.
-    /// </param>
-    /// <param name="currentTime">
-    /// The UTC timestamp to set as the creation time of the notification order.
-    /// </param>
+    /// <param name="orderRequest">The instant notification order containing recipient and message details.</param>
+    /// <param name="currentTime">The UTC timestamp to set as the creation time of the notification order.</param>
+    /// <returns>A fully configured <see cref="NotificationOrder"/> ready for persistence and processing.</returns>
     private NotificationOrder CreateMainNotificationOrderAsync(InstantNotificationOrder orderRequest, DateTime currentTime)
     {
         var smsDetails = orderRequest.InstantNotificationRecipient.ShortMessageDeliveryDetails;
@@ -158,10 +155,8 @@ public class OrderRequestService : IOrderRequestService
 
         var smsRecipient = new Recipient([new SmsAddressPoint(smsDetails.PhoneNumber)]);
 
+        var templates = SetSenderIfNotDefined([smsTemplate]);
         var recipients = new List<Recipient> { smsRecipient };
-        var templates = new List<INotificationTemplate> { smsTemplate };
-
-        templates = SetSenderIfNotDefined(templates);
 
         return new NotificationOrder
         {

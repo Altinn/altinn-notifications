@@ -1743,6 +1743,186 @@ public class OrderRequestServiceTests
     }
 
     [Fact]
+    public async Task RegisterInstantOrder_WhenSuccessful_ReturnsNotificationOrder()
+    {
+        // Arrange
+        var instantNotificationOrder = new InstantNotificationOrder
+        {
+            OrderId = Guid.NewGuid(),
+            OrderChainId = Guid.NewGuid(),
+            Creator = new Creator("test-creator"),
+            IdempotencyId = "E7344199-61C7-490E-A304-1E79C488D206",
+            SendersReference = "207B08E2-814A-4479-9509-8DCA45A64401",
+            InstantNotificationRecipient = new InstantNotificationRecipient
+            {
+                ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
+                {
+                    TimeToLiveInSeconds = 3600,
+                    PhoneNumber = "+4799999999",
+                    ShortMessageContent = new ShortMessageContent
+                    {
+                        Sender = "Test sender",
+                        Message = "Test message"
+                    }
+                }
+            }
+        };
+
+        var currentTime = DateTime.UtcNow;
+        var expectedNotificationOrder = new NotificationOrder
+        {
+            Created = currentTime,
+            RequestedSendTime = currentTime,
+            Id = instantNotificationOrder.OrderId,
+            Creator = new Creator("test-creator"),
+            NotificationChannel = NotificationChannel.Sms,
+            SendingTimePolicy = SendingTimePolicy.Anytime,
+            SendersReference = "207B08E2-814A-4479-9509-8DCA45A64401",
+
+            Templates =
+            [
+                new SmsTemplate("Test sender", "Test message")
+            ],
+
+            Recipients =
+            [
+                new Recipient([new SmsAddressPoint("+4799999999")])
+            ],
+
+            ResourceId = null,
+            IgnoreReservation = null,
+            ConditionEndpoint = null,
+            Type = OrderType.Instant
+        };
+
+        var repositoryMock = new Mock<IOrderRepository>();
+        repositoryMock.Setup(r => r.Create(It.IsAny<InstantNotificationOrder>(), It.IsAny<NotificationOrder>(), It.IsAny<CancellationToken>())).ReturnsAsync(instantNotificationOrder);
+
+        var dateTimeServiceMock = new Mock<IDateTimeService>();
+        dateTimeServiceMock.Setup(d => d.UtcNow()).Returns(currentTime);
+
+        var service = new OrderRequestService(
+            repositoryMock.Object,
+            Mock.Of<IContactPointService>(),
+            Mock.Of<IGuidService>(),
+            dateTimeServiceMock.Object,
+            Options.Create(new NotificationConfig()));
+
+        // Act
+        var result = await service.RegisterInstantOrder(instantNotificationOrder);
+
+        // Assert
+        Assert.False(result.IsError);
+        Assert.NotNull(result.Value);
+        Assert.Equal(expectedNotificationOrder.Id, result.Value.Id);
+        Assert.Equal(expectedNotificationOrder.Created, result.Value.Created);
+        Assert.Equal(expectedNotificationOrder.RequestedSendTime, result.Value.RequestedSendTime);
+        Assert.Equal(expectedNotificationOrder.NotificationChannel, result.Value.NotificationChannel);
+
+        repositoryMock.Verify(r => r.Create(It.IsAny<InstantNotificationOrder>(), It.IsAny<NotificationOrder>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task RegisterInstantOrder_WhenRepositoryFailsToSave_ReturnsServiceError()
+    {
+        // Arrange
+        var instantNotificationOrder = new InstantNotificationOrder
+        {
+            OrderId = Guid.NewGuid(),
+            OrderChainId = Guid.NewGuid(),
+            Creator = new Creator("test-creator"),
+            IdempotencyId = "B60DC3D8-EE36-45BC-BE1D-D2070B19AC97",
+            SendersReference = "6D6A1B44-3DE1-4E9F-91DF-CB3DDED32E7D",
+            InstantNotificationRecipient = new InstantNotificationRecipient
+            {
+                ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
+                {
+                    TimeToLiveInSeconds = 3600,
+                    PhoneNumber = "+4799999999",
+                    ShortMessageContent = new ShortMessageContent
+                    {
+                        Sender = "Test sender",
+                        Message = "Test message"
+                    }
+                }
+            }
+        };
+
+        var currentTime = DateTime.UtcNow;
+
+        var repositoryMock = new Mock<IOrderRepository>();
+        repositoryMock
+            .Setup(r => r.Create(It.IsAny<InstantNotificationOrder>(), It.IsAny<NotificationOrder>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((InstantNotificationOrder?)null!);
+
+        var dateTimeServiceMock = new Mock<IDateTimeService>();
+        dateTimeServiceMock.Setup(d => d.UtcNow()).Returns(currentTime);
+
+        var service = new OrderRequestService(
+            repositoryMock.Object,
+            Mock.Of<IContactPointService>(),
+            Mock.Of<IGuidService>(),
+            dateTimeServiceMock.Object,
+            Options.Create(new NotificationConfig()));
+
+        // Act
+        var result = await service.RegisterInstantOrder(instantNotificationOrder);
+
+        // Assert
+        Assert.True(result.IsError);
+        Assert.NotNull(result.Error);
+        Assert.Equal(500, result.Error.ErrorCode);
+        Assert.Equal("Failed to create the instant notification order.", result.Error.ErrorMessage);
+
+        repositoryMock.Verify(r => r.Create(It.IsAny<InstantNotificationOrder>(), It.IsAny<NotificationOrder>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task RegisterInstantOrder_WhenCancellationRequested_ThrowsOperationCanceledException()
+    {
+        // Arrange
+        var instantNotificationOrder = new InstantNotificationOrder
+        {
+            OrderId = Guid.NewGuid(),
+            OrderChainId = Guid.NewGuid(),
+            Creator = new Creator("test-creator"),
+            IdempotencyId = "E95830A1-6A56-4C0E-84C2-F399604222DB",
+            SendersReference = "590349E9-4153-40A9-A5D8-4A0C4947B3B0",
+            InstantNotificationRecipient = new InstantNotificationRecipient
+            {
+                ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
+                {
+                    TimeToLiveInSeconds = 3600,
+                    PhoneNumber = "+4799999999",
+                    ShortMessageContent = new ShortMessageContent
+                    {
+                        Sender = "Test sender",
+                        Message = "Test message"
+                    }
+                }
+            }
+        };
+
+        var repositoryMock = new Mock<IOrderRepository>();
+        var dateTimeServiceMock = new Mock<IDateTimeService>();
+
+        var service = new OrderRequestService(
+            repositoryMock.Object,
+            Mock.Of<IContactPointService>(),
+            Mock.Of<IGuidService>(),
+            dateTimeServiceMock.Object,
+            Options.Create(new NotificationConfig()));
+
+        using var cancellationTokenSource = new CancellationTokenSource();
+        await cancellationTokenSource.CancelAsync();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<OperationCanceledException>(async () => await service.RegisterInstantOrder(instantNotificationOrder, cancellationTokenSource.Token));
+
+        repositoryMock.Verify(r => r.Create(It.IsAny<InstantNotificationOrder>(), It.IsAny<NotificationOrder>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task RegisterNotificationOrder_ShouldPassNullValueForSendingTimePolicyToRepository()
     {
         // Arrange
