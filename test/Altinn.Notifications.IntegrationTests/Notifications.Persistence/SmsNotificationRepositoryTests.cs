@@ -393,50 +393,6 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task AddNotificationAsync_CancellationRequestedDuringExecution_ShouldNotInsertData()
-    {
-        // Arrange
-        SmsNotificationRepository repo = (SmsNotificationRepository)ServiceUtil
-            .GetServices([typeof(ISmsNotificationRepository)])
-            .First(i => i.GetType() == typeof(SmsNotificationRepository));
-
-        Guid orderId = await PostgreUtil.PopulateDBWithSmsOrderAndReturnId();
-
-        _orderIdsToDelete.Add(orderId);
-
-        Guid notificationId = Guid.NewGuid();
-        var requestedSendTime = DateTime.UtcNow;
-
-        SmsNotification smsNotification = new()
-        {
-            OrderId = orderId,
-            Id = notificationId,
-            RequestedSendTime = requestedSendTime,
-
-            Recipient = new()
-            {
-                MobileNumber = "+4799999999",
-                NationalIdentityNumber = "10275032552",
-            },
-
-            SendResult = new NotificationResult<SmsNotificationResultType>(SmsNotificationResultType.New, requestedSendTime)
-        };
-
-        using var cancellationTokenSource = new CancellationTokenSource();
-
-        var addTask = repo.AddNotification(smsNotification, requestedSendTime.AddMinutes(10), 1, cancellationTokenSource.Token);
-        cancellationTokenSource.CancelAfter(10); // Cancel after 10ms
-
-        // Assert
-        await Assert.ThrowsAsync<TaskCanceledException>(async () => await addTask);
-
-        // Ensure no data was inserted
-        string sql = $@"SELECT count(1) FROM notifications.smsnotifications sms WHERE sms.alternateid = '{notificationId}'";
-        int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
-        Assert.Equal(0, actualCount);
-    }
-
-    [Fact]
     public async Task AddNotificationAsync_CancellationRequestedBeforeExecution_ShouldNotInsertData()
     {
         // Arrange

@@ -13,8 +13,8 @@ public class ShortMessageContentValidatorTests
 
     public ShortMessageContentValidatorTests()
     {
-        ValidatorOptions.Global.LanguageManager.Enabled = false;
         _validator = new ShortMessageContentValidator();
+        ValidatorOptions.Global.LanguageManager.Enabled = false;
     }
 
     [Fact]
