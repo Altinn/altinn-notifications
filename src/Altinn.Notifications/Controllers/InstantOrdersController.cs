@@ -95,7 +95,7 @@ public class InstantOrdersController : ControllerBase
             }
 
             // 4. Register the instant notification order.
-            var instantNotificationOrder = request.MapToInstantNotificationOrder(creator);
+            var instantNotificationOrder = request.MapToInstantNotificationOrder(creator, DateTime.UtcNow);
             var registerationResult = await _orderRequestService.RegisterInstantOrder(instantNotificationOrder, cancellationToken);
             if (registerationResult.IsError || registerationResult.Value == null)
             {
