@@ -88,19 +88,15 @@ public class InstantOrdersController : ControllerBase
 
             // 3. Check if an order with the same idempotency identifier already exists.
             var trackingInformation = await _instantOrderRequestService.RetrieveTrackingInformation(creator, request.IdempotencyId, cancellationToken);
-            if (trackingInformation.IsSuccess && trackingInformation.Value != null)
+            if (trackingInformation != null)
             {
-                var instantNotificationOrderTracking = trackingInformation.Value;
-                if (instantNotificationOrderTracking.OrderChainId != Guid.Empty)
-                {
-                    return Ok(instantNotificationOrderTracking.MapToInstantNotificationOrderResponse());
-                }
+                return Ok(trackingInformation.MapToInstantNotificationOrderResponse());
             }
 
             // 4. Map and register the instant notification order.
             var instantNotificationOrder = request.MapToInstantNotificationOrder(creator, _dateTimeService.UtcNow());
             var registerationResult = await _instantOrderRequestService.PersistInstantSmsNotificationAsync(instantNotificationOrder, cancellationToken);
-            if (registerationResult.IsError || registerationResult.Value == null)
+            if (registerationResult == null)
             {
                 var problemDetails = new ProblemDetails
                 {
@@ -127,7 +123,7 @@ public class InstantOrdersController : ControllerBase
             // 7. Update the processing status of the instant notification order.
 
             // 8. Return the response with the order chain ID and shipment details.
-            return Created(instantNotificationOrder.OrderChainId.GetSelfLinkFromOrderChainId(), registerationResult.Value);
+            return Created(instantNotificationOrder.OrderChainId.GetSelfLinkFromOrderChainId(), registerationResult);
         }
         catch (InvalidOperationException ex)
         {
