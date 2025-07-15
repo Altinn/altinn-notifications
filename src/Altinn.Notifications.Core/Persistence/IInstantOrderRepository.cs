@@ -38,7 +38,7 @@ public interface IInstantOrderRepository
     /// <param name="smsNotification">
     /// The <see cref="SmsNotification"/> instance containing SMS-specific delivery information.
     /// </param>
-    /// <param name="smsExpiryTime">
+    /// <param name="smsExpiryDateTime">
     /// The <see cref="DateTime"/> indicating when the SMS notification expires and should no longer be delivered.
     /// </param>
     /// <param name="smsMessageCount">
@@ -51,5 +51,5 @@ public interface IInstantOrderRepository
     /// A <see cref="Task{TResult}"/> containing a <see cref="InstantNotificationOrderTracking"/> with tracking information,
     /// or <c>null</c> if the operation failed.
     /// </returns>
-    Task<InstantNotificationOrderTracking?> PersistInstantSmsNotificationAsync(InstantNotificationOrder instantNotificationOrder, NotificationOrder notificationOrder, SmsNotification smsNotification, DateTime smsExpiryTime, int smsMessageCount, CancellationToken cancellationToken = default);
+    Task<InstantNotificationOrderTracking?> PersistInstantSmsNotificationAsync(InstantNotificationOrder instantNotificationOrder, NotificationOrder notificationOrder, SmsNotification smsNotification, DateTime smsExpiryDateTime, int smsMessageCount, CancellationToken cancellationToken = default);
 }

@@ -77,7 +77,7 @@ public class InstantOrderRepository : IInstantOrderRepository
     }
 
     /// <inheritdoc/>
-    public async Task<InstantNotificationOrderTracking?> PersistInstantSmsNotificationAsync(InstantNotificationOrder instantNotificationOrder, NotificationOrder notificationOrder, SmsNotification smsNotification, DateTime smsExpiryTime, int smsMessageCount, CancellationToken cancellationToken = default)
+    public async Task<InstantNotificationOrderTracking?> PersistInstantSmsNotificationAsync(InstantNotificationOrder instantNotificationOrder, NotificationOrder notificationOrder, SmsNotification smsNotification, DateTime smsExpiryDateTime, int smsMessageCount, CancellationToken cancellationToken = default)
     {
         await using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
@@ -91,7 +91,7 @@ public class InstantOrderRepository : IInstantOrderRepository
             var smsTemplate = notificationOrder.Templates.Find(e => e.Type == NotificationTemplateType.Sms) as SmsTemplate;
             await InsertSmsTextAsync(mainOrderId, smsTemplate!, connection, transaction, cancellationToken);
 
-            await InsertSmsNotificationAsync(smsNotification, smsExpiryTime, smsMessageCount, connection, transaction, cancellationToken);
+            await InsertSmsNotificationAsync(smsNotification, smsExpiryDateTime, smsMessageCount, connection, transaction, cancellationToken);
 
             await transaction.CommitAsync(cancellationToken);
         }
@@ -184,7 +184,7 @@ public class InstantOrderRepository : IInstantOrderRepository
     /// <param name="notification">
     /// The <see cref="SmsNotification"/> containing recipient information, message content, and send result details.
     /// </param>
-    /// <param name="smsExpiryTime">
+    /// <param name="smsExpiryDateTime">
     /// The <see cref="DateTime"/> indicating when the SMS notification expires and should no longer be delivered.
     /// </param>
     /// <param name="smsMessageCount">
@@ -202,7 +202,7 @@ public class InstantOrderRepository : IInstantOrderRepository
     /// <returns>
     /// A <see cref="Task"/> representing the asynchronous operation.
     /// </returns>
-    private static async Task InsertSmsNotificationAsync(SmsNotification notification, DateTime smsExpiryTime, int smsMessageCount, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
+    private static async Task InsertSmsNotificationAsync(SmsNotification notification, DateTime smsExpiryDateTime, int smsMessageCount, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
     {
         await using NpgsqlCommand pgcom = new(_insertSmsNotificationSql, connection, transaction);
 
@@ -215,7 +215,7 @@ public class InstantOrderRepository : IInstantOrderRepository
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.SendResult.Result.ToString());
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Integer, smsMessageCount);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, notification.SendResult.ResultTime);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, smsExpiryTime);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, smsExpiryDateTime);
 
         await pgcom.ExecuteNonQueryAsync(cancellationToken);
     }

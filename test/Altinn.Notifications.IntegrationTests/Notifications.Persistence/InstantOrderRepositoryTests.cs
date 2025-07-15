@@ -111,7 +111,7 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
         };
 
         // Act
-        var result = await instantOrderRepository.PersistInstantSmsNotificationAsync(instantNotificationOrder, notificationOrder, smsNotification, DateTime.UtcNow.AddMinutes(15), 1);
+        var result = await instantOrderRepository.PersistInstantSmsNotificationAsync(instantNotificationOrder, notificationOrder, smsNotification, creationDateTime.AddMinutes(60), 1);
 
         // Assert
         Assert.NotNull(result);
@@ -211,7 +211,7 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
         };
 
         // Save the first order
-        await instantOrderRepository.PersistInstantSmsNotificationAsync(firstInstantOrder, firstNotificationOrder, firstSmsNotification, DateTime.UtcNow.AddMinutes(5), 1);
+        await instantOrderRepository.PersistInstantSmsNotificationAsync(firstInstantOrder, firstNotificationOrder, firstSmsNotification, creationDateTime.AddMinutes(120), 1);
 
         // Create second order with same idempotency ID
         var secondInstantOrder = new InstantNotificationOrder
@@ -220,14 +220,14 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
             OrderId = secondOrderId,
             IdempotencyId = idempotencyId,
             OrderChainId = secondOrderChainId,
-            Created = creationDateTime.AddMinutes(5),
+            Created = creationDateTime.AddMinutes(10),
             SendersReference = "C075F863-3E89-4688-9B31-D8817FECDF6B",
             InstantNotificationRecipient = new InstantNotificationRecipient
             {
                 ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
                 {
+                    TimeToLiveInSeconds = 10800,
                     PhoneNumber = "+4788888888",
-                    TimeToLiveInSeconds = 7260,
                     ShortMessageContent = new ShortMessageContent
                     {
                         Sender = "Altinn",
@@ -242,9 +242,9 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
             Id = secondOrderId,
             Creator = new("ttd"),
             Type = OrderType.Instant,
-            Created = creationDateTime.AddMinutes(5),
+            Created = creationDateTime.AddMinutes(10),
             NotificationChannel = NotificationChannel.Sms,
-            RequestedSendTime = creationDateTime.AddMinutes(5),
+            RequestedSendTime = creationDateTime.AddMinutes(10),
             SendersReference = "C075F863-3E89-4688-9B31-D8817FECDF6B",
             Templates =
             [
@@ -265,7 +265,7 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
         };
 
         // Act & Assert
-        await Assert.ThrowsAnyAsync<Exception>(async () => await instantOrderRepository.PersistInstantSmsNotificationAsync(secondInstantOrder, secondNotificationOrder, secondSmsNotification, DateTime.UtcNow.AddMinutes(10), 1));
+        await Assert.ThrowsAnyAsync<Exception>(async () => await instantOrderRepository.PersistInstantSmsNotificationAsync(secondInstantOrder, secondNotificationOrder, secondSmsNotification, creationDateTime.AddMinutes(180), 1));
 
         // Verify Orders Chain
         string persistedOrderChainSql = $@"SELECT count(*) FROM notifications.orderschain WHERE orderid = '{firstOrderChainId}'";
@@ -305,7 +305,7 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task PersistInstantSmsNotificationAsync_InstantNotificationOrderWithCancellationRequested_ThrowsOperationCanceledException()
+    public async Task PersistInstantSmsNotificationAsync_InstantNotificationOrderWithCancellationRequested_ThrowsTaskCanceledException()
     {
         // Arrange
         InstantOrderRepository instantOrderRepository =
@@ -331,8 +331,8 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
             {
                 ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
                 {
-                    PhoneNumber = "+4799999999",
                     TimeToLiveInSeconds = 9000,
+                    PhoneNumber = "+4799999999",
                     ShortMessageContent = new ShortMessageContent
                     {
                         Sender = "Altinn",
@@ -374,7 +374,7 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
         await cancellationTokenSource.CancelAsync();
 
         // Act & Assert
-        await Assert.ThrowsAsync<OperationCanceledException>(async () => await instantOrderRepository.PersistInstantSmsNotificationAsync(instantNotificationOrder, notificationOrder, smsNotification, DateTime.UtcNow.AddMinutes(25), 1, cancellationTokenSource.Token));
+        await Assert.ThrowsAsync<TaskCanceledException>(async () => await instantOrderRepository.PersistInstantSmsNotificationAsync(instantNotificationOrder, notificationOrder, smsNotification, creationDateTime.AddMinutes(150), 1, cancellationTokenSource.Token));
 
         // Verify nothing was persisted
         string orderChainSql = $@"SELECT count(*) FROM notifications.orderschain WHERE orderid = '{orderChainId}'";
@@ -412,7 +412,7 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task RetrieveTrackingInformation_WhenCancellationRequested_ThrowsOperationCanceledException()
+    public async Task RetrieveTrackingInformation_WhenCancellationRequested_ThrowsTaskCanceledException()
     {
         // Arrange
         InstantOrderRepository instantOrderRepository =
@@ -426,7 +426,7 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
         await cancellationTokenSource.CancelAsync();
 
         // Act & Assert
-        await Assert.ThrowsAsync<OperationCanceledException>(async () => await instantOrderRepository.RetrieveTrackingInformation(creatorName, idempotencyId, cancellationTokenSource.Token));
+        await Assert.ThrowsAsync<TaskCanceledException>(async () => await instantOrderRepository.RetrieveTrackingInformation(creatorName, idempotencyId, cancellationTokenSource.Token));
     }
 
     [Fact]
@@ -460,8 +460,8 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
             {
                 ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
                 {
-                    PhoneNumber = "+4799999999",
                     TimeToLiveInSeconds = 3600,
+                    PhoneNumber = "+4799999999",
                     ShortMessageContent = new ShortMessageContent
                     {
                         Sender = "Altinn",
@@ -499,7 +499,7 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
         };
 
         // Create the order in the database
-        await instantOrderRepository.PersistInstantSmsNotificationAsync(instantNotificationOrder, notificationOrder, smsNotification, DateTime.UtcNow.AddMinutes(20), 1);
+        await instantOrderRepository.PersistInstantSmsNotificationAsync(instantNotificationOrder, notificationOrder, smsNotification, creationDateTime.AddMinutes(60), 1);
 
         // Act
         var result = await instantOrderRepository.RetrieveTrackingInformation(creator, idempotencyId);
@@ -543,8 +543,8 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
             {
                 ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
                 {
-                    PhoneNumber = "+4799999999",
                     TimeToLiveInSeconds = 3600,
+                    PhoneNumber = "+4799999999",
                     ShortMessageContent = new ShortMessageContent
                     {
                         Sender = "Altinn",
@@ -582,7 +582,7 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
         };
 
         // Create the order in the database
-        await instantOrderRepository.PersistInstantSmsNotificationAsync(instantNotificationOrder, notificationOrder, smsNotification, DateTime.UtcNow.AddMinutes(15), 1);
+        await instantOrderRepository.PersistInstantSmsNotificationAsync(instantNotificationOrder, notificationOrder, smsNotification, creationDateTime.AddMinutes(60), 1);
 
         // Act
         var result = await instantOrderRepository.RetrieveTrackingInformation(invalidCreator, idempotencyId);
@@ -662,7 +662,7 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
         };
 
         // Create the order in the database
-        await instantOrderRepository.PersistInstantSmsNotificationAsync(instantNotificationOrder, notificationOrder, smsNotification, DateTime.UtcNow.AddMinutes(10), 1);
+        await instantOrderRepository.PersistInstantSmsNotificationAsync(instantNotificationOrder, notificationOrder, smsNotification, creationDateTime.AddMinutes(60), 1);
 
         // Act
         var result = await instantOrderRepository.RetrieveTrackingInformation(creator, invalidIdempotencyId);
