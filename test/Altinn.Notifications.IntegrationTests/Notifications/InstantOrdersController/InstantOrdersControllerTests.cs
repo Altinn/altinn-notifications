@@ -90,13 +90,14 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
         var httpContextMock = new Mock<HttpContext>();
         httpContextMock.Setup(e => e.Items).Returns(new Dictionary<object, object?> { { "Org", null } });
 
-        var orderRequestServiceMock = new Mock<IOrderRequestService>();
+        var orderRequestServiceMock = new Mock<IInstantOrderRequestService>();
 
         var controller = new InstantOrdersController(
+            Mock.Of<IDateTimeService>(),
             Options.Create(new NotificationConfig { DefaultSmsSenderNumber = "Altinn" }),
-            orderRequestServiceMock.Object,
             Mock.Of<ISmsOrderProcessingService>(),
             Mock.Of<IShortMessageServiceClient>(),
+            orderRequestServiceMock.Object,
             validatorMock.Object)
         {
             ControllerContext = new ControllerContext { HttpContext = httpContextMock.Object }
@@ -157,7 +158,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
             SendersReference = "F9D7B2DD-2436-49E3-A1AF-3967C640B94F"
         };
 
-        var orderRequestServiceMock = new Mock<IOrderRequestService>();
+        var orderRequestServiceMock = new Mock<IInstantOrderRequestService>();
         orderRequestServiceMock
             .Setup(e => e.RegisterInstantOrder(It.IsAny<InstantNotificationOrder>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(registeredOrder);
@@ -215,7 +216,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
             }
         };
 
-        var orderRequestServiceMock = new Mock<IOrderRequestService>();
+        var orderRequestServiceMock = new Mock<IInstantOrderRequestService>();
         orderRequestServiceMock
             .Setup(e => e.RegisterInstantOrder(It.IsAny<InstantNotificationOrder>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ServiceError(500, "Failed to create the instant notification order"));
@@ -270,7 +271,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
             }
         };
 
-        var orderRequestServiceMock = new Mock<IOrderRequestService>();
+        var orderRequestServiceMock = new Mock<IInstantOrderRequestService>();
         orderRequestServiceMock.Setup(e => e.RetrieveInstantOrderTracking("ttd", idempotencyId, It.IsAny<CancellationToken>())).ReturnsAsync(existingTracking);
 
         HttpClient client = GetTestClient(orderRequestService: orderRequestServiceMock.Object);
@@ -330,10 +331,10 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
-    private HttpClient GetTestClient(IOrderRequestService? orderRequestService = null, IShortMessageServiceClient? smsClient = null, ISmsOrderProcessingService? smsOrderProcessingService = null)
+    private HttpClient GetTestClient(IInstantOrderRequestService? orderRequestService = null, IShortMessageServiceClient? smsClient = null, ISmsOrderProcessingService? smsOrderProcessingService = null)
     {
         smsClient ??= Mock.Of<IShortMessageServiceClient>();
-        orderRequestService ??= Mock.Of<IOrderRequestService>();
+        orderRequestService ??= Mock.Of<IInstantOrderRequestService>();
         smsOrderProcessingService ??= Mock.Of<ISmsOrderProcessingService>();
 
         return _factory.WithWebHostBuilder(builder =>

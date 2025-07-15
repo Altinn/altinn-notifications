@@ -29,25 +29,28 @@ namespace Altinn.Notifications.Controllers;
 public class InstantOrdersController : ControllerBase
 {
     private readonly string _defaultSmsSender;
-    private readonly IOrderRequestService _orderRequestService;
+    private readonly IDateTimeService _dateTimeService;
     private readonly ISmsOrderProcessingService _smsOrderProcessingService;
     private readonly IShortMessageServiceClient _shortMessageServiceClient;
+    private readonly IInstantOrderRequestService _instantOrderRequestService;
     private readonly IValidator<InstantNotificationOrderRequestExt> _validator;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="InstantOrdersController"/> class.
     /// </summary>
     public InstantOrdersController(
+        IDateTimeService dateTimeService,
         IOptions<NotificationConfig> config,
-        IOrderRequestService orderRequestService,
         ISmsOrderProcessingService smsOrderProcessingService,
         IShortMessageServiceClient shortMessageServiceClient,
+        IInstantOrderRequestService instantOrderRequestService,
         IValidator<InstantNotificationOrderRequestExt> validator)
     {
         _validator = validator;
-        _orderRequestService = orderRequestService;
+        _dateTimeService = dateTimeService;
         _smsOrderProcessingService = smsOrderProcessingService;
         _shortMessageServiceClient = shortMessageServiceClient;
+        _instantOrderRequestService = instantOrderRequestService;
         _defaultSmsSender = config.Value.DefaultSmsSenderNumber;
     }
 
@@ -72,7 +75,7 @@ public class InstantOrdersController : ControllerBase
     {
         try
         {
-            // 1. Validate the request.
+            // 1. Validate the notification order.
             var validationResult = _validator.Validate(request);
             if (!validationResult.IsValid)
             {
@@ -88,15 +91,16 @@ public class InstantOrdersController : ControllerBase
             }
 
             // 3. Check if an order with the same idempotency identifier already exists.
-            var trackingInformation = await _orderRequestService.RetrieveInstantOrderTracking(creator, request.IdempotencyId, cancellationToken);
-            if (trackingInformation != null)
+            var trackingInformation = await _instantOrderRequestService.RetrieveInstantOrderTracking(creator, request.IdempotencyId, cancellationToken);
+            if (trackingInformation is not null)
             {
                 return Ok(trackingInformation.MapToInstantNotificationOrderResponse());
             }
 
-            // 4. Register the instant notification order.
-            var instantNotificationOrder = request.MapToInstantNotificationOrder(creator, DateTime.UtcNow);
-            var registerationResult = await _orderRequestService.RegisterInstantOrder(instantNotificationOrder, cancellationToken);
+            // 4. Map and register the instant notification order.
+            var instantNotificationOrder = request.MapToInstantNotificationOrder(creator, _dateTimeService.UtcNow());
+
+            var registerationResult = await _instantOrderRequestService.RegisterInstantOrder(instantNotificationOrder, cancellationToken);
             if (registerationResult.IsError || registerationResult.Value == null)
             {
                 var problemDetails = new ProblemDetails
@@ -125,6 +129,9 @@ public class InstantOrdersController : ControllerBase
                 return StatusCode(500, problemDetails);
             }
 
+            // 7. Update the processing status of the instant notification order.
+
+            // 8. Return the response with the order chain ID and shipment details.
             return Created(instantNotificationOrder.OrderChainId.GetSelfLinkFromOrderChainId(), new InstantNotificationOrderResponseExt
             {
                 OrderChainId = instantNotificationOrder.OrderChainId,
