@@ -4,8 +4,6 @@ namespace Altinn.Notifications.Core.Integrations;
 
 /// <summary>
 /// Represents an abstraction for sending short text messages (SMS) through the Altinn Notifications SMS service.
-/// Implementations of this interface are responsible for communicating with external SMS providers,
-/// handling message delivery, and reporting the outcome of each send attempt.
 /// </summary>
 public interface IShortMessageServiceClient
 {
@@ -15,10 +13,6 @@ public interface IShortMessageServiceClient
     /// <param name="shortMessage">
     /// The <see cref="ShortMessage"/> payload containing message content, recipient information,
     /// sender identifier, notification correlation, and delivery constraints.
-    /// </param>
-    /// <param name="cancellationToken">
-    /// A <see cref="CancellationToken"/> that can be used to cancel the send operation.
-    /// Defaults to <see cref="CancellationToken.None"/> if not specified.
     /// </param>
     /// <returns>
     /// A <see cref="Task{ShortMessageSendResult}"/> representing the asynchronous send operation.
@@ -41,5 +35,5 @@ public interface IShortMessageServiceClient
     ///   </item>
     /// </list>
     /// </returns>
-    Task<ShortMessageSendResult> SendAsync(ShortMessage shortMessage, CancellationToken cancellationToken = default);
+    Task<ShortMessageSendResult> SendAsync(ShortMessage shortMessage);
 }

@@ -112,7 +112,7 @@ public class InstantOrdersController : ControllerBase
             }
 
             // 5. Send out the SMS using the short message service client.
-            var smsSendingResult = await _shortMessageServiceClient.SendAsync(instantNotificationOrder.MapToShortMessage(_defaultSmsSender), cancellationToken);
+            var smsSendingResult = await _shortMessageServiceClient.SendAsync(instantNotificationOrder.MapToShortMessage(_defaultSmsSender));
             if (!smsSendingResult.Success)
             {
                 var problemDetails = new ProblemDetails

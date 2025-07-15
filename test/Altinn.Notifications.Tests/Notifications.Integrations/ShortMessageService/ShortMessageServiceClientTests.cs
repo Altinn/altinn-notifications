@@ -162,43 +162,6 @@ public class ShortMessageServiceClientTests
             Times.Once);
     }
 
-    [Fact]
-    public async Task SendAsync_CancellationTokenCancelsDuringExecution_ThrowsTaskCanceledException()
-    {
-        // Arrange
-        var shortMessage = new ShortMessage
-        {
-            Sender = "Altinn",
-            TimeToLive = 3600,
-            Message = "Test message",
-            Recipient = "+4799999999",
-            NotificationId = Guid.NewGuid()
-        };
-
-        // Use a handler that waits before returning to allow cancellation
-        var handler = new DelegatingHandlerStub(async (request, token) =>
-        {
-            await Task.Delay(1000, token);
-            return new HttpResponseMessage(HttpStatusCode.OK);
-        });
-
-        var settings = new PlatformSettings
-        {
-            ApiShortMessageServiceEndpoint = "http://localhost:5092/notifications/sms/api/v1/"
-        };
-
-        var client = new ShortMessageServiceClient(new HttpClient(handler), _loggerMock.Object, Options.Create(settings));
-
-        using var cts = new CancellationTokenSource();
-        var sendTask = client.SendAsync(shortMessage, cts.Token);
-
-        // Cancel after a short delay
-        cts.CancelAfter(100);
-
-        // Act & Assert
-        await Assert.ThrowsAsync<TaskCanceledException>(async () => await sendTask);
-    }
-
     private ShortMessageServiceClient CreateShortMessageServiceTestClient()
     {
         JsonSerializerOptions serializerOptions = new()
