@@ -3,10 +3,13 @@
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
+using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models.Orders;
 using Altinn.Notifications.Models.Recipient;
 using Altinn.Notifications.Models.Sms;
+
+using Moq;
 
 using Xunit;
 
@@ -68,10 +71,12 @@ public class InstantNotificationOrderMapperTests
         var domainModel = new InstantNotificationOrder
         {
             OrderId = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
             OrderChainId = Guid.NewGuid(),
+            SendersReference = "Test reference",
+            InstantNotificationRecipient = null!,
             Creator = new Creator("Test creator"),
-            IdempotencyId = Guid.NewGuid().ToString(),
-            InstantNotificationRecipient = null
+            IdempotencyId = Guid.NewGuid().ToString()
         };
 
         // Act & Assert
@@ -82,16 +87,20 @@ public class InstantNotificationOrderMapperTests
     public void MapToInstantNotificationOrder_WithValidInstantNotificationOrderRequestExt_ShouldMapCorrectly()
     {
         // Arrange
+        var creatorShortName = "Test creator";
+
         var requestModel = new InstantNotificationOrderRequestExt
         {
             SendersReference = "Test reference",
             IdempotencyId = "Test idempotency identifier",
+
             InstantNotificationRecipient = new InstantNotificationRecipientExt
             {
                 ShortMessageDeliveryDetails = new ShortMessageDeliveryDetailsExt
                 {
                     PhoneNumber = "+4799999999",
                     TimeToLiveInSeconds = 3600,
+
                     ShortMessageContent = new ShortMessageContentExt
                     {
                         Body = "Test message",
@@ -100,10 +109,12 @@ public class InstantNotificationOrderMapperTests
                 }
             }
         };
-        var creatorShortName = "Test creator";
+
+        var mockDateTimeService = new Mock<IDateTimeService>();
+        mockDateTimeService.Setup(e => e.UtcNow()).Returns(DateTime.UtcNow);
 
         // Act
-        var result = requestModel.MapToInstantNotificationOrder(creatorShortName);
+        var result = requestModel.MapToInstantNotificationOrder(creatorShortName, mockDateTimeService.Object.UtcNow());
 
         // Assert
         Assert.Equal(requestModel.IdempotencyId, result.IdempotencyId);
@@ -120,8 +131,11 @@ public class InstantNotificationOrderMapperTests
         // Arrange
         InstantNotificationOrderRequestExt? requestModel = null;
 
+        var mockDateTimeService = new Mock<IDateTimeService>();
+        mockDateTimeService.Setup(e => e.UtcNow()).Returns(DateTime.UtcNow);
+
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => requestModel!.MapToInstantNotificationOrder("Test creator"));
+        Assert.Throws<ArgumentNullException>(() => requestModel!.MapToInstantNotificationOrder("Test creator", mockDateTimeService.Object.UtcNow()));
     }
 
     [Fact]
@@ -146,8 +160,11 @@ public class InstantNotificationOrderMapperTests
             }
         };
 
+        var mockDateTimeService = new Mock<IDateTimeService>();
+        mockDateTimeService.Setup(e => e.UtcNow()).Returns(DateTime.UtcNow);
+
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => requestModel.MapToInstantNotificationOrder(null!));
+        Assert.Throws<ArgumentNullException>(() => requestModel.MapToInstantNotificationOrder(null!, mockDateTimeService.Object.UtcNow()));
     }
 
     [Fact]
@@ -160,7 +177,7 @@ public class InstantNotificationOrderMapperTests
             Notification = new NotificationOrderChainShipment
             {
                 ShipmentId = Guid.NewGuid(),
-                SendersReference = "Tes rReference"
+                SendersReference = "Test reference"
             }
         };
 
