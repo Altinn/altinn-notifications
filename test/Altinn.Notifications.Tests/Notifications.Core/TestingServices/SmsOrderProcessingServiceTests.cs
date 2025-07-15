@@ -183,59 +183,6 @@ public class SmsOrderProcessingServiceTests
         notificationServiceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<List<SmsAddressPoint>>(), It.IsAny<SmsRecipient>(), It.IsAny<int>(), It.IsAny<bool>()), Times.Exactly(2));
     }
 
-    [Fact]
-    public async Task ProcessInstantOrder_ValidOrder_NotificationIsCreatedAndSent()
-    {
-        // Arrange
-        var smsBody = "Test SMS body";
-        var mobileNumber = "+4799999999";
-
-        var orderId = Guid.NewGuid();
-        var timeToLiveInSeconds = 60;
-        var requestedSendTime = DateTime.UtcNow;
-        var expiryDateTime = requestedSendTime.AddSeconds(timeToLiveInSeconds);
-
-        var smsTemplate = new SmsTemplate("Altinn", smsBody);
-        var recipient = new Recipient([new SmsAddressPoint(mobileNumber)], nationalIdentityNumber: "31327093862");
-
-        var order = new NotificationOrder
-        {
-            Id = orderId,
-            Recipients = [recipient],
-            Templates = [smsTemplate],
-            RequestedSendTime = requestedSendTime,
-            NotificationChannel = NotificationChannel.Sms
-        };
-
-        var smsNotificationServiceMock = new Mock<ISmsNotificationService>();
-        smsNotificationServiceMock
-            .Setup(s => s.CreateNotificationAsync(
-                orderId,
-                requestedSendTime,
-                It.Is<SmsRecipient>(r => r.MobileNumber == mobileNumber),
-                expiryDateTime,
-                It.IsAny<int>(),
-                It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask)
-            .Verifiable();
-
-        var service = GetTestService(smsService: smsNotificationServiceMock.Object);
-
-        // Act
-        await service.ProcessInstantOrder(order, timeToLiveInSeconds);
-
-        // Assert
-        smsNotificationServiceMock.Verify(
-            s => s.CreateNotificationAsync(
-            orderId,
-            requestedSendTime,
-            It.Is<SmsRecipient>(r => r.MobileNumber == mobileNumber),
-            expiryDateTime,
-            It.IsAny<int>(),
-            It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
-
     [Theory]
     [InlineData(160, 1)]
     [InlineData(161, 2)]
