@@ -54,7 +54,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     }
 
     /// <inheritdoc/>
-    public async Task AddNotification(SmsNotification notification, DateTime expiry, int count, CancellationToken cancellationToken = default)
+    public async Task AddNotification(SmsNotification notification, DateTime expiry, int count)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_insertNewSmsNotificationSql);
 
