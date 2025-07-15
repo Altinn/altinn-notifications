@@ -1,9 +1,14 @@
-﻿using Altinn.Notifications.Core.Configuration;
+﻿using System;
+using System.Web;
+
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
+using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
@@ -13,20 +18,23 @@ using Microsoft.Extensions.Options;
 namespace Altinn.Notifications.Core.Services;
 
 /// <summary>
-/// Implementation of the <see cref="IInstantOrderRequestService"/>.
+/// Provides the concrete implementation of <see cref="IInstantOrderRequestService"/> for registering and tracking instant notification orders.
 /// </summary>
 internal class InstantOrderRequestService : IInstantOrderRequestService
 {
     private readonly string _defaultSmsSender;
-    private readonly IOrderRepository _repository;
+    private readonly IOrderRepository _orderRepository;
     private readonly IDateTimeService _dateTimeService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderRequestService"/> class.
     /// </summary>
-    public InstantOrderRequestService(IOrderRepository repository, IDateTimeService dateTimeService, IOptions<NotificationConfig> configurationOptions)
+    public InstantOrderRequestService(
+        IOrderRepository orderRepository,
+        IDateTimeService dateTimeService,
+        IOptions<NotificationConfig> configurationOptions)
     {
-        _repository = repository;
+        _orderRepository = orderRepository;
         _dateTimeService = dateTimeService;
         _defaultSmsSender = configurationOptions.Value.DefaultSmsSenderNumber;
     }
@@ -44,7 +52,7 @@ internal class InstantOrderRequestService : IInstantOrderRequestService
         var notificationOrder = CreateMainNotificationOrderAsync(instantNotificationOrder, currentTime);
 
         // 4. Inserts the instant notification order and the instantiated notification order into the database
-        var savedInstantNotificationOrder = await _repository.Create(instantNotificationOrder, notificationOrder, cancellationToken);
+        var savedInstantNotificationOrder = await _orderRepository.Create(instantNotificationOrder, notificationOrder, cancellationToken);
         if (savedInstantNotificationOrder == null)
         {
             return new ServiceError(500, "Failed to create the instant notification order.");
@@ -56,7 +64,7 @@ internal class InstantOrderRequestService : IInstantOrderRequestService
     /// <inheritdoc/>
     public async Task<InstantNotificationOrderTracking?> RetrieveInstantOrderTracking(string creatorName, string idempotencyId, CancellationToken cancellationToken = default)
     {
-        return await _repository.GetInstantOrderTracking(creatorName, idempotencyId, cancellationToken) ?? null;
+        return await _orderRepository.GetInstantOrderTracking(creatorName, idempotencyId, cancellationToken) ?? null;
     }
 
     /// <summary>
@@ -105,4 +113,72 @@ internal class InstantOrderRequestService : IInstantOrderRequestService
 
         return templates;
     }
+
+    private static int GetSmsCountForOrder(NotificationOrder order)
+    {
+        SmsTemplate? smsTemplate = order.Templates.Find(t => t.Type == NotificationTemplateType.Sms) as SmsTemplate;
+        return CalculateNumberOfMessages(smsTemplate!.Body);
+    }
+
+    /// <summary>
+    /// Calculates the number of messages based on the rules for concatenation of SMS messages in the SMS gateway.
+    /// </summary>
+    private static int CalculateNumberOfMessages(string message)
+    {
+        const int maxCharactersPerMessage = 160;
+        const int maxMessagesPerConcatenation = 16;
+        const int charactersPerConcatenatedMessage = 134;
+
+        string urlEncodedMessage = HttpUtility.UrlEncode(message);
+        int messageLength = urlEncodedMessage.Length;
+
+        if (messageLength <= maxCharactersPerMessage)
+        {
+            return 1;
+        }
+
+        // Calculate the number of messages for messages exceeding 160 characters
+        int numberOfMessages = (int)Math.Ceiling((double)messageLength / charactersPerConcatenatedMessage);
+
+        // Check if the total number of messages exceeds the limit
+        if (numberOfMessages > maxMessagesPerConcatenation)
+        {
+            numberOfMessages = maxMessagesPerConcatenation;
+        }
+
+        return numberOfMessages;
+    }
+
+    private async Task ProcessInstantOrder(NotificationOrder order, int timeToLiveInSeconds, CancellationToken cancellationToken = default)
+    {
+        var recipient = order.Recipients.First(e => e.AddressInfo.Exists(e => e.AddressType == AddressType.Sms));
+
+        var addressPoint = recipient.AddressInfo.OfType<SmsAddressPoint>().First();
+
+        int smsCount = GetSmsCountForOrder(order);
+
+        var smsRecipient = new SmsRecipient()
+        {
+            MobileNumber = addressPoint.MobileNumber
+        };
+
+        var expiryDateTime = order.RequestedSendTime.AddSeconds(timeToLiveInSeconds);
+
+        //await _smsService.CreateNotificationAsync(order.Id, order.RequestedSendTime, smsRecipient, expiryDateTime, smsCount, cancellationToken);
+    }
+
+    private async Task CreateNotificationAsync(Guid orderId, DateTime requestedSendTime, SmsRecipient recipient, DateTime expiryDateTime, int smsCount, CancellationToken cancellationToken = default)
+    {
+        //var smsNotification = new SmsNotification()
+        //{
+        //    OrderId = orderId,
+        //    Id = _guid.NewGuid(),
+        //    Recipient = recipient,
+        //    RequestedSendTime = requestedSendTime,
+        //    SendResult = new(SmsNotificationResultType.New, _dateTime.UtcNow())
+        //};
+
+        //await _repository.AddNotification(smsNotification, expiryDateTime, smsCount, cancellationToken);
+    }
+
 }

@@ -4,7 +4,7 @@ using Altinn.Notifications.Core.Shared;
 namespace Altinn.Notifications.Core.Services.Interfaces;
 
 /// <summary>
-/// Interface for the notification order service
+/// Defines operations for registering and tracking instant notification orders.
 /// </summary>
 public interface IInstantOrderRequestService
 {
