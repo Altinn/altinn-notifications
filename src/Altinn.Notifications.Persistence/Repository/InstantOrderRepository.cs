@@ -68,14 +68,9 @@ public class InstantOrderRepository : IInstantOrderRepository
         return instantNotificationOrder;
     }
 
-    private static async Task InsertSmsTextAsync(long dbOrderId, SmsTemplate? smsTemplate, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
+    private static async Task InsertSmsTextAsync(long dbOrderId, SmsTemplate smsTemplate, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
     {
-        if (smsTemplate == null)
-        {
-            return;
-        }
-
-        await using NpgsqlCommand pgcom = new NpgsqlCommand(_insertSmsTextSql, connection, transaction);
+        await using NpgsqlCommand pgcom = new(_insertSmsTextSql, connection, transaction);
 
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Bigint, dbOrderId);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, smsTemplate.SenderNumber);

@@ -28,8 +28,9 @@ public static class ServiceCollectionExtensions
 
         return services
         .AddSingleton<IOrderRepository, OrderRepository>()
-        .AddSingleton<IStatusFeedRepository, StatusFeedRepository>()
         .AddSingleton<IMetricsRepository, MetricsRepository>()
+        .AddSingleton<IStatusFeedRepository, StatusFeedRepository>()
+        .AddSingleton<IInstantOrderRepository, InstantOrderRepository>()
         .AddSingleton<IResourceLimitRepository, ResourceLimitRepository>()
         .AddSingleton<ISmsNotificationRepository, SmsNotificationRepository>()
         .AddSingleton<IEmailNotificationRepository, EmailNotificationRepository>()

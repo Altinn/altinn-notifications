@@ -80,15 +80,15 @@ public class InstantOrderRequestServiceTests
             Type = OrderType.Instant
         };
 
-        var repositoryMock = new Mock<IOrderRepository>();
-        repositoryMock.Setup(r => r.Create(It.IsAny<InstantNotificationOrder>(), It.IsAny<NotificationOrder>(), It.IsAny<CancellationToken>())).ReturnsAsync(instantNotificationOrder);
+        var instantRepositoryMock = new Mock<IInstantOrderRepository>();
+        instantRepositoryMock.Setup(r => r.Create(It.IsAny<InstantNotificationOrder>(), It.IsAny<NotificationOrder>(), It.IsAny<CancellationToken>())).ReturnsAsync(instantNotificationOrder);
 
         var dateTimeServiceMock = new Mock<IDateTimeService>();
         dateTimeServiceMock.Setup(d => d.UtcNow()).Returns(currentTime);
 
         var service = new InstantOrderRequestService(
-            repositoryMock.Object,
             dateTimeServiceMock.Object,
+            instantRepositoryMock.Object,
             Options.Create(new NotificationConfig()));
 
         // Act
@@ -102,7 +102,7 @@ public class InstantOrderRequestServiceTests
         Assert.Equal(expectedNotificationOrder.RequestedSendTime, result.Value.RequestedSendTime);
         Assert.Equal(expectedNotificationOrder.NotificationChannel, result.Value.NotificationChannel);
 
-        repositoryMock.Verify(r => r.Create(It.IsAny<InstantNotificationOrder>(), It.IsAny<NotificationOrder>(), It.IsAny<CancellationToken>()), Times.Once);
+        instantRepositoryMock.Verify(r => r.Create(It.IsAny<InstantNotificationOrder>(), It.IsAny<NotificationOrder>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -133,8 +133,8 @@ public class InstantOrderRequestServiceTests
 
         var currentTime = DateTime.UtcNow;
 
-        var repositoryMock = new Mock<IOrderRepository>();
-        repositoryMock
+        var instantRepositoryMock = new Mock<IInstantOrderRepository>();
+        instantRepositoryMock
             .Setup(r => r.Create(It.IsAny<InstantNotificationOrder>(), It.IsAny<NotificationOrder>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((InstantNotificationOrder?)null!);
 
@@ -142,8 +142,8 @@ public class InstantOrderRequestServiceTests
         dateTimeServiceMock.Setup(d => d.UtcNow()).Returns(currentTime);
 
         var service = new InstantOrderRequestService(
-            repositoryMock.Object,
             dateTimeServiceMock.Object,
+            instantRepositoryMock.Object,
             Options.Create(new NotificationConfig()));
 
         // Act
@@ -155,7 +155,7 @@ public class InstantOrderRequestServiceTests
         Assert.Equal(500, result.Error.ErrorCode);
         Assert.Equal("Failed to create the instant notification order.", result.Error.ErrorMessage);
 
-        repositoryMock.Verify(r => r.Create(It.IsAny<InstantNotificationOrder>(), It.IsAny<NotificationOrder>(), It.IsAny<CancellationToken>()), Times.Once);
+        instantRepositoryMock.Verify(r => r.Create(It.IsAny<InstantNotificationOrder>(), It.IsAny<NotificationOrder>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -184,12 +184,12 @@ public class InstantOrderRequestServiceTests
             }
         };
 
-        var repositoryMock = new Mock<IOrderRepository>();
         var dateTimeServiceMock = new Mock<IDateTimeService>();
+        var instantRepositoryMock = new Mock<IInstantOrderRepository>();
 
         var service = new InstantOrderRequestService(
-            repositoryMock.Object,
             dateTimeServiceMock.Object,
+            instantRepositoryMock.Object,
             Options.Create(new NotificationConfig()));
 
         using var cancellationTokenSource = new CancellationTokenSource();
@@ -198,7 +198,7 @@ public class InstantOrderRequestServiceTests
         // Act & Assert
         await Assert.ThrowsAsync<OperationCanceledException>(async () => await service.RegisterInstantOrder(instantNotificationOrder, cancellationTokenSource.Token));
 
-        repositoryMock.Verify(r => r.Create(It.IsAny<InstantNotificationOrder>(), It.IsAny<NotificationOrder>(), It.IsAny<CancellationToken>()), Times.Never);
+        instantRepositoryMock.Verify(r => r.Create(It.IsAny<InstantNotificationOrder>(), It.IsAny<NotificationOrder>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -208,15 +208,15 @@ public class InstantOrderRequestServiceTests
         string idempotencyId = "non-existent-id";
         string creatorName = "non-existent-creator";
 
-        var repositoryMock = new Mock<IOrderRepository>();
-        repositoryMock
+        var instantRepositoryMock = new Mock<IInstantOrderRepository>();
+        instantRepositoryMock
             .Setup(r => r.GetInstantOrderTracking(
                 It.Is<string>(s => s == creatorName),
                 It.Is<string>(s => s == idempotencyId),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync((InstantNotificationOrderTracking?)null);
 
-        var service = GetTestService(repositoryMock.Object);
+        var service = GetTestService(instantRepositoryMock.Object);
 
         // Act
         var result = await service.RetrieveInstantOrderTracking(creatorName, idempotencyId);
@@ -224,7 +224,7 @@ public class InstantOrderRequestServiceTests
         // Assert
         Assert.Null(result);
 
-        repositoryMock.Verify(
+        instantRepositoryMock.Verify(
             r => r.GetInstantOrderTracking(
                 It.Is<string>(s => s == creatorName),
                 It.Is<string>(s => s == idempotencyId),
@@ -249,15 +249,15 @@ public class InstantOrderRequestServiceTests
             }
         };
 
-        var repositoryMock = new Mock<IOrderRepository>();
-        repositoryMock
+        var instantRepositoryMock = new Mock<IInstantOrderRepository>();
+        instantRepositoryMock
             .Setup(r => r.GetInstantOrderTracking(
                 It.Is<string>(s => s == creatorName),
                 It.Is<string>(s => s == idempotencyId),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedTracking);
 
-        var service = GetTestService(repositoryMock.Object);
+        var service = GetTestService(instantRepositoryMock.Object);
 
         // Act
         var result = await service.RetrieveInstantOrderTracking(creatorName, idempotencyId);
@@ -268,7 +268,7 @@ public class InstantOrderRequestServiceTests
         Assert.Equal(expectedTracking.Notification.ShipmentId, result.Notification.ShipmentId);
         Assert.Equal(expectedTracking.Notification.SendersReference, result.Notification.SendersReference);
 
-        repositoryMock.Verify(
+        instantRepositoryMock.Verify(
             r => r.GetInstantOrderTracking(
                 It.Is<string>(s => s == creatorName),
                 It.Is<string>(s => s == idempotencyId),
@@ -283,8 +283,8 @@ public class InstantOrderRequestServiceTests
         string creatorName = "test-creator";
         string idempotencyId = "test-idempotency-id";
 
-        var repositoryMock = new Mock<IOrderRepository>();
-        repositoryMock
+        var instantRepositoryMock = new Mock<IInstantOrderRepository>();
+        instantRepositoryMock
             .Setup(r => r.GetInstantOrderTracking(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
@@ -292,7 +292,7 @@ public class InstantOrderRequestServiceTests
             .Callback<string, string, CancellationToken>((_, _, token) => token.ThrowIfCancellationRequested())
             .ReturnsAsync((InstantNotificationOrderTracking?)null);
 
-        var service = GetTestService(repositoryMock.Object);
+        var service = GetTestService(instantRepositoryMock.Object);
 
         using var cancellationTokenSource = new CancellationTokenSource();
         await cancellationTokenSource.CancelAsync();
@@ -301,7 +301,7 @@ public class InstantOrderRequestServiceTests
         await Assert.ThrowsAsync<OperationCanceledException>(async () =>
             await service.RetrieveInstantOrderTracking(creatorName, idempotencyId, cancellationTokenSource.Token));
 
-        repositoryMock.Verify(
+        instantRepositoryMock.Verify(
             r => r.GetInstantOrderTracking(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
@@ -309,12 +309,11 @@ public class InstantOrderRequestServiceTests
             Times.Once);
     }
 
-    private static InstantOrderRequestService GetTestService(IOrderRepository? repository = null, Guid? guid = null, DateTime? dateTime = null)
+    private static InstantOrderRequestService GetTestService(IInstantOrderRepository? instantRepositoryMock = null, Guid? guid = null, DateTime? dateTime = null)
     {
-        if (repository == null)
+        if (instantRepositoryMock == null)
         {
-            var repo = new Mock<IOrderRepository>();
-            repository = repo.Object;
+            instantRepositoryMock = new Mock<IInstantOrderRepository>().Object;
         }
 
         var dateTimeMock = new Mock<IDateTimeService>();
@@ -327,6 +326,6 @@ public class InstantOrderRequestServiceTests
             DefaultSmsSenderNumber = "TestDefaultSmsSenderNumberNumber"
         });
 
-        return new InstantOrderRequestService(repository, dateTimeMock.Object, config);
+        return new InstantOrderRequestService(dateTimeMock.Object, instantRepositoryMock, config);
     }
 }
