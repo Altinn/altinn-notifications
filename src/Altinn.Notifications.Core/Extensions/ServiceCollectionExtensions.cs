@@ -41,6 +41,7 @@ public static class ServiceCollectionExtensions
             .AddSingleton<IOrderProcessingService, OrderProcessingService>()
             .AddSingleton<IEmailNotificationService, EmailNotificationService>()
             .AddSingleton<ISmsOrderProcessingService, SmsOrderProcessingService>()
+            .AddSingleton<IInstantOrderRequestService, InstantOrderRequestService>()
             .AddSingleton<IAltinnServiceUpdateService, AltinnServiceUpdateService>()
             .AddSingleton<INotificationScheduleService, NotificationScheduleService>()
             .AddSingleton<IEmailOrderProcessingService, EmailOrderProcessingService>()

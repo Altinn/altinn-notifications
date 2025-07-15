@@ -23,19 +23,19 @@ namespace Altinn.Notifications.Core.Services;
 internal class InstantOrderRequestService : IInstantOrderRequestService
 {
     private readonly string _defaultSmsSender;
-    private readonly IOrderRepository _orderRepository;
     private readonly IDateTimeService _dateTimeService;
+    private readonly IInstantOrderRepository _instantOrderRepository;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderRequestService"/> class.
     /// </summary>
     public InstantOrderRequestService(
-        IOrderRepository orderRepository,
         IDateTimeService dateTimeService,
+        IInstantOrderRepository instantOrderRepository,
         IOptions<NotificationConfig> configurationOptions)
     {
-        _orderRepository = orderRepository;
         _dateTimeService = dateTimeService;
+        _instantOrderRepository = instantOrderRepository;
         _defaultSmsSender = configurationOptions.Value.DefaultSmsSenderNumber;
     }
 
@@ -52,7 +52,7 @@ internal class InstantOrderRequestService : IInstantOrderRequestService
         var notificationOrder = CreateMainNotificationOrderAsync(instantNotificationOrder, currentTime);
 
         // 4. Inserts the instant notification order and the instantiated notification order into the database
-        var savedInstantNotificationOrder = await _orderRepository.Create(instantNotificationOrder, notificationOrder, cancellationToken);
+        var savedInstantNotificationOrder = await _instantOrderRepository.Create(instantNotificationOrder, notificationOrder, cancellationToken);
         if (savedInstantNotificationOrder == null)
         {
             return new ServiceError(500, "Failed to create the instant notification order.");
@@ -64,7 +64,7 @@ internal class InstantOrderRequestService : IInstantOrderRequestService
     /// <inheritdoc/>
     public async Task<InstantNotificationOrderTracking?> RetrieveInstantOrderTracking(string creatorName, string idempotencyId, CancellationToken cancellationToken = default)
     {
-        return await _orderRepository.GetInstantOrderTracking(creatorName, idempotencyId, cancellationToken) ?? null;
+        return await _instantOrderRepository.GetInstantOrderTracking(creatorName, idempotencyId, cancellationToken) ?? null;
     }
 
     /// <summary>
