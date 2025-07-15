@@ -2,7 +2,6 @@
 
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
-using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
@@ -10,7 +9,6 @@ using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
-using Altinn.Notifications.Core.Shared;
 
 using Microsoft.Extensions.Options;
 
@@ -42,90 +40,60 @@ internal class InstantOrderRequestService : IInstantOrderRequestService
     }
 
     /// <inheritdoc/>
-    public async Task<Result<InstantNotificationOrderTracking, ServiceError>> RetrieveTrackingInformation(string creatorName, string idempotencyId, CancellationToken cancellationToken = default)
+    public async Task<InstantNotificationOrderTracking?> RetrieveTrackingInformation(string creatorName, string idempotencyId, CancellationToken cancellationToken = default)
     {
-        var notificationOrderTracking = await _instantOrderRepository.RetrieveTrackingInformation(creatorName, idempotencyId, cancellationToken);
-        if (notificationOrderTracking is null)
-        {
-            return new InstantNotificationOrderTracking()
-            {
-                OrderChainId = Guid.Empty,
-                Notification = new NotificationOrderChainShipment
-                {
-                    ShipmentId = Guid.Empty,
-                    SendersReference = string.Empty
-                }
-            };
-        }
-
-        return notificationOrderTracking;
+        return await _instantOrderRepository.RetrieveTrackingInformation(creatorName, idempotencyId, cancellationToken);
     }
 
     /// <inheritdoc/>
-    public async Task<Result<InstantNotificationOrderTracking, ServiceError>> PersistInstantSmsNotificationAsync(InstantNotificationOrder instantNotificationOrder, CancellationToken cancellationToken = default)
+    public async Task<InstantNotificationOrderTracking?> PersistInstantSmsNotificationAsync(InstantNotificationOrder instantNotificationOrder, CancellationToken cancellationToken = default)
     {
-        DateTime currentDateTime = _dateTimeService.UtcNow();
+        var deliveryDetails = instantNotificationOrder.InstantNotificationRecipient.ShortMessageDeliveryDetails;
+        var messageContent = instantNotificationOrder.InstantNotificationRecipient.ShortMessageDeliveryDetails.ShortMessageContent;
 
-        var smsDeliveryDetails = instantNotificationOrder.InstantNotificationRecipient.ShortMessageDeliveryDetails;
-
-        var recipients = new List<Recipient> { new([new SmsAddressPoint(smsDeliveryDetails.PhoneNumber)]) };
-
-        var smsTemplate = new SmsTemplate(smsDeliveryDetails.ShortMessageContent.Sender, smsDeliveryDetails.ShortMessageContent.Message);
-        var smsTemplates = SetDefaultSender([smsTemplate]);
+        int messagesCount = CalculateNumberOfMessages(messageContent.Message);
+        var expirationDateTime = instantNotificationOrder.Created.AddSeconds(deliveryDetails.TimeToLiveInSeconds);
+        var senderIdentifier = string.IsNullOrWhiteSpace(messageContent.Sender) ? _defaultSmsSender : messageContent.Sender;
 
         var notificationOrder = new NotificationOrder
         {
             ResourceId = null,
-            Recipients = recipients,
-            Templates = smsTemplates,
             IgnoreReservation = null,
             ConditionEndpoint = null,
-            Created = currentDateTime,
-            RequestedSendTime = currentDateTime,
             Type = instantNotificationOrder.Type,
             Id = instantNotificationOrder.OrderId,
             Creator = instantNotificationOrder.Creator,
+            Created = instantNotificationOrder.Created,
             SendingTimePolicy = SendingTimePolicy.Anytime,
             NotificationChannel = NotificationChannel.Sms,
-            SendersReference = instantNotificationOrder.SendersReference
+            RequestedSendTime = instantNotificationOrder.Created,
+            SendersReference = instantNotificationOrder.SendersReference,
+            Recipients = [new([new SmsAddressPoint(deliveryDetails.PhoneNumber)])],
+            Templates = [new SmsTemplate(senderIdentifier, messageContent.Message)]
         };
-
-        int smsMessageCount = CalculateNumberOfMessages(smsDeliveryDetails.ShortMessageContent.Message);
-
-        var smsExpiryTime = currentDateTime.AddSeconds(instantNotificationOrder.InstantNotificationRecipient.ShortMessageDeliveryDetails.TimeToLiveInSeconds);
 
         var smsNotification = new SmsNotification()
         {
             Id = _guidService.NewGuid(),
             Recipient = new SmsRecipient()
             {
-                MobileNumber = smsDeliveryDetails.PhoneNumber
+                MobileNumber = deliveryDetails.PhoneNumber
             },
-            RequestedSendTime = currentDateTime,
             OrderId = instantNotificationOrder.OrderId,
+            RequestedSendTime = instantNotificationOrder.Created,
             SendResult = new(SmsNotificationResultType.New, _dateTimeService.UtcNow())
         };
 
-        var savedInstantNotificationOrder = await _instantOrderRepository.PersistInstantSmsNotificationAsync(instantNotificationOrder, notificationOrder, smsNotification, smsExpiryTime, smsMessageCount, cancellationToken);
-        if (savedInstantNotificationOrder == null)
-        {
-            return new ServiceError(500, "Failed to create the presist the instant notification order.");
-        }
-
-        return new InstantNotificationOrderTracking()
-        {
-            OrderChainId = instantNotificationOrder.OrderChainId,
-
-            Notification = new NotificationOrderChainShipment
-            {
-                ShipmentId = instantNotificationOrder.OrderId,
-                SendersReference = instantNotificationOrder.SendersReference
-            }
-        };
+        return await _instantOrderRepository.PersistInstantSmsNotificationAsync(instantNotificationOrder, notificationOrder, smsNotification, expirationDateTime, messagesCount, cancellationToken);
     }
 
     /// <summary>
-    /// Calculates the number of messages based on the rules for concatenation of SMS messages in the SMS gateway.
+    /// Calculates the number of SMS messages required to deliver the specified message,
+    /// applying SMS gateway concatenation rules:
+    /// - Messages up to 160 characters are sent as a single SMS.
+    /// - Longer messages are split into segments of 134 characters each (concatenated SMS).
+    /// - The total number of segments is capped at 16, per gateway limitations.
+    /// The calculation uses the URL-encoded length of the message to account for special characters.
     /// </summary>
     private static int CalculateNumberOfMessages(string message)
     {
@@ -151,20 +119,5 @@ internal class InstantOrderRequestService : IInstantOrderRequestService
         }
 
         return numberOfMessages;
-    }
-
-    /// <summary>
-    /// Sets the default SMS sender identifier for any <see cref="SmsTemplate"/> in the list that does not have one defined.
-    /// </summary>
-    /// <param name="templates">The notification templates to update.</param>
-    /// <returns>The updated list of notification templates.</returns>
-    private List<INotificationTemplate> SetDefaultSender(List<INotificationTemplate> templates)
-    {
-        foreach (var template in templates.OfType<SmsTemplate>().Where(e => string.IsNullOrEmpty(e.SenderNumber)))
-        {
-            template.SenderNumber = _defaultSmsSender;
-        }
-
-        return templates;
     }
 }
