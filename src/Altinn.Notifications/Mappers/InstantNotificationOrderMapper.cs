@@ -16,79 +16,33 @@ namespace Altinn.Notifications.Mappers;
 public static class InstantNotificationOrderMapper
 {
     /// <summary>
-    /// Maps a <see cref="ShortMessageContentExt"/> external content model to a <see cref="ShortMessageContent"/> domain model.
-    /// </summary>
-    /// <param name="source">The external content model to map from.</param>
-    /// <returns>A <see cref="ShortMessageContent"/> domain model.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="source"/> is null.</exception>
-    public static ShortMessageContent MapToShortMessageContent(this ShortMessageContentExt source)
-    {
-        ArgumentNullException.ThrowIfNull(source);
-
-        return new ShortMessageContent
-        {
-            Message = source.Body,
-            Sender = source.Sender
-        };
-    }
-
-    /// <summary>
     /// Maps an <see cref="InstantNotificationOrder"/> domain model to a <see cref="ShortMessage"/> for SMS delivery.
     /// </summary>
     /// <param name="source">The instant notification order to map from.</param>
-    /// <param name="defaultSenderNumber">The default sender number.</param>
+    /// <param name="defaultSenderIdentifier">The default sender identifier.</param>
     /// <returns>A <see cref="ShortMessage"/> configured for SMS delivery.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="source"/> or its required properties are null.</exception>
-    public static ShortMessage MapToShortMessage(this InstantNotificationOrder source, string defaultSenderNumber)
+    /// <exception cref="ArgumentException">Thrown when <paramref name="defaultSenderIdentifier"/> is null or empty.</exception>
+    public static ShortMessage MapToShortMessage(this InstantNotificationOrder source, string defaultSenderIdentifier)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(source.InstantNotificationRecipient);
         ArgumentNullException.ThrowIfNull(source.InstantNotificationRecipient.ShortMessageDeliveryDetails);
         ArgumentNullException.ThrowIfNull(source.InstantNotificationRecipient.ShortMessageDeliveryDetails.ShortMessageContent);
 
+        ArgumentException.ThrowIfNullOrWhiteSpace(defaultSenderIdentifier);
+
+        // Ensure the sender is set to the original sender or a default value if not provided
+        var originalSender = source.InstantNotificationRecipient.ShortMessageDeliveryDetails.ShortMessageContent.Sender;
+        var shortMessageSender = string.IsNullOrWhiteSpace(originalSender) ? defaultSenderIdentifier : originalSender;
+
         return new ShortMessage
         {
+            Sender = shortMessageSender,
             NotificationId = source.OrderId,
             Recipient = source.InstantNotificationRecipient.ShortMessageDeliveryDetails.PhoneNumber,
             TimeToLive = source.InstantNotificationRecipient.ShortMessageDeliveryDetails.TimeToLiveInSeconds,
             Message = source.InstantNotificationRecipient.ShortMessageDeliveryDetails.ShortMessageContent.Message,
-            Sender = source.InstantNotificationRecipient.ShortMessageDeliveryDetails.ShortMessageContent.Sender ?? defaultSenderNumber,
-        };
-    }
-
-    /// <summary>
-    /// Maps a <see cref="ShortMessageDeliveryDetailsExt"/> external delivery details model to a <see cref="ShortMessageDeliveryDetails"/> domain model.
-    /// </summary>
-    /// <param name="source">The external delivery details model to map from.</param>
-    /// <returns>A <see cref="ShortMessageDeliveryDetails"/> domain model.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="source"/> or its required properties are null.</exception>
-    public static ShortMessageDeliveryDetails MapToShortMessageDeliveryDetails(this ShortMessageDeliveryDetailsExt source)
-    {
-        ArgumentNullException.ThrowIfNull(source);
-        ArgumentNullException.ThrowIfNull(source.ShortMessageContent);
-
-        return new ShortMessageDeliveryDetails
-        {
-            PhoneNumber = source.PhoneNumber,
-            TimeToLiveInSeconds = source.TimeToLiveInSeconds,
-            ShortMessageContent = source.ShortMessageContent.MapToShortMessageContent()
-        };
-    }
-
-    /// <summary>
-    /// Maps an <see cref="InstantNotificationRecipientExt"/> external recipient model to an <see cref="InstantNotificationRecipient"/> domain model.
-    /// </summary>
-    /// <param name="source">The external recipient model to map from.</param>
-    /// <returns>An <see cref="InstantNotificationRecipient"/> domain model.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="source"/> or its required properties are null.</exception>
-    public static InstantNotificationRecipient MapToInstantNotificationRecipient(this InstantNotificationRecipientExt source)
-    {
-        ArgumentNullException.ThrowIfNull(source);
-        ArgumentNullException.ThrowIfNull(source.ShortMessageDeliveryDetails);
-
-        return new InstantNotificationRecipient
-        {
-            ShortMessageDeliveryDetails = source.ShortMessageDeliveryDetails.MapToShortMessageDeliveryDetails()
         };
     }
 
@@ -119,27 +73,81 @@ public static class InstantNotificationOrderMapper
     /// </summary>
     /// <param name="source">The external request model to map from.</param>
     /// <param name="creatorShortName">The short name of the creator of the notification.</param>
+    /// <param name="created">The timestamp indicating when the instant notification order was created. This should be provided by the caller for improved testability.</param>
     /// <returns>An <see cref="InstantNotificationOrder"/> domain model.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="source"/> or its required properties are null.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="creatorShortName"/> is null or empty.</exception>
-    public static InstantNotificationOrder MapToInstantNotificationOrder(this InstantNotificationOrderRequestExt source, string creatorShortName)
+    public static InstantNotificationOrder MapToInstantNotificationOrder(this InstantNotificationOrderRequestExt source, string creatorShortName, DateTime created)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(source.InstantNotificationRecipient);
         ArgumentNullException.ThrowIfNull(source.InstantNotificationRecipient.ShortMessageDeliveryDetails);
         ArgumentNullException.ThrowIfNull(source.InstantNotificationRecipient.ShortMessageDeliveryDetails.ShortMessageContent);
 
-        ArgumentNullException.ThrowIfNull(creatorShortName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(creatorShortName);
 
         return new InstantNotificationOrder
         {
+            Created = created,
             OrderId = Guid.NewGuid(),
-            Created = DateTime.UtcNow,
             OrderChainId = Guid.NewGuid(),
             IdempotencyId = source.IdempotencyId,
             Creator = new Creator(creatorShortName),
             SendersReference = source.SendersReference,
             InstantNotificationRecipient = source.InstantNotificationRecipient.MapToInstantNotificationRecipient()
+        };
+    }
+
+    /// <summary>
+    /// Maps a <see cref="ShortMessageContentExt"/> external content model to a <see cref="ShortMessageContent"/> domain model.
+    /// </summary>
+    /// <param name="source">The external content model to map from.</param>
+    /// <returns>A <see cref="ShortMessageContent"/> domain model.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="source"/> is null.</exception>
+    private static ShortMessageContent MapToShortMessageContent(this ShortMessageContentExt source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+
+        return new ShortMessageContent
+        {
+            Message = source.Body,
+            Sender = source.Sender
+        };
+    }
+
+    /// <summary>
+    /// Maps a <see cref="ShortMessageDeliveryDetailsExt"/> external delivery details model to a <see cref="ShortMessageDeliveryDetails"/> domain model.
+    /// </summary>
+    /// <param name="source">The external delivery details model to map from.</param>
+    /// <returns>A <see cref="ShortMessageDeliveryDetails"/> domain model.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="source"/> or its required properties are null.</exception>
+    private static ShortMessageDeliveryDetails MapToShortMessageDeliveryDetails(this ShortMessageDeliveryDetailsExt source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(source.ShortMessageContent);
+
+        return new ShortMessageDeliveryDetails
+        {
+            PhoneNumber = source.PhoneNumber,
+            TimeToLiveInSeconds = source.TimeToLiveInSeconds,
+            ShortMessageContent = source.ShortMessageContent.MapToShortMessageContent()
+        };
+    }
+
+    /// <summary>
+    /// Maps an <see cref="InstantNotificationRecipientExt"/> external recipient model to an <see cref="InstantNotificationRecipient"/> domain model.
+    /// </summary>
+    /// <param name="source">The external recipient model to map from.</param>
+    /// <returns>An <see cref="InstantNotificationRecipient"/> domain model.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="source"/> or its required properties are null.</exception>
+    private static InstantNotificationRecipient MapToInstantNotificationRecipient(this InstantNotificationRecipientExt source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(source.ShortMessageDeliveryDetails);
+
+        return new InstantNotificationRecipient
+        {
+            ShortMessageDeliveryDetails = source.ShortMessageDeliveryDetails.MapToShortMessageDeliveryDetails()
         };
     }
 }
