@@ -1,5 +1,4 @@
-﻿using System;
-using System.Web;
+﻿using System.Web;
 
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
@@ -23,6 +22,7 @@ namespace Altinn.Notifications.Core.Services;
 internal class InstantOrderRequestService : IInstantOrderRequestService
 {
     private readonly string _defaultSmsSender;
+    private readonly IGuidService _guidService;
     private readonly IDateTimeService _dateTimeService;
     private readonly IInstantOrderRepository _instantOrderRepository;
 
@@ -30,94 +30,98 @@ internal class InstantOrderRequestService : IInstantOrderRequestService
     /// Initializes a new instance of the <see cref="OrderRequestService"/> class.
     /// </summary>
     public InstantOrderRequestService(
+        IGuidService guidService,
         IDateTimeService dateTimeService,
         IInstantOrderRepository instantOrderRepository,
         IOptions<NotificationConfig> configurationOptions)
     {
+        _guidService = guidService;
         _dateTimeService = dateTimeService;
         _instantOrderRepository = instantOrderRepository;
         _defaultSmsSender = configurationOptions.Value.DefaultSmsSenderNumber;
     }
 
     /// <inheritdoc/>
-    public async Task<Result<NotificationOrder, ServiceError>> RegisterInstantOrder(InstantNotificationOrder instantNotificationOrder, CancellationToken cancellationToken = default)
+    public async Task<Result<InstantNotificationOrderTracking, ServiceError>> RetrieveTrackingInformation(string creatorName, string idempotencyId, CancellationToken cancellationToken = default)
     {
-        // 1. Get the current time
-        DateTime currentTime = _dateTimeService.UtcNow();
-
-        // 2. Early cancellation if someone’s already cancelled
-        cancellationToken.ThrowIfCancellationRequested();
-
-        // 3. Instantiate the main order
-        var notificationOrder = CreateMainNotificationOrderAsync(instantNotificationOrder, currentTime);
-
-        // 4. Inserts the instant notification order and the instantiated notification order into the database
-        var savedInstantNotificationOrder = await _instantOrderRepository.Create(instantNotificationOrder, notificationOrder, cancellationToken);
-        if (savedInstantNotificationOrder == null)
+        var notificationOrderTracking = await _instantOrderRepository.RetrieveTrackingInformation(creatorName, idempotencyId, cancellationToken);
+        if (notificationOrderTracking is null)
         {
-            return new ServiceError(500, "Failed to create the instant notification order.");
+            return new InstantNotificationOrderTracking()
+            {
+                OrderChainId = Guid.Empty,
+                Notification = new NotificationOrderChainShipment
+                {
+                    ShipmentId = Guid.Empty,
+                    SendersReference = string.Empty
+                }
+            };
         }
 
-        return notificationOrder;
+        return notificationOrderTracking;
     }
 
     /// <inheritdoc/>
-    public async Task<InstantNotificationOrderTracking?> RetrieveInstantOrderTracking(string creatorName, string idempotencyId, CancellationToken cancellationToken = default)
+    public async Task<Result<InstantNotificationOrderTracking, ServiceError>> PersistInstantSmsNotificationAsync(InstantNotificationOrder instantNotificationOrder, CancellationToken cancellationToken = default)
     {
-        return await _instantOrderRepository.GetInstantOrderTracking(creatorName, idempotencyId, cancellationToken) ?? null;
-    }
+        DateTime currentDateTime = _dateTimeService.UtcNow();
 
-    /// <summary>
-    /// Creates a <see cref="NotificationOrder"/> for an instant notification by processing
-    /// recipient details and configuring the SMS message template.
-    /// </summary>
-    /// <param name="orderRequest">The instant notification order containing recipient and message details.</param>
-    /// <param name="currentTime">The UTC timestamp to set as the creation time of the notification order.</param>
-    /// <returns>A fully configured <see cref="NotificationOrder"/> ready for persistence and processing.</returns>
-    private NotificationOrder CreateMainNotificationOrderAsync(InstantNotificationOrder orderRequest, DateTime currentTime)
-    {
-        var smsDetails = orderRequest.InstantNotificationRecipient.ShortMessageDeliveryDetails;
-        var smsContent = smsDetails.ShortMessageContent;
+        var smsDeliveryDetails = instantNotificationOrder.InstantNotificationRecipient.ShortMessageDeliveryDetails;
 
-        var smsTemplate = new SmsTemplate(smsContent.Sender, smsContent.Message);
+        var recipients = new List<Recipient> { new([new SmsAddressPoint(smsDeliveryDetails.PhoneNumber)]) };
 
-        var smsRecipient = new Recipient([new SmsAddressPoint(smsDetails.PhoneNumber)]);
+        var smsTemplate = new SmsTemplate(smsDeliveryDetails.ShortMessageContent.Sender, smsDeliveryDetails.ShortMessageContent.Message);
+        var smsTemplates = SetDefaultSender([smsTemplate]);
 
-        var templates = SetSenderIfNotDefined([smsTemplate]);
-        var recipients = new List<Recipient> { smsRecipient };
-
-        return new NotificationOrder
+        var notificationOrder = new NotificationOrder
         {
             ResourceId = null,
-            Created = currentTime,
-            Templates = templates,
             Recipients = recipients,
+            Templates = smsTemplates,
             IgnoreReservation = null,
-            Type = orderRequest.Type,
             ConditionEndpoint = null,
-            Id = orderRequest.OrderId,
-            Creator = orderRequest.Creator,
-            RequestedSendTime = currentTime,
+            Created = currentDateTime,
+            RequestedSendTime = currentDateTime,
+            Type = instantNotificationOrder.Type,
+            Id = instantNotificationOrder.OrderId,
+            Creator = instantNotificationOrder.Creator,
             SendingTimePolicy = SendingTimePolicy.Anytime,
             NotificationChannel = NotificationChannel.Sms,
-            SendersReference = orderRequest.SendersReference
+            SendersReference = instantNotificationOrder.SendersReference
         };
-    }
 
-    private List<INotificationTemplate> SetSenderIfNotDefined(List<INotificationTemplate> templates)
-    {
-        foreach (var template in templates.OfType<SmsTemplate>().Where(e => string.IsNullOrEmpty(e.SenderNumber)))
+        int smsMessageCount = CalculateNumberOfMessages(smsDeliveryDetails.ShortMessageContent.Message);
+
+        var smsExpiryTime = currentDateTime.AddSeconds(instantNotificationOrder.InstantNotificationRecipient.ShortMessageDeliveryDetails.TimeToLiveInSeconds);
+
+        var smsNotification = new SmsNotification()
         {
-            template.SenderNumber = _defaultSmsSender;
+            Id = _guidService.NewGuid(),
+            Recipient = new SmsRecipient()
+            {
+                MobileNumber = smsDeliveryDetails.PhoneNumber
+            },
+            RequestedSendTime = currentDateTime,
+            OrderId = instantNotificationOrder.OrderId,
+            SendResult = new(SmsNotificationResultType.New, _dateTimeService.UtcNow())
+        };
+
+        var savedInstantNotificationOrder = await _instantOrderRepository.PersistInstantSmsNotificationAsync(instantNotificationOrder, notificationOrder, smsNotification, smsExpiryTime, smsMessageCount, cancellationToken);
+        if (savedInstantNotificationOrder == null)
+        {
+            return new ServiceError(500, "Failed to create the presist the instant notification order.");
         }
 
-        return templates;
-    }
+        return new InstantNotificationOrderTracking()
+        {
+            OrderChainId = instantNotificationOrder.OrderChainId,
 
-    private static int GetSmsCountForOrder(NotificationOrder order)
-    {
-        SmsTemplate? smsTemplate = order.Templates.Find(t => t.Type == NotificationTemplateType.Sms) as SmsTemplate;
-        return CalculateNumberOfMessages(smsTemplate!.Body);
+            Notification = new NotificationOrderChainShipment
+            {
+                ShipmentId = instantNotificationOrder.OrderId,
+                SendersReference = instantNotificationOrder.SendersReference
+            }
+        };
     }
 
     /// <summary>
@@ -149,36 +153,18 @@ internal class InstantOrderRequestService : IInstantOrderRequestService
         return numberOfMessages;
     }
 
-    private async Task ProcessInstantOrder(NotificationOrder order, int timeToLiveInSeconds, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Sets the default SMS sender identifier for any <see cref="SmsTemplate"/> in the list that does not have one defined.
+    /// </summary>
+    /// <param name="templates">The notification templates to update.</param>
+    /// <returns>The updated list of notification templates.</returns>
+    private List<INotificationTemplate> SetDefaultSender(List<INotificationTemplate> templates)
     {
-        var recipient = order.Recipients.First(e => e.AddressInfo.Exists(e => e.AddressType == AddressType.Sms));
-
-        var addressPoint = recipient.AddressInfo.OfType<SmsAddressPoint>().First();
-
-        int smsCount = GetSmsCountForOrder(order);
-
-        var smsRecipient = new SmsRecipient()
+        foreach (var template in templates.OfType<SmsTemplate>().Where(e => string.IsNullOrEmpty(e.SenderNumber)))
         {
-            MobileNumber = addressPoint.MobileNumber
-        };
+            template.SenderNumber = _defaultSmsSender;
+        }
 
-        var expiryDateTime = order.RequestedSendTime.AddSeconds(timeToLiveInSeconds);
-
-        //await _smsService.CreateNotificationAsync(order.Id, order.RequestedSendTime, smsRecipient, expiryDateTime, smsCount, cancellationToken);
+        return templates;
     }
-
-    private async Task CreateNotificationAsync(Guid orderId, DateTime requestedSendTime, SmsRecipient recipient, DateTime expiryDateTime, int smsCount, CancellationToken cancellationToken = default)
-    {
-        //var smsNotification = new SmsNotification()
-        //{
-        //    OrderId = orderId,
-        //    Id = _guid.NewGuid(),
-        //    Recipient = recipient,
-        //    RequestedSendTime = requestedSendTime,
-        //    SendResult = new(SmsNotificationResultType.New, _dateTime.UtcNow())
-        //};
-
-        //await _repository.AddNotification(smsNotification, expiryDateTime, smsCount, cancellationToken);
-    }
-
 }

@@ -69,7 +69,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, notification.SendResult.ResultTime);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, expiry);
 
-        await pgcom.ExecuteNonQueryAsync(cancellationToken);
+        await pgcom.ExecuteNonQueryAsync();
     }
 
     /// <inheritdoc/>

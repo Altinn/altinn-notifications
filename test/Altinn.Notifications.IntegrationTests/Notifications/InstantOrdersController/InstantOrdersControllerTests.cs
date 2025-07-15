@@ -95,7 +95,6 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
         var controller = new InstantOrdersController(
             Mock.Of<IDateTimeService>(),
             Options.Create(new NotificationConfig { DefaultSmsSenderNumber = "Altinn" }),
-            Mock.Of<ISmsOrderProcessingService>(),
             Mock.Of<IShortMessageServiceClient>(),
             orderRequestServiceMock.Object,
             validatorMock.Object)
@@ -108,187 +107,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
 
         // Assert
         Assert.IsType<ForbidResult>(result);
-        orderRequestServiceMock.Verify(e => e.RegisterInstantOrder(It.IsAny<InstantNotificationOrder>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task Post_WithFailedSmsSending_ReturnsInternalServerError()
-    {
-        // Arrange
-        var request = new InstantNotificationOrderRequestExt
-        {
-            IdempotencyId = Guid.NewGuid().ToString(),
-            SendersReference = "F9D7B2DD-2436-49E3-A1AF-3967C640B94F",
-            InstantNotificationRecipient = new InstantNotificationRecipientExt
-            {
-                ShortMessageDeliveryDetails = new()
-                {
-                    TimeToLiveInSeconds = 360,
-                    PhoneNumber = "+4799999999",
-                    ShortMessageContent = new()
-                    {
-                        Sender = "Altinn",
-                        Body = "Test message"
-                    }
-                }
-            }
-        };
-
-        var registeredOrder = new NotificationOrder
-        {
-            Id = Guid.NewGuid(),
-            RequestedSendTime = DateTime.UtcNow,
-            Recipients =
-            [
-                new Recipient()
-                {
-                    AddressInfo = [new SmsAddressPoint("+4799999999")]
-                }
-            ],
-
-            Templates =
-            [
-                new SmsTemplate()
-                {
-                    Body = "Test message",
-                    SenderNumber = "Altinn"
-                }
-            ],
-
-            SendersReference = "F9D7B2DD-2436-49E3-A1AF-3967C640B94F"
-        };
-
-        var orderRequestServiceMock = new Mock<IInstantOrderRequestService>();
-        orderRequestServiceMock
-            .Setup(e => e.RegisterInstantOrder(It.IsAny<InstantNotificationOrder>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(registeredOrder);
-
-        var smsOrderProcessingService = new Mock<ISmsOrderProcessingService>();
-        smsOrderProcessingService
-            .Setup(e => e.ProcessInstantOrder(It.IsAny<NotificationOrder>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-
-        var smsClientMock = new Mock<IShortMessageServiceClient>();
-        smsClientMock
-            .Setup(s => s.SendAsync(It.IsAny<ShortMessage>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ShortMessageSendResult { Success = false, StatusCode = (HttpStatusCode)500, ErrorDetails = "SMS sending failed" });
-
-        HttpClient client = GetTestClient(
-            smsClient: smsClientMock.Object,
-            orderRequestService: orderRequestServiceMock.Object,
-            smsOrderProcessingService: smsOrderProcessingService.Object);
-
-        using var requestContent = new StringContent(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
-
-        // Act
-        var response = await client.PostAsync(BasePath, requestContent);
-        var responseString = await response.Content.ReadAsStringAsync();
-        var problemDetails = JsonSerializer.Deserialize<ProblemDetails>(responseString, _options);
-
-        // Assert
-        Assert.NotNull(problemDetails);
-        Assert.Equal("SMS Sending Failed", problemDetails.Title);
-        Assert.Contains("Failed to send the SMS", problemDetails.Detail);
-        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task Post_WithFailedRegistration_ReturnsInternalServerError()
-    {
-        // Arrange
-        var request = new InstantNotificationOrderRequestExt
-        {
-            IdempotencyId = Guid.NewGuid().ToString(),
-            SendersReference = "89994D19-2AC3-4CBB-9994-213FD5DACC56",
-            InstantNotificationRecipient = new InstantNotificationRecipientExt
-            {
-                ShortMessageDeliveryDetails = new()
-                {
-                    TimeToLiveInSeconds = 360,
-                    PhoneNumber = "+4799999999",
-                    ShortMessageContent = new()
-                    {
-                        Sender = "Altinn",
-                        Body = "Test message"
-                    }
-                }
-            }
-        };
-
-        var orderRequestServiceMock = new Mock<IInstantOrderRequestService>();
-        orderRequestServiceMock
-            .Setup(e => e.RegisterInstantOrder(It.IsAny<InstantNotificationOrder>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ServiceError(500, "Failed to create the instant notification order"));
-
-        HttpClient client = GetTestClient(orderRequestService: orderRequestServiceMock.Object);
-        using var requestContent = new StringContent(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
-
-        // Act
-        var response = await client.PostAsync(BasePath, requestContent);
-        var responseString = await response.Content.ReadAsStringAsync();
-        var problem = JsonSerializer.Deserialize<ProblemDetails>(responseString, _options);
-
-        // Assert
-        Assert.NotNull(problem);
-        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
-        Assert.Equal("Instant Notification Registration Failed", problem.Title);
-        Assert.Equal("Failed to register the instant notification order.", problem.Detail);
-    }
-
-    [Fact]
-    public async Task Post_WithExistingOrder_ReturnsOkWithOrderTrackingDetails()
-    {
-        // Arrange
-        var idempotencyId = Guid.NewGuid().ToString();
-        var request = new InstantNotificationOrderRequestExt
-        {
-            IdempotencyId = idempotencyId,
-            SendersReference = "B0A6022E-2C08-4E2B-A6E3-3303AE7FFE49",
-            InstantNotificationRecipient = new InstantNotificationRecipientExt
-            {
-                ShortMessageDeliveryDetails = new()
-                {
-                    TimeToLiveInSeconds = 360,
-                    PhoneNumber = "+4799999999",
-                    ShortMessageContent = new()
-                    {
-                        Body = "Test message",
-                        Sender = "Test sender"
-                    }
-                }
-            }
-        };
-
-        var existingTracking = new InstantNotificationOrderTracking
-        {
-            OrderChainId = Guid.NewGuid(),
-            Notification = new NotificationOrderChainShipment
-            {
-                ShipmentId = Guid.NewGuid(),
-                SendersReference = "B0A6022E-2C08-4E2B-A6E3-3303AE7FFE49"
-            }
-        };
-
-        var orderRequestServiceMock = new Mock<IInstantOrderRequestService>();
-        orderRequestServiceMock.Setup(e => e.RetrieveInstantOrderTracking("ttd", idempotencyId, It.IsAny<CancellationToken>())).ReturnsAsync(existingTracking);
-
-        HttpClient client = GetTestClient(orderRequestService: orderRequestServiceMock.Object);
-        using var requestContent = new StringContent(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
-
-        // Act
-        var response = await client.PostAsync(BasePath, requestContent);
-        var responseString = await response.Content.ReadAsStringAsync();
-        var responseObject = JsonSerializer.Deserialize<InstantNotificationOrderResponseExt>(responseString, _options);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-        Assert.NotNull(responseObject);
-        Assert.Equal(existingTracking.OrderChainId, responseObject.OrderChainId);
-        Assert.Equal(existingTracking.Notification.SendersReference, responseObject.Notification.SendersReference);
+        orderRequestServiceMock.Verify(e => e.PersistInstantSmsNotificationAsync(It.IsAny<InstantNotificationOrder>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Theory]
@@ -331,11 +150,11 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
-    private HttpClient GetTestClient(IInstantOrderRequestService? orderRequestService = null, IShortMessageServiceClient? smsClient = null, ISmsOrderProcessingService? smsOrderProcessingService = null)
+    private HttpClient GetTestClient(IInstantOrderRequestService? orderRequestService = null, IShortMessageServiceClient? smsClient = null, IInstantOrderRequestService? instantOrderRequestService = null)
     {
         smsClient ??= Mock.Of<IShortMessageServiceClient>();
         orderRequestService ??= Mock.Of<IInstantOrderRequestService>();
-        smsOrderProcessingService ??= Mock.Of<ISmsOrderProcessingService>();
+        instantOrderRequestService ??= Mock.Of<IInstantOrderRequestService>();
 
         return _factory.WithWebHostBuilder(builder =>
         {
@@ -343,7 +162,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
             {
                 services.AddSingleton(smsClient);
                 services.AddSingleton(orderRequestService);
-                services.AddSingleton(smsOrderProcessingService);
+                services.AddSingleton(instantOrderRequestService);
                 services.AddSingleton<IPublicSigningKeyProvider, PublicSigningKeyProviderMock>();
                 services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
             });

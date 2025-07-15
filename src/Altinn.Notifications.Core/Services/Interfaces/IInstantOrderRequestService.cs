@@ -4,47 +4,60 @@ using Altinn.Notifications.Core.Shared;
 namespace Altinn.Notifications.Core.Services.Interfaces;
 
 /// <summary>
-/// Defines operations for registering and tracking instant notification orders.
+/// Provides methods for registering and tracking instant notification orders, enabling immediate delivery and status retrieval.
 /// </summary>
 public interface IInstantOrderRequestService
 {
     /// <summary>
-    /// Registers an instant notification order for immediate processing and delivery.
-    /// </summary>
-    /// <param name="instantNotificationOrder">
-    /// The instant notification order containing recipient and message details to be processed immediately.
-    /// </param>
-    /// <param name="cancellationToken">
-    /// A token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.
-    /// </param>
-    /// <returns>
-    /// A <see cref="Task{TResult}"/> containing a <see cref="Result{TValue, TError}"/>.
-    /// On success, the result contains a <see cref="NotificationOrder"/> with details about the registered instant notification order.
-    /// On failure, the result contains a <see cref="ServiceError"/> describing the reason for failure.
-    /// </returns>
-    /// <exception cref="OperationCanceledException">
-    /// Thrown when the operation is canceled through the provided <paramref name="cancellationToken"/>.
-    /// </exception>
-    Task<Result<NotificationOrder, ServiceError>> RegisterInstantOrder(InstantNotificationOrder instantNotificationOrder, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Retrieves tracking information for an instant notification order using the creator's name and idempotency identifier.
+    /// Retrieves tracking details for an instant notification order using the creator's short name and idempotency identifier.
     /// </summary>
     /// <param name="creatorName">
-    /// The short name of the creator that originally submitted the instant notification order.
+    /// The short name of the entity that submitted the instant notification order.
     /// </param>
     /// <param name="idempotencyId">
-    /// The idempotency identifier that was defined when the instant notification order was created.
+    /// The unique idempotency identifier assigned when the order was created, used to prevent duplicate processing.
     /// </param>
     /// <param name="cancellationToken">
-    /// A token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.
+    /// A <see cref="CancellationToken"/> to observe for cancellation requests. Defaults to <see cref="CancellationToken.None"/>.
     /// </param>
     /// <returns>
-    /// A <see cref="Task{TResult}"/> containing an <see cref="InstantNotificationOrderTracking"/> object with tracking details for the instant notification order,
-    /// or <c>null</c> if no matching order is found with the provided parameters.
+    /// A <see cref="Task{TResult}"/> containing a <see cref="Result{InstantNotificationOrderTracking, ServiceError}"/>:
+    /// <list type="table">
+    /// <item>
+    /// <description><see cref="InstantNotificationOrderTracking"/> if a matching order is found.</description>
+    /// </item>
+    /// <item>
+    /// <description><see cref="ServiceError"/> if no matching order exists or an error occurs.</description>
+    /// </item>
+    /// </list>
     /// </returns>
     /// <exception cref="OperationCanceledException">
-    /// Thrown when the operation is canceled through the provided <paramref name="cancellationToken"/>.
+    /// Thrown if the operation is canceled via the <paramref name="cancellationToken"/>.
     /// </exception>
-    Task<InstantNotificationOrderTracking?> RetrieveInstantOrderTracking(string creatorName, string idempotencyId, CancellationToken cancellationToken = default);
+    Task<Result<InstantNotificationOrderTracking, ServiceError>> RetrieveTrackingInformation(string creatorName, string idempotencyId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Registers a new instant notification order for immediate processing and delivery.
+    /// </summary>
+    /// <param name="instantNotificationOrder">
+    /// The <see cref="InstantNotificationOrder"/> containing recipient and message details for urgent delivery.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A <see cref="CancellationToken"/> to observe for cancellation requests. Defaults to <see cref="CancellationToken.None"/>.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task{TResult}"/> containing a <see cref="Result{InstantNotificationOrderTracking, ServiceError}"/>:
+    /// <list type="bullet">
+    /// <item>
+    /// <description><see cref="InstantNotificationOrderTracking"/> with tracking information if registration succeeds.</description>
+    /// </item>
+    /// <item>
+    /// <description><see cref="ServiceError"/> if an error occurs.</description>
+    /// </item>
+    /// </list>
+    /// </returns>
+    /// <exception cref="OperationCanceledException">
+    /// Thrown if the operation is canceled via the <paramref name="cancellationToken"/>.
+    /// </exception>
+    Task<Result<InstantNotificationOrderTracking, ServiceError>> PersistInstantSmsNotificationAsync(InstantNotificationOrder instantNotificationOrder, CancellationToken cancellationToken = default);
 }

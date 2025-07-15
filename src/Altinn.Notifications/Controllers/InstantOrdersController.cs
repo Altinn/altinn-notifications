@@ -4,7 +4,6 @@ using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
-using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Orders;
 using Altinn.Notifications.Validators.Extensions;
 
@@ -30,7 +29,6 @@ public class InstantOrdersController : ControllerBase
 {
     private readonly string _defaultSmsSender;
     private readonly IDateTimeService _dateTimeService;
-    private readonly ISmsOrderProcessingService _smsOrderProcessingService;
     private readonly IShortMessageServiceClient _shortMessageServiceClient;
     private readonly IInstantOrderRequestService _instantOrderRequestService;
     private readonly IValidator<InstantNotificationOrderRequestExt> _validator;
@@ -41,14 +39,12 @@ public class InstantOrdersController : ControllerBase
     public InstantOrdersController(
         IDateTimeService dateTimeService,
         IOptions<NotificationConfig> config,
-        ISmsOrderProcessingService smsOrderProcessingService,
         IShortMessageServiceClient shortMessageServiceClient,
         IInstantOrderRequestService instantOrderRequestService,
         IValidator<InstantNotificationOrderRequestExt> validator)
     {
         _validator = validator;
         _dateTimeService = dateTimeService;
-        _smsOrderProcessingService = smsOrderProcessingService;
         _shortMessageServiceClient = shortMessageServiceClient;
         _instantOrderRequestService = instantOrderRequestService;
         _defaultSmsSender = config.Value.DefaultSmsSenderNumber;
@@ -91,16 +87,19 @@ public class InstantOrdersController : ControllerBase
             }
 
             // 3. Check if an order with the same idempotency identifier already exists.
-            var trackingInformation = await _instantOrderRequestService.RetrieveInstantOrderTracking(creator, request.IdempotencyId, cancellationToken);
-            if (trackingInformation is not null)
+            var trackingInformation = await _instantOrderRequestService.RetrieveTrackingInformation(creator, request.IdempotencyId, cancellationToken);
+            if (trackingInformation.IsSuccess && trackingInformation.Value != null)
             {
-                return Ok(trackingInformation.MapToInstantNotificationOrderResponse());
+                var instantNotificationOrderTracking = trackingInformation.Value;
+                if (instantNotificationOrderTracking.OrderChainId != Guid.Empty)
+                {
+                    return Ok(instantNotificationOrderTracking.MapToInstantNotificationOrderResponse());
+                }
             }
 
             // 4. Map and register the instant notification order.
             var instantNotificationOrder = request.MapToInstantNotificationOrder(creator, _dateTimeService.UtcNow());
-
-            var registerationResult = await _instantOrderRequestService.RegisterInstantOrder(instantNotificationOrder, cancellationToken);
+            var registerationResult = await _instantOrderRequestService.PersistInstantSmsNotificationAsync(instantNotificationOrder, cancellationToken);
             if (registerationResult.IsError || registerationResult.Value == null)
             {
                 var problemDetails = new ProblemDetails
@@ -112,11 +111,7 @@ public class InstantOrdersController : ControllerBase
                 return StatusCode(500, problemDetails);
             }
 
-            // 5. Register the SMS notification order.
-            var timeToLiveInSeconds = instantNotificationOrder.InstantNotificationRecipient.ShortMessageDeliveryDetails.TimeToLiveInSeconds;
-            await _smsOrderProcessingService.ProcessInstantOrder(registerationResult.Value, timeToLiveInSeconds, cancellationToken);
-
-            // 6. Send out the SMS using the short message service client.
+            // 5. Send out the SMS using the short message service client.
             var smsSendingResult = await _shortMessageServiceClient.SendAsync(instantNotificationOrder.MapToShortMessage(_defaultSmsSender), cancellationToken);
             if (!smsSendingResult.Success)
             {
@@ -132,15 +127,7 @@ public class InstantOrdersController : ControllerBase
             // 7. Update the processing status of the instant notification order.
 
             // 8. Return the response with the order chain ID and shipment details.
-            return Created(instantNotificationOrder.OrderChainId.GetSelfLinkFromOrderChainId(), new InstantNotificationOrderResponseExt
-            {
-                OrderChainId = instantNotificationOrder.OrderChainId,
-                Notification = new NotificationOrderChainShipmentExt
-                {
-                    ShipmentId = registerationResult.Value.Id,
-                    SendersReference = registerationResult.Value.SendersReference
-                }
-            });
+            return Created(instantNotificationOrder.OrderChainId.GetSelfLinkFromOrderChainId(), registerationResult.Value);
         }
         catch (InvalidOperationException ex)
         {
