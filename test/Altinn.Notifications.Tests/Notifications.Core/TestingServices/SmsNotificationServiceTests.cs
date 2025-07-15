@@ -184,67 +184,6 @@ public class SmsNotificationServiceTests
     }
 
     [Fact]
-    public async Task CreateNotificationAsync_ValidParameters_NotificationIsCreatedAndPersisted()
-    {
-        // Arrange
-        int smsCount = 1;
-        Guid id = Guid.NewGuid();
-        Guid orderId = Guid.NewGuid();
-        DateTime dateTimeOutput = DateTime.UtcNow;
-        DateTime requestedSendTime = DateTime.UtcNow;
-        DateTime expiryDateTime = requestedSendTime.AddHours(1);
-
-        SmsRecipient recipient = new()
-        {
-            MobileNumber = "+47 999 99 999",
-            NationalIdentityNumber = "27302900227"
-        };
-
-        SmsNotification expected = new()
-        {
-            Id = id,
-            OrderId = orderId,
-            Recipient = recipient,
-            RequestedSendTime = requestedSendTime,
-            SendResult = new(SmsNotificationResultType.New, dateTimeOutput)
-        };
-
-        var repoMock = new Mock<ISmsNotificationRepository>();
-        repoMock
-            .Setup(r => r.AddNotification(
-                It.Is<SmsNotification>(n =>
-                    n.OrderId == expected.OrderId &&
-                    n.SendResult.Result == SmsNotificationResultType.New &&
-                    n.Recipient.MobileNumber == expected.Recipient.MobileNumber &&
-                    n.Recipient.OrganizationNumber == expected.Recipient.OrganizationNumber &&
-                    n.Recipient.NationalIdentityNumber == expected.Recipient.NationalIdentityNumber),
-                expiryDateTime,
-                smsCount,
-                It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask)
-            .Verifiable();
-
-        var service = GetTestService(repo: repoMock.Object, guidOutput: id, dateTimeOutput: dateTimeOutput);
-
-        // Act
-        await service.CreateNotificationAsync(orderId, requestedSendTime, recipient, expiryDateTime, smsCount);
-
-        // Assert
-        repoMock.Verify(
-            r => r.AddNotification(
-            It.Is<SmsNotification>(n =>
-                n.OrderId == expected.OrderId &&
-                n.SendResult.Result == SmsNotificationResultType.New &&
-                n.Recipient.MobileNumber == expected.Recipient.MobileNumber &&
-                n.Recipient.OrganizationNumber == expected.Recipient.OrganizationNumber &&
-                n.Recipient.NationalIdentityNumber == expected.Recipient.NationalIdentityNumber),
-            expiryDateTime,
-            smsCount,
-            It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
-
-    [Fact]
     public async Task SendNotifications_ProducerCalledOnceForEachRetrievedSms()
     {
         // Arrange 

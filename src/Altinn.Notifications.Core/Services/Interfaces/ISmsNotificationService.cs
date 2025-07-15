@@ -23,32 +23,6 @@ public interface ISmsNotificationService : INotificationService
     Task CreateNotification(Guid orderId, DateTime requestedSendTime, List<SmsAddressPoint> addressPoints, SmsRecipient recipient, int count, bool ignoreReservation = false);
 
     /// <summary>
-    /// Creates a new SMS notification based on the provided order identifier, requested send time, address point, and recipient details.
-    /// </summary>
-    /// <param name="orderId">
-    /// The unique identifier of the notification order associated with the SMS.
-    /// </param>
-    /// <param name="requestedSendTime">
-    /// The date and time when the SMS is requested to be sent.
-    /// </param>
-    /// <param name="recipient">
-    /// The recipient details of the SMS notification, including identification information.
-    /// </param>
-    /// <param name="expiryDateTime">
-    /// The date and time when the notification expires and will no longer be delivered.
-    /// </param>
-    /// <param name="smsCount">
-    /// The number of SMS messages to be sent for this notification.
-    /// </param>
-    /// <param name="cancellationToken">
-    /// A <see cref="CancellationToken"/> that can be used to cancel the creation operation..
-    /// </param>
-    /// <returns>
-    /// A task that represents the asynchronous operation.
-    /// </returns>
-    Task CreateNotificationAsync(Guid orderId, DateTime requestedSendTime, SmsRecipient recipient, DateTime expiryDateTime, int smsCount, CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Initiates the process of sending all ready-to-send SMS notifications.
     /// </summary>
     /// <param name="sendingTimePolicy">The sending time policy to filter the notifications. Defaults to daytime for SMS.</param>
