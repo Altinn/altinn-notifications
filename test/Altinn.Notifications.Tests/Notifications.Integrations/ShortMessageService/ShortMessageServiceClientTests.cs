@@ -4,7 +4,6 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading;
 using System.Threading.Tasks;
 
 using Altinn.Notifications.Core.Helpers;
@@ -178,6 +177,7 @@ public class ShortMessageServiceClientTests
             }
 
             ShortMessage? message = null;
+
             try
             {
                 string content = request.Content!.ReadAsStringAsync(token).GetAwaiter().GetResult();
@@ -198,6 +198,7 @@ public class ShortMessageServiceClientTests
 
             HttpStatusCode statusCode;
             string? errorContent = null;
+
             switch (message.Recipient)
             {
                 case "client-closed":

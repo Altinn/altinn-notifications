@@ -38,7 +38,8 @@ public class ShortMessageServiceClient : IShortMessageServiceClient
     {
         try
         {
-            var content = new StringContent(shortMessage.Serialize(), Encoding.UTF8, "application/json");
+            var serializedShortMessage = shortMessage.Serialize();
+            var content = new StringContent(serializedShortMessage, Encoding.UTF8, "application/json");
 
             using var response = await _httpClient.PostAsync(_sendEndpoint, content);
 
