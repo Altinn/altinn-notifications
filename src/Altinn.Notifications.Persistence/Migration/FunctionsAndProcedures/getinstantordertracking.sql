@@ -11,6 +11,7 @@ RETURNS TABLE (
 LANGUAGE plpgsql
 AS $$
 BEGIN
+    RETURN QUERY
     SELECT 
         oc.orderid AS orders_chain_id,
         (oc.orderchain->>'OrderId')::uuid AS shipment_id,
@@ -20,7 +21,7 @@ BEGIN
     WHERE 
         oc.creatorname = _creatorname
         AND oc.idempotencyid = _idempotencyid
-        AND oc.orderchain->>'Type' = '2';   
+        AND oc.orderchain->>'Type' = '2';
 END;
 $$;
 
