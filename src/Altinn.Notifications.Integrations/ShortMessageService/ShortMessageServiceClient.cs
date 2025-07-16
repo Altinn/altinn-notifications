@@ -55,7 +55,7 @@ public class ShortMessageServiceClient : IShortMessageServiceClient
             {
                 string errorDetails = await response.Content.ReadAsStringAsync();
 
-                _logger.LogWarning("Failed to send short message: {MessageContent}. Status: {StatusCode}, Details: {ErrorDetails}", content, response.StatusCode, errorDetails);
+                _logger.LogWarning("Failed to send short message: {MessageContent}. Status: {StatusCode}, Details: {ErrorDetails}", serializedShortMessage, response.StatusCode, errorDetails);
 
                 return new ShortMessageSendResult
                 {
