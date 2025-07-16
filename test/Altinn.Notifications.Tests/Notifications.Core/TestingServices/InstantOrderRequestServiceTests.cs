@@ -1,20 +1,19 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
-
-using Altinn.Notifications.Core.Configuration;
+﻿using Altinn.Notifications.Core.Configuration;
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
+using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
-
+using Castle.Core.Smtp;
 using Microsoft.Extensions.Options;
-
 using Moq;
-
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
@@ -207,6 +206,72 @@ public class InstantOrderRequestServiceTests
     }
 
     [Fact]
+    public async Task PersistInstantSmsNotificationAsync_CancellationRequested_ThrowsOperationCanceledException()
+    {
+        // Arrange
+        var orderId = Guid.NewGuid();
+        var smsOrderId = Guid.NewGuid();
+        var orderChainId = Guid.NewGuid();
+
+        var orderCreationDateTime = DateTime.UtcNow;
+        var creatorShortName = "creator-short-name";
+        var sendersReference = "207B08E2-814A-4479-9509-8DCA45A64401";
+
+        var instantNotificationOrder = new InstantNotificationOrder
+        {
+            OrderId = orderId,
+            OrderChainId = orderChainId,
+            Created = orderCreationDateTime,
+            SendersReference = sendersReference,
+            Creator = new Creator(creatorShortName),
+            IdempotencyId = "E7344199-61C7-490E-A304-1E79C488D206",
+            InstantNotificationRecipient = new InstantNotificationRecipient
+            {
+                ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
+                {
+                    TimeToLiveInSeconds = 3600,
+                    PhoneNumber = "+4799999999",
+                    ShortMessageContent = new ShortMessageContent
+                    {
+                        Sender = "Test sender",
+                        Message = "Test message"
+                    }
+                }
+            }
+        };
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+
+        var guidServiceMock = new Mock<IGuidService>();
+        guidServiceMock.Setup(e => e.NewGuid()).Returns(smsOrderId);
+
+        var dateTimeServiceMock = new Mock<IDateTimeService>();
+        dateTimeServiceMock.Setup(e => e.UtcNow()).Returns(orderCreationDateTime);
+
+        var service = new InstantOrderRequestService(
+            guidServiceMock.Object,
+            dateTimeServiceMock.Object,
+            orderRepositoryMock.Object,
+            Options.Create(new NotificationConfig()));
+
+        using var cancellationTokenSource = new CancellationTokenSource();
+        await cancellationTokenSource.CancelAsync();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<OperationCanceledException>(async () => await service.PersistInstantSmsNotificationAsync(instantNotificationOrder, cancellationTokenSource.Token));
+
+        orderRepositoryMock.Verify(
+             e => e.PersistInstantSmsNotificationAsync(
+                It.Is<InstantNotificationOrder>(e => e.OrderChainId == orderChainId),
+                It.Is<NotificationOrder>(e => e.Id == orderId),
+                It.Is<SmsNotification>(e => e.Id == smsOrderId),
+                It.Is<DateTime>(e => e == orderCreationDateTime.AddMinutes(60)),
+                It.Is<int>(e => e == 1),
+                It.IsAny<CancellationToken>()),
+             Times.Never);
+    }
+
+    [Fact]
     public async Task PersistInstantSmsNotificationAsync_WithInstantNotificationOrder_ReturnsTrackingInformation()
     {
         // Arrange
@@ -292,17 +357,22 @@ public class InstantOrderRequestServiceTests
              Times.Once);
     }
 
-    [Fact]
-    public async Task PersistInstantSmsNotificationAsync_CancellationRequested_ThrowsOperationCanceledException()
+    [Theory]
+    [InlineData("")]
+    [InlineData(null)]
+    [InlineData("   ")]
+    public async Task PersistInstantSmsNotificationAsync_PassesValidDomainObjectsToRepository_BasedOnInstantNotificationOrder(string? senderIdentifier)
     {
         // Arrange
         var orderId = Guid.NewGuid();
         var smsOrderId = Guid.NewGuid();
         var orderChainId = Guid.NewGuid();
-
         var orderCreationDateTime = DateTime.UtcNow;
+
+        var defaultSmsSenderIdentifier = "Altinn";
         var creatorShortName = "creator-short-name";
         var sendersReference = "207B08E2-814A-4479-9509-8DCA45A64401";
+        var messageContent = "Test message contains more than 160 characters: Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor. Cras elementum.";
 
         var instantNotificationOrder = new InstantNotificationOrder
         {
@@ -320,14 +390,43 @@ public class InstantOrderRequestServiceTests
                     PhoneNumber = "+4799999999",
                     ShortMessageContent = new ShortMessageContent
                     {
-                        Sender = "Test sender",
-                        Message = "Test message"
+                        Message = messageContent,
+                        Sender = senderIdentifier
                     }
                 }
             }
         };
 
+        int? initiatedSmsMessageCount = null;
+        DateTime? initiatedSmsExpiryDateTime = null;
+        SmsNotification? initiatedSmsNotification = null;
+        NotificationOrder? initiatedNotificationOrder = null;
+
         var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock.Setup(
+            e => e.PersistInstantSmsNotificationAsync(
+                It.Is<InstantNotificationOrder>(e => e.OrderChainId == orderChainId),
+                It.Is<NotificationOrder>(e => e.Id == orderId),
+                It.IsAny<SmsNotification>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .Callback((InstantNotificationOrder instantNotificationOrder, NotificationOrder notificationOrder, SmsNotification smsNotification, DateTime smsExpiryDateTime, int smsMessageCount, CancellationToken cancellationToken) =>
+            {
+                initiatedSmsMessageCount = smsMessageCount;
+                initiatedSmsNotification = smsNotification;
+                initiatedNotificationOrder = notificationOrder;
+                initiatedSmsExpiryDateTime = smsExpiryDateTime;
+            })
+            .ReturnsAsync(new InstantNotificationOrderTracking()
+            {
+                OrderChainId = orderChainId,
+                Notification = new NotificationOrderChainShipment
+                {
+                    ShipmentId = orderId,
+                    SendersReference = sendersReference
+                }
+            });
 
         var guidServiceMock = new Mock<IGuidService>();
         guidServiceMock.Setup(e => e.NewGuid()).Returns(smsOrderId);
@@ -335,27 +434,70 @@ public class InstantOrderRequestServiceTests
         var dateTimeServiceMock = new Mock<IDateTimeService>();
         dateTimeServiceMock.Setup(e => e.UtcNow()).Returns(orderCreationDateTime);
 
-        var service = new InstantOrderRequestService(
+        var config = new NotificationConfig
+        {
+            DefaultSmsSenderNumber = defaultSmsSenderIdentifier
+        };
+
+        var instantOrderRequestService = new InstantOrderRequestService(
             guidServiceMock.Object,
             dateTimeServiceMock.Object,
             orderRepositoryMock.Object,
-            Options.Create(new NotificationConfig()));
+            Options.Create(config));
 
-        using var cancellationTokenSource = new CancellationTokenSource();
-        await cancellationTokenSource.CancelAsync();
+        // Act
+        await instantOrderRequestService.PersistInstantSmsNotificationAsync(instantNotificationOrder);
 
-        // Act & Assert
-        await Assert.ThrowsAsync<OperationCanceledException>(async () => await service.PersistInstantSmsNotificationAsync(instantNotificationOrder, cancellationTokenSource.Token));
+        // Assert
+        Assert.Equal(2, initiatedSmsMessageCount);
 
-        orderRepositoryMock.Verify(
-             e => e.PersistInstantSmsNotificationAsync(
-                It.Is<InstantNotificationOrder>(e => e.OrderChainId == orderChainId),
-                It.Is<NotificationOrder>(e => e.Id == orderId),
-                It.Is<SmsNotification>(e => e.Id == smsOrderId),
-                It.Is<DateTime>(e => e == orderCreationDateTime.AddMinutes(60)),
-                It.Is<int>(e => e == 1),
-                It.IsAny<CancellationToken>()),
-             Times.Never);
+        Assert.NotNull(initiatedSmsExpiryDateTime);
+        Assert.Equal(orderCreationDateTime.AddSeconds(3600), initiatedSmsExpiryDateTime);
+
+        Assert.NotNull(initiatedSmsNotification);
+        Assert.NotNull(initiatedSmsNotification.Recipient);
+        Assert.NotNull(initiatedSmsNotification.SendResult);
+        Assert.NotEqual(orderId, initiatedSmsNotification.Id);
+        Assert.Equal(orderId, initiatedSmsNotification.OrderId);
+        Assert.NotEqual(orderChainId, initiatedSmsNotification.Id);
+        Assert.Equal(orderCreationDateTime, initiatedSmsNotification.RequestedSendTime);
+        Assert.Equal(NotificationChannel.Sms, initiatedSmsNotification.NotificationChannel);
+        Assert.Equal(orderCreationDateTime, initiatedSmsNotification.SendResult.ResultTime);
+        Assert.Null(initiatedSmsNotification.Recipient.IsReserved);
+        Assert.Null(initiatedSmsNotification.Recipient.CustomizedBody);
+        Assert.Null(initiatedSmsNotification.Recipient.OrganizationNumber);
+        Assert.Null(initiatedSmsNotification.Recipient.NationalIdentityNumber);
+
+        Assert.NotNull(initiatedNotificationOrder);
+        Assert.Null(initiatedNotificationOrder.ResourceId);
+        Assert.Equal(orderId, initiatedNotificationOrder.Id);
+        Assert.Null(initiatedNotificationOrder.ConditionEndpoint);
+        Assert.Null(initiatedNotificationOrder.IgnoreReservation);
+        Assert.NotEqual(orderChainId, initiatedNotificationOrder.Id);
+        Assert.Equal(OrderType.Instant, initiatedNotificationOrder.Type);
+        Assert.Equal(orderCreationDateTime, initiatedNotificationOrder.Created);
+        Assert.Equal(sendersReference, initiatedNotificationOrder.SendersReference);
+        Assert.Equal(creatorShortName, initiatedNotificationOrder.Creator.ShortName);
+        Assert.Equal(orderCreationDateTime, initiatedNotificationOrder.RequestedSendTime);
+        Assert.Equal(NotificationChannel.Sms, initiatedNotificationOrder.NotificationChannel);
+        Assert.Equal(SendingTimePolicy.Anytime, initiatedNotificationOrder.SendingTimePolicy);
+
+        Assert.NotNull(initiatedNotificationOrder.Templates);
+        Assert.Single(initiatedNotificationOrder.Templates);
+        var smsTemplate = Assert.IsType<SmsTemplate>(initiatedNotificationOrder.Templates[0]);
+        Assert.Equal(messageContent, smsTemplate.Body);
+        Assert.Equal(NotificationTemplateType.Sms, smsTemplate.Type);
+        Assert.Equal(defaultSmsSenderIdentifier, smsTemplate.SenderNumber);
+
+        Assert.NotNull(initiatedNotificationOrder.Recipients);
+        Assert.Single(initiatedNotificationOrder.Recipients);
+        var recipient = initiatedNotificationOrder.Recipients[0];
+        Assert.Null(recipient.IsReserved);
+        Assert.Null(recipient.OrganizationNumber);
+        Assert.Null(recipient.NationalIdentityNumber);
+        Assert.NotNull(recipient.AddressInfo);
+        Assert.Single(recipient.AddressInfo);
+        Assert.Equal(AddressType.Sms, recipient.AddressInfo[0].AddressType);
     }
 
     private static InstantOrderRequestService GetTestService(IOrderRepository? orderRepositoryMock = null, Guid? uniqueIdentifier = null, DateTime? dateTime = null)
