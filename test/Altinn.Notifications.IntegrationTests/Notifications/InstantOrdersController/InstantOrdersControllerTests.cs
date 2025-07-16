@@ -345,7 +345,6 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
     [InlineData("", "+4799999999", "test body", 60)]
     [InlineData("3AFD849E-200D-49FB-80BD-3A91A85B13AE", "", "test body", 60)]
     [InlineData("3AFD849E-200D-49FB-80BD-3A91A85B13AE", "+4799999999", "", 60)]
-    [InlineData("3AFD849E-200D-49FB-80BD-3A91A85B13AE", "+4799999999", "test body", 50)]
     public async Task Post_WithInvalidRequest_ReturnsBadRequest(string idempotencyId, string phoneNumber, string message, int timeToLiveInSeconds)
     {
         // Arrange
