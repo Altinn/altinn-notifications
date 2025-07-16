@@ -89,6 +89,9 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
         // Use GetTestClient to create the test server and client
         var client = GetTestClient(instantOrderRequestService: orderRequestServiceMock.Object, validator: validatorMock.Object);
 
+        // Simulate missing creator short name
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken(string.Empty, scope: "altinn:serviceowner/notifications.create"));
+
         var requestSerialized = JsonSerializer.Serialize(request);
         using var content = new StringContent(requestSerialized, Encoding.UTF8, "application/json");
 
