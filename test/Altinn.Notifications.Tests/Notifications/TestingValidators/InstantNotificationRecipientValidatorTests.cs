@@ -21,7 +21,8 @@ public class InstantNotificationRecipientValidatorTests
     {
         var request = new InstantNotificationOrderRequestExt
         {
-            IdempotencyId = "id-123",
+            IdempotencyId = "A292D9BF-4F54-48C0-BD3E-59F1617FBED5",
+
             InstantNotificationRecipient = new InstantNotificationRecipientExt
             {
                 ShortMessageDeliveryDetails = new ShortMessageDeliveryDetailsExt
@@ -42,29 +43,53 @@ public class InstantNotificationRecipientValidatorTests
         Assert.True(validationResult.IsValid);
     }
 
-    [Fact]
-    public void Validate_WithInvalidRecipient_ReturnsInvalid()
+    [Theory]
+    [InlineData("+4799999999")]
+    [InlineData("004799999999")]
+    public void Validate_WithDifferentValidPhoneNumberFormats_ReturnsValid(string phoneNumber)
     {
-        var request = new InstantNotificationOrderRequestExt
+        var recipient = new InstantNotificationRecipientExt
         {
-            IdempotencyId = "39A3D898-37D6-4507-A7AE-27FECD63884C",
-            SendersReference = "6C176F56-F69E-445B-9631-BAA68F0D5AB3",
-            InstantNotificationRecipient = new InstantNotificationRecipientExt
+            ShortMessageDeliveryDetails = new ShortMessageDeliveryDetailsExt
             {
-                ShortMessageDeliveryDetails = new ShortMessageDeliveryDetailsExt
+                PhoneNumber = phoneNumber,
+                TimeToLiveInSeconds = 3600,
+                ShortMessageContent = new ShortMessageContentExt
                 {
-                    TimeToLiveInSeconds = 3600,
-                    PhoneNumber = "invalid-number",
-                    ShortMessageContent = new ShortMessageContentExt
-                    {
-                        Sender = "Altinn",
-                        Body = "Test message"
-                    }
+                    Body = "Test",
+                    Sender = "Altinn"
                 }
             }
         };
 
-        var validationResult = _validator.Validate(request.InstantNotificationRecipient);
+        var validationResult = _validator.Validate(recipient);
+
+        Assert.True(validationResult.IsValid);
+    }
+
+    [Theory]
+    [InlineData(40)]
+    [InlineData(-1)]
+    [InlineData(31536001)]
+    public void Validate_WithInvalidTimeToLiveInSeconds_ReturnsInvalid(int timeToLiveInSeconds)
+    {
+        var recipient = new InstantNotificationRecipientExt
+        {
+            ShortMessageDeliveryDetails = new ShortMessageDeliveryDetailsExt
+            {
+                PhoneNumber = "+4799999999",
+
+                TimeToLiveInSeconds = timeToLiveInSeconds,
+
+                ShortMessageContent = new ShortMessageContentExt
+                {
+                    Body = "Test",
+                    Sender = "Altinn"
+                }
+            }
+        };
+
+        var validationResult = _validator.Validate(recipient);
 
         Assert.False(validationResult.IsValid);
     }
