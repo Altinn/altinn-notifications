@@ -344,7 +344,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
     [Theory]
     [InlineData("+4712345678", 60)]
     [InlineData("+4799999999", 172801)]
-    public async Task Post_WithAllRequiredFieldsPresentButInvalid_ModelValidationFails_ReturnsBadRequest(string phoneNumber, int timeToLiveInSeconds)
+    public async Task Post_WithInvalidPhoneNumberOrTimeToLive_ModelValidationFails_ReturnsBadRequest(string phoneNumber, int timeToLiveInSeconds)
     {
         // Arrange
         var request = new InstantNotificationOrderRequestExt
