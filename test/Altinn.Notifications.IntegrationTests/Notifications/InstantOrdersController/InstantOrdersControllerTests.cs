@@ -342,10 +342,59 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
     }
 
     [Theory]
+    [InlineData("+4712345678", 60)]
+    [InlineData("+4799999999", 172801)]
+    public async Task Post_WithAllRequiredFieldsPresentButInvalid_ModelValidationFails_ReturnsBadRequest(string phoneNumber, int timeToLiveInSeconds)
+    {
+        // Arrange
+        var request = new InstantNotificationOrderRequestExt
+        {
+            IdempotencyId = "7D9B1679-C6DA-4279-89C3-6BC9C5969842",
+
+            InstantNotificationRecipient = new InstantNotificationRecipientExt
+            {
+                ShortMessageDeliveryDetails = new()
+                {
+                    PhoneNumber = phoneNumber,
+                    TimeToLiveInSeconds = timeToLiveInSeconds,
+                    ShortMessageContent = new()
+                    {
+                        Sender = "Altinn",
+                        Body = "Test message"
+                    }
+                }
+            }
+        };
+
+        var validatorMock = new Mock<IValidator<InstantNotificationOrderRequestExt>>();
+        validatorMock
+            .Setup(v => v.Validate(request))
+            .Returns(new ValidationResult(new List<ValidationFailure>
+            {
+                new(nameof(ShortMessageDeliveryDetailsExt.PhoneNumber), "Recipient phone number is not a valid mobile number."),
+                new(nameof(ShortMessageDeliveryDetailsExt.TimeToLiveInSeconds), "Time-to-live must be between 60 and 172800 seconds (48 hours).")
+            }));
+
+        var client = GetTestClient(validator: validatorMock.Object);
+
+        using var requestContent = new StringContent(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
+
+        // Act
+        var response = await client.PostAsync(BasePath, requestContent);
+        string responseContent = await response.Content.ReadAsStringAsync();
+        var problem = JsonSerializer.Deserialize<ValidationProblemDetails>(responseContent, _options);
+
+        // Assert
+        Assert.NotNull(problem);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Theory]
     [InlineData("", "+4799999999", "test body", 60)]
     [InlineData("3AFD849E-200D-49FB-80BD-3A91A85B13AE", "", "test body", 60)]
     [InlineData("3AFD849E-200D-49FB-80BD-3A91A85B13AE", "+4799999999", "", 60)]
-    public async Task Post_WithInvalidRequest_ReturnsBadRequest(string idempotencyId, string phoneNumber, string message, int timeToLiveInSeconds)
+    public async Task Post_WithMissingRequiredInformation_RequestDeserializationFails_ReturnsBadRequest(string idempotencyId, string phoneNumber, string message, int timeToLiveInSeconds)
     {
         // Arrange
         var request = new InstantNotificationOrderRequestExt
