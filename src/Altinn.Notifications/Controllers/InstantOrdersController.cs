@@ -109,22 +109,10 @@ public class InstantOrdersController : ControllerBase
             }
 
             // 5. Send out the SMS using the short message service client.
-            var smsSendingResult = await _shortMessageServiceClient.SendAsync(instantNotificationOrder.MapToShortMessage(_defaultSmsSender));
-            if (smsSendingResult.Success)
-            {
-                return Created(instantNotificationOrder.OrderChainId.GetSelfLinkFromOrderChainId(), registerationResult);
-            }
-            else
-            {
-                var problemDetails = new ProblemDetails
-                {
-                    Status = 500,
-                    Title = "SMS sending failed",
-                    Detail = "Failed to send the SMS."
-                };
+            _ = Task.Run(async () => { await _shortMessageServiceClient.SendAsync(instantNotificationOrder.MapToShortMessage(_defaultSmsSender)); }, CancellationToken.None);
 
-                return StatusCode(500, problemDetails);
-            }
+            // 6. Return the tracking information.
+            return Created(instantNotificationOrder.OrderChainId.GetSelfLinkFromOrderChainId(), registerationResult.MapToInstantNotificationOrderResponse());
         }
         catch (InvalidOperationException ex)
         {
