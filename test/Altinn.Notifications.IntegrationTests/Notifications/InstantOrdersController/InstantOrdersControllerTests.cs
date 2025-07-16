@@ -77,8 +77,8 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
         // Arrange
         var request = new InstantNotificationOrderRequestExt
         {
-            SendersReference = DefaultSendersReference,
             IdempotencyId = Guid.NewGuid().ToString(),
+            SendersReference = DefaultSendersReference,
             InstantNotificationRecipient = new InstantNotificationRecipientExt
             {
                 ShortMessageDeliveryDetails = new()
@@ -271,8 +271,8 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
             {
                 ShortMessageDeliveryDetails = new ShortMessageDeliveryDetailsExt
                 {
-                    TimeToLiveInSeconds = DefaultTimeToLive,
                     PhoneNumber = DefaultPhoneNumber,
+                    TimeToLiveInSeconds = DefaultTimeToLive,
                     ShortMessageContent = new ShortMessageContentExt
                     {
                         Body = DefaultBody,
@@ -349,8 +349,8 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
                     TimeToLiveInSeconds = DefaultTimeToLive,
                     ShortMessageContent = new ShortMessageContentExt
                     {
-                        Sender = DefaultSender,
-                        Body = DefaultBody
+                        Body = DefaultBody,
+                        Sender = DefaultSender
                     }
                 }
             }
@@ -400,12 +400,12 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
             {
                 ShortMessageDeliveryDetails = new ShortMessageDeliveryDetailsExt
                 {
-                    TimeToLiveInSeconds = DefaultTimeToLive,
                     PhoneNumber = DefaultPhoneNumber,
+                    TimeToLiveInSeconds = DefaultTimeToLive,
                     ShortMessageContent = new ShortMessageContentExt
                     {
-                        Sender = DefaultSender,
-                        Body = DefaultBody
+                        Body = DefaultBody,
+                        Sender = DefaultSender
                     }
                 }
             }
@@ -461,8 +461,8 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
                     TimeToLiveInSeconds = timeToLiveInSeconds,
                     ShortMessageContent = new()
                     {
-                        Sender = DefaultSender,
-                        Body = DefaultBody
+                        Body = DefaultBody,
+                        Sender = DefaultSender
                     }
                 }
             }
@@ -470,12 +470,23 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
 
         var validatorMock = new Mock<IValidator<InstantNotificationOrderRequestExt>>();
         validatorMock
-            .Setup(v => v.Validate(request))
-            .Returns(new ValidationResult(new List<ValidationFailure>
+        .Setup(v => v.Validate(It.IsAny<InstantNotificationOrderRequestExt>()))
+        .Returns<InstantNotificationOrderRequestExt>(request =>
+        {
+            var failures = new List<ValidationFailure>();
+
+            if (request.InstantNotificationRecipient.ShortMessageDeliveryDetails.PhoneNumber == DefaultInvalidPhoneNumber)
             {
-                new(nameof(ShortMessageDeliveryDetailsExt.PhoneNumber), "Recipient phone number is not a valid mobile number."),
-                new(nameof(ShortMessageDeliveryDetailsExt.TimeToLiveInSeconds), "Time-to-live must be between 60 and 172800 seconds (48 hours).")
-            }));
+                failures.Add(new ValidationFailure(nameof(ShortMessageDeliveryDetailsExt.PhoneNumber), "Recipient phone number is not a valid mobile number."));
+            }
+
+            if (request.InstantNotificationRecipient.ShortMessageDeliveryDetails.TimeToLiveInSeconds == MaximumTimeToLiveExceeded)
+            {
+                failures.Add(new ValidationFailure(nameof(ShortMessageDeliveryDetailsExt.TimeToLiveInSeconds), "Time-to-live must be between 60 and 172800 seconds (48 hours)."));
+            }
+
+            return new ValidationResult(failures);
+        });
 
         var client = GetTestClient(validator: validatorMock.Object);
 
