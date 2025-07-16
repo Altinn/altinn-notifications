@@ -84,26 +84,19 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
         var validatorMock = new Mock<IValidator<InstantNotificationOrderRequestExt>>();
         validatorMock.Setup(e => e.Validate(It.IsAny<InstantNotificationOrderRequestExt>())).Returns(new ValidationResult());
 
-        var httpContextMock = new Mock<HttpContext>();
-        httpContextMock.Setup(e => e.Items).Returns(new Dictionary<object, object?> { { "Org", null } });
-
         var orderRequestServiceMock = new Mock<IInstantOrderRequestService>();
 
-        var controller = new InstantOrdersController(
-            Mock.Of<IDateTimeService>(),
-            Options.Create(new NotificationConfig { DefaultSmsSenderNumber = "Altinn" }),
-            Mock.Of<IShortMessageServiceClient>(),
-            orderRequestServiceMock.Object,
-            validatorMock.Object)
-        {
-            ControllerContext = new ControllerContext { HttpContext = httpContextMock.Object }
-        };
+        // Use GetTestClient to create the test server and client
+        var client = GetTestClient(instantOrderRequestService: orderRequestServiceMock.Object, validator: validatorMock.Object);
+
+        var requestSerialized = JsonSerializer.Serialize(request);
+        using var content = new StringContent(requestSerialized, Encoding.UTF8, "application/json");
 
         // Act
-        var result = await controller.Post(request);
+        var response = await client.PostAsync(BasePath, content);
 
         // Assert
-        Assert.IsType<ForbidResult>(result);
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
         orderRequestServiceMock.Verify(e => e.PersistInstantSmsNotificationAsync(It.IsAny<InstantNotificationOrder>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
