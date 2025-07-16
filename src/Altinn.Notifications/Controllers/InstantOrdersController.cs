@@ -120,9 +120,9 @@ public class InstantOrdersController : ControllerBase
                 return StatusCode(500, problemDetails);
             }
 
-            // 7. Update the processing status of the instant notification order.
+            // 6. Update the processing status of the instant notification order.
 
-            // 8. Return the response with the order chain ID and shipment details.
+            // 7. Return the response with the order chain ID and shipment details.
             return Created(instantNotificationOrder.OrderChainId.GetSelfLinkFromOrderChainId(), registerationResult);
         }
         catch (InvalidOperationException ex)

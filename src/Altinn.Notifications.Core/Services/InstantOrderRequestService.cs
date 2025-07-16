@@ -22,7 +22,7 @@ internal class InstantOrderRequestService : IInstantOrderRequestService
     private readonly string _defaultSmsSender;
     private readonly IGuidService _guidService;
     private readonly IDateTimeService _dateTimeService;
-    private readonly IInstantOrderRepository _instantOrderRepository;
+    private readonly IOrderRepository _orderRepository;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderRequestService"/> class.
@@ -30,19 +30,19 @@ internal class InstantOrderRequestService : IInstantOrderRequestService
     public InstantOrderRequestService(
         IGuidService guidService,
         IDateTimeService dateTimeService,
-        IInstantOrderRepository instantOrderRepository,
+        IOrderRepository instantOrderRepository,
         IOptions<NotificationConfig> configurationOptions)
     {
         _guidService = guidService;
         _dateTimeService = dateTimeService;
-        _instantOrderRepository = instantOrderRepository;
+        _orderRepository = instantOrderRepository;
         _defaultSmsSender = configurationOptions.Value.DefaultSmsSenderNumber;
     }
 
     /// <inheritdoc/>
     public async Task<InstantNotificationOrderTracking?> RetrieveTrackingInformation(string creatorName, string idempotencyId, CancellationToken cancellationToken = default)
     {
-        return await _instantOrderRepository.RetrieveTrackingInformation(creatorName, idempotencyId, cancellationToken);
+        return await _orderRepository.RetrieveTrackingInformation(creatorName, idempotencyId, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -84,7 +84,7 @@ internal class InstantOrderRequestService : IInstantOrderRequestService
             SendResult = new(SmsNotificationResultType.New, _dateTimeService.UtcNow())
         };
 
-        return await _instantOrderRepository.PersistInstantSmsNotificationAsync(instantNotificationOrder, notificationOrder, smsNotification, expirationDateTime, messagesCount, cancellationToken);
+        return await _orderRepository.PersistInstantSmsNotificationAsync(instantNotificationOrder, notificationOrder, smsNotification, expirationDateTime, messagesCount, cancellationToken);
     }
 
     /// <summary>
