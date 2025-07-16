@@ -6,7 +6,6 @@ using System.Text.Json.Serialization;
 
 using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Controllers;
-using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.ShortMessageService;
@@ -22,7 +21,6 @@ using AltinnCore.Authentication.JwtCookie;
 using FluentValidation;
 using FluentValidation.Results;
 
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
@@ -40,6 +38,21 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.TestingControllers
 public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebApplicationFactory<InstantOrdersController>>
 {
     private const string BasePath = "/notifications/api/v1/orders/instant";
+    private const string DefaultScope = "altinn:serviceowner/notifications.create";
+
+    private const int MinimumTimeToLive = 60;
+    private const int DefaultTimeToLive = 360;
+    private const int MaximumTimeToLiveExceeded = 172801;
+
+    private const string DefaultCreator = "ttd";
+    private const string DefaultSender = "Altinn";
+    private const string DefaultBody = "Test message";
+    private const string DefaultTestBody = "test body";
+    private const string DefaultPhoneNumber = "+4799999999";
+    private const string DefaultSenderIdentifier = "Test sender";
+    private const string DefaultInvalidPhoneNumber = "+4712345678";
+    private const string DefaultIdempotencyId = "D1112C2C-80B9-430F-9500-A09B76AE8221";
+    private const string DefaultSendersReference = "89F4BE02-2722-4E77-87AC-23081CC6365D";
 
     private readonly JsonSerializerOptions _options;
     private readonly IntegrationTestWebApplicationFactory<InstantOrdersController> _factory;
@@ -64,18 +77,18 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
         // Arrange
         var request = new InstantNotificationOrderRequestExt
         {
+            SendersReference = DefaultSendersReference,
             IdempotencyId = Guid.NewGuid().ToString(),
-            SendersReference = "89F4BE02-2722-4E77-87AC-23081CC6365D",
             InstantNotificationRecipient = new InstantNotificationRecipientExt
             {
                 ShortMessageDeliveryDetails = new()
                 {
-                    TimeToLiveInSeconds = 360,
-                    PhoneNumber = "+4799999999",
+                    PhoneNumber = DefaultPhoneNumber,
+                    TimeToLiveInSeconds = DefaultTimeToLive,
                     ShortMessageContent = new()
                     {
-                        Body = "Test message",
-                        Sender = "Test sender"
+                        Body = DefaultBody,
+                        Sender = DefaultSenderIdentifier
                     }
                 }
             }
@@ -90,7 +103,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
         var client = GetTestClient(instantOrderRequestService: orderRequestServiceMock.Object, validator: validatorMock.Object);
 
         // Simulate missing creator short name
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken(string.Empty, scope: "altinn:serviceowner/notifications.create"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken(string.Empty, scope: DefaultScope));
 
         var requestSerialized = JsonSerializer.Serialize(request);
         using var content = new StringContent(requestSerialized, Encoding.UTF8, "application/json");
@@ -107,36 +120,30 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
     public async Task Post_WithExistingOrderIdempotency_ReturnsOkWithTrackingInformation()
     {
         // Arrange
-        var creator = "ttd";
-        var shipmentId = Guid.NewGuid();
-        var orderChainId = Guid.NewGuid();
-        var idempotencyId = "D1112C2C-80B9-430F-9500-A09B76AE8221";
-        var sendersReference = "D76AEEF1-C530-4A22-BA9F-9DC4CFF9D9D7";
-
         var trackingInfo = new InstantNotificationOrderTracking
         {
-            OrderChainId = orderChainId,
+            OrderChainId = Guid.NewGuid(),
             Notification = new NotificationOrderChainShipment
             {
-                ShipmentId = shipmentId,
-                SendersReference = sendersReference
+                ShipmentId = Guid.NewGuid(),
+                SendersReference = DefaultSendersReference
             }
         };
 
         var request = new InstantNotificationOrderRequestExt
         {
-            IdempotencyId = idempotencyId,
-            SendersReference = sendersReference,
+            IdempotencyId = DefaultIdempotencyId,
+            SendersReference = DefaultSendersReference,
             InstantNotificationRecipient = new InstantNotificationRecipientExt
             {
                 ShortMessageDeliveryDetails = new ShortMessageDeliveryDetailsExt
                 {
-                    TimeToLiveInSeconds = 360,
-                    PhoneNumber = "+4799999999",
+                    PhoneNumber = DefaultPhoneNumber,
+                    TimeToLiveInSeconds = DefaultTimeToLive,
                     ShortMessageContent = new ShortMessageContentExt
                     {
-                        Body = "Test message",
-                        Sender = "Test sender"
+                        Body = DefaultBody,
+                        Sender = DefaultSenderIdentifier
                     }
                 }
             }
@@ -144,14 +151,14 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
 
         var orderRequestServiceMock = new Mock<IInstantOrderRequestService>();
         orderRequestServiceMock
-            .Setup(e => e.RetrieveTrackingInformation(creator, idempotencyId, It.IsAny<CancellationToken>()))
+            .Setup(e => e.RetrieveTrackingInformation(DefaultCreator, DefaultIdempotencyId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(trackingInfo);
 
         var validatorMock = new Mock<IValidator<InstantNotificationOrderRequestExt>>();
         validatorMock.Setup(e => e.Validate(request)).Returns(new ValidationResult());
 
         var client = GetTestClient(instantOrderRequestService: orderRequestServiceMock.Object, validator: validatorMock.Object);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken(creator, scope: "altinn:serviceowner/notifications.create"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken(DefaultCreator, scope: DefaultScope));
 
         var requestSerialized = JsonSerializer.Serialize(request);
         using var content = new StringContent(requestSerialized, Encoding.UTF8, "application/json");
@@ -171,7 +178,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
         Assert.Equal(trackingInfo.Notification.SendersReference, result.Notification.SendersReference);
 
         validatorMock.Verify(e => e.Validate(It.Is<InstantNotificationOrderRequestExt>(e => e == request)), Times.Once);
-        orderRequestServiceMock.Verify(e => e.RetrieveTrackingInformation(creator, idempotencyId, It.IsAny<CancellationToken>()), Times.Once);
+        orderRequestServiceMock.Verify(e => e.RetrieveTrackingInformation(DefaultCreator, DefaultIdempotencyId, It.IsAny<CancellationToken>()), Times.Once);
         orderRequestServiceMock.Verify(e => e.PersistInstantSmsNotificationAsync(It.IsAny<InstantNotificationOrder>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -179,24 +186,20 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
     public async Task Post_WithRegistrationFailure_ReturnsInternalServerErrorWithProblemDetails()
     {
         // Arrange
-        var creator = "ttd";
-        var idempotencyId = Guid.NewGuid().ToString();
-        var sendersReference = "A1B2C3D4-E5F6-7890-1234-56789ABCDEF0";
-
         var request = new InstantNotificationOrderRequestExt
         {
-            IdempotencyId = idempotencyId,
-            SendersReference = sendersReference,
+            IdempotencyId = DefaultIdempotencyId,
+            SendersReference = DefaultSendersReference,
             InstantNotificationRecipient = new InstantNotificationRecipientExt
             {
                 ShortMessageDeliveryDetails = new ShortMessageDeliveryDetailsExt
                 {
-                    TimeToLiveInSeconds = 360,
-                    PhoneNumber = "+4799999999",
+                    PhoneNumber = DefaultPhoneNumber,
+                    TimeToLiveInSeconds = DefaultTimeToLive,
                     ShortMessageContent = new ShortMessageContentExt
                     {
-                        Body = "Test message",
-                        Sender = "Test sender"
+                        Body = DefaultBody,
+                        Sender = DefaultSenderIdentifier
                     }
                 }
             }
@@ -204,7 +207,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
 
         var orderRequestServiceMock = new Mock<IInstantOrderRequestService>();
         orderRequestServiceMock
-            .Setup(e => e.RetrieveTrackingInformation(creator, idempotencyId, It.IsAny<CancellationToken>()))
+            .Setup(e => e.RetrieveTrackingInformation(DefaultCreator, DefaultIdempotencyId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((InstantNotificationOrderTracking?)null);
 
         orderRequestServiceMock
@@ -221,7 +224,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
             shortMessageServiceClient: shortMessageServiceClientMock.Object,
             validator: validatorMock.Object);
 
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken(creator, scope: "altinn:serviceowner/notifications.create"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken(DefaultCreator, scope: DefaultScope));
 
         var requestSerialized = JsonSerializer.Serialize(request);
         using var content = new StringContent(requestSerialized, Encoding.UTF8, "application/json");
@@ -242,7 +245,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
 
         validatorMock.Verify(e => e.Validate(request), Times.Once);
         shortMessageServiceClientMock.Verify(e => e.SendAsync(It.IsAny<ShortMessage>()), Times.Never);
-        orderRequestServiceMock.Verify(e => e.RetrieveTrackingInformation(creator, idempotencyId, It.IsAny<CancellationToken>()), Times.Once);
+        orderRequestServiceMock.Verify(e => e.RetrieveTrackingInformation(DefaultCreator, DefaultIdempotencyId, It.IsAny<CancellationToken>()), Times.Once);
         orderRequestServiceMock.Verify(e => e.PersistInstantSmsNotificationAsync(It.IsAny<InstantNotificationOrder>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -250,36 +253,30 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
     public async Task Post_WithValidRequest_RegistrationAndSmsSendingSucceeds_ReturnsCreatedWithTrackingInformation()
     {
         // Arrange
-        var creator = "ttd";
-        var shipmentId = Guid.NewGuid();
-        var orderChainId = Guid.NewGuid();
-        var idempotencyId = Guid.NewGuid().ToString();
-        var sendersReference = "A1B2C3D4-E5F6-7890-1234-56789ABCDEF0";
-
         var trackingInfo = new InstantNotificationOrderTracking
         {
-            OrderChainId = orderChainId,
+            OrderChainId = Guid.NewGuid(),
             Notification = new NotificationOrderChainShipment
             {
-                ShipmentId = shipmentId,
-                SendersReference = sendersReference
+                ShipmentId = Guid.NewGuid(),
+                SendersReference = DefaultSendersReference
             }
         };
 
         var request = new InstantNotificationOrderRequestExt
         {
-            IdempotencyId = idempotencyId,
-            SendersReference = sendersReference,
+            IdempotencyId = DefaultIdempotencyId,
+            SendersReference = DefaultSendersReference,
             InstantNotificationRecipient = new InstantNotificationRecipientExt
             {
                 ShortMessageDeliveryDetails = new ShortMessageDeliveryDetailsExt
                 {
-                    TimeToLiveInSeconds = 360,
-                    PhoneNumber = "+4799999999",
+                    TimeToLiveInSeconds = DefaultTimeToLive,
+                    PhoneNumber = DefaultPhoneNumber,
                     ShortMessageContent = new ShortMessageContentExt
                     {
-                        Body = "Test message",
-                        Sender = "Test sender"
+                        Body = DefaultBody,
+                        Sender = DefaultSenderIdentifier
                     }
                 }
             }
@@ -287,7 +284,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
 
         var orderRequestServiceMock = new Mock<IInstantOrderRequestService>();
         orderRequestServiceMock
-            .Setup(e => e.RetrieveTrackingInformation(creator, idempotencyId, It.IsAny<CancellationToken>()))
+            .Setup(e => e.RetrieveTrackingInformation(DefaultCreator, DefaultIdempotencyId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((InstantNotificationOrderTracking?)null);
 
         orderRequestServiceMock
@@ -312,7 +309,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
             shortMessageServiceClient: shortMessageServiceClientMock.Object,
             validator: validatorMock.Object);
 
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken(creator, scope: "altinn:serviceowner/notifications.create"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken(DefaultCreator, scope: DefaultScope));
 
         var requestSerialized = JsonSerializer.Serialize(request);
         using var content = new StringContent(requestSerialized, Encoding.UTF8, "application/json");
@@ -333,7 +330,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
 
         validatorMock.Verify(e => e.Validate(request), Times.Once);
         shortMessageServiceClientMock.Verify(e => e.SendAsync(It.IsAny<ShortMessage>()), Times.Once);
-        orderRequestServiceMock.Verify(e => e.RetrieveTrackingInformation(creator, idempotencyId, It.IsAny<CancellationToken>()), Times.Once);
+        orderRequestServiceMock.Verify(e => e.RetrieveTrackingInformation(DefaultCreator, DefaultIdempotencyId, It.IsAny<CancellationToken>()), Times.Once);
         orderRequestServiceMock.Verify(e => e.PersistInstantSmsNotificationAsync(It.IsAny<InstantNotificationOrder>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -348,12 +345,12 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
             {
                 ShortMessageDeliveryDetails = new ShortMessageDeliveryDetailsExt
                 {
-                    PhoneNumber = "+4799999999",
-                    TimeToLiveInSeconds = 360,
+                    PhoneNumber = DefaultPhoneNumber,
+                    TimeToLiveInSeconds = DefaultTimeToLive,
                     ShortMessageContent = new ShortMessageContentExt
                     {
-                        Sender = "Altinn",
-                        Body = "Test message"
+                        Sender = DefaultSender,
+                        Body = DefaultBody
                     }
                 }
             }
@@ -376,7 +373,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
 
         var client = GetTestClient(instantOrderRequestService: orderRequestServiceMock.Object, validator: validatorMock.Object);
 
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken(DefaultCreator, scope: DefaultScope));
 
         using var requestContent = new StringContent(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
 
@@ -398,18 +395,17 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
         // Arrange
         var request = new InstantNotificationOrderRequestExt
         {
-            IdempotencyId = "577BCD91-B294-4675-86A2-0F21F2F4C2F4",
+            IdempotencyId = DefaultIdempotencyId,
             InstantNotificationRecipient = new InstantNotificationRecipientExt
             {
                 ShortMessageDeliveryDetails = new ShortMessageDeliveryDetailsExt
                 {
-                    TimeToLiveInSeconds = 360,
-                    PhoneNumber = "+4799999999",
-
+                    TimeToLiveInSeconds = DefaultTimeToLive,
+                    PhoneNumber = DefaultPhoneNumber,
                     ShortMessageContent = new ShortMessageContentExt
                     {
-                        Sender = "Altinn",
-                        Body = "Test message"
+                        Sender = DefaultSender,
+                        Body = DefaultBody
                     }
                 }
             }
@@ -432,7 +428,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
 
         var client = GetTestClient(instantOrderRequestService: orderRequestServiceMock.Object, validator: validatorMock.Object);
 
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken(DefaultCreator, scope: DefaultScope));
 
         using var requestContent = new StringContent(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
 
@@ -449,15 +445,14 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
     }
 
     [Theory]
-    [InlineData("+4712345678", 60)]
-    [InlineData("+4799999999", 172801)]
+    [InlineData(DefaultInvalidPhoneNumber, MinimumTimeToLive)]
+    [InlineData(DefaultPhoneNumber, MaximumTimeToLiveExceeded)]
     public async Task Post_WithInvalidPhoneNumberOrTimeToLive_ModelValidationFails_ReturnsBadRequest(string phoneNumber, int timeToLiveInSeconds)
     {
         // Arrange
         var request = new InstantNotificationOrderRequestExt
         {
-            IdempotencyId = "7D9B1679-C6DA-4279-89C3-6BC9C5969842",
-
+            IdempotencyId = DefaultIdempotencyId,
             InstantNotificationRecipient = new InstantNotificationRecipientExt
             {
                 ShortMessageDeliveryDetails = new()
@@ -466,8 +461,8 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
                     TimeToLiveInSeconds = timeToLiveInSeconds,
                     ShortMessageContent = new()
                     {
-                        Sender = "Altinn",
-                        Body = "Test message"
+                        Sender = DefaultSender,
+                        Body = DefaultBody
                     }
                 }
             }
@@ -485,7 +480,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
         var client = GetTestClient(validator: validatorMock.Object);
 
         using var requestContent = new StringContent(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken(DefaultCreator, scope: DefaultScope));
 
         // Act
         var response = await client.PostAsync(BasePath, requestContent);
@@ -498,15 +493,15 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
     }
 
     [Theory]
-    [InlineData("", "+4799999999", "test body", 60)]
-    [InlineData("3AFD849E-200D-49FB-80BD-3A91A85B13AE", "", "test body", 60)]
-    [InlineData("3AFD849E-200D-49FB-80BD-3A91A85B13AE", "+4799999999", "", 60)]
-    public async Task Post_WithMissingRequiredInformation_RequestDeserializationFails_ReturnsBadRequest(string idempotencyId, string phoneNumber, string message, int timeToLiveInSeconds)
+    [InlineData("", DefaultPhoneNumber, DefaultTestBody, MinimumTimeToLive)]
+    [InlineData("3AFD849E-200D-49FB-80BD-3A91A85B13AE", "", DefaultTestBody, MinimumTimeToLive)]
+    [InlineData("3AFD849E-200D-49FB-80BD-3A91A85B13AE", DefaultPhoneNumber, "", MinimumTimeToLive)]
+    public async Task Post_WithMissingRequiredInformation_RequestDeserializationFails_ReturnsBadRequest(string IdempotencyId, string phoneNumber, string message, int timeToLiveInSeconds)
     {
         // Arrange
         var request = new InstantNotificationOrderRequestExt
         {
-            IdempotencyId = idempotencyId,
+            IdempotencyId = IdempotencyId,
             InstantNotificationRecipient = new InstantNotificationRecipientExt
             {
                 ShortMessageDeliveryDetails = new()
@@ -516,7 +511,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
                     ShortMessageContent = new()
                     {
                         Body = message,
-                        Sender = "Altinn"
+                        Sender = DefaultSender
                     }
                 }
             }
@@ -524,7 +519,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
 
         HttpClient client = GetTestClient();
         using var requestContent = new StringContent(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken(DefaultCreator, scope: DefaultScope));
 
         // Act
         var response = await client.PostAsync(BasePath, requestContent);
