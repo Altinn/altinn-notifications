@@ -177,7 +177,7 @@ public class InstantOrderRequestServiceTests
                 It.Is<DateTime>(e => e == orderCreationDateTime.AddMinutes(60)),
                 It.Is<int>(e => e == 1),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync((InstantNotificationOrderTracking?)null!);
+            .ReturnsAsync((InstantNotificationOrderTracking?)null);
 
         var guidServiceMock = new Mock<IGuidService>();
         guidServiceMock.Setup(e => e.NewGuid()).Returns(smsOrderId);
@@ -516,7 +516,7 @@ public class InstantOrderRequestServiceTests
         var configurationOptions = Options.Create<NotificationConfig>(new()
         {
             DefaultEmailFromAddress = "noreply@altinn.no",
-            DefaultSmsSenderNumber = "TestDefaultSmsSenderNumberNumber"
+            DefaultSmsSenderNumber = "TestDefaultSmsSenderNumber"
         });
 
         return new InstantOrderRequestService(guidServiceMock.Object, dateTimeServiceMock.Object, orderRepositoryMock, configurationOptions);
