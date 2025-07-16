@@ -174,7 +174,7 @@ public class InstantOrderRequestServiceTests
                 It.Is<InstantNotificationOrder>(e => e.OrderChainId == orderChainId),
                 It.Is<NotificationOrder>(e => e.Id == orderId),
                 It.Is<SmsNotification>(e => e.Id == smsOrderId),
-                It.Is<DateTime>(e => e == orderCreationDateTime.AddMinutes(60)),
+                It.Is<DateTime>(e => e == orderCreationDateTime.AddSeconds(3600)),
                 It.Is<int>(e => e == 1),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync((InstantNotificationOrderTracking?)null);
@@ -202,7 +202,7 @@ public class InstantOrderRequestServiceTests
                 It.Is<InstantNotificationOrder>(e => e.OrderChainId == orderChainId),
                 It.Is<NotificationOrder>(e => e.Id == orderId),
                 It.Is<SmsNotification>(e => e.Id == smsOrderId),
-                It.Is<DateTime>(e => e == orderCreationDateTime.AddMinutes(60)),
+                It.Is<DateTime>(e => e == orderCreationDateTime.AddSeconds(3600)),
                 It.Is<int>(e => e == 1),
                 It.IsAny<CancellationToken>()),
              Times.Once);
@@ -268,7 +268,7 @@ public class InstantOrderRequestServiceTests
                 It.Is<InstantNotificationOrder>(e => e.OrderChainId == orderChainId),
                 It.Is<NotificationOrder>(e => e.Id == orderId),
                 It.Is<SmsNotification>(e => e.Id == smsOrderId),
-                It.Is<DateTime>(e => e == orderCreationDateTime.AddMinutes(60)),
+                It.Is<DateTime>(e => e == orderCreationDateTime.AddSeconds(3600)),
                 It.Is<int>(e => e == 1),
                 It.IsAny<CancellationToken>()),
              Times.Never);
@@ -315,7 +315,7 @@ public class InstantOrderRequestServiceTests
                 It.Is<InstantNotificationOrder>(e => e.OrderChainId == orderChainId),
                 It.Is<NotificationOrder>(e => e.Id == orderId),
                 It.Is<SmsNotification>(e => e.Id == smsOrderId),
-                It.Is<DateTime>(e => e == orderCreationDateTime.AddMinutes(60)),
+                It.Is<DateTime>(e => e == orderCreationDateTime.AddSeconds(3600)),
                 It.Is<int>(e => e == 1),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new InstantNotificationOrderTracking()
@@ -354,7 +354,7 @@ public class InstantOrderRequestServiceTests
                 It.Is<InstantNotificationOrder>(e => e.OrderChainId == orderChainId),
                 It.Is<NotificationOrder>(e => e.Id == orderId),
                 It.Is<SmsNotification>(e => e.Id == smsOrderId),
-                It.Is<DateTime>(e => e == orderCreationDateTime.AddMinutes(60)),
+                It.Is<DateTime>(e => e == orderCreationDateTime.AddSeconds(3600)),
                 It.Is<int>(e => e == 1),
                 It.IsAny<CancellationToken>()),
              Times.Once);
