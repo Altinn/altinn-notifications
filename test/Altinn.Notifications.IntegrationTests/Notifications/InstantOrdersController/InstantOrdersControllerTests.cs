@@ -328,7 +328,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
         var responseContent = await response.Content.ReadAsStringAsync();
-        var result = JsonSerializer.Deserialize<InstantNotificationOrderTracking>(responseContent, _options);
+        var result = JsonSerializer.Deserialize<InstantNotificationOrderResponseExt>(responseContent, _options);
 
         Assert.NotNull(result);
         Assert.Equal(trackingInfo.OrderChainId, result.OrderChainId);
