@@ -81,7 +81,7 @@ internal class InstantOrderRequestService : IInstantOrderRequestService
             },
             OrderId = instantNotificationOrder.OrderId,
             RequestedSendTime = instantNotificationOrder.Created,
-            SendResult = new(SmsNotificationResultType.New, _dateTimeService.UtcNow())
+            SendResult = new(SmsNotificationResultType.Sending, _dateTimeService.UtcNow())
         };
 
         return await _orderRepository.PersistInstantSmsNotificationAsync(instantNotificationOrder, notificationOrder, smsNotification, expirationDateTime, messagesCount, cancellationToken);
