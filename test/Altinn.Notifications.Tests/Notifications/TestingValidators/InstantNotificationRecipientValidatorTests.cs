@@ -26,7 +26,7 @@ public class InstantNotificationRecipientValidatorTests
             {
                 ShortMessageDeliveryDetails = new ShortMessageDeliveryDetailsExt
                 {
-                    PhoneNumber = "+4712345678",
+                    PhoneNumber = "+4799999999",
                     TimeToLiveInSeconds = 3600,
                     ShortMessageContent = new ShortMessageContentExt
                     {
