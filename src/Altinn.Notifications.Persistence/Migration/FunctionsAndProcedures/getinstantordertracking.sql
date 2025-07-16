@@ -8,8 +8,9 @@ RETURNS TABLE (
     shipment_id uuid,
     senders_reference text
 ) 
-LANGUAGE 'plpgsql'
-AS $BODY$
+LANGUAGE plpgsql
+AS $$
+BEGIN
     SELECT 
         oc.orderid AS orders_chain_id,
         (oc.orderchain->>'OrderId')::uuid AS shipment_id,
@@ -19,9 +20,9 @@ AS $BODY$
     WHERE 
         oc.creatorname = _creatorname
         AND oc.idempotencyid = _idempotencyid
-        AND oc.orderchain->>'Type' = '2';
+        AND oc.orderchain->>'Type' = '2';   
 END;
-$BODY$;
+$$;
 
 COMMENT ON FUNCTION notifications.get_instant_order_tracking IS 
 'Retrieves tracking information for an instant notification order using the creator''s short name and idempotency identifier.
