@@ -1,4 +1,10 @@
-﻿using Altinn.Common.AccessToken.Services;
+﻿using System.Net;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Controllers;
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Integrations;
@@ -10,20 +16,20 @@ using Altinn.Notifications.Models.Recipient;
 using Altinn.Notifications.Models.Sms;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
 using Altinn.Notifications.Tests.Notifications.Utils;
+
 using AltinnCore.Authentication.JwtCookie;
+
 using FluentValidation;
 using FluentValidation.Results;
+
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+
 using Moq;
-using System.Net;
-using System.Net.Http.Headers;
-using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.TestingControllers;
@@ -101,46 +107,6 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
         orderRequestServiceMock.Verify(e => e.PersistInstantSmsNotificationAsync(It.IsAny<InstantNotificationOrder>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    [Theory]
-    [InlineData("", "+4799999999", "test body", 60)]
-    [InlineData("3AFD849E-200D-49FB-80BD-3A91A85B13AE", "", "test body", 60)]
-    [InlineData("3AFD849E-200D-49FB-80BD-3A91A85B13AE", "+4799999999", "", 60)]
-    [InlineData("3AFD849E-200D-49FB-80BD-3A91A85B13AE", "+4799999999", "test body", 50)]
-    public async Task Post_WithInvalidRequest_ReturnsBadRequest(string idempotencyId, string phoneNumber, string message, int timeToLiveInSeconds)
-    {
-        // Arrange
-        var request = new InstantNotificationOrderRequestExt
-        {
-            IdempotencyId = idempotencyId,
-            InstantNotificationRecipient = new InstantNotificationRecipientExt
-            {
-                ShortMessageDeliveryDetails = new()
-                {
-                    PhoneNumber = phoneNumber,
-                    TimeToLiveInSeconds = timeToLiveInSeconds,
-                    ShortMessageContent = new()
-                    {
-                        Body = message,
-                        Sender = "Altinn"
-                    }
-                }
-            }
-        };
-
-        HttpClient client = GetTestClient();
-        using var requestContent = new StringContent(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
-
-        // Act
-        var response = await client.PostAsync(BasePath, requestContent);
-        string responseContent = await response.Content.ReadAsStringAsync();
-        var problem = JsonSerializer.Deserialize<ValidationProblemDetails>(responseContent, _options);
-
-        // Assert
-        Assert.NotNull(problem);
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-    }
-
     [Fact]
     public async Task Post_WithExistingOrderIdempotency_ReturnsOkWithTrackingInformation()
     {
@@ -211,6 +177,137 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
         validatorMock.Verify(e => e.Validate(It.Is<InstantNotificationOrderRequestExt>(e => e == request)), Times.Once);
         orderRequestServiceMock.Verify(e => e.RetrieveTrackingInformation(creator, idempotencyId, It.IsAny<CancellationToken>()), Times.Once);
         orderRequestServiceMock.Verify(e => e.PersistInstantSmsNotificationAsync(It.IsAny<InstantNotificationOrder>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Post_WithValidRequest_RegistrationAndSmsSendingSucceeds_ReturnsCreatedWithTrackingInformation()
+    {
+        // Arrange
+        var creator = "ttd";
+        var shipmentId = Guid.NewGuid();
+        var orderChainId = Guid.NewGuid();
+        var idempotencyId = Guid.NewGuid().ToString();
+        var sendersReference = "A1B2C3D4-E5F6-7890-1234-56789ABCDEF0";
+
+        var trackingInfo = new InstantNotificationOrderTracking
+        {
+            OrderChainId = orderChainId,
+            Notification = new NotificationOrderChainShipment
+            {
+                ShipmentId = shipmentId,
+                SendersReference = sendersReference
+            }
+        };
+
+        var request = new InstantNotificationOrderRequestExt
+        {
+            IdempotencyId = idempotencyId,
+            SendersReference = sendersReference,
+            InstantNotificationRecipient = new InstantNotificationRecipientExt
+            {
+                ShortMessageDeliveryDetails = new ShortMessageDeliveryDetailsExt
+                {
+                    TimeToLiveInSeconds = 360,
+                    PhoneNumber = "+4799999999",
+                    ShortMessageContent = new ShortMessageContentExt
+                    {
+                        Body = "Test message",
+                        Sender = "Test sender"
+                    }
+                }
+            }
+        };
+
+        var orderRequestServiceMock = new Mock<IInstantOrderRequestService>();
+        orderRequestServiceMock
+            .Setup(e => e.RetrieveTrackingInformation(creator, idempotencyId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((InstantNotificationOrderTracking?)null);
+
+        orderRequestServiceMock
+            .Setup(e => e.PersistInstantSmsNotificationAsync(It.IsAny<InstantNotificationOrder>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(trackingInfo);
+
+        var shortMessageServiceClientMock = new Mock<IShortMessageServiceClient>();
+        shortMessageServiceClientMock
+            .Setup(e => e.SendAsync(It.IsAny<ShortMessage>()))
+            .ReturnsAsync(new ShortMessageSendResult
+            {
+                Success = true,
+                ErrorDetails = null,
+                StatusCode = HttpStatusCode.OK
+            });
+
+        var validatorMock = new Mock<IValidator<InstantNotificationOrderRequestExt>>();
+        validatorMock.Setup(e => e.Validate(request)).Returns(new ValidationResult());
+
+        var client = GetTestClient(
+            instantOrderRequestService: orderRequestServiceMock.Object,
+            shortMessageServiceClient: shortMessageServiceClientMock.Object,
+            validator: validatorMock.Object);
+
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken(creator, scope: "altinn:serviceowner/notifications.create"));
+
+        var requestSerialized = JsonSerializer.Serialize(request);
+        using var content = new StringContent(requestSerialized, Encoding.UTF8, "application/json");
+
+        // Act
+        var response = await client.PostAsync(BasePath, content);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+        var responseContent = await response.Content.ReadAsStringAsync();
+        var result = JsonSerializer.Deserialize<InstantNotificationOrderTracking>(responseContent, _options);
+
+        Assert.NotNull(result);
+        Assert.Equal(trackingInfo.OrderChainId, result.OrderChainId);
+        Assert.Equal(trackingInfo.Notification.ShipmentId, result.Notification.ShipmentId);
+        Assert.Equal(trackingInfo.Notification.SendersReference, result.Notification.SendersReference);
+
+        validatorMock.Verify(e => e.Validate(request), Times.Once);
+        shortMessageServiceClientMock.Verify(e => e.SendAsync(It.IsAny<ShortMessage>()), Times.Once);
+        orderRequestServiceMock.Verify(e => e.RetrieveTrackingInformation(creator, idempotencyId, It.IsAny<CancellationToken>()), Times.Once);
+        orderRequestServiceMock.Verify(e => e.PersistInstantSmsNotificationAsync(It.IsAny<InstantNotificationOrder>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Theory]
+    [InlineData("", "+4799999999", "test body", 60)]
+    [InlineData("3AFD849E-200D-49FB-80BD-3A91A85B13AE", "", "test body", 60)]
+    [InlineData("3AFD849E-200D-49FB-80BD-3A91A85B13AE", "+4799999999", "", 60)]
+    [InlineData("3AFD849E-200D-49FB-80BD-3A91A85B13AE", "+4799999999", "test body", 50)]
+    public async Task Post_WithInvalidRequest_ReturnsBadRequest(string idempotencyId, string phoneNumber, string message, int timeToLiveInSeconds)
+    {
+        // Arrange
+        var request = new InstantNotificationOrderRequestExt
+        {
+            IdempotencyId = idempotencyId,
+            InstantNotificationRecipient = new InstantNotificationRecipientExt
+            {
+                ShortMessageDeliveryDetails = new()
+                {
+                    PhoneNumber = phoneNumber,
+                    TimeToLiveInSeconds = timeToLiveInSeconds,
+                    ShortMessageContent = new()
+                    {
+                        Body = message,
+                        Sender = "Altinn"
+                    }
+                }
+            }
+        };
+
+        HttpClient client = GetTestClient();
+        using var requestContent = new StringContent(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
+
+        // Act
+        var response = await client.PostAsync(BasePath, requestContent);
+        string responseContent = await response.Content.ReadAsStringAsync();
+        var problem = JsonSerializer.Deserialize<ValidationProblemDetails>(responseContent, _options);
+
+        // Assert
+        Assert.NotNull(problem);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     private HttpClient GetTestClient(IInstantOrderRequestService? instantOrderRequestService = null, IShortMessageServiceClient? shortMessageServiceClient = null, IValidator<InstantNotificationOrderRequestExt>? validator = null)
