@@ -341,6 +341,61 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
         orderRequestServiceMock.Verify(e => e.PersistInstantSmsNotificationAsync(It.IsAny<InstantNotificationOrder>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Fact]
+    public async Task Post_WhenPersistInstantSmsNotificationAsyncThrowsOperationCanceledException_Returns499RequestTerminated()
+    {
+        // Arrange
+        var request = new InstantNotificationOrderRequestExt
+        {
+            IdempotencyId = Guid.NewGuid().ToString(),
+            InstantNotificationRecipient = new InstantNotificationRecipientExt
+            {
+                ShortMessageDeliveryDetails = new ShortMessageDeliveryDetailsExt
+                {
+                    PhoneNumber = "+4799999999",
+                    TimeToLiveInSeconds = 360,
+                    ShortMessageContent = new ShortMessageContentExt
+                    {
+                        Sender = "Altinn",
+                        Body = "Test message"
+                    }
+                }
+            }
+        };
+
+        var validatorMock = new Mock<IValidator<InstantNotificationOrderRequestExt>>();
+        validatorMock
+            .Setup(v => v.Validate(It.IsAny<InstantNotificationOrderRequestExt>()))
+            .Returns(new ValidationResult());
+
+        var orderRequestServiceMock = new Mock<IInstantOrderRequestService>();
+
+        orderRequestServiceMock
+            .Setup(s => s.RetrieveTrackingInformation(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((InstantNotificationOrderTracking?)null);
+
+        orderRequestServiceMock
+            .Setup(s => s.PersistInstantSmsNotificationAsync(It.IsAny<InstantNotificationOrder>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationCanceledException());
+
+        var client = GetTestClient(instantOrderRequestService: orderRequestServiceMock.Object, validator: validatorMock.Object);
+
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
+
+        using var requestContent = new StringContent(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
+
+        // Act
+        var response = await client.PostAsync(BasePath, requestContent);
+        var responseContent = await response.Content.ReadAsStringAsync();
+        var problem = JsonSerializer.Deserialize<ProblemDetails>(responseContent, _options);
+
+        // Assert
+        Assert.Equal(499, (int)response.StatusCode);
+
+        Assert.NotNull(problem);
+        Assert.Equal(499, problem.Status);
+    }
+
     [Theory]
     [InlineData("+4712345678", 60)]
     [InlineData("+4799999999", 172801)]
