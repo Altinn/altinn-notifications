@@ -25,7 +25,7 @@ internal class InstantOrderRequestService : IInstantOrderRequestService
     private readonly IOrderRepository _orderRepository;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="OrderRequestService"/> class.
+    /// Initializes a new instance of the <see cref="InstantOrderRequestService"/> class.
     /// </summary>
     public InstantOrderRequestService(
         IGuidService guidService,
