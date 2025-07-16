@@ -201,10 +201,7 @@ public class InstantNotificationOrderMapperTests
             IdempotencyId = "Test idempotency identifier"
         };
 
-        var mockDateTimeService = new Mock<IDateTimeService>();
-        mockDateTimeService.Setup(e => e.UtcNow()).Returns(DateTime.UtcNow);
-
-        Assert.Throws<ArgumentNullException>(() => requestModel.MapToInstantNotificationOrder("Test creator", mockDateTimeService.Object.UtcNow()));
+        Assert.Throws<ArgumentNullException>(() => requestModel.MapToInstantNotificationOrder("Test creator", DateTime.UtcNow));
     }
 
     [Fact]
@@ -220,10 +217,7 @@ public class InstantNotificationOrderMapperTests
             }
         };
 
-        var mockDateTimeService = new Mock<IDateTimeService>();
-        mockDateTimeService.Setup(e => e.UtcNow()).Returns(DateTime.UtcNow);
-
-        Assert.Throws<ArgumentNullException>(() => requestModel.MapToInstantNotificationOrder("Test creator", mockDateTimeService.Object.UtcNow()));
+        Assert.Throws<ArgumentNullException>(() => requestModel.MapToInstantNotificationOrder("Test creator", DateTime.UtcNow));
     }
 
     [Fact]
@@ -244,10 +238,7 @@ public class InstantNotificationOrderMapperTests
             }
         };
 
-        var mockDateTimeService = new Mock<IDateTimeService>();
-        mockDateTimeService.Setup(e => e.UtcNow()).Returns(DateTime.UtcNow);
-
-        Assert.Throws<ArgumentNullException>(() => requestModel.MapToInstantNotificationOrder("Test creator", mockDateTimeService.Object.UtcNow()));
+        Assert.Throws<ArgumentNullException>(() => requestModel.MapToInstantNotificationOrder("Test creator", DateTime.UtcNow));
     }
 
     [Fact]
@@ -295,10 +286,7 @@ public class InstantNotificationOrderMapperTests
     {
         InstantNotificationOrderRequestExt? requestModel = null;
 
-        var mockDateTimeService = new Mock<IDateTimeService>();
-        mockDateTimeService.Setup(e => e.UtcNow()).Returns(DateTime.UtcNow);
-
-        Assert.Throws<ArgumentNullException>(() => requestModel!.MapToInstantNotificationOrder("Test creator", mockDateTimeService.Object.UtcNow()));
+        Assert.Throws<ArgumentNullException>(() => requestModel!.MapToInstantNotificationOrder("Test creator", DateTime.UtcNow));
     }
 
     [Theory]
@@ -325,16 +313,13 @@ public class InstantNotificationOrderMapperTests
             }
         };
 
-        var mockDateTimeService = new Mock<IDateTimeService>();
-        mockDateTimeService.Setup(e => e.UtcNow()).Returns(DateTime.UtcNow);
-
         if (creatorShortName is not null)
         {
-            Assert.Throws<ArgumentException>(() => requestModel.MapToInstantNotificationOrder(creatorShortName!, mockDateTimeService.Object.UtcNow()));
+            Assert.Throws<ArgumentException>(() => requestModel.MapToInstantNotificationOrder(creatorShortName!, DateTime.UtcNow));
         }
         else
         {
-            Assert.Throws<ArgumentNullException>(() => requestModel.MapToInstantNotificationOrder(creatorShortName!, mockDateTimeService.Object.UtcNow()));
+            Assert.Throws<ArgumentNullException>(() => requestModel.MapToInstantNotificationOrder(creatorShortName!, DateTime.UtcNow));
         }
     }
 
