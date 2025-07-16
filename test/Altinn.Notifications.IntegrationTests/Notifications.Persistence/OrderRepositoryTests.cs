@@ -1994,7 +1994,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
         }
 
         [Fact]
-        public async Task PersistInstantSmsNotificationAsync_InstantNotificationOrderWithCancellationRequested_ThrowsTaskCanceledException()
+        public async Task PersistInstantSmsNotificationAsync_InstantNotificationOrderWithCancellationRequested_ThrowsOperationCanceledException()
         {
             // Arrange
             OrderRepository orderRepository =
@@ -2063,7 +2063,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             await cancellationTokenSource.CancelAsync();
 
             // Act & Assert
-            await Assert.ThrowsAsync<TaskCanceledException>(async () => await orderRepository.PersistInstantSmsNotificationAsync(instantNotificationOrder, notificationOrder, smsNotification, creationDateTime.AddMinutes(150), 1, cancellationTokenSource.Token));
+            await Assert.ThrowsAsync<OperationCanceledException>(async () => await orderRepository.PersistInstantSmsNotificationAsync(instantNotificationOrder, notificationOrder, smsNotification, creationDateTime.AddMinutes(150), 1, cancellationTokenSource.Token));
 
             // Verify nothing was persisted
             string orderChainSql = $@"SELECT count(*) FROM notifications.orderschain WHERE orderid = '{orderChainId}'";
