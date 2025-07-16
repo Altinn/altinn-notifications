@@ -10,24 +10,6 @@ RETURNS TABLE (
 ) 
 LANGUAGE 'plpgsql'
 AS $BODY$
-DECLARE
-    v_record_exists boolean;
-BEGIN
-    -- Check if record exists first to provide better error handling
-    SELECT EXISTS (
-        SELECT 1 
-        FROM notifications.orderschain 
-        WHERE creatorname = _creatorname
-        AND idempotencyid = _idempotencyid
-        AND orderchain->>'Type' = '2'
-    ) INTO v_record_exists;
-
-    IF NOT v_record_exists THEN
-        -- Return empty result set with no rows
-        RETURN;
-    END IF;
-
-    RETURN QUERY
     SELECT 
         oc.orderid AS orders_chain_id,
         (oc.orderchain->>'OrderId')::uuid AS shipment_id,
