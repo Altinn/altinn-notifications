@@ -71,7 +71,7 @@ public class InstantOrdersController : ControllerBase
     {
         try
         {
-            // 1. Validate the notification order.
+            // 1. Validate the instant notification order.
             var validationResult = _validator.Validate(request);
             if (!validationResult.IsValid)
             {
@@ -86,14 +86,14 @@ public class InstantOrdersController : ControllerBase
                 return Forbid();
             }
 
-            // 3. Check if an order with the same idempotency identifier already exists.
+            // 3. Return the tracking information if an order with the same creator's short name and idempotency identifier already exists.
             var trackingInformation = await _instantOrderRequestService.RetrieveTrackingInformation(creator, request.IdempotencyId, cancellationToken);
             if (trackingInformation != null)
             {
                 return Ok(trackingInformation.MapToInstantNotificationOrderResponse());
             }
 
-            // 4. Map and register the instant notification order.
+            // 4. Register the instant notification order.
             var instantNotificationOrder = request.MapToInstantNotificationOrder(creator, _dateTimeService.UtcNow());
             var registerationResult = await _instantOrderRequestService.PersistInstantSmsNotificationAsync(instantNotificationOrder, cancellationToken);
             if (registerationResult == null)
@@ -101,29 +101,30 @@ public class InstantOrdersController : ControllerBase
                 var problemDetails = new ProblemDetails
                 {
                     Status = 500,
-                    Title = "Instant Notification Registration Failed",
+                    Title = "Registration failed",
                     Detail = "Failed to register the instant notification order."
                 };
+
                 return StatusCode(500, problemDetails);
             }
 
             // 5. Send out the SMS using the short message service client.
             var smsSendingResult = await _shortMessageServiceClient.SendAsync(instantNotificationOrder.MapToShortMessage(_defaultSmsSender));
-            if (!smsSendingResult.Success)
+            if (smsSendingResult.Success)
+            {
+                return Created(instantNotificationOrder.OrderChainId.GetSelfLinkFromOrderChainId(), registerationResult);
+            }
+            else
             {
                 var problemDetails = new ProblemDetails
                 {
                     Status = 500,
-                    Title = "SMS Sending Failed",
-                    Detail = $"Failed to send the SMS."
+                    Title = "SMS sending failed",
+                    Detail = "Failed to send the SMS."
                 };
+
                 return StatusCode(500, problemDetails);
             }
-
-            // 6. Update the processing status of the instant notification order.
-
-            // 7. Return the response with the order chain ID and shipment details.
-            return Created(instantNotificationOrder.OrderChainId.GetSelfLinkFromOrderChainId(), registerationResult);
         }
         catch (InvalidOperationException ex)
         {
