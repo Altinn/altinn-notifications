@@ -355,7 +355,7 @@ public class InstantOrderRequestServiceTests
                 It.Is<DateTime>(e => e == orderCreationDateTime.AddMinutes(60)),
                 It.Is<int>(e => e == 1),
                 It.IsAny<CancellationToken>()),
-             Times.Once);
+             Times.Never);
     }
 
     private static InstantOrderRequestService GetTestService(IOrderRepository? orderRepositoryMock = null, Guid? uniqueIdentifier = null, DateTime? dateTime = null)

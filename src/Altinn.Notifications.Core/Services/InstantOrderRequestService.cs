@@ -48,6 +48,8 @@ internal class InstantOrderRequestService : IInstantOrderRequestService
     /// <inheritdoc/>
     public async Task<InstantNotificationOrderTracking?> PersistInstantSmsNotificationAsync(InstantNotificationOrder instantNotificationOrder, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var deliveryDetails = instantNotificationOrder.InstantNotificationRecipient.ShortMessageDeliveryDetails;
         var messageContent = instantNotificationOrder.InstantNotificationRecipient.ShortMessageDeliveryDetails.ShortMessageContent;
 
@@ -83,6 +85,8 @@ internal class InstantOrderRequestService : IInstantOrderRequestService
             RequestedSendTime = instantNotificationOrder.Created,
             SendResult = new(SmsNotificationResultType.Sending, _dateTimeService.UtcNow())
         };
+
+        cancellationToken.ThrowIfCancellationRequested();
 
         return await _orderRepository.PersistInstantSmsNotificationAsync(instantNotificationOrder, notificationOrder, smsNotification, expirationDateTime, messagesCount, cancellationToken);
     }
