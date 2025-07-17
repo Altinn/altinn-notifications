@@ -180,7 +180,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
     }
 
     [Fact]
-    public async Task Post_WithRegistrationFailure_ReturnsInternalServerErrorWithProblemDetails()
+    public async Task Post_WithRegistrationFailure_ReturnsUnprocessableEntityWithProblemDetails()
     {
         // Arrange
         var request = new InstantNotificationOrderRequestExt
@@ -230,15 +230,13 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
         var response = await client.PostAsync(BasePath, content);
 
         // Assert
-        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
 
         var responseContent = await response.Content.ReadAsStringAsync();
         var problem = JsonSerializer.Deserialize<ProblemDetails>(responseContent, _options);
 
         Assert.NotNull(problem);
-        Assert.Equal(500, problem.Status);
-        Assert.Equal("Registration failed", problem.Title);
-        Assert.Contains("Failed to register the instant notification order", problem.Detail);
+        Assert.Equal(422, problem.Status);
 
         validatorMock.Verify(e => e.Validate(request), Times.Once);
         shortMessageServiceClientMock.Verify(e => e.SendAsync(It.IsAny<ShortMessage>()), Times.Never);
