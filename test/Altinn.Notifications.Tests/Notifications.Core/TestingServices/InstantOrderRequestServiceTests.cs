@@ -254,9 +254,11 @@ public class InstantOrderRequestServiceTests
         var dateTimeServiceMock = new Mock<IDateTimeService>();
         dateTimeServiceMock.Setup(e => e.UtcNow()).Returns(orderCreationDateTime);
 
+        var taskCompletionSource = new TaskCompletionSource();
         var shortMessageServiceClient = new Mock<IShortMessageServiceClient>();
         shortMessageServiceClient
             .Setup(e => e.SendAsync(It.Is<ShortMessage>(e => e.NotificationId == smsOrderId)))
+            .Callback(() => taskCompletionSource.SetResult())
             .ReturnsAsync(new ShortMessageSendResult()
             {
                 Success = true,
@@ -272,6 +274,9 @@ public class InstantOrderRequestServiceTests
 
         // Act
         var result = await service.PersistInstantSmsNotificationAsync(instantNotificationOrder);
+
+        // Wait for the short message to be sent.
+        await taskCompletionSource.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
         // Assert
         Assert.NotNull(result);
@@ -454,12 +459,14 @@ public class InstantOrderRequestServiceTests
         var dateTimeServiceMock = new Mock<IDateTimeService>();
         dateTimeServiceMock.Setup(e => e.UtcNow()).Returns(orderCreationDateTime);
 
+        var taskCompletionSource = new TaskCompletionSource();
         var shortMessageServiceClient = new Mock<IShortMessageServiceClient>();
         shortMessageServiceClient
             .Setup(e => e.SendAsync(It.IsAny<ShortMessage>()))
             .Callback((ShortMessage shortMessage) =>
             {
                 initiatedShortMessage = shortMessage;
+                taskCompletionSource.SetResult();
             })
             .ReturnsAsync(new ShortMessageSendResult()
             {
@@ -476,6 +483,9 @@ public class InstantOrderRequestServiceTests
 
         // Act
         await service.PersistInstantSmsNotificationAsync(instantNotificationOrder);
+
+        // Wait for the short message to be sent.
+        await taskCompletionSource.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
         // Assert
         Assert.Equal(16, initiatedSmsMessageCount);
@@ -529,6 +539,7 @@ public class InstantOrderRequestServiceTests
         Assert.Equal(AddressType.Sms, recipient.AddressInfo[0].AddressType);
 
         Assert.NotNull(initiatedShortMessage);
+        Assert.Equal(3600, initiatedShortMessage.TimeToLive);
         Assert.Equal("+4799999999", initiatedShortMessage.Recipient);
         Assert.Equal(smsOrderId, initiatedShortMessage.NotificationId);
         Assert.Equal(longMessageContent, initiatedShortMessage.Message);
