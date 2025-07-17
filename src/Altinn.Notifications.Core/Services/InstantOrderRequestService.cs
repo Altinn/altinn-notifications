@@ -55,6 +55,8 @@ public class InstantOrderRequestService : IInstantOrderRequestService
     /// <inheritdoc/>
     public async Task<InstantNotificationOrderTracking?> PersistInstantSmsNotificationAsync(InstantNotificationOrder instantNotificationOrder, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var deliveryDetails = instantNotificationOrder.InstantNotificationRecipient.ShortMessageDeliveryDetails;
         var messageContent = instantNotificationOrder.InstantNotificationRecipient.ShortMessageDeliveryDetails.ShortMessageContent;
 
