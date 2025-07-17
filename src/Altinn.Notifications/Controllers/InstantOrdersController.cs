@@ -54,9 +54,9 @@ public class InstantOrdersController : ControllerBase
     [Produces("application/json")]
     [SwaggerResponse(201, "The instant notification was created.", typeof(InstantNotificationOrderResponseExt))]
     [SwaggerResponse(200, "The notification order was created previously.", typeof(InstantNotificationOrderResponseExt))]
-    [SwaggerResponse(400, "The notification order is invalid", typeof(string))]
-    [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request before the server could complete processing", typeof(string))]
-    [SwaggerResponse(500, "An internal server error occurred while processing the notification order", typeof(string))]
+    [SwaggerResponse(400, "The notification order is invalid", typeof(ValidationProblemDetails))]
+    [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request before the server could complete processing")]
+    [SwaggerResponse(500, "An internal server error occurred while processing the notification order")]
     public async Task<IActionResult> Post([FromBody] InstantNotificationOrderRequestExt request, CancellationToken cancellationToken = default)
     {
         try
