@@ -20,7 +20,7 @@ public class InstantNotificationOrderMapperTests
     [Fact]
     public void MapToShortMessage_WithNullRecipient_ShouldThrowArgumentNullException()
     {
-        var domainModel = new InstantNotificationOrder
+        var instantNotificationOrder = new InstantNotificationOrder
         {
             OrderId = Guid.NewGuid(),
             Created = DateTime.UtcNow,
@@ -31,13 +31,13 @@ public class InstantNotificationOrderMapperTests
             IdempotencyId = Guid.NewGuid().ToString()
         };
 
-        Assert.Throws<ArgumentNullException>(() => domainModel.MapToShortMessage("Default sender"));
+        Assert.Throws<ArgumentNullException>(() => instantNotificationOrder.MapToShortMessage("Default sender"));
     }
 
     [Fact]
     public void MapToShortMessage_WithValidInstantNotificationOrder_ShouldMapCorrectly()
     {
-        var domainModel = new InstantNotificationOrder
+        var instantNotificationOrder = new InstantNotificationOrder
         {
             OrderId = Guid.NewGuid(),
             OrderChainId = Guid.NewGuid(),
@@ -60,21 +60,21 @@ public class InstantNotificationOrderMapperTests
 
         var defaultSenderNumber = "Default sender";
 
-        var result = domainModel.MapToShortMessage(defaultSenderNumber);
+        var result = instantNotificationOrder.MapToShortMessage(defaultSenderNumber);
 
         Assert.NotEqual(defaultSenderNumber, result.Sender);
 
-        Assert.Equal(domainModel.OrderId, result.NotificationId);
-        Assert.Equal(domainModel.InstantNotificationRecipient.ShortMessageDeliveryDetails.PhoneNumber, result.Recipient);
-        Assert.Equal(domainModel.InstantNotificationRecipient.ShortMessageDeliveryDetails.TimeToLiveInSeconds, result.TimeToLive);
-        Assert.Equal(domainModel.InstantNotificationRecipient.ShortMessageDeliveryDetails.ShortMessageContent.Sender, result.Sender);
-        Assert.Equal(domainModel.InstantNotificationRecipient.ShortMessageDeliveryDetails.ShortMessageContent.Message, result.Message);
+        Assert.Equal(instantNotificationOrder.OrderId, result.NotificationId);
+        Assert.Equal(instantNotificationOrder.InstantNotificationRecipient.ShortMessageDeliveryDetails.PhoneNumber, result.Recipient);
+        Assert.Equal(instantNotificationOrder.InstantNotificationRecipient.ShortMessageDeliveryDetails.TimeToLiveInSeconds, result.TimeToLive);
+        Assert.Equal(instantNotificationOrder.InstantNotificationRecipient.ShortMessageDeliveryDetails.ShortMessageContent.Sender, result.Sender);
+        Assert.Equal(instantNotificationOrder.InstantNotificationRecipient.ShortMessageDeliveryDetails.ShortMessageContent.Message, result.Message);
     }
 
     [Fact]
     public void MapToShortMessage_WithNullDeliveryDetails_ShouldThrowArgumentNullException()
     {
-        var domainModel = new InstantNotificationOrder
+        var instantNotificationOrder = new InstantNotificationOrder
         {
             OrderId = Guid.NewGuid(),
             Created = DateTime.UtcNow,
@@ -88,13 +88,13 @@ public class InstantNotificationOrderMapperTests
             }
         };
 
-        Assert.Throws<ArgumentNullException>(() => domainModel.MapToShortMessage("Default sender"));
+        Assert.Throws<ArgumentNullException>(() => instantNotificationOrder.MapToShortMessage("Default sender"));
     }
 
     [Fact]
     public void MapToShortMessage_WithNullShortMessageContent_ShouldThrowArgumentNullException()
     {
-        var domainModel = new InstantNotificationOrder
+        var instantNotificationOrder = new InstantNotificationOrder
         {
             OrderId = Guid.NewGuid(),
             Created = DateTime.UtcNow,
@@ -113,7 +113,7 @@ public class InstantNotificationOrderMapperTests
             }
         };
 
-        Assert.Throws<ArgumentNullException>(() => domainModel.MapToShortMessage("Default sender"));
+        Assert.Throws<ArgumentNullException>(() => instantNotificationOrder.MapToShortMessage("Default sender"));
     }
 
     [Fact]
@@ -126,14 +126,15 @@ public class InstantNotificationOrderMapperTests
     [Theory]
     [InlineData("")]
     [InlineData(null)]
-    public void MapToShortMessage_WithInvalidDefaultSenderIdentifier_ShouldThrowExceptions(string? defaultSender)
+    public void MapToShortMessage_WithInvalidDefaultSenderIdentifier_ShouldThrowException(string? defaultSender)
     {
-        var domainModel = new InstantNotificationOrder
+        var instantNotificationOrder = new InstantNotificationOrder
         {
             OrderId = Guid.NewGuid(),
             OrderChainId = Guid.NewGuid(),
             Creator = new Creator("Test creator"),
             IdempotencyId = Guid.NewGuid().ToString(),
+
             InstantNotificationRecipient = new InstantNotificationRecipient
             {
                 ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
@@ -151,20 +152,20 @@ public class InstantNotificationOrderMapperTests
 
         if (defaultSender is not null)
         {
-            Assert.Throws<ArgumentException>(() => domainModel.MapToShortMessage(defaultSender!));
+            Assert.Throws<ArgumentException>(() => instantNotificationOrder.MapToShortMessage(defaultSender!));
         }
         else
         {
-            Assert.Throws<ArgumentNullException>(() => domainModel.MapToShortMessage(defaultSender!));
+            Assert.Throws<ArgumentNullException>(() => instantNotificationOrder.MapToShortMessage(defaultSender!));
         }
     }
 
     [Theory]
     [InlineData("")]
     [InlineData(null)]
-    public void MapToShortMessage_WithInvalidSenderIdentifier_UseDefaultSender_ShouldMapCorrectly(string? senderIdentifier)
+    public void MapToShortMessage_WithInvalidSenderIdentifier_UseDefaultSenderIdentifier_ShouldMapCorrectly(string? senderIdentifier)
     {
-        var domainModel = new InstantNotificationOrder
+        var instantNotificationOrder = new InstantNotificationOrder
         {
             OrderId = Guid.NewGuid(),
             OrderChainId = Guid.NewGuid(),
@@ -186,7 +187,7 @@ public class InstantNotificationOrderMapperTests
         };
         var defaultSenderNumber = "Default sender";
 
-        var result = domainModel.MapToShortMessage(defaultSenderNumber);
+        var result = instantNotificationOrder.MapToShortMessage(defaultSenderNumber);
 
         Assert.Equal(defaultSenderNumber, result.Sender);
     }
@@ -194,20 +195,20 @@ public class InstantNotificationOrderMapperTests
     [Fact]
     public void MapToInstantNotificationOrder_WithNullRecipient_ShouldThrowArgumentNullException()
     {
-        var requestModel = new InstantNotificationOrderRequestExt
+        var instantNotificationOrderRequest = new InstantNotificationOrderRequestExt
         {
             SendersReference = "Test reference",
             InstantNotificationRecipient = null!,
             IdempotencyId = "Test idempotency identifier"
         };
 
-        Assert.Throws<ArgumentNullException>(() => requestModel.MapToInstantNotificationOrder("Test creator", DateTime.UtcNow));
+        Assert.Throws<ArgumentNullException>(() => instantNotificationOrderRequest.MapToInstantNotificationOrder("Test creator", DateTime.UtcNow));
     }
 
     [Fact]
     public void MapToInstantNotificationOrder_WithNullDeliveryDetails_ShouldThrowArgumentNullException()
     {
-        var requestModel = new InstantNotificationOrderRequestExt
+        var instantNotificationOrderRequest = new InstantNotificationOrderRequestExt
         {
             SendersReference = "Test reference",
             IdempotencyId = "Test idempotency identifier",
@@ -217,13 +218,13 @@ public class InstantNotificationOrderMapperTests
             }
         };
 
-        Assert.Throws<ArgumentNullException>(() => requestModel.MapToInstantNotificationOrder("Test creator", DateTime.UtcNow));
+        Assert.Throws<ArgumentNullException>(() => instantNotificationOrderRequest.MapToInstantNotificationOrder("Test creator", DateTime.UtcNow));
     }
 
     [Fact]
     public void MapToInstantNotificationOrder_WithNullShortMessageContent_ShouldThrowArgumentNullException()
     {
-        var requestModel = new InstantNotificationOrderRequestExt
+        var instantNotificationOrderRequest = new InstantNotificationOrderRequestExt
         {
             SendersReference = "Test reference",
             IdempotencyId = "Test idempotency identifier",
@@ -238,14 +239,14 @@ public class InstantNotificationOrderMapperTests
             }
         };
 
-        Assert.Throws<ArgumentNullException>(() => requestModel.MapToInstantNotificationOrder("Test creator", DateTime.UtcNow));
+        Assert.Throws<ArgumentNullException>(() => instantNotificationOrderRequest.MapToInstantNotificationOrder("Test creator", DateTime.UtcNow));
     }
 
     [Fact]
     public void MapToInstantNotificationOrder_WithValidInstantNotificationOrderRequestExt_ShouldMapCorrectly()
     {
         var creatorShortName = "Test creator";
-        var requestModel = new InstantNotificationOrderRequestExt
+        var instantNotificationOrderRequest = new InstantNotificationOrderRequestExt
         {
             SendersReference = "Test reference",
             IdempotencyId = "Test idempotency identifier",
@@ -269,35 +270,37 @@ public class InstantNotificationOrderMapperTests
         var mockDateTimeService = new Mock<IDateTimeService>();
         mockDateTimeService.Setup(e => e.UtcNow()).Returns(created);
 
-        var result = requestModel.MapToInstantNotificationOrder(creatorShortName, created);
+        var result = instantNotificationOrderRequest.MapToInstantNotificationOrder(creatorShortName, created);
 
         Assert.Equal(created, result.Created);
         Assert.Equal(creatorShortName, result.Creator.ShortName);
-        Assert.Equal(requestModel.IdempotencyId, result.IdempotencyId);
-        Assert.Equal(requestModel.SendersReference, result.SendersReference);
-        Assert.Equal(requestModel.InstantNotificationRecipient.ShortMessageDeliveryDetails.PhoneNumber, result.InstantNotificationRecipient.ShortMessageDeliveryDetails.PhoneNumber);
-        Assert.Equal(requestModel.InstantNotificationRecipient.ShortMessageDeliveryDetails.TimeToLiveInSeconds, result.InstantNotificationRecipient.ShortMessageDeliveryDetails.TimeToLiveInSeconds);
-        Assert.Equal(requestModel.InstantNotificationRecipient.ShortMessageDeliveryDetails.ShortMessageContent.Body, result.InstantNotificationRecipient.ShortMessageDeliveryDetails.ShortMessageContent.Message);
-        Assert.Equal(requestModel.InstantNotificationRecipient.ShortMessageDeliveryDetails.ShortMessageContent.Sender, result.InstantNotificationRecipient.ShortMessageDeliveryDetails.ShortMessageContent.Sender);
+
+        Assert.Equal(instantNotificationOrderRequest.IdempotencyId, result.IdempotencyId);
+        Assert.Equal(instantNotificationOrderRequest.SendersReference, result.SendersReference);
+        Assert.Equal(instantNotificationOrderRequest.InstantNotificationRecipient.ShortMessageDeliveryDetails.PhoneNumber, result.InstantNotificationRecipient.ShortMessageDeliveryDetails.PhoneNumber);
+        Assert.Equal(instantNotificationOrderRequest.InstantNotificationRecipient.ShortMessageDeliveryDetails.TimeToLiveInSeconds, result.InstantNotificationRecipient.ShortMessageDeliveryDetails.TimeToLiveInSeconds);
+        Assert.Equal(instantNotificationOrderRequest.InstantNotificationRecipient.ShortMessageDeliveryDetails.ShortMessageContent.Body, result.InstantNotificationRecipient.ShortMessageDeliveryDetails.ShortMessageContent.Message);
+        Assert.Equal(instantNotificationOrderRequest.InstantNotificationRecipient.ShortMessageDeliveryDetails.ShortMessageContent.Sender, result.InstantNotificationRecipient.ShortMessageDeliveryDetails.ShortMessageContent.Sender);
     }
 
     [Fact]
     public void MapToInstantNotificationOrder_WithNullInstantNotificationOrderRequest_ShouldThrowArgumentNullException()
     {
-        InstantNotificationOrderRequestExt? requestModel = null;
+        InstantNotificationOrderRequestExt? instantNotificationOrderRequest = null;
 
-        Assert.Throws<ArgumentNullException>(() => requestModel!.MapToInstantNotificationOrder("Test creator", DateTime.UtcNow));
+        Assert.Throws<ArgumentNullException>(() => instantNotificationOrderRequest!.MapToInstantNotificationOrder("Test creator", DateTime.UtcNow));
     }
 
     [Theory]
     [InlineData("")]
     [InlineData(null)]
-    public void MapToInstantNotificationOrder_WithInvalidCreatorShortName_ShouldThrowExceptions(string? creatorShortName)
+    public void MapToInstantNotificationOrder_WithInvalidCreatorShortName_ShouldThrowException(string? creatorShortName)
     {
-        var requestModel = new InstantNotificationOrderRequestExt
+        var instantNotificationOrderRequest = new InstantNotificationOrderRequestExt
         {
             SendersReference = "Test reference",
             IdempotencyId = "Test idempotency identifier",
+
             InstantNotificationRecipient = new InstantNotificationRecipientExt
             {
                 ShortMessageDeliveryDetails = new ShortMessageDeliveryDetailsExt
@@ -315,38 +318,38 @@ public class InstantNotificationOrderMapperTests
 
         if (creatorShortName is not null)
         {
-            Assert.Throws<ArgumentException>(() => requestModel.MapToInstantNotificationOrder(creatorShortName!, DateTime.UtcNow));
+            Assert.Throws<ArgumentException>(() => instantNotificationOrderRequest.MapToInstantNotificationOrder(creatorShortName!, DateTime.UtcNow));
         }
         else
         {
-            Assert.Throws<ArgumentNullException>(() => requestModel.MapToInstantNotificationOrder(creatorShortName!, DateTime.UtcNow));
+            Assert.Throws<ArgumentNullException>(() => instantNotificationOrderRequest.MapToInstantNotificationOrder(creatorShortName!, DateTime.UtcNow));
         }
     }
 
     [Fact]
     public void MapToInstantNotificationOrderResponse_WithNullTracking_ShouldThrowArgumentNullException()
     {
-        InstantNotificationOrderTracking? trackingModel = null;
+        InstantNotificationOrderTracking? instantNotificationOrderTracking = null;
 
-        Assert.Throws<ArgumentNullException>(() => trackingModel!.MapToInstantNotificationOrderResponse());
+        Assert.Throws<ArgumentNullException>(() => instantNotificationOrderTracking!.MapToInstantNotificationOrderResponse());
     }
 
     [Fact]
     public void MapToInstantNotificationOrderResponse_WithNullNotification_ShouldThrowArgumentNullException()
     {
-        var trackingModel = new InstantNotificationOrderTracking
+        var instantNotificationOrderTracking = new InstantNotificationOrderTracking
         {
             Notification = null!,
             OrderChainId = Guid.NewGuid()
         };
 
-        Assert.Throws<ArgumentNullException>(() => trackingModel.MapToInstantNotificationOrderResponse());
+        Assert.Throws<ArgumentNullException>(() => instantNotificationOrderTracking.MapToInstantNotificationOrderResponse());
     }
 
     [Fact]
     public void MapToInstantNotificationOrderResponse_WithValidInstantNotificationOrderTracking_ShouldMapCorrectly()
     {
-        var trackingModel = new InstantNotificationOrderTracking
+        var instantNotificationOrderTracking = new InstantNotificationOrderTracking
         {
             OrderChainId = Guid.NewGuid(),
             Notification = new NotificationOrderChainShipment
@@ -356,10 +359,10 @@ public class InstantNotificationOrderMapperTests
             }
         };
 
-        var result = trackingModel.MapToInstantNotificationOrderResponse();
+        var result = instantNotificationOrderTracking.MapToInstantNotificationOrderResponse();
 
-        Assert.Equal(trackingModel.OrderChainId, result.OrderChainId);
-        Assert.Equal(trackingModel.Notification.ShipmentId, result.Notification.ShipmentId);
-        Assert.Equal(trackingModel.Notification.SendersReference, result.Notification.SendersReference);
+        Assert.Equal(instantNotificationOrderTracking.OrderChainId, result.OrderChainId);
+        Assert.Equal(instantNotificationOrderTracking.Notification.ShipmentId, result.Notification.ShipmentId);
+        Assert.Equal(instantNotificationOrderTracking.Notification.SendersReference, result.Notification.SendersReference);
     }
 }
