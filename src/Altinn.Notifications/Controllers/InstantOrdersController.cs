@@ -1,6 +1,4 @@
 ﻿using Altinn.Notifications.Configuration;
-using Altinn.Notifications.Core.Configuration;
-using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
@@ -11,7 +9,6 @@ using FluentValidation;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
 
 using Swashbuckle.AspNetCore.Annotations;
 
@@ -21,15 +18,13 @@ namespace Altinn.Notifications.Controllers;
 /// Handles API requests for creating and processing instant notification orders.
 /// </summary>
 [ApiController]
-[SwaggerResponse(401, "Caller is unauthorized")]
 [Route("notifications/api/v1/future/orders/instant")]
+[SwaggerResponse(401, "Caller is unauthorized")]
 [SwaggerResponse(403, "Caller is not authorized to access the requested resource")]
 [Authorize(Policy = AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS)]
 public class InstantOrdersController : ControllerBase
 {
-    private readonly string _defaultSmsSender;
     private readonly IDateTimeService _dateTimeService;
-    private readonly IShortMessageServiceClient _shortMessageServiceClient;
     private readonly IInstantOrderRequestService _instantOrderRequestService;
     private readonly IValidator<InstantNotificationOrderRequestExt> _validator;
 
@@ -38,16 +33,12 @@ public class InstantOrdersController : ControllerBase
     /// </summary>
     public InstantOrdersController(
         IDateTimeService dateTimeService,
-        IOptions<NotificationConfig> config,
-        IShortMessageServiceClient shortMessageServiceClient,
         IInstantOrderRequestService instantOrderRequestService,
         IValidator<InstantNotificationOrderRequestExt> validator)
     {
         _validator = validator;
         _dateTimeService = dateTimeService;
-        _shortMessageServiceClient = shortMessageServiceClient;
         _instantOrderRequestService = instantOrderRequestService;
-        _defaultSmsSender = config.Value.DefaultSmsSenderNumber;
     }
 
     /// <summary>
@@ -63,9 +54,9 @@ public class InstantOrdersController : ControllerBase
     [Produces("application/json")]
     [SwaggerResponse(201, "The instant notification was created.", typeof(InstantNotificationOrderResponseExt))]
     [SwaggerResponse(200, "The notification order was created previously.", typeof(InstantNotificationOrderResponseExt))]
-    [SwaggerResponse(400, "The notification order is invalid", typeof(ValidationProblemDetails))]
-    [SwaggerResponse(422, "An internal server error occurred while processing the notification order", typeof(ValidationProblemDetails))]
-    [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request before the server could complete processing")]
+    [SwaggerResponse(400, "The notification order is invalid", typeof(string))]
+    [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request before the server could complete processing", typeof(string))]
+    [SwaggerResponse(500, "An internal server error occurred while processing the notification order", typeof(string))]
     public async Task<IActionResult> Post([FromBody] InstantNotificationOrderRequestExt request, CancellationToken cancellationToken = default)
     {
         try
@@ -78,40 +69,38 @@ public class InstantOrdersController : ControllerBase
                 return ValidationProblem(ModelState);
             }
 
-            // 2. Retrieve the creator's short name.
+            // 2. Ensure the request is associated with a valid organization.
             var creator = HttpContext.GetOrg();
             if (string.IsNullOrWhiteSpace(creator))
             {
                 return Forbid();
             }
 
-            // 3. Return the tracking information if the idempotency identifier already exists.
+            // 3. Check for existing order by organization short name and idempotency identifier.
             var trackingInformation = await _instantOrderRequestService.RetrieveTrackingInformation(creator, request.IdempotencyId, cancellationToken);
             if (trackingInformation != null)
             {
                 return Ok(trackingInformation.MapToInstantNotificationOrderResponse());
             }
 
-            // 4. Persist the instant notification order into the databaase.
+            // 4. Map and persist the instant notification order.
             var instantNotificationOrder = request.MapToInstantNotificationOrder(creator, _dateTimeService.UtcNow());
             trackingInformation = await _instantOrderRequestService.PersistInstantSmsNotificationAsync(instantNotificationOrder, cancellationToken);
+
             if (trackingInformation == null)
             {
                 var problemDetails = new ProblemDetails
                 {
-                    Status = 422,
+                    Status = 500,
                     Title = "Instant notification order registration failed",
                     Detail = "An internal server error occurred while processing the notification order."
                 };
 
-                return StatusCode(422, problemDetails);
+                return StatusCode(500, problemDetails);
             }
 
-            // 5. Send the SMS using the short message service client.
-            _ = Task.Run(async () => { await _shortMessageServiceClient.SendAsync(instantNotificationOrder.MapToShortMessage(_defaultSmsSender)); }, CancellationToken.None);
-
-            // 6. Return the tracking information.
-            return Created(instantNotificationOrder.OrderChainId.GetSelfLinkFromOrderChainId(), trackingInformation.MapToInstantNotificationOrderResponse());
+            // 5. Return tracking information and location header.
+            return Created(trackingInformation.OrderChainId.GetSelfLinkFromOrderChainId(), trackingInformation.MapToInstantNotificationOrderResponse());
         }
         catch (InvalidOperationException ex)
         {
@@ -131,7 +120,6 @@ public class InstantOrdersController : ControllerBase
                 Title = "Request terminated",
                 Detail = "The client disconnected or cancelled the request before the server could complete processing."
             };
-
             return StatusCode(499, problemDetails);
         }
     }
