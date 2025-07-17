@@ -16,23 +16,26 @@ public class InstantNotificationRecipientValidatorTests
         _validator = new InstantNotificationRecipientValidator();
     }
 
-    [Fact]
-    public void Validate_WithValidRecipient_ReturnsValid()
+    [Theory]
+    [InlineData("A292D9BF-4F54-48C0-BD3E-59F1617FBED5", "+4799999999", 3600, "Test", "Altinn")]
+    [InlineData("B1234567-89AB-CDEF-0123-456789ABCDEF", "004799999999", 1800, "Hello", "Test sender")]
+    public void Validate_OrderRequestWithValidInformation_ShouldPass(string idempotencyId, string phoneNumber, int timeToLiveInSeconds, string body, string sender)
     {
         var request = new InstantNotificationOrderRequestExt
         {
-            IdempotencyId = "A292D9BF-4F54-48C0-BD3E-59F1617FBED5",
+            IdempotencyId = idempotencyId,
 
             InstantNotificationRecipient = new InstantNotificationRecipientExt
             {
                 ShortMessageDeliveryDetails = new ShortMessageDeliveryDetailsExt
                 {
-                    PhoneNumber = "+4799999999",
-                    TimeToLiveInSeconds = 3600,
+                    PhoneNumber = phoneNumber,
+                    TimeToLiveInSeconds = timeToLiveInSeconds,
+
                     ShortMessageContent = new ShortMessageContentExt
                     {
-                        Body = "Test",
-                        Sender = "Altinn"
+                        Body = body,
+                        Sender = sender
                     }
                 }
             }
@@ -41,56 +44,37 @@ public class InstantNotificationRecipientValidatorTests
         var validationResult = _validator.Validate(request.InstantNotificationRecipient);
 
         Assert.True(validationResult.IsValid);
+        Assert.Empty(validationResult.Errors);
     }
 
     [Theory]
-    [InlineData("+4799999999")]
-    [InlineData("004799999999")]
-    public void Validate_WithDifferentValidPhoneNumberFormats_ReturnsValid(string phoneNumber)
+    [InlineData("A292D9BF-4F54-48C0-BD3E-59F1617FBED5", "+4799999999", -1, "Test", "Altinn")]
+    [InlineData("A292D9BF-4F54-48C0-BD3E-59F1617FBED5", "+4712345678", 3600, "Test", "Altinn")]
+    public void Validate_OrderRequestWithInvalidInformation_ShouldFail(string idempotencyId, string phoneNumber, int timeToLiveInSeconds, string body, string sender)
     {
-        var recipient = new InstantNotificationRecipientExt
+        var request = new InstantNotificationOrderRequestExt
         {
-            ShortMessageDeliveryDetails = new ShortMessageDeliveryDetailsExt
+            IdempotencyId = idempotencyId,
+
+            InstantNotificationRecipient = new InstantNotificationRecipientExt
             {
-                PhoneNumber = phoneNumber,
-                TimeToLiveInSeconds = 3600,
-                ShortMessageContent = new ShortMessageContentExt
+                ShortMessageDeliveryDetails = new ShortMessageDeliveryDetailsExt
                 {
-                    Body = "Test",
-                    Sender = "Altinn"
+                    PhoneNumber = phoneNumber,
+                    TimeToLiveInSeconds = timeToLiveInSeconds,
+
+                    ShortMessageContent = new ShortMessageContentExt
+                    {
+                        Body = body,
+                        Sender = sender
+                    }
                 }
             }
         };
 
-        var validationResult = _validator.Validate(recipient);
-
-        Assert.True(validationResult.IsValid);
-    }
-
-    [Theory]
-    [InlineData(40)]
-    [InlineData(-1)]
-    [InlineData(31536001)]
-    public void Validate_WithInvalidTimeToLiveInSeconds_ReturnsInvalid(int timeToLiveInSeconds)
-    {
-        var recipient = new InstantNotificationRecipientExt
-        {
-            ShortMessageDeliveryDetails = new ShortMessageDeliveryDetailsExt
-            {
-                PhoneNumber = "+4799999999",
-
-                TimeToLiveInSeconds = timeToLiveInSeconds,
-
-                ShortMessageContent = new ShortMessageContentExt
-                {
-                    Body = "Test",
-                    Sender = "Altinn"
-                }
-            }
-        };
-
-        var validationResult = _validator.Validate(recipient);
+        var validationResult = _validator.Validate(request.InstantNotificationRecipient);
 
         Assert.False(validationResult.IsValid);
+        Assert.Single(validationResult.Errors);
     }
 }

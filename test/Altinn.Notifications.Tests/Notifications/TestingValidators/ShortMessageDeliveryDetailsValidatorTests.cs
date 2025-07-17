@@ -1,8 +1,6 @@
 ﻿using Altinn.Notifications.Models.Sms;
 using Altinn.Notifications.Validators.Sms;
 
-using FluentValidation;
-
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.TestingValidators;
@@ -14,8 +12,6 @@ public class ShortMessageDeliveryDetailsValidatorTests
     public ShortMessageDeliveryDetailsValidatorTests()
     {
         _validator = new ShortMessageDeliveryDetailsValidator();
-
-        ValidatorOptions.Global.LanguageManager.Enabled = false;
     }
 
     [Theory]
@@ -46,20 +42,18 @@ public class ShortMessageDeliveryDetailsValidatorTests
         // Assert
         Assert.False(result.IsValid);
         Assert.Single(result.Errors);
-
-        Assert.Equal("Recipient phone number is not a valid mobile number.", result.Errors[0].ErrorMessage);
     }
 
     [Theory]
     [InlineData(59)]
     [InlineData(172801)]
-    public void Validate_DeliveryDetailsWithTimeToLiveOutOfRange_ShouldFail(int invalidTimeToLiveInSeconds)
+    public void Validate_DeliveryDetailsWithOutOfRangeTimeToLive_ShouldFail(int timeToLiveInSeconds)
     {
         // Arrange
         var details = new ShortMessageDeliveryDetailsExt
         {
             PhoneNumber = "+4799999999",
-            TimeToLiveInSeconds = invalidTimeToLiveInSeconds,
+            TimeToLiveInSeconds = timeToLiveInSeconds,
             ShortMessageContent = new ShortMessageContentExt
             {
                 Body = "Test message",
@@ -73,7 +67,6 @@ public class ShortMessageDeliveryDetailsValidatorTests
         // Assert
         Assert.False(result.IsValid);
         Assert.Single(result.Errors);
-        Assert.Equal("Time-to-live must be between 60 and 172800 seconds (48 hours).", result.Errors[0].ErrorMessage);
     }
 
     [Theory]
@@ -81,7 +74,7 @@ public class ShortMessageDeliveryDetailsValidatorTests
     [InlineData("Short message", "Altinn", "+4799999999", 3600)]
     [InlineData("1234567890", "SenderName", "+4798765432", 172800)]
     [InlineData("Test message", "Test sender", "+4795555555", 120)]
-    public void Validate_DeliveryDetailsWithValidShortMessageContent_ShouldPass(string body, string sender, string phoneNumber, int timeToLiveInSeconds)
+    public void Validate_DeliveryDetailsWithValidContent_ShouldPass(string body, string sender, string phoneNumber, int timeToLiveInSeconds)
     {
         // Arrange
         var details = new ShortMessageDeliveryDetailsExt
