@@ -1,7 +1,6 @@
 ﻿using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
-using Altinn.Notifications.Core.Models.ShortMessageService;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Orders;
 using Altinn.Notifications.Models.Recipient;
@@ -15,37 +14,6 @@ namespace Altinn.Notifications.Mappers;
 /// </summary>
 public static class InstantNotificationOrderMapper
 {
-    /// <summary>
-    /// Maps an <see cref="InstantNotificationOrder"/> domain model to a <see cref="ShortMessage"/> for SMS delivery.
-    /// </summary>
-    /// <param name="source">The instant notification order to map from.</param>
-    /// <param name="defaultSenderIdentifier">The default sender identifier.</param>
-    /// <returns>A <see cref="ShortMessage"/> configured for SMS delivery.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="source"/> or its required properties are null.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="defaultSenderIdentifier"/> is null or empty.</exception>
-    public static ShortMessage MapToShortMessage(this InstantNotificationOrder source, string defaultSenderIdentifier)
-    {
-        ArgumentNullException.ThrowIfNull(source);
-        ArgumentNullException.ThrowIfNull(source.InstantNotificationRecipient);
-        ArgumentNullException.ThrowIfNull(source.InstantNotificationRecipient.ShortMessageDeliveryDetails);
-        ArgumentNullException.ThrowIfNull(source.InstantNotificationRecipient.ShortMessageDeliveryDetails.ShortMessageContent);
-
-        ArgumentException.ThrowIfNullOrWhiteSpace(defaultSenderIdentifier);
-
-        // Ensure the sender is set to the original sender or a default value if not provided
-        var originalSender = source.InstantNotificationRecipient.ShortMessageDeliveryDetails.ShortMessageContent.Sender;
-        var shortMessageSender = string.IsNullOrWhiteSpace(originalSender) ? defaultSenderIdentifier : originalSender;
-
-        return new ShortMessage
-        {
-            Sender = shortMessageSender,
-            NotificationId = source.OrderId,
-            Recipient = source.InstantNotificationRecipient.ShortMessageDeliveryDetails.PhoneNumber,
-            TimeToLive = source.InstantNotificationRecipient.ShortMessageDeliveryDetails.TimeToLiveInSeconds,
-            Message = source.InstantNotificationRecipient.ShortMessageDeliveryDetails.ShortMessageContent.Message,
-        };
-    }
-
     /// <summary>
     /// Maps an <see cref="InstantNotificationOrderTracking"/> domain model to an <see cref="InstantNotificationOrderResponseExt"/> response model.
     /// </summary>
