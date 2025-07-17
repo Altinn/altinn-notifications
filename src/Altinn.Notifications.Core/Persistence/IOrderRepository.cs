@@ -35,6 +35,33 @@ public interface IOrderRepository
     public Task<List<NotificationOrder>> Create(NotificationOrderChainRequest orderChain, NotificationOrder mainOrder, List<NotificationOrder>? reminders, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Creates a new new high-priority instant notification order in the database.
+    /// </summary>
+    /// <param name="instantNotificationOrder">
+    /// The <see cref="InstantNotificationOrder"/> containing recipient, message, and delivery details.
+    /// </param>
+    /// <param name="notificationOrder">
+    /// The <see cref="NotificationOrder"/> representing the standard notification order.
+    /// </param>
+    /// <param name="smsNotification">
+    /// The <see cref="SmsNotification"/> instance containing SMS-specific delivery information.
+    /// </param>
+    /// <param name="smsExpiryDateTime">
+    /// The <see cref="DateTime"/> indicating when the SMS notification expires and should no longer be delivered.
+    /// </param>
+    /// <param name="smsMessageCount">
+    /// The number of SMS messages to be sent based on the message content.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A <see cref="CancellationToken"/> to monitor for cancellation requests. Defaults to <see cref="CancellationToken.None"/>.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task{TResult}"/> containing a <see cref="InstantNotificationOrderTracking"/> with tracking information,
+    /// or <c>null</c> if the operation failed.
+    /// </returns>
+    Task<InstantNotificationOrderTracking?> Create(InstantNotificationOrder instantNotificationOrder, NotificationOrder notificationOrder, SmsNotification smsNotification, DateTime smsExpiryDateTime, int smsMessageCount, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets a list of notification orders where requestedSendTime has passed
     /// </summary>
     /// <returns>A list of notification orders</returns>
@@ -137,31 +164,4 @@ public interface IOrderRepository
     /// or <c>null</c> if no matching order is found for the provided parameters.
     /// </returns>
     Task<InstantNotificationOrderTracking?> RetrieveTrackingInformation(string creatorName, string idempotencyId, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Creates a new new high-priority instant notification order in the database.
-    /// </summary>
-    /// <param name="instantNotificationOrder">
-    /// The <see cref="InstantNotificationOrder"/> containing recipient, message, and delivery details.
-    /// </param>
-    /// <param name="notificationOrder">
-    /// The <see cref="NotificationOrder"/> representing the standard notification order.
-    /// </param>
-    /// <param name="smsNotification">
-    /// The <see cref="SmsNotification"/> instance containing SMS-specific delivery information.
-    /// </param>
-    /// <param name="smsExpiryDateTime">
-    /// The <see cref="DateTime"/> indicating when the SMS notification expires and should no longer be delivered.
-    /// </param>
-    /// <param name="smsMessageCount">
-    /// The number of SMS messages to be sent based on the message content.
-    /// </param>
-    /// <param name="cancellationToken">
-    /// A <see cref="CancellationToken"/> to monitor for cancellation requests. Defaults to <see cref="CancellationToken.None"/>.
-    /// </param>
-    /// <returns>
-    /// A <see cref="Task{TResult}"/> containing a <see cref="InstantNotificationOrderTracking"/> with tracking information,
-    /// or <c>null</c> if the operation failed.
-    /// </returns>
-    Task<InstantNotificationOrderTracking?> Create(InstantNotificationOrder instantNotificationOrder, NotificationOrder notificationOrder, SmsNotification smsNotification, DateTime smsExpiryDateTime, int smsMessageCount, CancellationToken cancellationToken = default);
 }
