@@ -86,17 +86,17 @@ public class InstantOrdersController : ControllerBase
                 return Forbid();
             }
 
-            // 3. Return the tracking information if an order with the same creator's short name and idempotency identifier already exists.
+            // 3. Return the tracking information if the idempotency identifier already exists.
             var trackingInformation = await _instantOrderRequestService.RetrieveTrackingInformation(creator, request.IdempotencyId, cancellationToken);
             if (trackingInformation != null)
             {
                 return Ok(trackingInformation.MapToInstantNotificationOrderResponse());
             }
 
-            // 4. Register the instant notification order.
+            // 4. Persist the instant notification order into the databaase.
             var instantNotificationOrder = request.MapToInstantNotificationOrder(creator, _dateTimeService.UtcNow());
-            var registerationResult = await _instantOrderRequestService.PersistInstantSmsNotificationAsync(instantNotificationOrder, cancellationToken);
-            if (registerationResult == null)
+            trackingInformation = await _instantOrderRequestService.PersistInstantSmsNotificationAsync(instantNotificationOrder, cancellationToken);
+            if (trackingInformation == null)
             {
                 var problemDetails = new ProblemDetails
                 {
@@ -108,11 +108,11 @@ public class InstantOrdersController : ControllerBase
                 return StatusCode(500, problemDetails);
             }
 
-            // 5. Send out the SMS using the short message service client.
+            // 5. Send the SMS using the short message service client.
             _ = Task.Run(async () => { await _shortMessageServiceClient.SendAsync(instantNotificationOrder.MapToShortMessage(_defaultSmsSender)); }, CancellationToken.None);
 
             // 6. Return the tracking information.
-            return Created(instantNotificationOrder.OrderChainId.GetSelfLinkFromOrderChainId(), registerationResult.MapToInstantNotificationOrderResponse());
+            return Created(instantNotificationOrder.OrderChainId.GetSelfLinkFromOrderChainId(), trackingInformation.MapToInstantNotificationOrderResponse());
         }
         catch (InvalidOperationException ex)
         {

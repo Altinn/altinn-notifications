@@ -88,7 +88,7 @@ internal class InstantOrderRequestService : IInstantOrderRequestService
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        return await _orderRepository.PersistInstantSmsNotificationAsync(instantNotificationOrder, notificationOrder, smsNotification, expirationDateTime, messagesCount, cancellationToken);
+        return await _orderRepository.Create(instantNotificationOrder, notificationOrder, smsNotification, expirationDateTime, messagesCount, cancellationToken);
     }
 
     /// <summary>

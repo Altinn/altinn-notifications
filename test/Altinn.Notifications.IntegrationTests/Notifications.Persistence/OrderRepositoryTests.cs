@@ -1734,7 +1734,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
         }
 
         [Fact]
-        public async Task PersistInstantSmsNotificationAsync_WithValidInstantNotificationOrder_OrdersSuccessfullyPersisted()
+        public async Task Create_WithValidInstantNotificationOrder_OrdersSuccessfullyPersisted()
         {
             // Arrange
             OrderRepository orderRepository =
@@ -1800,7 +1800,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             };
 
             // Act
-            var result = await orderRepository.PersistInstantSmsNotificationAsync(instantNotificationOrder, notificationOrder, smsNotification, creationDateTime.AddMinutes(60), 1);
+            var result = await orderRepository.Create(instantNotificationOrder, notificationOrder, smsNotification, creationDateTime.AddSeconds(3600), 1);
 
             // Assert
             Assert.NotNull(result);
@@ -1829,7 +1829,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
         }
 
         [Fact]
-        public async Task PersistInstantSmsNotificationAsync_InstantNotificationOrderWithDuplicatedIdempotencyId_ThrowsException()
+        public async Task Create_InstantNotificationOrderWithDuplicatedIdempotencyId_ThrowsException()
         {
             // Arrange
             OrderRepository orderRepository =
@@ -1900,7 +1900,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             };
 
             // Save the first order
-            await orderRepository.PersistInstantSmsNotificationAsync(firstInstantOrder, firstNotificationOrder, firstSmsNotification, creationDateTime.AddMinutes(120), 1);
+            await orderRepository.Create(firstInstantOrder, firstNotificationOrder, firstSmsNotification, creationDateTime.AddSeconds(7200), 1);
 
             // Create second order with same idempotency ID
             var secondInstantOrder = new InstantNotificationOrder
@@ -1954,7 +1954,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             };
 
             // Act & Assert
-            await Assert.ThrowsAnyAsync<Exception>(async () => await orderRepository.PersistInstantSmsNotificationAsync(secondInstantOrder, secondNotificationOrder, secondSmsNotification, creationDateTime.AddMinutes(180), 1));
+            await Assert.ThrowsAnyAsync<Exception>(async () => await orderRepository.Create(secondInstantOrder, secondNotificationOrder, secondSmsNotification, creationDateTime.AddSeconds(10800), 1));
 
             // Verify Orders Chain
             string persistedOrderChainSql = $@"SELECT count(*) FROM notifications.orderschain WHERE orderid = '{firstOrderChainId}'";
@@ -1994,7 +1994,92 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
         }
 
         [Fact]
-        public async Task PersistInstantSmsNotificationAsync_InstantNotificationOrderWithCancellationRequested_ThrowsOperationCanceledException()
+        public async Task Create_InstantNotificationOrderWithoutSmsTemplate_ThrowsInvalidOperationException()
+        {
+            // Arrange
+            OrderRepository orderRepository =
+                (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+            Guid orderId = Guid.NewGuid();
+            Guid orderChainId = Guid.NewGuid();
+
+            _orderIdsToDelete.Add(orderId);
+            _ordersChainIdsToDelete.Add(orderChainId);
+
+            var creationDateTime = DateTime.UtcNow;
+
+            var instantNotificationOrder = new InstantNotificationOrder
+            {
+                OrderId = orderId,
+                Creator = new("ttd"),
+                Created = creationDateTime,
+                OrderChainId = orderChainId,
+                IdempotencyId = "{4E161804-5D31-41F8-B528-62100E9C5712}",
+                SendersReference = "3C001D49-FBF9-4784-88E7-19263E8C20A0",
+                InstantNotificationRecipient = new InstantNotificationRecipient
+                {
+                    ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
+                    {
+                        TimeToLiveInSeconds = 3600,
+                        PhoneNumber = "+4799999999",
+
+                        ShortMessageContent = new ShortMessageContent
+                        {
+                            Sender = "Altinn",
+                            Message = "This message should not be persisted"
+                        }
+                    }
+                }
+            };
+
+            // NotificationOrder without any SmsTemplate in Templates
+            NotificationOrder notificationOrder = new()
+            {
+                Id = orderId,
+                Creator = new("ttd"),
+                Type = OrderType.Instant,
+                Created = creationDateTime,
+                RequestedSendTime = creationDateTime,
+                NotificationChannel = NotificationChannel.Sms,
+                SendersReference = "3C001D49-FBF9-4784-88E7-19263E8C20A0",
+                Templates = [], // No SmsTemplate
+                Recipients =
+                [
+                    new Recipient([new SmsAddressPoint("+4799999999")])
+                ]
+            };
+
+            var smsNotification = new SmsNotification
+            {
+                OrderId = orderId,
+                Id = Guid.NewGuid(),
+                Recipient = new SmsRecipient { MobileNumber = "+4799999999" },
+                SendResult = new(SmsNotificationResultType.New, DateTime.UtcNow)
+            };
+
+            // Act & Assert
+            var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await orderRepository.Create(instantNotificationOrder, notificationOrder, smsNotification, creationDateTime.AddSeconds(3600), 1));
+
+            // Verify nothing was persisted
+            string orderChainSql = $@"SELECT count(*) FROM notifications.orderschain WHERE orderid = '{orderChainId}'";
+            int orderChainCount = await PostgreUtil.RunSqlReturnOutput<int>(orderChainSql);
+            Assert.Equal(0, orderChainCount);
+
+            string orderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{orderId}'";
+            int orderCount = await PostgreUtil.RunSqlReturnOutput<int>(orderSql);
+            Assert.Equal(0, orderCount);
+
+            string smsTextSql = $@"SELECT count(*) FROM notifications.smstexts AS st JOIN notifications.orders o ON st._orderid = o._id WHERE o.alternateid = '{orderId}'";
+            int smsTextCount = await PostgreUtil.RunSqlReturnOutput<int>(smsTextSql);
+            Assert.Equal(0, smsTextCount);
+
+            string smsNotificationSql = $@"SELECT count(*) FROM notifications.smsnotifications AS sn JOIN notifications.orders o ON sn._orderid = o._id WHERE o.alternateid = '{orderId}'";
+            int smsNotificationCount = await PostgreUtil.RunSqlReturnOutput<int>(smsNotificationSql);
+            Assert.Equal(0, smsNotificationCount);
+        }
+
+        [Fact]
+        public async Task Create_InstantNotificationOrderWithCancellationRequested_ThrowsOperationCanceledException()
         {
             // Arrange
             OrderRepository orderRepository =
@@ -2063,7 +2148,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             await cancellationTokenSource.CancelAsync();
 
             // Act & Assert
-            await Assert.ThrowsAsync<OperationCanceledException>(async () => await orderRepository.PersistInstantSmsNotificationAsync(instantNotificationOrder, notificationOrder, smsNotification, creationDateTime.AddMinutes(150), 1, cancellationTokenSource.Token));
+            await Assert.ThrowsAsync<OperationCanceledException>(async () => await orderRepository.Create(instantNotificationOrder, notificationOrder, smsNotification, creationDateTime.AddSeconds(9000), 1, cancellationTokenSource.Token));
 
             // Verify nothing was persisted
             string orderChainSql = $@"SELECT count(*) FROM notifications.orderschain WHERE orderid = '{orderChainId}'";
@@ -2188,7 +2273,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             };
 
             // Create the order in the database
-            await orderRepository.PersistInstantSmsNotificationAsync(instantNotificationOrder, notificationOrder, smsNotification, creationDateTime.AddMinutes(60), 1);
+            await orderRepository.Create(instantNotificationOrder, notificationOrder, smsNotification, creationDateTime.AddMinutes(60), 1);
 
             // Act
             var result = await orderRepository.RetrieveTrackingInformation(creator, idempotencyId);
@@ -2271,7 +2356,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             };
 
             // Create the order in the database
-            await orderRepository.PersistInstantSmsNotificationAsync(instantNotificationOrder, notificationOrder, smsNotification, creationDateTime.AddMinutes(60), 1);
+            await orderRepository.Create(instantNotificationOrder, notificationOrder, smsNotification, creationDateTime.AddMinutes(60), 1);
 
             // Act
             var result = await orderRepository.RetrieveTrackingInformation(invalidCreator, idempotencyId);
@@ -2351,7 +2436,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             };
 
             // Create the order in the database
-            await orderRepository.PersistInstantSmsNotificationAsync(instantNotificationOrder, notificationOrder, smsNotification, creationDateTime.AddMinutes(60), 1);
+            await orderRepository.Create(instantNotificationOrder, notificationOrder, smsNotification, creationDateTime.AddMinutes(60), 1);
 
             // Act
             var result = await orderRepository.RetrieveTrackingInformation(creator, invalidIdempotencyId);

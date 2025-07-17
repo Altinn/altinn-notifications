@@ -170,7 +170,7 @@ public class InstantOrderRequestServiceTests
 
         var orderRepositoryMock = new Mock<IOrderRepository>();
         orderRepositoryMock.Setup(
-            e => e.PersistInstantSmsNotificationAsync(
+            e => e.Create(
                 It.Is<InstantNotificationOrder>(e => e.OrderChainId == orderChainId),
                 It.Is<NotificationOrder>(e => e.Id == orderId),
                 It.Is<SmsNotification>(e => e.Id == smsOrderId),
@@ -198,7 +198,7 @@ public class InstantOrderRequestServiceTests
         Assert.Null(result);
 
         orderRepositoryMock.Verify(
-             e => e.PersistInstantSmsNotificationAsync(
+             e => e.Create(
                 It.Is<InstantNotificationOrder>(e => e.OrderChainId == orderChainId),
                 It.Is<NotificationOrder>(e => e.Id == orderId),
                 It.Is<SmsNotification>(e => e.Id == smsOrderId),
@@ -264,7 +264,7 @@ public class InstantOrderRequestServiceTests
         await Assert.ThrowsAsync<OperationCanceledException>(async () => await service.PersistInstantSmsNotificationAsync(instantNotificationOrder, cancellationTokenSource.Token));
 
         orderRepositoryMock.Verify(
-             e => e.PersistInstantSmsNotificationAsync(
+             e => e.Create(
                 It.Is<InstantNotificationOrder>(e => e.OrderChainId == orderChainId),
                 It.Is<NotificationOrder>(e => e.Id == orderId),
                 It.Is<SmsNotification>(e => e.Id == smsOrderId),
@@ -311,7 +311,7 @@ public class InstantOrderRequestServiceTests
 
         var orderRepositoryMock = new Mock<IOrderRepository>();
         orderRepositoryMock.Setup(
-            e => e.PersistInstantSmsNotificationAsync(
+            e => e.Create(
                 It.Is<InstantNotificationOrder>(e => e.OrderChainId == orderChainId),
                 It.Is<NotificationOrder>(e => e.Id == orderId),
                 It.Is<SmsNotification>(e => e.Id == smsOrderId),
@@ -350,7 +350,7 @@ public class InstantOrderRequestServiceTests
         Assert.Equal(sendersReference, result.Notification.SendersReference);
 
         orderRepositoryMock.Verify(
-             e => e.PersistInstantSmsNotificationAsync(
+             e => e.Create(
                 It.Is<InstantNotificationOrder>(e => e.OrderChainId == orderChainId),
                 It.Is<NotificationOrder>(e => e.Id == orderId),
                 It.Is<SmsNotification>(e => e.Id == smsOrderId),
@@ -407,7 +407,7 @@ public class InstantOrderRequestServiceTests
 
         var orderRepositoryMock = new Mock<IOrderRepository>();
         orderRepositoryMock.Setup(
-            e => e.PersistInstantSmsNotificationAsync(
+            e => e.Create(
                 It.Is<InstantNotificationOrder>(e => e.OrderChainId == orderChainId),
                 It.Is<NotificationOrder>(e => e.Id == orderId),
                 It.IsAny<SmsNotification>(),

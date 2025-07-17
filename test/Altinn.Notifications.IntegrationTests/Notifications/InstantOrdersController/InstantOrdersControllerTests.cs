@@ -40,9 +40,9 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
     private const string BasePath = "/notifications/api/v1/orders/instant";
     private const string DefaultScope = "altinn:serviceowner/notifications.create";
 
+    private const int ValidTimeToLive = 360;
     private const int MinimumTimeToLive = 60;
-    private const int DefaultTimeToLive = 360;
-    private const int MaximumTimeToLiveExceeded = 172801;
+    private const int MaximumTimeToLive = 17280;
 
     private const string DefaultCreator = "ttd";
     private const string DefaultSender = "Altinn";
@@ -84,7 +84,8 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
                 ShortMessageDeliveryDetails = new()
                 {
                     PhoneNumber = DefaultPhoneNumber,
-                    TimeToLiveInSeconds = DefaultTimeToLive,
+                    TimeToLiveInSeconds = ValidTimeToLive,
+
                     ShortMessageContent = new()
                     {
                         Body = DefaultBody,
@@ -99,10 +100,8 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
 
         var orderRequestServiceMock = new Mock<IInstantOrderRequestService>();
 
-        // Use GetTestClient to create the test server and client
         var client = GetTestClient(instantOrderRequestService: orderRequestServiceMock.Object, validator: validatorMock.Object);
 
-        // Simulate missing creator short name
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken(string.Empty, scope: DefaultScope));
 
         var requestSerialized = JsonSerializer.Serialize(request);
@@ -139,7 +138,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
                 ShortMessageDeliveryDetails = new ShortMessageDeliveryDetailsExt
                 {
                     PhoneNumber = DefaultPhoneNumber,
-                    TimeToLiveInSeconds = DefaultTimeToLive,
+                    TimeToLiveInSeconds = ValidTimeToLive,
                     ShortMessageContent = new ShortMessageContentExt
                     {
                         Body = DefaultBody,
@@ -177,7 +176,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
         Assert.Equal(trackingInfo.Notification.ShipmentId, result.Notification.ShipmentId);
         Assert.Equal(trackingInfo.Notification.SendersReference, result.Notification.SendersReference);
 
-        validatorMock.Verify(e => e.Validate(It.Is<InstantNotificationOrderRequestExt>(e => e == request)), Times.Once);
+        validatorMock.Verify(e => e.Validate(request), Times.Once);
         orderRequestServiceMock.Verify(e => e.RetrieveTrackingInformation(DefaultCreator, DefaultIdempotencyId, It.IsAny<CancellationToken>()), Times.Once);
         orderRequestServiceMock.Verify(e => e.PersistInstantSmsNotificationAsync(It.IsAny<InstantNotificationOrder>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -195,7 +194,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
                 ShortMessageDeliveryDetails = new ShortMessageDeliveryDetailsExt
                 {
                     PhoneNumber = DefaultPhoneNumber,
-                    TimeToLiveInSeconds = DefaultTimeToLive,
+                    TimeToLiveInSeconds = ValidTimeToLive,
                     ShortMessageContent = new ShortMessageContentExt
                     {
                         Body = DefaultBody,
@@ -272,7 +271,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
                 ShortMessageDeliveryDetails = new ShortMessageDeliveryDetailsExt
                 {
                     PhoneNumber = DefaultPhoneNumber,
-                    TimeToLiveInSeconds = DefaultTimeToLive,
+                    TimeToLiveInSeconds = ValidTimeToLive,
                     ShortMessageContent = new ShortMessageContentExt
                     {
                         Body = DefaultBody,
@@ -346,7 +345,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
                 ShortMessageDeliveryDetails = new ShortMessageDeliveryDetailsExt
                 {
                     PhoneNumber = DefaultPhoneNumber,
-                    TimeToLiveInSeconds = DefaultTimeToLive,
+                    TimeToLiveInSeconds = ValidTimeToLive,
                     ShortMessageContent = new ShortMessageContentExt
                     {
                         Body = DefaultBody,
@@ -401,7 +400,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
                 ShortMessageDeliveryDetails = new ShortMessageDeliveryDetailsExt
                 {
                     PhoneNumber = DefaultPhoneNumber,
-                    TimeToLiveInSeconds = DefaultTimeToLive,
+                    TimeToLiveInSeconds = ValidTimeToLive,
                     ShortMessageContent = new ShortMessageContentExt
                     {
                         Body = DefaultBody,
@@ -445,8 +444,8 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
     }
 
     [Theory]
+    [InlineData(DefaultPhoneNumber, MaximumTimeToLive + 20)]
     [InlineData(DefaultInvalidPhoneNumber, MinimumTimeToLive)]
-    [InlineData(DefaultPhoneNumber, MaximumTimeToLiveExceeded)]
     public async Task Post_WithInvalidPhoneNumberOrTimeToLive_ModelValidationFails_ReturnsBadRequest(string phoneNumber, int timeToLiveInSeconds)
     {
         // Arrange
@@ -459,6 +458,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
                 {
                     PhoneNumber = phoneNumber,
                     TimeToLiveInSeconds = timeToLiveInSeconds,
+
                     ShortMessageContent = new()
                     {
                         Body = DefaultBody,
@@ -475,14 +475,14 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
         {
             var failures = new List<ValidationFailure>();
 
+            if (request.InstantNotificationRecipient.ShortMessageDeliveryDetails.TimeToLiveInSeconds > MaximumTimeToLive)
+            {
+                failures.Add(new ValidationFailure(nameof(ShortMessageDeliveryDetailsExt.TimeToLiveInSeconds), "Time-to-live must be between 60 and 172800 seconds (48 hours)."));
+            }
+
             if (request.InstantNotificationRecipient.ShortMessageDeliveryDetails.PhoneNumber == DefaultInvalidPhoneNumber)
             {
                 failures.Add(new ValidationFailure(nameof(ShortMessageDeliveryDetailsExt.PhoneNumber), "Recipient phone number is not a valid mobile number."));
-            }
-
-            if (request.InstantNotificationRecipient.ShortMessageDeliveryDetails.TimeToLiveInSeconds == MaximumTimeToLiveExceeded)
-            {
-                failures.Add(new ValidationFailure(nameof(ShortMessageDeliveryDetailsExt.TimeToLiveInSeconds), "Time-to-live must be between 60 and 172800 seconds (48 hours)."));
             }
 
             return new ValidationResult(failures);
@@ -507,7 +507,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
     [InlineData("", DefaultPhoneNumber, DefaultTestBody, MinimumTimeToLive)]
     [InlineData("3AFD849E-200D-49FB-80BD-3A91A85B13AE", "", DefaultTestBody, MinimumTimeToLive)]
     [InlineData("3AFD849E-200D-49FB-80BD-3A91A85B13AE", DefaultPhoneNumber, "", MinimumTimeToLive)]
-    public async Task Post_WithMissingRequiredInformation_RequestDeserializationFails_ReturnsBadRequest(string IdempotencyId, string phoneNumber, string message, int timeToLiveInSeconds)
+    public async Task Post_WithMissingRequiredInformation_ModelValidationFails_ReturnsBadRequest(string IdempotencyId, string phoneNumber, string message, int timeToLiveInSeconds)
     {
         // Arrange
         var request = new InstantNotificationOrderRequestExt

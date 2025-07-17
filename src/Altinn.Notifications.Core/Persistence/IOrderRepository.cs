@@ -139,7 +139,7 @@ public interface IOrderRepository
     Task<InstantNotificationOrderTracking?> RetrieveTrackingInformation(string creatorName, string idempotencyId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Persists a new high-priority instant notification order.
+    /// Creates a new new high-priority instant notification order in the database.
     /// </summary>
     /// <param name="instantNotificationOrder">
     /// The <see cref="InstantNotificationOrder"/> containing recipient, message, and delivery details.
@@ -163,5 +163,5 @@ public interface IOrderRepository
     /// A <see cref="Task{TResult}"/> containing a <see cref="InstantNotificationOrderTracking"/> with tracking information,
     /// or <c>null</c> if the operation failed.
     /// </returns>
-    Task<InstantNotificationOrderTracking?> PersistInstantSmsNotificationAsync(InstantNotificationOrder instantNotificationOrder, NotificationOrder notificationOrder, SmsNotification smsNotification, DateTime smsExpiryDateTime, int smsMessageCount, CancellationToken cancellationToken = default);
+    Task<InstantNotificationOrderTracking?> Create(InstantNotificationOrder instantNotificationOrder, NotificationOrder notificationOrder, SmsNotification smsNotification, DateTime smsExpiryDateTime, int smsMessageCount, CancellationToken cancellationToken = default);
 }
