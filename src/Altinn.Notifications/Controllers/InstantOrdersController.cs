@@ -64,9 +64,8 @@ public class InstantOrdersController : ControllerBase
     [SwaggerResponse(201, "The instant notification was created.", typeof(InstantNotificationOrderResponseExt))]
     [SwaggerResponse(200, "The notification order was created previously.", typeof(InstantNotificationOrderResponseExt))]
     [SwaggerResponse(400, "The notification order is invalid", typeof(ValidationProblemDetails))]
-    [SwaggerResponse(422, "The notification order is invalid", typeof(ValidationProblemDetails))]
+    [SwaggerResponse(422, "An internal server error occurred while processing the notification order", typeof(ValidationProblemDetails))]
     [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request before the server could complete processing")]
-    [SwaggerResponse(500, "An internal server error occurred while processing the notification order.", typeof(ProblemDetails))]
     public async Task<IActionResult> Post([FromBody] InstantNotificationOrderRequestExt request, CancellationToken cancellationToken = default)
     {
         try
@@ -100,12 +99,12 @@ public class InstantOrdersController : ControllerBase
             {
                 var problemDetails = new ProblemDetails
                 {
-                    Status = 500,
-                    Title = "Registration failed",
-                    Detail = "Failed to register the instant notification order."
+                    Status = 422,
+                    Title = "Instant notification order registration failed",
+                    Detail = "An internal server error occurred while processing the notification order."
                 };
 
-                return StatusCode(500, problemDetails);
+                return StatusCode(422, problemDetails);
             }
 
             // 5. Send the SMS using the short message service client.
