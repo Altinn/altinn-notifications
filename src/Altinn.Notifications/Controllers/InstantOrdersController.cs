@@ -21,8 +21,8 @@ namespace Altinn.Notifications.Controllers;
 /// Handles API requests for creating and processing instant notification orders.
 /// </summary>
 [ApiController]
-[Route("notifications/api/v1/orders/instant")]
 [SwaggerResponse(401, "Caller is unauthorized")]
+[Route("notifications/api/v1/future/orders/instant")]
 [SwaggerResponse(403, "Caller is not authorized to access the requested resource")]
 [Authorize(Policy = AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS)]
 public class InstantOrdersController : ControllerBase
@@ -61,7 +61,7 @@ public class InstantOrdersController : ControllerBase
     [HttpPost]
     [Consumes("application/json")]
     [Produces("application/json")]
-    [SwaggerResponse(201, "The instant notification was created and sent.", typeof(InstantNotificationOrderResponseExt))]
+    [SwaggerResponse(201, "The instant notification was created.", typeof(InstantNotificationOrderResponseExt))]
     [SwaggerResponse(200, "The notification order was created previously.", typeof(InstantNotificationOrderResponseExt))]
     [SwaggerResponse(400, "The notification order is invalid", typeof(ValidationProblemDetails))]
     [SwaggerResponse(422, "The notification order is invalid", typeof(ValidationProblemDetails))]
