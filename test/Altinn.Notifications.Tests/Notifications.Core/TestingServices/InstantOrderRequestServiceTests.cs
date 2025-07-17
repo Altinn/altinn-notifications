@@ -374,8 +374,8 @@ public class InstantOrderRequestServiceTests
 
         var defaultSmsSenderIdentifier = "Altinn";
         var creatorShortName = "creator-short-name";
+        var longMessageContent = new string('a', 2500);
         var sendersReference = "207B08E2-814A-4479-9509-8DCA45A64401";
-        var messageContent = "Test message contains more than 160 characters: Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor. Cras elementum.";
 
         var instantNotificationOrder = new InstantNotificationOrder
         {
@@ -393,8 +393,8 @@ public class InstantOrderRequestServiceTests
                     PhoneNumber = "+4799999999",
                     ShortMessageContent = new ShortMessageContent
                     {
-                        Message = messageContent,
-                        Sender = senderIdentifier
+                        Sender = senderIdentifier,
+                        Message = longMessageContent
                     }
                 }
             }
@@ -452,7 +452,7 @@ public class InstantOrderRequestServiceTests
         await instantOrderRequestService.PersistInstantSmsNotificationAsync(instantNotificationOrder);
 
         // Assert
-        Assert.Equal(2, initiatedSmsMessageCount);
+        Assert.Equal(16, initiatedSmsMessageCount);
 
         Assert.NotNull(initiatedSmsExpiryDateTime);
         Assert.Equal(orderCreationDateTime.AddSeconds(3600), initiatedSmsExpiryDateTime);
@@ -488,7 +488,7 @@ public class InstantOrderRequestServiceTests
         Assert.NotNull(initiatedNotificationOrder.Templates);
         Assert.Single(initiatedNotificationOrder.Templates);
         var smsTemplate = Assert.IsType<SmsTemplate>(initiatedNotificationOrder.Templates[0]);
-        Assert.Equal(messageContent, smsTemplate.Body);
+        Assert.Equal(longMessageContent, smsTemplate.Body);
         Assert.Equal(NotificationTemplateType.Sms, smsTemplate.Type);
         Assert.Equal(defaultSmsSenderIdentifier, smsTemplate.SenderNumber);
 
