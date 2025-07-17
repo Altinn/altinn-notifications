@@ -37,7 +37,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.TestingControllers
 /// </summary>
 public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebApplicationFactory<InstantOrdersController>>
 {
-    private const string BasePath = "/notifications/api/v1/orders/instant";
+    private const string BasePath = "/notifications/api/v1/future/orders/instant";
     private const string NotificationCreationScope = "altinn:serviceowner/notifications.create";
 
     private const int ValidTimeToLive = 360;
