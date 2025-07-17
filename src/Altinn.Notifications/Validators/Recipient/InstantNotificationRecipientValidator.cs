@@ -1,0 +1,21 @@
+﻿using Altinn.Notifications.Models.Recipient;
+using Altinn.Notifications.Validators.Sms;
+
+using FluentValidation;
+
+namespace Altinn.Notifications.Validators.Recipient;
+
+/// <summary>
+/// Represents validation rules for recipients of notification orders intended for immediate delivery.
+/// </summary>
+internal sealed class InstantNotificationRecipientValidator : AbstractValidator<InstantNotificationRecipientExt>
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="InstantNotificationRecipientValidator"/> class.
+    /// </summary>
+    public InstantNotificationRecipientValidator()
+    {
+        RuleFor(recipient => recipient.ShortMessageDeliveryDetails)
+            .SetValidator(new ShortMessageDeliveryDetailsValidator());
+    }
+}
