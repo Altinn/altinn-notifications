@@ -62,7 +62,7 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
     /// <inheritdoc/>
     public async Task ProcessOrderRetryWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients)
     {
-        var expiryDateTime = GetExpiryTime(order);
+        var expiryDateTime = GetExpiryDateTime(order);
 
         int messagesCount = GetSmsCountForOrder(order);
 
@@ -100,7 +100,7 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
     /// <inheritdoc/>
     public async Task ProcessOrderWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients)
     {
-        var expiryDateTime = GetExpiryTime(order);
+        var expiryDateTime = GetExpiryDateTime(order);
 
         var messagesCount = GetSmsCountForOrder(order);
 
@@ -114,6 +114,7 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
                 .ToList();
 
             var matchedSmsRecipient = FindSmsRecipient(allSmsRecipients, recipient);
+
             var smsRecipient = matchedSmsRecipient ?? new SmsRecipient { IsReserved = recipient.IsReserved };
 
             await _smsService.CreateNotification(
@@ -213,7 +214,7 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
     /// </remarks>
     /// <param name="order">The notification order containing the requested send time and sending time policy.</param>
     /// <returns>The calculated expiry time for the notification order.</returns>
-    private DateTime GetExpiryTime(NotificationOrder order)
+    private DateTime GetExpiryDateTime(NotificationOrder order)
     {
         return order.SendingTimePolicy switch
         {
