@@ -24,10 +24,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Profi
 
 public class ProfileClientTests
 {
-    private readonly JsonSerializerOptions _serializerOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
+    private static readonly JsonSerializerOptions _serializerOptions = JsonSerializerOptionsProvider.Options;
 
     private ProfileClient CreateProfileClient(DelegatingHandler? handler = null)
     {
@@ -35,12 +32,12 @@ public class ProfileClientTests
         {
             if (request.RequestUri!.AbsolutePath.EndsWith("users/contactpoint/lookup"))
             {
-                UserContactPointLookup? lookup = JsonSerializer.Deserialize<UserContactPointLookup>(await request!.Content!.ReadAsStringAsync(token), JsonSerializerOptionsProvider.Options);
+                UserContactPointLookup? lookup = JsonSerializer.Deserialize<UserContactPointLookup>(await request!.Content!.ReadAsStringAsync(token), _serializerOptions);
                 return await GetUserProfileResponse(lookup!);
             }
             else if (request.RequestUri!.AbsolutePath.EndsWith("units/contactpoint/lookup"))
             {
-                UnitContactPointLookup? lookup = JsonSerializer.Deserialize<UnitContactPointLookup>(await request!.Content!.ReadAsStringAsync(token), JsonSerializerOptionsProvider.Options);
+                UnitContactPointLookup? lookup = JsonSerializer.Deserialize<UnitContactPointLookup>(await request!.Content!.ReadAsStringAsync(token), _serializerOptions);
                 return await GetUnitProfileResponse(lookup!);
             }
             else if (request!.RequestUri!.AbsolutePath.EndsWith("organizations/notificationaddresses/lookup"))
@@ -158,6 +155,16 @@ public class ProfileClientTests
 
         // Act
         List<OrganizationContactPoints> actual = await registerClient.GetOrganizationContactPoints(["test-org"]);
+
+        // Assert
+        Assert.Empty(actual);
+    }
+
+    [Fact]
+    public async Task GetOrganizationContactPoints_WhenEmptyResult_ReturnsEmpty()
+    {
+        // Act
+        List<OrganizationContactPoints> actual = await CreateProfileClient().GetOrganizationContactPoints(["empty-list"]);
 
         // Assert
         Assert.Empty(actual);
