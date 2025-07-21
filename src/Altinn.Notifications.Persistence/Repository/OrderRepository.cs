@@ -22,6 +22,10 @@ namespace Altinn.Notifications.Persistence.Repository;
 [ExcludeFromCodeCoverage]
 public class OrderRepository : IOrderRepository
 {
+    private const string _shipmentIdColumnName = "shipment_id";
+    private const string _ordersChainIdColumnName = "orders_chain_id";
+    private const string _senderReferenceColumnName = "senders_reference";
+
     private readonly NpgsqlDataSource _dataSource;
 
     private const string _getOrderByIdSql = "select notificationorder from notifications.orders where alternateid=$1 and creatorname=$2";
@@ -37,7 +41,7 @@ public class OrderRepository : IOrderRepository
     private const string _getOrdersChainTrackingSql = "SELECT * FROM notifications.get_orders_chain_tracking($1, $2)"; // (_creatorname, _idempotencyid)
     private const string _tryMarkOrderAsCompletedSql = "SELECT notifications.trymarkorderascompleted($1, $2)"; // (_alternateid, _alternateidsource)
     private const string _insertSmsNotificationSql = "call notifications.insertsmsnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (_orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _customizedbody, _result, _smscount, _resulttime, _expirytime)
-    private const string _getInstantOrderTrackingInformationSql = "SELECT * FROM notifications.get_instant_order_tracking($1, $2)"; // (_creatorname, _idempotencyid)
+    private const string _getInstantOrderTrackingInformationSql = "SELECT * FROM notifications.get_instant_order_tracking(_creatorname := @creatorName, _idempotencyid := @idempotencyId)";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderRepository"/> class.
@@ -283,10 +287,6 @@ public class OrderRepository : IOrderRepository
     /// <inheritdoc/>
     public async Task<NotificationOrderChainResponse?> GetOrderChainTracking(string creatorName, string idempotencyId, CancellationToken cancellationToken = default)
     {
-        string shipmentIdColumnName = "shipment_id";
-        string ordersChainIdColumnName = "orders_chain_id";
-        string senderReferenceColumnName = "senders_reference";
-
         cancellationToken.ThrowIfCancellationRequested();
 
         await using NpgsqlCommand command = _dataSource.CreateCommand(_getOrdersChainTrackingSql);
@@ -302,21 +302,21 @@ public class OrderRepository : IOrderRepository
 
         await reader.ReadAsync(cancellationToken);
 
-        var ordersChainId = await reader.GetFieldValueAsync<Guid>(reader.GetOrdinal(ordersChainIdColumnName), cancellationToken);
+        var ordersChainId = await reader.GetFieldValueAsync<Guid>(reader.GetOrdinal(_ordersChainIdColumnName), cancellationToken);
         if (ordersChainId == Guid.Empty)
         {
             return null;
         }
 
-        var mainShipmentId = await reader.GetFieldValueAsync<Guid>(reader.GetOrdinal(shipmentIdColumnName), cancellationToken);
+        var mainShipmentId = await reader.GetFieldValueAsync<Guid>(reader.GetOrdinal(_shipmentIdColumnName), cancellationToken);
         if (mainShipmentId == Guid.Empty)
         {
             return null;
         }
 
-        string? mainSendersReference = await reader.IsDBNullAsync(reader.GetOrdinal(senderReferenceColumnName), cancellationToken) ?
+        string? mainSendersReference = await reader.IsDBNullAsync(reader.GetOrdinal(_senderReferenceColumnName), cancellationToken) ?
             null :
-            reader.GetString(reader.GetOrdinal(senderReferenceColumnName));
+            reader.GetString(reader.GetOrdinal(_senderReferenceColumnName));
 
         var reminderShipments = await ExtractReminderShipmentsTracking(reader, cancellationToken);
 
@@ -369,10 +369,6 @@ public class OrderRepository : IOrderRepository
     /// <inheritdoc/>
     public async Task<InstantNotificationOrderTracking?> RetrieveTrackingInformation(string creatorName, string idempotencyId, CancellationToken cancellationToken = default)
     {
-        string shipmentIdColumnName = "shipment_id";
-        string ordersChainIdColumnName = "orders_chain_id";
-        string senderReferenceColumnName = "senders_reference";
-
         await using NpgsqlCommand command = _dataSource.CreateCommand(_getInstantOrderTrackingInformationSql);
         command.Parameters.AddWithValue(NpgsqlDbType.Text, creatorName);
         command.Parameters.AddWithValue(NpgsqlDbType.Text, idempotencyId);
@@ -385,21 +381,21 @@ public class OrderRepository : IOrderRepository
 
         await reader.ReadAsync(cancellationToken);
 
-        var orderChainId = await reader.GetFieldValueAsync<Guid>(reader.GetOrdinal(ordersChainIdColumnName), cancellationToken);
+        var orderChainId = await reader.GetFieldValueAsync<Guid>(reader.GetOrdinal(_ordersChainIdColumnName), cancellationToken);
         if (orderChainId == Guid.Empty)
         {
             return null;
         }
 
-        var shipmentId = await reader.GetFieldValueAsync<Guid>(reader.GetOrdinal(shipmentIdColumnName), cancellationToken);
+        var shipmentId = await reader.GetFieldValueAsync<Guid>(reader.GetOrdinal(_shipmentIdColumnName), cancellationToken);
         if (shipmentId == Guid.Empty)
         {
             return null;
         }
 
-        string? sendersReference = await reader.IsDBNullAsync(reader.GetOrdinal(senderReferenceColumnName), cancellationToken)
+        string? sendersReference = await reader.IsDBNullAsync(reader.GetOrdinal(_senderReferenceColumnName), cancellationToken)
             ? null
-            : reader.GetString(reader.GetOrdinal(senderReferenceColumnName));
+            : reader.GetString(reader.GetOrdinal(_senderReferenceColumnName));
 
         return new InstantNotificationOrderTracking
         {
