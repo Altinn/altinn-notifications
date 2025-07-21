@@ -3,12 +3,12 @@
 namespace Altinn.Notifications.Core.Integrations;
 
 /// <summary>
-/// Represents an abstraction for sending short text messages (SMS) through the Altinn Notifications SMS service.
+/// Defines a client for sending short text messages.
 /// </summary>
 public interface IShortMessageServiceClient
 {
     /// <summary>
-    /// Asynchronously sends a short text message to a single recipient using the Altinn Notifications SMS service.
+    /// Sends a text message.
     /// </summary>
     /// <param name="shortMessage">
     /// The <see cref="ShortMessage"/> payload containing message content, recipient information,

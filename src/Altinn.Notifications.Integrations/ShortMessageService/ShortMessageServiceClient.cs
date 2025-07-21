@@ -15,9 +15,9 @@ namespace Altinn.Notifications.Integrations.ShortMessageService;
 /// </summary>
 public class ShortMessageServiceClient : IShortMessageServiceClient
 {
-    private readonly Uri _sendEndpoint;
     private readonly HttpClient _httpClient;
     private readonly ILogger<ShortMessageServiceClient> _logger;
+    private readonly Uri _sendEndpoint = new("instantmessage/send", UriKind.Relative);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ShortMessageServiceClient"/> class.
@@ -29,7 +29,6 @@ public class ShortMessageServiceClient : IShortMessageServiceClient
     {
         _logger = logger;
         _httpClient = httpClient;
-        _sendEndpoint = new Uri("instantmessage/send", UriKind.Relative);
         _httpClient.BaseAddress = new Uri(platformSettings.Value.ApiShortMessageServiceEndpoint);
     }
 
@@ -83,8 +82,8 @@ public class ShortMessageServiceClient : IShortMessageServiceClient
             return new ShortMessageSendResult
             {
                 Success = false,
-                StatusCode = HttpStatusCode.InternalServerError,
-                ErrorDetails = $"An unexpected error occurred: {ex.Message}"
+                ErrorDetails = $"An unexpected error occurred: {ex.Message}",
+                StatusCode = HttpStatusCode.InternalServerError
             };
         }
     }
