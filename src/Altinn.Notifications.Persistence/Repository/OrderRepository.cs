@@ -189,6 +189,8 @@ public class OrderRepository : IOrderRepository
     /// <inheritdoc/>
     public async Task<InstantNotificationOrderTracking?> Create(InstantNotificationOrder instantNotificationOrder, NotificationOrder notificationOrder, SmsNotification smsNotification, DateTime smsExpiryDateTime, int smsMessageCount, CancellationToken cancellationToken = default)
     {
+        var smsTemplate = notificationOrder.Templates.Find(e => e.Type == NotificationTemplateType.Sms) as SmsTemplate ?? throw new InvalidOperationException("SMS template is missing.");
+
         cancellationToken.ThrowIfCancellationRequested();
 
         await using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
@@ -203,7 +205,6 @@ public class OrderRepository : IOrderRepository
             long mainOrderId = await InsertOrder(notificationOrder, connection, transaction, OrderProcessingStatus.Processed, cancellationToken);
 
             cancellationToken.ThrowIfCancellationRequested();
-            var smsTemplate = notificationOrder.Templates.Find(e => e.Type == NotificationTemplateType.Sms) as SmsTemplate ?? throw new InvalidOperationException("SMS template is missing.");
             await InsertSmsTextAsync(mainOrderId, smsTemplate, connection, transaction, cancellationToken);
 
             cancellationToken.ThrowIfCancellationRequested();
