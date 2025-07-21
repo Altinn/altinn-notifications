@@ -191,7 +191,7 @@ public class ProfileClientTests
         Assert.Equal(HttpStatusCode.ServiceUnavailable, exception.Response?.StatusCode);
     }
 
-    private Task<HttpResponseMessage> GetUserProfileResponse(UserContactPointLookup lookup)
+    private static Task<HttpResponseMessage> GetUserProfileResponse(UserContactPointLookup lookup)
     {
         HttpStatusCode statusCode = HttpStatusCode.OK;
         object? contentData = null;
@@ -226,7 +226,7 @@ public class ProfileClientTests
             });
     }
 
-    private Task<HttpResponseMessage> GetUnitProfileResponse(UnitContactPointLookup lookup)
+    private static Task<HttpResponseMessage> GetUnitProfileResponse(UnitContactPointLookup lookup)
     {
         HttpStatusCode statusCode = HttpStatusCode.OK;
         object? contentData = null;
@@ -261,7 +261,7 @@ public class ProfileClientTests
             });
     }
 
-    private Task<HttpResponseMessage> GetResponse(OrgContactPointLookup lookup)
+    private static Task<HttpResponseMessage> GetResponse(OrgContactPointLookup lookup)
     {
         object? contentData = null;
         HttpStatusCode statusCode = HttpStatusCode.OK;
@@ -291,7 +291,7 @@ public class ProfileClientTests
         return CreateMockResponse(contentData, statusCode);
     }
 
-    private Task<HttpResponseMessage> CreateMockResponse(object? contentData, HttpStatusCode statusCode)
+    private static Task<HttpResponseMessage> CreateMockResponse(object? contentData, HttpStatusCode statusCode)
     {
         JsonContent? content = (contentData != null) ? JsonContent.Create(contentData, options: _serializerOptions) : null;
 
