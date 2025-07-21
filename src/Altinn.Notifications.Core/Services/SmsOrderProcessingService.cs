@@ -78,10 +78,14 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
         foreach (var recipient in recipients)
         {
             var smsAddress = recipient.AddressInfo.OfType<SmsAddressPoint>().FirstOrDefault();
+            if (smsAddress == null)
+            {
+                continue;
+            }
 
             var isSmsRecipientRegistered =
                 registeredSmsRecipients.Exists(er =>
-                                               er.MobileNumber == smsAddress?.MobileNumber &&
+                                               er.MobileNumber == smsAddress.MobileNumber &&
                                                er.OrganizationNumber == recipient.OrganizationNumber &&
                                                er.NationalIdentityNumber == recipient.NationalIdentityNumber);
             if (isSmsRecipientRegistered)
@@ -105,7 +109,7 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
     /// <inheritdoc/>
     public async Task ProcessOrderWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients)
     {
-        if (order.Templates.Find(t => t.Type == NotificationTemplateType.Sms) is not SmsTemplate smsTemplate)
+        if (order.Templates.Find(e => e.Type == NotificationTemplateType.Sms) is not SmsTemplate smsTemplate)
         {
             throw new InvalidOperationException("SMS template is not found or is not of the correct type.");
         }
@@ -118,47 +122,22 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
 
         foreach (var recipient in recipients)
         {
-            var emailAddresses = recipient.AddressInfo
+            var smsAddresses = recipient.AddressInfo
                 .OfType<SmsAddressPoint>()
                 .Where(a => !string.IsNullOrWhiteSpace(a.MobileNumber))
                 .ToList();
 
-            var matchedSmsRecipient = FindSmsRecipient(allSmsRecipients, recipient);
-
-            var smsRecipient = matchedSmsRecipient ?? new SmsRecipient { IsReserved = recipient.IsReserved };
+            var smsRecipient = FindSmsRecipient(allSmsRecipients, recipient) ?? new SmsRecipient { IsReserved = recipient.IsReserved };
 
             await _smsService.CreateNotification(
                 order.Id,
                 order.RequestedSendTime,
                 expiryDateTime,
-                emailAddresses,
+                smsAddresses,
                 smsRecipient,
                 messagesCount,
                 order.IgnoreReservation ?? false);
         }
-    }
-
-    /// <summary>
-    /// Determines whether the specified template part requires customization by checking for placeholder keywords.
-    /// </summary>
-    /// <param name="templatePart">The part of the SMS template (The SMS body) to evaluate.</param>
-    /// <returns><c>true</c> if the template part contains placeholders for recipient-specific customization; otherwise, <c>false</c>.</returns>
-    private bool RequiresCustomization(string? templatePart)
-    {
-        return _keywordsService.ContainsRecipientNumberPlaceholder(templatePart) || _keywordsService.ContainsRecipientNamePlaceholder(templatePart);
-    }
-
-    /// <summary>
-    /// Finds the SMS recipient matching the given recipient.
-    /// </summary>
-    /// <param name="smsRecipients">The list of SMS recipients.</param>
-    /// <param name="recipient">The recipient to match.</param>
-    /// <returns>The matching SMS recipient, or null if no match is found.</returns>
-    private static SmsRecipient? FindSmsRecipient(IEnumerable<SmsRecipient> smsRecipients, Recipient recipient)
-    {
-        return smsRecipients.FirstOrDefault(er =>
-            (!string.IsNullOrWhiteSpace(recipient.OrganizationNumber) && er.OrganizationNumber == recipient.OrganizationNumber) ||
-            (!string.IsNullOrWhiteSpace(recipient.NationalIdentityNumber) && er.NationalIdentityNumber == recipient.NationalIdentityNumber));
     }
 
     /// <summary>
@@ -188,6 +167,16 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
         }
 
         return numberOfMessages;
+    }
+
+    /// <summary>
+    /// Determines whether the specified template part requires customization by checking for placeholder keywords.
+    /// </summary>
+    /// <param name="templatePart">The part of the SMS template (The SMS body) to evaluate.</param>
+    /// <returns><c>true</c> if the template part contains placeholders for recipient-specific customization; otherwise, <c>false</c>.</returns>
+    private bool RequiresCustomization(string? templatePart)
+    {
+        return _keywordsService.ContainsRecipientNumberPlaceholder(templatePart) || _keywordsService.ContainsRecipientNamePlaceholder(templatePart);
     }
 
     /// <summary>
@@ -230,6 +219,19 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
         }
 
         return order.Recipients;
+    }
+
+    /// <summary>
+    /// Finds the SMS recipient matching the given recipient.
+    /// </summary>
+    /// <param name="smsRecipients">The list of SMS recipients.</param>
+    /// <param name="recipient">The recipient to match.</param>
+    /// <returns>The matching SMS recipient, or null if no match is found.</returns>
+    private static SmsRecipient? FindSmsRecipient(IEnumerable<SmsRecipient> smsRecipients, Recipient recipient)
+    {
+        return smsRecipients.FirstOrDefault(er =>
+            (!string.IsNullOrWhiteSpace(recipient.OrganizationNumber) && er.OrganizationNumber == recipient.OrganizationNumber) ||
+            (!string.IsNullOrWhiteSpace(recipient.NationalIdentityNumber) && er.NationalIdentityNumber == recipient.NationalIdentityNumber));
     }
 
     /// <summary>
