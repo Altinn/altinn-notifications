@@ -62,11 +62,16 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
     /// <inheritdoc/>
     public async Task ProcessOrderRetryWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients)
     {
+        if (order.Templates.Find(t => t.Type == NotificationTemplateType.Sms) is not SmsTemplate smsTemplate)
+        {
+            throw new InvalidOperationException("SMS template is not found or is not of the correct type.");
+        }
+
         var expiryDateTime = GetExpiryDateTime(order);
 
-        int messagesCount = GetSmsCountForOrder(order);
+        var messagesCount = CalculateNumberOfMessages(smsTemplate.Body);
 
-        var allSmsRecipients = await GetSmsRecipientsAsync(order, recipients);
+        var allSmsRecipients = await GetSmsRecipientsAsync(recipients, smsTemplate.Body);
 
         var registeredSmsRecipients = await _smsNotificationRepository.GetRecipients(order.Id);
 
@@ -100,11 +105,16 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
     /// <inheritdoc/>
     public async Task ProcessOrderWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients)
     {
+        if (order.Templates.Find(t => t.Type == NotificationTemplateType.Sms) is not SmsTemplate smsTemplate)
+        {
+            throw new InvalidOperationException("SMS template is not found or is not of the correct type.");
+        }
+
         var expiryDateTime = GetExpiryDateTime(order);
 
-        var messagesCount = GetSmsCountForOrder(order);
+        var messagesCount = CalculateNumberOfMessages(smsTemplate.Body);
 
-        var allSmsRecipients = await GetSmsRecipientsAsync(order, recipients);
+        var allSmsRecipients = await GetSmsRecipientsAsync(recipients, smsTemplate.Body);
 
         foreach (var recipient in recipients)
         {
@@ -126,30 +136,6 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
                 messagesCount,
                 order.IgnoreReservation ?? false);
         }
-    }
-
-    /// <summary>
-    /// Retrieves a list of recipients for sending SMS, replacing keywords in the body with actual values.
-    /// </summary>
-    /// <param name="order">The notification order containing the SMS template and recipients.</param>
-    /// <param name="recipients">The list of recipients to process.</param>
-    /// <returns>A task that represents the asynchronous operation. The task result contains the list of SMS recipients with keywords replaced.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when the order or its templates are null.</exception>
-    private async Task<IEnumerable<SmsRecipient>> GetSmsRecipientsAsync(NotificationOrder order, IEnumerable<Recipient> recipients)
-    {
-        ArgumentNullException.ThrowIfNull(order);
-        ArgumentNullException.ThrowIfNull(order.Templates);
-
-        var smsTemplate = order.Templates.OfType<SmsTemplate>().FirstOrDefault();
-        var smsRecipients = recipients.Select(recipient => new SmsRecipient
-        {
-            IsReserved = recipient.IsReserved,
-            OrganizationNumber = recipient.OrganizationNumber,
-            NationalIdentityNumber = recipient.NationalIdentityNumber,
-            CustomizedBody = RequiresCustomization(smsTemplate?.Body) ? smsTemplate!.Body : null
-        }).ToList();
-
-        return await _keywordsService.ReplaceKeywordsAsync(smsRecipients);
     }
 
     /// <summary>
@@ -224,21 +210,6 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
         };
     }
 
-    private static int GetSmsCountForOrder(NotificationOrder order)
-    {
-        if (order.Templates.Find(t => t.Type == NotificationTemplateType.Sms) is not SmsTemplate smsTemplate)
-        {
-            throw new InvalidOperationException("SMS template is not found or is not of the correct type.");
-        }
-
-        if (string.IsNullOrEmpty(smsTemplate.Body))
-        {
-            return 0;
-        }
-
-        return CalculateNumberOfMessages(smsTemplate.Body);
-    }
-
     /// <summary>
     /// Ensures all recipients in the notification order have SMS contact points.
     /// Looks up and adds SMS contact points for recipients missing them.
@@ -259,5 +230,31 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
         }
 
         return order.Recipients;
+    }
+
+    /// <summary>
+    /// Creates a collection of <see cref="SmsRecipient"/> for SMS delivery.
+    /// </summary>
+    /// <param name="recipients">The recipients to process.</param>
+    /// <param name="messageBody">The SMS message body.</param>
+    /// <returns>
+    /// A task representing the asynchronous operation. The result contains the collection of <see cref="SmsRecipient"/> with customized message bodies.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="recipients"/> is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="messageBody"/> is null or whitespace.</exception>
+    private async Task<IEnumerable<SmsRecipient>> GetSmsRecipientsAsync(IEnumerable<Recipient> recipients, string messageBody)
+    {
+        ArgumentNullException.ThrowIfNull(recipients);
+        ArgumentException.ThrowIfNullOrWhiteSpace(messageBody);
+
+        var smsRecipients = recipients.Select(recipient => new SmsRecipient
+        {
+            IsReserved = recipient.IsReserved,
+            OrganizationNumber = recipient.OrganizationNumber,
+            NationalIdentityNumber = recipient.NationalIdentityNumber,
+            CustomizedBody = RequiresCustomization(messageBody) ? messageBody : null
+        });
+
+        return await _keywordsService.ReplaceKeywordsAsync(smsRecipients);
     }
 }
