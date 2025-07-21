@@ -36,7 +36,7 @@ public class OrderRepository : IOrderRepository
     private const string _insertorderchainSql = "call notifications.insertorderchain($1, $2, $3, $4, $5)"; // (_orderid, _idempotencyid, _creatorname, _created, _orderchain)
     private const string _getOrdersChainTrackingSql = "SELECT * FROM notifications.get_orders_chain_tracking($1, $2)"; // (_creatorname, _idempotencyid)
     private const string _tryMarkOrderAsCompletedSql = "SELECT notifications.trymarkorderascompleted($1, $2)"; // (_alternateid, _alternateidsource)
-    private const string _getInstantOrderTrackingSql = "SELECT * FROM notifications.get_instant_order_tracking($1, $2)"; // (_alternateid, _alternateidsource)
+    private const string _getInstantOrderTrackingSql = "SELECT * FROM notifications.get_instant_order_tracking(_creatorname := @creatorName, _idempotencyid := @idempotencyId)";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderRepository"/> class.
@@ -366,8 +366,8 @@ public class OrderRepository : IOrderRepository
         cancellationToken.ThrowIfCancellationRequested();
 
         await using NpgsqlCommand command = _dataSource.CreateCommand(_getInstantOrderTrackingSql);
-        command.Parameters.AddWithValue(NpgsqlDbType.Text, creatorName);
-        command.Parameters.AddWithValue(NpgsqlDbType.Text, idempotencyId);
+        command.Parameters.AddWithValue("@creatorName", NpgsqlDbType.Text, creatorName);
+        command.Parameters.AddWithValue("@idempotencyId", NpgsqlDbType.Text, idempotencyId);
 
         await using NpgsqlDataReader reader = await command.ExecuteReaderAsync(cancellationToken);
         if (!reader.HasRows)
