@@ -51,7 +51,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         [Fact]
         public void GetResultDescription_AllResultTypesHaveDescriptions()
         {
-            foreach (SmsNotificationResultType resultType in Enum.GetValues(typeof(SmsNotificationResultType)))
+            foreach (SmsNotificationResultType resultType in Enum.GetValues<SmsNotificationResultType>())
             {
                 string resultDescrption = SmsNotificationSummaryService.GetResultDescription(resultType);
                 Assert.NotEmpty(resultDescrption);

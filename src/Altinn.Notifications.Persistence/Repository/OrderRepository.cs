@@ -64,7 +64,7 @@ public class OrderRepository : IOrderRepository
         {
             while (await reader.ReadAsync())
             {
-                order = reader.GetFieldValue<NotificationOrder>("notificationorder");
+                order = await reader.GetFieldValueAsync<NotificationOrder>("notificationorder");
             }
         }
 
@@ -84,7 +84,7 @@ public class OrderRepository : IOrderRepository
         {
             while (await reader.ReadAsync())
             {
-                NotificationOrder notificationOrder = reader.GetFieldValue<NotificationOrder>("notificationorder");
+                NotificationOrder notificationOrder = await reader.GetFieldValueAsync<NotificationOrder>("notificationorder");
                 searchResult.Add(notificationOrder);
             }
         }
@@ -243,7 +243,7 @@ public class OrderRepository : IOrderRepository
         {
             while (await reader.ReadAsync())
             {
-                NotificationOrder notificationOrder = reader.GetFieldValue<NotificationOrder>(0);
+                NotificationOrder notificationOrder = await reader.GetFieldValueAsync<NotificationOrder>(0);
                 searchResult.Add(notificationOrder);
             }
         }

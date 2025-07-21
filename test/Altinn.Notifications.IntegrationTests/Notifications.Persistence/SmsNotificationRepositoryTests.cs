@@ -229,7 +229,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
         _orderIdsToDelete.Add(order.Id);
 
         // Act & Assert
-        foreach (SmsNotificationResultType resultType in Enum.GetValues(typeof(SmsNotificationResultType)))
+        foreach (SmsNotificationResultType resultType in Enum.GetValues<SmsNotificationResultType>())
         {
             try
             {

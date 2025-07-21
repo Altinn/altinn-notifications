@@ -45,7 +45,8 @@ const environment = __ENV.env;
 
 const scopes = "altinn:serviceowner/notifications.create";
 const ninRecipient = __ENV.ninRecipient ? __ENV.ninRecipient.toLowerCase() : null;
-const emailRecipient = __ENV.emailRecipient ? __ENV.emailRecipient.toLowerCase() : environment === "yt01"? "noreply@altinn.no" : null;
+const fallbackEmailRecipient = environment === "yt01"? "noreply@altinn.no" : null;
+const emailRecipient = __ENV.emailRecipient ? __ENV.emailRecipient.toLowerCase() : fallbackEmailRecipient;
 
 export const options = {
     summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(95)', 'p(99)', 'p(99.5)', 'p(99.9)', 'count'],
