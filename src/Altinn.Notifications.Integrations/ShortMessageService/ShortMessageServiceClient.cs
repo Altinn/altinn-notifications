@@ -81,8 +81,8 @@ public class ShortMessageServiceClient : IShortMessageServiceClient
             return new ShortMessageSendResult
             {
                 Success = false,
-                StatusCode = HttpStatusCode.InternalServerError,
-                ErrorDetails = $"An unexpected error occurred: {ex.Message}"
+                ErrorDetails = $"An unexpected error occurred: {ex.Message}",
+                StatusCode = HttpStatusCode.InternalServerError
             };
         }
     }
