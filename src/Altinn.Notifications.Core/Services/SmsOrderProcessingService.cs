@@ -16,24 +16,27 @@ namespace Altinn.Notifications.Core.Services;
 /// </summary>
 public class SmsOrderProcessingService : ISmsOrderProcessingService
 {
-    private readonly ISmsNotificationRepository _smsNotificationRepository;
+    private readonly IKeywordsService _keywordsService;
     private readonly ISmsNotificationService _smsService;
     private readonly IContactPointService _contactPointService;
-    private readonly IKeywordsService _keywordsService;
+    private readonly ISmsNotificationRepository _smsNotificationRepository;
+    private readonly INotificationScheduleService _notificationScheduleService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsOrderProcessingService"/> class.
     /// </summary>
     public SmsOrderProcessingService(
-        ISmsNotificationRepository smsNotificationRepository,
+        IKeywordsService keywordsService,
         ISmsNotificationService smsService,
         IContactPointService contactPointService,
-        IKeywordsService keywordsService)
+        ISmsNotificationRepository smsNotificationRepository,
+        INotificationScheduleService notificationScheduleService)
     {
-        _smsNotificationRepository = smsNotificationRepository;
         _smsService = smsService;
-        _contactPointService = contactPointService;
         _keywordsService = keywordsService;
+        _contactPointService = contactPointService;
+        _smsNotificationRepository = smsNotificationRepository;
+        _notificationScheduleService = notificationScheduleService;
     }
 
     /// <inheritdoc/>
@@ -61,6 +64,7 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
     {
         int smsCount = GetSmsCountForOrder(order);
 
+        var expiryDateTime = GetExpiryTime(order);
         var allSmsRecipients = await GetSmsRecipientsAsync(order, recipients);
         var registeredSmsRecipients = await _smsNotificationRepository.GetRecipients(order.Id);
 
@@ -84,6 +88,7 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
             await _smsService.CreateNotification(
                 order.Id,
                 order.RequestedSendTime,
+                expiryDateTime,
                 [smsAddress],
                 smsRecipient,
                 smsCount);
@@ -94,6 +99,8 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
     public async Task ProcessOrderWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients)
     {
         int smsCount = GetSmsCountForOrder(order);
+
+        var expiryDateTime = GetExpiryTime(order);
 
         var allSmsRecipients = await GetSmsRecipientsAsync(order, recipients);
 
@@ -110,6 +117,7 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
             await _smsService.CreateNotification(
                 order.Id,
                 order.RequestedSendTime,
+                expiryDateTime,
                 emailAddresses,
                 smsRecipient,
                 smsCount,
@@ -216,5 +224,25 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
     {
         SmsTemplate? smsTemplate = order.Templates.Find(t => t.Type == NotificationTemplateType.Sms) as SmsTemplate;
         return CalculateNumberOfMessages(smsTemplate!.Body);
+    }
+
+    /// <summary>
+    /// Calculates the expiry time for a notification order based on the requested send time and sending time policy.
+    /// </summary>
+    /// <param name="order">The notification order containing the requested send time and sending time policy.</param>
+    /// <returns>The calculated expiry time for the notification order.</returns>
+    private DateTime GetExpiryTime(NotificationOrder order)
+    {
+        var expiryTime = order.RequestedSendTime.AddDays(2);
+
+        if (order.SendingTimePolicy == SendingTimePolicy.Daytime)
+        {
+            if (!_notificationScheduleService.CanSendSmsNotifications())
+            {
+                expiryTime = order.RequestedSendTime.AddDays(3);
+            }
+        }
+
+        return expiryTime;
     }
 }
