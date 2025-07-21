@@ -26,7 +26,7 @@ public class ProfileClientTests
 {
     private static readonly JsonSerializerOptions _serializerOptions = JsonSerializerOptionsProvider.Options;
 
-    private ProfileClient CreateProfileClient(DelegatingHandler? handler = null)
+    private static ProfileClient CreateProfileClient(DelegatingHandler? handler = null)
     {
         var profileHttpMessageHandler = handler ?? new DelegatingHandlerStub(async (request, token) =>
         {
