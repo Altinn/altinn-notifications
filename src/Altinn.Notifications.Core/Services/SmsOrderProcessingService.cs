@@ -239,19 +239,22 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
     }
 
     /// <summary>
-    /// Updates the recipients with contact points.
+    /// Ensures all recipients in the notification order have SMS contact points.
+    /// Looks up and adds SMS contact points for recipients missing them.
     /// </summary>
-    /// <param name="order">The notification order.</param>
-    /// <returns>A task that represents the asynchronous operation. The task result contains the updated list of recipients.</returns>
+    /// <param name="order">The notification order containing the recipients.</param>
+    /// <returns>
+    /// A task representing the asynchronous operation. The result is the updated list of recipients.
+    /// </returns>
     private async Task<List<Recipient>> UpdateRecipientsWithContactPointsAsync(NotificationOrder order)
     {
-        var recipientsWithoutMobileNumber = order.Recipients
-            .Where(r => !r.AddressInfo.Exists(a => a.AddressType == AddressType.Sms))
+        var recipientsMissingSmsContact = order.Recipients
+            .Where(r => r.AddressInfo.All(a => a.AddressType != AddressType.Sms))
             .ToList();
 
-        if (recipientsWithoutMobileNumber.Count != 0)
+        if (recipientsMissingSmsContact.Count > 0)
         {
-            await _contactPointService.AddSmsContactPoints(recipientsWithoutMobileNumber, order.ResourceId);
+            await _contactPointService.AddSmsContactPoints(recipientsMissingSmsContact, order.ResourceId);
         }
 
         return order.Recipients;
