@@ -627,17 +627,11 @@ public class OrderRepository : IOrderRepository
     }
 
     /// <summary>
-    /// Persists an SMS notification.
+    /// Persists an SMS notification with send result and expiry information.
     /// </summary>
-    /// <param name="notification">
-    /// The <see cref="SmsNotification"/> containing recipient information, message content, and send result details.
-    /// </param>
-    /// <param name="smsExpiryDateTime">
-    /// The <see cref="DateTime"/> indicating when the SMS notification expires and should no longer be delivered.
-    /// </param>
-    /// <param name="smsMessageCount">
-    /// The number of SMS messages to be sent based on the message content.
-    /// </param>
+    /// <param name="notification">The SMS notification to persist.</param>
+    /// <param name="smsExpiryDateTime">The expiry date and time for the SMS.</param>
+    /// <param name="smsMessageCount">The number of SMS messages to send.</param>
     /// <param name="connection">
     /// The active <see cref="NpgsqlConnection"/> to the PostgreSQL database.
     /// </param>
