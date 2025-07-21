@@ -9,7 +9,6 @@ using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Profile;
 using Altinn.Notifications.Integrations.Profile.Mappers;
 using Altinn.Notifications.Integrations.Profile.Models;
-using Altinn.Notifications.Integrations.Register;
 
 using Microsoft.Extensions.Options;
 
@@ -21,6 +20,7 @@ namespace Altinn.Notifications.Integrations.Clients;
 public class ProfileClient : IProfileClient
 {
     private readonly HttpClient _client;
+    private static readonly JsonSerializerOptions _jsonSerializerOptions = JsonSerializerOptionsProvider.Options;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProfileClient"/> class.
@@ -39,7 +39,7 @@ public class ProfileClient : IProfileClient
             NationalIdentityNumbers = nationalIdentityNumbers
         };
 
-        HttpContent content = new StringContent(JsonSerializer.Serialize(lookupObject, JsonSerializerOptionsProvider.Options), Encoding.UTF8, "application/json");
+        HttpContent content = new StringContent(JsonSerializer.Serialize(lookupObject, _jsonSerializerOptions), Encoding.UTF8, "application/json");
 
         var response = await _client.PostAsync("users/contactpoint/lookup", content);
 
@@ -49,7 +49,7 @@ public class ProfileClient : IProfileClient
         }
 
         string responseContent = await response.Content.ReadAsStringAsync();
-        List<UserContactPointsDto> contactPoints = JsonSerializer.Deserialize<UserContactPointsList>(responseContent, JsonSerializerOptionsProvider.Options)!.ContactPointsList;
+        List<UserContactPointsDto> contactPoints = JsonSerializer.Deserialize<UserContactPointsList>(responseContent, _jsonSerializerOptions)!.ContactPointsList;
 
         return contactPoints.Select(contactPointDto => contactPointDto.ToUserContactPoint()).ToList();
     }
@@ -63,7 +63,7 @@ public class ProfileClient : IProfileClient
             OrganizationNumbers = organizationNumbers
         };
 
-        HttpContent content = new StringContent(JsonSerializer.Serialize(lookupObject, JsonSerializerOptionsProvider.Options), Encoding.UTF8, "application/json");
+        HttpContent content = new StringContent(JsonSerializer.Serialize(lookupObject, _jsonSerializerOptions), Encoding.UTF8, "application/json");
 
         var response = await _client.PostAsync("units/contactpoint/lookup", content);
 
@@ -73,15 +73,35 @@ public class ProfileClient : IProfileClient
         }
 
         string responseContent = await response.Content.ReadAsStringAsync();
-        OrgContactPointsList contactPoints = JsonSerializer.Deserialize<OrgContactPointsList>(responseContent, JsonSerializerOptionsProvider.Options)!;
+        OrgContactPointsList contactPoints = JsonSerializer.Deserialize<OrgContactPointsList>(responseContent, _jsonSerializerOptions)!;
 
         return contactPoints.ContactPointsList;
     }
-    
+
     /// <inheritdoc/>
-    public Task<List<OrganizationContactPoints>> GetOrganizationContactPoints(List<string> organizationNumbers)
+    public async Task<List<OrganizationContactPoints>> GetOrganizationContactPoints(List<string> organizationNumbers)
     {
-        List<OrganizationContactPoints> foo = [];
-        return Task.FromResult(foo);
+        if (organizationNumbers == null || organizationNumbers.Count == 0)
+        {
+            return [];
+        }
+
+        var lookupObject = new OrgContactPointLookup
+        {
+            OrganizationNumbers = organizationNumbers
+        };
+
+        HttpContent content = new StringContent(JsonSerializer.Serialize(lookupObject, _jsonSerializerOptions), Encoding.UTF8, "application/json");
+        var response = await _client.PostAsync("organizations/notificationaddresses/lookup", content);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new PlatformHttpException(response, $"ProfileClient.GetOrganizationContactPoints failed with status code {response.StatusCode}");
+        }
+
+        string responseContent = await response.Content.ReadAsStringAsync();
+        var contactPoints = JsonSerializer.Deserialize<OrgContactPointsList>(responseContent, _jsonSerializerOptions);
+        
+        return contactPoints?.ContactPointsList ?? [];
     }
 }

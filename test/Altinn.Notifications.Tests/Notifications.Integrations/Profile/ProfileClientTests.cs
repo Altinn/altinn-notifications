@@ -1,8 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -13,7 +15,6 @@ using Altinn.Notifications.Integrations.Clients;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Profile;
 using Altinn.Notifications.Integrations.Profile.Models;
-using Altinn.Notifications.Integrations.Register;
 
 using Microsoft.Extensions.Options;
 
@@ -28,32 +29,35 @@ public class ProfileClientTests
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    private readonly ProfileClient _profileClient;
-
-    public ProfileClientTests()
+    private ProfileClient CreateProfileClient(DelegatingHandler? handler = null)
     {
-        var profileHttpMessageHandler = new DelegatingHandlerStub(async (request, token) =>
-           {
-               if (request.RequestUri!.AbsolutePath.EndsWith("users/contactpoint/lookup"))
-               {
-                   UserContactPointLookup? lookup = JsonSerializer.Deserialize<UserContactPointLookup>(await request!.Content!.ReadAsStringAsync(token), JsonSerializerOptionsProvider.Options);
-                   return await GetUserProfileResponse(lookup!);
-               }
-               else if (request.RequestUri!.AbsolutePath.EndsWith("units/contactpoint/lookup"))
-               {
-                   UnitContactPointLookup? lookup = JsonSerializer.Deserialize<UnitContactPointLookup>(await request!.Content!.ReadAsStringAsync(token), JsonSerializerOptionsProvider.Options);
-                   return await GetUnitProfileResponse(lookup!);
-               }
+        var profileHttpMessageHandler = handler ?? new DelegatingHandlerStub(async (request, token) =>
+        {
+            if (request.RequestUri!.AbsolutePath.EndsWith("users/contactpoint/lookup"))
+            {
+                UserContactPointLookup? lookup = JsonSerializer.Deserialize<UserContactPointLookup>(await request!.Content!.ReadAsStringAsync(token), JsonSerializerOptionsProvider.Options);
+                return await GetUserProfileResponse(lookup!);
+            }
+            else if (request.RequestUri!.AbsolutePath.EndsWith("units/contactpoint/lookup"))
+            {
+                UnitContactPointLookup? lookup = JsonSerializer.Deserialize<UnitContactPointLookup>(await request!.Content!.ReadAsStringAsync(token), JsonSerializerOptionsProvider.Options);
+                return await GetUnitProfileResponse(lookup!);
+            }
+            else if (request!.RequestUri!.AbsolutePath.EndsWith("organizations/notificationaddresses/lookup"))
+            {
+                OrgContactPointLookup? lookup = JsonSerializer.Deserialize<OrgContactPointLookup>(await request!.Content!.ReadAsStringAsync(token), _serializerOptions);
+                return await GetResponse(lookup!);
+            }
 
-               return new HttpResponseMessage(HttpStatusCode.NotFound);
-           });
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        });
 
         PlatformSettings settings = new()
         {
             ApiProfileEndpoint = "https://platform.at22.altinn.cloud/profile/api/v1/"
         };
 
-        _profileClient = new ProfileClient(
+        return new ProfileClient(
                       new HttpClient(profileHttpMessageHandler),
                       Options.Create(settings));
     }
@@ -62,7 +66,7 @@ public class ProfileClientTests
     public async Task GetUserContactPoints_SuccessResponse_NoMatches()
     {
         // Act
-        List<UserContactPoints> actual = await _profileClient.GetUserContactPoints(["empty-list"]);
+        List<UserContactPoints> actual = await CreateProfileClient().GetUserContactPoints(["empty-list"]);
 
         // Assert
         Assert.Empty(actual);
@@ -72,7 +76,7 @@ public class ProfileClientTests
     public async Task GetUserContactPoints_SuccessResponse_TwoElementsInResponse()
     {
         // Act
-        List<UserContactPoints> actual = await _profileClient.GetUserContactPoints(["populated-list"]);
+        List<UserContactPoints> actual = await CreateProfileClient().GetUserContactPoints(["populated-list"]);
 
         // Assert
         Assert.Equal(2, actual.Count);
@@ -83,7 +87,7 @@ public class ProfileClientTests
     public async Task GetUserContactPoints_FailureResponse_ExceptionIsThrown()
     {
         // Act
-        var exception = await Assert.ThrowsAsync<PlatformHttpException>(async () => await _profileClient.GetUserContactPoints(["unavailable"]));
+        var exception = await Assert.ThrowsAsync<PlatformHttpException>(async () => await CreateProfileClient().GetUserContactPoints(["unavailable"]));
 
         Assert.StartsWith("ProfileClient.GetUserContactPoints failed with status code", exception.Message);
         Assert.Equal(HttpStatusCode.ServiceUnavailable, exception.Response?.StatusCode);
@@ -93,7 +97,7 @@ public class ProfileClientTests
     public async Task GetUserRegisteredContactPoints_SuccessResponse_NoMatches()
     {
         // Act
-        List<OrganizationContactPoints> actual = await _profileClient.GetUserRegisteredContactPoints(["12345678", "98754321"], "no-matches");
+        List<OrganizationContactPoints> actual = await CreateProfileClient().GetUserRegisteredContactPoints(["12345678", "98754321"], "no-matches");
 
         // Assert
         Assert.Empty(actual);
@@ -103,7 +107,7 @@ public class ProfileClientTests
     public async Task GetUserRegisteredContactPoints_SuccessResponse_TwoListElementsReturned()
     {
         // Act
-        List<OrganizationContactPoints> actual = await _profileClient.GetUserRegisteredContactPoints(["12345678", "98754321"], "some-matches");
+        List<OrganizationContactPoints> actual = await CreateProfileClient().GetUserRegisteredContactPoints(["12345678", "98754321"], "some-matches");
 
         // Assert
         Assert.Equal(2, actual.Count);
@@ -115,10 +119,69 @@ public class ProfileClientTests
     {
         // Act
         var exception = await Assert.ThrowsAsync<PlatformHttpException>(
-            async () => await _profileClient.GetUserRegisteredContactPoints(["12345678", "98754321"], "error-resource"));
+            async () => await CreateProfileClient().GetUserRegisteredContactPoints(["12345678", "98754321"], "error-resource"));
 
         Assert.StartsWith("ProfileClient.GetUserRegisteredContactPoints failed with status code", exception.Message);
         Assert.Equal(HttpStatusCode.ServiceUnavailable, exception.Response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetOrganizationContactPoints_WithEmptyOrganizationNumbers_ReturnsEmpty()
+    {
+        // Arrange
+        List<string> organizationNumbers = [];
+
+        // Act
+        var result = await CreateProfileClient().GetOrganizationContactPoints(organizationNumbers);
+
+        // Assert
+        Assert.Empty(result);
+        Assert.NotNull(result);
+    }
+
+    [Fact]
+    public async Task GetOrganizationContactPoints_WithNullResponseContent_ReturnsEmpty()
+    {
+        // Arrange
+        var registerClient = CreateProfileClient(new DelegatingHandlerStub((request, token) =>
+        {
+            if (request!.RequestUri!.AbsolutePath.EndsWith("organizations/notificationaddresses/lookup"))
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("null", Encoding.UTF8, "application/json")
+                });
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        }));
+
+        // Act
+        List<OrganizationContactPoints> actual = await registerClient.GetOrganizationContactPoints(["test-org"]);
+
+        // Assert
+        Assert.Empty(actual);
+    }
+
+    [Fact]
+    public async Task GetOrganizationContactPoints_WithPopulatedList_ReturnsExpectedData()
+    {
+        // Act
+        List<OrganizationContactPoints> actual = await CreateProfileClient().GetOrganizationContactPoints(["populated-list"]);
+
+        // Assert
+        Assert.Equal(2, actual.Count);
+        Assert.Contains("910011154", actual.Select(e => e.OrganizationNumber));
+    }
+
+    [Fact]
+    public async Task GetOrganizationContactPoints_WithUnavailableEndpoint_ThrowsException()
+    {
+        // Act
+        var exception = await Assert.ThrowsAsync<PlatformHttpException>(async () => await CreateProfileClient().GetOrganizationContactPoints(["unavailable"]));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, exception.Response?.StatusCode);
     }
 
     private Task<HttpResponseMessage> GetUserProfileResponse(UserContactPointLookup lookup)
@@ -189,5 +252,46 @@ public class ProfileClientTests
                 StatusCode = statusCode,
                 Content = content
             });
+    }
+
+    private Task<HttpResponseMessage> GetResponse(OrgContactPointLookup lookup)
+    {
+        object? contentData = null;
+        HttpStatusCode statusCode = HttpStatusCode.OK;
+
+        switch (lookup.OrganizationNumbers[0])
+        {
+            case "empty-list":
+                contentData = new OrgContactPointsList() { ContactPointsList = [] };
+                break;
+
+            case "populated-list":
+                contentData = new OrgContactPointsList
+                {
+                    ContactPointsList =
+                    [
+                        new OrganizationContactPoints { OrganizationNumber = "910011154", EmailList = [] },
+                        new OrganizationContactPoints { OrganizationNumber = "910011155", EmailList = [] }
+                    ]
+                };
+                break;
+
+            case "unavailable":
+                statusCode = HttpStatusCode.ServiceUnavailable;
+                break;
+        }
+
+        return CreateMockResponse(contentData, statusCode);
+    }
+
+    private Task<HttpResponseMessage> CreateMockResponse(object? contentData, HttpStatusCode statusCode)
+    {
+        JsonContent? content = (contentData != null) ? JsonContent.Create(contentData, options: _serializerOptions) : null;
+
+        return Task.FromResult(new HttpResponseMessage()
+        {
+            StatusCode = statusCode,
+            Content = content
+        });
     }
 }
