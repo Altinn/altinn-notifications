@@ -62,10 +62,12 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
     /// <inheritdoc/>
     public async Task ProcessOrderRetryWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients)
     {
-        int smsCount = GetSmsCountForOrder(order);
-
         var expiryDateTime = GetExpiryTime(order);
+
+        int messagesCount = GetSmsCountForOrder(order);
+
         var allSmsRecipients = await GetSmsRecipientsAsync(order, recipients);
+
         var registeredSmsRecipients = await _smsNotificationRepository.GetRecipients(order.Id);
 
         foreach (var recipient in recipients)
@@ -91,16 +93,16 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
                 expiryDateTime,
                 [smsAddress],
                 smsRecipient,
-                smsCount);
+                messagesCount);
         }
     }
 
     /// <inheritdoc/>
     public async Task ProcessOrderWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients)
     {
-        int smsCount = GetSmsCountForOrder(order);
-
         var expiryDateTime = GetExpiryTime(order);
+
+        var messagesCount = GetSmsCountForOrder(order);
 
         var allSmsRecipients = await GetSmsRecipientsAsync(order, recipients);
 
@@ -120,7 +122,7 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
                 expiryDateTime,
                 emailAddresses,
                 smsRecipient,
-                smsCount,
+                messagesCount,
                 order.IgnoreReservation ?? false);
         }
     }
@@ -173,25 +175,6 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
     }
 
     /// <summary>
-    /// Updates the recipients with contact points.
-    /// </summary>
-    /// <param name="order">The notification order.</param>
-    /// <returns>A task that represents the asynchronous operation. The task result contains the updated list of recipients.</returns>
-    private async Task<List<Recipient>> UpdateRecipientsWithContactPointsAsync(NotificationOrder order)
-    {
-        var recipientsWithoutMobileNumber = order.Recipients
-            .Where(r => !r.AddressInfo.Exists(a => a.AddressType == AddressType.Sms))
-            .ToList();
-
-        if (recipientsWithoutMobileNumber.Count != 0)
-        {
-            await _contactPointService.AddSmsContactPoints(recipientsWithoutMobileNumber, order.ResourceId);
-        }
-
-        return order.Recipients;
-    }
-
-    /// <summary>
     /// Calculates the number of messages based on the rules for concatenation of SMS messages in the SMS gateway.
     /// </summary>
     internal static int CalculateNumberOfMessages(string message)
@@ -221,23 +204,23 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
     }
 
     /// <summary>
-    /// Calculates the expiry time for a notification order based on the requested send time and sending time policy.
+    /// Calculates the expiry date and time for an SMS notification based on the sending time policy and current SMS send window.
     /// </summary>
+    /// <remarks>
+    /// - If the sending time policy is <see cref="SendingTimePolicy.Anytime"/>, the expiry time is set to 2 days after the requested send time.
+    /// - If the sending time policy is <see cref="SendingTimePolicy.Daytime"/> and the current time is within the allowed window, expiry time is also set to 2 days after the requested send time.
+    /// - Otherwise, the expiry time is set to 3 days after the requested send time.
+    /// </remarks>
     /// <param name="order">The notification order containing the requested send time and sending time policy.</param>
     /// <returns>The calculated expiry time for the notification order.</returns>
     private DateTime GetExpiryTime(NotificationOrder order)
     {
-        var expiryTime = order.RequestedSendTime.AddDays(2);
-
-        if (order.SendingTimePolicy == SendingTimePolicy.Daytime)
+        return order.SendingTimePolicy switch
         {
-            if (!_notificationScheduleService.CanSendSmsNotifications())
-            {
-                expiryTime = order.RequestedSendTime.AddDays(3);
-            }
-        }
+            SendingTimePolicy.Anytime => order.RequestedSendTime.AddDays(2),
 
-        return expiryTime;
+            _ => _notificationScheduleService.CanSendSmsNotifications() ? order.RequestedSendTime.AddDays(2) : order.RequestedSendTime.AddDays(3),
+        };
     }
 
     private static int GetSmsCountForOrder(NotificationOrder order)
@@ -251,7 +234,26 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
         {
             return 0;
         }
-        
+
         return CalculateNumberOfMessages(smsTemplate.Body);
+    }
+
+    /// <summary>
+    /// Updates the recipients with contact points.
+    /// </summary>
+    /// <param name="order">The notification order.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains the updated list of recipients.</returns>
+    private async Task<List<Recipient>> UpdateRecipientsWithContactPointsAsync(NotificationOrder order)
+    {
+        var recipientsWithoutMobileNumber = order.Recipients
+            .Where(r => !r.AddressInfo.Exists(a => a.AddressType == AddressType.Sms))
+            .ToList();
+
+        if (recipientsWithoutMobileNumber.Count != 0)
+        {
+            await _contactPointService.AddSmsContactPoints(recipientsWithoutMobileNumber, order.ResourceId);
+        }
+
+        return order.Recipients;
     }
 }
