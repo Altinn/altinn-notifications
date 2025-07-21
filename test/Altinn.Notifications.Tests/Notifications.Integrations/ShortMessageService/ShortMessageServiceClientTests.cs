@@ -5,10 +5,8 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
-using Altinn.Common.PEP.Configuration;
 using Altinn.Notifications.Core.Helpers;
 using Altinn.Notifications.Core.Models.ShortMessageService;
-using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.ShortMessageService;
 using Altinn.Notifications.IntegrationTests;
 
