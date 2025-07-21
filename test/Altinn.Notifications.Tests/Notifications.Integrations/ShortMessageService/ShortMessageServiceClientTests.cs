@@ -176,17 +176,17 @@ public class ShortMessageServiceClientTests
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
         };
 
-        var delegatingHandler = new DelegatingHandlerStub((request, token) =>
+        var delegatingHandler = new DelegatingHandlerStub(async (request, token) =>
         {
             if (!request!.RequestUri!.AbsolutePath.EndsWith("instantmessage/send"))
             {
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+                return new HttpResponseMessage(HttpStatusCode.NotFound);
             }
 
             ShortMessage? message = null;
             try
             {
-                string content = request.Content!.ReadAsStringAsync(token).GetAwaiter().GetResult();
+                string content = await request.Content!.ReadAsStringAsync(token);
                 message = JsonSerializer.Deserialize<ShortMessage>(content, serializerOptions);
             }
             catch
@@ -196,10 +196,10 @@ public class ShortMessageServiceClientTests
 
             if (message == null)
             {
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadRequest)
+                return new HttpResponseMessage(HttpStatusCode.BadRequest)
                 {
                     Content = new StringContent("Invalid JSON format", Encoding.UTF8, "application/json")
-                });
+                };
             }
 
             HttpStatusCode statusCode;
@@ -237,7 +237,7 @@ public class ShortMessageServiceClientTests
                 response.Content = new StringContent(errorContent, Encoding.UTF8, "application/json");
             }
 
-            return Task.FromResult(response);
+            return response;
         });
 
         PlatformSettings settings = new()
