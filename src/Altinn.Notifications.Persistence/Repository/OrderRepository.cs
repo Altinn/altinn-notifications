@@ -370,8 +370,8 @@ public class OrderRepository : IOrderRepository
     public async Task<InstantNotificationOrderTracking?> RetrieveTrackingInformation(string creatorName, string idempotencyId, CancellationToken cancellationToken = default)
     {
         await using NpgsqlCommand command = _dataSource.CreateCommand(_getInstantOrderTrackingInformationSql);
-        command.Parameters.AddWithValue(NpgsqlDbType.Text, creatorName);
-        command.Parameters.AddWithValue(NpgsqlDbType.Text, idempotencyId);
+        command.Parameters.AddWithValue("@creatorName", NpgsqlDbType.Text, creatorName);
+        command.Parameters.AddWithValue("@idempotencyId", NpgsqlDbType.Text, idempotencyId);
 
         await using NpgsqlDataReader reader = await command.ExecuteReaderAsync(cancellationToken);
         if (!reader.HasRows)
