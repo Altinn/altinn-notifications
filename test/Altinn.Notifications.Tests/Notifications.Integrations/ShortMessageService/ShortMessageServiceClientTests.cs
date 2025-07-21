@@ -7,6 +7,7 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Altinn.Notifications.Core.Helpers;
 using Altinn.Notifications.Core.Models.ShortMessageService;
+using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.ShortMessageService;
 using Altinn.Notifications.IntegrationTests;
 
@@ -23,17 +24,16 @@ public class ShortMessageServiceClientTests
 {
     private readonly ShortMessageServiceClient _shortMessageServiceClient;
     private readonly Mock<ILogger<ShortMessageServiceClient>> _loggerMock;
-    private readonly IOptions<Altinn.Notifications.Integrations.Configuration.PlatformSettings> _platformSettings;
+
+    private static readonly IOptions<PlatformSettings> _platformSettings = Options.Create(new PlatformSettings()
+    {
+        ApiShortMessageServiceEndpoint = "http://localhost:5092/notifications/sms/api/v1/"
+    });
 
     public ShortMessageServiceClientTests()
     {
-       _loggerMock = new Mock<ILogger<ShortMessageServiceClient>>();
-       _shortMessageServiceClient = CreateShortMessageServiceTestClient();
-
-       _platformSettings = Options.Create(new Altinn.Notifications.Integrations.Configuration.PlatformSettings()
-       {
-           ApiShortMessageServiceEndpoint = "http://localhost:5092/notifications/sms/api/v1/"
-       });
+        _loggerMock = new Mock<ILogger<ShortMessageServiceClient>>();
+        _shortMessageServiceClient = CreateShortMessageServiceTestClient();
     }
 
     [Fact]
