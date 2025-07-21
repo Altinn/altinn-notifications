@@ -36,6 +36,11 @@ public class OrderRepository : IOrderRepository
     private const string _insertorderchainSql = "call notifications.insertorderchain($1, $2, $3, $4, $5)"; // (_orderid, _idempotencyid, _creatorname, _created, _orderchain)
     private const string _getOrdersChainTrackingSql = "SELECT * FROM notifications.get_orders_chain_tracking($1, $2)"; // (_creatorname, _idempotencyid)
     private const string _tryMarkOrderAsCompletedSql = "SELECT notifications.trymarkorderascompleted($1, $2)"; // (_alternateid, _alternateidsource)
+    private const string _getInstantOrderTrackingSql = "SELECT * FROM notifications.get_instant_order_tracking(_creatorname := @creatorName, _idempotencyid := @idempotencyId)";
+
+    private const string _shipmentIdColumnName = "shipment_id";
+    private const string _ordersChainIdColumnName = "orders_chain_id";
+    private const string _senderReferenceColumnName = "senders_reference";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderRepository"/> class.
@@ -111,6 +116,45 @@ public class OrderRepository : IOrderRepository
         }
 
         return order;
+    }
+
+    /// <inheritdoc/>
+    public async Task<InstantNotificationOrder> Create(InstantNotificationOrder instantNotificationOrder, NotificationOrder notificationOrder, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        await using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await InsertInstantNotificationOrderAsync(instantNotificationOrder, connection, transaction, cancellationToken);
+
+            cancellationToken.ThrowIfCancellationRequested();
+            long mainOrderId = await InsertOrder(notificationOrder, connection, transaction, cancellationToken);
+
+            if (notificationOrder.Templates.Find(e => e.Type == NotificationTemplateType.Sms) is SmsTemplate mainSmsTemplate)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                await InsertSmsTextAsync(mainOrderId, mainSmsTemplate, connection, transaction, cancellationToken);
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            throw;
+        }
+        catch (Exception)
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            throw;
+        }
+
+        return instantNotificationOrder;
     }
 
     /// <inheritdoc/>
@@ -248,21 +292,21 @@ public class OrderRepository : IOrderRepository
 
         await reader.ReadAsync(cancellationToken);
 
-        var ordersChainId = await reader.GetFieldValueAsync<Guid>(reader.GetOrdinal("orders_chain_id"), cancellationToken);
+        var ordersChainId = await reader.GetFieldValueAsync<Guid>(reader.GetOrdinal(_ordersChainIdColumnName), cancellationToken);
         if (ordersChainId == Guid.Empty)
         {
             return null;
         }
 
-        var mainShipmentId = await reader.GetFieldValueAsync<Guid>(reader.GetOrdinal("shipment_id"), cancellationToken);
+        var mainShipmentId = await reader.GetFieldValueAsync<Guid>(reader.GetOrdinal(_shipmentIdColumnName), cancellationToken);
         if (mainShipmentId == Guid.Empty)
         {
             return null;
         }
 
-        string? mainSendersReference = await reader.IsDBNullAsync(reader.GetOrdinal("senders_reference"), cancellationToken) ?
+        string? mainSendersReference = await reader.IsDBNullAsync(reader.GetOrdinal(_senderReferenceColumnName), cancellationToken) ?
             null :
-            reader.GetString(reader.GetOrdinal("senders_reference"));
+            reader.GetString(reader.GetOrdinal(_senderReferenceColumnName));
 
         var reminderShipments = await ExtractReminderShipmentsTracking(reader, cancellationToken);
 
@@ -310,6 +354,50 @@ public class OrderRepository : IOrderRepository
 
         var result = await pgcom.ExecuteScalarAsync();
         return result != null && (bool)result;
+    }
+
+    /// <inheritdoc/>
+    public async Task<InstantNotificationOrderTracking?> GetInstantOrderTracking(string creatorName, string idempotencyId, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        await using NpgsqlCommand command = _dataSource.CreateCommand(_getInstantOrderTrackingSql);
+        command.Parameters.AddWithValue("@creatorName", NpgsqlDbType.Text, creatorName);
+        command.Parameters.AddWithValue("@idempotencyId", NpgsqlDbType.Text, idempotencyId);
+
+        await using NpgsqlDataReader reader = await command.ExecuteReaderAsync(cancellationToken);
+        if (!reader.HasRows)
+        {
+            return null;
+        }
+
+        await reader.ReadAsync(cancellationToken);
+
+        var orderChainId = await reader.GetFieldValueAsync<Guid>(reader.GetOrdinal(_ordersChainIdColumnName), cancellationToken);
+        if (orderChainId == Guid.Empty)
+        {
+            return null;
+        }
+
+        var shipmentId = await reader.GetFieldValueAsync<Guid>(reader.GetOrdinal(_shipmentIdColumnName), cancellationToken);
+        if (shipmentId == Guid.Empty)
+        {
+            return null;
+        }
+
+        string? sendersReference = await reader.IsDBNullAsync(reader.GetOrdinal(_senderReferenceColumnName), cancellationToken)
+            ? null
+            : reader.GetString(reader.GetOrdinal(_senderReferenceColumnName));
+
+        return new InstantNotificationOrderTracking
+        {
+            OrderChainId = orderChainId,
+            Notification = new NotificationOrderChainShipment
+            {
+                ShipmentId = shipmentId,
+                SendersReference = sendersReference
+            }
+        };
     }
 
     private static NotificationOrderWithStatus? ReadNotificationOrderWithStatus(NpgsqlDataReader reader)
@@ -458,6 +546,35 @@ public class OrderRepository : IOrderRepository
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, emailTemplate.Subject);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, emailTemplate.Body);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, emailTemplate.ContentType.ToString());
+
+        await pgcom.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Persists an instant notification order to the database as part of a transaction.
+    /// </summary>
+    /// <param name="instantNotificationOrder">
+    /// The high-priority notification order to be persisted, containing recipient and delivery details.
+    /// </param>
+    /// <param name="connection">
+    /// The active PostgreSQL database connection.
+    /// </param>
+    /// <param name="transaction">
+    /// The transaction context within which the database operation executes.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.
+    /// </param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    private static async Task InsertInstantNotificationOrderAsync(InstantNotificationOrder instantNotificationOrder, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
+    {
+        await using NpgsqlCommand pgcom = new(_insertorderchainSql, connection, transaction);
+
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, instantNotificationOrder.OrderChainId);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, instantNotificationOrder.IdempotencyId);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, instantNotificationOrder.Creator.ShortName);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, instantNotificationOrder.Created);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Jsonb, instantNotificationOrder);
 
         await pgcom.ExecuteNonQueryAsync(cancellationToken);
     }
