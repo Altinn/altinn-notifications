@@ -8,25 +8,9 @@ RETURNS TABLE (
     shipment_id uuid,
     senders_reference text
 ) 
-LANGUAGE 'plpgsql'
-AS $BODY$
-DECLARE
-    v_record_exists boolean;
+LANGUAGE plpgsql
+AS $$
 BEGIN
-    -- Check if record exists first to provide better error handling
-    SELECT EXISTS (
-        SELECT 1 
-        FROM notifications.orderschain 
-        WHERE creatorname = _creatorname
-        AND idempotencyid = _idempotencyid
-        AND orderchain->>'Type' = '2'
-    ) INTO v_record_exists;
-
-    IF NOT v_record_exists THEN
-        -- Return empty result set with no rows
-        RETURN;
-    END IF;
-
     RETURN QUERY
     SELECT 
         oc.orderid AS orders_chain_id,
@@ -39,7 +23,7 @@ BEGIN
         AND oc.idempotencyid = _idempotencyid
         AND oc.orderchain->>'Type' = '2';
 END;
-$BODY$;
+$$;
 
 COMMENT ON FUNCTION notifications.get_instant_order_tracking IS 
 'Retrieves tracking information for an instant notification order using the creator''s short name and idempotency identifier.

@@ -37,9 +37,10 @@ public class ShortMessageServiceClient : IShortMessageServiceClient
     {
         try
         {
-            var content = new StringContent(shortMessage.Serialize(), Encoding.UTF8, "application/json");
+            var serializedShortMessage = shortMessage.Serialize();
+            var content = new StringContent(serializedShortMessage, Encoding.UTF8, "application/json");
 
-            var response = await _httpClient.PostAsync(_sendEndpoint, content);
+            using var response = await _httpClient.PostAsync(_sendEndpoint, content);
 
             if (response.IsSuccessStatusCode)
             {
@@ -53,7 +54,7 @@ public class ShortMessageServiceClient : IShortMessageServiceClient
             {
                 string errorDetails = await response.Content.ReadAsStringAsync();
 
-                _logger.LogWarning("Failed to send short message: {MessageContent}. Status: {StatusCode}, Details: {ErrorDetails}", content, response.StatusCode, errorDetails);
+                _logger.LogWarning("Failed to send short message: {MessageContent}. Status: {StatusCode}, Details: {ErrorDetails}", serializedShortMessage, response.StatusCode, errorDetails);
 
                 return new ShortMessageSendResult
                 {
@@ -71,7 +72,7 @@ public class ShortMessageServiceClient : IShortMessageServiceClient
             {
                 Success = false,
                 ErrorDetails = ex.Message,
-                StatusCode = ex.StatusCode ?? HttpStatusCode.InternalServerError,
+                StatusCode = ex.StatusCode ?? HttpStatusCode.ServiceUnavailable,
             };
         }
         catch (Exception ex)

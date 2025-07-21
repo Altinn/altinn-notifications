@@ -36,7 +36,7 @@ public record InstantNotificationOrder
     /// <summary>
     /// The recipient information and message content.
     /// </summary>
-    public required InstantNotificationRecipient Recipient { get; init; }
+    public required InstantNotificationRecipient InstantNotificationRecipient { get; init; }
 
     /// <summary>
     /// The reference identifier assigned by the sender for tracking purposes.
