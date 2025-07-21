@@ -75,7 +75,14 @@ public class ShortMessageServiceClientTests
         Assert.Equal(HttpStatusCode.BadRequest, result.StatusCode);
         Assert.Contains("Invalid request format", result.ErrorDetails);
 
-        _loggerMock.Verify(e => e.Log(LogLevel.Warning, It.IsAny<EventId>(), It.IsAny<It.IsAnyType>(), It.IsAny<Exception>(), It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once);
+        _loggerMock.Verify(
+            e => e.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
     }
 
     [Fact]
