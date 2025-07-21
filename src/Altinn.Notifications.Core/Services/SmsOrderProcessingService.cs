@@ -220,12 +220,6 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
         return numberOfMessages;
     }
 
-    private static int GetSmsCountForOrder(NotificationOrder order)
-    {
-        SmsTemplate? smsTemplate = order.Templates.Find(t => t.Type == NotificationTemplateType.Sms) as SmsTemplate;
-        return CalculateNumberOfMessages(smsTemplate!.Body);
-    }
-
     /// <summary>
     /// Calculates the expiry time for a notification order based on the requested send time and sending time policy.
     /// </summary>
@@ -244,5 +238,20 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
         }
 
         return expiryTime;
+    }
+
+    private static int GetSmsCountForOrder(NotificationOrder order)
+    {
+        if (order.Templates.Find(t => t.Type == NotificationTemplateType.Sms) is not SmsTemplate smsTemplate)
+        {
+            throw new InvalidOperationException("SMS template is not found or is not of the correct type.");
+        }
+
+        if (string.IsNullOrEmpty(smsTemplate.Body))
+        {
+            return 0;
+        }
+        
+        return CalculateNumberOfMessages(smsTemplate.Body);
     }
 }
