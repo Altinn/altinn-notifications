@@ -10,14 +10,14 @@ The starting point for both transformations is the `swagger.json` file generated
 
 
 
-### Key changes for docs.altinn.no:
+### Key changes for docs.altinn.no (`transform.jq`):
 - **OpenAPI Version**: Sets the version to `3.0.3`.
 - **Security**: Removes all security-related definitions (`security` and `securitySchemes`), as authentication is handled externally.
 - **Path Prefix**: Removes the base `/notifications/api/v1` prefix from all API paths to simplify them.
 - **Tag Consolidation**: Merges the `FutureOrders` and `Shipment` tags into a single `Orders` tag for better organization.
 - **Server URL**: Removes the local development server URL and updates the production URL to include the correct base path (`/notifications/api/v1`).
 
-### Key changes for APIM:
+### Key changes for APIM (`transform-apim.jq`):
 - **OpenAPI Version**: Sets the version to `3.0.1`.
 - **Server Info**: Removes all `servers` definitions, as APIM manages the base URLs.
 - **Security**: Removes all security-related definitions.
