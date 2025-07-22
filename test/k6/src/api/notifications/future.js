@@ -27,3 +27,12 @@ export function postSmsNotificationOrder(serializedOrder, token, label) {
   params.tags = { name: label };
   return http.post(endpoint, serializedOrder, params);
 }
+
+export function getStatusFeed(sequenceNumber, token, label) {
+  const params = apiHelpers.buildHeaderWithBearer(token);
+  params.tags = { name: label };
+
+  const endpoint = config.notifications.statusfeed_v2(sequenceNumber);
+  console.log(endpoint);
+  return http.get(endpoint, params);
+}

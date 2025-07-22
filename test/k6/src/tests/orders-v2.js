@@ -2,7 +2,7 @@
     Test script for Platform Notifications API V2 using an application owner token.
 
     Command:
-    podman compose run k6 run /src/tests/v2-orders-email.js \
+    podman compose run k6 run /src/tests/orders-v2.js \
     -e tokenGeneratorUserName={the user name to access the token generator} \
     -e tokenGeneratorUserPwd={the password to access the token generator} \
     -e mpClientId={the id of an integration defined in maskinporten} \
@@ -130,8 +130,6 @@ function postSmsNotificationOrderRequest(data) {
         post_sms_order
     );
 
-    console.log(response);
-
     const success = check(response, {
         "POST SMS notification order request. Status is 201 Created": (r) => r.status === 201
     });
@@ -157,7 +155,6 @@ function postSmsNotificationOrderRequest(data) {
  * @param {string} type - The type of notification (e.g., "Email" or "SMS").
  */
 function getShipmentStatus(data, shipmentId, label, type) {
-    console.log("test");
     const response = futureOrdersApi.getShipment(shipmentId, data.token, label);
 
     switch (type) {
@@ -182,6 +179,26 @@ function getShipmentStatus(data, shipmentId, label, type) {
     }
 }
 
+/**
+ * Gets the status feed for notifications.
+ * @param {Object} data - data object containing token.
+ * @param {string} label - the label for the request.
+ * @description This function retrieves the status feed for notifications using the sequence number query string start position.
+ */
+function getStatusFeed(data, label) {
+    const sequenceNumber = 0; // starting position for the status feed
+    const response = futureOrdersApi.getStatusFeed(sequenceNumber, data.token, label);
+
+    check(response, {
+        "GET status feed. Status is 200 OK": (r) => r.status === 200,
+    });
+
+    const body = JSON.parse(response.body);
+
+    check(body, {
+        "GET status feed. Response body is not empty": (r) => Object.keys(r).length > 0,
+    });
+}
 
 /**
  * The main function to run the test.
@@ -199,5 +216,6 @@ export default function (data) {
 
     // checking shipment details for the SMS order
     getShipmentStatus(data, responseObject.notification.shipmentId, get_sms_notifications, "SMS");
-
+    
+    getStatusFeed(data, post_mail_order);
 }
