@@ -43,12 +43,12 @@ namespace Altinn.Notifications.Core.Services
         /// <inheritdoc/>
         public DateTime GetSmsExpiryDateTime(DateTime referenceDateTime)
         {
-            if (CanSendSmsNow())
+            var (localDateTime, sendWindowStartTime, sendWindowEndTime) = GetLocalDateTimeAndSendWindow(referenceDateTime);
+
+            if (localDateTime.TimeOfDay > sendWindowStartTime && localDateTime.TimeOfDay < sendWindowEndTime)
             {
                 return referenceDateTime.AddHours(48);
             }
-
-            var (localDateTime, sendWindowStartTime, _) = GetLocalDateTimeAndSendWindow(referenceDateTime);
 
             var nextSendWindowStartDateTime = localDateTime.Date.AddHours(48).Add(sendWindowStartTime);
 
