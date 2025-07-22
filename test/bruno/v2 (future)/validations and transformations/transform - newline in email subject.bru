@@ -1,5 +1,5 @@
 meta {
-  name: transform newline in email subject
+  name: transform - newline in email subject
   type: http
   seq: 1
 }
@@ -18,8 +18,8 @@ body:json {
       "recipientEmail": {
         "emailAddress": "{{process.env.TESTDATA_MY_EMAIL}}",
         "emailSettings": {        
-          "subject": "Multiline\nEmail Subject - \r\nCovering\n\rall\rplatforms",
-          "body": "Multiline\nEmail Body - \r\nCovering\n\rall\rplatforms",
+          "subject": "(TEST) Multiline\nEmail Subject - \r\nCovering\n\rall\rplatforms",
+          "body": "(TEST) Multiline\nEmail Body - \r\nCovering\n\rall\rplatforms\n\n(Env.: {{Environment}} - Ref: {{random_idempotency_id}})",
           "contentType": "Plain",
           "sendingTimePolicy": "Anytime"
         }
