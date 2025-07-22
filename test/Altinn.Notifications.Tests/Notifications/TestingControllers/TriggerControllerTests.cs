@@ -40,7 +40,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
         public async Task Trigger_SendSmsNotifications_AfterBusinessHours_ServiceNotCalled()
         {
             // Arrange
-            _notificationScheduleMock.Setup(x => x.CanSendSmsNotifications()).Returns(false);
+            _notificationScheduleMock.Setup(x => x.IsWithinSmsSendWindow()).Returns(false);
 
             // Act
             ActionResult result = await _controller.Trigger_SendSmsNotificationsDaytime();
@@ -54,7 +54,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
         public async Task Trigger_SendSmsNotifications_BeforeBusinessHours_ServiceNotCalled()
         {
             // Arrange
-            _notificationScheduleMock.Setup(x => x.CanSendSmsNotifications()).Returns(false);
+            _notificationScheduleMock.Setup(x => x.IsWithinSmsSendWindow()).Returns(false);
 
             // Act
             ActionResult result = await _controller.Trigger_SendSmsNotificationsDaytime();

@@ -67,9 +67,9 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
             throw new InvalidOperationException("SMS template is not found or is not of the correct type.");
         }
 
-        var expiryDateTime = GetExpiryDateTime(order);
-
         var messagesCount = CalculateNumberOfMessages(smsTemplate.Body);
+
+        var expiryDateTime = _notificationScheduleService.GetSmsExpiryDateTime();
 
         var allSmsRecipients = await GetSmsRecipientsAsync(recipients, smsTemplate.Body);
 
@@ -114,9 +114,9 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
             throw new InvalidOperationException("SMS template is not found or is not of the correct type.");
         }
 
-        var expiryDateTime = GetExpiryDateTime(order);
-
         var messagesCount = CalculateNumberOfMessages(smsTemplate.Body);
+
+        var expiryDateTime = _notificationScheduleService.GetSmsExpiryDateTime();
 
         var allSmsRecipients = await GetSmsRecipientsAsync(recipients, smsTemplate.Body);
 
@@ -177,26 +177,6 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
     private bool RequiresCustomization(string? templatePart)
     {
         return _keywordsService.ContainsRecipientNumberPlaceholder(templatePart) || _keywordsService.ContainsRecipientNamePlaceholder(templatePart);
-    }
-
-    /// <summary>
-    /// Calculates the expiry date and time for an SMS notification based on the sending time policy and current SMS send window.
-    /// </summary>
-    /// <remarks>
-    /// - If the sending time policy is <see cref="SendingTimePolicy.Anytime"/>, the expiry time is set to 2 days after the requested send time.
-    /// - If the sending time policy is <see cref="SendingTimePolicy.Daytime"/> and the current time is within the allowed window, expiry time is also set to 2 days after the requested send time.
-    /// - Otherwise, the expiry time is set to 3 days after the requested send time.
-    /// </remarks>
-    /// <param name="order">The notification order containing the requested send time and sending time policy.</param>
-    /// <returns>The calculated expiry time for the notification order.</returns>
-    private DateTime GetExpiryDateTime(NotificationOrder order)
-    {
-        return order.SendingTimePolicy switch
-        {
-            SendingTimePolicy.Anytime => order.RequestedSendTime.AddDays(2),
-
-            _ => _notificationScheduleService.CanSendSmsNotifications() ? order.RequestedSendTime.AddDays(2) : order.RequestedSendTime.AddDays(3),
-        };
     }
 
     /// <summary>
