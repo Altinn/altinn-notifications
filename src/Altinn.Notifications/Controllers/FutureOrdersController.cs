@@ -39,7 +39,7 @@ public class FutureOrdersController : ControllerBase
     }
 
     /// <summary>
-    /// Creates a new notification order that has one or more reminders.
+    /// Creates a new notification order with zero or more reminders
     /// </summary>
     /// <remarks>
     /// The API will accept the request after some basic validation of the request.

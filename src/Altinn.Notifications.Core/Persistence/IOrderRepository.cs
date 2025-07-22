@@ -1,4 +1,5 @@
 ﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Shared;
 
@@ -17,23 +18,6 @@ public interface IOrderRepository
     public Task<NotificationOrder> Create(NotificationOrder order);
 
     /// <summary>
-    /// Creates a new high-priority instant notification order in the database for immediate processing.
-    /// </summary>
-    /// <param name="instantNotificationOrder">
-    /// The instant notification order containing recipient and delivery information.
-    /// </param>
-    /// <param name="notificationOrder">
-    /// The corresponding standard notification order that will be used for tracking and processing.
-    /// </param>
-    /// <param name="cancellationToken">
-    /// A token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.
-    /// </param>
-    /// <returns>
-    /// The persisted <see cref="InstantNotificationOrder"/> with generated IDs and timestamp information.
-    /// </returns>
-    public Task<InstantNotificationOrder> Create(InstantNotificationOrder instantNotificationOrder, NotificationOrder notificationOrder, CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Creates a new notification order chain in the database, consisting of a main notification and optional reminders.
     /// </summary>
     /// <param name="orderChain">The chain containing settings for the notification sequence.</param>
@@ -49,6 +33,33 @@ public interface IOrderRepository
     /// - Zero or more reminder notifications that will be processed after their respective delays.
     /// </remarks>
     public Task<List<NotificationOrder>> Create(NotificationOrderChainRequest orderChain, NotificationOrder mainOrder, List<NotificationOrder>? reminders, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Creates a new new high-priority instant notification order in the database.
+    /// </summary>
+    /// <param name="instantNotificationOrder">
+    /// The <see cref="InstantNotificationOrder"/> containing recipient, message, and delivery details.
+    /// </param>
+    /// <param name="notificationOrder">
+    /// The <see cref="NotificationOrder"/> representing the standard notification order.
+    /// </param>
+    /// <param name="smsNotification">
+    /// The <see cref="SmsNotification"/> instance containing SMS-specific delivery information.
+    /// </param>
+    /// <param name="smsExpiryDateTime">
+    /// The <see cref="DateTime"/> indicating when the SMS notification expires and should no longer be delivered.
+    /// </param>
+    /// <param name="smsMessageCount">
+    /// The number of SMS messages to be sent based on the message content.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A <see cref="CancellationToken"/> to monitor for cancellation requests. Defaults to <see cref="CancellationToken.None"/>.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task{TResult}"/> containing a <see cref="InstantNotificationOrderTracking"/> with tracking information,
+    /// or <c>null</c> if the operation failed.
+    /// </returns>
+    Task<InstantNotificationOrderTracking?> Create(InstantNotificationOrder instantNotificationOrder, NotificationOrder notificationOrder, SmsNotification smsNotification, DateTime smsExpiryDateTime, int smsMessageCount, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets a list of notification orders where requestedSendTime has passed
@@ -149,8 +160,8 @@ public interface IOrderRepository
     /// A token to monitor for cancellation requests. Defaults to <see cref="CancellationToken.None"/>.
     /// </param>
     /// <returns>
-    /// A <see cref="Task{TResult}"/> containing a <see cref="InstantNotificationOrderTracking"/> with identifiers and sender references for the instant notification order,
+    /// A <see cref="Task{TResult}"/> containing a <see cref="InstantNotificationOrderTracking"/> with tracking information,
     /// or <c>null</c> if no matching order is found for the provided parameters.
     /// </returns>
-    Task<InstantNotificationOrderTracking?> GetInstantOrderTracking(string creatorName, string idempotencyId, CancellationToken cancellationToken = default);
+    Task<InstantNotificationOrderTracking?> RetrieveTrackingInformation(string creatorName, string idempotencyId, CancellationToken cancellationToken = default);
 }
