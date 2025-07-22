@@ -10,6 +10,7 @@
     -e encodedJwk={the encoded JSON web key used to sign the maskinporten token request} \
     -e env={environment: at22, at23, at24, tt02, prod} \
     -e emailRecipient={an email address to add as a notification recipient} \
+    -e smsRecipient={a mobile number to include as a notification recipient} \
     -e ninRecipient={a national identity number of a person to include as a notification recipient} \
     -e subscriptionKey={the subscription key with access to the automated tests product} \
     -e runFullTestSet=true
@@ -30,17 +31,21 @@ import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 
 import * as setupToken from "../setup.js";
 import * as futureOrdersApi from "../api/notifications/future.js";
-import { post_mail_order, get_mail_notifications, setEmptyThresholds } from "./threshold-labels.js";
+import { post_mail_order, post_sms_order, get_mail_notifications, setEmptyThresholds, get_sms_notifications } from "./threshold-labels.js";
 
-const labels = [post_mail_order, get_mail_notifications];
+const labels = [post_mail_order, post_sms_order, get_mail_notifications, get_sms_notifications];
 
 const emailOrderRequestJson = JSON.parse(
     open("../data/orders/order-v2-email.json")
+);
+const smsOrderRequestJson = JSON.parse(
+    open("../data/orders/order-v2-sms.json")
 );
 
 const environment = __ENV.env;
 const scopes = "altinn:serviceowner/notifications.create";
 const emailRecipient = __ENV.emailRecipient ? __ENV.emailRecipient.toLowerCase() : environment === "yt01"? "noreply@altinn.no" : null;
+const smsRecipient = __ENV.smsRecipient ? __ENV.smsRecipient.toLowerCase() : environment === "yt01" ? "+4799999999" : null;
 
 export const options = {
     summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(95)', 'p(99)', 'p(99.5)', 'p(99.9)', 'count'],
@@ -57,31 +62,39 @@ setEmptyThresholds(labels, options);
  */
 export function setup() {
     const token = setupToken.getAltinnTokenForOrg(scopes);
-    const idempotencyId = uuidv4();
+    const idempotencyIdEmail = uuidv4();
+    const idempotencyIdSms = uuidv4();
     const sendersReference = uuidv4();
 
     if (emailRecipient) {
         emailOrderRequestJson.recipient.recipientEmail.emailAddress = emailRecipient;
     }
 
-    const emailOrderRequest = { ...emailOrderRequestJson, idempotencyId };
+    if (smsRecipient) {
+        smsOrderRequestJson.recipient.recipientSms.phoneNumber = smsRecipient;
+    }
+
+    const emailOrderRequest = { ...emailOrderRequestJson, idempotencyId: idempotencyIdEmail };
 
     const runFullTestSet = __ENV.runFullTestSet
         ? __ENV.runFullTestSet.toLowerCase().includes("true")
         : false;
+
+    const smsOrderRequest = { ...smsOrderRequestJson, idempotencyId: idempotencyIdSms, sendersReference };
 
     return {
         token,
         runFullTestSet,
         sendersReference,
         emailOrderRequest,
+        smsOrderRequest
     };
 }
 
 /**
- * Posts an email notification order request.
+ * Posts an email notification order request using the v2 API.
  * @param {Object} data - The data object containing emailOrderRequest and token.
- * @returns {string} The selfLink of the created order.
+ * @returns {string} The response body of the created order.
  */
 function postEmailNotificationOrderRequest(data) {
     const response = futureOrdersApi.postEmailNotificationOrderV2(
@@ -105,22 +118,68 @@ function postEmailNotificationOrderRequest(data) {
     return response.body;
 }
 
-
 /**
- * Gets the email notification shipment status.
- * @param {Object} data - The data object containing token.
- * @param {string} shipmentId - The ID of the order.
+ * Posts an SMS notification order request using the v2 API.
+ * @param {Object} data - The data object containing smsOrderRequest and token.
+ * @returns {string} The response body of the created order.
  */
-function getShipmentStatus(data, shipmentId) {
-    const response = futureOrdersApi.getShipment(shipmentId, data.token, get_mail_notifications);
+function postSmsNotificationOrderRequest(data) {
+    const response = futureOrdersApi.postSmsNotificationOrder(
+        JSON.stringify(data.smsOrderRequest),
+        data.token,
+        post_sms_order
+    );
+
+    console.log(response);
+
+    const success = check(response, {
+        "POST SMS notification order request. Status is 201 Created": (r) => r.status === 201
+    });
+
+    stopIterationOnFail("POST SMS notification order request failed", success);
+
+    const selfLink = response.headers["Location"];
 
     check(response, {
-        "GET email shipment. Status is 200 OK": (r) => r.status === 200,
+        "POST SMS notification order request. Location header provided": (_) => selfLink,
+        "POST SMS notification order request. Response body is not an empty string": (r) => r.body
     });
 
-    check(JSON.parse(response.body), {
-        "GET email shipment status. ShipmentId property is a match": (shipmentResponse) => shipmentResponse.shipmentId === shipmentId,
-    });
+    return response.body;
+}
+
+
+/**
+ * Gets the notification shipment status for email or SMS.
+ * @param {Object} data - The data object containing token.
+ * @param {string} shipmentId - The ID of the order.
+ * @param {string} label - The label for the request.
+ * @param {string} type - The type of notification (e.g., "Email" or "SMS").
+ */
+function getShipmentStatus(data, shipmentId, label, type) {
+    console.log("test");
+    const response = futureOrdersApi.getShipment(shipmentId, data.token, label);
+
+    switch (type) {
+        case "Email": 
+            check(response, {
+                "GET shipment details for Email. Status is 200 OK": (r) => r.status === 200,
+            });
+            check(JSON.parse(response.body), {
+                "GET shipment details for Email. ShipmentId property is a match": (shipmentResponse) => shipmentResponse.shipmentId === shipmentId,
+            });
+            break;
+        case "SMS":
+            check(response, {
+                "GET SMS shipment details for SMS. Status is 200 OK": (r) => r.status === 200,
+            });
+            check(JSON.parse(response.body), {
+                "GET SMS shipment details for SMS. ShipmentId property is a match": (shipmentResponse) => shipmentResponse.shipmentId === shipmentId,
+            });
+            break;
+        default:
+            throw new Error(`Unknown notification type: ${type}`);
+    }
 }
 
 
@@ -129,17 +188,16 @@ function getShipmentStatus(data, shipmentId) {
  * @param {Object} data - The data object containing runFullTestSet and other test data.
  */
 export default function (data) {
-    const response = postEmailNotificationOrderRequest(data);
-    const responseObject = JSON.parse(response);
+    let response = postEmailNotificationOrderRequest(data);
+    let responseObject = JSON.parse(response);
 
-    getShipmentStatus(data, responseObject.notification.shipmentId);
+    // checking shipment details for the email order
+    getShipmentStatus(data, responseObject.notification.shipmentId, get_mail_notifications, "Email");
 
-    // if (data.runFullTestSet) {
-    //     getNotificationOrderById(data, selfLink, id);
-    //     getNotificationOrderBySendersReference(data);
-    //     getNotificationOrderWithStatus(data, id, "Email");
-    //     getEmailNotificationSummary(data, id);
-    //     postEmailNotificationOrderWithNegativeConditionCheck(data);
-    // } else {
-    // }
+    response = postSmsNotificationOrderRequest(data);
+    responseObject = JSON.parse(response);
+
+    // checking shipment details for the SMS order
+    getShipmentStatus(data, responseObject.notification.shipmentId, get_sms_notifications, "SMS");
+
 }

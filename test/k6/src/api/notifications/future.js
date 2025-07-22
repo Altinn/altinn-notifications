@@ -19,3 +19,11 @@ export function getShipment(orderId, token, label) {
 
   return http.get(endpoint, params);
 }
+
+export function postSmsNotificationOrder(serializedOrder, token, label) {
+  const endpoint = config.notifications.orders_v2;
+
+  const params = apiHelpers.buildHeaderWithBearerAndContentType(token);
+  params.tags = { name: label };
+  return http.post(endpoint, serializedOrder, params);
+}

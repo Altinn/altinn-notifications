@@ -1,0 +1,11 @@
+{
+  "recipient": {
+     "recipientSms": {
+      "smsSettings": {
+        "body": "This is a plain test body for testing SMS services",
+        "sendingTimePolicy": "Daytime"
+      }
+    }
+  }
+}
+  
