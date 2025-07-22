@@ -6,12 +6,12 @@
 public interface INotificationScheduleService
 {
     /// <summary>
-    /// Determines whether the current UTC time is within the configured window for sending SMS messages.
+    /// Determine whether SMS messages are allowed to be sent at the current UTC time, based on the configured sending window.
     /// </summary>
     /// <returns>
-    /// <c>true</c> if SMS messages can be sent at the current UTC time; otherwise, <c>false</c>.
+    /// <c>true</c> if SMS messages can be sent now; otherwise, <c>false</c>.
     /// </returns>
-    bool IsWithinSmsSendWindow();
+    bool CanSendSmsNow();
 
     /// <summary>
     /// Calculates when an SMS notification should expire, based on a given UTC time and the configured sending window.

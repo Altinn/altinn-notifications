@@ -31,7 +31,7 @@ namespace Altinn.Notifications.Core.Services
         }
 
         /// <inheritdoc/>
-        public bool IsWithinSmsSendWindow()
+        public bool CanSendSmsNow()
         {
             DateTime dateTimeUtc = _dateTimeService.UtcNow();
 
@@ -43,24 +43,20 @@ namespace Altinn.Notifications.Core.Services
         /// <inheritdoc/>
         public DateTime GetSmsExpiryDateTime(DateTime referenceDateTime)
         {
-            var (localDateTime, sendWindowStartTime, sendWindowEndTime) = GetLocalDateTimeAndSendWindow(referenceDateTime);
-
-            if (localDateTime.TimeOfDay > sendWindowStartTime && localDateTime.TimeOfDay < sendWindowEndTime)
+            if (CanSendSmsNow())
             {
                 return referenceDateTime.AddHours(48);
             }
 
-            var nextSendWindowStartDateTime = localDateTime.Date.Add(sendWindowStartTime);
+            var (localDateTime, sendWindowStartTime, _) = GetLocalDateTimeAndSendWindow(referenceDateTime);
 
-            TimeZoneInfo norwgianTimeZone = TimeZoneInfo.FindSystemTimeZoneById(_timeZoneId);
+            var nextSendWindowStartDateTime = localDateTime.Date.AddHours(48).Add(sendWindowStartTime);
 
-            var expiryDateTimeInLocalZone = localDateTime.TimeOfDay < sendWindowStartTime ? nextSendWindowStartDateTime : nextSendWindowStartDateTime.AddDays(1);
+            var expiryDateTime = localDateTime.TimeOfDay < sendWindowStartTime ? nextSendWindowStartDateTime : nextSendWindowStartDateTime.AddDays(1);
 
-            DateTime expiryUtc = TimeZoneInfo.ConvertTimeToUtc(expiryDateTimeInLocalZone, norwgianTimeZone);
+            TimeZoneInfo localTimeZone = TimeZoneInfo.FindSystemTimeZoneById(_timeZoneId);
 
-            var expiryDateTime = new DateTime(expiryUtc.Year, expiryUtc.Month, expiryUtc.Day + 2, expiryUtc.Hour, expiryUtc.Minute, expiryUtc.Second, DateTimeKind.Utc);
-
-            return expiryDateTime;
+            return TimeZoneInfo.ConvertTimeToUtc(expiryDateTime, localTimeZone);
         }
 
         /// <summary>
