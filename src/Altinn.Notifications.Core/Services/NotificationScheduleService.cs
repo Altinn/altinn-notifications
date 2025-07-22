@@ -8,7 +8,7 @@ using Microsoft.Extensions.Options;
 namespace Altinn.Notifications.Core.Services
 {
     /// <summary>
-    /// Implementation of the <see cref="INotificationScheduleService"/> using the "W. Europe Standard Time".
+    /// Provides scheduling logic for SMS notifications.
     /// </summary>
     public class NotificationScheduleService : INotificationScheduleService
     {
@@ -35,49 +35,66 @@ namespace Altinn.Notifications.Core.Services
         {
             DateTime dateTimeUtc = _dateTimeService.UtcNow();
 
-            TimeZoneInfo norwayTimeZone = TimeZoneInfo.FindSystemTimeZoneById(_timeZoneId);
+            var (equivalentNorwayDateTime, sendWindowStartTime, sendWindowEndTime) = GetEquivalentNorwayTimeAndSendWindow(dateTimeUtc);
 
-            DateTime norwayTime = TimeZoneInfo.ConvertTimeFromUtc(dateTimeUtc, norwayTimeZone);
+            TimeSpan equivalentNorwayTime = equivalentNorwayDateTime.TimeOfDay;
 
-            TimeSpan startTime = new(_config.SmsSendWindowStartHour, 0, 0);
-            TimeSpan endTime = new(_config.SmsSendWindowEndHour, 0, 0);
-
-            TimeSpan currentTime = norwayTime.TimeOfDay;
-
-            return startTime < currentTime && currentTime < endTime;
+            return equivalentNorwayTime > sendWindowStartTime && equivalentNorwayTime < sendWindowEndTime;
         }
 
         /// <inheritdoc/>
-        public DateTime GetSmsExpiryDateTime()
+        public DateTime GetSmsExpiryDateTime(DateTime referenceDateTime)
         {
-            DateTime dateTimeUtc = _dateTimeService.UtcNow();
+            var (equivalentNorwayDateTime, sendWindowStartTime, sendWindowEndTime) = GetEquivalentNorwayTimeAndSendWindow(referenceDateTime);
 
-            TimeZoneInfo norwayTimeZone = TimeZoneInfo.FindSystemTimeZoneById(_timeZoneId);
+            TimeSpan equivalentNorwayTime = equivalentNorwayDateTime.TimeOfDay;
 
-            DateTime norwayTime = TimeZoneInfo.ConvertTimeFromUtc(dateTimeUtc, norwayTimeZone);
+            DateTime referenceExpiryDateTime;
 
-            TimeSpan startTime = new(_config.SmsSendWindowStartHour, 0, 0);
-            TimeSpan endTime = new(_config.SmsSendWindowEndHour, 0, 0);
-
-            TimeSpan currentTime = norwayTime.TimeOfDay;
-
-            if (startTime < currentTime && currentTime < endTime)
+            if (equivalentNorwayTime > sendWindowStartTime && equivalentNorwayTime < sendWindowEndTime)
             {
-                // If the current time is within the allowed send window for SMS, set the expiry to 48 hours from now.
-                return norwayTime.AddHours(48);
-            }
-            else if (currentTime < startTime)
-            {
-                // If the current time is before the allowed send window for SMS, set the expiry to 48 hours after today's window starts.
-                return norwayTime.Date.Add(startTime).AddHours(48);
+                referenceExpiryDateTime = equivalentNorwayDateTime;
             }
             else
             {
-                // If the current time is after the allowed send window for SMS, set the expiry to 48 hours after the next window starts.
-                DateTime nextStart = norwayTime.Date.AddDays(1).Add(startTime);
-                TimeSpan untilNextStart = nextStart - norwayTime;
-                return norwayTime.Add(untilNextStart).AddHours(48);
+                var startTimeForToday = equivalentNorwayDateTime.Date.Add(sendWindowStartTime);
+                referenceExpiryDateTime = equivalentNorwayTime < sendWindowStartTime ? startTimeForToday : startTimeForToday.AddDays(1);
             }
+
+            return referenceExpiryDateTime.AddHours(48);
+        }
+
+        /// <summary>
+        /// Retrieves the corresponding local time in Norway, along with the configured start and end times for sending SMS messages.
+        /// </summary>
+        /// <param name="dateTimeUtc">The UTC time to convert to Norway local time.</param>
+        /// <returns>
+        /// A tuple containing:
+        /// <list type="table">
+        ///   <item><description>The corresponding Norway local time for the given UTC input.</description></item>
+        ///   <item><description>The start time of the SMS send window.</description></item>
+        ///   <item><description>The end time of the SMS send window.</description></item>
+        /// </list>
+        /// </returns>
+        private (DateTime EquivalentNorwayDateTime, TimeSpan SendWindowStartTime, TimeSpan SendWindowEndTime) GetEquivalentNorwayTimeAndSendWindow(DateTime dateTimeUtc)
+        {
+            DateTime equivalentNorwayTime;
+
+            switch (dateTimeUtc.Kind)
+            {
+                case DateTimeKind.Utc:
+                    TimeZoneInfo norwayTimeZone = TimeZoneInfo.FindSystemTimeZoneById(_timeZoneId);
+                    equivalentNorwayTime = TimeZoneInfo.ConvertTimeFromUtc(dateTimeUtc, norwayTimeZone);
+                    break;
+
+                default:
+                    throw new ArgumentException("DateTime must be in UTC format.", nameof(dateTimeUtc));
+            }
+
+            TimeSpan sendWindowStartTime = new(_config.SmsSendWindowStartHour, 0, 0);
+            TimeSpan sendWindowEndTime = new(_config.SmsSendWindowEndHour, 0, 0);
+
+            return (equivalentNorwayTime, sendWindowStartTime, sendWindowEndTime);
         }
     }
 }

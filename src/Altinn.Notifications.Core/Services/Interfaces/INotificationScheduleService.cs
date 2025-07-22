@@ -6,18 +6,21 @@
 public interface INotificationScheduleService
 {
     /// <summary>
-    /// Determines whether the current local time is within the configured SMS send window.
+    /// Determines whether the current UTC time is within the configured window for sending SMS messages.
     /// </summary>
     /// <returns>
-    /// <c>true</c> if the current local time falls within the configured SMS send window; otherwise, <c>false</c>.
+    /// <c>true</c> if SMS messages can be sent at the current UTC time; otherwise, <c>false</c>.
     /// </returns>
     bool IsWithinSmsSendWindow();
 
     /// <summary>
-    /// Calculates the expiry date and time for an SMS notification based on the current time and the configured send window.
+    /// Calculates when an SMS notification should expire, based on a given UTC time and the configured sending window.
     /// </summary>
+    /// <param name="referenceDateTime">
+    /// The UTC time used as the starting point for calculating the expiry date and time.
+    /// </param>
     /// <returns>
-    /// A <see cref="DateTime"/> value representing when the SMS notification should expire.
+    /// The UTC date and time when the SMS notification will expire.
     /// </returns>
-    DateTime GetSmsExpiryDateTime();
+    DateTime GetSmsExpiryDateTime(DateTime referenceDateTime);
 }
