@@ -69,7 +69,7 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
 
         var messagesCount = CalculateNumberOfMessages(smsTemplate.Body);
 
-        var expiryDateTime = _notificationScheduleService.GetSmsExpiryDateTime();
+        var expiryDateTime = _notificationScheduleService.GetSmsExpiryDateTime(order.RequestedSendTime);
 
         var allSmsRecipients = await GetSmsRecipientsAsync(recipients, smsTemplate.Body);
 
@@ -116,7 +116,7 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
 
         var messagesCount = CalculateNumberOfMessages(smsTemplate.Body);
 
-        var expiryDateTime = _notificationScheduleService.GetSmsExpiryDateTime();
+        var expiryDateTime = _notificationScheduleService.GetSmsExpiryDateTime(order.RequestedSendTime);
 
         var allSmsRecipients = await GetSmsRecipientsAsync(recipients, smsTemplate.Body);
 
