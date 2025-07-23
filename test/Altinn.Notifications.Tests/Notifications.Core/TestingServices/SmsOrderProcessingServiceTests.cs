@@ -26,15 +26,52 @@ public class SmsOrderProcessingServiceTests
     private static DateTime _requestedSendTime = new(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 10, 0, 0, DateTimeKind.Utc);
 
     [Fact]
-    public async Task ProcessOrder_ExpectedInputToService()
+    public async Task ProcessOrder_WhenSendingTimePolicyIsDaytime_ScheduleServiceIsCalled()
     {
         // Arrange
         var order = new NotificationOrder()
         {
             ResourceId = null,
-            Id = _notificationOrderId,
             ConditionEndpoint = null,
             IgnoreReservation = null,
+            Id = _notificationOrderId,
+            Created = _requestedSendTime,
+            Creator = new Creator("ttd"),
+            Type = OrderType.Notification,
+            RequestedSendTime = _requestedSendTime,
+            SendingTimePolicy = SendingTimePolicy.Daytime,
+            NotificationChannel = NotificationChannel.Sms,
+            Templates = [new SmsTemplate("Altinn", "this is the body")],
+            Recipients =
+            [
+                new Recipient([new SmsAddressPoint("+4799999999")], nationalIdentityNumber: "enduser-nin")
+            ]
+        };
+
+        var notificationScheduleServiceMock = new Mock<INotificationScheduleService>();
+        notificationScheduleServiceMock
+            .Setup(e => e.GetSmsExpirationDateTime(_requestedSendTime))
+            .Returns(_requestedSendTime.AddHours(48));
+
+        var service = GetTestService(notificationScheduleService: notificationScheduleServiceMock.Object);
+
+        // Act
+        await service.ProcessOrder(order);
+
+        // Assert
+        notificationScheduleServiceMock.Verify(e => e.GetSmsExpirationDateTime(It.IsAny<DateTime>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ProcessOrder_WhenValidSmsOrderIsGiven_SmsNotificationServiceIsCalled()
+    {
+        // Arrange
+        var order = new NotificationOrder()
+        {
+            ResourceId = null,
+            ConditionEndpoint = null,
+            IgnoreReservation = null,
+            Id = _notificationOrderId,
             Created = _requestedSendTime,
             Creator = new Creator("ttd"),
             Type = OrderType.Notification,
@@ -74,46 +111,48 @@ public class SmsOrderProcessingServiceTests
 
         // Assert
         notificationServiceMock.VerifyAll();
+        notificationScheduleServiceMock.Verify(e => e.GetSmsExpirationDateTime(It.IsAny<DateTime>()), Times.Never);
     }
 
     [Fact]
-    public async Task ProcessOrder_NotificationServiceCalledOnceForEachRecipient()
+    public async Task ProcessOrder_WhenSendingTimePolicyIsAnytime_ScheduleServiceIsNotCalled()
     {
         // Arrange
         var order = new NotificationOrder()
         {
+            ResourceId = null,
             Id = _notificationOrderId,
+            ConditionEndpoint = null,
+            IgnoreReservation = null,
+            Created = _requestedSendTime,
+            Creator = new Creator("ttd"),
+            Type = OrderType.Notification,
+            RequestedSendTime = _requestedSendTime,
+            SendingTimePolicy = SendingTimePolicy.Anytime,
             NotificationChannel = NotificationChannel.Sms,
+            Templates = [new SmsTemplate("Altinn", "this is the body")],
             Recipients =
             [
-                new()
-                {
-                    OrganizationNumber = "123456",
-                    AddressInfo = [new SmsAddressPoint("+4799999999")]
-                },
-                new()
-                {
-                    OrganizationNumber = "654321",
-                    AddressInfo = [new SmsAddressPoint("+4799999999")]
-                }
-            ],
-            Templates = [new SmsTemplate("Altinn", "this is the body")]
+                new Recipient([new SmsAddressPoint("+4799999999")], nationalIdentityNumber: "enduser-nin")
+            ]
         };
 
-        var notificationServiceMock = new Mock<ISmsNotificationService>();
-        notificationServiceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<List<SmsAddressPoint>>(), It.IsAny<SmsRecipient>(), It.IsAny<int>(), It.IsAny<bool>()));
+        var notificationScheduleServiceMock = new Mock<INotificationScheduleService>();
+        notificationScheduleServiceMock
+            .Setup(e => e.GetSmsExpirationDateTime(_requestedSendTime))
+            .Returns(_requestedSendTime.AddHours(48));
 
-        var service = GetTestService(smsService: notificationServiceMock.Object);
+        var service = GetTestService(notificationScheduleService: notificationScheduleServiceMock.Object);
 
         // Act
         await service.ProcessOrder(order);
 
         // Assert
-        notificationServiceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<List<SmsAddressPoint>>(), It.IsAny<SmsRecipient>(), It.IsAny<int>(), It.IsAny<bool>()), Times.Exactly(2));
+        notificationScheduleServiceMock.Verify(e => e.GetSmsExpirationDateTime(It.IsAny<DateTime>()), Times.Never);
     }
 
     [Fact]
-    public async Task ProcessOrder_RecipientMissingMobileNumber_ContactPointServiceCalled()
+    public async Task ProcessOrder_WhenRecipientIsMissingMobileNumber_ContactPointServiceIsCalled()
     {
         // Arrange
         var order = new NotificationOrder()
@@ -161,7 +200,7 @@ public class SmsOrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessOrderRetry_NotificationServiceCalledIfRecipientNotInDatabase()
+    public async Task ProcessOrderRetry_WhenRecipientsNotInDatabase_NotificationServiceIsCalledForEach()
     {
         // Arrange
         var order = new NotificationOrder()
@@ -199,11 +238,47 @@ public class SmsOrderProcessingServiceTests
         notificationServiceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<List<SmsAddressPoint>>(), It.IsAny<SmsRecipient>(), It.IsAny<int>(), It.IsAny<bool>()), Times.Exactly(2));
     }
 
+    [Fact]
+    public async Task ProcessOrder_WhenMultipleRecipientsAreGiven_NotificationServiceIsCalledOncePerRecipient()
+    {
+        // Arrange
+        var order = new NotificationOrder()
+        {
+            Id = _notificationOrderId,
+            NotificationChannel = NotificationChannel.Sms,
+            Recipients =
+            [
+                new()
+                {
+                    OrganizationNumber = "123456",
+                    AddressInfo = [new SmsAddressPoint("+4799999999")]
+                },
+                new()
+                {
+                    OrganizationNumber = "654321",
+                    AddressInfo = [new SmsAddressPoint("+4799999999")]
+                }
+            ],
+            Templates = [new SmsTemplate("Altinn", "this is the body")]
+        };
+
+        var notificationServiceMock = new Mock<ISmsNotificationService>();
+        notificationServiceMock.Setup(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<List<SmsAddressPoint>>(), It.IsAny<SmsRecipient>(), It.IsAny<int>(), It.IsAny<bool>()));
+
+        var service = GetTestService(smsService: notificationServiceMock.Object);
+
+        // Act
+        await service.ProcessOrder(order);
+
+        // Assert
+        notificationServiceMock.Verify(s => s.CreateNotification(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<List<SmsAddressPoint>>(), It.IsAny<SmsRecipient>(), It.IsAny<int>(), It.IsAny<bool>()), Times.Exactly(2));
+    }
+
     [Theory]
     [InlineData(160, 1)]
     [InlineData(161, 2)]
     [InlineData(18685, 16)]
-    public async Task ProcessOrder_SendsCorrectSmsSegmentCount_ForVariousMessageLengths(int messageLength, int expectedSegmentCount)
+    public async Task ProcessOrder_WhenMessageLengthVaries_CorrectSmsSegmentCountIsCalculated(int messageLength, int expectedSegmentCount)
     {
         // Arrange
         var order = new NotificationOrder()
