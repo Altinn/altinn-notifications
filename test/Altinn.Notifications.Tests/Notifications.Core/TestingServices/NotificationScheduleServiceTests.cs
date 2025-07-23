@@ -82,7 +82,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             var expectedExpiryDateTime = new DateTime(2025, 08, 27, 10, 0, 0, DateTimeKind.Utc);
 
             // Act
-            var expiryDateTime = _notificationScheduleService.GetSmsExpiryDateTime(requestedSendTime);
+            var expiryDateTime = _notificationScheduleService.GetSmsExpirationDateTime(requestedSendTime);
 
             // Assert
             Assert.Equal(expectedExpiryDateTime, expiryDateTime);
@@ -99,7 +99,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             var expectedExpiryDateTimeInUTCFormat = ConvertNorwegianLocalTimeToUtc(expectedExpiryDateTimeInLocalFormat);
 
             // Act
-            var expiryDateTime = _notificationScheduleService.GetSmsExpiryDateTime(requestedSendTime);
+            var expiryDateTime = _notificationScheduleService.GetSmsExpirationDateTime(requestedSendTime);
 
             // Assert
             Assert.Equal(expectedExpiryDateTimeInUTCFormat, expiryDateTime);
@@ -116,7 +116,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             var expectedExpiryDateTimeInUTCFormat = ConvertNorwegianLocalTimeToUtc(expectedExpiryDateTimeInLocalFormat);
 
             // Act
-            var expiryDateTime = _notificationScheduleService.GetSmsExpiryDateTime(requestedSendTime);
+            var expiryDateTime = _notificationScheduleService.GetSmsExpirationDateTime(requestedSendTime);
 
             // Assert
             Assert.Equal(expectedExpiryDateTimeInUTCFormat, expiryDateTime);

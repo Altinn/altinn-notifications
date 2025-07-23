@@ -28,15 +28,15 @@ public class SmsNotificationService : ISmsNotificationService
     /// </summary>
     public SmsNotificationService(
         IGuidService guid,
+        IKafkaProducer producer,
         IDateTimeService dateTime,
         ISmsNotificationRepository repository,
-        IKafkaProducer producer,
         IOptions<KafkaSettings> kafkaSettings)
     {
         _guid = guid;
         _dateTime = dateTime;
-        _repository = repository;
         _producer = producer;
+        _repository = repository;
         _smsQueueTopicName = kafkaSettings.Value.SmsQueueTopicName;
     }
 

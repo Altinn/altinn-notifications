@@ -22,5 +22,5 @@ public interface INotificationScheduleService
     /// <returns>
     /// The UTC date and time when the SMS notification will expire.
     /// </returns>
-    DateTime GetSmsExpiryDateTime(DateTime referenceDateTime);
+    DateTime GetSmsExpirationDateTime(DateTime referenceDateTime);
 }

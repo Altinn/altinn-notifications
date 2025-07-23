@@ -35,28 +35,31 @@ namespace Altinn.Notifications.Core.Services
         {
             DateTime dateTimeUtc = _dateTimeService.UtcNow();
 
-            var (localDateTime, sendWindowStartTime, sendWindowEndTime) = GetLocalDateTimeAndSendWindow(dateTimeUtc);
+            var (systemDateTime, sendWindowStartTime, sendWindowEndTime) = GetSystemDateTimeAndSendWindow(dateTimeUtc);
 
-            return localDateTime.TimeOfDay > sendWindowStartTime && localDateTime.TimeOfDay < sendWindowEndTime;
+            return systemDateTime.TimeOfDay > sendWindowStartTime && systemDateTime.TimeOfDay < sendWindowEndTime;
         }
 
         /// <inheritdoc/>
-        public DateTime GetSmsExpiryDateTime(DateTime referenceDateTime)
+        public DateTime GetSmsExpirationDateTime(DateTime referenceDateTime)
         {
-            var (localDateTime, sendWindowStartTime, sendWindowEndTime) = GetLocalDateTimeAndSendWindow(referenceDateTime);
+            var (systemDateTime, sendWindowStartTime, sendWindowEndTime) = GetSystemDateTimeAndSendWindow(referenceDateTime);
 
-            if (localDateTime.TimeOfDay > sendWindowStartTime && localDateTime.TimeOfDay < sendWindowEndTime)
+            if (systemDateTime.TimeOfDay > sendWindowStartTime && systemDateTime.TimeOfDay < sendWindowEndTime)
             {
                 return referenceDateTime.AddHours(48);
             }
 
-            var nextSendWindowStartDateTime = localDateTime.Date.AddHours(48).Add(sendWindowStartTime);
+            var nextSendWindowStartDateTime = systemDateTime.Date.Add(sendWindowStartTime);
 
-            var expiryDateTime = localDateTime.TimeOfDay < sendWindowStartTime ? nextSendWindowStartDateTime : nextSendWindowStartDateTime.AddDays(1);
+            var expiryDateTimeBasedOnSystemTimeZone =
+                systemDateTime.TimeOfDay > sendWindowEndTime ? nextSendWindowStartDateTime.AddHours(72) : nextSendWindowStartDateTime.AddHours(48);
 
-            TimeZoneInfo localTimeZone = TimeZoneInfo.FindSystemTimeZoneById(_timeZoneId);
+            TimeZoneInfo timeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById(_timeZoneId);
 
-            return TimeZoneInfo.ConvertTimeToUtc(expiryDateTime, localTimeZone);
+            var expiryDateTimeUtc = TimeZoneInfo.ConvertTimeToUtc(expiryDateTimeBasedOnSystemTimeZone, timeZoneInfo);
+
+            return expiryDateTimeUtc;
         }
 
         /// <summary>
@@ -72,15 +75,15 @@ namespace Altinn.Notifications.Core.Services
         /// </list>
         /// </returns>
         /// <exception cref="System.ArgumentException">DateTime must be in UTC format.</exception>
-        private (DateTime LocalDateTime, TimeSpan SendWindowStartTime, TimeSpan SendWindowEndTime) GetLocalDateTimeAndSendWindow(DateTime referenceUtcDateTime)
+        private (DateTime LocalDateTime, TimeSpan SendWindowStartTime, TimeSpan SendWindowEndTime) GetSystemDateTimeAndSendWindow(DateTime referenceUtcDateTime)
         {
-            DateTime localDateTime;
+            DateTime systemDateTime;
 
             switch (referenceUtcDateTime.Kind)
             {
                 case DateTimeKind.Utc:
                     TimeZoneInfo norwayTimeZone = TimeZoneInfo.FindSystemTimeZoneById(_timeZoneId);
-                    localDateTime = TimeZoneInfo.ConvertTimeFromUtc(referenceUtcDateTime, norwayTimeZone);
+                    systemDateTime = TimeZoneInfo.ConvertTimeFromUtc(referenceUtcDateTime, norwayTimeZone);
                     break;
 
                 default:
@@ -90,7 +93,7 @@ namespace Altinn.Notifications.Core.Services
             TimeSpan sendWindowStartTime = new(_config.SmsSendWindowStartHour, 0, 0);
             TimeSpan sendWindowEndTime = new(_config.SmsSendWindowEndHour, 0, 0);
 
-            return (localDateTime, sendWindowStartTime, sendWindowEndTime);
+            return (systemDateTime, sendWindowStartTime, sendWindowEndTime);
         }
     }
 }

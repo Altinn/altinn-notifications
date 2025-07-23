@@ -67,22 +67,18 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
             throw new InvalidOperationException("SMS template is not found or is not of the correct type.");
         }
 
-        var messagesCount = CalculateNumberOfMessages(smsTemplate.Body);
-
-        var expiryDateTime = _notificationScheduleService.GetSmsExpiryDateTime(order.RequestedSendTime);
+        var messagesCount = CalculateSegmentCount(smsTemplate.Body);
 
         var allSmsRecipients = await GetSmsRecipientsAsync(recipients, smsTemplate.Body);
 
         var registeredSmsRecipients = await _smsNotificationRepository.GetRecipients(order.Id);
 
+        var expirationDateTime = _notificationScheduleService.GetSmsExpirationDateTime(order.RequestedSendTime);
+
         foreach (var recipient in recipients)
         {
             var smsAddress = recipient.AddressInfo.OfType<SmsAddressPoint>().FirstOrDefault();
-            if (smsAddress == null)
-            {
-                continue;
-            }
-
+            
             var isSmsRecipientRegistered =
                 registeredSmsRecipients.Exists(er =>
                                                er.MobileNumber == smsAddress.MobileNumber &&
@@ -99,7 +95,7 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
             await _smsService.CreateNotification(
                 order.Id,
                 order.RequestedSendTime,
-                expiryDateTime,
+                expirationDateTime,
                 [smsAddress],
                 smsRecipient,
                 messagesCount);
@@ -114,11 +110,11 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
             throw new InvalidOperationException("SMS template is not found or is not of the correct type.");
         }
 
-        var messagesCount = CalculateNumberOfMessages(smsTemplate.Body);
-
-        var expiryDateTime = _notificationScheduleService.GetSmsExpiryDateTime(order.RequestedSendTime);
+        var segmentsCount = CalculateSegmentCount(smsTemplate.Body);
 
         var allSmsRecipients = await GetSmsRecipientsAsync(recipients, smsTemplate.Body);
+
+        var expirationDateTime = _notificationScheduleService.GetSmsExpirationDateTime(order.RequestedSendTime);
 
         foreach (var recipient in recipients)
         {
@@ -132,10 +128,10 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
             await _smsService.CreateNotification(
                 order.Id,
                 order.RequestedSendTime,
-                expiryDateTime,
+                expirationDateTime,
                 smsAddresses,
                 smsRecipient,
-                messagesCount,
+                segmentsCount,
                 order.IgnoreReservation ?? false);
         }
     }
@@ -143,7 +139,7 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
     /// <summary>
     /// Calculates the number of messages based on the rules for concatenation of SMS messages in the SMS gateway.
     /// </summary>
-    internal static int CalculateNumberOfMessages(string message)
+    private static int CalculateSegmentCount(string message)
     {
         const int maxCharactersPerMessage = 160;
         const int maxMessagesPerConcatenation = 16;
@@ -190,7 +186,7 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
     private async Task<List<Recipient>> UpdateRecipientsWithContactPointsAsync(NotificationOrder order)
     {
         var recipientsMissingSmsContact = order.Recipients
-            .Where(r => r.AddressInfo.All(a => a.AddressType != AddressType.Sms))
+            .Where(e => e.AddressInfo.All(e => e.AddressType != AddressType.Sms))
             .ToList();
 
         if (recipientsMissingSmsContact.Count > 0)
@@ -235,7 +231,7 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
             OrganizationNumber = recipient.OrganizationNumber,
             NationalIdentityNumber = recipient.NationalIdentityNumber,
             CustomizedBody = RequiresCustomization(messageBody) ? messageBody : null
-        });
+        }).ToList(); 
 
         return await _keywordsService.ReplaceKeywordsAsync(smsRecipients);
     }

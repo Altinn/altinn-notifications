@@ -270,6 +270,7 @@ public class SmsNotificationServiceTests
         dateTimeService
             .Setup(d => d.UtcNow())
             .Returns(dateTimeOutput ?? DateTime.UtcNow);
+
         if (repo == null)
         {
             var repoMock = new Mock<ISmsNotificationRepository>();
@@ -282,6 +283,6 @@ public class SmsNotificationServiceTests
             producer = producerMock.Object;
         }
 
-        return new SmsNotificationService(guidService.Object, dateTimeService.Object, repo, producer, Options.Create(new KafkaSettings { SmsQueueTopicName = _smsQueueTopicName }));
+        return new SmsNotificationService(guidService.Object, producer, dateTimeService.Object, repo, Options.Create(new KafkaSettings { SmsQueueTopicName = _smsQueueTopicName }));
     }
 }
