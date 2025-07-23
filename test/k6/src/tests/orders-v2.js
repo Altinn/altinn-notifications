@@ -27,10 +27,10 @@ import { stopIterationOnFail } from "../errorhandler.js";
 import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 
 import * as setupToken from "../setup.js";
-import * as futureOrdersApi from "../api/notifications/future.js";
-import { post_mail_order, post_sms_order, get_mail_notifications, setEmptyThresholds, get_sms_notifications } from "./threshold-labels.js";
+import * as futureOrdersApi from "../api/notifications/v2.js";
+import { post_sms_order_v2, post_email_order_v2, setEmptyThresholds, get_email_shipment, get_sms_shipment, get_status_feed } from "./threshold-labels.js";
 
-const labels = [post_mail_order, post_sms_order, get_mail_notifications, get_sms_notifications];
+const labels = [];
 
 const emailOrderRequestJson = JSON.parse(
     open("../data/orders/order-v2-email.json")
@@ -114,10 +114,10 @@ export function setup() {
  * @returns {string} The response body of the created order.
  */
 function postEmailNotificationOrderRequest(data) {
-    const response = futureOrdersApi.postEmailNotificationOrderV2(
+    const response = futureOrdersApi.postNotificationOrderV2(
         JSON.stringify(data.emailOrderRequest),
         data.token,
-        post_mail_order
+        post_email_order_v2
     );
 
     const success = check(response, {
@@ -141,10 +141,10 @@ function postEmailNotificationOrderRequest(data) {
  * @returns {string} The response body of the created order.
  */
 function postSmsNotificationOrderRequest(data) {
-    const response = futureOrdersApi.postSmsNotificationOrder(
+    const response = futureOrdersApi.postNotificationOrderV2(
         JSON.stringify(data.smsOrderRequest),
         data.token,
-        post_sms_order
+        post_sms_order_v2
     );
 
     const success = check(response, {
@@ -226,13 +226,13 @@ export default function (data) {
     let responseObject = JSON.parse(response);
 
     // checking shipment details for the email order
-    getShipmentStatus(data, responseObject.notification.shipmentId, get_mail_notifications, "Email");
+    getShipmentStatus(data, responseObject.notification.shipmentId, get_email_shipment, "Email");
 
     response = postSmsNotificationOrderRequest(data);
     responseObject = JSON.parse(response);
 
     // checking shipment details for the SMS order
-    getShipmentStatus(data, responseObject.notification.shipmentId, get_sms_notifications, "SMS");
+    getShipmentStatus(data, responseObject.notification.shipmentId, get_sms_shipment, "SMS");
     
-    getStatusFeed(data, post_mail_order);
+    getStatusFeed(data, get_status_feed);
 }

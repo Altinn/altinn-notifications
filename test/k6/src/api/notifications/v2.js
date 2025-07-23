@@ -25,6 +25,5 @@ export function getStatusFeed(sequenceNumber, token, label) {
   params.tags = { name: label };
 
   const endpoint = config.notifications.statusfeed_v2(sequenceNumber);
-  console.log(endpoint);
   return http.get(endpoint, params);
 }
