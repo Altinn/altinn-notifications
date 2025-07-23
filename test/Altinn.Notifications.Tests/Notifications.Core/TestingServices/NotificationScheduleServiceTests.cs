@@ -73,7 +73,6 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             Assert.False(result);
         }
 
-
         [Fact]
         public void GetSmsExpiryDateTime_RequestSendTimeIsWithinSendWindow_ReturnsNextStartTime()
         {
