@@ -72,8 +72,13 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
         var allSmsRecipients = await GetSmsRecipientsAsync(recipients, smsTemplate.Body);
 
         var registeredSmsRecipients = await _smsNotificationRepository.GetRecipients(order.Id);
+        
+        var expirationDateTime = order.SendingTimePolicy switch
+        {
+            SendingTimePolicy.Daytime => _notificationScheduleService.GetSmsExpirationDateTime(order.RequestedSendTime),
 
-        var expirationDateTime = _notificationScheduleService.GetSmsExpirationDateTime(order.RequestedSendTime);
+            _ => order.RequestedSendTime.AddHours(48),
+        };
 
         foreach (var recipient in recipients)
         {
@@ -114,7 +119,12 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
 
         var allSmsRecipients = await GetSmsRecipientsAsync(recipients, smsTemplate.Body);
 
-        var expirationDateTime = _notificationScheduleService.GetSmsExpirationDateTime(order.RequestedSendTime);
+        var expirationDateTime = order.SendingTimePolicy switch
+        {
+            SendingTimePolicy.Daytime => _notificationScheduleService.GetSmsExpirationDateTime(order.RequestedSendTime),
+
+            _ => order.RequestedSendTime.AddHours(48),
+        };
 
         foreach (var recipient in recipients)
         {
@@ -231,7 +241,7 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
             OrganizationNumber = recipient.OrganizationNumber,
             NationalIdentityNumber = recipient.NationalIdentityNumber,
             CustomizedBody = RequiresCustomization(messageBody) ? messageBody : null
-        }).ToList(); 
+        }).ToList();
 
         return await _keywordsService.ReplaceKeywordsAsync(smsRecipients);
     }
