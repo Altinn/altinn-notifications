@@ -76,7 +76,7 @@ public class SmsOrderProcessingServiceTests
             Creator = new Creator("ttd"),
             Type = OrderType.Notification,
             RequestedSendTime = _requestedSendTime,
-            SendingTimePolicy = SendingTimePolicy.Daytime,
+            SendingTimePolicy = SendingTimePolicy.Anytime,
             NotificationChannel = NotificationChannel.Sms,
             Templates = [new SmsTemplate("Altinn", "this is the body")],
             Recipients =
