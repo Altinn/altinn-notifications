@@ -73,6 +73,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             Assert.False(result);
         }
 
+
         [Fact]
         public void GetSmsExpiryDateTime_RequestSendTimeIsWithinSendWindow_ReturnsNextStartTime()
         {
@@ -120,6 +121,18 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             // Assert
             Assert.Equal(expectedExpiryDateTimeInUTCFormat, expiryDateTime);
+        }
+
+        [Theory]
+        [InlineData(DateTimeKind.Local)]
+        [InlineData(DateTimeKind.Unspecified)]
+        public void GetSmsExpirationDateTime_WhenReferenceDateTimeIsNotUtc_ThrowsArgumentException(DateTimeKind kind)
+        {
+            // Arrange
+            var nonUtcDateTime = new DateTime(2025, 8, 25, 10, 0, 0, kind);
+
+            // Act & Assert
+            var exception = Assert.Throws<ArgumentException>(() => _notificationScheduleService.GetSmsExpirationDateTime(nonUtcDateTime));
         }
 
         /// <summary>
