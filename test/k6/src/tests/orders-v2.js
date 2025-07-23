@@ -31,7 +31,7 @@ import * as setupToken from "../setup.js";
 import * as futureOrdersApi from "../api/notifications/v2.js";
 import { post_sms_order_v2, post_email_order_v2, setEmptyThresholds, get_email_shipment, get_sms_shipment, get_status_feed } from "./threshold-labels.js";
 
-const labels = [];
+const labels = [post_email_order_v2, post_sms_order_v2, get_email_shipment, get_sms_shipment, get_status_feed];
 
 const emailOrderRequestJson = JSON.parse(
     open("../data/orders/order-v2-email.json")
