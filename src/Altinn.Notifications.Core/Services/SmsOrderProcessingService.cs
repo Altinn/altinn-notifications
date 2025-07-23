@@ -66,7 +66,7 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
 
         var expirationDateTime = GetExpirationDateTime(order);
 
-        var messagesCount = CalculateSegmentCount(smsTemplate.Body);
+        var segmentsCount = CalculateSegmentCount(smsTemplate.Body);
 
         var allSmsRecipients = await GetSmsRecipientsAsync(recipients, smsTemplate.Body);
 
@@ -95,7 +95,7 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
                 expirationDateTime,
                 [smsAddress],
                 smsRecipient,
-                messagesCount);
+                segmentsCount);
         }
     }
 
