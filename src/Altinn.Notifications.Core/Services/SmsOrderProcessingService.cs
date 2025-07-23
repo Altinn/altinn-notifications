@@ -62,10 +62,9 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
     /// <inheritdoc/>
     public async Task ProcessOrderRetryWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients)
     {
-        if (order.Templates.Find(t => t.Type == NotificationTemplateType.Sms) is not SmsTemplate smsTemplate)
-        {
-            throw new InvalidOperationException("SMS template is not found or is not of the correct type.");
-        }
+        var smsTemplate = GetValidatedSmsTemplate(order);
+
+        var expirationDateTime = GetExpirationDateTime(order);
 
         var messagesCount = CalculateSegmentCount(smsTemplate.Body);
 
@@ -73,13 +72,6 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
 
         var registeredSmsRecipients = await _smsNotificationRepository.GetRecipients(order.Id);
         
-        var expirationDateTime = order.SendingTimePolicy switch
-        {
-            SendingTimePolicy.Daytime => _notificationScheduleService.GetSmsExpirationDateTime(order.RequestedSendTime),
-
-            _ => order.RequestedSendTime.AddHours(48),
-        };
-
         foreach (var recipient in recipients)
         {
             var smsAddress = recipient.AddressInfo.OfType<SmsAddressPoint>().FirstOrDefault();
@@ -110,21 +102,13 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
     /// <inheritdoc/>
     public async Task ProcessOrderWithoutAddressLookup(NotificationOrder order, List<Recipient> recipients)
     {
-        if (order.Templates.Find(e => e.Type == NotificationTemplateType.Sms) is not SmsTemplate smsTemplate)
-        {
-            throw new InvalidOperationException("SMS template is not found or is not of the correct type.");
-        }
+        var smsTemplate = GetValidatedSmsTemplate(order);
+
+        var expirationDateTime = GetExpirationDateTime(order);
 
         var segmentsCount = CalculateSegmentCount(smsTemplate.Body);
 
         var allSmsRecipients = await GetSmsRecipientsAsync(recipients, smsTemplate.Body);
-
-        var expirationDateTime = order.SendingTimePolicy switch
-        {
-            SendingTimePolicy.Daytime => _notificationScheduleService.GetSmsExpirationDateTime(order.RequestedSendTime),
-
-            _ => order.RequestedSendTime.AddHours(48),
-        };
 
         foreach (var recipient in recipients)
         {
@@ -183,6 +167,44 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
     private bool RequiresCustomization(string? templatePart)
     {
         return _keywordsService.ContainsRecipientNumberPlaceholder(templatePart) || _keywordsService.ContainsRecipientNamePlaceholder(templatePart);
+    }
+
+    /// <summary>
+    /// Calculates the expiration date and time for an SMS notification based on the order's sending time policy.
+    /// </summary>
+    /// <param name="order">The notification order containing the requested send time and sending time policy.</param>
+    /// <returns>
+    /// The expiration <see cref="DateTime"/> for the SMS notification. 
+    /// If the sending time policy is <see cref="SendingTimePolicy.Daytime"/>, the expiration is determined by the notification schedule service.
+    /// Otherwise, it defaults to 48 hours after the requested send time.
+    /// </returns>
+    private DateTime GetExpirationDateTime(NotificationOrder order)
+    {
+        return order.SendingTimePolicy switch
+        {
+            SendingTimePolicy.Daytime => _notificationScheduleService.GetSmsExpirationDateTime(order.RequestedSendTime),
+            _ => order.RequestedSendTime.AddHours(48),
+        };
+    }
+
+    /// <summary>
+    /// Retrieves and validates the SMS template from the notification order.
+    /// </summary>
+    /// <param name="order">The notification order containing the list of templates.</param>
+    /// <returns>
+    /// The <see cref="SmsTemplate"/> found in the order's templates.
+    /// </returns>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown if an SMS template is not found or is not of the correct type.
+    /// </exception>
+    private static SmsTemplate GetValidatedSmsTemplate(NotificationOrder order)
+    {
+        if (order.Templates.Find(e => e.Type == NotificationTemplateType.Sms) is not SmsTemplate smsTemplate)
+        {
+            throw new InvalidOperationException("SMS template is not found or is not of the correct type.");
+        }
+
+        return smsTemplate;
     }
 
     /// <summary>
