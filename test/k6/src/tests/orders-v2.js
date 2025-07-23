@@ -31,7 +31,7 @@ import * as setupToken from "../setup.js";
 import * as futureOrdersApi from "../api/notifications/v2.js";
 import { post_sms_order_v2, post_email_order_v2, setEmptyThresholds, get_email_shipment, get_sms_shipment, get_status_feed } from "./threshold-labels.js";
 
-const labels = [];
+const labels = [post_email_order_v2, post_sms_order_v2, get_email_shipment, get_sms_shipment, get_status_feed];
 
 const emailOrderRequestJson = JSON.parse(
     open("../data/orders/order-v2-email.json")
@@ -74,7 +74,7 @@ setEmptyThresholds(labels, options);
 
 /**
  * Initialize test data.
- * @returns {Object} The data object containing token, runFullTestSet, sendersReference, and emailOrderRequest.
+ * @returns {Object} The data object containing token, sendersReference, and emailOrderRequest.
 */
 export function setup() {
     const emailRecipient = getEmailRecipient();
@@ -110,15 +110,10 @@ export function setup() {
 
     const emailOrderRequest = { ...emailOrderRequestJson, idempotencyId: idempotencyIdEmail };
 
-    const runFullTestSet = __ENV.runFullTestSet
-        ? __ENV.runFullTestSet.toLowerCase().includes("true")
-        : false;
-
     const smsOrderRequest = { ...smsOrderRequestJson, idempotencyId: idempotencyIdSms, sendersReference };
 
     return {
         token,
-        runFullTestSet,
         sendersReference,
         emailOrderRequest,
         smsOrderRequest
@@ -236,7 +231,7 @@ function getStatusFeed(data, label) {
 
 /**
  * The main function to run the test.
- * @param {Object} data - The data object containing runFullTestSet and other test data.
+ * @param {Object} data - The data object containing test data.
  */
 export default function (data) {
     let response = postEmailNotificationOrderRequest(data);
