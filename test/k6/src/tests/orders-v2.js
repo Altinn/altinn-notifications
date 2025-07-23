@@ -10,6 +10,7 @@
     -e encodedJwk={the encoded JSON web key used to sign the maskinporten token request} \
     -e env={environment: at22, at23, at24, tt02, prod} \
     -e emailRecipient={an email address to add as a notification recipient} \
+    -e ninRecipient={a national identity number of a person to include as a notification recipient} \
     -e smsRecipient={a mobile number to include as a notification recipient} \
     -e subscriptionKey={the subscription key with access to the automated tests product} \
 
@@ -78,16 +79,32 @@ setEmptyThresholds(labels, options);
 export function setup() {
     const emailRecipient = getEmailRecipient();
     const smsRecipient = getSmsRecipient();
+
+    // used with notification email orders if applicable
+    const ninRecipient = __ENV.ninRecipient ? __ENV.ninRecipient.toLowerCase() : null;
+
     const token = setupToken.getAltinnTokenForOrg(scopes);
     const idempotencyIdEmail = uuidv4();
     const idempotencyIdSms = uuidv4();
     const sendersReference = uuidv4();
 
-    if (emailRecipient) {
+    if (emailRecipient != null) {
         emailOrderRequestJson.recipient.recipientEmail.emailAddress = emailRecipient;
     }
+    else {
+        // unset recipientEmail object when no email recipient is provided
+        delete emailOrderRequestJson.recipient["recipientEmail"];
+    }
 
-    if (smsRecipient) {
+    if (ninRecipient != null) {
+        emailOrderRequestJson.recipient.recipientPerson.nationalIdentityNumber = ninRecipient;
+    }
+    else {
+        // unset recipientPerson object when no national identity number is provided
+        delete emailOrderRequestJson.recipient["recipientPerson"];
+    }
+
+    if (smsRecipient != null) {
         smsOrderRequestJson.recipient.recipientSms.phoneNumber = smsRecipient;
     }
 
