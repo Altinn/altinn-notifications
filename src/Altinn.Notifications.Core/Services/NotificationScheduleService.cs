@@ -77,18 +77,14 @@ namespace Altinn.Notifications.Core.Services
         /// <exception cref="System.ArgumentException">DateTime must be in UTC format.</exception>
         private (DateTime LocalDateTime, TimeSpan SendWindowStartTime, TimeSpan SendWindowEndTime) GetSystemDateTimeAndSendWindow(DateTime referenceUtcDateTime)
         {
-            DateTime systemDateTime;
-
-            switch (referenceUtcDateTime.Kind)
+            if (referenceUtcDateTime.Kind != DateTimeKind.Utc)
             {
-                case DateTimeKind.Utc:
-                    TimeZoneInfo norwayTimeZone = TimeZoneInfo.FindSystemTimeZoneById(_timeZoneId);
-                    systemDateTime = TimeZoneInfo.ConvertTimeFromUtc(referenceUtcDateTime, norwayTimeZone);
-                    break;
-
-                default:
-                    throw new ArgumentException("DateTime must be in UTC format.");
+                throw new ArgumentException("DateTime must be in UTC format.");
             }
+
+            TimeZoneInfo norwayTimeZone = TimeZoneInfo.FindSystemTimeZoneById(_timeZoneId);
+
+            var systemDateTime = TimeZoneInfo.ConvertTimeFromUtc(referenceUtcDateTime, norwayTimeZone);
 
             TimeSpan sendWindowStartTime = new(_config.SmsSendWindowStartHour, 0, 0);
             TimeSpan sendWindowEndTime = new(_config.SmsSendWindowEndHour, 0, 0);
