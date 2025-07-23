@@ -7,6 +7,15 @@
         "body": "Dear $recipientName$! This is an automated email generated during the testing of Altinn Notifications. Your registration number is $recipientNumber$. Best regards, Altinn Team",
         "contentType": "Html"
       }
+    },
+    "recipientPerson": {
+      "emailSettings": {
+          "subject": "Automated email from Altinn",
+          "body": "Dear $recipientName$! This is an automated email generated during the testing of Altinn Notifications. Your registration number is $recipientNumber$. Best regards, Altinn Team",
+          "contentType": "Html"
+      },
+      "nationalIdentityNumber": "string",
+      "channelSchema": "Email"
     }
   }
 }
