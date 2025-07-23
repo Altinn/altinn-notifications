@@ -11,12 +11,9 @@
     -e env={environment: at22, at23, at24, tt02, prod} \
     -e emailRecipient={an email address to add as a notification recipient} \
     -e smsRecipient={a mobile number to include as a notification recipient} \
-    -e ninRecipient={a national identity number of a person to include as a notification recipient} \
     -e subscriptionKey={the subscription key with access to the automated tests product} \
-    -e runFullTestSet=true
 
     Notes:
-    - To run only use case tests, omit `runFullTestSet` or set it to `false`.
     - The `subscriptionKey` is required and can be retrieved from API management in Azure.
 
     Command syntax for different shells:
@@ -44,8 +41,26 @@ const smsOrderRequestJson = JSON.parse(
 
 const environment = __ENV.env;
 const scopes = "altinn:serviceowner/notifications.create";
-const emailRecipient = __ENV.emailRecipient ? __ENV.emailRecipient.toLowerCase() : environment === "yt01"? "noreply@altinn.no" : null;
-const smsRecipient = __ENV.smsRecipient ? __ENV.smsRecipient.toLowerCase() : environment === "yt01" ? "+4799999999" : null;
+
+function getEmailRecipient() {
+    if (__ENV.emailRecipient) {
+        return __ENV.emailRecipient.toLowerCase();
+    }
+    if (environment === "yt01") {
+        return "noreply@altinn.no";
+    }
+    return null;
+}
+
+function getSmsRecipient() {
+    if (__ENV.smsRecipient) {
+        return __ENV.smsRecipient.toLowerCase();
+    }
+    if (environment === "yt01") {
+        return "+4799999999";
+    }
+    return null;
+}
 
 export const options = {
     summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(95)', 'p(99)', 'p(99.5)', 'p(99.9)', 'count'],
@@ -59,8 +74,10 @@ setEmptyThresholds(labels, options);
 /**
  * Initialize test data.
  * @returns {Object} The data object containing token, runFullTestSet, sendersReference, and emailOrderRequest.
- */
+*/
 export function setup() {
+    const emailRecipient = getEmailRecipient();
+    const smsRecipient = getSmsRecipient();
     const token = setupToken.getAltinnTokenForOrg(scopes);
     const idempotencyIdEmail = uuidv4();
     const idempotencyIdSms = uuidv4();
