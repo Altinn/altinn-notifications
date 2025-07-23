@@ -78,10 +78,10 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
         foreach (var recipient in recipients)
         {
             var smsAddress = recipient.AddressInfo.OfType<SmsAddressPoint>().FirstOrDefault();
-            
+
             var isSmsRecipientRegistered =
                 registeredSmsRecipients.Exists(er =>
-                                               er.MobileNumber == smsAddress.MobileNumber &&
+                                               er.MobileNumber == smsAddress?.MobileNumber &&
                                                er.OrganizationNumber == recipient.OrganizationNumber &&
                                                er.NationalIdentityNumber == recipient.NationalIdentityNumber);
             if (isSmsRecipientRegistered)
