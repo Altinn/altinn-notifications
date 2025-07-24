@@ -39,7 +39,7 @@ public static partial class NotificationOrderChainMapper
         var reminders = notificationOrderChainRequestExt.Reminders?
             .Select(reminder =>
             {
-                DateTime requestedSendTime = DateTime.UtcNow;
+                DateTime requestedSendTime = notificationOrderChainRequestExt.RequestedSendTime;
 
                 if (reminder.DelayDays.HasValue)
                 {
