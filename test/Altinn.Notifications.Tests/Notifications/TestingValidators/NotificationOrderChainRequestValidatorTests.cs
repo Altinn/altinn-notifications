@@ -290,33 +290,33 @@ public class NotificationOrderChainRequestValidatorTests
             Reminders =
             [
                 new NotificationReminderExt
-            {
-                ConditionEndpoint = new Uri("https://api.te.no/altinn/te-123-123/?seen=true"),
-                SendersReference = "te-123-123",
-                DelayDays = 7,
-                Recipient = new NotificationRecipientExt
                 {
-                    RecipientPerson = new RecipientPersonExt
+                    ConditionEndpoint = new Uri("https://api.te.no/altinn/te-123-123/?seen=true"),
+                    SendersReference = "te-123-123",
+                    DelayDays = 7,
+                    Recipient = new NotificationRecipientExt
                     {
-                        NationalIdentityNumber = "11122233300",
-                        ResourceId = "urn:altinn:resource:te_svc123",
-                        IgnoreReservation = true,
-                        ChannelSchema = NotificationChannelExt.SmsPreferred,
-                        SmsSettings = new SmsSendingOptionsExt
+                        RecipientPerson = new RecipientPersonExt
                         {
-                            SendingTimePolicy = SendingTimePolicyExt.Daytime,
-                            Body = "Du har en melding fra TE som krever handling. Logg inn i Altinn for å gjøre deg kjent med innholdet.",
-                            Sender = "1234 TE"
-                        },
-                        EmailSettings = new EmailSendingOptionsExt
-                        {
-                            SendingTimePolicy = SendingTimePolicyExt.Anytime,
-                            Subject = "Påminnelse: Melding fra TE",
-                            Body = "Du har en melding fra TE som krever handling. Logg inn i Altinn for å gjøre deg kjent med innholdet."
+                            NationalIdentityNumber = "11122233300",
+                            ResourceId = "urn:altinn:resource:te_svc123",
+                            IgnoreReservation = true,
+                            ChannelSchema = NotificationChannelExt.SmsPreferred,
+                            SmsSettings = new SmsSendingOptionsExt
+                            {
+                                SendingTimePolicy = SendingTimePolicyExt.Daytime,
+                                Body = "Du har en melding fra TE som krever handling. Logg inn i Altinn for å gjøre deg kjent med innholdet.",
+                                Sender = "1234 TE"
+                            },
+                            EmailSettings = new EmailSendingOptionsExt
+                            {
+                                SendingTimePolicy = SendingTimePolicyExt.Anytime,
+                                Subject = "Påminnelse: Melding fra TE",
+                                Body = "Du har en melding fra TE som krever handling. Logg inn i Altinn for å gjøre deg kjent med innholdet."
+                            }
                         }
                     }
                 }
-            }
             ]
         };
 
