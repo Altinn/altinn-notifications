@@ -30,7 +30,7 @@ import * as setupToken from "../setup.js";
 import * as ordersApi from "../api/notifications/v2.js";
 import { post_email_order_v2, get_email_shipment, post_sms_order_v2, get_sms_shipment, setEmptyThresholds } from "./threshold-labels.js";
 import { getShipmentStatus } from "./orders-v2.js";
-import { scopes, resourceId, options } from "../shared/variables.js";
+import { scopes, resourceId } from "../shared/variables.js";
 import { getOrgNoRecipient } from "../shared/functions.js";
 
 const orderRequestJson = JSON.parse(
