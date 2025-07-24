@@ -758,6 +758,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         Assert.Single(capturedRequest.Reminders);
         Assert.Equal(3, capturedRequest.Reminders[0].DelayDays);
         Assert.Equal("reminder-ref-1", capturedRequest.Reminders[0].SendersReference);
+        Assert.Equal(request.RequestedSendTime.AddDays(3), capturedRequest.Reminders[0].RequestedSendTime);
     }
 
     [Fact]
