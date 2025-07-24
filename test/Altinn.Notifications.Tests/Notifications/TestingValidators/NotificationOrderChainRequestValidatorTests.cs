@@ -217,7 +217,7 @@ public class NotificationOrderChainRequestValidatorTests
                 new NotificationReminderExt
                 {
                     SendersReference = "te-123-123",
-                    RequestedSendTime = DateTime.Now.AddDays(10),
+                    RequestedSendTime = DateTime.UtcNow.AddDays(10),
                     ConditionEndpoint = new Uri("https://api.te.no/altinn/te-123-145/?seen=true"),
                     Recipient = new NotificationRecipientExt
                     {
