@@ -35,31 +35,33 @@ namespace Altinn.Notifications.Core.Services
         {
             DateTime dateTimeUtc = _dateTimeService.UtcNow();
 
-            var (systemDateTime, sendWindowStartTime, sendWindowEndTime) = GetSystemDateTimeAndSendWindow(dateTimeUtc);
+            var (localEquivalentDateTime, sendWindowStartTime, sendWindowEndTime) = GetlocalEquivalentDateTimeAndSendWindow(dateTimeUtc);
 
-            return systemDateTime.TimeOfDay > sendWindowStartTime && systemDateTime.TimeOfDay < sendWindowEndTime;
+            return localEquivalentDateTime.TimeOfDay > sendWindowStartTime && localEquivalentDateTime.TimeOfDay < sendWindowEndTime;
         }
 
         /// <inheritdoc/>
-        public DateTime GetSmsExpirationDateTime(DateTime referenceDateTime)
+        public DateTime GetSmsExpirationDateTime(DateTime referenceUtcDateTime)
         {
-            var (systemDateTime, sendWindowStartTime, sendWindowEndTime) = GetSystemDateTimeAndSendWindow(referenceDateTime);
+            var (localEquivalentDateTime, sendWindowStartTime, sendWindowEndTime) = GetlocalEquivalentDateTimeAndSendWindow(referenceUtcDateTime);
 
-            if (systemDateTime.TimeOfDay > sendWindowStartTime && systemDateTime.TimeOfDay < sendWindowEndTime)
+            if (localEquivalentDateTime.TimeOfDay > sendWindowStartTime && localEquivalentDateTime.TimeOfDay < sendWindowEndTime)
             {
-                return referenceDateTime.AddHours(48);
+                return referenceUtcDateTime.AddHours(48);
             }
 
-            var nextSendWindowStartDateTime = systemDateTime.Date.Add(sendWindowStartTime);
+            DateTime expiryDateTime;
 
-            var expiryDateTimeBasedOnSystemTimeZone =
-                systemDateTime.TimeOfDay > sendWindowEndTime ? nextSendWindowStartDateTime.AddHours(72) : nextSendWindowStartDateTime.AddHours(48);
+            if (localEquivalentDateTime.TimeOfDay < sendWindowStartTime)
+            {
+                expiryDateTime = localEquivalentDateTime.Date.Add(sendWindowStartTime).AddHours(48);
+            }
+            else
+            {
+                expiryDateTime = localEquivalentDateTime.Date.AddDays(1).Add(sendWindowStartTime).AddHours(48);
+            }
 
-            TimeZoneInfo timeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById(_timeZoneId);
-
-            var expiryDateTimeUtc = TimeZoneInfo.ConvertTimeToUtc(expiryDateTimeBasedOnSystemTimeZone, timeZoneInfo);
-
-            return expiryDateTimeUtc;
+            return expiryDateTime.ToUniversalTime();
         }
 
         /// <summary>
@@ -74,8 +76,8 @@ namespace Altinn.Notifications.Core.Services
         ///   <item><description>The end time of the SMS send window.</description></item>
         /// </list>
         /// </returns>
-        /// <exception cref="System.ArgumentException">DateTime must be in UTC format.</exception>
-        private (DateTime LocalDateTime, TimeSpan SendWindowStartTime, TimeSpan SendWindowEndTime) GetSystemDateTimeAndSendWindow(DateTime referenceUtcDateTime)
+        /// <exception cref="ArgumentException">DateTime must be in UTC format.</exception>
+        private (DateTime LocalEquivalentDateTime, TimeSpan SendWindowStartTime, TimeSpan SendWindowEndTime) GetlocalEquivalentDateTimeAndSendWindow(DateTime referenceUtcDateTime)
         {
             if (referenceUtcDateTime.Kind != DateTimeKind.Utc)
             {
@@ -84,12 +86,13 @@ namespace Altinn.Notifications.Core.Services
 
             TimeZoneInfo norwayTimeZone = TimeZoneInfo.FindSystemTimeZoneById(_timeZoneId);
 
-            var systemDateTime = TimeZoneInfo.ConvertTimeFromUtc(referenceUtcDateTime, norwayTimeZone);
+            var localEquivalentDateTime = TimeZoneInfo.ConvertTimeFromUtc(referenceUtcDateTime, norwayTimeZone);
 
-            TimeSpan sendWindowStartTime = new(_config.SmsSendWindowStartHour, 0, 0);
             TimeSpan sendWindowEndTime = new(_config.SmsSendWindowEndHour, 0, 0);
 
-            return (systemDateTime, sendWindowStartTime, sendWindowEndTime);
+            TimeSpan sendWindowStartTime = new(_config.SmsSendWindowStartHour, 0, 0);
+
+            return (localEquivalentDateTime, sendWindowStartTime, sendWindowEndTime);
         }
     }
 }
