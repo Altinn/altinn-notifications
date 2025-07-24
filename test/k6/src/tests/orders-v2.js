@@ -183,7 +183,7 @@ function postSmsNotificationOrderRequest(data) {
  * @param {string} label - The label for the request.
  * @param {string} type - The type of notification (e.g., "Email" or "SMS").
  */
-function getShipmentStatus(data, shipmentId, label, type) {
+export function getShipmentStatus(data, shipmentId, label, type) {
     const response = futureOrdersApi.getShipment(shipmentId, data.token, label);
 
     switch (type) {

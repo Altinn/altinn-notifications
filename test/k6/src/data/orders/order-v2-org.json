@@ -1,0 +1,21 @@
+{
+  "sendersReference": "string",
+  "idempotencyId": "string",
+  "recipient": {
+    "recipientOrganization": {
+      "emailSettings": {
+        "senderEmailAddress": "noreply@altinn.cloud",
+        "subject": "Automated email from Altinn",
+        "body": "Dear $recipientName$! This is an automated email generated during the testing of Altinn Notifications. Your registration number is $recipientNumber$. Best regards, Altinn Team",
+        "contentType": "Html"
+      },
+      "smsSettings": {
+        "sender": "Altinn",
+        "body": "This is a plain test body for testing SMS services"
+      },
+      "orgNumber": "string",
+      "resourceId": "string",
+      "channelSchema": "Email"
+    }
+  }
+}

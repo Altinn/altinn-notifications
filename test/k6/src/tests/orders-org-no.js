@@ -16,7 +16,7 @@
     Notes:
     - To run only use case tests, omit `runFullTestSet` or set it to `false`.
     - The `resourceId` is required and should be a valid resource identifier.
-    - The `orgNoRecipient` is required for sending notifications to an organization.
+    - The `orgNoRecipient` is required for sending notifications to an organization, _unless_ set environment = yt01 .
 
     Command syntax for different shells:
     - Bash: Use the command as written above.
