@@ -8,6 +8,7 @@ using Altinn.Notifications.Models.Sms;
 using Altinn.Notifications.Validators;
 
 using FluentValidation.TestHelper;
+
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.TestingValidators;
@@ -72,7 +73,7 @@ public class NotificationOrderChainRequestValidatorTests
                 {
                     ConditionEndpoint = new Uri("https://api.te.no/altinn/te-123-123/?seen=true"),
                     SendersReference = "te-123-123-rem-2",
-                    DelayDays = 14,
+                    RequestedSendTime = DateTime.UtcNow.AddDays(14),
                     Recipient = new NotificationRecipientExt
                     {
                         RecipientOrganization = new RecipientOrganizationExt
@@ -189,6 +190,35 @@ public class NotificationOrderChainRequestValidatorTests
                     ConditionEndpoint = new Uri("https://api.te.no/altinn/te-123-123/?seen=true"),
                     SendersReference = "te-123-123",
                     DelayDays = 7,
+                    Recipient = new NotificationRecipientExt
+                    {
+                        RecipientPerson = new RecipientPersonExt
+                        {
+                            NationalIdentityNumber = "11122233300",
+                            ResourceId = "urn:altinn:resource:te_svc123",
+                            IgnoreReservation = false,
+                            ChannelSchema = NotificationChannelExt.EmailPreferred,
+                            SmsSettings = new SmsSendingOptionsExt
+                            {
+                                SendingTimePolicy = SendingTimePolicyExt.Daytime,
+                                Sender = "1234 TE",
+                                Body = "Du har en melding fra TE som krever handling. Logg inn i Altinn for å gjøre deg kjent med innholdet."
+                            },
+                            EmailSettings = new EmailSendingOptionsExt
+                            {
+                                SenderEmailAddress = "noreply-te@example.com",
+                                SendingTimePolicy = SendingTimePolicyExt.Anytime,
+                                Subject = "Påminnelse: Melding fra TE",
+                                Body = "Du har en melding fra TE som krever handling"
+                            }
+                        }
+                    }
+                },
+                new NotificationReminderExt
+                {
+                    SendersReference = "te-123-123",
+                    RequestedSendTime = DateTime.Now.AddDays(10),
+                    ConditionEndpoint = new Uri("https://api.te.no/altinn/te-123-145/?seen=true"),
                     Recipient = new NotificationRecipientExt
                     {
                         RecipientPerson = new RecipientPersonExt
