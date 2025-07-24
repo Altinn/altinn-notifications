@@ -294,7 +294,7 @@ public class ContactPointService : IContactPointService
         }
 
         List<OrganizationContactPoints> authorizedUserContactPoints = [];
-        Task<List<OrganizationContactPoints>> registerTask = _profileClient.GetOrganizationContactPoints(orgNos);
+        Task<List<OrganizationContactPoints>> organizationContactPointsTask = _profileClient.GetOrganizationContactPoints(orgNos);
 
         if (!string.IsNullOrEmpty(resourceId))
         {
@@ -302,7 +302,7 @@ public class ContactPointService : IContactPointService
             authorizedUserContactPoints = await _authorizationService.AuthorizeUserContactPointsForResource(allUserContactPoints, resourceId);
         }
 
-        List<OrganizationContactPoints> contactPoints = await registerTask;
+        List<OrganizationContactPoints> contactPoints = await organizationContactPointsTask;
 
         if (!string.IsNullOrEmpty(resourceId))
         {
