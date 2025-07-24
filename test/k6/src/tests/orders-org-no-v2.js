@@ -60,7 +60,6 @@ export function setup() {
     const token = setupToken.getAltinnTokenForOrg(scopes);
 
     const orgNoRecipient = getOrgNoRecipient();
-    console.log(orgNoRecipient);
 
     const emailOrderRequest = {
         ...orderRequestJson,
@@ -155,12 +154,6 @@ function postSmsNotificationOrderRequest(data) {
 
     return response.body;
 }
-
-/**
- * Gets the SMS notification summary.
- * @param {Object} data - The data object containing token.
- * @param {string} orderId - The ID of the order.
- */
 
 /**
  * The main function to run the test.
