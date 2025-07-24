@@ -39,6 +39,7 @@ public static partial class NotificationOrderChainMapper
         var reminders = notificationOrderChainRequestExt.Reminders?
             .Select(reminder =>
             {
+                var reminderDelayDays = 0;
                 DateTime requestedSendTime = notificationOrderChainRequestExt.RequestedSendTime;
 
                 if (reminder.DelayDays.HasValue)
@@ -48,9 +49,10 @@ public static partial class NotificationOrderChainMapper
                 else if (reminder.RequestedSendTime.HasValue)
                 {
                     requestedSendTime = reminder.RequestedSendTime.Value.ToUniversalTime();
+                    reminderDelayDays = reminder.RequestedSendTime.Value.Subtract(notificationOrderChainRequestExt.RequestedSendTime).Days;
                 }
 
-                return reminder.MapToNotificationReminder(requestedSendTime);
+                return reminder.MapToNotificationReminder(requestedSendTime, reminderDelayDays);
             })
             .ToList();
 
@@ -103,8 +105,9 @@ public static partial class NotificationOrderChainMapper
     /// </summary>
     /// <param name="notificationReminderExt">The external notification reminder object to map from.</param>
     /// <param name="requestedSendTime">The requested send time for the reminder.</param>
+    /// <param name="reminderDelayDays">The number of days to delay the reminder relative to the main notification.</param>
     /// <returns>A <see cref="NotificationReminder"/> object mapped from the provided notification reminder.</returns>
-    private static NotificationReminder MapToNotificationReminder(this NotificationReminderExt notificationReminderExt, DateTime requestedSendTime)
+    private static NotificationReminder MapToNotificationReminder(this NotificationReminderExt notificationReminderExt, DateTime requestedSendTime, int reminderDelayDays)
     {
         return new()
         {
@@ -119,9 +122,9 @@ public static partial class NotificationOrderChainMapper
             OrderId = Guid.NewGuid(),
             Type = OrderType.Reminder,
             RequestedSendTime = requestedSendTime,
-            DelayDays = notificationReminderExt.DelayDays ?? 0,
             SendersReference = notificationReminderExt.SendersReference,
-            ConditionEndpoint = notificationReminderExt.ConditionEndpoint
+            ConditionEndpoint = notificationReminderExt.ConditionEndpoint,
+            DelayDays = notificationReminderExt.DelayDays ?? reminderDelayDays
         };
     }
 
