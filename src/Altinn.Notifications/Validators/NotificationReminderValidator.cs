@@ -39,7 +39,7 @@ internal sealed class NotificationReminderValidator : AbstractValidator<Notifica
                 .WithMessage("DelayDays must be null when RequestedSendTime is set.");
 
             RuleFor(option => option.RequestedSendTime)
-                .Must(sendTime => sendTime!.Value.Kind != DateTimeKind.Unspecified)
+                .Must(sendTime => sendTime.HasValue && sendTime.Value.Kind != DateTimeKind.Unspecified)
                 .WithMessage("The RequestedSendTime must have specified a time zone.")
 
                 .GreaterThanOrEqualTo(DateTime.UtcNow)
