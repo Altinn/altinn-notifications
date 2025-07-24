@@ -37,9 +37,6 @@ public interface IOrderRequestService
     /// 
     /// The operation is idempotent when using the same <see cref="NotificationOrderChainRequest.IdempotencyId"/>,
     /// ensuring that repeated calls with identical parameters won't create duplicate notification chains.
-    /// 
-    /// When reminders are specified, they will be scheduled for delivery after the main notification
-    /// according to their respective <see cref="NotificationReminder.DelayDays"/> value.
     /// </remarks>
     /// <exception cref="OperationCanceledException">
     /// Thrown when the operation is canceled through the provided <paramref name="cancellationToken"/>.
