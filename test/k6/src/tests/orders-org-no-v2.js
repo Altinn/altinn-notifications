@@ -24,20 +24,18 @@
 
 import { check } from "k6";
 import { stopIterationOnFail } from "../errorhandler.js";
-import { randomItem, uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
+import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 
 import * as setupToken from "../setup.js";
-import { orgNosYt01 } from "../data/orgnos.js";
 import * as ordersApi from "../api/notifications/v2.js";
 import { post_email_order_v2, get_email_shipment, post_sms_order_v2, get_sms_shipment, setEmptyThresholds } from "./threshold-labels.js";
 import { getShipmentStatus } from "./orders-v2.js";
-import { scopes, resourceId, environment, yt01Environment } from "../shared/variables.js";
+import { scopes, resourceId, options } from "../shared/variables.js";
+import { getOrgNoRecipient } from "../shared/functions.js";
 
 const orderRequestJson = JSON.parse(
     open("../data/orders/order-v2-org.json")
 );
-
-const labels = [post_email_order_v2, get_email_shipment, post_sms_order_v2, get_sms_shipment];
 
 export const options = {
     summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(95)', 'p(99)', 'p(99.5)', 'p(99.9)', 'count'],
@@ -46,19 +44,10 @@ export const options = {
         checks: ['rate>=1']
     }
 };
-setEmptyThresholds(labels, options);
 
-/**
- * Gets the recipient based on environment variables
- */
-function getOrgNoRecipient() {
-    if (!__ENV.orgNoRecipient && environment === yt01Environment) {
-        return randomItem(orgNosYt01);
-    }
-    else {
-        return __ENV.orgNoRecipient ? __ENV.orgNoRecipient.toLowerCase() : null;
-    }
-}
+const labels = [post_email_order_v2, get_email_shipment, post_sms_order_v2, get_sms_shipment];
+
+setEmptyThresholds(labels, options);
 
 /**
  * Initialize test data.
@@ -71,6 +60,7 @@ export function setup() {
     const token = setupToken.getAltinnTokenForOrg(scopes);
 
     const orgNoRecipient = getOrgNoRecipient();
+    console.log(orgNoRecipient);
 
     const emailOrderRequest = {
         ...orderRequestJson,

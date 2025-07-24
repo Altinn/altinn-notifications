@@ -33,13 +33,11 @@ import { orgNosYt01 } from "../data/orgnos.js";
 import * as ordersApi from "../api/notifications/orders.js";
 import * as notificationsApi from "../api/notifications/notifications.js";
 import { post_mail_order, get_mail_notifications, post_sms_order, get_sms_notifications, setEmptyThresholds } from "./threshold-labels.js";
-import { scopes, resourceId, environment, yt01Environment } from "../shared/variables.js";
+import { scopes, resourceId, environment, yt01Environment, options } from "../shared/variables.js";
 
 const emailOrderRequestJson = JSON.parse(
     open("../data/orders/01-email-request.json")
 );
-
-const labels = [post_mail_order, get_mail_notifications, post_sms_order, get_sms_notifications];
 
 export const options = {
     summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(95)', 'p(99)', 'p(99.5)', 'p(99.9)', 'count'],
@@ -48,6 +46,9 @@ export const options = {
         checks: ['rate>=1']
     }
 };
+
+const labels = [post_mail_order, get_mail_notifications, post_sms_order, get_sms_notifications];
+
 setEmptyThresholds(labels, options);
 
 /**
