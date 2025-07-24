@@ -29,15 +29,18 @@ import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 
 import * as setupToken from "../setup.js";
 import * as futureOrdersApi from "../api/notifications/v2.js";
-import { post_sms_order_v2, post_email_order_v2, setEmptyThresholds, get_email_shipment, get_sms_shipment, get_status_feed } from "./threshold-labels.js";
+import { post_sms_order_v2, post_sms_instant_order_v2, post_email_order_v2, setEmptyThresholds, get_email_shipment, get_sms_shipment, get_status_feed } from "./threshold-labels.js";
 
-const labels = [post_email_order_v2, post_sms_order_v2, get_email_shipment, get_sms_shipment, get_status_feed];
+const labels = [post_email_order_v2, post_sms_order_v2, post_sms_instant_order_v2, get_email_shipment, get_sms_shipment, get_status_feed];
 
 const emailOrderRequestJson = JSON.parse(
     open("../data/orders/order-v2-email.json")
 );
 const smsOrderRequestJson = JSON.parse(
     open("../data/orders/order-v2-sms.json")
+);
+const smsOrderInstantRequestJson = JSON.parse(
+    open("../data/orders/order-v2-sms-instant.json")
 );
 
 const environment = __ENV.env;
@@ -112,11 +115,25 @@ export function setup() {
 
     const smsOrderRequest = { ...smsOrderRequestJson, idempotencyId: idempotencyIdSms, sendersReference };
 
+    const smsOrderInstantRequest = {
+        ...smsOrderInstantRequestJson,
+        idempotencyId: uuidv4(),
+        sendersReference,
+        recipient: {
+            ...smsOrderInstantRequestJson.recipient,
+            recipientSms: {
+                ...smsOrderInstantRequestJson.recipient.recipientSms,
+                phoneNumber: smsRecipient
+            }
+        }
+    };
+
     return {
         token,
         sendersReference,
         emailOrderRequest,
-        smsOrderRequest
+        smsOrderRequest,
+        smsOrderInstantRequest
     };
 }
 
@@ -171,6 +188,28 @@ function postSmsNotificationOrderRequest(data) {
         "POST SMS notification order request. Location header provided": (_) => selfLink,
         "POST SMS notification order request. Response body is not an empty string": (r) => r.body
     });
+
+    return response.body;
+}
+
+
+/**
+ * Post instant SMS notification order request using the v2 API.
+ * @param {*} data 
+ * @returns 
+ */
+function postSmsInstantNotificationOrderRequest(data) {
+    const response = futureOrdersApi.postSmsInstantNotificationOrderRequest(
+        JSON.stringify(data.smsOrderInstantRequest),
+        data.token,
+        post_sms_instant_order_v2
+    );  
+
+    const success = check(response, {
+        "POST SMS instant notification order request. Status is 201 Created": (r) => r.status === 201
+    });
+
+    stopIterationOnFail("POST SMS instant notification order request failed", success);
 
     return response.body;
 }
@@ -246,5 +285,7 @@ export default function (data) {
     // checking shipment details for the SMS order
     getShipmentStatus(data, responseObject.notification.shipmentId, get_sms_shipment, "SMS");
     
+    postSmsInstantNotificationOrderRequest(data);
+
     getStatusFeed(data, get_status_feed);
 }

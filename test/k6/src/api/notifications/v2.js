@@ -11,6 +11,17 @@ export function postNotificationOrderV2(serializedOrder, token, label) {
   return http.post(endpoint, serializedOrder, params);
 }
 
+export function postSmsInstantNotificationOrderRequest(data, token) {
+  const endpoint = config.notifications.orders_sms_instant_v2;
+
+  const params = apiHelpers.buildHeaderWithBearerAndContentType(token);
+  params.tags = { name: "POST SMS instant notification order request" };
+
+  const smsOrderRequest = data;
+
+  return http.post(endpoint, smsOrderRequest, params);
+}
+
 export function getShipment(orderId, token, label) {
   const params = apiHelpers.buildHeaderWithBearer(token);
   params.tags = { name: label };
