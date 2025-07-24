@@ -176,17 +176,6 @@ function postSmsNotificationOrderRequest(data) {
  * @param {Object} data - The data object containing token.
  * @param {string} orderId - The ID of the order.
  */
-function getSmsNotificationSummary(data, orderId) {
-    const response = notificationsApi.getSmsNotifications(orderId, data.token, get_sms_notifications);
-
-    check(response, {
-        "GET SMS notifications. Status is 200 OK": (r) => r.status === 200,
-    });
-
-    check(JSON.parse(response.body), {
-        "GET SMS notifications. OrderId property is a match": (notificationSummary) => notificationSummary.orderId === orderId,
-    });
-}
 
 /**
  * The main function to run the test.
