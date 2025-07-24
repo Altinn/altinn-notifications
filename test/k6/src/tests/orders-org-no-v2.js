@@ -29,14 +29,9 @@ import { randomItem, uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js"
 import * as setupToken from "../setup.js";
 import { orgNosYt01 } from "../data/orgnos.js";
 import * as ordersApi from "../api/notifications/v2.js";
-import * as notificationsApi from "../api/notifications/notifications.js";
 import { post_email_order_v2, get_email_shipment, post_sms_order_v2, get_sms_shipment, setEmptyThresholds } from "./threshold-labels.js";
 import { getShipmentStatus } from "./orders-v2.js";
-
-const environment = __ENV.env;
-const yt01Environment = "yt01";
-const resourceId = __ENV.resourceId;
-const scopes = "altinn:serviceowner/notifications.create";
+import { scopes, resourceId, environment, yt01Environment } from "../shared/variables.js";
 
 const orderRequestJson = JSON.parse(
     open("../data/orders/order-v2-org.json")

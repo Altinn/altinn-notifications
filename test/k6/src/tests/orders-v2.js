@@ -93,7 +93,7 @@ export function setup() {
     }
     else {
         // unset recipientEmail object when no email recipient is provided
-        delete emailOrderRequestJson.recipient["recipientEmail"];
+        emailOrderRequestJson.recipient["recipientEmail"] = undefined;
     }
 
     if (ninRecipient != null) {
@@ -101,7 +101,7 @@ export function setup() {
     }
     else {
         // unset recipientPerson object when no national identity number is provided
-        delete emailOrderRequestJson.recipient["recipientPerson"];
+        emailOrderRequestJson.recipient["recipientPerson"] = undefined;
     }
 
     if (smsRecipient != null) {
