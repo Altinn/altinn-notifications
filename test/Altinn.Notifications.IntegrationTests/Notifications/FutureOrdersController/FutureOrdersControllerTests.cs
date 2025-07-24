@@ -87,7 +87,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     public async Task Post_InvalidRequest_RequestedSendTimeInPast_ReturnsBadRequest()
     {
         // Arrange
-        var requestExt = CreateValidRequest();
+        var requestExt = CreateFutureEmailOrderChainRequest();
         requestExt.RequestedSendTime = DateTime.UtcNow.AddHours(-2);
 
         HttpClient client = GetTestClient();
@@ -113,7 +113,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     public async Task Post_MissingBearer_ReturnsUnauthorized()
     {
         // Arrange
-        var requestExt = CreateValidRequest();
+        var requestExt = CreateFutureEmailOrderChainRequest();
         HttpClient client = GetTestClient();
 
         // Act
@@ -127,7 +127,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     public async Task Post_OrganizationTokenWithInvalidScope_ReturnsForbidden()
     {
         // Arrange
-        var requestExt = CreateValidRequest();
+        var requestExt = CreateFutureEmailOrderChainRequest();
         HttpClient client = GetTestClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             "Bearer",
@@ -144,7 +144,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     public async Task Post_RegularUserWithValidToken_ReturnsForbidden()
     {
         // Arrange
-        var requestExt = CreateValidRequest();
+        var requestExt = CreateFutureEmailOrderChainRequest();
         HttpClient client = GetTestClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             "Bearer",
@@ -165,9 +165,9 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     public async Task Post_InvalidRequest_MissingCreatorShortName_ReturnsForbidden()
     {
         // Arrange
-        var requestExt = CreateValidRequest();
+        var requestExt = CreateFutureEmailOrderChainRequest();
         var orderRequestServiceMock = new Mock<IOrderRequestService>();
-        var validatorMock = SetupValidValidator();
+        var validatorMock = SetupValidator();
 
         var httpContextMock = new Mock<HttpContext>();
         httpContextMock.Setup(e => e.Items).Returns(new Dictionary<object, object?> { { "Org", null } });
@@ -191,7 +191,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     public async Task Post_OrganizationTokenWithCorrectScope_ReturnsCreateddWithOrderDetails()
     {
         // Arrange
-        var requestExt = CreateValidRequest();
+        var requestExt = CreateFutureEmailOrderChainRequest();
         var expectedResponse = new NotificationOrderChainResponse
         {
             OrderChainId = Guid.NewGuid(),
@@ -234,7 +234,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     public async Task Post_PlatformAccessTokenAuthentication_ReturnsCreatedWithOrderDetails()
     {
         // Arrange
-        var requestExt = CreateValidRequest();
+        var requestExt = CreateFutureEmailOrderChainRequest();
         var expectedResponse = new NotificationOrderChainResponse
         {
             OrderChainId = Guid.NewGuid(),
@@ -280,10 +280,12 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     public async Task Post_ValidRequest_WithReminders_ReturnsCreatedResponseWithReminderDetails()
     {
         // Arrange
-        var requestExt = new NotificationOrderChainRequestExt
+        var requestedSendTime = DateTime.UtcNow.AddHours(2);
+
+        var orderChainRequest = new NotificationOrderChainRequestExt
         {
+            RequestedSendTime = requestedSendTime,
             IdempotencyId = Guid.NewGuid().ToString(),
-            RequestedSendTime = DateTime.UtcNow.AddHours(2),
             Recipient = new NotificationRecipientExt
             {
                 RecipientSms = new RecipientSmsExt
@@ -301,7 +303,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
             [
                 new NotificationReminderExt
                 {
-                    DelayDays = 2,
+                    RequestedSendTime = requestedSendTime.AddHours(48),
                     Recipient = new NotificationRecipientExt
                     {
                         RecipientSms = new RecipientSmsExt
@@ -320,13 +322,15 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         };
 
         var expectedResponse = CreateNotificationOrderChainResponse(Guid.NewGuid(), 1);
+
         var client = GetTestClient(expectedResponse);
+        
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             "Bearer",
             PrincipalUtil.GetOrgToken("ttd", scope: "altinn:serviceowner/notifications.create"));
 
         // Act
-        var response = await SendPostRequest(client, requestExt);
+        var response = await SendPostRequest(client, orderChainRequest);
         var responseObject = await DeserializeResponse(response);
 
         // Assert
@@ -346,7 +350,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     public async Task Post_ValidRequestUsingRecipientEmail_WithoutReminders_ReturnsCreated()
     {
         // Arrange
-        var requestExt = CreateValidRequest();
+        var requestExt = CreateFutureEmailOrderChainRequest();
         var expectedResponse = CreateNotificationOrderChainResponse(Guid.NewGuid());
         var client = GetTestClient(expectedResponse);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
@@ -421,10 +425,11 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     public async Task Post_ValidRequestUsingOrganizationRecipient_WithReminders_ReturnsCreated()
     {
         // Arrange
+        var requestedSendTime = DateTime.UtcNow.AddHours(2);
         var requestExt = new NotificationOrderChainRequestExt
         {
+            RequestedSendTime = requestedSendTime,
             IdempotencyId = Guid.NewGuid().ToString(),
-            RequestedSendTime = DateTime.UtcNow.AddHours(2),
             Recipient = new NotificationRecipientExt
             {
                 RecipientOrganization = new RecipientOrganizationExt
@@ -466,7 +471,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
                 },
                 new NotificationReminderExt
                 {
-                    DelayDays = 7,
+                    RequestedSendTime = requestedSendTime.AddDays(7),
                     SendersReference = "0CBF6860-77BC-4D53-B7F4-926BE85A138C",
                     Recipient = new NotificationRecipientExt
                     {
@@ -514,9 +519,9 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     public async Task Post_ValidRequestWithExistingOrder_ReturnsOkWithExistingOrderDetails()
     {
         // Arrange
-        var request = CreateValidRequest();
+        var request = CreateFutureEmailOrderChainRequest();
         var existingResponse = CreateOrderChainResponse();
-        var validatorMock = SetupValidValidator();
+        var validatorMock = SetupValidator();
         var orderServiceMock = new Mock<IOrderRequestService>();
 
         orderServiceMock.Setup(s => s.RetrieveOrderChainTracking("ttd", request.IdempotencyId, It.IsAny<CancellationToken>()))
@@ -546,10 +551,10 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     public async Task Post_ValidRequest_FirstTimeSubmission_ReturnsCreatedWithSelfReferenceUrl()
     {
         // Arrange
-        var request = CreateValidRequest();
+        var request = CreateFutureEmailOrderChainRequest();
         var newResponse = CreateOrderChainResponse();
         var expectedUrl = newResponse.OrderChainId.GetSelfLinkFromOrderChainId();
-        var validatorMock = SetupValidValidator();
+        var validatorMock = SetupValidator();
         var orderServiceMock = new Mock<IOrderRequestService>();
 
         orderServiceMock.Setup(s => s.RetrieveOrderChainTracking("ttd", request.IdempotencyId, It.IsAny<CancellationToken>()))
@@ -580,8 +585,8 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     public async Task Post_OperationCanceled_ReturnsClientClosedRequest()
     {
         // Arrange
-        var request = CreateValidRequest();
-        var validatorMock = SetupValidValidator();
+        var request = CreateFutureEmailOrderChainRequest();
+        var validatorMock = SetupValidator();
         var orderServiceMock = new Mock<IOrderRequestService>();
 
         orderServiceMock.Setup(s => s.RetrieveOrderChainTracking(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -612,8 +617,8 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     public async Task Post_MissingRecipients_ReturnsProblemDetails422Status()
     {
         // Arrange
-        var request = CreateValidRequest();
-        var validatorMock = SetupValidValidator();
+        var request = CreateFutureEmailOrderChainRequest();
+        var validatorMock = SetupValidator();
         var orderServiceMock = new Mock<IOrderRequestService>();
         orderServiceMock.Setup(s => s.RetrieveOrderChainTracking("ttd", request.IdempotencyId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((NotificationOrderChainResponse?)null);
@@ -641,8 +646,8 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     public async Task Post_OperationCanceledDuringRegistration_Returns499Status()
     {
         // Arrange
-        var request = CreateValidRequest();
-        var validatorMock = SetupValidValidator();
+        var request = CreateFutureEmailOrderChainRequest();
+        var validatorMock = SetupValidator();
         var orderServiceMock = new Mock<IOrderRequestService>();
 
         orderServiceMock.Setup(s => s.RetrieveOrderChainTracking("ttd", request.IdempotencyId, It.IsAny<CancellationToken>()))
@@ -673,7 +678,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     }
 
     [Fact]
-    public async Task Post_RequestDtoToInternalModelMapping_PreservesAllPropertiesIncludingReminders()
+    public async Task Post_RequestToInternalModelMapping_PreservesAllPropertiesIncludingReminders()
     {
         // Arrange
         var request = new NotificationOrderChainRequestExt
@@ -721,7 +726,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         };
 
         NotificationOrderChainRequest? capturedRequest = null;
-        var validatorMock = SetupValidValidator();
+        var validatorMock = SetupValidator();
         var orderServiceMock = new Mock<IOrderRequestService>();
 
         orderServiceMock.Setup(s => s.RetrieveOrderChainTracking("ttd", request.IdempotencyId, It.IsAny<CancellationToken>()))
@@ -759,8 +764,8 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     public async Task Post_EnsuresCancellationTokenPassedToController_IsForwardedToAllServiceLayerMethods()
     {
         // Arrange
-        var request = CreateValidRequest();
-        var validatorMock = SetupValidValidator();
+        var request = CreateFutureEmailOrderChainRequest();
+        var validatorMock = SetupValidator();
         var cancellationToken = CancellationToken.None;
         var orderServiceMock = new Mock<IOrderRequestService>();
 
@@ -843,7 +848,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     /// Creates a valid notification order chain request for testing.
     /// </summary>
     /// <returns>A properly configured <see cref="NotificationOrderChainRequestExt"/> instance.</returns>
-    private static NotificationOrderChainRequestExt CreateValidRequest()
+    private static NotificationOrderChainRequestExt CreateFutureEmailOrderChainRequest()
     {
         return new NotificationOrderChainRequestExt
         {
@@ -888,12 +893,23 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     /// Configures a mock validator that always returns a valid validation result.
     /// </summary>
     /// <returns>A configured mock of <see cref="IValidator{T}"/> for <see cref="NotificationOrderChainRequestExt"/>.</returns>
-    private static Mock<IValidator<NotificationOrderChainRequestExt>> SetupValidValidator()
+    private static Mock<IValidator<NotificationOrderChainRequestExt>> SetupValidator()
     {
         var validatorMock = new Mock<IValidator<NotificationOrderChainRequestExt>>();
         validatorMock.Setup(v => v.Validate(It.IsAny<NotificationOrderChainRequestExt>()))
             .Returns(new ValidationResult());
         return validatorMock;
+    }
+
+    /// <summary>
+    /// Deserializes the HTTP response content into a <see cref="NotificationOrderChainResponseExt"/> object.
+    /// </summary>
+    /// <param name="response">The HTTP response message containing JSON content.</param>
+    /// <returns>A deserialized <see cref="NotificationOrderChainResponseExt"/> object, or <c>null</c> if deserialization fails.</returns>
+    private static async Task<NotificationOrderChainResponseExt?> DeserializeResponse(HttpResponseMessage response)
+    {
+        string responseString = await response.Content.ReadAsStringAsync();
+        return JsonSerializer.Deserialize<NotificationOrderChainResponseExt>(responseString, _options);
     }
 
     /// <summary>
@@ -906,54 +922,6 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     {
         using var content = new StringContent(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
         return await client.PostAsync(BasePath, content);
-    }
-
-    /// <summary>
-    /// Deserializes the HTTP response content into a <see cref="NotificationOrderChainResponseExt"/> object.
-    /// </summary>
-    /// <param name="response">The HTTP response message containing JSON content.</param>
-    /// <returns>A deserialized <see cref="NotificationOrderChainResponseExt"/> object, or <c>null</c> if deserialization fails.</returns>
-    private async Task<NotificationOrderChainResponseExt?> DeserializeResponse(HttpResponseMessage response)
-    {
-        string responseString = await response.Content.ReadAsStringAsync();
-        return JsonSerializer.Deserialize<NotificationOrderChainResponseExt>(responseString, _options);
-    }
-
-    /// <summary>
-    /// Creates a test notification order chain response with optional reminders.
-    /// </summary>
-    /// <param name="orderId">The unique identifier for the notification order.</param>
-    /// <param name="reminderCount">The number of reminder shipments to include.</param>
-    /// <param name="sendersReference">Custom sender's reference for the main notification.</param>
-    /// <returns>A configured <see cref="NotificationOrderChainResponse"/> for testing.</returns>
-    private static NotificationOrderChainResponse CreateNotificationOrderChainResponse(Guid orderId, int reminderCount = 0, string sendersReference = "notification-ref")
-    {
-        List<NotificationOrderChainShipment>? reminders = null;
-
-        if (reminderCount > 0)
-        {
-            reminders = new List<NotificationOrderChainShipment>(reminderCount);
-
-            for (int i = 0; i < reminderCount; i++)
-            {
-                reminders.Add(new NotificationOrderChainShipment
-                {
-                    ShipmentId = Guid.NewGuid(),
-                    SendersReference = Guid.NewGuid().ToString()
-                });
-            }
-        }
-
-        return new NotificationOrderChainResponse
-        {
-            OrderChainId = orderId,
-            OrderChainReceipt = new NotificationOrderChainReceipt
-            {
-                Reminders = reminders,
-                ShipmentId = Guid.NewGuid(),
-                SendersReference = sendersReference
-            }
-        };
     }
 
     /// <summary>
@@ -994,5 +962,42 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
                 services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
             });
         }).CreateClient();
+    }
+
+    /// <summary>
+    /// Creates a test notification order chain response with optional reminders.
+    /// </summary>
+    /// <param name="orderId">The unique identifier for the notification order.</param>
+    /// <param name="reminderCount">The number of reminder shipments to include.</param>
+    /// <param name="sendersReference">Custom sender's reference for the main notification.</param>
+    /// <returns>A configured <see cref="NotificationOrderChainResponse"/> for testing.</returns>
+    private static NotificationOrderChainResponse CreateNotificationOrderChainResponse(Guid orderId, int reminderCount = 0, string sendersReference = "notification-ref")
+    {
+        List<NotificationOrderChainShipment>? reminders = null;
+
+        if (reminderCount > 0)
+        {
+            reminders = new List<NotificationOrderChainShipment>(reminderCount);
+
+            for (int i = 0; i < reminderCount; i++)
+            {
+                reminders.Add(new NotificationOrderChainShipment
+                {
+                    ShipmentId = Guid.NewGuid(),
+                    SendersReference = Guid.NewGuid().ToString()
+                });
+            }
+        }
+
+        return new NotificationOrderChainResponse
+        {
+            OrderChainId = orderId,
+            OrderChainReceipt = new NotificationOrderChainReceipt
+            {
+                Reminders = reminders,
+                ShipmentId = Guid.NewGuid(),
+                SendersReference = sendersReference
+            }
+        };
     }
 }
