@@ -39,7 +39,16 @@ public static partial class NotificationOrderChainMapper
         var reminders = notificationOrderChainRequestExt.Reminders?
             .Select(reminder =>
             {
-                var requestedSendTime = notificationOrderChainRequestExt.RequestedSendTime.AddDays(reminder.DelayDays).ToUniversalTime();
+                DateTime requestedSendTime = DateTime.UtcNow;
+
+                if (reminder.DelayDays.HasValue)
+                {
+                    requestedSendTime = notificationOrderChainRequestExt.RequestedSendTime.AddDays(reminder.DelayDays.Value).ToUniversalTime();
+                }
+                else if (reminder.RequestedSendTime.HasValue)
+                {
+                    requestedSendTime = reminder.RequestedSendTime.Value.ToUniversalTime();
+                }
 
                 return reminder.MapToNotificationReminder(requestedSendTime);
             })
@@ -110,7 +119,7 @@ public static partial class NotificationOrderChainMapper
             OrderId = Guid.NewGuid(),
             Type = OrderType.Reminder,
             RequestedSendTime = requestedSendTime,
-            DelayDays = notificationReminderExt.DelayDays,
+            DelayDays = notificationReminderExt.DelayDays ?? 0,
             SendersReference = notificationReminderExt.SendersReference,
             ConditionEndpoint = notificationReminderExt.ConditionEndpoint
         };
