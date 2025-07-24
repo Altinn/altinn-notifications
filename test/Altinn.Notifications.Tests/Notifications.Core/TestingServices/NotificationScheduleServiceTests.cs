@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Runtime.InteropServices;
 
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Services;
@@ -15,9 +14,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 {
     public class NotificationScheduleServiceTests
     {
-        private const string _norwayTimeZoneIdLinux = "Europe/Oslo";
         private readonly Mock<IDateTimeService> _dateTimeMock = new();
-        private const string _norwayTimeZoneIdWindows = "W. Europe Standard Time";
         private readonly NotificationScheduleService _notificationScheduleService;
 
         public NotificationScheduleServiceTests()
@@ -127,7 +124,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             var nonUtcDateTime = new DateTime(2025, 8, 25, 10, 0, 0, kind);
 
             // Act & Assert
-            var exception = Assert.Throws<ArgumentException>(() => _notificationScheduleService.GetSmsExpirationDateTime(nonUtcDateTime));
+            Assert.Throws<ArgumentException>(() => _notificationScheduleService.GetSmsExpirationDateTime(nonUtcDateTime));
         }
     }
 }
