@@ -133,6 +133,13 @@ function postEmailNotificationOrderRequest(data) {
 
     stopIterationOnFail("POST email notification order request failed", success);
 
+    const selfLink = response.headers["Location"];
+
+    check(response, {
+        "POST email notification order request. Location header provided": (_) => selfLink,
+        "POST email notification order request. Response body is not an empty string": (r) => r.body
+    });
+
     return response.body;
 }
 
