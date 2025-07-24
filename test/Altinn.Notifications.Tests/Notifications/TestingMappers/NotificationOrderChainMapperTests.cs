@@ -141,7 +141,7 @@ public class NotificationOrderChainMapperTests
                 },
                 new NotificationReminderExt
                 {
-                    DelayDays = 5,
+                    RequestedSendTime = baseTime.AddDays(5),
                     SendersReference = "7B1A786D-4767-4113-8401-836D1D176BC2",
                     ConditionEndpoint = new Uri("https://vg.no/second-reminder-condition"),
 
@@ -586,7 +586,7 @@ public class NotificationOrderChainMapperTests
                 },
                 new NotificationReminderExt
                 {
-                    DelayDays = 7,
+                    RequestedSendTime = baseTime.AddDays(7),
                     Recipient = new NotificationRecipientExt
                     {
                         RecipientOrganization = new RecipientOrganizationExt
@@ -845,7 +845,7 @@ public class NotificationOrderChainMapperTests
             [
                 new NotificationReminderExt
                 {
-                    DelayDays = 3,
+                    RequestedSendTime = baseTime.AddDays(3),
                     Recipient = new NotificationRecipientExt
                     {
                         RecipientOrganization = new RecipientOrganizationExt
@@ -1088,7 +1088,7 @@ public class NotificationOrderChainMapperTests
             [
                 new NotificationReminderExt
                 {
-                    DelayDays = 3,
+                    RequestedSendTime = baseTime.AddDays(3),
                     SendersReference = "ref-reminder-A3BCFE4284D6",
                     ConditionEndpoint = new Uri("https://vg.no/first-reminder-condition"),
 
@@ -1633,7 +1633,7 @@ public class NotificationOrderChainMapperTests
                 },
                 new NotificationReminderExt
                 {
-                    DelayDays = 7,
+                    RequestedSendTime = baseTime.AddDays(7),
                     Recipient = new NotificationRecipientExt
                     {
                         RecipientPerson = new RecipientPersonExt
