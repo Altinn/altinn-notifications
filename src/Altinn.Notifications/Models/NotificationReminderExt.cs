@@ -39,7 +39,7 @@ public record NotificationReminderExt
     /// </summary>
     [DefaultValue(1)]
     [JsonPropertyName("delayDays")]
-    public int? DelayDays { get; init; } = 1;
+    public int? DelayDays { get; init; }
 
     /// <summary>
     /// Gets or sets the earliest date and time when the reminder should be delivered.
@@ -50,7 +50,7 @@ public record NotificationReminderExt
     /// Defaults to the current UTC time if not specified.
     /// </remarks>
     [JsonPropertyName("requestedSendTime")]
-    public DateTime? RequestedSendTime { get; init; } = DateTime.UtcNow;
+    public DateTime? RequestedSendTime { get; init; }
 
     /// <summary>
     /// Gets or sets the recipient information for this reminder.
