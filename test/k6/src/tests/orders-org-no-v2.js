@@ -76,15 +76,36 @@ export function setup() {
     const token = setupToken.getAltinnTokenForOrg(scopes);
 
     const orgNoRecipient = getOrgNoRecipient();
-    orderRequestJson.recipient.recipientOrganization.orgNumber = orgNoRecipient;
-    orderRequestJson.recipient.recipientOrganization.resourceId = resourceId;
-    orderRequestJson.recipient.recipientOrganization.channelSchema = "Email";
 
-    const emailOrderRequest = { ...orderRequestJson, idempotencyId: idempotencyIdEmail, sendersReference };
+    const emailOrderRequest = {
+        ...orderRequestJson,
+        idempotencyId: idempotencyIdEmail,
+        sendersReference,
+        recipient: {
+            ...orderRequestJson.recipient,
+            recipientOrganization: {
+                ...orderRequestJson.recipient.recipientOrganization,
+                orgNumber: orgNoRecipient,
+                resourceId: resourceId,
+                channelSchema: "Email"
+            }
+        }
+    };
 
-    orderRequestJson.recipient.recipientOrganization.channelSchema = "SMS";
-
-    const smsOrderRequest = { ...orderRequestJson, idempotencyId: idempotencyIdSms, sendersReference };
+    const smsOrderRequest = {
+        ...orderRequestJson,
+        idempotencyId: idempotencyIdSms,
+        sendersReference,
+        recipient: {
+            ...orderRequestJson.recipient,
+            recipientOrganization: {
+                ...orderRequestJson.recipient.recipientOrganization,
+                orgNumber: orgNoRecipient,
+                resourceId: resourceId,
+                channelSchema: "SMS"
+            }
+        }
+    };
 
     return {
         token,
