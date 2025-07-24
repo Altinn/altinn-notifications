@@ -42,21 +42,20 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
 {
     private const string BasePath = "/notifications/api/v1/future/orders";
 
-    private readonly JsonSerializerOptions _options;
+    private static readonly JsonSerializerOptions _options = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        Converters = { new JsonStringEnumConverter() }
+    };
+
     private readonly IntegrationTestWebApplicationFactory<FutureOrdersController> _factory;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FutureOrdersControllerTests"/> class.
     /// </summary>
-    /// <param name="factory">The test web application factory.</param>
     public FutureOrdersControllerTests(IntegrationTestWebApplicationFactory<FutureOrdersController> factory)
     {
         _factory = factory;
-        _options = new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true,
-            Converters = { new JsonStringEnumConverter() }
-        };
     }
 
     [Fact]
