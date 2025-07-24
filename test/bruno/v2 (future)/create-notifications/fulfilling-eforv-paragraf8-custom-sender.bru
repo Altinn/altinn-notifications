@@ -1,7 +1,7 @@
 meta {
   name: Fulfilling eForv. §8 - custom sender
   type: http
-  seq: 5
+  seq: 3
 }
 
 post {
@@ -20,46 +20,46 @@ body:json {
     },
     "recipient": {
       "recipientPerson": {
-        "nationalIdentityNumber": "11122233300",
+        "nationalIdentityNumber": "{{process.env.TESTDATA_TENOR_SET_1_PERSON}}",
         "resourceId": "urn:altinn:resource:te_svc123",
         "ignoreReservation": false,
         "channelSchema": "EmailPreferred",
         "smsSettings": {
           "sendingTimePolicy": "Daytime",
           "sender": "1234 TE",
-          "body": "Du har en ny melding fra TE. Logg inn i Altinn for å gjøre deg kjent med innholdet."
+          "body": "(TEST) Dette er en testmelding til meg selv (Env.: {{Environment}} - Ref: {{random_idempotency_id}})"
         },
         "emailSettings": {
           "sendingTimePolicy": "Anytime",
           "senderEmailAddress": "noreply-te@example.com",
           "senderName": "Tjenesteeier",
-          "subject": "Ny melding fra TE",
-          "body": "Du har en ny melding fra TE. Logg inn i Altinn for å gjøre deg kjent med innholdet."
+          "subject": "(TEST) Ny melding fra TE",
+          "body": "(TEST) Dette er en testmelding til meg selv (Env.: {{Environment}} - Ref: {{random_idempotency_id}})"
         }
       }
     },
     "reminders": [
       {
-        "conditionEndpoint": "https://api.te.no/altinn/te-123-123/?seen=true",
+        "conditionEndpoint": "{{process.env.TESTDATA_URL_CONDITION_FALSE}}",
         "sendersReference": "te-123-123",
         "delayDays": 7,
         "recipient": {
           "recipientPerson": {
-            "nationalIdentityNumber": "11122233300",
+            "nationalIdentityNumber": "{{process.env.TESTDATA_TENOR_SET_1_PERSON}}",
             "resourceId": "urn:altinn:resource:te_svc123",
             "ignoreReservation": true,
             "channelSchema": "SmsPreferred",
             "smsSettings": {
               "sendingTimePolicy": "Daytime",
               "sender": "1234 TE",
-              "body": "Du har en melding fra TE som krever handling. Logg inn i Altinn for å gjøre deg kjent med innholdet."
+              "body": "(TEST) Dette er en testmelding til meg selv (Env.: {{Environment}} - Ref: {{random_idempotency_id}})"
             },
             "emailSettings": {
               "sendingTimePolicy": "Anytime",
               "senderEmailAddress": "noreply-te@example.com",
               "senderName": "Tjenesteeier",
-              "subject": "Påminnelse: Melding fra TE",
-              "body": "Du har en melding fra TE som krever handling. Logg inn i Altinn for å gjøre deg kjent med innholdet."
+              "subject": "(TEST) Påminnelse: Melding fra TE",
+              "body": "(TEST) Dette er en testmelding til meg selv (Env.: {{Environment}} - Ref: {{random_idempotency_id}})"
             }
           }
         }

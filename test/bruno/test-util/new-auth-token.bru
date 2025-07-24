@@ -5,7 +5,7 @@ meta {
 }
 
 get {
-  url: {{process.env.TOKEN_GENERATOR_URL}}/api/GetEnterpriseToken?env={{Environment}}&scopes=altinn:serviceowner/notifications.create&org=ttd&orgNo=991825827
+  url: {{process.env.TOKEN_GENERATOR_URL}}/api/GetEnterpriseToken?env={{Environment}}&scopes=altinn:serviceowner/notifications.create&org=ttd
   body: none
   auth: basic
 }
@@ -14,7 +14,6 @@ params:query {
   env: {{Environment}}
   scopes: altinn:serviceowner/notifications.create
   org: ttd
-  orgNo: 991825827
 }
 
 auth:basic {

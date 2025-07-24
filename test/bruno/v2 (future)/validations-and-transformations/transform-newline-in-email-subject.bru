@@ -1,7 +1,7 @@
 meta {
-  name: MVP - Email
+  name: transform - newline in email subject
   type: http
-  seq: 2
+  seq: 1
 }
 
 post {
@@ -18,8 +18,8 @@ body:json {
       "recipientEmail": {
         "emailAddress": "{{process.env.TESTDATA_MY_EMAIL}}",
         "emailSettings": {        
-          "subject": "Multiline\nEmail Subject - \r\nCovering\n\rall\rplatforms",
-          "body": "Multiline\nEmail Body - \r\nCovering\n\rall\rplatforms",
+          "subject": "(TEST) Multiline\nEmail Subject - \r\nCovering\n\rall\rplatforms",
+          "body": "(TEST) Multiline\nEmail Body - \r\nCovering\n\rall\rplatforms\n\n(Env.: {{Environment}} - Ref: {{random_idempotency_id}})",
           "contentType": "Plain",
           "sendingTimePolicy": "Anytime"
         }
