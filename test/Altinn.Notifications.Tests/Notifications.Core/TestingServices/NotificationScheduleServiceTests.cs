@@ -96,13 +96,11 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             var expectedExpiryDateTimeInLocalFormat = new DateTime(2025, 08, 28, 09, 0, 0, DateTimeKind.Unspecified);
 
-            var expectedExpiryDateTimeInUTCFormat = ConvertNorwegianLocalTimeToUtc(expectedExpiryDateTimeInLocalFormat);
-
             // Act
             var expiryDateTime = _notificationScheduleService.GetSmsExpirationDateTime(requestedSendTime);
 
             // Assert
-            Assert.Equal(expectedExpiryDateTimeInUTCFormat, expiryDateTime);
+            Assert.Equal(expectedExpiryDateTimeInLocalFormat.ToUniversalTime(), expiryDateTime);
         }
 
         [Fact]
@@ -113,13 +111,11 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             var expectedExpiryDateTimeInLocalFormat = new DateTime(2025, 08, 27, 09, 0, 0, DateTimeKind.Unspecified);
 
-            var expectedExpiryDateTimeInUTCFormat = ConvertNorwegianLocalTimeToUtc(expectedExpiryDateTimeInLocalFormat);
-
             // Act
             var expiryDateTime = _notificationScheduleService.GetSmsExpirationDateTime(requestedSendTime);
 
             // Assert
-            Assert.Equal(expectedExpiryDateTimeInUTCFormat, expiryDateTime);
+            Assert.Equal(expectedExpiryDateTimeInLocalFormat.ToUniversalTime(), expiryDateTime);
         }
 
         [Theory]
@@ -132,25 +128,6 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             // Act & Assert
             var exception = Assert.Throws<ArgumentException>(() => _notificationScheduleService.GetSmsExpirationDateTime(nonUtcDateTime));
-        }
-
-        /// <summary>
-        /// Converts a local Norwegian time (Europe/Oslo or W. Europe Standard Time) to its corresponding UTC time.
-        /// This is used in tests to calculate the expected UTC expiry time from a local time value.
-        /// </summary>
-        /// <param name="localNorwegianTime">
-        /// The local time in Norway (DateTimeKind.Unspecified) to convert to UTC.
-        /// </param>
-        /// <returns>
-        /// The equivalent UTC <see cref="DateTime"/>.
-        /// </returns>
-        private static DateTime ConvertNorwegianLocalTimeToUtc(DateTime localNorwegianTime)
-        {
-            var timeZoneId = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? _norwayTimeZoneIdWindows : _norwayTimeZoneIdLinux;
-
-            TimeZoneInfo norwayTimeZone = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
-
-            return TimeZoneInfo.ConvertTimeToUtc(localNorwegianTime, norwayTimeZone);
         }
     }
 }
