@@ -1,0 +1,65 @@
+meta {
+  name: Fulfilling eForvaltningsforskriften §8
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "{{random_idempotency_id}}",
+    "associationDialogporten": {
+      "dialogueId": "{{dialog_guid}}",
+      "transmissionId": "{{transmissionId-utsending-1}}"
+    },
+     "recipient": {
+      "recipientPerson": {
+        "nationalIdentityNumber": "{{process.env.TESTDATA_TENOR_SET_1_PERSON}}",
+        "resourceId": "urn:altinn:resource:te_svc123",
+        "ignoreReservation": false,
+        "channelSchema": "EmailPreferred",
+        "smsSettings": {
+          "sendingTimePolicy": "Daytime",
+          "body": "2 - Du har en ny melding fra TE. Logg inn i Altinn for å gjøre deg kjent med innholdet.",
+          "sender": "test sender"
+        },
+        "emailSettings": {
+          "sendingTimePolicy": "Anytime",
+          "subject": "Ny melding fra TE",
+          "body": "2 - Du har en ny melding fra TE. Logg inn i Altinn for å gjøre deg kjent med innholdet."
+        }
+      }
+    },
+    "reminders": [
+      {
+        "conditionEndpoint": "{{process.env.TESTDATA_URL_CONDITION_FALSE}}",
+        "sendersReference": "{{random_idempotency_id}}",
+        "delayDays": 7,
+        "recipient": {
+          "recipientPerson": {
+            "nationalIdentityNumber": "{{process.env.TESTDATA_TENOR_SET_1_PERSON}}",
+            "resourceId": "urn:altinn:resource:te_svc123",
+            "ignoreReservation": true,
+            "channelSchema": "SmsPreferred",
+            "smsSettings": {
+              "sendingTimePolicy": "Daytime",
+              "body": "2 -Du har en melding fra TE som krever handling. Logg inn i Altinn for å gjøre deg kjent med innholdet.",
+              "sender": "test sender"
+            },
+            "emailSettings": {
+              "sendingTimePolicy": "Anytime",
+              "subject": "Påminnelse: Melding fra TE",
+              "body": "2 - Du har en melding fra TE som krever handling. Logg inn i Altinn for å gjøre deg kjent med innholdet."
+            }
+          }
+        }
+      }
+    ]
+  }
+}
