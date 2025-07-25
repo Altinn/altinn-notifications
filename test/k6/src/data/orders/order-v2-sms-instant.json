@@ -1,0 +1,14 @@
+{
+  "idempotencyId": "string",
+  "sendersReference": "string",
+  "recipient": {
+    "recipientSms": {
+      "phoneNumber": "string",
+      "timeToLiveInSeconds": 60,
+      "smsSettings": {
+        "sender": "Altinn-test",
+        "body": "This is a plain test body for testing SMS instant services"
+      }
+    }
+  }
+}
