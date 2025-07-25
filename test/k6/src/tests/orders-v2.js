@@ -29,7 +29,11 @@ import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 
 import * as setupToken from "../setup.js";
 import * as futureOrdersApi from "../api/notifications/v2.js";
-import { post_sms_order_v2, post_sms_instant_order_v2, post_email_order_v2, setEmptyThresholds, get_email_shipment, get_sms_shipment, get_status_feed } from "./threshold-labels.js";
+import {
+    post_sms_order_v2, post_sms_instant_order_v2, post_email_order_v2,
+    setEmptyThresholds, get_email_shipment, get_sms_shipment,
+    get_sms_instant_shipment, get_status_feed
+} from "./threshold-labels.js";
 
 const labels = [post_email_order_v2, post_sms_order_v2, post_sms_instant_order_v2, get_email_shipment, get_sms_shipment, get_status_feed];
 
@@ -206,7 +210,8 @@ function postSmsInstantNotificationOrderRequest(data) {
     );  
 
     const success = check(response, {
-        "POST SMS instant notification order request. Status is 201 Created": (r) => r.status === 201
+        "POST SMS instant notification order request. Status is 201 Created": (r) => r.status === 201,
+        "POST SMS instant notification order request. Response body contains shipmentId": (r) => JSON.parse(r.body).notification.shipmentId !== undefined
     });
 
     stopIterationOnFail("POST SMS instant notification order request failed", success);
@@ -228,10 +233,10 @@ export function getShipmentStatus(data, shipmentId, label, type) {
     switch (type) {
         case "Email": 
             check(response, {
-                "GET shipment details for Email. Status is 200 OK": (r) => r.status === 200,
+                "GET shipment details for Email. Status is 200 OK": (r) => r.status === 200
             });
             check(JSON.parse(response.body), {
-                "GET shipment details for Email. ShipmentId property is a match": (shipmentResponse) => shipmentResponse.shipmentId === shipmentId,
+                "GET shipment details for Email. ShipmentId property is a match": (shipmentResponse) => shipmentResponse.shipmentId === shipmentId
             });
             break;
         case "SMS":
@@ -239,7 +244,16 @@ export function getShipmentStatus(data, shipmentId, label, type) {
                 "GET SMS shipment details for SMS. Status is 200 OK": (r) => r.status === 200,
             });
             check(JSON.parse(response.body), {
-                "GET SMS shipment details for SMS. ShipmentId property is a match": (shipmentResponse) => shipmentResponse.shipmentId === shipmentId,
+                "GET SMS shipment details for SMS. ShipmentId property is a match": (shipmentResponse) => shipmentResponse.shipmentId === shipmentId
+            });
+            break;
+        case "SMSInstant":
+            check(response, {
+                "GET SMS instant shipment details for SMS. Status is 200 OK": (r) => r.status === 200
+            });
+            check(JSON.parse(response.body), {
+                "GET SMS instant shipment details for SMS. ShipmentId property is a match": (shipmentResponse) => shipmentResponse.shipmentId === shipmentId,
+                "Get SMS instant shipment details for SMS. Type is Instant": (shipmentResponse) => shipmentResponse.type === "Instant"
             });
             break;
         default:
@@ -285,7 +299,9 @@ export default function (data) {
     // checking shipment details for the SMS order
     getShipmentStatus(data, responseObject.notification.shipmentId, get_sms_shipment, "SMS");
     
-    postSmsInstantNotificationOrderRequest(data);
+    // testing instant SMS notification order request
+    response = postSmsInstantNotificationOrderRequest(data);
+    getShipmentStatus(data, JSON.parse(response).notification.shipmentId, get_sms_instant_shipment, "SMSInstant");
 
     getStatusFeed(data, get_status_feed);
 }
