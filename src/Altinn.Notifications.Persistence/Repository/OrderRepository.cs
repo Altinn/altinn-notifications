@@ -100,7 +100,7 @@ public class OrderRepository : IOrderRepository
         await using var transaction = await connection.BeginTransactionAsync();
         try
         {
-            long dbOrderId = await InsertOrder(order, connection, transaction);
+            long dbOrderId = await InsertOrder(order, connection, transaction, OrderProcessingStatus.Registered);
 
             EmailTemplate? emailTemplate = order.Templates.Find(t => t.Type == NotificationTemplateType.Email) as EmailTemplate;
             await InsertEmailTextAsync(dbOrderId, emailTemplate, connection, transaction);

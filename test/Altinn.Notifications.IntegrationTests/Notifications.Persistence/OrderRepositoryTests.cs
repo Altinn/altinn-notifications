@@ -89,6 +89,40 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
         }
 
         [Fact]
+        public async Task Create_NotificationOrder_ProcessingStatusSetToRegistered()
+        {
+            // Arrange
+            OrderRepository repo = (OrderRepository)ServiceUtil
+                .GetServices(new List<Type>() { typeof(IOrderRepository) })
+                .First(i => i.GetType() == typeof(OrderRepository));
+
+            NotificationOrder order = new()
+            {
+                Id = Guid.NewGuid(),
+                Created = DateTime.UtcNow,
+                Creator = new("test"),
+                Templates = new List<INotificationTemplate>()
+                {
+                    new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)
+                }
+            };
+
+            _orderIdsToDelete.Add(order.Id);
+
+            // Act
+            await repo.Create(order);
+
+            // Assert
+            string sql = $@"SELECT processedstatus 
+                          FROM notifications.orders 
+                          WHERE alternateid = '{order.Id}'";
+
+            string actualStatus = await PostgreUtil.RunSqlReturnOutput<string>(sql);
+
+            Assert.Equal(OrderProcessingStatus.Registered.ToString(), actualStatus);
+        }
+
+        [Fact]
         public async Task GetOrderWithStatusById_ConfirmConditionEndpoint()
         {
             // Arrange
