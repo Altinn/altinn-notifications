@@ -1,20 +1,26 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace Altinn.Notifications.Core.Services.Interfaces;
 
-namespace Altinn.Notifications.Core.Services.Interfaces
+/// <summary>
+/// Defines scheduling operations for SMS notification delivery.
+/// </summary>
+public interface INotificationScheduleService
 {
     /// <summary>
-    /// Interface describing the functionality of the notification schedule service
+    /// Determine whether SMS messages are allowed to be sent at the current UTC time, based on the configured sending window.
     /// </summary>
-    public interface INotificationScheduleService
-    {
-        /// <summary>
-        /// Checks if currently within send window and can send sms notifications
-        /// </summary>
-        /// <returns></returns>
-       public bool CanSendSmsNotifications();
-    }
+    /// <returns>
+    /// <c>true</c> if SMS messages can be sent now; otherwise, <c>false</c>.
+    /// </returns>
+    bool CanSendSmsNow();
+
+    /// <summary>
+    /// Calculates when an SMS notification should expire, based on a given UTC time and the configured sending window.
+    /// </summary>
+    /// <param name="referenceUtcDateTime">
+    /// The UTC time used as the starting point for calculating the expiry date and time.
+    /// </param>
+    /// <returns>
+    /// The UTC date and time when the SMS notification will expire.
+    /// </returns>
+    DateTime GetSmsExpirationDateTime(DateTime referenceUtcDateTime);
 }

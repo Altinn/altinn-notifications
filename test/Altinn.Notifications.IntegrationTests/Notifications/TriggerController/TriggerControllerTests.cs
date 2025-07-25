@@ -47,7 +47,7 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
     }
 
     [Fact]
-    public async Task Trigger_Trigger_SendEmailNotifications_EmailNotificationServiceCalled()
+    public async Task Trigger_SendEmailNotifications_EmailNotificationServiceCalled()
     {
         Mock<IEmailNotificationService> serviceMock = new();
         serviceMock

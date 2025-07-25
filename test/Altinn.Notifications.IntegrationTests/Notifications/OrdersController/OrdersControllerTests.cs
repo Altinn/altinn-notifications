@@ -47,17 +47,18 @@ public class OrdersControllerTests : IClassFixture<IntegrationTestWebApplication
 
         _order = new(
             _orderId,
-            "senders-reference",
-            [],
-            DateTime.UtcNow,
-            NotificationChannel.Email,
+            OrderType.Notification,
             new Creator("ttd"),
             DateTime.UtcNow,
-            [],
+            null,
+            null,
             false,
-            null,
-            null,
-            OrderType.Notification);
+            "senders-reference",
+            DateTime.UtcNow,
+            [],
+            SendingTimePolicy.Daytime,
+            [],
+            NotificationChannel.Email);
 
         _orderWithStatus = new(
             _orderId,
