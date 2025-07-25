@@ -1,0 +1,69 @@
+meta {
+  name: Fulfilling eForv. §8 - custom sender
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "te-123-123",
+    "associationDialogporten": {
+      "dialogueId": "123",
+      "transmissionId": "456"
+    },
+    "recipient": {
+      "recipientPerson": {
+        "nationalIdentityNumber": "{{process.env.TESTDATA_TENOR_SET_1_PERSON}}",
+        "resourceId": "urn:altinn:resource:te_svc123",
+        "ignoreReservation": false,
+        "channelSchema": "EmailPreferred",
+        "smsSettings": {
+          "sendingTimePolicy": "Daytime",
+          "sender": "1234 TE",
+          "body": "(TEST) Dette er en testmelding til meg selv (Env.: {{Environment}} - Ref: {{random_idempotency_id}})"
+        },
+        "emailSettings": {
+          "sendingTimePolicy": "Anytime",
+          "senderEmailAddress": "noreply-te@example.com",
+          "senderName": "Tjenesteeier",
+          "subject": "(TEST) Ny melding fra TE",
+          "body": "(TEST) Dette er en testmelding til meg selv (Env.: {{Environment}} - Ref: {{random_idempotency_id}})"
+        }
+      }
+    },
+    "reminders": [
+      {
+        "conditionEndpoint": "{{process.env.TESTDATA_URL_CONDITION_FALSE}}",
+        "sendersReference": "te-123-123",
+        "delayDays": 7,
+        "recipient": {
+          "recipientPerson": {
+            "nationalIdentityNumber": "{{process.env.TESTDATA_TENOR_SET_1_PERSON}}",
+            "resourceId": "urn:altinn:resource:te_svc123",
+            "ignoreReservation": true,
+            "channelSchema": "SmsPreferred",
+            "smsSettings": {
+              "sendingTimePolicy": "Daytime",
+              "sender": "1234 TE",
+              "body": "(TEST) Dette er en testmelding til meg selv (Env.: {{Environment}} - Ref: {{random_idempotency_id}})"
+            },
+            "emailSettings": {
+              "sendingTimePolicy": "Anytime",
+              "senderEmailAddress": "noreply-te@example.com",
+              "senderName": "Tjenesteeier",
+              "subject": "(TEST) Påminnelse: Melding fra TE",
+              "body": "(TEST) Dette er en testmelding til meg selv (Env.: {{Environment}} - Ref: {{random_idempotency_id}})"
+            }
+          }
+        }
+      }
+    ]
+  }
+}

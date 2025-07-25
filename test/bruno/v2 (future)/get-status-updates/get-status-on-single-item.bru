@@ -1,0 +1,15 @@
+meta {
+  name: get status on a single item
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{host}}/notifications/api/v1/future/shipment/:notificationId
+  body: none
+  auth: inherit
+}
+
+params:path {
+  notificationId: 9e3a90f8-dee2-42e8-af69-8f7ea0d3c78b
+}

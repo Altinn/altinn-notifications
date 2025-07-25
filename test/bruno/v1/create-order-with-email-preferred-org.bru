@@ -1,0 +1,31 @@
+meta {
+  name: create order with emailPreferred ORG
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{host}}/notifications/api/v1/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "resourceId": "app_ttd_rf-0002",
+    "emailTemplate": {
+      "subject": "test epost altinn 3 ressurs. ",
+      "body": "dette er en <em>test2</em>",
+      "contentType": "Html"
+    },
+    "notificationChannel": "EmailPreferred",
+    "recipients": [
+      {
+        "organizationNumber": "{{process.env.TESTDATA_TENOR_SET_1_ORG}}"
+      }
+    ],
+    "smsTemplate": {
+      "body": "test av altinn ressurs varsel"
+    }
+  }
+}

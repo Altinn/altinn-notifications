@@ -1,0 +1,77 @@
+meta {
+  name: Demo notification with 2 reminders
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "te-123-123",
+    "dialogportenAssociation": {
+      "dialogId": "{{dialog_guid}}",
+      "transmissionId": "{{transmissionId-utsending-1}}"
+    },
+    "recipient": {
+      "recipientEmail": {
+        "emailAddress": "ola.normann@example.com",
+        "emailSettings": {
+          "sendingTimePolicy": "Anytime",
+          "contentType": "Plain",
+          "subject": "(TEST) Ny melding fra TE",
+          "body": "(TEST) Dette er en testmelding til meg selv (Env.: {{Environment}} - Ref: {{random_idempotency_id}})"
+        }
+      }
+    },
+    "reminders": [
+      {
+        "conditionEndpoint": "{{process.env.TESTDATA_URL_CONDITION_FALSE}}",
+        "sendersReference": "te-123-123-rem-1",
+        "delayDays": 1,
+        "recipient": {
+          "recipientOrganization": {
+            "orgNumber": "{{process.env.TESTDATA_TENOR_SET_1_ORG}}",
+            "resourceId": "urn:altinn:resource:te_svc123",
+            "channelSchema": "SmsPreferred",
+            "smsSettings": {
+              "sendingTimePolicy": "Daytime",
+              "body": "(TEST) Dette er en testmelding til $recipientName$ selv (Env.: {{Environment}} - Ref: {{random_idempotency_id}})"
+            },
+            "emailSettings": {
+              "sendingTimePolicy": "Anytime",
+              "subject": "(TEST) Ny melding fra TE",
+              "body": "(TEST) Dette er en testmelding til $recipientName$ selv (Env.: {{Environment}} - Ref: {{random_idempotency_id}})"
+            }
+          }
+        }
+      },
+      {
+        "conditionEndpoint": "{{process.env.TESTDATA_URL_CONDITION_FALSE}}",
+        "sendersReference": "te-123-123-rem-2",
+        "delayDays": 7,
+        "recipient": {
+          "recipientOrganization": {
+            "orgNumber": "{{process.env.TESTDATA_TENOR_SET_1_ORG}}",
+            "resourceId": "urn:altinn:resource:te_svc123",
+            "channelSchema": "SmsPreferred",
+            "smsSettings": {
+              "sendingTimePolicy": "Daytime",
+              "body": "(TEST) Dette er en testmelding til $recipientName$ selv (Env.: {{Environment}} - Ref: {{random_idempotency_id}})"
+            },
+            "emailSettings": {
+              "sendingTimePolicy": "Anytime",
+              "subject": "(TEST) Ny melding fra TE",
+              "body": "(TEST) Dette er en testmelding til $recipientName$ selv (Env.: {{Environment}} - Ref: {{random_idempotency_id}})"
+            }
+          }
+        }
+      }
+    ]
+  }
+}

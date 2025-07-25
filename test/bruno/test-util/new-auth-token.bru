@@ -1,0 +1,36 @@
+meta {
+  name: new auth token
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{process.env.TOKEN_GENERATOR_URL}}/api/GetEnterpriseToken?env={{Environment}}&scopes=altinn:serviceowner/notifications.create&org=ttd
+  body: none
+  auth: basic
+}
+
+params:query {
+  env: {{Environment}}
+  scopes: altinn:serviceowner/notifications.create
+  org: ttd
+}
+
+auth:basic {
+  username: {{process.env.TOKEN_BASIC_AUTH_USER}}
+  password: {{process.env.TOKEN_BASIC_AUTH_PW}}
+}
+
+script:post-response {
+  let data = res.getBody();
+  bru.setEnvVar("jwt",data);
+  
+  // Check if the response contains a valid token
+  if (!data || data.trim() === '') {
+    console.error('Failed to retrieve a valid token');
+    return;
+  }
+  bru.setEnvVar("jwt", data);
+  bru.setEnvVar("jwt_from", Date.now());
+  bru.setEnvVar("jwt_env", bru.getEnvVar("Environment"));
+}

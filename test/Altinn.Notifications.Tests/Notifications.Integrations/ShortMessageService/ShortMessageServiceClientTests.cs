@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+
 using Altinn.Notifications.Core.Helpers;
 using Altinn.Notifications.Core.Models.ShortMessageService;
 using Altinn.Notifications.Integrations.Configuration;
@@ -24,11 +25,6 @@ public class ShortMessageServiceClientTests
 {
     private readonly ShortMessageServiceClient _shortMessageServiceClient;
     private readonly Mock<ILogger<ShortMessageServiceClient>> _loggerMock;
-
-    private static readonly IOptions<PlatformSettings> _platformSettings = Options.Create(new PlatformSettings()
-    {
-        ApiShortMessageServiceEndpoint = "http://localhost:5092/notifications/sms/api/v1/"
-    });
 
     public ShortMessageServiceClientTests()
     {
@@ -79,14 +75,7 @@ public class ShortMessageServiceClientTests
         Assert.Equal(HttpStatusCode.BadRequest, result.StatusCode);
         Assert.Contains("Invalid request format", result.ErrorDetails);
 
-        _loggerMock.Verify(
-            e => e.Log(
-                LogLevel.Warning,
-                It.IsAny<EventId>(),
-                It.IsAny<It.IsAnyType>(),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        _loggerMock.Verify(e => e.Log(LogLevel.Warning, It.IsAny<EventId>(), It.IsAny<It.IsAnyType>(), It.IsAny<Exception>(), It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once);
     }
 
     [Fact]
@@ -109,6 +98,36 @@ public class ShortMessageServiceClientTests
         Assert.False(result.Success);
         Assert.Equal((HttpStatusCode)499, result.StatusCode);
         Assert.Contains("Request was canceled", result.ErrorDetails);
+    }
+
+    [Fact]
+    public async Task SendAsync_GenericException_ReturnsFailureWithExceptionDetails()
+    {
+        // Arrange
+        var shortMessage = new ShortMessage
+        {
+            Sender = "Altinn",
+            TimeToLive = 3600,
+            Message = "Test message",
+            Recipient = "generic-error",
+            NotificationId = Guid.NewGuid()
+        };
+
+        // Act
+        var result = await _shortMessageServiceClient.SendAsync(shortMessage);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal(HttpStatusCode.InternalServerError, result.StatusCode);
+        Assert.Contains("An unexpected error occurred", result.ErrorDetails);
+        _loggerMock.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
     }
 
     [Fact]
@@ -142,36 +161,6 @@ public class ShortMessageServiceClientTests
             Times.Once);
     }
 
-    [Fact]
-    public async Task SendAsync_GenericException_ReturnsFailureWithExceptionDetails()
-    {
-        // Arrange
-        var shortMessage = new ShortMessage
-        {
-            Sender = "Altinn",
-            TimeToLive = 3600,
-            Message = "Test message",
-            Recipient = "generic-error",
-            NotificationId = Guid.NewGuid()
-        };
-
-        // Act
-        var result = await _shortMessageServiceClient.SendAsync(shortMessage);
-
-        // Assert
-        Assert.False(result.Success);
-        Assert.Equal(HttpStatusCode.InternalServerError, result.StatusCode);
-        Assert.Contains("An unexpected error occurred", result.ErrorDetails);
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.IsAny<It.IsAnyType>(),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
-    }
-
     private ShortMessageServiceClient CreateShortMessageServiceTestClient()
     {
         JsonSerializerOptions serializerOptions = new()
@@ -180,17 +169,18 @@ public class ShortMessageServiceClientTests
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
         };
 
-        var delegatingHandler = new DelegatingHandlerStub(async (request, token) =>
+        var delegatingHandler = new DelegatingHandlerStub((request, token) =>
         {
             if (!request!.RequestUri!.AbsolutePath.EndsWith("instantmessage/send"))
             {
-                return new HttpResponseMessage(HttpStatusCode.NotFound);
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
             }
 
             ShortMessage? message = null;
+
             try
             {
-                string content = await request.Content!.ReadAsStringAsync(token);
+                string content = request.Content!.ReadAsStringAsync(token).GetAwaiter().GetResult();
                 message = JsonSerializer.Deserialize<ShortMessage>(content, serializerOptions);
             }
             catch
@@ -200,14 +190,15 @@ public class ShortMessageServiceClientTests
 
             if (message == null)
             {
-                return new HttpResponseMessage(HttpStatusCode.BadRequest)
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadRequest)
                 {
                     Content = new StringContent("Invalid JSON format", Encoding.UTF8, "application/json")
-                };
+                });
             }
 
             HttpStatusCode statusCode;
             string? errorContent = null;
+
             switch (message.Recipient)
             {
                 case "client-closed":
@@ -241,9 +232,14 @@ public class ShortMessageServiceClientTests
                 response.Content = new StringContent(errorContent, Encoding.UTF8, "application/json");
             }
 
-            return response;
+            return Task.FromResult(response);
         });
 
-        return new ShortMessageServiceClient(new HttpClient(delegatingHandler), _loggerMock.Object, _platformSettings);
+        PlatformSettings settings = new()
+        {
+            ApiShortMessageServiceEndpoint = "http://localhost:5092/notifications/sms/api/v1/"
+        };
+
+        return new ShortMessageServiceClient(new HttpClient(delegatingHandler), _loggerMock.Object, Options.Create(settings));
     }
 }
