@@ -3,7 +3,6 @@ using System.Text.Json;
 
 using Altinn.Common.AccessTokenClient.Services;
 using Altinn.Notifications.Core.Integrations;
-using Altinn.Notifications.Core.Models.ContactPoints;
 using Altinn.Notifications.Core.Models.Parties;
 using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Integrations.Configuration;
@@ -20,7 +19,6 @@ public class RegisterClient : IRegisterClient
 {
     private readonly HttpClient _client;
     private readonly JsonSerializerOptions _jsonSerializerOptions;
-    private readonly string _contactPointLookupEndpoint = "organizations/contactpoint/lookup";
     private readonly string _nameComponentsLookupEndpoint = "parties/nameslookup";
 
     private readonly IAccessTokenGenerator _accessTokenGenerator;
@@ -39,32 +37,6 @@ public class RegisterClient : IRegisterClient
         _accessTokenGenerator = accessTokenGenerator;
 
         _jsonSerializerOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-    }
-
-    /// <inheritdoc/>
-    public async Task<List<OrganizationContactPoints>> GetOrganizationContactPoints(List<string> organizationNumbers)
-    {
-        if (organizationNumbers == null || organizationNumbers.Count == 0)
-        {
-            return [];
-        }
-
-        var lookupObject = new OrgContactPointLookup
-        {
-            OrganizationNumbers = organizationNumbers
-        };
-
-        var content = JsonContent.Create(lookupObject, options: _jsonSerializerOptions);
-
-        var response = await _client.PostAsync(_contactPointLookupEndpoint, content);
-
-        if (!response.IsSuccessStatusCode)
-        {
-            throw await PlatformHttpException.CreateAsync(response);
-        }
-
-        var contactPoints = await response.Content.ReadFromJsonAsync<OrgContactPointsList>(_jsonSerializerOptions);
-        return contactPoints?.ContactPointsList ?? [];
     }
 
     /// <inheritdoc/>
