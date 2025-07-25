@@ -34,8 +34,8 @@ import {
     setEmptyThresholds, get_email_shipment, get_sms_shipment,
     get_sms_instant_shipment, get_status_feed
 } from "./threshold-labels.js";
-import { environment, scopes, yt01Environment } from "../shared/variables.js";
-import { getEmailRecipient } from "../shared/functions.js";
+import { scopes } from "../shared/variables.js";
+import { getEmailRecipient, getSmsRecipient } from "../shared/functions.js";
 
 const labels = [post_email_order_v2, post_sms_order_v2, post_sms_instant_order_v2, get_email_shipment, get_sms_shipment, get_status_feed];
 
@@ -48,16 +48,6 @@ const smsOrderRequestJson = JSON.parse(
 const smsOrderInstantRequestJson = JSON.parse(
     open("../data/orders/order-v2-sms-instant.json")
 );
-
-function getSmsRecipient() {
-    if (__ENV.smsRecipient) {
-        return __ENV.smsRecipient.toLowerCase();
-    }
-    if (environment === yt01Environment) {
-        return "+4799999999";
-    }
-    return null;
-}
 
 export const options = {
     summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(95)', 'p(99)', 'p(99.5)', 'p(99.9)', 'count'],
