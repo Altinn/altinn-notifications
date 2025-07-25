@@ -1,5 +1,4 @@
-﻿using Altinn.Notifications.Core.Models.ContactPoints;
-using Altinn.Notifications.Core.Models.Parties;
+﻿using Altinn.Notifications.Core.Models.Parties;
 
 namespace Altinn.Notifications.Core.Integrations;
 
@@ -8,16 +7,6 @@ namespace Altinn.Notifications.Core.Integrations;
 /// </summary>
 public interface IRegisterClient
 {
-    /// <summary>
-    /// Asynchronously retrieves contact point details for the specified organizations.
-    /// </summary>
-    /// <param name="organizationNumbers">A collection of organization numbers for which contact point details are requested.</param>
-    /// <returns>
-    /// A task that represents the asynchronous operation. 
-    /// The task result contains a list of <see cref="OrganizationContactPoints"/> representing the contact points of the specified organizations.
-    /// </returns>
-    Task<List<OrganizationContactPoints>> GetOrganizationContactPoints(List<string> organizationNumbers);
-
     /// <summary>
     /// Asynchronously retrieves party details for the specified persons and/or organizations.
     /// </summary>

@@ -1,6 +1,6 @@
 ﻿using Altinn.Notifications.Core.Models.ContactPoints;
 
-namespace Altinn.Notifications.Integrations.Register
+namespace Altinn.Notifications.Integrations.Profile
 {
     /// <summary>
     /// A list representation of <see cref="OrganizationContactPoints"/>

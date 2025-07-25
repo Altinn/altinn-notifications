@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Altinn.Notifications.Integrations.Register
+namespace Altinn.Notifications.Integrations.Profile
 {
     /// <summary>
     /// A class describing the query model for contact points for organizations
