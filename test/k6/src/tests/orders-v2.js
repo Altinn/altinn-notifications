@@ -34,6 +34,7 @@ import {
     setEmptyThresholds, get_email_shipment, get_sms_shipment,
     get_sms_instant_shipment, get_status_feed
 } from "./threshold-labels.js";
+import { environment, scopes, yt01Environment } from "../shared/variables.js";
 
 const labels = [post_email_order_v2, post_sms_order_v2, post_sms_instant_order_v2, get_email_shipment, get_sms_shipment, get_status_feed];
 
@@ -47,14 +48,11 @@ const smsOrderInstantRequestJson = JSON.parse(
     open("../data/orders/order-v2-sms-instant.json")
 );
 
-const environment = __ENV.env;
-const scopes = "altinn:serviceowner/notifications.create";
-
 function getEmailRecipient() {
     if (__ENV.emailRecipient) {
         return __ENV.emailRecipient.toLowerCase();
     }
-    if (environment === "yt01") {
+    if (environment === yt01Environment) {
         return "noreply@altinn.no";
     }
     return null;
@@ -64,7 +62,7 @@ function getSmsRecipient() {
     if (__ENV.smsRecipient) {
         return __ENV.smsRecipient.toLowerCase();
     }
-    if (environment === "yt01") {
+    if (environment === yt01Environment) {
         return "+4799999999";
     }
     return null;

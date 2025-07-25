@@ -1,4 +1,5 @@
 import { stopIterationOnFail } from "./errorhandler.js";
+import { environment } from "./shared/variables.js";
 
 // Base URLs for the Altinn platform across different environments.
 const baseUrls = {
@@ -16,7 +17,6 @@ const maskinportenBaseUrls = {
     tt02: "https://test.maskinporten.no/"
 };
 
-const environment = __ENV.env ? __ENV.env.toLowerCase() : null;
 if (!environment) {
     stopIterationOnFail("Environment variable 'env' is not set", false);
 }
