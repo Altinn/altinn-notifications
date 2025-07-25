@@ -4,7 +4,6 @@ using System.Text;
 using System.Text.Json;
 
 using Altinn.Common.AccessTokenClient.Services;
-using Altinn.Notifications.Core.Models.ContactPoints;
 using Altinn.Notifications.Core.Models.Parties;
 using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Integrations.Configuration;
@@ -31,66 +30,6 @@ public class RegisterClientTests
     public RegisterClientTests()
     {
         _registerClient = CreateRegisterClient();
-    }
-
-    [Fact]
-    public async Task GetOrganizationContactPoints_WithEmptyOrganizationNumbers_ReturnsEmpty()
-    {
-        // Arrange
-        List<string> organizationNumbers = [];
-
-        // Act
-        var result = await _registerClient.GetOrganizationContactPoints(organizationNumbers);
-
-        // Assert
-        Assert.Empty(result);
-        Assert.NotNull(result);
-    }
-
-    [Fact]
-    public async Task GetOrganizationContactPoints_WithNullResponseContent_ReturnsEmpty()
-    {
-        // Arrange
-        var registerClient = CreateRegisterClient(new DelegatingHandlerStub((request, token) =>
-        {
-            if (request!.RequestUri!.AbsolutePath.EndsWith("contactpoint/lookup"))
-            {
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-                {
-                    Content = new StringContent("null", Encoding.UTF8, "application/json")
-                });
-            }
-
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
-        }));
-
-        // Act
-        List<OrganizationContactPoints> actual = await registerClient.GetOrganizationContactPoints(["test-org"]);
-
-        // Assert
-        Assert.Empty(actual);
-    }
-
-    [Fact]
-    public async Task GetOrganizationContactPoints_WithPopulatedList_ReturnsExpectedData()
-    {
-        // Act
-        List<OrganizationContactPoints> actual = await _registerClient.GetOrganizationContactPoints(["populated-list"]);
-
-        // Assert
-        Assert.Equal(2, actual.Count);
-        Assert.Contains("910011154", actual.Select(e => e.OrganizationNumber));
-    }
-
-    [Fact]
-    public async Task GetOrganizationContactPoints_WithUnavailableEndpoint_ThrowsException()
-    {
-        // Act
-        var exception = await Assert.ThrowsAsync<PlatformHttpException>(async () => await _registerClient.GetOrganizationContactPoints(["unavailable"]));
-
-        // Assert
-        Assert.StartsWith("503 - Service Unavailable", exception.Message);
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, exception.Response?.StatusCode);
     }
 
     [Fact]
@@ -252,18 +191,8 @@ public class RegisterClientTests
     {
         var registerHttpMessageHandler = handler ?? new DelegatingHandlerStub(async (request, token) =>
         {
-            if (request!.RequestUri!.AbsolutePath.EndsWith("contactpoint/lookup"))
-            {
-                OrgContactPointLookup? lookup = JsonSerializer.Deserialize<OrgContactPointLookup>(await request!.Content!.ReadAsStringAsync(token), _serializerOptions);
-                return await GetResponse(lookup!);
-            }
-            else if (request!.RequestUri!.AbsolutePath.EndsWith("nameslookup"))
-            {
-                PartyDetailsLookupBatch? lookup = JsonSerializer.Deserialize<PartyDetailsLookupBatch>(await request!.Content!.ReadAsStringAsync(token), _serializerOptions);
-                return await GetPartyDetailsResponse(lookup!);
-            }
-
-            return new HttpResponseMessage(HttpStatusCode.NotFound);
+            PartyDetailsLookupBatch? lookup = JsonSerializer.Deserialize<PartyDetailsLookupBatch>(await request!.Content!.ReadAsStringAsync(token), _serializerOptions);
+            return await GetPartyDetailsResponse(lookup!);
         });
 
         PlatformSettings settings = new()
@@ -347,36 +276,6 @@ public class RegisterClientTests
                         break;
                 }
             }
-        }
-
-        return CreateMockResponse(contentData, statusCode);
-    }
-
-    private Task<HttpResponseMessage> GetResponse(OrgContactPointLookup lookup)
-    {
-        object? contentData = null;
-        HttpStatusCode statusCode = HttpStatusCode.OK;
-
-        switch (lookup.OrganizationNumbers[0])
-        {
-            case "empty-list":
-                contentData = new OrgContactPointsList() { ContactPointsList = [] };
-                break;
-
-            case "populated-list":
-                contentData = new OrgContactPointsList
-                {
-                    ContactPointsList =
-                    [
-                        new OrganizationContactPoints { OrganizationNumber = "910011154", EmailList = [] },
-                        new OrganizationContactPoints { OrganizationNumber = "910011155", EmailList = [] }
-                    ]
-                };
-                break;
-
-            case "unavailable":
-                statusCode = HttpStatusCode.ServiceUnavailable;
-                break;
         }
 
         return CreateMockResponse(contentData, statusCode);
