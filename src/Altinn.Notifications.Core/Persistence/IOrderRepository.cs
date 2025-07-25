@@ -11,10 +11,14 @@ namespace Altinn.Notifications.Core.Persistence;
 public interface IOrderRepository
 {
     /// <summary>
-    /// Creates a new notification order in the database
+    /// Creates a new notification order in the database with processing status set to 'Registered'
     /// </summary>
     /// <param name="order">The order to save</param>
     /// <returns>The saved notification order</returns>
+    /// <remarks>
+    /// This method persists the notification order with OrderProcessingStatus.Registered, 
+    /// indicating it is ready for asynchronous processing by the notification pipeline.
+    /// </remarks>
     public Task<NotificationOrder> Create(NotificationOrder order);
 
     /// <summary>
