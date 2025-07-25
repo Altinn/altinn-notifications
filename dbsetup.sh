@@ -1,9 +1,11 @@
  #!/bin/bash
 export PGPASSWORD=Password
 
-# alter max connections
-psql -h localhost -p 5432 -U platform_notifications_admin -d notificationsdb  \
--c "ALTER SYSTEM SET max_connections TO '250';"
+# The timeout value (e.g., 10 seconds)
+TIMEOUT='10s'
+
+# Set the parameter for the entire system
+psql -c "ALTER SYSTEM SET idle_session_timeout = '${TIMEOUT}';"
 
 # set up platform_notifications role
 psql -h localhost -p 5432 -U platform_notifications_admin -d notificationsdb \
