@@ -31,11 +31,12 @@ import * as ordersApi from "../api/notifications/orders.js";
 import * as notificationsApi from "../api/notifications/notifications.js";
 import { post_sms_order, get_sms_notifications, setEmptyThresholds } from "./threshold-labels.js";
 import { getNotificationOrderById, getNotificationOrderBySendersReference, getNotificationOrderWithStatus } from "../api/notifications/get-notification-orders.js";
-import { environment, scopes, yt01Environment } from "../shared/variables.js";
+import { scopes } from "../shared/variables.js";
+import { getSmsRecipient } from "../shared/functions.js";
 
 const labels = [post_sms_order, get_sms_notifications];
 
-const smsRecipient = __ENV.smsRecipient ? __ENV.smsRecipient.toLowerCase() : environment === yt01Environment ? "+4799999999" : null;
+const smsRecipient = getSmsRecipient();
 
 export const options = {
     summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(95)', 'p(99)', 'p(99.5)', 'p(99.9)', 'count'],

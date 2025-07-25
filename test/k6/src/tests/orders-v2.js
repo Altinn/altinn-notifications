@@ -35,6 +35,7 @@ import {
     get_sms_instant_shipment, get_status_feed
 } from "./threshold-labels.js";
 import { environment, scopes, yt01Environment } from "../shared/variables.js";
+import { getEmailRecipient } from "../shared/functions.js";
 
 const labels = [post_email_order_v2, post_sms_order_v2, post_sms_instant_order_v2, get_email_shipment, get_sms_shipment, get_status_feed];
 
@@ -47,16 +48,6 @@ const smsOrderRequestJson = JSON.parse(
 const smsOrderInstantRequestJson = JSON.parse(
     open("../data/orders/order-v2-sms-instant.json")
 );
-
-function getEmailRecipient() {
-    if (__ENV.emailRecipient) {
-        return __ENV.emailRecipient.toLowerCase();
-    }
-    if (environment === yt01Environment) {
-        return "noreply@altinn.no";
-    }
-    return null;
-}
 
 function getSmsRecipient() {
     if (__ENV.smsRecipient) {
