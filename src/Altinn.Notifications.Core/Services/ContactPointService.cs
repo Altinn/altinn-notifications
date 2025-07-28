@@ -11,21 +11,15 @@ namespace Altinn.Notifications.Core.Services;
 /// <summary>
 /// Implementation of the <see cref="IContactPointService"/> using Altinn platform services to lookup contact points
 /// </summary>
-public class ContactPointService : IContactPointService
+/// <remarks>
+/// Initializes a new instance of the <see cref="ContactPointService"/> class.
+/// </remarks>
+public class ContactPointService(
+    IProfileClient profile,
+    IAuthorizationService authorizationService) : IContactPointService
 {
-    private readonly IProfileClient _profileClient;
-    private readonly IAuthorizationService _authorizationService;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ContactPointService"/> class.
-    /// </summary>
-    public ContactPointService(
-        IProfileClient profile,
-        IAuthorizationService authorizationService)
-    {
-        _profileClient = profile;
-        _authorizationService = authorizationService;
-    }
+    private readonly IProfileClient _profileClient = profile;
+    private readonly IAuthorizationService _authorizationService = authorizationService;
 
     /// <inheritdoc/>
     public async Task AddEmailContactPoints(List<Recipient> recipients, string? resourceId)
