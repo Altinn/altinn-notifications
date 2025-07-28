@@ -18,72 +18,90 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
     public class ContactPointServiceTests
     {
         [Fact]
-        public async Task AddSmsContactPoints_NationalIdentityNumberAvailable_ProfileServiceCalled()
+        public async Task AddSmsContactPoints_WithValidNationalId_EnrichesRecipientWithFormattedSmsContactPoint()
         {
             // Arrange
-            List<Recipient> input = [
-                new Recipient()
-                {
-                    NationalIdentityNumber = "12345678901"
-                }
-            ];
+            const string nationalId = "12345678901";
+            const string rawMobileNumber = "99999999";
+            const string formattedMobileNumber = "+4799999999";
 
-            List<Recipient> expectedOutput = [
-                new Recipient()
+            var recipients = new List<Recipient>
+            {
+                new() { NationalIdentityNumber = nationalId }
+            };
+
+            var mockUserContactPoints = new List<UserContactPoints>
+            {
+                new()
                 {
-                    NationalIdentityNumber = "12345678901",
                     IsReserved = true,
-                    AddressInfo = [new SmsAddressPoint("+4799999999")]
+                    MobileNumber = rawMobileNumber,
+                    NationalIdentityNumber = nationalId
                 }
-            ];
+            };
 
             var profileClientMock = new Mock<IProfileClient>();
             profileClientMock
-                .Setup(p => p.GetUserContactPoints(It.Is<List<string>>(s => s.Contains("12345678901"))))
-                .ReturnsAsync([new UserContactPoints() { NationalIdentityNumber = "12345678901", MobileNumber = "99999999", IsReserved = true }]);
+                .Setup(x => x.GetUserContactPoints(It.Is<List<string>>(ids => ids.Contains(nationalId))))
+                .ReturnsAsync(mockUserContactPoints);
 
             var service = GetTestService(profileClient: profileClientMock.Object);
 
             // Act
-            await service.AddSmsContactPoints(input, null);
+            await service.AddSmsContactPoints(recipients, null);
 
-            // Assert 
-            Assert.Equivalent(expectedOutput, input);
-            string actualMobileNumber = ((SmsAddressPoint)input[0].AddressInfo[0]).MobileNumber;
-            Assert.Equal("+4799999999", actualMobileNumber);
+            // Assert
+            var recipient = recipients[0];
+            Assert.True(recipient.IsReserved);
+            Assert.Equal(nationalId, recipient.NationalIdentityNumber);
+
+            Assert.Single(recipient.AddressInfo);
+            var smsAddressPoint = Assert.IsType<SmsAddressPoint>(recipient.AddressInfo[0]);
+            Assert.Equal(formattedMobileNumber, smsAddressPoint.MobileNumber);
+
+            profileClientMock.Verify(e => e.GetUserContactPoints(It.Is<List<string>>(ids => ids.Contains(nationalId))), Times.Once);
         }
 
         [Fact]
-        public async Task AddSmsContactPoints_OrganizationNumberAvailable_RegisterServiceCalled()
+        public async Task AddSmsContactPoints_WithValidOrganizationNumber_EnrichesRecipientWithOrganizationSmsContact()
         {
             // Arrange
-            List<Recipient> input = [
-                new Recipient()
-                {
-                    OrganizationNumber = "12345678901"
-                }
-            ];
+            const string organizationNumber = "123456789";
+            const string expectedMobileNumber = "+4799999999";
 
-            List<Recipient> expectedOutput = [
-                new Recipient()
+            var recipients = new List<Recipient>
+            {
+                new() { OrganizationNumber = organizationNumber }
+            };
+
+            var mockOrganizationContactPoints = new List<OrganizationContactPoints>
+            {
+                new()
                 {
-                    OrganizationNumber = "12345678901",
-                    AddressInfo = [new SmsAddressPoint("+4799999999")]
+                    OrganizationNumber = organizationNumber,
+                    MobileNumberList = [expectedMobileNumber]
                 }
-            ];
+            };
 
             var profileClientMock = new Mock<IProfileClient>();
             profileClientMock
-                .Setup(p => p.GetOrganizationContactPoints(It.Is<List<string>>(s => s.Contains("12345678901"))))
-                .ReturnsAsync([new OrganizationContactPoints() { OrganizationNumber = "12345678901", MobileNumberList = ["+4799999999"] }]);
+                .Setup(x => x.GetOrganizationContactPoints(It.Is<List<string>>(orgs => orgs.Contains(organizationNumber))))
+                .ReturnsAsync(mockOrganizationContactPoints);
 
             var service = GetTestService(profileClient: profileClientMock.Object);
 
             // Act
-            await service.AddSmsContactPoints(input, null);
+            await service.AddSmsContactPoints(recipients, null);
 
-            // Assert 
-            Assert.Equivalent(expectedOutput, input);
+            // Assert
+            var recipient = recipients[0];
+            Assert.Equal(organizationNumber, recipient.OrganizationNumber);
+            Assert.Single(recipient.AddressInfo);
+
+            var smsAddressPoint = Assert.IsType<SmsAddressPoint>(recipient.AddressInfo[0]);
+            Assert.Equal(expectedMobileNumber, smsAddressPoint.MobileNumber);
+
+            profileClientMock.Verify(x => x.GetOrganizationContactPoints(It.Is<List<string>>(orgs => orgs.Contains(organizationNumber))), Times.Once);
         }
 
         [Fact]
