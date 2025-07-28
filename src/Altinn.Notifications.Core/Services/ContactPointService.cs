@@ -219,14 +219,35 @@ public class ContactPointService : IContactPointService
         }
     }
 
-    private async Task<List<Recipient>> AugmentRecipients(
+    /// <summary>
+    /// Looks up and augments each recipient in the provided list with contact point information
+    /// based on their national identity number or organization number.
+    /// </summary>
+    /// <param name="recipients">
+    /// The list of <see cref="Recipient"/> objects to be augmented with contact point information.
+    /// Each recipient must have either a national identity number or an organization number.
+    /// </param>
+    /// <param name="resourceId">
+    /// The resource identifier used to filter and authorize user-registered contact points for organizations.
+    /// If <c>null</c> or empty, only official organization contact points are used.
+    /// </param>
+    /// <param name="createUserContactPoint">
+    /// A function that applies user contact point data to a recipient. Invoked for recipients with a national identity number
+    /// and a matching <see cref="UserContactPoints"/> entry.
+    /// </param>
+    /// <param name="createOrgContactPoint">
+    /// A function that applies organization contact point data to a recipient. Invoked for recipients with an organization number
+    /// and a matching <see cref="OrganizationContactPoints"/> entry.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation. The method augments the provided recipient objects in place.
+    /// </returns>
+    private async Task AugmentRecipients(
         List<Recipient> recipients,
         string? resourceId,
         Func<Recipient, UserContactPoints, Recipient> createUserContactPoint,
         Func<Recipient, OrganizationContactPoints, Recipient> createOrgContactPoint)
     {
-        List<Recipient> augmentedRecipients = [];
-
         var userLookupTask = LookupPersonContactPoints(recipients);
         var orgLookupTask = LookupOrganizationContactPoints(recipients, resourceId);
 
@@ -245,7 +266,7 @@ public class ContactPointService : IContactPointService
                 if (userContactPoints != null)
                 {
                     recipient.IsReserved = userContactPoints.IsReserved;
-                    augmentedRecipients.Add(createUserContactPoint(recipient, userContactPoints));
+                    createUserContactPoint(recipient, userContactPoints);
                 }
             }
             else if (!string.IsNullOrEmpty(recipient.OrganizationNumber))
@@ -255,12 +276,10 @@ public class ContactPointService : IContactPointService
 
                 if (organizationContactPoints != null)
                 {
-                    augmentedRecipients.Add(createOrgContactPoint(recipient, organizationContactPoints));
+                    createOrgContactPoint(recipient, organizationContactPoints);
                 }
             }
         }
-
-        return augmentedRecipients;
     }
 
     /// <summary>
