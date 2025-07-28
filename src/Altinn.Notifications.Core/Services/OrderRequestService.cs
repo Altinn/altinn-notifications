@@ -151,8 +151,6 @@ public class OrderRequestService : IOrderRequestService
     /// </exception>
     private async Task<Result<NotificationOrder, ServiceError>> CreateMainNotificationOrderAsync(NotificationOrderChainRequest orderRequest, DateTime currentTime, CancellationToken cancellationToken)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-
         var (recipients, templates, channel, ignoreReservation, resourceId, sendingTimePolicyForSms) = ExtractDeliveryComponents(orderRequest.Recipient);
 
         var lookupResult = await GetRecipientLookupResult(recipients, channel, GetSanitizedResourceId(resourceId));
