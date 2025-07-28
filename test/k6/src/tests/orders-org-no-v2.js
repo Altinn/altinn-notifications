@@ -84,8 +84,9 @@ export function setup() {
             ...orderRequestJson.recipient,
             recipientOrganization: {
                 ...orderRequestJson.recipient.recipientOrganization,
+                emailSettings: undefined,
                 orgNumber: orgNoRecipient,
-                resourceId: resourceId,
+                resourceId: undefined,
                 channelSchema: "SMS"
             }
         }
