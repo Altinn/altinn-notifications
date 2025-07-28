@@ -29,7 +29,7 @@ public class ContactPointService(
             resourceId,
             (recipient, userContactPoints) =>
             {
-                if (!string.IsNullOrEmpty(userContactPoints.Email))
+                if (!string.IsNullOrWhiteSpace(userContactPoints.Email))
                 {
                     recipient.AddressInfo.Add(new EmailAddressPoint(userContactPoints.Email));
                 }
@@ -38,9 +38,9 @@ public class ContactPointService(
             },
             (recipient, orgContactPoints) =>
             {
-                recipient.AddressInfo.AddRange(orgContactPoints.EmailList.Select(e => new EmailAddressPoint(e)));
+                recipient.AddressInfo.AddRange(orgContactPoints.EmailList.Where(e => !string.IsNullOrWhiteSpace(e)).Select(e => new EmailAddressPoint(e)));
 
-                recipient.AddressInfo.AddRange(orgContactPoints.UserContactPoints.Where(u => !string.IsNullOrEmpty(u.Email)).Select(u => new EmailAddressPoint(u.Email)));
+                recipient.AddressInfo.AddRange(orgContactPoints.UserContactPoints.Where(u => !string.IsNullOrWhiteSpace(u.Email)).Select(u => new EmailAddressPoint(u.Email)));
 
                 return recipient;
             });
@@ -54,7 +54,7 @@ public class ContactPointService(
             resourceId,
             (recipient, userContactPoints) =>
             {
-                if (!string.IsNullOrEmpty(userContactPoints.MobileNumber))
+                if (!string.IsNullOrWhiteSpace(userContactPoints.MobileNumber))
                 {
                     recipient.AddressInfo.Add(new SmsAddressPoint(userContactPoints.MobileNumber));
                 }
@@ -63,9 +63,9 @@ public class ContactPointService(
             },
             (recipient, orgContactPoints) =>
             {
-                recipient.AddressInfo.AddRange(orgContactPoints.MobileNumberList.Select(m => new SmsAddressPoint(m)));
+                recipient.AddressInfo.AddRange(orgContactPoints.MobileNumberList.Where(e => !string.IsNullOrWhiteSpace(e)).Select(e => new SmsAddressPoint(e)));
 
-                recipient.AddressInfo.AddRange(orgContactPoints.UserContactPoints.Where(u => !string.IsNullOrEmpty(u.MobileNumber)).Select(u => new SmsAddressPoint(u.MobileNumber)));
+                recipient.AddressInfo.AddRange(orgContactPoints.UserContactPoints.Where(e => !string.IsNullOrWhiteSpace(e.MobileNumber)).Select(e => new SmsAddressPoint(e.MobileNumber)));
 
                 return recipient;
             });
@@ -79,12 +79,12 @@ public class ContactPointService(
             resourceId,
             (recipient, userContactPoints) =>
             {
-                if (!string.IsNullOrEmpty(userContactPoints.Email))
+                if (!string.IsNullOrWhiteSpace(userContactPoints.Email))
                 {
                     recipient.AddressInfo.Add(new EmailAddressPoint(userContactPoints.Email));
                 }
 
-                if (!string.IsNullOrEmpty(userContactPoints.MobileNumber))
+                if (!string.IsNullOrWhiteSpace(userContactPoints.MobileNumber))
                 {
                     recipient.AddressInfo.Add(new SmsAddressPoint(userContactPoints.MobileNumber));
                 }
@@ -93,13 +93,13 @@ public class ContactPointService(
             },
             (recipient, orgContactPoints) =>
             {
-                recipient.AddressInfo.AddRange(orgContactPoints.EmailList.Select(e => new EmailAddressPoint(e)));
+                recipient.AddressInfo.AddRange(orgContactPoints.EmailList.Where(e => !string.IsNullOrWhiteSpace(e)).Select(e => new EmailAddressPoint(e)));
 
-                recipient.AddressInfo.AddRange(orgContactPoints.MobileNumberList.Select(m => new SmsAddressPoint(m)));
+                recipient.AddressInfo.AddRange(orgContactPoints.MobileNumberList.Where(e => !string.IsNullOrWhiteSpace(e)).Select(e => new SmsAddressPoint(e)));
 
-                recipient.AddressInfo.AddRange(orgContactPoints.UserContactPoints.Where(u => !string.IsNullOrEmpty(u.Email)).Select(u => new EmailAddressPoint(u.Email)));
+                recipient.AddressInfo.AddRange(orgContactPoints.UserContactPoints.Where(u => !string.IsNullOrWhiteSpace(u.Email)).Select(u => new EmailAddressPoint(u.Email)));
 
-                recipient.AddressInfo.AddRange(orgContactPoints.UserContactPoints.Where(u => !string.IsNullOrEmpty(u.MobileNumber)).Select(u => new SmsAddressPoint(u.MobileNumber)));
+                recipient.AddressInfo.AddRange(orgContactPoints.UserContactPoints.Where(u => !string.IsNullOrWhiteSpace(u.MobileNumber)).Select(u => new SmsAddressPoint(u.MobileNumber)));
 
                 return recipient;
             });
@@ -161,7 +161,7 @@ public class ContactPointService(
                        recipient,
                        orgContactPoints.MobileNumberList,
                        orgContactPoints.EmailList,
-                       m => new SmsAddressPoint(m),
+                       e => new SmsAddressPoint(e),
                        e => new EmailAddressPoint(e));
 
                     foreach (var userContact in orgContactPoints.UserContactPoints)
@@ -203,11 +203,11 @@ public class ContactPointService(
         Func<TPreferred, IAddressPoint> preferredSelector,
         Func<TFallback, IAddressPoint> fallbackSelector)
     {
-        if (!string.IsNullOrEmpty(preferredContact?.ToString()))
+        if (!string.IsNullOrWhiteSpace(Convert.ToString(preferredContact)))
         {
             recipient.AddressInfo.Add(preferredSelector(preferredContact));
         }
-        else if (!string.IsNullOrEmpty(fallbackContact?.ToString()))
+        else if (!string.IsNullOrWhiteSpace(Convert.ToString(fallbackContact)))
         {
             recipient.AddressInfo.Add(fallbackSelector(fallbackContact));
         }
@@ -248,14 +248,14 @@ public class ContactPointService(
         await Task.WhenAll(userLookupTask, orgLookupTask);
 
         List<UserContactPoints> userContactPointsList = userLookupTask.Result;
-        List<OrganizationContactPoints> organizationContactPointList = orgLookupTask.Result;
+        List<OrganizationContactPoints> organizationContactPointsList = orgLookupTask.Result;
 
         foreach (Recipient recipient in recipients)
         {
-            if (!string.IsNullOrEmpty(recipient.NationalIdentityNumber))
+            if (!string.IsNullOrWhiteSpace(recipient.NationalIdentityNumber))
             {
-                UserContactPoints? userContactPoints = userContactPointsList!
-                    .Find(u => u.NationalIdentityNumber == recipient.NationalIdentityNumber);
+                UserContactPoints? userContactPoints = userContactPointsList
+                    .Find(e => e.NationalIdentityNumber == recipient.NationalIdentityNumber);
 
                 if (userContactPoints != null)
                 {
@@ -263,9 +263,9 @@ public class ContactPointService(
                     createUserContactPoint(recipient, userContactPoints);
                 }
             }
-            else if (!string.IsNullOrEmpty(recipient.OrganizationNumber))
+            else if (!string.IsNullOrWhiteSpace(recipient.OrganizationNumber))
             {
-                OrganizationContactPoints? organizationContactPoints = organizationContactPointList!
+                OrganizationContactPoints? organizationContactPoints = organizationContactPointsList
                     .Find(o => o.OrganizationNumber == recipient.OrganizationNumber);
 
                 if (organizationContactPoints != null)
@@ -335,7 +335,7 @@ public class ContactPointService(
 
         List<OrganizationContactPoints> contactPoints = await _profileClient.GetOrganizationContactPoints(organizationNumbers);
 
-        if (!string.IsNullOrEmpty(resourceId))
+        if (!string.IsNullOrWhiteSpace(resourceId))
         {
             var allUserContactPoints = await _profileClient.GetUserRegisteredContactPoints(organizationNumbers, resourceId);
             var authorizedUserContactPoints = await _authorizationService.AuthorizeUserContactPointsForResource(allUserContactPoints, resourceId);
