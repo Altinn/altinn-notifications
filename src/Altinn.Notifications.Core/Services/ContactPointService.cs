@@ -19,7 +19,9 @@ public class ContactPointService : IContactPointService
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactPointService"/> class.
     /// </summary>
-    public ContactPointService(IProfileClient profile, IAuthorizationService authorizationService)
+    public ContactPointService(
+        IProfileClient profile,
+        IAuthorizationService authorizationService)
     {
         _profileClient = profile;
         _authorizationService = authorizationService;
@@ -261,18 +263,28 @@ public class ContactPointService : IContactPointService
         return augmentedRecipients;
     }
 
+    /// <summary>
+    /// Retrieves contact points for recipients with a valid national identity number.
+    /// </summary>
+    /// <param name="recipients">
+    /// The list of <see cref="Recipient"/> objects to retrieve contact information for. 
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation. The task result contains a list of <see cref="UserContactPoints"/> 
+    /// corresponding to the provided national identity numbers. If no valid national identity numbers are found, an empty list is returned.
+    /// </returns>
     private async Task<List<UserContactPoints>> LookupPersonContactPoints(List<Recipient> recipients)
     {
-        List<string> nins = [.. recipients
-                .Where(r => !string.IsNullOrEmpty(r.NationalIdentityNumber))
-                .Select(r => r.NationalIdentityNumber!)];
+        List<string> nationalIdentityNumbers = [.. recipients
+                .Where(e => !string.IsNullOrWhiteSpace(e.NationalIdentityNumber))
+                .Select(e => e.NationalIdentityNumber)];
 
-        if (nins.Count == 0)
+        if (nationalIdentityNumbers.Count == 0)
         {
             return [];
         }
 
-        List<UserContactPoints> contactPoints = await _profileClient.GetUserContactPoints(nins);
+        List<UserContactPoints> contactPoints = await _profileClient.GetUserContactPoints(nationalIdentityNumbers);
 
         contactPoints.ForEach(contactPoint =>
         {
@@ -282,52 +294,68 @@ public class ContactPointService : IContactPointService
         return contactPoints;
     }
 
+    /// <summary>
+    /// Retrieves contact points for recipients with a valid organization number.
+    /// Optionally enriches the contact points with user-registered contact points authorized for a specific resource.
+    /// </summary>
+    /// <param name="recipients">
+    /// The list of <see cref="Recipient"/> objects to retrieve organization contact information for.
+    /// </param>
+    /// <param name="resourceId">
+    /// The resource identifier used to filter and authorize user-registered contact points for the organizations.
+    /// If <c>null</c> or empty, only official organization contact points are returned.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation. The task result contains a list of <see cref="OrganizationContactPoints"/>
+    /// corresponding to the provided organization numbers. If no valid organization numbers are found, an empty list is returned.
+    /// </returns>
     private async Task<List<OrganizationContactPoints>> LookupOrganizationContactPoints(List<Recipient> recipients, string? resourceId)
     {
-        List<string> orgNos = [.. recipients
-         .Where(r => !string.IsNullOrEmpty(r.OrganizationNumber))
-         .Select(r => r.OrganizationNumber!)];
+        List<string> organizationNumbers = [.. recipients
+                .Where(e => !string.IsNullOrWhiteSpace(e.OrganizationNumber))
+                .Select(e => e.OrganizationNumber)];
 
-        if (orgNos.Count == 0)
+        if (organizationNumbers.Count == 0)
         {
             return [];
         }
 
-        List<OrganizationContactPoints> authorizedUserContactPoints = [];
-        Task<List<OrganizationContactPoints>> organizationContactPointsTask = _profileClient.GetOrganizationContactPoints(orgNos);
+        List<OrganizationContactPoints> contactPoints = await _profileClient.GetOrganizationContactPoints(organizationNumbers);
 
         if (!string.IsNullOrEmpty(resourceId))
         {
-            var allUserContactPoints = await _profileClient.GetUserRegisteredContactPoints(orgNos, resourceId);
-            authorizedUserContactPoints = await _authorizationService.AuthorizeUserContactPointsForResource(allUserContactPoints, resourceId);
-        }
+            var allUserContactPoints = await _profileClient.GetUserRegisteredContactPoints(organizationNumbers, resourceId);
+            var authorizedUserContactPoints = await _authorizationService.AuthorizeUserContactPointsForResource(allUserContactPoints, resourceId);
 
-        List<OrganizationContactPoints> contactPoints = await organizationContactPointsTask;
-
-        if (!string.IsNullOrEmpty(resourceId))
-        {
-            foreach (var userContactPoint in authorizedUserContactPoints)
+            foreach (var authorizedUserContactPoint in authorizedUserContactPoints)
             {
-                userContactPoint.UserContactPoints.ForEach(userContactPoint =>
+                authorizedUserContactPoint.UserContactPoints.ForEach(userContactPoint =>
                 {
                     userContactPoint.MobileNumber = MobileNumberHelper.EnsureCountryCodeIfValidNumber(userContactPoint.MobileNumber);
                 });
 
-                var existingContactPoint = contactPoints.Find(cp => cp.OrganizationNumber == userContactPoint.OrganizationNumber);
-
-                if (existingContactPoint != null)
+                var existingContactPoint = contactPoints.Find(cp => cp.OrganizationNumber == authorizedUserContactPoint.OrganizationNumber);
+                if (existingContactPoint == null)
                 {
-                    existingContactPoint.UserContactPoints.AddRange(userContactPoint.UserContactPoints);
+                    contactPoints.Add(authorizedUserContactPoint);
                 }
                 else
                 {
-                    contactPoints.Add(userContactPoint);
+                    existingContactPoint.UserContactPoints.AddRange(authorizedUserContactPoint.UserContactPoints);
                 }
             }
         }
 
         contactPoints.ForEach(contactPoint =>
         {
+            contactPoint.MobileNumberList = [.. contactPoint.MobileNumberList
+                .Where(e => !string.IsNullOrWhiteSpace(e))
+                .Distinct(StringComparer.OrdinalIgnoreCase)];
+
+            contactPoint.EmailList = [.. contactPoint.EmailList
+                .Where(e => !string.IsNullOrWhiteSpace(e))
+                .Distinct(StringComparer.OrdinalIgnoreCase)];
+
             contactPoint.MobileNumberList = [.. contactPoint.MobileNumberList
                 .Select(mobileNumber =>
                 {
