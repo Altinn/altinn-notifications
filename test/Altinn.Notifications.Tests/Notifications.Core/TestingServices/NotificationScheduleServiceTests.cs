@@ -91,13 +91,13 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             // Arrange
             var requestedSendTime = new DateTime(2025, 08, 25, 20, 0, 0, DateTimeKind.Utc); // 20:00 UTC is 21:00 or 22:00 local time
 
-            var expectedExpiryDateTimeInLocalFormat = new DateTime(2025, 08, 28, 09, 0, 0, DateTimeKind.Unspecified);
+            var expectedExpiryDateTime = new DateTime(2025, 08, 28, 07, 0, 0, DateTimeKind.Utc);
 
             // Act
             var expiryDateTime = _notificationScheduleService.GetSmsExpirationDateTime(requestedSendTime);
 
             // Assert
-            Assert.Equal(expectedExpiryDateTimeInLocalFormat.ToUniversalTime(), expiryDateTime);
+            Assert.Equal(expectedExpiryDateTime.ToUniversalTime(), expiryDateTime);
         }
 
         [Fact]
@@ -106,13 +106,13 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             // Arrange
             var requestedSendTime = new DateTime(2025, 08, 25, 05, 0, 0, DateTimeKind.Utc); // 05:00 UTC is 06:00 or 07:00 local time
 
-            var expectedExpiryDateTimeInLocalFormat = new DateTime(2025, 08, 27, 09, 0, 0, DateTimeKind.Unspecified);
+            var expectedExpiryDateTime = new DateTime(2025, 08, 27, 07, 0, 0, DateTimeKind.Utc);
 
             // Act
             var expiryDateTime = _notificationScheduleService.GetSmsExpirationDateTime(requestedSendTime);
 
             // Assert
-            Assert.Equal(expectedExpiryDateTimeInLocalFormat.ToUniversalTime(), expiryDateTime);
+            Assert.Equal(expectedExpiryDateTime.ToUniversalTime(), expiryDateTime);
         }
 
         [Theory]
