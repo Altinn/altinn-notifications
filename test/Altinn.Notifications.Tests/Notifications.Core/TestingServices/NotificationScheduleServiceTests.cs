@@ -97,7 +97,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             var expiryDateTime = _notificationScheduleService.GetSmsExpirationDateTime(requestedSendTime);
 
             // Assert
-            Assert.Equal(expectedExpiryDateTime.ToUniversalTime(), expiryDateTime);
+            Assert.Equal(expectedExpiryDateTime, expiryDateTime);
         }
 
         [Fact]
@@ -112,7 +112,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             var expiryDateTime = _notificationScheduleService.GetSmsExpirationDateTime(requestedSendTime);
 
             // Assert
-            Assert.Equal(expectedExpiryDateTime.ToUniversalTime(), expiryDateTime);
+            Assert.Equal(expectedExpiryDateTime, expiryDateTime);
         }
 
         [Theory]
