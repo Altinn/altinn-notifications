@@ -41,6 +41,12 @@ export const notifications = {
 
     orders_email: `https://platform.${baseUrl}/notifications/api/v1/orders/email/`,
 
+    orders_v2: `https://platform.${baseUrl}/notifications/api/v1/future/orders/`,
+
+    shipment_v2: (orderId) => `https://platform.${baseUrl}/notifications/api/v1/future/shipment/${orderId}`,
+
+    statusfeed_v2: (sequenceNumber) => `https://platform.${baseUrl}/notifications/api/v1/future/shipment/feed?seq=${sequenceNumber}`,
+
     orders_fromId: (orderId) => `https://platform.${baseUrl}/notifications/api/v1/orders/${orderId}`,
 
     orders_status: (orderId) => `https://platform.${baseUrl}/notifications/api/v1/orders/${orderId}/status`,
