@@ -325,8 +325,8 @@ public class ContactPointService(
     private async Task<List<OrganizationContactPoints>> LookupOrganizationContactPoints(List<Recipient> recipients, string? resourceId)
     {
         List<string> organizationNumbers = [.. recipients
-                .Where(e => !string.IsNullOrWhiteSpace(e.OrganizationNumber))
-                .Select(e => e.OrganizationNumber)];
+            .Where(e => !string.IsNullOrWhiteSpace(e.OrganizationNumber))
+            .Select(e => e.OrganizationNumber)];
 
         if (organizationNumbers.Count == 0)
         {
@@ -338,6 +338,7 @@ public class ContactPointService(
         if (!string.IsNullOrWhiteSpace(resourceId))
         {
             var allUserContactPoints = await _profileClient.GetUserRegisteredContactPoints(organizationNumbers, resourceId);
+
             var authorizedUserContactPoints = await _authorizationService.AuthorizeUserContactPointsForResource(allUserContactPoints, resourceId);
 
             foreach (var authorizedUserContactPoint in authorizedUserContactPoints)
@@ -361,21 +362,49 @@ public class ContactPointService(
 
         contactPoints.ForEach(contactPoint =>
         {
-            contactPoint.MobileNumberList = [.. contactPoint.MobileNumberList
+            // Remove duplicate mobile numbers.
+            contactPoint.MobileNumberList = [..
+                contactPoint.MobileNumberList
+                .Where(e => !string.IsNullOrWhiteSpace(e))
+                .Select(MobileNumberHelper.EnsureCountryCodeIfValidNumber)
+                .Distinct(StringComparer.OrdinalIgnoreCase)];
+
+            // Remove duplicate email addresses.
+            contactPoint.EmailList = [..
+                contactPoint.EmailList
                 .Where(e => !string.IsNullOrWhiteSpace(e))
                 .Distinct(StringComparer.OrdinalIgnoreCase)];
 
-            contactPoint.EmailList = [.. contactPoint.EmailList
-                .Where(e => !string.IsNullOrWhiteSpace(e))
-                .Distinct(StringComparer.OrdinalIgnoreCase)];
-
-            contactPoint.MobileNumberList = [.. contactPoint.MobileNumberList
-                .Select(mobileNumber =>
-                {
-                    return MobileNumberHelper.EnsureCountryCodeIfValidNumber(mobileNumber);
-                })];
+            // Remove user contact points that overlap with official contact points.
+            contactPoint.UserContactPoints = [..
+                contactPoint.UserContactPoints
+                .Where(userContact => !IsUserContactOverlapsOrganizationContact(userContact, contactPoint))];
         });
 
         return contactPoints;
+    }
+
+    /// <summary>
+    /// Determines whether a user's contact information (email or mobile number) matches 
+    /// any contact information in the organization's official contact points.
+    /// </summary>
+    /// <param name="userContact">The user's contact information to check for duplicates.</param>
+    /// <param name="contactPoint">The organization's official contact points to compare against.</param>
+    /// <returns>
+    /// <c>true</c> if the user's email address or mobile number matches any official contact point;
+    /// otherwise, <c>false</c>. Empty or whitespace-only values are ignored in the comparison.
+    /// </returns>
+    private static bool IsUserContactOverlapsOrganizationContact(UserContactPoints userContact, OrganizationContactPoints contactPoint)
+    {
+        bool isDuplicateEmailaddress =
+            !string.IsNullOrWhiteSpace(userContact.Email) &&
+            contactPoint.EmailList.Any(officialEmail => string.Equals(userContact.Email, officialEmail, StringComparison.OrdinalIgnoreCase));
+
+        var normalizedUserMobile = MobileNumberHelper.EnsureCountryCodeIfValidNumber(userContact.MobileNumber);
+        bool isDuplicateMobileNumber =
+            !string.IsNullOrWhiteSpace(normalizedUserMobile) &&
+            contactPoint.MobileNumberList.Any(officialMobile => string.Equals(normalizedUserMobile, officialMobile, StringComparison.OrdinalIgnoreCase));
+
+        return isDuplicateEmailaddress || isDuplicateMobileNumber;
     }
 }
