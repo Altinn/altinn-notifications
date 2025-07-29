@@ -21,6 +21,8 @@ BEGIN
         FROM notifications.orderschain 
         WHERE creatorname = _creatorname
         AND idempotencyid = _idempotencyid
+        -- exclude type 'Instant' from results
+		AND (oc.orderchain->>'Type' <> '2' OR oc.orderchain->>'Type' IS NULL) 
     ) INTO v_record_exists;
     
     IF NOT v_record_exists THEN
@@ -64,7 +66,7 @@ COMMENT ON FUNCTION notifications.get_orders_chain_tracking IS
 'Retrieves tracking information for a notification order chain using the creator''s short name and idempotency identifier.
 
 This function enables idempotent operations by allowing clients to retrieve previously submitted
-notification chain information without creating duplicates.
+notification chain information without creating duplicates. It specifically excludes order chains where the type is ''Instant'' (i.e., where the ''Type'' field in the orderchain data is ''2'').
 
 Parameters:
 - _creatorname: The short name of the creator that originally submitted the notification order chain
