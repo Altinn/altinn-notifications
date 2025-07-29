@@ -348,7 +348,7 @@ BEGIN
         WHERE creatorname = _creatorname
         AND idempotencyid = _idempotencyid
         -- exclude type 'Instant' from results
-		AND (oc.orderchain->>'Type' <> '2' OR oc.orderchain->>'Type' IS NULL) 
+		AND (orderchain->>'Type' <> '2' OR orderchain->>'Type' IS NULL) 
     ) INTO v_record_exists;
     
     IF NOT v_record_exists THEN
