@@ -21,10 +21,12 @@ body:json {
   }
 }
 
-expected {
-  // Expected response code and body
-  code: 400
-  body: {
-    contains: "ValidationError"
-  }
+tests {
+  test("should return 400 status code", function() {
+    expect(res.getStatus()).to.equal(400);
+  });
+  
+  test("should contain ValidationError in response", function() {
+    expect(res.getBody()).to.contain("ValidationError");
+  });
 }
