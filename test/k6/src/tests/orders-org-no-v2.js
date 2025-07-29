@@ -164,6 +164,7 @@ export default function (data) {
     let response = postEmailNotificationOrderRequest(data);
     getShipmentStatus(data, JSON.parse(response).notification.shipmentId, get_email_shipment, "Email");
 
-    response = postSmsNotificationOrderRequest(data);
-    getShipmentStatus(data, JSON.parse(response).notification.shipmentId, get_sms_shipment, "SMS");
+    // Disable Sms notifications order request until missing contact information in test data is resolved.
+    // response = postSmsNotificationOrderRequest(data);
+    // getShipmentStatus(data, JSON.parse(response).notification.shipmentId, get_sms_shipment, "SMS");
 }
