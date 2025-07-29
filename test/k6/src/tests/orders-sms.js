@@ -31,13 +31,12 @@ import * as ordersApi from "../api/notifications/orders.js";
 import * as notificationsApi from "../api/notifications/notifications.js";
 import { post_sms_order, get_sms_notifications, setEmptyThresholds } from "./threshold-labels.js";
 import { getNotificationOrderById, getNotificationOrderBySendersReference, getNotificationOrderWithStatus } from "../api/notifications/get-notification-orders.js";
+import { scopes } from "../shared/variables.js";
+import { getSmsRecipient } from "../shared/functions.js";
 
 const labels = [post_sms_order, get_sms_notifications];
 
-const environment = __ENV.env;
-const scopes = "altinn:serviceowner/notifications.create";
-
-const smsRecipient = __ENV.smsRecipient ? __ENV.smsRecipient.toLowerCase() : environment === "yt01" ? "+4799999999" : null;
+const smsRecipient = getSmsRecipient();
 
 export const options = {
     summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(95)', 'p(99)', 'p(99.5)', 'p(99.9)', 'count'],
