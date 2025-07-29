@@ -375,36 +375,91 @@ public class ContactPointService(
                 .Where(e => !string.IsNullOrWhiteSpace(e))
                 .Distinct(StringComparer.OrdinalIgnoreCase)];
 
-            // Remove user contact points that overlap with official contact points.
+            // Remove user contact points that overlap with itself or official contact points.
             contactPoint.UserContactPoints = [..
-                contactPoint.UserContactPoints
-                .Where(userContact => !IsUserContactOverlapsOrganizationContact(userContact, contactPoint))];
+                NullifyDuplicateUserContactPoints(contactPoint.UserContactPoints)
+                .Select(userContact => NullifyDuplicateUserContactPoints(userContact, contactPoint))
+                .Where(userContact => !string.IsNullOrWhiteSpace(userContact.Email) || !string.IsNullOrWhiteSpace(userContact.MobileNumber))];
         });
 
         return contactPoints;
     }
 
     /// <summary>
-    /// Determines whether a user's contact information (email or mobile number) matches 
-    /// any contact information in the organization's official contact points.
+    /// Scans a collection of <see cref="UserContactPoints"/> and clears duplicate contact fields within the list.
+    /// Only the first occurrence of each unique email address or mobile number is retained across the collection.
+    /// Subsequent duplicates have the corresponding field set to an empty string.
     /// </summary>
-    /// <param name="userContact">The user's contact information to check for duplicates.</param>
-    /// <param name="contactPoint">The organization's official contact points to compare against.</param>
+    /// <param name="userContacts">
+    /// The collection of user contact points to process for internal deduplication.
+    /// </param>
     /// <returns>
-    /// <c>true</c> if the user's email address or mobile number matches any official contact point;
-    /// otherwise, <c>false</c>. Empty or whitespace-only values are ignored in the comparison.
+    /// A sequence of <see cref="UserContactPoints"/> where duplicate email and mobile number values have been nullified.
     /// </returns>
-    private static bool IsUserContactOverlapsOrganizationContact(UserContactPoints userContact, OrganizationContactPoints contactPoint)
+    private static IEnumerable<UserContactPoints> NullifyDuplicateUserContactPoints(IEnumerable<UserContactPoints> userContacts)
     {
-        bool isDuplicateEmailaddress =
+        var seenEmails = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var seenMobiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var userContact in userContacts)
+        {
+            if (!string.IsNullOrWhiteSpace(userContact.Email))
+            {
+                var duplicateEmail = !seenEmails.Add(userContact.Email);
+                if (duplicateEmail)
+                {
+                    userContact.Email = string.Empty;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(userContact.MobileNumber))
+            {
+                var duplicateMobileNumber = !seenMobiles.Add(userContact.MobileNumber);
+                if (duplicateMobileNumber)
+                {
+                    userContact.MobileNumber = string.Empty;
+                }
+            }
+
+            yield return userContact;
+        }
+    }
+
+    /// <summary>
+    /// Scans the specified <see cref="UserContactPoints"/> for contact details (email and mobile number) 
+    /// that are already present in the specified <see cref="OrganizationContactPoints"/>. 
+    /// If a match is found, the corresponding field in the user contact is cleared (set to an empty string).
+    /// </summary>
+    /// <param name="userContact">
+    /// The user contact information to evaluate and modify if duplicates are found.
+    /// </param>
+    /// <param name="organizationContactPoints">
+    /// The organization's official contact point data containing email addresses and mobile numbers.
+    /// </param>
+    /// <returns>
+    /// The same <see cref="UserContactPoints"/> instance with duplicate email and/or mobile number fields cleared.
+    /// If both fields become empty, the caller is responsible for removing the contact from the list.
+    /// </returns>
+    private static UserContactPoints NullifyDuplicateUserContactPoints(UserContactPoints userContact, OrganizationContactPoints organizationContactPoints)
+    {
+        var isDuplicateEmail =
             !string.IsNullOrWhiteSpace(userContact.Email) &&
-            contactPoint.EmailList.Any(officialEmail => string.Equals(userContact.Email, officialEmail, StringComparison.OrdinalIgnoreCase));
+            organizationContactPoints.EmailList.Any(e => string.Equals(e, userContact.Email, StringComparison.OrdinalIgnoreCase));
 
-        var normalizedUserMobile = MobileNumberHelper.EnsureCountryCodeIfValidNumber(userContact.MobileNumber);
-        bool isDuplicateMobileNumber =
-            !string.IsNullOrWhiteSpace(normalizedUserMobile) &&
-            contactPoint.MobileNumberList.Any(officialMobile => string.Equals(normalizedUserMobile, officialMobile, StringComparison.OrdinalIgnoreCase));
+        if (isDuplicateEmail)
+        {
+            userContact.Email = string.Empty;
+        }
 
-        return isDuplicateEmailaddress || isDuplicateMobileNumber;
+        var isDuplicateMobileNumber =
+            !string.IsNullOrWhiteSpace(userContact.MobileNumber) &&
+            organizationContactPoints.MobileNumberList.Any(m => string.Equals(m, userContact.MobileNumber, StringComparison.OrdinalIgnoreCase));
+
+        if (isDuplicateMobileNumber)
+        {
+            userContact.MobileNumber = string.Empty;
+        }
+
+        return userContact;
     }
 }
