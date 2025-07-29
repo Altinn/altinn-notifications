@@ -2478,5 +2478,355 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             // Assert
             Assert.Null(result);
         }
+
+        [Fact]
+        public async Task UsingTheSameIdempotencyIdForInstantAndNormalOrders_ShouldNotEnforceUniqueConstraint_ReturnsUniqueShipmentIds()
+        {
+            // Arrange
+            OrderRepository sut =
+              (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+            Guid normalOrderId = Guid.NewGuid();
+            Guid instantOrderId = Guid.NewGuid();
+            Guid normalOrderChainId = Guid.NewGuid();
+            Guid instantOrderChainId = Guid.NewGuid();
+
+            string idempotencyId = "SAME-IDEMPOTENCY-ID";
+
+            _orderIdsToDelete.AddRange([normalOrderId, instantOrderId]);
+            _ordersChainIdsToDelete.AddRange([normalOrderChainId, instantOrderChainId]);
+
+            // Create a normal notification order
+            var normalOrderRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+                .SetOrderId(normalOrderId)
+                .SetOrderChainId(normalOrderChainId)
+                .SetIdempotencyId(idempotencyId)
+                .SetType(OrderType.Notification)
+                .SetCreator(new Creator("ttd"))
+                .SetSendersReference("NORMAL-ORDER-REF")
+                .SetRecipient(new NotificationRecipient
+                {
+                    RecipientEmail = new RecipientEmail
+                    {
+                        EmailAddress = "recipient@example.com",
+                        Settings = new EmailSendingOptions
+                        {
+                            Body = "Normal email body",
+                            Subject = "Normal email subject",
+                            SenderEmailAddress = "sender@example.com",
+                            ContentType = EmailContentType.Plain,
+                            SendingTimePolicy = SendingTimePolicy.Anytime
+                        }
+                    }
+                })
+                .Build();
+
+            NotificationOrder normalNotificationOrder = new()
+            {
+                Id = normalOrderId,
+                Creator = new("ttd"),
+                Type = OrderType.Notification,
+                NotificationChannel = NotificationChannel.Email,
+                SendersReference = "NORMAL-ORDER-REF",
+                Templates =
+                [
+                    new EmailTemplate("sender@example.com", "Normal email subject", "Normal email body", EmailContentType.Plain)
+                ],
+                Recipients =
+                [
+                    new Recipient([new EmailAddressPoint("recipient@example.com")])
+                ]
+            };
+
+            // Create an instant notification order
+            var instantNotificationOrder = new InstantNotificationOrder
+            {
+                OrderId = instantOrderId,
+                Creator = new("ttd"),
+                OrderChainId = instantOrderChainId,
+                IdempotencyId = idempotencyId,
+                SendersReference = "INSTANT-ORDER-REF",
+                InstantNotificationRecipient = new InstantNotificationRecipient
+                {
+                    ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
+                    {
+                        PhoneNumber = "+4799999999",
+                        TimeToLiveInSeconds = 3600,
+                        ShortMessageContent = new ShortMessageContent
+                        {
+                            Sender = "Altinn",
+                            Message = "Instant test message"
+                        }
+                    }
+                }
+            };
+
+            NotificationOrder instantNotificationOrderEntity = new()
+            {
+                Id = instantOrderId,
+                Creator = new("ttd"),
+                Type = OrderType.Instant,
+                NotificationChannel = NotificationChannel.Sms,
+                SendersReference = "INSTANT-ORDER-REF",
+                Templates =
+                [
+                    new SmsTemplate("Altinn", "Instant test message")
+                ],
+                Recipients =
+                [
+                    new Recipient([new SmsAddressPoint("+4799999999")])
+                ]
+            };
+
+            var smsNotification = new SmsNotification
+            {
+                OrderId = instantOrderId,
+                Id = Guid.NewGuid(),
+                Recipient = new SmsRecipient { MobileNumber = "+4799999999" },
+                SendResult = new(SmsNotificationResultType.New, DateTime.UtcNow)
+            };
+
+            // Act
+            // Create the normal order
+            var normalOrderResult = await sut.Create(normalOrderRequest, normalNotificationOrder, null);
+
+            // Create the instant order
+            var instantOrderResult = await sut.Create(instantNotificationOrder, instantNotificationOrderEntity, smsNotification, smsExpiryDateTime: DateTime.UtcNow.AddHours(48), smsMessageCount: 1);
+
+            // Assert
+            Assert.NotNull(normalOrderResult);
+            Assert.Single(normalOrderResult);
+            Assert.Equal(normalOrderId, normalOrderResult[0].Id);
+
+            Assert.NotNull(instantOrderResult);
+            Assert.Equal(instantOrderChainId, instantOrderResult.OrderChainId);
+            Assert.Equal(instantOrderId, instantOrderResult.Notification.ShipmentId);
+
+            // Verify that both orders were created
+            string normalOrderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{normalOrderId}' and type = 'Notification'";
+            int normalOrderCount = await PostgreUtil.RunSqlReturnOutput<int>(normalOrderSql);
+            Assert.Equal(1, normalOrderCount);
+
+            string instantOrderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{instantOrderId}' and type = 'Instant'";
+            int instantOrderCount = await PostgreUtil.RunSqlReturnOutput<int>(instantOrderSql);
+            Assert.Equal(1, instantOrderCount);
+        }
+
+        [Fact]
+        public async Task Create_TwoInstantOrdersWithSameIdempotencyId_ThrowsPostgresUniqueConstraintException()
+        {
+            // Arrange
+            OrderRepository sut = (OrderRepository)ServiceUtil
+                .GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+            Guid firstOrderId = Guid.NewGuid();
+            Guid secondOrderId = Guid.NewGuid();
+            Guid orderChainId = Guid.NewGuid();
+            string idempotencyId = Guid.NewGuid().ToString();
+
+            _orderIdsToDelete.Add(firstOrderId);
+            _orderIdsToDelete.Add(secondOrderId);
+            _ordersChainIdsToDelete.Add(orderChainId);
+
+            var creationDateTime = DateTime.UtcNow;
+
+            var instantNotificationOrder = new InstantNotificationOrder
+            {
+                OrderId = firstOrderId,
+                Creator = new("ttd"),
+                Created = creationDateTime,
+                OrderChainId = orderChainId,
+                IdempotencyId = idempotencyId,
+                SendersReference = "REF-1",
+                InstantNotificationRecipient = new InstantNotificationRecipient
+                {
+                    ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
+                    {
+                        PhoneNumber = "+4799999999",
+                        TimeToLiveInSeconds = 3600,
+                        ShortMessageContent = new ShortMessageContent
+                        {
+                            Sender = "Altinn",
+                            Message = "Test message"
+                        }
+                    }
+                }
+            };
+
+            NotificationOrder notificationOrder = new()
+            {
+                Id = firstOrderId,
+                Creator = new("ttd"),
+                Type = OrderType.Instant,
+                Created = creationDateTime,
+                RequestedSendTime = creationDateTime,
+                NotificationChannel = NotificationChannel.Sms,
+                SendersReference = "REF-1",
+                Templates =
+                [
+                    new SmsTemplate("Altinn", "Test message")
+                ],
+                Recipients =
+                [
+                    new Recipient([new SmsAddressPoint("+4799999999")])
+                ]
+            };
+
+            var smsNotification = new SmsNotification
+            {
+                OrderId = firstOrderId,
+                Id = Guid.NewGuid(),
+                Recipient = new SmsRecipient { MobileNumber = "+4799999999" },
+                SendResult = new(SmsNotificationResultType.New, DateTime.UtcNow)
+            };
+
+            // Act
+            var result1 = await sut.Create(instantNotificationOrder, notificationOrder, smsNotification, creationDateTime.AddHours(48), 1);
+
+            // Try to create a second order with the same idempotencyId but a different orderId
+            var instantNotificationOrder2 = instantNotificationOrder with { OrderId = secondOrderId };
+
+            var notificationOrder2 = new NotificationOrder
+            {
+                Id = secondOrderId,
+                Creator = notificationOrder.Creator,
+                Type = notificationOrder.Type,
+                Created = notificationOrder.Created,
+                RequestedSendTime = notificationOrder.RequestedSendTime,
+                NotificationChannel = notificationOrder.NotificationChannel,
+                SendersReference = notificationOrder.SendersReference,
+                Templates = notificationOrder.Templates,
+                Recipients = notificationOrder.Recipients
+            };
+
+            var smsNotification2 = new SmsNotification
+            {
+                OrderId = secondOrderId,
+                Id = Guid.NewGuid(),
+                Recipient = smsNotification.Recipient,
+                SendResult = smsNotification.SendResult
+            };
+
+            // Assert
+            var ex = await Assert.ThrowsAsync<Npgsql.PostgresException>(async () =>
+                await sut.Create(instantNotificationOrder2, notificationOrder2, smsNotification2, creationDateTime.AddHours(48), 1));
+
+            Assert.Equal("23505", ex.SqlState); // 23505 = unique_violation in PostgreSQL
+            Assert.NotNull(result1);
+            Assert.Equal(firstOrderId, result1.Notification.ShipmentId);
+        }
+
+        [Fact]
+        public async Task Create_TwoNotificationOrdersWithSameIdempotencyIdAndType_ThrowsPostgresUniqueConstraintException()
+        {
+            // Arrange
+            OrderRepository sut = (OrderRepository)ServiceUtil
+                .GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
+
+            Guid firstOrderId = Guid.NewGuid();
+            Guid secondOrderId = Guid.NewGuid();
+            Guid firstOrderChainId = Guid.NewGuid();
+            Guid secondOrderChainId = Guid.NewGuid();
+            string idempotencyId = Guid.NewGuid().ToString();
+
+            _orderIdsToDelete.Add(firstOrderId);
+            _orderIdsToDelete.Add(secondOrderId);
+            _ordersChainIdsToDelete.Add(firstOrderChainId);
+            _ordersChainIdsToDelete.Add(secondOrderChainId);
+
+            var notificationOrderRequest1 = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+                .SetOrderId(firstOrderId)
+                .SetOrderChainId(firstOrderChainId)
+                .SetIdempotencyId(idempotencyId)
+                .SetType(OrderType.Notification)
+                .SetCreator(new Creator("ttd"))
+                .SetSendersReference("REF-1")
+                .SetRecipient(new NotificationRecipient
+                {
+                    RecipientEmail = new RecipientEmail
+                    {
+                        EmailAddress = "recipient@example.com",
+                        Settings = new EmailSendingOptions
+                        {
+                            Body = "Test message",
+                            Subject = "Test subject",
+                            SenderEmailAddress = "sender@example.com",
+                            ContentType = EmailContentType.Plain,
+                            SendingTimePolicy = SendingTimePolicy.Anytime
+                        }
+                    }
+                })
+                .Build();
+
+            var notificationOrder1 = new NotificationOrder
+            {
+                Id = firstOrderId,
+                Creator = new("ttd"),
+                Type = OrderType.Notification,
+                NotificationChannel = NotificationChannel.Email,
+                SendersReference = "REF-1",
+                Templates =
+                [
+                    new EmailTemplate("sender@example.com", "Test subject", "Test message", EmailContentType.Plain)
+                ],
+                Recipients =
+                [
+                    new Recipient([new EmailAddressPoint("recipient@example.com")])
+                ]
+            };
+
+            var notificationOrderRequest2 = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
+                .SetOrderId(secondOrderId)
+                .SetOrderChainId(secondOrderChainId)
+                .SetIdempotencyId(idempotencyId)
+                .SetType(OrderType.Notification)
+                .SetCreator(new Creator("ttd"))
+                .SetSendersReference("REF-2")
+                .SetRecipient(new NotificationRecipient
+                {
+                    RecipientEmail = new RecipientEmail
+                    {
+                        EmailAddress = "recipient2@example.com",
+                        Settings = new EmailSendingOptions
+                        {
+                            Body = "Test message 2",
+                            Subject = "Test subject 2",
+                            SenderEmailAddress = "sender2@example.com",
+                            ContentType = EmailContentType.Plain,
+                            SendingTimePolicy = SendingTimePolicy.Anytime
+                        }
+                    }
+                })
+                .Build();
+
+            var notificationOrder2 = new NotificationOrder
+            {
+                Id = secondOrderId,
+                Creator = new("ttd"),
+                Type = OrderType.Notification,
+                NotificationChannel = NotificationChannel.Email,
+                SendersReference = "REF-2",
+                Templates =
+                [
+                    new EmailTemplate("sender2@example.com", "Test subject 2", "Test message 2", EmailContentType.Plain)
+                ],
+                Recipients =
+                [
+                    new Recipient([new EmailAddressPoint("recipient2@example.com")])
+                ]
+            };
+
+            // Act
+            var result1 = await sut.Create(notificationOrderRequest1, notificationOrder1, null);
+
+            // Assert
+            var ex = await Assert.ThrowsAsync<Npgsql.PostgresException>(async () =>
+                await sut.Create(notificationOrderRequest2, notificationOrder2, null));
+
+            Assert.Equal("23505", ex.SqlState); // 23505 = unique_violation in PostgreSQL
+            Assert.NotNull(result1);
+            Assert.Single(result1);
+            Assert.Equal(firstOrderId, result1[0].Id);
+        }
     }
 }
