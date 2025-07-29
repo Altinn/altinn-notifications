@@ -167,5 +167,5 @@ public interface IOrderRepository
     /// A <see cref="Task{TResult}"/> containing a <see cref="InstantNotificationOrderTracking"/> with tracking information,
     /// or <c>null</c> if no matching order is found for the provided parameters.
     /// </returns>
-    Task<InstantNotificationOrderTracking?> RetrieveTrackingInformation(string creatorName, string idempotencyId, CancellationToken cancellationToken = default);
+    Task<InstantNotificationOrderTracking?> RetrieveInstantOrderTrackingInformation(string creatorName, string idempotencyId, CancellationToken cancellationToken = default);
 }

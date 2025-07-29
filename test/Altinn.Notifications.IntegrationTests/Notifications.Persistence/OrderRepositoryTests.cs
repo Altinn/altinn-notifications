@@ -2213,7 +2213,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             string idempotencyId = "1091990A-D05D-4326-A1D7-60420F4E8B1E";
 
             // Act
-            var result = await orderRepository.RetrieveTrackingInformation(creatorName, idempotencyId);
+            var result = await orderRepository.RetrieveInstantOrderTrackingInformation(creatorName, idempotencyId);
 
             // Assert
             Assert.Null(result);
@@ -2234,7 +2234,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             await cancellationTokenSource.CancelAsync();
 
             // Act & Assert
-            await Assert.ThrowsAsync<TaskCanceledException>(async () => await orderRepository.RetrieveTrackingInformation(creatorName, idempotencyId, cancellationTokenSource.Token));
+            await Assert.ThrowsAsync<TaskCanceledException>(async () => await orderRepository.RetrieveInstantOrderTrackingInformation(creatorName, idempotencyId, cancellationTokenSource.Token));
         }
 
         [Fact]
@@ -2310,7 +2310,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             await orderRepository.Create(instantNotificationOrder, notificationOrder, smsNotification, creationDateTime.AddMinutes(60), 1);
 
             // Act
-            var result = await orderRepository.RetrieveTrackingInformation(creator, idempotencyId);
+            var result = await orderRepository.RetrieveInstantOrderTrackingInformation(creator, idempotencyId);
 
             // Assert
             Assert.NotNull(result);
@@ -2393,7 +2393,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             await orderRepository.Create(instantNotificationOrder, notificationOrder, smsNotification, creationDateTime.AddMinutes(60), 1);
 
             // Act
-            var result = await orderRepository.RetrieveTrackingInformation(invalidCreator, idempotencyId);
+            var result = await orderRepository.RetrieveInstantOrderTrackingInformation(invalidCreator, idempotencyId);
 
             // Assert
             Assert.Null(result);
@@ -2473,7 +2473,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             await orderRepository.Create(instantNotificationOrder, notificationOrder, smsNotification, creationDateTime.AddMinutes(60), 1);
 
             // Act
-            var result = await orderRepository.RetrieveTrackingInformation(creator, invalidIdempotencyId);
+            var result = await orderRepository.RetrieveInstantOrderTrackingInformation(creator, invalidIdempotencyId);
 
             // Assert
             Assert.Null(result);
@@ -2491,7 +2491,8 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             Guid normalOrderChainId = Guid.NewGuid();
             Guid instantOrderChainId = Guid.NewGuid();
 
-            string idempotencyId = "SAME-IDEMPOTENCY-ID";
+            // same id is used for both orders
+            string idempotencyId = Guid.NewGuid().ToString();
 
             _orderIdsToDelete.AddRange([normalOrderId, instantOrderId]);
             _ordersChainIdsToDelete.AddRange([normalOrderChainId, instantOrderChainId]);
@@ -2514,8 +2515,6 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
                             Body = "Normal email body",
                             Subject = "Normal email subject",
                             SenderEmailAddress = "sender@example.com",
-                            ContentType = EmailContentType.Plain,
-                            SendingTimePolicy = SendingTimePolicy.Anytime
                         }
                     }
                 })
@@ -2593,6 +2592,9 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             // Create the instant order
             var instantOrderResult = await sut.Create(instantNotificationOrder, instantNotificationOrderEntity, smsNotification, smsExpiryDateTime: DateTime.UtcNow.AddHours(48), smsMessageCount: 1);
 
+            var orderChainTrackingInformation = await sut.GetOrderChainTracking("ttd", idempotencyId);
+            var instantTrackingInformation = await sut.RetrieveInstantOrderTrackingInformation("ttd", instantNotificationOrder.IdempotencyId);
+
             // Assert
             Assert.NotNull(normalOrderResult);
             Assert.Single(normalOrderResult);
@@ -2602,14 +2604,12 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             Assert.Equal(instantOrderChainId, instantOrderResult.OrderChainId);
             Assert.Equal(instantOrderId, instantOrderResult.Notification.ShipmentId);
 
-            // Verify that both orders were created
-            string normalOrderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{normalOrderId}' and type = 'Notification'";
-            int normalOrderCount = await PostgreUtil.RunSqlReturnOutput<int>(normalOrderSql);
-            Assert.Equal(1, normalOrderCount);
-
-            string instantOrderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{instantOrderId}' and type = 'Instant'";
-            int instantOrderCount = await PostgreUtil.RunSqlReturnOutput<int>(instantOrderSql);
-            Assert.Equal(1, instantOrderCount);
+            // Verify that both orders were created by reading their respective tracking information responses
+            // Notification type
+            Assert.Equal(normalOrderId, orderChainTrackingInformation?.OrderChainReceipt.ShipmentId);
+            
+            // Instant type
+            Assert.Equal(instantOrderId, instantTrackingInformation?.Notification.ShipmentId);
         }
 
         [Fact]
