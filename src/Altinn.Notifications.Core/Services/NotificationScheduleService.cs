@@ -58,9 +58,9 @@ namespace Altinn.Notifications.Core.Services
                 return referenceUtcDateTime.AddHours(48);
             }
 
-            DateTime baseDateTime = equivalentDateTimeInNorway.Date.Add(_sendWindowStartTime);
-
             double hoursToAdd = equivalentDateTimeInNorway.TimeOfDay < _sendWindowStartTime ? 48 : 72;
+
+            DateTime baseDateTime = equivalentDateTimeInNorway.Date.Add(_sendWindowStartTime);
 
             DateTime expiryDateTime = baseDateTime.AddHours(hoursToAdd);
 
@@ -72,7 +72,7 @@ namespace Altinn.Notifications.Core.Services
         /// </summary>
         /// <param name="dateTimeUTC">The UTC time to convert.</param>
         /// <returns>The equivalent time in the Norwegian time zone.</returns>
-        /// <exception cref="ArgumentException">Thrown if <paramref name="dateTimeUTC"/> is not in UTC.</exception>
+        /// <exception cref="ArgumentException">Thrown if <paramref name="dateTimeUTC"/> is not in UTC format.</exception>
         private DateTime GetEquivalentDateTimeInNorway(DateTime dateTimeUTC)
         {
             if (dateTimeUTC.Kind != DateTimeKind.Utc)
