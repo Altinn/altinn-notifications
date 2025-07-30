@@ -8,40 +8,79 @@ using Microsoft.Extensions.Options;
 namespace Altinn.Notifications.Core.Services
 {
     /// <summary>
-    /// Implementation of the <see cref="INotificationScheduleService"/> using the "W. Europe Standard Time".
+    /// Provides scheduling logic for SMS notifications.
     /// </summary>
     public class NotificationScheduleService : INotificationScheduleService
     {
+        private readonly TimeSpan _sendWindowEndTime;
+        private readonly TimeSpan _sendWindowStartTime;
+
         private readonly IDateTimeService _dateTimeService;
-        private readonly NotificationConfig _config;
-        private readonly string _timeZoneId;
-        private const string _norwayTimeZoneIdWindows = "W. Europe Standard Time";
-        private const string _norwayTimeZoneIdLinux = "Europe/Oslo";
+
+        private readonly TimeZoneInfo _norwegainTimeZoneInfo;
+        private const string _norwegainTimeZoneIdLinux = "Europe/Oslo";
+        private const string _norwegainTimeZoneIdWindows = "W. Europe Standard Time";
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NotificationScheduleService"/> class.
         /// </summary>
-        public NotificationScheduleService(IDateTimeService dateTimeService, IOptions<NotificationConfig> config)
+        public NotificationScheduleService(
+            IDateTimeService dateTimeService,
+            IOptions<NotificationConfig> config)
         {
             _dateTimeService = dateTimeService;
-            _config = config.Value;
-            _timeZoneId = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? _norwayTimeZoneIdWindows : _norwayTimeZoneIdLinux;
+
+            _sendWindowEndTime = new(config.Value.SmsSendWindowEndHour, 0, 0);
+            _sendWindowStartTime = new(config.Value.SmsSendWindowStartHour, 0, 0);
+
+            var norwegainTimeZoneId =
+                RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? _norwegainTimeZoneIdWindows : _norwegainTimeZoneIdLinux;
+            _norwegainTimeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById(norwegainTimeZoneId);
         }
 
         /// <inheritdoc/>
-        public bool CanSendSmsNotifications()
+        public bool CanSendSmsNow()
         {
             DateTime dateTimeUtc = _dateTimeService.UtcNow();
-            TimeZoneInfo norwayTimeZone = TimeZoneInfo.FindSystemTimeZoneById(_timeZoneId);
 
-            DateTime norwayTime = TimeZoneInfo.ConvertTimeFromUtc(dateTimeUtc, norwayTimeZone);
+            var equivalentDateTimeInNorway = GetEquivalentDateTimeInNorway(dateTimeUtc);
 
-            TimeSpan startTime = new TimeSpan(_config.SmsSendWindowStartHour, 0, 0);
-            TimeSpan endTime = new TimeSpan(_config.SmsSendWindowEndHour, 0, 0);
+            return equivalentDateTimeInNorway.TimeOfDay > _sendWindowStartTime && equivalentDateTimeInNorway.TimeOfDay < _sendWindowEndTime;
+        }
 
-            TimeSpan currentTime = norwayTime.TimeOfDay;
+        /// <inheritdoc/>
+        public DateTime GetSmsExpirationDateTime(DateTime referenceUtcDateTime)
+        {
+            var equivalentDateTimeInNorway = GetEquivalentDateTimeInNorway(referenceUtcDateTime);
 
-            return startTime < currentTime && currentTime < endTime;
+            if (equivalentDateTimeInNorway.TimeOfDay > _sendWindowStartTime && equivalentDateTimeInNorway.TimeOfDay < _sendWindowEndTime)
+            {
+                return referenceUtcDateTime.AddHours(48);
+            }
+
+            double hoursToAdd = equivalentDateTimeInNorway.TimeOfDay < _sendWindowStartTime ? 48 : 72;
+
+            DateTime baseDateTime = equivalentDateTimeInNorway.Date.Add(_sendWindowStartTime);
+
+            DateTime expiryDateTime = baseDateTime.AddHours(hoursToAdd);
+
+            return TimeZoneInfo.ConvertTimeToUtc(expiryDateTime, _norwegainTimeZoneInfo);
+        }
+
+        /// <summary>
+        /// Converts a UTC <see cref="DateTime"/> to the equivalent time in the Norwegian time zone.
+        /// </summary>
+        /// <param name="dateTimeUTC">The UTC time to convert.</param>
+        /// <returns>The equivalent time in the Norwegian time zone.</returns>
+        /// <exception cref="ArgumentException">Thrown if <paramref name="dateTimeUTC"/> is not in UTC format.</exception>
+        private DateTime GetEquivalentDateTimeInNorway(DateTime dateTimeUTC)
+        {
+            if (dateTimeUTC.Kind != DateTimeKind.Utc)
+            {
+                throw new ArgumentException("DateTime must be in UTC format.", nameof(dateTimeUTC));
+            }
+
+            return TimeZoneInfo.ConvertTimeFromUtc(dateTimeUTC, _norwegainTimeZoneInfo);
         }
     }
 }
