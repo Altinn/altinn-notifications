@@ -379,7 +379,12 @@ public class ContactPointService(
             contactPoint.UserContactPoints = [..
                 NullifyDuplicateUserContactPoints(contactPoint.UserContactPoints)
                 .Select(userContact => NullifyDuplicateUserContactPoints(userContact, contactPoint))
-                .Where(userContact => !string.IsNullOrWhiteSpace(userContact.Email) || !string.IsNullOrWhiteSpace(userContact.MobileNumber))];
+                .Where(userContact => !string.IsNullOrWhiteSpace(userContact.Email) || !string.IsNullOrWhiteSpace(userContact.MobileNumber))
+                .Select(userContact =>
+                {
+                    userContact.MobileNumber = MobileNumberHelper.EnsureCountryCodeIfValidNumber(userContact.MobileNumber);
+                    return userContact;
+                })];
         });
 
         return contactPoints;
