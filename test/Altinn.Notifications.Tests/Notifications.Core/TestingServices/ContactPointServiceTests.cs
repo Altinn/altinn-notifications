@@ -200,10 +200,12 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             string organizationRawMobileNumber = "99999999";
             string organizationFormattedMobileNumber = "+4799999999";
             string organizationInvalidFormattedMobileNumber = "004799999999";
+            string organizationEmailAddress = "organizatoin-recipient@example.com";
 
             string mainContactPersonNationalId = "17269942983";
             string mainContactPersonRawMobileNumber = "99999999";
             string mainContactPersonFormattedMobileNumber = "+4799999999";
+            string mainContactPersonEmailAddress = "person-recipient@example.com";
 
             var recipientsToEnrich = new List<Recipient>
             {
@@ -219,12 +221,14 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                     {
                         PartyId = 1532951,
                         OrganizationNumber = organizationNumber,
-                        MobileNumberList = [organizationRawMobileNumber],
+                        EmailList = [organizationEmailAddress, organizationEmailAddress],
+                        MobileNumberList = [organizationRawMobileNumber, organizationRawMobileNumber],
                         UserContactPoints =
                         [
                             new()
                             {
                                 UserId = 1522201,
+                                Email = mainContactPersonEmailAddress,
                                 MobileNumber = mainContactPersonRawMobileNumber,
                                 NationalIdentityNumber = mainContactPersonNationalId
                             }
@@ -248,6 +252,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             Assert.NotNull(recipient.AddressInfo);
             Assert.Single(recipient.AddressInfo);
+            Assert.IsNotType<EmailAddressPoint>(recipient.AddressInfo);
 
             var actualMobileNumbers = recipient.AddressInfo.OfType<SmsAddressPoint>().Select(a => a.MobileNumber).ToList();
 
