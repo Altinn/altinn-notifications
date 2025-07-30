@@ -343,12 +343,7 @@ public class ContactPointService(
 
             foreach (var authorizedUserContactPoint in authorizedUserContactPoints)
             {
-                authorizedUserContactPoint.UserContactPoints.ForEach(userContactPoint =>
-                {
-                    userContactPoint.MobileNumber = MobileNumberHelper.EnsureCountryCodeIfValidNumber(userContactPoint.MobileNumber);
-                });
-
-                var existingContactPoint = contactPoints.Find(cp => cp.OrganizationNumber == authorizedUserContactPoint.OrganizationNumber);
+                var existingContactPoint = contactPoints.Find(e => e.OrganizationNumber == authorizedUserContactPoint.OrganizationNumber);
                 if (existingContactPoint == null)
                 {
                     contactPoints.Add(authorizedUserContactPoint);
