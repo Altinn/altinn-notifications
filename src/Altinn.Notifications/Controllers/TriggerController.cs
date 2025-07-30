@@ -91,7 +91,7 @@ public class TriggerController : ControllerBase
     [Route("sendsmsdaytime")]
     public async Task<ActionResult> Trigger_SendSmsNotificationsDaytime()
     {
-        if (!_scheduleService.CanSendSmsNotifications())
+        if (!_scheduleService.CanSendSmsNow())
         {
             return Ok();
         }

@@ -915,54 +915,57 @@ public class OrderRequestServiceTests
         // Expected orders
         var expectedMainOrder = new NotificationOrder(
             mainOrderId,
+            OrderType.Notification,
+            new Creator("skd"),
+            DateTime.UtcNow,
+            resourceId,
+            new Uri("https://api.skatteetaten.no/conditions/new"),
+            true,
             "TAX-REMINDER-2025",
+            mainOrderSendTime.AddDays(1),
+            [new([], "29105573746")],
+            SendingTimePolicy.Daytime,
             [
                 new SmsTemplate("Skatteetaten", "Tax filing due: Visit Skatteetaten.no."),
                 new EmailTemplate("no-reply@skatteetaten.no", "Tax Filing 2025", "<p>Log in to <a href=\"https://skatteetaten.no\">Tax Portal</a> to file your return.</p>", EmailContentType.Html)
             ],
-            mainOrderSendTime.AddDays(1),
-            NotificationChannel.EmailPreferred,
-            new Creator("skd"),
-            DateTime.UtcNow,
-            [new([], "29105573746")],
-            true,
-            resourceId,
-            new Uri("https://api.skatteetaten.no/conditions/new"),
-            OrderType.Notification);
+            NotificationChannel.EmailPreferred);
 
         var expectedFirstReminder = new NotificationOrder(
             firstReminderId,
+            OrderType.Reminder,
+            new Creator("skd"),
+            DateTime.UtcNow,
+            resourceId,
+            new Uri("https://api.skatteetaten.no/conditions/incomplete"),
+            true,
             "TAX-REMINDER-2025-FIRST",
+            mainOrderSendTime.AddDays(7),
+            [new([], "29105573746")],
+            SendingTimePolicy.Daytime,
             [
                 new SmsTemplate("Skatteetaten", "Reminder: File your tax return at Skatteetaten.no."),
                 new EmailTemplate("no-reply@skatteetaten.no", "Reminder: Tax 2025", "<p><strong>Reminder:</strong> File your return at <a href=\"https://skatteetaten.no\">Tax Portal</a>.</p>", EmailContentType.Html)
             ],
-            mainOrderSendTime.AddDays(7),
-            NotificationChannel.EmailPreferred,
-            new Creator("skd"),
-            DateTime.UtcNow,
-            [new([], "29105573746")],
-            true,
-            resourceId,
-            new Uri("https://api.skatteetaten.no/conditions/incomplete"),
-            OrderType.Reminder);
+            NotificationChannel.EmailPreferred);
 
         var expectedFinalReminder = new NotificationOrder(
             secondReminderId,
+            OrderType.Reminder,
+            new Creator("skd"),
+            DateTime.UtcNow,
+            resourceId,
+            new Uri("https://api.Skatteetaten.no/conditions/incomplete"),
+            true,
             "TAX-REMINDER-2025-FINAL",
+            mainOrderSendTime.AddDays(14),
+            [new([], "29105573746")],
+            SendingTimePolicy.Daytime,
             [
                 new SmsTemplate("Skatteetaten", "Urgent: File your tax return now at Skatteetaten.no."),
                 new EmailTemplate("no-reply@skatteetaten.no", "Final Reminder: Tax 2025", "<p><strong>Final Reminder:</strong> File now to avoid penalties. <a href=\"https://skatteetaten.no\">Tax Portal</a></p>", EmailContentType.Html)
             ],
-            mainOrderSendTime.AddDays(14),
-            NotificationChannel.SmsPreferred,
-            new Creator("skd"),
-            DateTime.UtcNow,
-            [new([], "29105573746")],
-            true,
-            resourceId,
-            new Uri("https://api.Skatteetaten.no/conditions/incomplete"),
-            OrderType.Reminder);
+            NotificationChannel.SmsPreferred);
 
         var orderRepositoryMock = new Mock<IOrderRepository>();
         var contactPointServiceMock = new Mock<IContactPointService>();
@@ -1127,20 +1130,21 @@ public class OrderRequestServiceTests
 
         var expectedOrder = new NotificationOrder(
             orderId,
+            OrderType.Notification,
+            new Creator("brg"),
+            DateTime.UtcNow,
+            "urn:altinn:resource:email-sms-resource-name",
+            new Uri("https://api.brreg.no/conditions/notification"),
+            null,
             "REF-42DBDAB8281C",
+            currentTime.AddHours(2),
+            [new([], organizationNumber: "312508729")],
+            SendingTimePolicy.Daytime,
             [
                 new SmsTemplate("Brønnøysund", "Your organization's annual report is due by March 31, 2025. Log in to Altinn to complete it."),
                 new EmailTemplate("no-reply@brreg.no", "Annual Report 2025", "<p>Your organization's annual report is due by March 31, 2025. Log in to Altinn to complete it.</p>", EmailContentType.Html)
             ],
-            currentTime.AddHours(2),
-            NotificationChannel.EmailAndSms,
-            new Creator("brg"),
-            DateTime.UtcNow,
-            [new([], organizationNumber: "312508729")],
-            null,
-            "urn:altinn:resource:email-sms-resource-name",
-            new Uri("https://api.brreg.no/conditions/notification"),
-            OrderType.Notification);
+            NotificationChannel.EmailAndSms);
 
         var orderRepositoryMock = new Mock<IOrderRepository>();
         orderRepositoryMock.Setup(r => r.Create(
