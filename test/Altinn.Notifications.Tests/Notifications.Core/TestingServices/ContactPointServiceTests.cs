@@ -18,7 +18,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
     public class ContactPointServiceTests
     {
         [Fact]
-        public async Task AddSmsContactPoints_WhenUsingNationalId_ShouldEnrichesRecipientsWithMobileNumbers()
+        public async Task AddSmsContactPoints_WhenUsingNationalId_ShouldEnricheRecipientsWithMobileNumbers()
         {
             // Arrange
             string nationalId = "17269942983";
@@ -72,7 +72,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         }
 
         [Fact]
-        public async Task AddSmsContactPoints_WhenUsingOrganizationNumber_ShouldEnrichesRecipientsWithMobileNumbers()
+        public async Task AddSmsContactPoints_WhenUsingOrganizationNumber_ShouldEnricheRecipientsWithMobileNumbers()
         {
             // Arrange
             string organizationNumber = "123456789";
@@ -175,13 +175,24 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         }
 
         [Fact]
-        public async Task AddSmsContactPoints_WhenUsingOrganizationNumberAndResourceId_ShouldEnrichesAuthorizedRecipientsWithMobileNumbers()
+        public async Task AddSmsContactPoints_WhenUsingOrganizationNumberAndResourceId_ShouldEnricheAuthorizedRecipientsWithMobileNumbers()
         {
             // Arrange
+            string resourceIdentifier = "urn:altinn:resource-id";
+
             string organizationNumber = "123456789";
-            string resourceIdentifier = "urn:altinn:resource";
-            string organizationFormattedMobileNumber = "+4799999999";
-            string contactPersonFormattedMobileNumber = "+4796666666";
+            string organizationRawMobileNumber = "99999999";
+            string organizationFirstFormatMobileNumber = "+4799999999";
+            string organizationSecondFormatMobileNumber = "004799999999";
+
+            string contactPersonRawMobileNumber = "96666666";
+            string contactPersonFirstFormatMobileNumber = "+4796666666";
+            string contactPersonSecondFormatMobileNumber = "004796666666";
+
+            string firstContactPersonNationalId = "03288308712";
+            string secondContactPersonNationalId = "08297224086";
+            string thirdContactPersonNationalId = "24283830469";
+            string fourthContactPersonNationalId = "17275807885";
 
             List<Recipient> recipientsToEnrich =
             [
@@ -199,8 +210,8 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
                     AddressInfo =
                     [
-                        new SmsAddressPoint(organizationFormattedMobileNumber),
-                        new SmsAddressPoint(contactPersonFormattedMobileNumber)
+                        new SmsAddressPoint(organizationFirstFormatMobileNumber),
+                        new SmsAddressPoint(contactPersonFirstFormatMobileNumber)
                     ]
                 }
             ];
@@ -213,7 +224,15 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                     new OrganizationContactPoints()
                     {
                         OrganizationNumber = organizationNumber,
-                        MobileNumberList = [organizationFormattedMobileNumber]
+                        MobileNumberList =
+                        [
+                            organizationRawMobileNumber,
+                            contactPersonRawMobileNumber,
+                            organizationFirstFormatMobileNumber,
+                            contactPersonFirstFormatMobileNumber,
+                            organizationSecondFormatMobileNumber,
+                            contactPersonSecondFormatMobileNumber
+                        ]
                     }
                 ]);
 
@@ -232,18 +251,32 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                             {
                                 UserId = 200001,
                                 IsReserved = false,
-                                MobileNumber = "+4796666666",
-                                Email = "first-address@example.com",
-                                NationalIdentityNumber = "03288308712"
+                                MobileNumber = organizationRawMobileNumber,
+                                NationalIdentityNumber = firstContactPersonNationalId
                             },
 
                             new UserContactPoints()
                             {
                                 UserId = 200009,
                                 IsReserved = false,
-                                MobileNumber = "004799999999",
-                                Email = "second-address@example.com",
-                                NationalIdentityNumber = "08297224086"
+                                MobileNumber = contactPersonRawMobileNumber,
+                                NationalIdentityNumber = secondContactPersonNationalId
+                            },
+
+                            new UserContactPoints()
+                            {
+                                UserId = 200011,
+                                IsReserved = false,
+                                MobileNumber = contactPersonFirstFormatMobileNumber,
+                                NationalIdentityNumber = thirdContactPersonNationalId
+                            },
+
+                            new UserContactPoints()
+                            {
+                                UserId = 200007,
+                                IsReserved = false,
+                                MobileNumber = contactPersonSecondFormatMobileNumber,
+                                NationalIdentityNumber = fourthContactPersonNationalId
                             }
                         ]
                     }
