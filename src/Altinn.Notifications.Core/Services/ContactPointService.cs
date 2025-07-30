@@ -380,11 +380,7 @@ public class ContactPointService(
                 NullifyDuplicateUserContactPoints(contactPoint.UserContactPoints)
                 .Select(userContact => NullifyDuplicateUserContactPoints(userContact, contactPoint))
                 .Where(userContact => !string.IsNullOrWhiteSpace(userContact.Email) || !string.IsNullOrWhiteSpace(userContact.MobileNumber))
-                .Select(userContact =>
-                {
-                    userContact.MobileNumber = MobileNumberHelper.EnsureCountryCodeIfValidNumber(userContact.MobileNumber);
-                    return userContact;
-                })];
+                ];
         });
 
         return contactPoints;
@@ -419,6 +415,8 @@ public class ContactPointService(
 
             if (!string.IsNullOrWhiteSpace(userContact.MobileNumber))
             {
+                userContact.MobileNumber = MobileNumberHelper.EnsureCountryCodeIfValidNumber(userContact.MobileNumber);
+
                 var duplicateMobileNumber = !seenMobiles.Add(userContact.MobileNumber);
                 if (duplicateMobileNumber)
                 {
