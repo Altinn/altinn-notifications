@@ -188,8 +188,12 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             // Arrange
             string organizationNumber = "123456789";
             string organizationRawMobileNumber = "99999999";
-            string organizationFirstFormatMobileNumber = "+4799999999";
-            string organizationSecondFormatMobileNumber = "004799999999";
+            string organizationFormattedMobileNumber = "+4799999999";
+            string organizationInvalidFormattedMobileNumber = "004799999999";
+
+            string mainContactPersonNationalId = "17269942983";
+            string mainContactPersonRawMobileNumber = "99999999";
+            string mainContactPersonFormattedMobileNumber = "+4799999999";
 
             var recipientsToEnrich = new List<Recipient>
             {
@@ -197,15 +201,24 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             };
 
             var profileClientMock = new Mock<IProfileClient>();
-
             profileClientMock
                 .Setup(e => e.GetOrganizationContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber))))
                 .ReturnsAsync(
                 [
                     new()
                     {
+                        PartyId = 1532951,
                         OrganizationNumber = organizationNumber,
-                        MobileNumberList = [organizationRawMobileNumber, organizationFirstFormatMobileNumber, organizationSecondFormatMobileNumber]
+                        MobileNumberList = [organizationRawMobileNumber],
+                        UserContactPoints =
+                        [
+                            new()
+                            {
+                                UserId = 1522201,
+                                MobileNumber = mainContactPersonRawMobileNumber,
+                                NationalIdentityNumber = mainContactPersonNationalId
+                            }
+                        ]
                     }
                 ]);
 
@@ -226,21 +239,14 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             Assert.NotNull(recipient.AddressInfo);
             Assert.Single(recipient.AddressInfo);
 
-            var organizationAddressPoint = Assert.IsType<SmsAddressPoint>(recipient.AddressInfo[0]);
-            Assert.Equal(AddressType.Sms, organizationAddressPoint.AddressType);
-            Assert.Equal(organizationFirstFormatMobileNumber, organizationAddressPoint.MobileNumber);
-
-            var notExpectedMobileNumbers = new[]
-            {
-                organizationRawMobileNumber,
-                organizationSecondFormatMobileNumber
-            };
-
             var actualMobileNumbers = recipient.AddressInfo.OfType<SmsAddressPoint>().Select(a => a.MobileNumber).ToList();
-            foreach (var mobileNumber in notExpectedMobileNumbers)
-            {
-                Assert.DoesNotContain(mobileNumber, actualMobileNumbers);
-            }
+
+            Assert.Contains(organizationFormattedMobileNumber, actualMobileNumbers);
+            Assert.Contains(mainContactPersonFormattedMobileNumber, actualMobileNumbers);
+
+            Assert.DoesNotContain(organizationRawMobileNumber, actualMobileNumbers);
+            Assert.DoesNotContain(mainContactPersonRawMobileNumber, actualMobileNumbers);
+            Assert.DoesNotContain(organizationInvalidFormattedMobileNumber, actualMobileNumbers);
 
             profileClientMock.Verify(x => x.GetOrganizationContactPoints(It.Is<List<string>>(orgs => orgs.Contains(organizationNumber))), Times.Once);
 
