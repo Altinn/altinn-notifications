@@ -11,6 +11,7 @@ RETURNS TABLE (
     reminders jsonb
 ) 
 LANGUAGE 'plpgsql'
+STABLE
 AS $BODY$
 DECLARE
     v_record_exists boolean;
@@ -59,6 +60,8 @@ BEGIN
     WHERE 
         orders_chain.creatorname = _creatorname
         AND orders_chain.idempotencyid = _idempotencyid;
+        -- Exclude type 'Instant' from results
+        AND (orders_chain.orderchain->>'Type' <> '2' OR orders_chain.orderchain->>'Type' IS NULL);
 END;
 $BODY$;
 
