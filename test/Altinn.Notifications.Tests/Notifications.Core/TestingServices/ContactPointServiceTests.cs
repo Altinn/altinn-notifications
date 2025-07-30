@@ -262,7 +262,8 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             string organizationNumber = "123456789";
             string organizationEmailAddresse = "organization@example.com";
 
-            string contactPersonEmailAddresse = "recipient@example.com";
+            string contactPersonNationalId = "29326345553";
+            string contactPersonEmailAddresse = "main-recipient@example.com";
 
             var recipientsToEnrich = new List<Recipient>
             {
@@ -277,8 +278,18 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 [
                     new()
                     {
+                        PartyId = 1532951,
                         OrganizationNumber = organizationNumber,
-                        EmailList = [organizationEmailAddresse, organizationEmailAddresse, organizationEmailAddresse]
+                        EmailList = [organizationEmailAddresse, organizationEmailAddresse, organizationEmailAddresse],
+                        UserContactPoints =
+                        [
+                            new()
+                            {
+                                UserId = 1522021,
+                                Email = contactPersonEmailAddresse,
+                                NationalIdentityNumber = contactPersonNationalId
+                            }
+                        ]
                     }
                 ]);
 
@@ -297,7 +308,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             Assert.Equal(organizationNumber, recipient.OrganizationNumber);
 
             Assert.NotNull(recipient.AddressInfo);
-            Assert.Equal(1, recipient.AddressInfo.Count);
+            Assert.Equal(2, recipient.AddressInfo.Count);
 
             var organizationAddressPoint = Assert.IsType<EmailAddressPoint>(recipient.AddressInfo[0]);
             Assert.Equal(AddressType.Email, organizationAddressPoint.AddressType);
