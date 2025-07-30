@@ -326,7 +326,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         }
 
         [Fact]
-        public async Task AddEmailAndSmsContactPointsAsync_WhenUsingOrganizationNumber_ShouldEnrichRecipientsWithMobileNumbersAndEmailAddresses()
+        public async Task AddEmailAndSmsContactPoints_WhenUsingOrganizationNumber_ShouldEnrichRecipientsWithMobileNumbersAndEmailAddresses()
         {
             // Arrange
             string organizationNumber = "123456789";
@@ -338,6 +338,11 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             string organizationFirstEmailAddresse = "first-organization-email@example.com";
             string organizationSecondEmailAddresse = "second-organization-email@example.com";
+
+            string contactPersonNationalId = "29326345553";
+            string contactPersonRawMobileNumber = "95555555";
+            string contactPersonFormattedMobileNumber = "+4795555555";
+            string contactPersonEmailAddresse = "main-recipient@example.com";
 
             var recipientsToEnrich = new List<Recipient>
             {
@@ -354,7 +359,17 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                         PartyId = 1532451,
                         OrganizationNumber = organizationNumber,
                         EmailList = [organizationFirstEmailAddresse, organizationFirstEmailAddresse, organizationSecondEmailAddresse],
-                        MobileNumberList = [organizationFirstRawMobileNumber, organizationSecondRawMobileNumber, organizationSecondRawMobileNumber]
+                        MobileNumberList = [organizationFirstRawMobileNumber, organizationSecondRawMobileNumber, organizationSecondRawMobileNumber],
+                        UserContactPoints =
+                        [
+                            new()
+                            {
+                                UserId = 1522021,
+                                Email = contactPersonEmailAddresse,
+                                MobileNumber = contactPersonRawMobileNumber,
+                                NationalIdentityNumber = contactPersonNationalId
+                            }
+                        ]
                     }
                 ]);
 
@@ -373,19 +388,21 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             Assert.Equal(organizationNumber, recipient.OrganizationNumber);
 
             Assert.NotNull(recipient.AddressInfo);
-            Assert.Equal(4, recipient.AddressInfo.Count);
+            Assert.Equal(6, recipient.AddressInfo.Count);
 
             // Extract email and SMS address points
-            var emailAddresses = recipient.AddressInfo.OfType<EmailAddressPoint>().ToList();
             var smsAddresses = recipient.AddressInfo.OfType<SmsAddressPoint>().ToList();
+            var emailAddresses = recipient.AddressInfo.OfType<EmailAddressPoint>().ToList();
 
             // Assert emails
-            Assert.Equal(2, emailAddresses.Count);
+            Assert.Equal(3, emailAddresses.Count);
+            Assert.Contains(emailAddresses, e => e.EmailAddress == contactPersonEmailAddresse);
             Assert.Contains(emailAddresses, e => e.EmailAddress == organizationFirstEmailAddresse);
             Assert.Contains(emailAddresses, e => e.EmailAddress == organizationSecondEmailAddresse);
 
             // Assert SMS/mobile numbers
-            Assert.Equal(2, smsAddresses.Count);
+            Assert.Equal(3, smsAddresses.Count);
+            Assert.Contains(smsAddresses, e => e.MobileNumber == contactPersonFormattedMobileNumber);
             Assert.Contains(smsAddresses, e => e.MobileNumber == organizationFirstFormattedMobileNumber);
             Assert.Contains(smsAddresses, e => e.MobileNumber == organizationSecondFormattedMobileNumber);
 
