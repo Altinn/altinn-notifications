@@ -24,6 +24,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             string nationalId = "17269942983";
             string rawMobileNumber = "99999999";
             string formattedMobileNumber = "+4799999999";
+            string emailAddress = "recipient@example.com";
 
             var recipientsToEnrich = new List<Recipient>
             {
@@ -39,6 +40,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                     {
                         UserId = 90090020,
                         IsReserved = true,
+                        Email = emailAddress,
                         MobileNumber = rawMobileNumber,
                         NationalIdentityNumber = nationalId
                     }
@@ -59,6 +61,9 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             Assert.Equal(nationalId, recipient.NationalIdentityNumber);
 
             var addressInfo = Assert.Single(recipient.AddressInfo);
+
+            Assert.IsNotType<EmailAddressPoint>(addressInfo);
+
             var smsAddressPoint = Assert.IsType<SmsAddressPoint>(addressInfo);
             Assert.Equal(AddressType.Sms, smsAddressPoint.AddressType);
             Assert.Equal(formattedMobileNumber, smsAddressPoint.MobileNumber);
