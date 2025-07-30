@@ -275,9 +275,11 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         {
             // Arrange
             string organizationNumber = "123456789";
+            string organizationFormattedMobileNumber = "+4799999999";
             string organizationEmailAddresse = "organization@example.com";
 
             string contactPersonNationalId = "29326345553";
+            string contactPersonFormattedMobileNumber = "+4796666666";
             string contactPersonEmailAddresse = "main-recipient@example.com";
 
             var recipientsToEnrich = new List<Recipient>
@@ -295,6 +297,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                     {
                         PartyId = 1532951,
                         OrganizationNumber = organizationNumber,
+                        MobileNumberList = [organizationFormattedMobileNumber, contactPersonFormattedMobileNumber],
                         EmailList = [organizationEmailAddresse, organizationEmailAddresse, organizationEmailAddresse],
                         UserContactPoints =
                         [
@@ -302,7 +305,8 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                             {
                                 UserId = 1522021,
                                 Email = contactPersonEmailAddresse,
-                                NationalIdentityNumber = contactPersonNationalId
+                                NationalIdentityNumber = contactPersonNationalId,
+                                MobileNumber = contactPersonFormattedMobileNumber
                             }
                         ]
                     }
@@ -324,6 +328,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             Assert.NotNull(recipient.AddressInfo);
             Assert.Equal(2, recipient.AddressInfo.Count);
+            Assert.IsNotType<SmsAddressPoint>(recipient.AddressInfo);
 
             var organizationAddressPoint = Assert.IsType<EmailAddressPoint>(recipient.AddressInfo[0]);
             Assert.Equal(AddressType.Email, organizationAddressPoint.AddressType);
