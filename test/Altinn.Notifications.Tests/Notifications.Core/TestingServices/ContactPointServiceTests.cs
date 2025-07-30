@@ -72,45 +72,76 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         }
 
         [Fact]
-        public async Task AddSmsContactPoints_WithValidOrganizationNumber_EnrichesRecipientWithOrganizationSmsContact()
+        public async Task AddSmsContactPoints_WhenUsingOrganizationNumber_ShouldEnrichesRecipientsWithMobileNumbers()
         {
             // Arrange
             const string organizationNumber = "123456789";
-            const string expectedMobileNumber = "+4799999999";
+            const string organizationRawMobileNumber = "99999999";
+            const string organizationMobileNumber = "+4799999999";
+
+            const string contactPersonNationalId = "01325339035";
+            const string contactPersonRawMobileNumber = "96666666";
+            const string contactPersonFormattedMobileNumber = "+4796666666";
 
             var recipients = new List<Recipient>
             {
                 new() { OrganizationNumber = organizationNumber }
             };
 
-            var mockOrganizationContactPoints = new List<OrganizationContactPoints>
+            UserContactPoints userContactPointsMock = new()
+            {
+                UserId = 90090040,
+                IsReserved = false,
+                MobileNumber = contactPersonRawMobileNumber,
+                NationalIdentityNumber = contactPersonNationalId
+            };
+
+            var organizationContactPointsMock = new List<OrganizationContactPoints>
             {
                 new()
                 {
                     OrganizationNumber = organizationNumber,
-                    MobileNumberList = [expectedMobileNumber]
+                    UserContactPoints = [userContactPointsMock],
+                    MobileNumberList = [organizationRawMobileNumber]
                 }
             };
 
             var profileClientMock = new Mock<IProfileClient>();
-            profileClientMock
-                .Setup(x => x.GetOrganizationContactPoints(It.Is<List<string>>(orgs => orgs.Contains(organizationNumber))))
-                .ReturnsAsync(mockOrganizationContactPoints);
 
-            var service = GetTestService(profileClient: profileClientMock.Object);
+            profileClientMock
+                .Setup(e => e.GetOrganizationContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber))))
+                .ReturnsAsync(organizationContactPointsMock);
+
+            var authorizationServiceMock = new Mock<IAuthorizationService>();
+
+            var service = GetTestService(
+                profileClient: profileClientMock.Object,
+                authorizationService: authorizationServiceMock.Object);
 
             // Act
             await service.AddSmsContactPoints(recipients, null);
 
             // Assert
             var recipient = recipients[0];
+            Assert.Null(recipient.NationalIdentityNumber);
             Assert.Equal(organizationNumber, recipient.OrganizationNumber);
-            Assert.Single(recipient.AddressInfo);
 
-            var smsAddressPoint = Assert.IsType<SmsAddressPoint>(recipient.AddressInfo[0]);
-            Assert.Equal(expectedMobileNumber, smsAddressPoint.MobileNumber);
+            Assert.NotNull(recipient.AddressInfo);
+            Assert.Equal(2, recipient.AddressInfo.Count);
+
+            var organizationAddressPoint = Assert.IsType<SmsAddressPoint>(recipient.AddressInfo[0]);
+            Assert.Equal(AddressType.Sms, organizationAddressPoint.AddressType);
+            Assert.Equal(organizationMobileNumber, organizationAddressPoint.MobileNumber);
+
+            var contactPersonAddressPoint = Assert.IsType<SmsAddressPoint>(recipient.AddressInfo[1]);
+            Assert.Equal(AddressType.Sms, contactPersonAddressPoint.AddressType);
+            Assert.Equal(contactPersonFormattedMobileNumber, contactPersonAddressPoint.MobileNumber);
 
             profileClientMock.Verify(x => x.GetOrganizationContactPoints(It.Is<List<string>>(orgs => orgs.Contains(organizationNumber))), Times.Once);
+
+            profileClientMock.Verify(e => e.GetUserContactPoints(It.IsAny<List<string>>()), Times.Never);
+            profileClientMock.Verify(e => e.GetUserRegisteredContactPoints(It.IsAny<List<string>>(), It.IsAny<string>()), Times.Never);
+            authorizationServiceMock.Verify(e => e.AuthorizeUserContactPointsForResource(It.IsAny<List<OrganizationContactPoints>>(), It.IsAny<string>()), Times.Never);
         }
 
         [Fact]
