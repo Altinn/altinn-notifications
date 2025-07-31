@@ -510,23 +510,43 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         public async Task AddSmsContactPoints_WhenUsingOrganizationNumber_ShouldEnrichRecipientsWithMobileNumbers()
         {
             // Arrange
-            string organizationNumber = "123456789";
-            string organizationRawMobileNumber = "99999999";
-            string organizationFirstFormatMobileNumber = "+4799999999";
-            string organizationSecondFormatMobileNumber = "004799999999";
+            string resourceIdentifier = "urn:altinn:tax-report";
+
+            // Organization details
+            string organizationNumber = "984456321";
+            string organizationRawMobileNumber = "46583920";
+            string organizationFirstFormatMobileNumber = "+4746583920";
+            string organizationSecondFormatMobileNumber = "004746583920";
             string organizationFirstEmailAddress = "organizatoin-recipient@example.com";
+            string organizationSecondEmailAddress = "organizatoin-support@example.com";
 
-            string contactPersonNationalId = "17269942983";
-            string contactPersonRawMobileNumber = "99999999";
-            string contactPersonFormattedMobileNumber = "+4799999999";
-            string contactPersonEmailAddress = "person-recipient@example.com";
+            // Contact person under organization
+            string contactPersonNationalId = "13309224560";
+            string contactPersonRawMobileNumber = "47682930";
+            string contactPersonFormattedMobileNumber = "+4747682930";
+            string contactPersonEmailAddress = "general-manager@example.com";
 
+            // Registered contact persons with access to the resource
+            string firstContactPersonNationalId = "19263535750";
+            string firstContactPersonMobileNumber = "+4745681234";
+            string firstContactPersonEmailAddress = "first-contact-person@example.com";
+
+            string secondContactPersonNationalId = "19217405109";
+            string secondContactPersonMobileNumber = "004745681235";
+
+            string authorizedContactPersonNationalId = "13303439816";
+            string authorizedContactPersonRawMobileNumber = "95681236";
+            string authorizedContactPersonFormattedMobileNumber = "+4795681236";
+            string authorizedContactPersonEmailAddress = "authorized-contact-person@example.com";
+
+            // Recipient
             var recipientsToEnrich = new List<Recipient>
             {
                 new() { OrganizationNumber = organizationNumber }
             };
 
             var profileClientMock = new Mock<IProfileClient>();
+
             profileClientMock
                 .Setup(e => e.GetOrganizationContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber))))
                 .ReturnsAsync(
@@ -535,13 +555,13 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                     {
                         PartyId = 50660768,
                         OrganizationNumber = organizationNumber,
-                        EmailList = [organizationFirstEmailAddress, organizationFirstEmailAddress],
-                        MobileNumberList = [organizationRawMobileNumber, organizationSecondFormatMobileNumber],
+                        EmailList = [organizationFirstEmailAddress, organizationSecondEmailAddress, organizationFirstEmailAddress], // Duplicate
+                        MobileNumberList = [organizationRawMobileNumber, organizationSecondFormatMobileNumber, organizationFirstFormatMobileNumber], // Duplicate
                         UserContactPoints =
                         [
                             new()
                             {
-                                UserId = 20020487,
+                                UserId = 200000,
                                 IsReserved = false,
                                 Email = contactPersonEmailAddress,
                                 MobileNumber = contactPersonRawMobileNumber,
@@ -551,14 +571,73 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                     }
                 ]);
 
+            profileClientMock
+                .Setup(e => e.GetUserRegisteredContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber)), resourceIdentifier))
+                .ReturnsAsync(
+                [
+                    new()
+                    {
+                        PartyId = 50660768,
+                        OrganizationNumber = organizationNumber,
+                        UserContactPoints =
+                        [
+                            new()
+                            {
+                                UserId = 200001,
+                                IsReserved = false,
+                                Email = firstContactPersonEmailAddress,
+                                MobileNumber = firstContactPersonMobileNumber,
+                                NationalIdentityNumber = firstContactPersonNationalId
+                            },
+                            new()
+                            {
+                                UserId = 200009,
+                                IsReserved = true,
+                                Email = firstContactPersonEmailAddress,
+                                MobileNumber = secondContactPersonMobileNumber,
+                                NationalIdentityNumber = secondContactPersonNationalId
+                            },
+                            new()
+                            {
+                                UserId = 200011,
+                                IsReserved = false,
+                                Email = authorizedContactPersonEmailAddress,
+                                MobileNumber = authorizedContactPersonRawMobileNumber,
+                                NationalIdentityNumber = authorizedContactPersonNationalId
+                            }
+                        ]
+                    }
+                ]);
+
             var authorizationServiceMock = new Mock<IAuthorizationService>();
+            authorizationServiceMock
+                .Setup(e => e.AuthorizeUserContactPointsForResource(It.IsAny<List<OrganizationContactPoints>>(), It.Is<string>(e => e.Equals(resourceIdentifier))))
+                .ReturnsAsync(
+                [
+                    new()
+                    {
+                        PartyId = 50660768,
+                        OrganizationNumber = organizationNumber,
+                        UserContactPoints =
+                        [
+                            new()
+                            {
+                                UserId = 200011,
+                                IsReserved = false,
+                                Email = authorizedContactPersonEmailAddress,
+                                MobileNumber = authorizedContactPersonRawMobileNumber,
+                                NationalIdentityNumber = authorizedContactPersonNationalId
+                            }
+                        ]
+                    }
+                ]);
 
             var service = GetTestService(
                 profileClient: profileClientMock.Object,
                 authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddSmsContactPoints(recipientsToEnrich, null);
+            await service.AddSmsContactPoints(recipientsToEnrich, resourceIdentifier);
 
             // Assert
             var recipient = Assert.Single(recipientsToEnrich);
@@ -566,18 +645,46 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             Assert.Null(recipient.NationalIdentityNumber);
             Assert.Equal(organizationNumber, recipient.OrganizationNumber);
 
-            Assert.IsNotType<EmailAddressPoint>(recipient.AddressInfo);
+            // Ensure we only get SMS contact points (not email, etc.)
+            Assert.All(recipient.AddressInfo, e => Assert.IsType<SmsAddressPoint>(e));
 
-            var actualMobileNumbers = recipient.AddressInfo.OfType<SmsAddressPoint>().Select(e => e.MobileNumber).ToList();
+            var actualMobileNumbers = recipient.AddressInfo
+                .OfType<SmsAddressPoint>()
+                .Select(e => e.MobileNumber)
+                .OrderBy(e => e)
+                .ToList();
+
+            // Expected included numbers (after normalization/deduplication)
+            var expectedMobileNumbers = new List<string>
+            {
+                organizationFirstFormatMobileNumber,
+                contactPersonFormattedMobileNumber,
+                authorizedContactPersonFormattedMobileNumber
+            };
+
+            Assert.Equal([.. expectedMobileNumbers.OrderBy(e => e)], actualMobileNumbers);
+
+            // Explicit exclusions for raw/duplicate formats and reserved users
+            Assert.DoesNotContain(organizationRawMobileNumber, actualMobileNumbers);
+            Assert.DoesNotContain(contactPersonRawMobileNumber, actualMobileNumbers);
+            Assert.DoesNotContain(firstContactPersonMobileNumber, actualMobileNumbers);
+            Assert.DoesNotContain(secondContactPersonMobileNumber, actualMobileNumbers);
+            Assert.DoesNotContain(organizationSecondFormatMobileNumber, actualMobileNumbers);
 
             Assert.Equal(1, actualMobileNumbers.Count(e => e == contactPersonFormattedMobileNumber));
             Assert.Equal(1, actualMobileNumbers.Count(e => e == organizationFirstFormatMobileNumber));
+            Assert.Equal(1, actualMobileNumbers.Count(e => e == authorizedContactPersonFormattedMobileNumber));
 
             Assert.Equal(0, actualMobileNumbers.Count(e => e == organizationRawMobileNumber));
             Assert.Equal(0, actualMobileNumbers.Count(e => e == contactPersonRawMobileNumber));
+            Assert.Equal(0, actualMobileNumbers.Count(e => e == secondContactPersonMobileNumber));
             Assert.Equal(0, actualMobileNumbers.Count(e => e == organizationSecondFormatMobileNumber));
+            Assert.Equal(0, actualMobileNumbers.Count(e => e == authorizedContactPersonRawMobileNumber));
 
             profileClientMock.Verify(e => e.GetOrganizationContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber))), Times.Once);
+            profileClientMock.Verify(e => e.GetUserRegisteredContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber)), It.Is<string>(e => e.Equals(resourceIdentifier))), Times.Once);
+            authorizationServiceMock.Verify(e => e.AuthorizeUserContactPointsForResource(It.IsAny<List<OrganizationContactPoints>>(), It.Is<string>(e => e.Equals(resourceIdentifier))), Times.Once);
+
             profileClientMock.VerifyNoOtherCalls();
             authorizationServiceMock.VerifyNoOtherCalls();
         }
