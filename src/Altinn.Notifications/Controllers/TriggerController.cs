@@ -59,8 +59,16 @@ public class TriggerController : ControllerBase
     [Route("deleteoldstatusfeedrecords")]
     public async Task<ActionResult> Trigger_DeleteOldStatusFeedRecords()
     {
-        await _statusFeedService.DeleteOldStatusFeedRecords();
-        return Ok();
+        try
+        {
+            await _statusFeedService.DeleteOldStatusFeedRecords();
+            return Ok();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to delete old status feed records");
+            return StatusCode(500, "Failed to delete old status feed records");
+        }
     }
 
     /// <summary>
