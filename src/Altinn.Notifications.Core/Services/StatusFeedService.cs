@@ -29,9 +29,16 @@ public class StatusFeedService : IStatusFeedService
     /// <inheritdoc />
     public async Task DeleteOldStatusFeedRecords()
     {
-        await _statusFeedRepository.DeleteOldStatusFeedRecords();
+        try
+        {
+            await _statusFeedRepository.DeleteOldStatusFeedRecords();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to delete old status feed records");
+            throw;
+        }
     }
-
     /// <inheritdoc />
     public async Task<Result<List<StatusFeed>, ServiceError>> GetStatusFeed(int seq, string creatorName, CancellationToken cancellationToken)
     {
