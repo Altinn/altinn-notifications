@@ -13,27 +13,23 @@ namespace Altinn.Notifications.Persistence.Repository;
 /// <summary>
 /// Repository for handling status feed related operations.
 /// </summary>
-public class StatusFeedRepository : IStatusFeedRepository
+/// <remarks>
+/// Initializes a new instance of the <see cref="StatusFeedRepository"/> class.
+/// </remarks>
+/// <param name="dataSource">the npgsql data source</param>
+public class StatusFeedRepository(NpgsqlDataSource dataSource) : IStatusFeedRepository
 {
-    private readonly NpgsqlDataSource _dataSource;
+    private readonly NpgsqlDataSource _dataSource = dataSource;
 
     // the created column is used to only return entries that are older than 2 seconds, to avoid returning entries that are still being processed
     private const string _getStatusFeedSql = @"SELECT * FROM notifications.getstatusfeed(@seq, @creatorname, @limit)";
+    private const string _deleteOldStatusFeedRecordsSql = "SELECT notifications.delete_old_status_feed_records()";
 
     private readonly JsonSerializerOptions _jsonSerializerOptions = new()
     {
         PropertyNameCaseInsensitive = true,
         Converters = { new JsonStringEnumConverter() }
     };
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="StatusFeedRepository"/> class.
-    /// </summary>
-    /// <param name="dataSource">the npgsql data source</param>
-    public StatusFeedRepository(NpgsqlDataSource dataSource)
-    {
-        _dataSource = dataSource;
-    }
 
     /// <inheritdoc/>
     public async Task<List<StatusFeed>> GetStatusFeed(int seq, string creatorName, CancellationToken cancellationToken, int limit = 50)
@@ -67,5 +63,13 @@ public class StatusFeedRepository : IStatusFeedRepository
         }
 
         return statusFeedEntries;
+    }
+
+    /// <inheritdoc/>
+    public async Task DeleteOldStatusFeedRecords()
+    {
+        await using NpgsqlCommand command = _dataSource.CreateCommand(_deleteOldStatusFeedRecordsSql);
+
+        await command.ExecuteNonQueryAsync();
     }
 }
