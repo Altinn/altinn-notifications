@@ -372,8 +372,8 @@ public class ContactPointService(
 
             // Remove user contact points that overlap with itself or official contact points.
             contactPoint.UserContactPoints = [..
-                NullifyDuplicateUserContactPoints(contactPoint.UserContactPoints)
-                .Select(userContact => NullifyDuplicateUserContactPoints(userContact, contactPoint))
+                NullifyDuplicateContactAddress(contactPoint.UserContactPoints)
+                .Select(userContact => NullifyDuplicateContactAddress(userContact, contactPoint))
                 .Where(userContact => !string.IsNullOrWhiteSpace(userContact.Email) || !string.IsNullOrWhiteSpace(userContact.MobileNumber))
                 ];
         });
@@ -392,7 +392,7 @@ public class ContactPointService(
     /// <returns>
     /// A sequence of <see cref="UserContactPoints"/> where duplicate email and mobile number values have been nullified.
     /// </returns>
-    private static IEnumerable<UserContactPoints> NullifyDuplicateUserContactPoints(IEnumerable<UserContactPoints> userContacts)
+    private static IEnumerable<UserContactPoints> NullifyDuplicateContactAddress(IEnumerable<UserContactPoints> userContacts)
     {
         var seenEmails = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var seenMobiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -438,7 +438,7 @@ public class ContactPointService(
     /// The same <see cref="UserContactPoints"/> instance with duplicate email and/or mobile number fields cleared.
     /// If both fields become empty, the caller is responsible for removing the contact from the list.
     /// </returns>
-    private static UserContactPoints NullifyDuplicateUserContactPoints(UserContactPoints userContact, OrganizationContactPoints organizationContactPoints)
+    private static UserContactPoints NullifyDuplicateContactAddress(UserContactPoints userContact, OrganizationContactPoints organizationContactPoints)
     {
         var isDuplicateEmail =
             !string.IsNullOrWhiteSpace(userContact.Email) &&
