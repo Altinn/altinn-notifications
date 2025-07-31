@@ -66,10 +66,12 @@ public class StatusFeedRepository(NpgsqlDataSource dataSource) : IStatusFeedRepo
     }
 
     /// <inheritdoc/>
-    public async Task DeleteOldStatusFeedRecords()
+    public async Task<int> DeleteOldStatusFeedRecords()
     {
         await using NpgsqlCommand command = _dataSource.CreateCommand(_deleteOldStatusFeedRecordsSql);
 
-        await command.ExecuteNonQueryAsync();
+        var result = await command.ExecuteScalarAsync();
+
+        return (int)Convert.ToInt64(result);
     }
 }

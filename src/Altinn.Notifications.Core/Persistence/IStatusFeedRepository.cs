@@ -13,8 +13,10 @@ public interface IStatusFeedRepository
     /// <remarks>This method removes records from the status feed that are no longer relevant or have
     /// exceeded their retention period of 90 days. It is used to maintain the feed's size and ensure efficient
     /// performance.</remarks>
-    /// <returns>A task that represents the asynchronous operation.</returns>
-    public Task DeleteOldStatusFeedRecords();
+    /// <returns>
+    /// A task that represents the asynchronous operation. The result contains the number of rows affected.
+    /// </returns>
+    public Task<int> DeleteOldStatusFeedRecords();
 
     /// <summary>
     /// Get status feed
