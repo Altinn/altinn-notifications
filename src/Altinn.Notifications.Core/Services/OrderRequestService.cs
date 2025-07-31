@@ -143,9 +143,6 @@ public class OrderRequestService : IOrderRequestService
     /// <item><description>Constructs a complete notification order with all required properties</description></item>
     /// </list>
     /// </remarks>
-    /// <exception cref="OperationCanceledException">
-    /// Thrown when the operation is canceled through the provided <paramref name="cancellationToken"/>.
-    /// </exception>
     private async Task<Result<NotificationOrder, ServiceError>> CreateMainNotificationOrderAsync(NotificationOrderChainRequest orderRequest, DateTime currentTime)
     {
         var (recipients, templates, channel, ignoreReservation, resourceId, sendingTimePolicyForSms) = ExtractDeliveryComponents(orderRequest.Recipient);
