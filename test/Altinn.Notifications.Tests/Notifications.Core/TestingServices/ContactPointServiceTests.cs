@@ -79,7 +79,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             // Arrange
             string nationalId = "16219001324";
             string rawMobileNumber = "99999999";
-            string emailAddresse = "recipient@example.com";
+            string emailAddress = "recipient@example.com";
 
             var recipientsToEnrich = new List<Recipient>
             {
@@ -95,7 +95,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                     {
                         UserId = 90090020,
                         IsReserved = true,
-                        Email = emailAddresse,
+                        Email = emailAddress,
                         MobileNumber = rawMobileNumber,
                         NationalIdentityNumber = nationalId
                     }
@@ -120,7 +120,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             var addressInfo = Assert.Single(recipient.AddressInfo);
 
             var emailAddressPoint = Assert.IsType<EmailAddressPoint>(addressInfo);
-            Assert.Equal(emailAddresse, emailAddressPoint.EmailAddress);
+            Assert.Equal(emailAddress, emailAddressPoint.EmailAddress);
             Assert.Equal(AddressType.Email, emailAddressPoint.AddressType);
 
             profileClientMock.Verify(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))), Times.Once);
@@ -135,7 +135,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             string nationalId = "17269942983";
             string rawMobileNumber = "99999999";
             string formattedMobileNumber = "+4799999999";
-            string emailAddresse = "recipient@example.com";
+            string emailAddress = "recipient@example.com";
 
             var recipientsToEnrich = new List<Recipient>
             {
@@ -151,7 +151,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                     {
                         UserId = 90090020,
                         IsReserved = false,
-                        Email = emailAddresse,
+                        Email = emailAddress,
                         MobileNumber = rawMobileNumber,
                         NationalIdentityNumber = nationalId
                     }
@@ -180,7 +180,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
 
             var emailAddressPoint = Assert.Single(recipient.AddressInfo.OfType<EmailAddressPoint>());
             Assert.Equal(AddressType.Email, emailAddressPoint.AddressType);
-            Assert.Equal(emailAddresse, emailAddressPoint.EmailAddress);
+            Assert.Equal(emailAddress, emailAddressPoint.EmailAddress);
 
             profileClientMock.Verify(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))), Times.Once);
             profileClientMock.VerifyNoOtherCalls();
@@ -517,8 +517,8 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             string organizationRawMobileNumber = "46583920";
             string organizationFirstFormatMobileNumber = "+4746583920";
             string organizationSecondFormatMobileNumber = "004746583920";
-            string organizationFirstEmailAddress = "organizatoin-recipient@example.com";
-            string organizationSecondEmailAddress = "organizatoin-support@example.com";
+            string organizationFirstEmailAddress = "organization-recipient@example.com";
+            string organizationSecondEmailAddress = "organization-support@example.com";
 
             // Contact person under organization
             string contactPersonNationalId = "13309224560";
@@ -700,8 +700,8 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             string organizationRawMobileNumber = "46583920";
             string organizationFirstFormatMobileNumber = "+4746583920";
             string organizationSecondFormatMobileNumber = "004746583920";
-            string organizationFirstEmailAddress = "organizatoin-recipient@example.com";
-            string organizationSecondEmailAddress = "organizatoin-support@example.com";
+            string organizationFirstEmailAddress = "organization-recipient@example.com";
+            string organizationSecondEmailAddress = "organization-support@example.com";
 
             // Contact person under organization
             string contactPersonNationalId = "08312015790";
