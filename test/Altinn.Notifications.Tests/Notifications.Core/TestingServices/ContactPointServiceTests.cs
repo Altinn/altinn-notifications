@@ -847,7 +847,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             Assert.Equal([.. expectedEmailAddresses.OrderBy(e => e)], actualEmailAddresses);
 
             // Explicit exclusions for duplicates and non-authorized/reserved users
-            Assert.DoesNotContain(secondContactPersonMobileNumber, actualEmailAddresses);
+            Assert.DoesNotContain(firstContactPersonEmailAddress, actualEmailAddresses);
             Assert.DoesNotContain(secondContactPersonEmailAddress, actualEmailAddresses);
 
             Assert.Equal(1, actualEmailAddresses.Count(e => e == contactPersonEmailAddress));
