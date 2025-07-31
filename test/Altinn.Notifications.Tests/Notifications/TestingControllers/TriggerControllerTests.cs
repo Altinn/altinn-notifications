@@ -102,4 +102,18 @@ public class TriggerControllerTests
         var statusCodeResult = (ObjectResult)result;
         Assert.Equal(StatusCodes.Status500InternalServerError, statusCodeResult.StatusCode);
     }
+
+    [Fact]
+    public async Task Trigger_DeleteOldStatusFeedRecords_CallsServiceAndReturnsOk()
+    {
+        // Arrange
+        _statusFeedServiceMock.Setup(x => x.DeleteOldStatusFeedRecords()).Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _controller.Trigger_DeleteOldStatusFeedRecords();
+
+        // Assert
+        _statusFeedServiceMock.Verify(x => x.DeleteOldStatusFeedRecords(), Times.Once);
+        Assert.IsType<OkResult>(result);
+    }
 }
