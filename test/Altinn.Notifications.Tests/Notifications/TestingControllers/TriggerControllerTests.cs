@@ -11,99 +11,95 @@ using Moq;
 
 using Xunit;
 
-namespace Altinn.Notifications.Tests.Notifications.TestingControllers
+namespace Altinn.Notifications.Tests.Notifications.TestingControllers;
+
+public class TriggerControllerTests
 {
-    public class TriggerControllerTests
+    private readonly TriggerController _controller;
+
+    private readonly Mock<ISmsNotificationService> _smsNotificationServiceMock = new();
+    private readonly Mock<IOrderProcessingService> _orderProcessingServiceMock = new();
+    private readonly Mock<INotificationScheduleService> _notificationScheduleMock = new();
+    private readonly Mock<IEmailNotificationService> _emailNotificationServiceMock = new();
+    private readonly Mock<IStatusFeedService> _statusFeedServiceMock = new();
+
+    public TriggerControllerTests()
     {
-        private readonly TriggerController _controller;
+        _controller = new TriggerController(
+            _orderProcessingServiceMock.Object,
+            _emailNotificationServiceMock.Object,
+            _smsNotificationServiceMock.Object,
+            _notificationScheduleMock.Object,
+            _statusFeedServiceMock.Object,
+            NullLogger<TriggerController>.Instance);
+    }
 
-        private readonly Mock<ISmsNotificationService> _smsNotificationServiceMock;
-        private readonly Mock<IOrderProcessingService> _orderProcessingServiceMock;
-        private readonly Mock<INotificationScheduleService> _notificationScheduleMock;
-        private readonly Mock<IEmailNotificationService> _emailNotificationServiceMock;
+    [Fact]
+    public async Task Trigger_SendSmsNotificationsDaytime_CanSendSmsNowReturnsFalse_ServiceNotCalled()
+    {
+        // Arrange
+        _notificationScheduleMock.Setup(x => x.CanSendSmsNow()).Returns(false);
 
-        public TriggerControllerTests()
-        {
-            _smsNotificationServiceMock = new Mock<ISmsNotificationService>();
-            _orderProcessingServiceMock = new Mock<IOrderProcessingService>();
-            _notificationScheduleMock = new Mock<INotificationScheduleService>();
-            _emailNotificationServiceMock = new Mock<IEmailNotificationService>();
+        // Act
+        ActionResult result = await _controller.Trigger_SendSmsNotificationsDaytime();
 
-            _controller = new TriggerController(
-                _orderProcessingServiceMock.Object,
-                _emailNotificationServiceMock.Object,
-                _smsNotificationServiceMock.Object,
-                _notificationScheduleMock.Object,
-                NullLogger<TriggerController>.Instance);
-        }
+        // Assert
+        _smsNotificationServiceMock.Verify(x => x.SendNotifications(It.IsAny<SendingTimePolicy>()), Times.Never);
+        Assert.IsType<OkResult>(result);
+    }
 
-        [Fact]
-        public async Task Trigger_SendSmsNotificationsDaytime_CanSendSmsNowReturnsFalse_ServiceNotCalled()
-        {
-            // Arrange
-            _notificationScheduleMock.Setup(x => x.CanSendSmsNow()).Returns(false);
+    [Fact]
+    public async Task Trigger_TerminateExpiredNotifications_Success()
+    {
+        // Arrange
+        _smsNotificationServiceMock.Setup(x => x.TerminateExpiredNotifications()).Returns(Task.CompletedTask);
+        _emailNotificationServiceMock.Setup(x => x.TerminateExpiredNotifications()).Returns(Task.CompletedTask);
 
-            // Act
-            ActionResult result = await _controller.Trigger_SendSmsNotificationsDaytime();
+        // Act
+        IActionResult result = await _controller.Trigger_TerminateExpiredNotifications();
 
-            // Assert
-            _smsNotificationServiceMock.Verify(x => x.SendNotifications(It.IsAny<SendingTimePolicy>()), Times.Never);
-            Assert.IsType<OkResult>(result);
-        }
+        // Assert
+        _smsNotificationServiceMock.Verify(x => x.TerminateExpiredNotifications(), Times.Once);
+        _emailNotificationServiceMock.Verify(x => x.TerminateExpiredNotifications(), Times.Once);
 
-        [Fact]
-        public async Task Trigger_TerminateExpiredNotifications_Success()
-        {
-            // Arrange
-            _smsNotificationServiceMock.Setup(x => x.TerminateExpiredNotifications()).Returns(Task.CompletedTask);
-            _emailNotificationServiceMock.Setup(x => x.TerminateExpiredNotifications()).Returns(Task.CompletedTask);
+        Assert.IsType<OkResult>(result);
+    }
 
-            // Act
-            IActionResult result = await _controller.Trigger_TerminateExpiredNotifications();
+    [Fact]
+    public async Task Trigger_TerminateExpiredNotifications_EmailServiceThrowsException_ReturnsInternalServerError()
+    {
+        // Arrange
+        _smsNotificationServiceMock.Setup(x => x.TerminateExpiredNotifications()).Returns(Task.CompletedTask);
+        _emailNotificationServiceMock.Setup(x => x.TerminateExpiredNotifications()).ThrowsAsync(new Exception("Simulated exception"));
 
-            // Assert
-            _smsNotificationServiceMock.Verify(x => x.TerminateExpiredNotifications(), Times.Once);
-            _emailNotificationServiceMock.Verify(x => x.TerminateExpiredNotifications(), Times.Once);
+        // Act
+        IActionResult result = await _controller.Trigger_TerminateExpiredNotifications();
 
-            Assert.IsType<OkResult>(result);
-        }
+        // Assert
+        _smsNotificationServiceMock.Verify(x => x.TerminateExpiredNotifications(), Times.Never);
+        _emailNotificationServiceMock.Verify(x => x.TerminateExpiredNotifications(), Times.Once);
 
-        [Fact]
-        public async Task Trigger_TerminateExpiredNotifications_EmailServiceThrowsException_ReturnsInternalServerError()
-        {
-            // Arrange
-            _smsNotificationServiceMock.Setup(x => x.TerminateExpiredNotifications()).Returns(Task.CompletedTask);
-            _emailNotificationServiceMock.Setup(x => x.TerminateExpiredNotifications()).ThrowsAsync(new Exception("Simulated exception"));
+        Assert.IsType<ObjectResult>(result);
+        var statusCodeResult = (ObjectResult)result;
+        Assert.Equal(StatusCodes.Status500InternalServerError, statusCodeResult.StatusCode);
+    }
 
-            // Act
-            IActionResult result = await _controller.Trigger_TerminateExpiredNotifications();
+    [Fact]
+    public async Task Trigger_TerminateExpiredNotifications_SmsServiceThrowsException_ReturnsInternalServerError()
+    {
+        // Arrange
+        _emailNotificationServiceMock.Setup(x => x.TerminateExpiredNotifications()).Returns(Task.CompletedTask);
+        _smsNotificationServiceMock.Setup(x => x.TerminateExpiredNotifications()).ThrowsAsync(new Exception("Simulated exception"));
 
-            // Assert
-            _smsNotificationServiceMock.Verify(x => x.TerminateExpiredNotifications(), Times.Never);
-            _emailNotificationServiceMock.Verify(x => x.TerminateExpiredNotifications(), Times.Once);
+        // Act
+        IActionResult result = await _controller.Trigger_TerminateExpiredNotifications();
 
-            Assert.IsType<ObjectResult>(result);
-            var statusCodeResult = (ObjectResult)result;
-            Assert.Equal(StatusCodes.Status500InternalServerError, statusCodeResult.StatusCode);
-        }
+        // Assert
+        _smsNotificationServiceMock.Verify(x => x.TerminateExpiredNotifications(), Times.Once);
+        _emailNotificationServiceMock.Verify(x => x.TerminateExpiredNotifications(), Times.Once);
 
-        [Fact]
-        public async Task Trigger_TerminateExpiredNotifications_SmsServiceThrowsException_ReturnsInternalServerError()
-        {
-            // Arrange
-            _emailNotificationServiceMock.Setup(x => x.TerminateExpiredNotifications()).Returns(Task.CompletedTask);
-            _smsNotificationServiceMock.Setup(x => x.TerminateExpiredNotifications()).ThrowsAsync(new Exception("Simulated exception"));
-
-            // Act
-            IActionResult result = await _controller.Trigger_TerminateExpiredNotifications();
-
-            // Assert
-            _smsNotificationServiceMock.Verify(x => x.TerminateExpiredNotifications(), Times.Once);
-            _emailNotificationServiceMock.Verify(x => x.TerminateExpiredNotifications(), Times.Once);
-
-            Assert.IsType<ObjectResult>(result);
-            var statusCodeResult = (ObjectResult)result;
-            Assert.Equal(StatusCodes.Status500InternalServerError, statusCodeResult.StatusCode);
-        }
+        Assert.IsType<ObjectResult>(result);
+        var statusCodeResult = (ObjectResult)result;
+        Assert.Equal(StatusCodes.Status500InternalServerError, statusCodeResult.StatusCode);
     }
 }
