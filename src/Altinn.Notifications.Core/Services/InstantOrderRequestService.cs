@@ -49,7 +49,7 @@ public class InstantOrderRequestService : IInstantOrderRequestService
     /// <inheritdoc/>
     public async Task<InstantNotificationOrderTracking?> RetrieveTrackingInformation(string creatorName, string idempotencyId, CancellationToken cancellationToken = default)
     {
-        return await _orderRepository.RetrieveTrackingInformation(creatorName, idempotencyId, cancellationToken);
+        return await _orderRepository.RetrieveInstantOrderTrackingInformation(creatorName, idempotencyId, cancellationToken);
     }
 
     /// <inheritdoc/>

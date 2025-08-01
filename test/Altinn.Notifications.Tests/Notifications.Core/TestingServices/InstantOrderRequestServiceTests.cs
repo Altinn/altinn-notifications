@@ -34,7 +34,7 @@ public class InstantOrderRequestServiceTests
 
         var orderRepositoryMock = new Mock<IOrderRepository>();
         orderRepositoryMock
-            .Setup(r => r.RetrieveTrackingInformation(creatorName, idempotencyId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.RetrieveInstantOrderTrackingInformation(creatorName, idempotencyId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((InstantNotificationOrderTracking?)null);
 
         var service = GetTestService(orderRepository: orderRepositoryMock.Object);
@@ -45,7 +45,7 @@ public class InstantOrderRequestServiceTests
         // Assert
         Assert.Null(result);
 
-        orderRepositoryMock.Verify(e => e.RetrieveTrackingInformation(creatorName, idempotencyId, It.IsAny<CancellationToken>()), Times.Once);
+        orderRepositoryMock.Verify(e => e.RetrieveInstantOrderTrackingInformation(creatorName, idempotencyId, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -70,7 +70,7 @@ public class InstantOrderRequestServiceTests
         };
 
         var orderRepositoryMock = new Mock<IOrderRepository>();
-        orderRepositoryMock.Setup(r => r.RetrieveTrackingInformation(creatorName, idempotencyId, It.IsAny<CancellationToken>())).ReturnsAsync(expectedTracking);
+        orderRepositoryMock.Setup(r => r.RetrieveInstantOrderTrackingInformation(creatorName, idempotencyId, It.IsAny<CancellationToken>())).ReturnsAsync(expectedTracking);
 
         var service = GetTestService(orderRepository: orderRepositoryMock.Object);
 
@@ -83,7 +83,7 @@ public class InstantOrderRequestServiceTests
         Assert.Equal(orderId, result.Notification.ShipmentId);
         Assert.Equal(sendersReference, result.Notification.SendersReference);
 
-        orderRepositoryMock.Verify(r => r.RetrieveTrackingInformation(creatorName, idempotencyId, It.IsAny<CancellationToken>()), Times.Once);
+        orderRepositoryMock.Verify(r => r.RetrieveInstantOrderTrackingInformation(creatorName, idempotencyId, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -95,7 +95,7 @@ public class InstantOrderRequestServiceTests
 
         var orderRepositoryMock = new Mock<IOrderRepository>();
         orderRepositoryMock
-            .Setup(r => r.RetrieveTrackingInformation(creatorName, idempotencyId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.RetrieveInstantOrderTrackingInformation(creatorName, idempotencyId, It.IsAny<CancellationToken>()))
             .Callback<string, string, CancellationToken>((_, _, token) => token.ThrowIfCancellationRequested())
             .ReturnsAsync((InstantNotificationOrderTracking?)null);
 
@@ -107,7 +107,7 @@ public class InstantOrderRequestServiceTests
         // Act & Assert
         await Assert.ThrowsAsync<OperationCanceledException>(async () => await service.RetrieveTrackingInformation(creatorName, idempotencyId, cancellationTokenSource.Token));
 
-        orderRepositoryMock.Verify(r => r.RetrieveTrackingInformation(creatorName, idempotencyId, It.Is<CancellationToken>(token => token.IsCancellationRequested)), Times.Once);
+        orderRepositoryMock.Verify(r => r.RetrieveInstantOrderTrackingInformation(creatorName, idempotencyId, It.Is<CancellationToken>(token => token.IsCancellationRequested)), Times.Once);
     }
 
     [Fact]
