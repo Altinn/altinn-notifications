@@ -11,19 +11,15 @@ namespace Altinn.Notifications.Core.Services;
 /// <summary>
 /// Implementation of the <see cref="IContactPointService"/> using Altinn platform services to lookup contact points
 /// </summary>
-public class ContactPointService : IContactPointService
+/// <remarks>
+/// Initializes a new instance of the <see cref="ContactPointService"/> class.
+/// </remarks>
+public class ContactPointService(
+    IProfileClient profile,
+    IAuthorizationService authorizationService) : IContactPointService
 {
-    private readonly IProfileClient _profileClient;
-    private readonly IAuthorizationService _authorizationService;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ContactPointService"/> class.
-    /// </summary>
-    public ContactPointService(IProfileClient profile, IAuthorizationService authorizationService)
-    {
-        _profileClient = profile;
-        _authorizationService = authorizationService;
-    }
+    private readonly IProfileClient _profileClient = profile;
+    private readonly IAuthorizationService _authorizationService = authorizationService;
 
     /// <inheritdoc/>
     public async Task AddEmailContactPoints(List<Recipient> recipients, string? resourceId)
@@ -33,7 +29,7 @@ public class ContactPointService : IContactPointService
             resourceId,
             (recipient, userContactPoints) =>
             {
-                if (!string.IsNullOrEmpty(userContactPoints.Email))
+                if (!string.IsNullOrWhiteSpace(userContactPoints.Email))
                 {
                     recipient.AddressInfo.Add(new EmailAddressPoint(userContactPoints.Email));
                 }
@@ -42,9 +38,9 @@ public class ContactPointService : IContactPointService
             },
             (recipient, orgContactPoints) =>
             {
-                recipient.AddressInfo.AddRange(orgContactPoints.EmailList.Select(e => new EmailAddressPoint(e)));
+                recipient.AddressInfo.AddRange(orgContactPoints.EmailList.Where(e => !string.IsNullOrWhiteSpace(e)).Select(e => new EmailAddressPoint(e)));
 
-                recipient.AddressInfo.AddRange(orgContactPoints.UserContactPoints.Where(u => !string.IsNullOrEmpty(u.Email)).Select(u => new EmailAddressPoint(u.Email)));
+                recipient.AddressInfo.AddRange(orgContactPoints.UserContactPoints.Where(u => !string.IsNullOrWhiteSpace(u.Email)).Select(u => new EmailAddressPoint(u.Email)));
 
                 return recipient;
             });
@@ -58,7 +54,7 @@ public class ContactPointService : IContactPointService
             resourceId,
             (recipient, userContactPoints) =>
             {
-                if (!string.IsNullOrEmpty(userContactPoints.MobileNumber))
+                if (!string.IsNullOrWhiteSpace(userContactPoints.MobileNumber))
                 {
                     recipient.AddressInfo.Add(new SmsAddressPoint(userContactPoints.MobileNumber));
                 }
@@ -67,9 +63,9 @@ public class ContactPointService : IContactPointService
             },
             (recipient, orgContactPoints) =>
             {
-                recipient.AddressInfo.AddRange(orgContactPoints.MobileNumberList.Select(m => new SmsAddressPoint(m)));
+                recipient.AddressInfo.AddRange(orgContactPoints.MobileNumberList.Where(e => !string.IsNullOrWhiteSpace(e)).Select(e => new SmsAddressPoint(e)));
 
-                recipient.AddressInfo.AddRange(orgContactPoints.UserContactPoints.Where(u => !string.IsNullOrEmpty(u.MobileNumber)).Select(u => new SmsAddressPoint(u.MobileNumber)));
+                recipient.AddressInfo.AddRange(orgContactPoints.UserContactPoints.Where(e => !string.IsNullOrWhiteSpace(e.MobileNumber)).Select(e => new SmsAddressPoint(e.MobileNumber)));
 
                 return recipient;
             });
@@ -83,12 +79,12 @@ public class ContactPointService : IContactPointService
             resourceId,
             (recipient, userContactPoints) =>
             {
-                if (!string.IsNullOrEmpty(userContactPoints.Email))
+                if (!string.IsNullOrWhiteSpace(userContactPoints.Email))
                 {
                     recipient.AddressInfo.Add(new EmailAddressPoint(userContactPoints.Email));
                 }
 
-                if (!string.IsNullOrEmpty(userContactPoints.MobileNumber))
+                if (!string.IsNullOrWhiteSpace(userContactPoints.MobileNumber))
                 {
                     recipient.AddressInfo.Add(new SmsAddressPoint(userContactPoints.MobileNumber));
                 }
@@ -97,13 +93,13 @@ public class ContactPointService : IContactPointService
             },
             (recipient, orgContactPoints) =>
             {
-                recipient.AddressInfo.AddRange(orgContactPoints.EmailList.Select(e => new EmailAddressPoint(e)));
+                recipient.AddressInfo.AddRange(orgContactPoints.EmailList.Where(e => !string.IsNullOrWhiteSpace(e)).Select(e => new EmailAddressPoint(e)));
 
-                recipient.AddressInfo.AddRange(orgContactPoints.MobileNumberList.Select(m => new SmsAddressPoint(m)));
+                recipient.AddressInfo.AddRange(orgContactPoints.MobileNumberList.Where(e => !string.IsNullOrWhiteSpace(e)).Select(e => new SmsAddressPoint(e)));
 
-                recipient.AddressInfo.AddRange(orgContactPoints.UserContactPoints.Where(u => !string.IsNullOrEmpty(u.Email)).Select(u => new EmailAddressPoint(u.Email)));
+                recipient.AddressInfo.AddRange(orgContactPoints.UserContactPoints.Where(u => !string.IsNullOrWhiteSpace(u.Email)).Select(u => new EmailAddressPoint(u.Email)));
 
-                recipient.AddressInfo.AddRange(orgContactPoints.UserContactPoints.Where(u => !string.IsNullOrEmpty(u.MobileNumber)).Select(u => new SmsAddressPoint(u.MobileNumber)));
+                recipient.AddressInfo.AddRange(orgContactPoints.UserContactPoints.Where(u => !string.IsNullOrWhiteSpace(u.MobileNumber)).Select(u => new SmsAddressPoint(u.MobileNumber)));
 
                 return recipient;
             });
@@ -165,7 +161,7 @@ public class ContactPointService : IContactPointService
                        recipient,
                        orgContactPoints.MobileNumberList,
                        orgContactPoints.EmailList,
-                       m => new SmsAddressPoint(m),
+                       e => new SmsAddressPoint(e),
                        e => new EmailAddressPoint(e));
 
                     foreach (var userContact in orgContactPoints.UserContactPoints)
@@ -207,72 +203,101 @@ public class ContactPointService : IContactPointService
         Func<TPreferred, IAddressPoint> preferredSelector,
         Func<TFallback, IAddressPoint> fallbackSelector)
     {
-        if (!string.IsNullOrEmpty(preferredContact?.ToString()))
+        if (!string.IsNullOrWhiteSpace(Convert.ToString(preferredContact)))
         {
             recipient.AddressInfo.Add(preferredSelector(preferredContact));
         }
-        else if (!string.IsNullOrEmpty(fallbackContact?.ToString()))
+        else if (!string.IsNullOrWhiteSpace(Convert.ToString(fallbackContact)))
         {
             recipient.AddressInfo.Add(fallbackSelector(fallbackContact));
         }
     }
 
-    private async Task<List<Recipient>> AugmentRecipients(
+    /// <summary>
+    /// Looks up and augments each recipient in the provided list with contact point information
+    /// based on their national identity number or organization number.
+    /// </summary>
+    /// <param name="recipients">
+    /// The list of <see cref="Recipient"/> objects to be augmented with contact point information.
+    /// Each recipient must have either a national identity number or an organization number.
+    /// </param>
+    /// <param name="resourceId">
+    /// The resource identifier used to filter and authorize user-registered contact points for organizations.
+    /// If <c>null</c> or empty, only official organization contact points are used.
+    /// </param>
+    /// <param name="createUserContactPoint">
+    /// A function that applies user contact point data to a recipient. Invoked for recipients with a national identity number
+    /// and a matching <see cref="UserContactPoints"/> entry.
+    /// </param>
+    /// <param name="createOrgContactPoint">
+    /// A function that applies organization contact point data to a recipient. Invoked for recipients with an organization number
+    /// and a matching <see cref="OrganizationContactPoints"/> entry.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation. The method augments the provided recipient objects in place.
+    /// </returns>
+    private async Task AugmentRecipients(
         List<Recipient> recipients,
         string? resourceId,
         Func<Recipient, UserContactPoints, Recipient> createUserContactPoint,
         Func<Recipient, OrganizationContactPoints, Recipient> createOrgContactPoint)
     {
-        List<Recipient> augmentedRecipients = [];
-
         var userLookupTask = LookupPersonContactPoints(recipients);
         var orgLookupTask = LookupOrganizationContactPoints(recipients, resourceId);
 
         await Task.WhenAll(userLookupTask, orgLookupTask);
 
         List<UserContactPoints> userContactPointsList = userLookupTask.Result;
-        List<OrganizationContactPoints> organizationContactPointList = orgLookupTask.Result;
+        List<OrganizationContactPoints> organizationContactPointsList = orgLookupTask.Result;
 
         foreach (Recipient recipient in recipients)
         {
-            if (!string.IsNullOrEmpty(recipient.NationalIdentityNumber))
+            if (!string.IsNullOrWhiteSpace(recipient.NationalIdentityNumber))
             {
-                UserContactPoints? userContactPoints = userContactPointsList!
-                    .Find(u => u.NationalIdentityNumber == recipient.NationalIdentityNumber);
+                UserContactPoints? userContactPoints = userContactPointsList
+                    .Find(e => e.NationalIdentityNumber == recipient.NationalIdentityNumber);
 
                 if (userContactPoints != null)
                 {
                     recipient.IsReserved = userContactPoints.IsReserved;
-                    augmentedRecipients.Add(createUserContactPoint(recipient, userContactPoints));
+                    createUserContactPoint(recipient, userContactPoints);
                 }
             }
-            else if (!string.IsNullOrEmpty(recipient.OrganizationNumber))
+            else if (!string.IsNullOrWhiteSpace(recipient.OrganizationNumber))
             {
-                OrganizationContactPoints? organizationContactPoints = organizationContactPointList!
+                OrganizationContactPoints? organizationContactPoints = organizationContactPointsList
                     .Find(o => o.OrganizationNumber == recipient.OrganizationNumber);
 
                 if (organizationContactPoints != null)
                 {
-                    augmentedRecipients.Add(createOrgContactPoint(recipient, organizationContactPoints));
+                    createOrgContactPoint(recipient, organizationContactPoints);
                 }
             }
         }
-
-        return augmentedRecipients;
     }
 
+    /// <summary>
+    /// Retrieves contact points for recipients with a valid national identity number.
+    /// </summary>
+    /// <param name="recipients">
+    /// The list of <see cref="Recipient"/> objects to retrieve contact information for. 
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation. The task result contains a list of <see cref="UserContactPoints"/> 
+    /// corresponding to the provided national identity numbers. If no valid national identity numbers are found, an empty list is returned.
+    /// </returns>
     private async Task<List<UserContactPoints>> LookupPersonContactPoints(List<Recipient> recipients)
     {
-        List<string> nins = [.. recipients
-                .Where(r => !string.IsNullOrEmpty(r.NationalIdentityNumber))
-                .Select(r => r.NationalIdentityNumber!)];
+        List<string> nationalIdentityNumbers = [.. recipients
+                .Where(e => !string.IsNullOrWhiteSpace(e.NationalIdentityNumber))
+                .Select(e => e.NationalIdentityNumber)];
 
-        if (nins.Count == 0)
+        if (nationalIdentityNumbers.Count == 0)
         {
             return [];
         }
 
-        List<UserContactPoints> contactPoints = await _profileClient.GetUserContactPoints(nins);
+        List<UserContactPoints> contactPoints = await _profileClient.GetUserContactPoints(nationalIdentityNumbers);
 
         contactPoints.ForEach(contactPoint =>
         {
@@ -282,59 +307,157 @@ public class ContactPointService : IContactPointService
         return contactPoints;
     }
 
+    /// <summary>
+    /// Retrieves contact points for recipients with a valid organization number.
+    /// Optionally enriches the contact points with user-registered contact points authorized for a specific resource.
+    /// </summary>
+    /// <param name="recipients">
+    /// The list of <see cref="Recipient"/> objects to retrieve organization contact information for.
+    /// </param>
+    /// <param name="resourceId">
+    /// The resource identifier used to filter and authorize user-registered contact points for the organizations.
+    /// If <c>null</c> or empty, only official organization contact points are returned.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation. The task result contains a list of <see cref="OrganizationContactPoints"/>
+    /// corresponding to the provided organization numbers. If no valid organization numbers are found, an empty list is returned.
+    /// </returns>
     private async Task<List<OrganizationContactPoints>> LookupOrganizationContactPoints(List<Recipient> recipients, string? resourceId)
     {
-        List<string> orgNos = [.. recipients
-         .Where(r => !string.IsNullOrEmpty(r.OrganizationNumber))
-         .Select(r => r.OrganizationNumber!)];
+        List<string> organizationNumbers = [.. recipients
+            .Where(e => !string.IsNullOrWhiteSpace(e.OrganizationNumber))
+            .Select(e => e.OrganizationNumber)];
 
-        if (orgNos.Count == 0)
+        if (organizationNumbers.Count == 0)
         {
             return [];
         }
 
-        List<OrganizationContactPoints> authorizedUserContactPoints = [];
-        Task<List<OrganizationContactPoints>> organizationContactPointsTask = _profileClient.GetOrganizationContactPoints(orgNos);
+        List<OrganizationContactPoints> contactPoints = await _profileClient.GetOrganizationContactPoints(organizationNumbers);
 
-        if (!string.IsNullOrEmpty(resourceId))
+        if (!string.IsNullOrWhiteSpace(resourceId))
         {
-            var allUserContactPoints = await _profileClient.GetUserRegisteredContactPoints(orgNos, resourceId);
-            authorizedUserContactPoints = await _authorizationService.AuthorizeUserContactPointsForResource(allUserContactPoints, resourceId);
-        }
+            var allUserContactPoints = await _profileClient.GetUserRegisteredContactPoints(organizationNumbers, resourceId);
 
-        List<OrganizationContactPoints> contactPoints = await organizationContactPointsTask;
+            var authorizedUserContactPoints = await _authorizationService.AuthorizeUserContactPointsForResource(allUserContactPoints, resourceId);
 
-        if (!string.IsNullOrEmpty(resourceId))
-        {
-            foreach (var userContactPoint in authorizedUserContactPoints)
+            foreach (var authorizedUserContactPoint in authorizedUserContactPoints)
             {
-                userContactPoint.UserContactPoints.ForEach(userContactPoint =>
+                var existingContactPoint = contactPoints.Find(e => e.OrganizationNumber == authorizedUserContactPoint.OrganizationNumber);
+                if (existingContactPoint == null)
                 {
-                    userContactPoint.MobileNumber = MobileNumberHelper.EnsureCountryCodeIfValidNumber(userContactPoint.MobileNumber);
-                });
-
-                var existingContactPoint = contactPoints.Find(cp => cp.OrganizationNumber == userContactPoint.OrganizationNumber);
-
-                if (existingContactPoint != null)
-                {
-                    existingContactPoint.UserContactPoints.AddRange(userContactPoint.UserContactPoints);
+                    contactPoints.Add(authorizedUserContactPoint);
                 }
                 else
                 {
-                    contactPoints.Add(userContactPoint);
+                    existingContactPoint.UserContactPoints.AddRange(authorizedUserContactPoint.UserContactPoints);
                 }
             }
         }
 
         contactPoints.ForEach(contactPoint =>
         {
-            contactPoint.MobileNumberList = [.. contactPoint.MobileNumberList
-                .Select(mobileNumber =>
-                {
-                    return MobileNumberHelper.EnsureCountryCodeIfValidNumber(mobileNumber);
-                })];
+            // Remove duplicate mobile numbers.
+            contactPoint.MobileNumberList = [..
+                contactPoint.MobileNumberList
+                .Where(e => !string.IsNullOrWhiteSpace(e))
+                .Select(MobileNumberHelper.EnsureCountryCodeIfValidNumber)
+                .Distinct(StringComparer.OrdinalIgnoreCase)];
+
+            // Remove duplicate email addresses.
+            contactPoint.EmailList = [..
+                contactPoint.EmailList
+                .Where(e => !string.IsNullOrWhiteSpace(e))
+                .Distinct(StringComparer.OrdinalIgnoreCase)];
+
+            // Remove user contact points that overlap with itself or official contact points.
+            contactPoint.UserContactPoints = [..
+                NullifyDuplicateContactAddress(contactPoint.UserContactPoints)
+                .Select(userContact => NullifyDuplicateContactAddress(userContact, contactPoint))
+                .Where(userContact => !string.IsNullOrWhiteSpace(userContact.Email) || !string.IsNullOrWhiteSpace(userContact.MobileNumber))
+                ];
         });
 
         return contactPoints;
+    }
+
+    /// <summary>
+    /// Scans a collection of <see cref="UserContactPoints"/> and clears duplicate contact fields within the list.
+    /// Only the first occurrence of each unique email address or mobile number is retained across the collection.
+    /// Subsequent duplicates have the corresponding field set to an empty string.
+    /// </summary>
+    /// <param name="userContacts">
+    /// The collection of user contact points to process for internal deduplication.
+    /// </param>
+    /// <returns>
+    /// A sequence of <see cref="UserContactPoints"/> where duplicate email and mobile number values have been nullified.
+    /// </returns>
+    private static IEnumerable<UserContactPoints> NullifyDuplicateContactAddress(IEnumerable<UserContactPoints> userContacts)
+    {
+        var seenEmails = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var seenMobiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var userContact in userContacts)
+        {
+            if (!string.IsNullOrWhiteSpace(userContact.Email))
+            {
+                var duplicateEmail = !seenEmails.Add(userContact.Email);
+                if (duplicateEmail)
+                {
+                    userContact.Email = string.Empty;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(userContact.MobileNumber))
+            {
+                userContact.MobileNumber = MobileNumberHelper.EnsureCountryCodeIfValidNumber(userContact.MobileNumber);
+
+                var duplicateMobileNumber = !seenMobiles.Add(userContact.MobileNumber);
+                if (duplicateMobileNumber)
+                {
+                    userContact.MobileNumber = string.Empty;
+                }
+            }
+
+            yield return userContact;
+        }
+    }
+
+    /// <summary>
+    /// Scans the specified <see cref="UserContactPoints"/> for contact details (email and mobile number) 
+    /// that are already present in the specified <see cref="OrganizationContactPoints"/>. 
+    /// If a match is found, the corresponding field in the user contact is cleared (set to an empty string).
+    /// </summary>
+    /// <param name="userContact">
+    /// The user contact information to evaluate and modify if duplicates are found.
+    /// </param>
+    /// <param name="organizationContactPoints">
+    /// The organization's official contact point data containing email addresses and mobile numbers.
+    /// </param>
+    /// <returns>
+    /// The same <see cref="UserContactPoints"/> instance with duplicate email and/or mobile number fields cleared.
+    /// If both fields become empty, the caller is responsible for removing the contact from the list.
+    /// </returns>
+    private static UserContactPoints NullifyDuplicateContactAddress(UserContactPoints userContact, OrganizationContactPoints organizationContactPoints)
+    {
+        var isDuplicateEmail =
+            !string.IsNullOrWhiteSpace(userContact.Email) &&
+            organizationContactPoints.EmailList.Any(e => string.Equals(e, userContact.Email, StringComparison.OrdinalIgnoreCase));
+
+        if (isDuplicateEmail)
+        {
+            userContact.Email = string.Empty;
+        }
+
+        var isDuplicateMobileNumber =
+            !string.IsNullOrWhiteSpace(userContact.MobileNumber) &&
+            organizationContactPoints.MobileNumberList.Any(m => string.Equals(m, userContact.MobileNumber, StringComparison.OrdinalIgnoreCase));
+
+        if (isDuplicateMobileNumber)
+        {
+            userContact.MobileNumber = string.Empty;
+        }
+
+        return userContact;
     }
 }

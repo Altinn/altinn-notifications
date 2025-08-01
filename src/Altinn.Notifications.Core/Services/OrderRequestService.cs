@@ -94,7 +94,7 @@ public class OrderRequestService : IOrderRequestService
         cancellationToken.ThrowIfCancellationRequested();
 
         // 3. Create the main order
-        var mainOrderResult = await CreateMainNotificationOrderAsync(orderRequest, currentTime, cancellationToken);
+        var mainOrderResult = await CreateMainNotificationOrderAsync(orderRequest, currentTime);
         if (mainOrderResult.IsError && mainOrderResult.Error != null)
         {
             return mainOrderResult.Error;
@@ -121,9 +121,6 @@ public class OrderRequestService : IOrderRequestService
     /// <param name="currentTime">
     /// The UTC timestamp to set as the creation time of the notification order.
     /// </param>
-    /// <param name="cancellationToken">
-    /// A token that can be used to request cancellation of the asynchronous operation.
-    /// </param>
     /// <returns>
     /// A <see cref="Result{TValue,TError}"/> containing either:
     /// <list type="bullet">
@@ -146,13 +143,8 @@ public class OrderRequestService : IOrderRequestService
     /// <item><description>Constructs a complete notification order with all required properties</description></item>
     /// </list>
     /// </remarks>
-    /// <exception cref="OperationCanceledException">
-    /// Thrown when the operation is canceled through the provided <paramref name="cancellationToken"/>.
-    /// </exception>
-    private async Task<Result<NotificationOrder, ServiceError>> CreateMainNotificationOrderAsync(NotificationOrderChainRequest orderRequest, DateTime currentTime, CancellationToken cancellationToken)
+    private async Task<Result<NotificationOrder, ServiceError>> CreateMainNotificationOrderAsync(NotificationOrderChainRequest orderRequest, DateTime currentTime)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-
         var (recipients, templates, channel, ignoreReservation, resourceId, sendingTimePolicyForSms) = ExtractDeliveryComponents(orderRequest.Recipient);
 
         var lookupResult = await GetRecipientLookupResult(recipients, channel, GetSanitizedResourceId(resourceId));
