@@ -22,6 +22,7 @@ public interface IStatusFeedService
     /// </summary>
     /// <remarks>This method removes records that are no longer relevant based on predefined criteria 90 days since creation. It is
     /// used to maintain the status feed's size and relevance.</remarks>
+    /// <param name="cancellationToken">A CancellationToken for cancelling an ongoing asynchronous Task</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    public Task DeleteOldStatusFeedRecords();
+    public Task DeleteOldStatusFeedRecords(CancellationToken cancellationToken);
 }

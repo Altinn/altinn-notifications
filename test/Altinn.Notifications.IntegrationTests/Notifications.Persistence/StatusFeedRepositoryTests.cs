@@ -75,7 +75,7 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
         await InsertTestDataRowForStatusFeed(recentOrderId, recentDate, recentShipmentId.ToString());
 
         // Act
-        var rowsAffected = await sut.DeleteOldStatusFeedRecords();
+        var rowsAffected = await sut.DeleteOldStatusFeedRecords(CancellationToken.None);
 
         // Assert
         Assert.Equal(1, rowsAffected); // Only the old row should be deleted

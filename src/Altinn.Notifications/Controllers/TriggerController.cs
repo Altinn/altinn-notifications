@@ -57,11 +57,11 @@ public class TriggerController : ControllerBase
     [HttpPost]
     [Consumes("application/json")]
     [Route("deleteoldstatusfeedrecords")]
-    public async Task<ActionResult> Trigger_DeleteOldStatusFeedRecords()
+    public async Task<ActionResult> Trigger_DeleteOldStatusFeedRecords(CancellationToken cancellationToken)
     {
         try
         {
-            await _statusFeedService.DeleteOldStatusFeedRecords();
+            await _statusFeedService.DeleteOldStatusFeedRecords(cancellationToken);
             return Ok();
         }
         catch (Exception ex)

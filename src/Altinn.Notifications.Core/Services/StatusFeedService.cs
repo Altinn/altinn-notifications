@@ -27,9 +27,9 @@ public class StatusFeedService : IStatusFeedService
     }
 
     /// <inheritdoc />
-    public Task DeleteOldStatusFeedRecords()
+    public Task DeleteOldStatusFeedRecords(CancellationToken cancellationToken)
     {
-       return _statusFeedRepository.DeleteOldStatusFeedRecords();
+       return _statusFeedRepository.DeleteOldStatusFeedRecords(cancellationToken);
     }
 
     /// <inheritdoc />

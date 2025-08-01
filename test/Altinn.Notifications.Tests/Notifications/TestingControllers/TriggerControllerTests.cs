@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Altinn.Notifications.Controllers;
@@ -107,13 +108,13 @@ public class TriggerControllerTests
     public async Task Trigger_DeleteOldStatusFeedRecords_CallsServiceAndReturnsOk()
     {
         // Arrange
-        _statusFeedServiceMock.Setup(x => x.DeleteOldStatusFeedRecords()).Returns(Task.CompletedTask);
+        _statusFeedServiceMock.Setup(x => x.DeleteOldStatusFeedRecords(CancellationToken.None)).Returns(Task.CompletedTask);
 
         // Act
-        var result = await _controller.Trigger_DeleteOldStatusFeedRecords();
+        var result = await _controller.Trigger_DeleteOldStatusFeedRecords(CancellationToken.None);
 
         // Assert
-        _statusFeedServiceMock.Verify(x => x.DeleteOldStatusFeedRecords(), Times.Once);
+        _statusFeedServiceMock.Verify(x => x.DeleteOldStatusFeedRecords(CancellationToken.None), Times.Once);
         Assert.IsType<OkResult>(result);
     }
 }

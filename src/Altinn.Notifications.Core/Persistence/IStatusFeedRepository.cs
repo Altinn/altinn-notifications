@@ -10,13 +10,16 @@ public interface IStatusFeedRepository
     /// <summary>
     /// Deletes outdated records from the status feed.
     /// </summary>
-    /// <remarks>This method removes records from the status feed that have exceeded their
+    /// <remarks>
+    /// This method removes records from the status feed that have exceeded their
     /// retention period of 90 days. It is used to maintain the feed's size and ensure efficient
-    /// performance.</remarks>
+    /// performance.
+    /// </remarks>
+    /// <param name="cancellationToken">Token for cancelling the current asynchronous request.</param>
     /// <returns>
     /// A task that represents the asynchronous operation. The result contains the number of rows affected.
     /// </returns>
-    public Task<int> DeleteOldStatusFeedRecords();
+    public Task<int> DeleteOldStatusFeedRecords(CancellationToken cancellationToken);
 
     /// <summary>
     /// Get status feed
