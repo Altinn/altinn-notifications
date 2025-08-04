@@ -77,7 +77,7 @@ setEmptyThresholds(labels, options);
  * @returns {Object} The data object containing token, sendersReference, and emailOrderRequest.
 */
 export function setup() {
-    const emailRecipient = 'invalidemailrecipient.com';
+    const emailRecipient = getEmailRecipient();
     const smsRecipient = getSmsRecipient();
 
     // used with notification email orders if applicable

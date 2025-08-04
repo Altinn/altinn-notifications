@@ -95,6 +95,10 @@ function postSmsNotificationOrderRequest(data) {
         "POST SMS notification order request. Status is 202 Accepted": (r) => r.status === 202
     });
 
+    if (!success) {
+        console.error(`POST SMS notification order request failed: ${JSON.stringify(response.body)}`);
+    }
+
     stopIterationOnFail("POST SMS notification order request failed", success);
 
     const selfLink = response.headers["Location"];

@@ -102,6 +102,10 @@ function postEmailNotificationOrderRequest(data) {
         "POST email notification order request. Status is 202 Accepted": (r) => r.status === 202
     });
 
+    if (!success) {
+        console.error(`POST email notification order request failed: ${JSON.stringify(response.body)}`);
+    }
+
     stopIterationOnFail("POST email notification order request failed", success);
 
     const selfLink = response.headers["Location"];
@@ -131,6 +135,10 @@ function getEmailNotificationSummary(data, orderId) {
         "GET email notifications. Status is 200 OK": (r) => r.status === 200,
     });
 
+    if (!success) {
+        console.error(`GET email notifications failed: ${JSON.stringify(response.body)}`);
+    }
+
     check(JSON.parse(response.body), {
         "GET email notifications. OrderId property is a match": (notificationSummary) => notificationSummary.orderId === orderId,
     });
@@ -152,6 +160,10 @@ function postEmailNotificationOrderWithNegativeConditionCheck(data) {
     let success = check(response, {
         "POST email notification order request with condition. Status is 202 Accepted": (r) => r.status === 202
     });
+
+    if (!success) {
+        console.error(`POST email notification order request with condition check failed: ${JSON.stringify(response.body)}`);
+    }
 
     stopIterationOnFail("POST email notification order request with condition check failed", success);
 
