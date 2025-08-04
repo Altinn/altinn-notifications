@@ -77,7 +77,7 @@ setEmptyThresholds(labels, options);
  * @returns {Object} The data object containing token, sendersReference, and emailOrderRequest.
 */
 export function setup() {
-    const emailRecipient = getEmailRecipient();
+    const emailRecipient = 'invalidemailrecipient.com';
     const smsRecipient = getSmsRecipient();
 
     // used with notification email orders if applicable
@@ -136,6 +136,10 @@ function postEmailNotificationOrderRequest(data) {
         "POST email notification order request. Status is 201 Created": (r) => r.status === 201
     });
 
+    if (!success) {
+        console.error(`POST email notification order request failed. Response: ${JSON.stringify(response.body)}`);
+    }
+
     stopIterationOnFail("POST email notification order request failed", success);
 
     const selfLink = response.headers["Location"];
@@ -162,6 +166,10 @@ function postSmsNotificationOrderRequest(data) {
     const success = check(response, {
         "POST SMS notification order request. Status is 201 Created": (r) => r.status === 201
     });
+
+    if (!success) {
+        console.error(`POST SMS notification order request failed. Response: ${JSON.stringify(response.body)}`);
+    }
 
     stopIterationOnFail("POST SMS notification order request failed", success);
 
@@ -218,9 +226,13 @@ function getStatusFeed(data, label) {
     const sequenceNumber = 0; // starting position for the status feed
     const response = futureOrdersApi.getStatusFeed(sequenceNumber, data.token, label);
 
-    check(response, {
+    const success = check(response, {
         "GET status feed. Status is 200 OK": (r) => r.status === 200,
     });
+
+    if (!success) {
+        console.error(`GET status feed failed. Response: ${JSON.stringify(response.body)}`);
+    }
 
     const body = JSON.parse(response.body);
 

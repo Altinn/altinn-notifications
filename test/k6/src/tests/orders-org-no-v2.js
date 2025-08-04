@@ -116,6 +116,10 @@ function postEmailNotificationOrderRequest(data) {
         "POST email notification order request. Status is 201 Created": (r) => r.status === 201,
     });
 
+    if (!success) {
+        console.error(`POST email notification order request failed. Response: ${JSON.stringify(response.body)}`);
+    }
+
     stopIterationOnFail("POST email notification order request failed", success);
 
     const selfLink = response.headers["Location"];
@@ -143,6 +147,10 @@ function postSmsNotificationOrderRequest(data) {
     const success = check(response, {
         "POST SMS notification order request. Status is 201 Created": (r) => r.status === 201
     });
+
+    if (!success) {
+        console.error(`POST SMS notification order request failed. Response: ${JSON.stringify(response.body)}`);
+    }
 
     stopIterationOnFail("POST SMS notification order request failed", success);
 
