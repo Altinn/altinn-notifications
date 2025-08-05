@@ -1200,7 +1200,7 @@ public class OrderRequestServiceTests
                 contactPointServiceMock.Verify(
                     cp => cp.AddEmailAndSmsContactPointsAsync(
                     It.Is<List<Recipient>>(r => r.Any(rec => rec.OrganizationNumber == "312508729")),
-                    It.Is<string?>(s => s == "urn:altinn:resource:email-sms-resource-name")), // prefix urn:altinn:resource: is stripped
+                    It.Is<string?>(s => s == "urn:altinn:resource:email-sms-resource-name")),
                     Times.Once);
 
                 return true;
