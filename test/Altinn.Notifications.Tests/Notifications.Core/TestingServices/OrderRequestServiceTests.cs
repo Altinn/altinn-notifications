@@ -1061,7 +1061,7 @@ public class OrderRequestServiceTests
                     cp => cp.AddPreferredContactPoints(
                         It.Is<NotificationChannel>(ch => ch == NotificationChannel.EmailPreferred),
                         It.Is<List<Recipient>>(r => r.Any(rec => rec.NationalIdentityNumber == "29105573746")),
-                        It.Is<string?>(s => s == "tax-2025")),
+                        It.Is<string?>(s => s == resourceId)),
                     Times.Exactly(2));
 
                 // Verify contact point added the expected email address
@@ -1069,7 +1069,7 @@ public class OrderRequestServiceTests
                     cp => cp.AddPreferredContactPoints(
                         It.Is<NotificationChannel>(ch => ch == NotificationChannel.SmsPreferred),
                         It.Is<List<Recipient>>(r => r.Any(rec => rec.NationalIdentityNumber == "29105573746")),
-                        It.Is<string?>(s => s == "tax-2025")),
+                        It.Is<string?>(s => s == resourceId)),
                     Times.Once);
 
                 return true;
@@ -1200,7 +1200,7 @@ public class OrderRequestServiceTests
                 contactPointServiceMock.Verify(
                     cp => cp.AddEmailAndSmsContactPointsAsync(
                     It.Is<List<Recipient>>(r => r.Any(rec => rec.OrganizationNumber == "312508729")),
-                    It.Is<string?>(s => s == "email-sms-resource-name")), // prefix urn:altinn:resource: is stripped
+                    It.Is<string?>(s => s == "urn:altinn:resource:email-sms-resource-name")), // prefix urn:altinn:resource: is stripped
                     Times.Once);
 
                 return true;
@@ -1388,7 +1388,7 @@ public class OrderRequestServiceTests
                 contactPointServiceMock.Verify(
                     cp => cp.AddSmsContactPoints(
                         It.Is<List<Recipient>>(r => r.Any(rec => rec.NationalIdentityNumber == "16069412345")),
-                        It.Is<string?>(s => s == "sms-test")),
+                        It.Is<string?>(s => s == "urn:altinn:resource:sms-test")),
                     Times.Once);
 
                 return true;
@@ -1675,7 +1675,7 @@ public class OrderRequestServiceTests
                 contactPointMock.Verify(
                     contactService => contactService.AddEmailContactPoints(
                         It.Is<List<Recipient>>(r => r.Any(rec => rec.NationalIdentityNumber == "16069412345")),
-                        It.Is<string?>(s => s == "test")),
+                        It.Is<string?>(s => s == "urn:altinn:resource:test")),
                     Times.Once);
 
                 return true;
