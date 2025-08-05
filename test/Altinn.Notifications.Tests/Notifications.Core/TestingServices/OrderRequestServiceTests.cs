@@ -795,8 +795,10 @@ public class OrderRequestServiceTests
     }
 
     [Theory]
-    [InlineData("urn:altinn:resource:tax-2025")]
+    [InlineData("")]
+    [InlineData("   ")]
     [InlineData("tax-2025")]
+    [InlineData("urn:altinn:resource:tax-2025")]
     public async Task RegisterNotificationOrderChain_RecipientPersonWithMultipleReminders_OrderChainCreated(string resourceId)
     {
         // Arrange
