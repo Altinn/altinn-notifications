@@ -147,7 +147,7 @@ public class OrderRequestService : IOrderRequestService
     {
         var (recipients, templates, channel, ignoreReservation, resourceId, sendingTimePolicyForSms) = ExtractDeliveryComponents(orderRequest.Recipient);
 
-        var lookupResult = await GetRecipientLookupResult(recipients, channel, GetSanitizedResourceId(resourceId));
+        var lookupResult = await GetRecipientLookupResult(recipients, channel, resourceId);
 
         if (lookupResult?.MissingContact?.Count > 0)
         {
@@ -232,7 +232,7 @@ public class OrderRequestService : IOrderRequestService
 
             var (recipients, templates, channel, ignoreReservation, resourceId, sendingTimePolicyForSms) = ExtractDeliveryComponents(notificationReminder.Recipient);
 
-            var lookupResult = await GetRecipientLookupResult(recipients, channel, GetSanitizedResourceId(resourceId));
+            var lookupResult = await GetRecipientLookupResult(recipients, channel, resourceId);
 
             if (lookupResult?.MissingContact?.Count > 0)
             {
@@ -338,16 +338,6 @@ public class OrderRequestService : IOrderRequestService
         };
 
         return response;
-    }
-
-    private static string? GetSanitizedResourceId(string? resourceId)
-    {
-        if (string.IsNullOrWhiteSpace(resourceId))
-        {
-            return null;
-        }
-
-        return resourceId.StartsWith("urn:altinn:resource:", StringComparison.Ordinal) ? resourceId["urn:altinn:resource:".Length..] : resourceId;
     }
 
     private async Task<RecipientLookupResult?> GetRecipientLookupResult(List<Recipient> originalRecipients, NotificationChannel channel, string? resourceId)
