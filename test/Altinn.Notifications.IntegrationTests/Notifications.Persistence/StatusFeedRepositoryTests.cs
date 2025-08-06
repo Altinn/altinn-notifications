@@ -1,7 +1,11 @@
-﻿using Altinn.Notifications.Core.Persistence;
+﻿using System.Collections.Immutable;
+using System.Text.Json;
+
+using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models.Status;
+using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
-
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
@@ -25,7 +29,7 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
     public async Task GetStatusFeed_WithTestCreatorName_ReturnsExpectedResult()
     {
         // Arrange
-        await InsertTestDataRowForStatusFeed(123, "2025-5-21", Guid.NewGuid().ToString());
+        await InsertTestDataRowForStatusFeed(123, "2025-5-21", Guid.NewGuid());
 
         StatusFeedRepository statusFeedRepository = (StatusFeedRepository)ServiceUtil
             .GetServices([typeof(IStatusFeedRepository)])
@@ -71,8 +75,8 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
         string oldDate = DateTime.UtcNow.AddDays(-91).ToString("yyyy-MM-dd");
         string recentDate = DateTime.UtcNow.AddDays(-10).ToString("yyyy-MM-dd");
 
-        await InsertTestDataRowForStatusFeed(oldOrderId, oldDate, oldShipmentId.ToString());
-        await InsertTestDataRowForStatusFeed(recentOrderId, recentDate, recentShipmentId.ToString());
+        await InsertTestDataRowForStatusFeed(oldOrderId, oldDate, oldShipmentId);
+        await InsertTestDataRowForStatusFeed(recentOrderId, recentDate, recentShipmentId);
 
         // Act
         var rowsAffected = await sut.DeleteOldStatusFeedRecords(CancellationToken.None);
@@ -86,28 +90,28 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
         Assert.Contains(remaining, x => x.OrderStatus.ShipmentId == recentShipmentId);
     }
 
-    private async Task InsertTestDataRowForStatusFeed(int orderId, string created, string shipmentId)
+    private async Task InsertTestDataRowForStatusFeed(int orderId, string created, Guid shipmentId)
     {
-        var orderStatusFeedTestOrderCompleted = $@"{{
-              ""Status"": ""Order_Completed"",
-              ""Recipients"": [
-                {{
-                  ""Type"": ""Email"",
-                  ""Status"": ""Email_Delivered"",
-                  ""Destination"": ""navn.navnesen@example.com""
-                }},
-                {{
-                  ""Type"": ""SMS"",
-                  ""Status"": ""SMS_Delivered"",
-                  ""Destination"": ""+4799999999""
-                }}
-              ],
-              ""ShipmentId"": ""{shipmentId}"",
-              ""LastUpdated"": ""2025-03-28T16:24:17.8182889+01:00"",
-              ""ShipmentType"": ""Notification"",
-              ""SendersReference"": ""Random-Senders-Reference-55027""
-            }}";
-    
+        OrderStatus orderStatus = new OrderStatus
+        {
+            Status = ProcessingLifecycle.Order_Completed,
+            ShipmentId = shipmentId,
+            LastUpdated = DateTime.UtcNow,
+            ShipmentType = "Notification",
+            SendersReference = Guid.NewGuid().ToString(),
+            Recipients = new List<Recipient>
+            {
+                new()
+                {
+                    LastUpdate = DateTime.UtcNow,
+                    Status = ProcessingLifecycle.Email_Delivered,
+                    Destination = "+4799999999"
+                }
+            }.ToImmutableList(),
+        };
+
+        var orderStatusFeedTestOrderCompleted = JsonSerializer.Serialize(orderStatus);
+
         var sqlInsert = $@"INSERT INTO notifications.statusfeed(
                               orderid, creatorname, created, orderstatus)
                               VALUES({orderId}, '{_creatorName}', '{created}', '{orderStatusFeedTestOrderCompleted}')";
