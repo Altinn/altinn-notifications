@@ -1,7 +1,7 @@
 meta {
-  name: create order with emailPreferred ORG
+  name: create order with smsPreferred ORG
   type: http
-  seq: 1
+  seq: 2
 }
 
 post {
@@ -18,7 +18,7 @@ body:json {
       "body": "dette er en <em>test2</em>",
       "contentType": "Html"
     },
-    "notificationChannel": "EmailPreferred",
+    "notificationChannel": "SmsPreferred",
     "recipients": [
       {
         "organizationNumber": "{{process.env.TESTDATA_TENOR_SET_1_ORG}}"
