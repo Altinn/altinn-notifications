@@ -83,11 +83,6 @@ public class AuthorizationService : IAuthorizationService
 
     private static string GetSanitizedResourceId(string resourceId)
     {
-        if (string.IsNullOrWhiteSpace(resourceId))
-        {
-            return resourceId;
-        }
-
         return resourceId.StartsWith("urn:altinn:resource:", StringComparison.Ordinal) ? resourceId["urn:altinn:resource:".Length..] : resourceId;
     }
 
