@@ -302,6 +302,11 @@ public class ContactPointService(
         contactPoints.ForEach(contactPoint =>
         {
             contactPoint.MobileNumber = MobileNumberHelper.EnsureCountryCodeIfValidNumber(contactPoint.MobileNumber);
+
+            if (!MobileNumberHelper.IsValidMobileNumber(contactPoint.MobileNumber))
+            {
+                contactPoint.MobileNumber = string.Empty;
+            }
         });
 
         return contactPoints;
@@ -334,6 +339,10 @@ public class ContactPointService(
         }
 
         List<OrganizationContactPoints> contactPoints = await _profileClient.GetOrganizationContactPoints(organizationNumbers);
+        contactPoints.ForEach(contactPoint =>
+        {
+            contactPoint.MobileNumberList = [.. contactPoint.MobileNumberList.Select(MobileNumberHelper.EnsureCountryCodeIfValidNumber)];
+        });
 
         if (!string.IsNullOrWhiteSpace(resourceId))
         {
@@ -357,24 +366,23 @@ public class ContactPointService(
 
         contactPoints.ForEach(contactPoint =>
         {
-            // Remove duplicate mobile numbers.
+            // Keep only unique and valid mobile numbers.
             contactPoint.MobileNumberList = [..
                 contactPoint.MobileNumberList
-                .Where(e => !string.IsNullOrWhiteSpace(e))
-                .Select(MobileNumberHelper.EnsureCountryCodeIfValidNumber)
+                .Where(e => MobileNumberHelper.IsValidMobileNumber(e))
                 .Distinct(StringComparer.OrdinalIgnoreCase)];
 
-            // Remove duplicate email addresses.
+            // Keep only unique email addresses.
             contactPoint.EmailList = [..
                 contactPoint.EmailList
                 .Where(e => !string.IsNullOrWhiteSpace(e))
                 .Distinct(StringComparer.OrdinalIgnoreCase)];
 
-            // Remove user contact points that overlap with itself or official contact points.
+            // Keep only unique and valid mobile numbers.
             contactPoint.UserContactPoints = [..
                 NullifyDuplicateContactAddress(contactPoint.UserContactPoints)
                 .Select(userContact => NullifyDuplicateContactAddress(userContact, contactPoint))
-                .Where(userContact => !string.IsNullOrWhiteSpace(userContact.Email) || !string.IsNullOrWhiteSpace(userContact.MobileNumber))
+                .Where(userContact => !string.IsNullOrWhiteSpace(userContact.Email) || MobileNumberHelper.IsValidMobileNumber(userContact.MobileNumber))
                 ];
         });
 
