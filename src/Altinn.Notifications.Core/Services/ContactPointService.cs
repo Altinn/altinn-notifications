@@ -304,12 +304,7 @@ public class ContactPointService(
             contactPoint.MobileNumber = MobileNumberHelper.EnsureCountryCodeIfValidNumber(contactPoint.MobileNumber);
         });
 
-        List<UserContactPoints> validContactPoints =
-            [.. contactPoints.Select(contactPoint =>
-                             {
-                                 contactPoint.MobileNumber = MobileNumberHelper.EnsureCountryCodeIfValidNumber(contactPoint.MobileNumber);
-                                 return contactPoint;
-                             })];
+        List<UserContactPoints> validContactPoints = [.. contactPoints.Where(e => MobileNumberHelper.IsValidMobileNumber(e.MobileNumber))];
 
         return validContactPoints;
     }
