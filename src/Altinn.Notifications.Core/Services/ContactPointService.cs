@@ -341,6 +341,10 @@ public class ContactPointService(
         }
 
         List<OrganizationContactPoints> contactPoints = await _profileClient.GetOrganizationContactPoints(organizationNumbers);
+        contactPoints.ForEach(contactPoint =>
+        {
+            contactPoint.MobileNumberList = [.. contactPoint.MobileNumberList.Select(MobileNumberHelper.EnsureCountryCodeIfValidNumber)];
+        });
 
         if (!string.IsNullOrWhiteSpace(resourceId))
         {
@@ -368,7 +372,6 @@ public class ContactPointService(
             contactPoint.MobileNumberList = [..
                 contactPoint.MobileNumberList
                 .Where(e => MobileNumberHelper.IsValidMobileNumber(e))
-                .Select(MobileNumberHelper.EnsureCountryCodeIfValidNumber)
                 .Distinct(StringComparer.OrdinalIgnoreCase)];
 
             // Keep only unique email addresses.
