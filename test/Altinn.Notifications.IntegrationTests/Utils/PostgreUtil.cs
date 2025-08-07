@@ -169,6 +169,49 @@ public static class PostgreUtil
         return (order, smsNotification);
     }
 
+    public static async Task<(NotificationOrder Order, SmsNotification SmsNotification, EmailNotification EmailNotification)> PopulateDBWithOrderAndEmailAndSmsNotifications(string? sendersReference = null)
+    {
+        // Create order, SMS notification, and Email notification test data
+        (NotificationOrder order, SmsNotification smsNotification) = TestdataUtil.GetOrderAndSmsNotification();
+        (NotificationOrder orderForEmail, EmailNotification emailNotification) = TestdataUtil.GetOrderAndEmailNotification();
+
+        // Use the same order for both notifications
+        order.Id = Guid.NewGuid();
+        smsNotification.OrderId = order.Id;
+        smsNotification.Id = Guid.NewGuid();
+        smsNotification.SendResult =
+            new NotificationResult<SmsNotificationResultType>(
+                SmsNotificationResultType.Delivered,
+                DateTime.UtcNow);
+        orderForEmail.Id = order.Id;
+        emailNotification.OrderId = order.Id;
+        emailNotification.Id = Guid.NewGuid();
+        emailNotification.SendResult =
+            new NotificationResult<EmailNotificationResultType>(
+                EmailNotificationResultType.Delivered,
+                DateTime.UtcNow);
+
+        if (sendersReference != null)
+        {
+            order.SendersReference = sendersReference;
+            orderForEmail.SendersReference = sendersReference;
+        }
+
+        var serviceList = ServiceUtil.GetServices(new List<Type> { typeof(IOrderRepository), typeof(ISmsNotificationRepository), typeof(IEmailNotificationRepository) });
+        OrderRepository orderRepo = (OrderRepository)serviceList.First(i => i.GetType() == typeof(OrderRepository));
+        SmsNotificationRepository smsRepo = (SmsNotificationRepository)serviceList.First(i => i.GetType() == typeof(SmsNotificationRepository));
+        EmailNotificationRepository emailRepo = (EmailNotificationRepository)serviceList.First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        // Persist order and both notifications
+        await orderRepo.Create(order);
+        await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
+        await smsRepo.AddNotification(smsNotification, DateTime.UtcNow.AddDays(1), 1);
+        await emailRepo.AddNotification(emailNotification, DateTime.UtcNow.AddDays(1));
+        await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processed);
+
+        return (order, smsNotification, emailNotification);
+    }
+
     public static async Task DeleteOrderFromDb(string sendersRef)
     {
         NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;

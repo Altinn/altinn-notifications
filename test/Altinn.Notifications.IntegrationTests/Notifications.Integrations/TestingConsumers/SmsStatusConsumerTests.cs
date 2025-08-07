@@ -150,6 +150,41 @@ public class SmsStatusConsumerTests : IAsyncLifetime
         await PostgreUtil.DeleteOrderFromDb(order.Id);
     }
 
+    [Fact]
+    public async Task InsertStatusFeed_OrderWithTwoNotifications_ShouldInsertTheSmsNotification()
+    {
+        // Arrange
+        Dictionary<string, string> vars = new()
+        {
+            { "KafkaSettings__SmsStatusUpdatedTopicName", _statusUpdatedTopicName },
+            { "KafkaSettings__Admin__TopicList", $"[\"{_statusUpdatedTopicName}\"]" }
+        };
+        using SmsStatusConsumer sut = (SmsStatusConsumer)ServiceUtil
+                                                    .GetServices([typeof(IHostedService)], vars)
+                                                    .First(s => s.GetType() == typeof(SmsStatusConsumer))!;
+        (NotificationOrder order, SmsNotification smsNotification, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailAndSmsNotifications();
+        SmsSendOperationResult sendOperationResult = new()
+        {
+            NotificationId = smsNotification.Id,
+            GatewayReference = Guid.NewGuid().ToString(),
+            SendResult = SmsNotificationResultType.Delivered
+        };
+
+        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
+
+        // Act
+        await sut.StartAsync(CancellationToken.None);
+        await Task.Delay(10000);
+        await sut.StopAsync(CancellationToken.None);
+
+        // Assert
+        int count = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+        Assert.Equal(1, count);
+
+        // cleanup
+        await PostgreUtil.DeleteOrderFromDb(order.Id);
+    }
+
     public Task InitializeAsync()
     {
         return Task.CompletedTask;
