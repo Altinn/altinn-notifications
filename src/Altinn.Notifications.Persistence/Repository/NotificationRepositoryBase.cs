@@ -191,12 +191,13 @@ public abstract class NotificationRepositoryBase
         {
             string status = string.Empty;
             string destination = string.Empty;
-            bool isValidMobileNumber = MobileNumberHelper.IsValidMobileNumber(destination);
+            bool isValidMobileNumber = false;
 
             try
             {
                 status = await reader.GetFieldValueAsync<string>("status");
                 destination = await reader.GetFieldValueAsync<string>("destination");
+                isValidMobileNumber = MobileNumberHelper.IsValidMobileNumber(destination);
 
                 var recipient = new Recipient
                 {
