@@ -302,11 +302,14 @@ public class ContactPointService(
         contactPoints.ForEach(contactPoint =>
         {
             contactPoint.MobileNumber = MobileNumberHelper.EnsureCountryCodeIfValidNumber(contactPoint.MobileNumber);
+
+            if (!MobileNumberHelper.IsValidMobileNumber(contactPoint.MobileNumber))
+            {
+                contactPoint.MobileNumber = string.Empty;
+            }
         });
 
-        List<UserContactPoints> validContactPoints = [.. contactPoints.Where(e => MobileNumberHelper.IsValidMobileNumber(e.MobileNumber))];
-
-        return validContactPoints;
+        return contactPoints;
     }
 
     /// <summary>
