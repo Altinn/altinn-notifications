@@ -360,20 +360,20 @@ public class ContactPointService(
 
         contactPoints.ForEach(contactPoint =>
         {
-            // Remove duplicate mobile numbers.
+            // Keep only unique and valid mobile numbers.
             contactPoint.MobileNumberList = [..
                 contactPoint.MobileNumberList
                 .Where(e => MobileNumberHelper.IsValidMobileNumber(e))
                 .Select(MobileNumberHelper.EnsureCountryCodeIfValidNumber)
                 .Distinct(StringComparer.OrdinalIgnoreCase)];
 
-            // Remove duplicate email addresses.
+            // Keep only unique email addresses.
             contactPoint.EmailList = [..
                 contactPoint.EmailList
                 .Where(e => !string.IsNullOrWhiteSpace(e))
                 .Distinct(StringComparer.OrdinalIgnoreCase)];
 
-            // Remove user contact points that overlap with itself or official contact points.
+            // Keep only unique and valid mobile numbers.
             contactPoint.UserContactPoints = [..
                 NullifyDuplicateContactAddress(contactPoint.UserContactPoints)
                 .Select(userContact => NullifyDuplicateContactAddress(userContact, contactPoint))
