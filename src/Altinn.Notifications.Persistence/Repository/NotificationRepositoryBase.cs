@@ -185,19 +185,33 @@ public abstract class NotificationRepositoryBase
         return result != null && (bool)result;
     }
 
-    private static async Task ReadRecipients(List<Recipient> recipients, NpgsqlDataReader reader)
+    private async Task ReadRecipients(List<Recipient> recipients, NpgsqlDataReader reader)
     {
         while (await reader.ReadAsync())
         {
-            string destination = await reader.GetFieldValueAsync<string>("destination");
-            string status = await reader.GetFieldValueAsync<string>("status");
-            var recipient = new Recipient
+            string status = string.Empty;
+            string destination = string.Empty;
+            bool isValidMobileNumber = MobileNumberHelper.IsValidMobileNumber(destination);
+
+            try
             {
-                Destination = destination,
-                LastUpdate = await reader.GetFieldValueAsync<DateTime>("last_update"),
-                Status = MobileNumberHelper.IsValidMobileNumber(destination) ? ProcessingLifecycleMapper.GetSmsLifecycleStage(status) : ProcessingLifecycleMapper.GetEmailLifecycleStage(status)
-            };
-            recipients.Add(recipient);
+                status = await reader.GetFieldValueAsync<string>("status");
+                destination = await reader.GetFieldValueAsync<string>("destination");
+
+                var recipient = new Recipient
+                {
+                    Destination = destination,
+                    LastUpdate = await reader.GetFieldValueAsync<DateTime>("last_update"),
+                    Status = isValidMobileNumber ? ProcessingLifecycleMapper.GetSmsLifecycleStage(status) : ProcessingLifecycleMapper.GetEmailLifecycleStage(status)
+                };
+                recipients.Add(recipient);
+            }
+            catch (Exception)
+            {
+                _logger.LogError("ReadRecipients; {Destination}, {Status}, {IsValidMobileNumber}", destination, status, isValidMobileNumber);
+
+                throw;
+            }
         }
     }
 
