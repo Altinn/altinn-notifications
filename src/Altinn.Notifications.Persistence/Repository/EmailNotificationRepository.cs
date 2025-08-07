@@ -129,14 +129,10 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
 
             await transaction.CommitAsync();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             await transaction.RollbackAsync();
-
-            //throw;
-            //Temporary: Log error but don't rethrow to reduce notification volume (Issue #980)
-            //TODO: Remove this suppression once root cause is fixed
-            _logger.LogError(ex, "Failed to update email notification status for NotificationId: {NotificationId}, Status: {Status}", notificationId, status);
+            throw;
         }
     }
 
