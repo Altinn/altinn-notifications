@@ -299,12 +299,14 @@ public class ContactPointService(
 
         List<UserContactPoints> contactPoints = await _profileClient.GetUserContactPoints(nationalIdentityNumbers);
 
-        contactPoints.ForEach(contactPoint =>
-        {
-            contactPoint.MobileNumber = MobileNumberHelper.EnsureCountryCodeIfValidNumber(contactPoint.MobileNumber);
-        });
-
-        return contactPoints;
+        List<UserContactPoints> validContactPoints =
+            [.. contactPoints.Where(contactPoint => MobileNumberHelper.IsValidMobileNumber(contactPoint.MobileNumber))
+                             .Select(contactPoint =>
+                                     {
+                                         contactPoint.MobileNumber = MobileNumberHelper.EnsureCountryCodeIfValidNumber(contactPoint.MobileNumber);
+                                         return contactPoint;
+                                     })];
+        return validContactPoints;
     }
 
     /// <summary>
