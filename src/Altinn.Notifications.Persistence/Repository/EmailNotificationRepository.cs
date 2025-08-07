@@ -132,7 +132,7 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
         catch (Exception)
         {
             await transaction.RollbackAsync();
-            throw;
+            ///throw;
         }
     }
 
