@@ -302,10 +302,11 @@ public class ContactPointService(
         List<UserContactPoints> validContactPoints =
             [.. contactPoints.Where(contactPoint => MobileNumberHelper.IsValidMobileNumber(contactPoint.MobileNumber))
                              .Select(contactPoint =>
-                                     {
-                                         contactPoint.MobileNumber = MobileNumberHelper.EnsureCountryCodeIfValidNumber(contactPoint.MobileNumber);
-                                         return contactPoint;
-                                     })];
+                             {
+                                 contactPoint.MobileNumber = MobileNumberHelper.EnsureCountryCodeIfValidNumber(contactPoint.MobileNumber);
+                                 return contactPoint;
+                             })];
+
         return validContactPoints;
     }
 
@@ -362,7 +363,7 @@ public class ContactPointService(
             // Remove duplicate mobile numbers.
             contactPoint.MobileNumberList = [..
                 contactPoint.MobileNumberList
-                .Where(e => !string.IsNullOrWhiteSpace(e))
+                .Where(e => MobileNumberHelper.IsValidMobileNumber(e))
                 .Select(MobileNumberHelper.EnsureCountryCodeIfValidNumber)
                 .Distinct(StringComparer.OrdinalIgnoreCase)];
 
@@ -376,7 +377,7 @@ public class ContactPointService(
             contactPoint.UserContactPoints = [..
                 NullifyDuplicateContactAddress(contactPoint.UserContactPoints)
                 .Select(userContact => NullifyDuplicateContactAddress(userContact, contactPoint))
-                .Where(userContact => !string.IsNullOrWhiteSpace(userContact.Email) || !string.IsNullOrWhiteSpace(userContact.MobileNumber))
+                .Where(userContact => !string.IsNullOrWhiteSpace(userContact.Email) || MobileNumberHelper.IsValidMobileNumber(userContact.MobileNumber))
                 ];
         });
 
