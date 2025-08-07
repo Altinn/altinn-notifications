@@ -1,0 +1,15 @@
+meta {
+  name: get notification order status
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{host}}/notifications/api/v1/orders/:notificationId/status
+  body: none
+  auth: inherit
+}
+
+params:path {
+  notificationId: 29a84264-8d59-4b50-b55c-5d8b2a9ccd10
+}
