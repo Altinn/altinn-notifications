@@ -185,34 +185,22 @@ public abstract class NotificationRepositoryBase
         return result != null && (bool)result;
     }
 
-    private async Task ReadRecipients(List<Recipient> recipients, NpgsqlDataReader reader)
+    private static async Task ReadRecipients(List<Recipient> recipients, NpgsqlDataReader reader)
     {
         while (await reader.ReadAsync())
         {
-            string status = string.Empty;
-            string destination = string.Empty;
-            bool isValidMobileNumber = false;
+            var status = await reader.GetFieldValueAsync<string>("status");
+            var destination = await reader.GetFieldValueAsync<string>("destination");
+            var isValidMobileNumber = MobileNumberHelper.IsValidMobileNumber(destination);
 
-            try
+            var recipient = new Recipient
             {
-                status = await reader.GetFieldValueAsync<string>("status");
-                destination = await reader.GetFieldValueAsync<string>("destination");
-                isValidMobileNumber = MobileNumberHelper.IsValidMobileNumber(destination);
+                Destination = destination,
+                LastUpdate = await reader.GetFieldValueAsync<DateTime>("last_update"),
+                Status = isValidMobileNumber ? ProcessingLifecycleMapper.GetSmsLifecycleStage(status) : ProcessingLifecycleMapper.GetEmailLifecycleStage(status)
+            };
 
-                var recipient = new Recipient
-                {
-                    Destination = destination,
-                    LastUpdate = await reader.GetFieldValueAsync<DateTime>("last_update"),
-                    Status = isValidMobileNumber ? ProcessingLifecycleMapper.GetSmsLifecycleStage(status) : ProcessingLifecycleMapper.GetEmailLifecycleStage(status)
-                };
-                recipients.Add(recipient);
-            }
-            catch (Exception)
-            {
-                _logger.LogError("ReadRecipients; {Destination}, {Status}, {IsValidMobileNumber}", destination, status, isValidMobileNumber);
-
-                throw;
-            }
+            recipients.Add(recipient);
         }
     }
 
