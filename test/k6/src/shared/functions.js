@@ -24,7 +24,7 @@ export function getEmailRecipient() {
     return null;
 }
 
-function getSmsRecipient() {
+export function getSmsRecipient() {
     if (__ENV.smsRecipient) {
         return __ENV.smsRecipient.toLowerCase();
     }
