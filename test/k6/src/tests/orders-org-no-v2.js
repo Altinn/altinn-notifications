@@ -13,7 +13,8 @@
         -e resourceId={the resource ID associated with the notification order} \
 
     Notes:
-    - The `resourceId` is required and should be a valid resource identifier.
+    - The `resourceId` is required for email, and should be a valid resource identifier. 
+    - However, the field is not used for the SMS notification order request use case test below. 
     - The `orgNoRecipient` is required for sending notifications to an organization, _unless_ set environment = yt01 .
 
     Command syntax for different shells:
@@ -84,7 +85,6 @@ export function setup() {
             ...orderRequestJson.recipient,
             recipientOrganization: {
                 ...orderRequestJson.recipient.recipientOrganization,
-                emailSettings: undefined,
                 orgNumber: orgNoRecipient,
                 resourceId: undefined,
                 channelSchema: "SMS"
