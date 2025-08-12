@@ -1,0 +1,15 @@
+meta {
+  name: get sms notifications on order
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{host}}/notifications/api/v1/orders/:notificationId/notifications/sms
+  body: none
+  auth: inherit
+}
+
+params:path {
+  notificationId: 56818f5d-68d7-4bc6-bfdb-6c7d7f32ba60
+}

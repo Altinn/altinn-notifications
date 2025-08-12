@@ -2,6 +2,7 @@
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
+
 using Microsoft.Extensions.Logging;
 
 namespace Altinn.Notifications.Core.Services;
@@ -23,6 +24,12 @@ public class StatusFeedService : IStatusFeedService
     {
         _statusFeedRepository = statusFeedRepository;
         _logger = logger;
+    }
+
+    /// <inheritdoc />
+    public Task DeleteOldStatusFeedRecords(CancellationToken cancellationToken)
+    {
+       return _statusFeedRepository.DeleteOldStatusFeedRecords(cancellationToken);
     }
 
     /// <inheritdoc />

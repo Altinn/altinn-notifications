@@ -189,14 +189,17 @@ public abstract class NotificationRepositoryBase
     {
         while (await reader.ReadAsync())
         {
-            string destination = await reader.GetFieldValueAsync<string>("destination");
-            string status = await reader.GetFieldValueAsync<string>("status");
+            var status = await reader.GetFieldValueAsync<string>("status");
+            var destination = await reader.GetFieldValueAsync<string>("destination");
+            var isValidMobileNumber = MobileNumberHelper.IsValidMobileNumber(destination);
+
             var recipient = new Recipient
             {
                 Destination = destination,
                 LastUpdate = await reader.GetFieldValueAsync<DateTime>("last_update"),
-                Status = MobileNumberHelper.IsValidMobileNumber(destination) ? ProcessingLifecycleMapper.GetSmsLifecycleStage(status) : ProcessingLifecycleMapper.GetEmailLifecycleStage(status)
+                Status = isValidMobileNumber ? ProcessingLifecycleMapper.GetSmsLifecycleStage(status) : ProcessingLifecycleMapper.GetEmailLifecycleStage(status)
             };
+
             recipients.Add(recipient);
         }
     }

@@ -1,7 +1,7 @@
 meta {
-  name: Two organizations - One reminder
+  name: Fulfilling eForvaltningsforskriften §8 ORG
   type: http
-  seq: 5
+  seq: 1
 }
 
 post {
@@ -12,13 +12,13 @@ post {
 
 body:json {
   {
-    "sendersReference": "{{senders_reference_guid}}",
     "idempotencyId": "{{random_idempotency_id}}",
-    "recipient": {
+    "sendersReference": "{{random_idempotency_id}}",
+     "recipient": {
       "recipientOrganization": {
         "orgNumber": "{{process.env.TESTDATA_TENOR_SET_1_ORG}}",
-        "channelSchema": "EmailAndSms",
-        "resourceId": "urn:altinn:resource:app_ttd_rf-545454545",
+        "channelSchema": "SmsPreferred",
+        "resourceId": "urn:altinn:resource:app_ttd_storage-end-to-end",
         "smsSettings": {
           "sendingTimePolicy": "Daytime",
           "body": "(TEST) Dear $recipientName$, please check your email for an important update regarding your account $recipientNumber$. - Altinn Team"
@@ -33,17 +33,23 @@ body:json {
     },
     "reminders": [
       {
-        "delayDays": 1,
+        "conditionEndpoint": "{{process.env.TESTDATA_URL_CONDITION_TRUE}}",
+        "sendersReference": "{{random_idempotency_id}}",
+        "requestedSendTime": "2025-08-06T11:00:00Z",
         "recipient": {
           "recipientOrganization": {
+            "orgNumber": "{{process.env.TESTDATA_TENOR_SET_1_ORG}}",
+            "channelSchema": "SmsPreferred",
             "emailSettings": {
               "subject": "(TEST) Important Update Regarding Your Account",
               "body": "(TEST) Dear $recipientName$,\n\nWe wanted to inform you about an important update to your account $recipientNumber$. Please log in to your dashboard to review the changes.\n\nBest regards,\nAltinn Team",
               "contentType": "Plain",
               "sendingTimePolicy": "Anytime"
             },
-            "orgNumber": "{{process.env.TESTDATA_TENOR_SET_2_ORG}}",
-            "channelSchema": "Email"
+            "smsSettings": {
+              "sendingTimePolicy": "Daytime",
+              "body": "(TEST) Dear $recipientName$, please check your email for an important update regarding your account $recipientNumber$. - Altinn Team"
+            }
           }
         }
       }
