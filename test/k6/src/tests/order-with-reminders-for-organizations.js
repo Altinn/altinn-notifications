@@ -47,34 +47,12 @@ setEmptyThresholds(labels, options);
  * Initialize test data for various test scenarios.
  */
 export function setup() {
-
-    // Retrieve organization number and generate an authentication token
-    const orgNoRecipient = getOrgNoRecipient();
+    // Generate an authentication token
     const token = setupToken.getAltinnTokenForOrg(scopes);
 
-    // Generate unique identifiers
-    const dialogId = uuidv4();
-    const idempotencyId = uuidv4();
-    const transmissionId = uuidv4();
-    const sendersReference = "k6-test-order-with-reminders-for-organizations" + uuidv4().substring(0, 8);
-
-    // Create a valid order request
+    // Create a valid order request template
     const validOrderRequest = JSON.parse(JSON.stringify(orderChainRequestJson));
-    validOrderRequest.idempotencyId = idempotencyId;
-    validOrderRequest.sendersReference = sendersReference;
     validOrderRequest.recipient.recipientOrganization.resourceId = resourceId;
-    validOrderRequest.recipient.recipientOrganization.orgNumber = orgNoRecipient;
-
-    validOrderRequest.dialogportenAssociation = {
-        dialogId: dialogId,
-        transmissionId: transmissionId
-    };
-
-    for (let reminder of validOrderRequest.reminders) {
-        reminder.sendersReference = "reminder-" + sendersReference;
-        reminder.recipient.recipientOrganization.resourceId = resourceId;
-        reminder.recipient.recipientOrganization.orgNumber = orgNoRecipient;
-    }
 
     return {
         token,
@@ -105,50 +83,55 @@ function postNotificationOrderChain(data, orderRequest, label = post_order_chain
 * Each virtual user will run through this complete sequence.
 */
 export default function (data) {
-
-    // Create unique request with new IDs
+    // Create unique request with new IDs for each VU
     const orgNoRecipient = getOrgNoRecipient();
     const uniqueRequest = JSON.parse(JSON.stringify(data.validOrderRequest));
+
+    // Generate unique identifiers
     uniqueRequest.idempotencyId = uuidv4();
-    uniqueRequest.dialogportenAssociation.dialogId = uuidv4();
-    uniqueRequest.dialogportenAssociation.transmissionId = uuidv4();
-    uniqueRequest.recipient.recipientOrganization.orgNumber = orgNoRecipient;
     uniqueRequest.sendersReference = "k6-test-order-with-reminders-" + uuidv4().substring(0, 8);
 
+    // Create dialogportenAssociation with unique IDs
+    uniqueRequest.dialogportenAssociation = {
+        dialogId: uuidv4(),
+        transmissionId: uuidv4()
+    };
+
+    // Update all reminders with unique references
     for (let reminder of uniqueRequest.reminders) {
-        reminder.recipient.recipientOrganization.orgNumber = orgNoRecipient;
         reminder.sendersReference = "reminder-" + uniqueRequest.sendersReference;
+        reminder.recipient.recipientOrganization.resourceId = resourceId;
+        reminder.recipient.recipientOrganization.orgNumber = orgNoRecipient;
     }
 
-    let orderResponse = postNotificationOrderChain(data, data.validOrderRequest);
+    // Send the UNIQUE request (not the original template)
+    let orderResponse = postNotificationOrderChain(data, uniqueRequest);
 
     let shipmentId;
-    let responseBody;   
+    let responseBody;
     let responseCategory;
 
     try {
-        switch (orderResponse.status) {
+        if (orderResponse.body) {
+            responseBody = JSON.parse(orderResponse.body);
+            shipmentId = responseBody.notification?.shipmentId;
+        }
 
+        switch (orderResponse.status) {
             case 200:
                 responseCategory = "duplicate_order";
-                responseBody = JSON.parse(orderResponse.body);
-                shipmentId = responseBody.notification?.shipmentId;
-
                 check(orderResponse, {
                     "Duplicate order returns 200 OK": (r) => r.status === 200,
-                    "Duplicate order contains valid notification": (r) => responseBody.notification !== undefined,
-                    "Duplicate order contains shipmentId": (r) => shipmentId !== undefined
-                })
+                    "Duplicate order contains valid notification": () => responseBody.notification !== undefined,
+                    "Duplicate order contains shipmentId": () => shipmentId !== undefined
+                });
                 break;
 
             case 201:
                 responseCategory = "created_successfully";
-                responseBody = JSON.parse(orderResponse.body);
-                shipmentId = responseBody.notification?.shipmentId;
-
                 check(orderResponse, {
                     "Valid order accepted with 201 Created": (r) => r.status === 201,
-                    "Valid order response contains shipmentId": (r) => shipmentId !== undefined,
+                    "Valid order response contains shipmentId": () => shipmentId !== undefined,
                     "Valid order response includes Location header": (r) => r.headers["Location"] !== undefined
                 });
                 break;
@@ -169,6 +152,7 @@ export default function (data) {
         }
     } catch (error) {
         responseCategory = "execution_error";
+        console.error(`Error during test execution: ${error.message}`);
     }
 
     // Stop iteration on critical failures
