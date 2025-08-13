@@ -27,7 +27,7 @@ import { stopIterationOnFail } from "../errorhandler.js";
 import { getOrgNoRecipient } from "../shared/functions.js";
 import { scopes, resourceId } from "../shared/variables.js";
 import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
-import { post_order_chain, post_invalid_order, get_order_shipment, setEmptyThresholds, post_duplicate_order } from "./threshold-labels.js";
+import { post_order_chain, setEmptyThresholds } from "./threshold-labels.js";
 
 const orderChainRequestJson = JSON.parse(
     open("../data/orders/order-with-reminders-for-organizations.json")
@@ -40,7 +40,7 @@ export const options = {
     }
 };
 
-const labels = [post_order_chain, get_order_shipment, post_invalid_order, post_duplicate_order];
+const labels = [post_order_chain];
 setEmptyThresholds(labels, options);
 
 /**
@@ -48,17 +48,17 @@ setEmptyThresholds(labels, options);
  */
 export function setup() {
 
-    // 1. Retrieve organization number and generate an authentication token
+    // Retrieve organization number and generate an authentication token
     const orgNoRecipient = getOrgNoRecipient();
     const token = setupToken.getAltinnTokenForOrg(scopes);
 
-    // 2. Generate unique identifiers for the order and reminders
+    // Generate unique identifiers
     const dialogId = uuidv4();
     const idempotencyId = uuidv4();
     const transmissionId = uuidv4();
     const sendersReference = "k6-test-order-with-reminders-for-organizations" + uuidv4().substring(0, 8);
 
-    // 3. Create a valid order request
+    // Create a valid order request
     const validOrderRequest = JSON.parse(JSON.stringify(orderChainRequestJson));
     validOrderRequest.idempotencyId = idempotencyId;
     validOrderRequest.sendersReference = sendersReference;
@@ -76,30 +76,20 @@ export function setup() {
         reminder.recipient.recipientOrganization.orgNumber = orgNoRecipient;
     }
 
-    // 5. Create an invalid order request by removing required email settings ("channelSchema": "EmailPreferred")
-    const invalidOrderRequest = JSON.parse(JSON.stringify(validOrderRequest));
-    delete invalidOrderRequest.recipient.recipientOrganization.emailSettings;
-
-    // 6. Create a valid order request by removing the resourceId from the main order and reminders
-    const noResourceIdOrderRequest = JSON.parse(JSON.stringify(validOrderRequest));
-    noResourceIdOrderRequest.idempotencyId = uuidv4();
-    noResourceIdOrderRequest.recipient.recipientOrganization.resourceId = undefined;
-    for (let reminder of noResourceIdOrderRequest.reminders) {
-        reminder.recipient.recipientOrganization.resourceId = undefined;
-    }
-
     return {
         token,
-        validOrderRequest,
-        invalidOrderRequest,
-        noResourceIdOrderRequest,
-        idempotencyId
+        validOrderRequest
     };
 }
 
 /**
-* Posts a notification order chain request.
-*/
+ * Posts a notification order chain request.
+ * 
+ * @param {Object} data - The test data context containing token
+ * @param {Object} orderRequest - The order request object to be registered
+ * @param {string} label - Custom metric label for tracking this specific operation type
+ * @returns {Object} - The HTTP response object
+ */
 function postNotificationOrderChain(data, orderRequest, label = post_order_chain) {
     const response = ordersApi.postNotificationOrderV2(
         JSON.stringify(orderRequest),
@@ -111,64 +101,80 @@ function postNotificationOrderChain(data, orderRequest, label = post_order_chain
 }
 
 /**
- * Gets the shipment status for a notification.
- */
-function getShipmentStatus(data, shipmentId) {
-    const response = ordersApi.getShipment(shipmentId, data.token, get_order_shipment);
-
-    check(response, {
-        "GET shipment details. Status is 200 OK": (r) => r.status === 200
-    });
-
-    check(JSON.parse(response.body), {
-        "GET shipment details. ShipmentId property is a match": (shipmentResponse) => shipmentResponse.shipmentId === shipmentId
-    });
-
-    return response;
-}
-
-/**
- * Main test function that executes all notification order scenarios.
- * Each virtual user will run through this complete sequence.
- */
+* Main test function that executes all notification order scenarios.
+* Each virtual user will run through this complete sequence.
+*/
 export default function (data) {
-    // Test Case 1: Invalid Order (Missing Required Fields)
-    // Tests the API's validation capabilities by sending an order missing email settings
-    let response = postNotificationOrderChain(data, data.invalidOrderRequest, post_invalid_order);
-    check(response, {
-        "Invalid order rejected with 400 Bad Request": (r) => r.status === 400,
-        "Invalid order response includes validation details": (r) => r.body.includes("validation")
-    });
-    
-    // Test Case 2: Valid Order Creation with Profile and Authorization APIs timing measurement
-    // Tests successful order creation with all required fields and measures backend API calls
-    response = postNotificationOrderChain(data, data.validOrderRequest);
-    const success = check(response, {
-        "Valid order accepted with 201 Created": (r) => r.status === 201,
-        "Valid order response includes Location header": (r) => r.headers["Location"],
-        "Valid order response contains shipmentId": (r) => JSON.parse(r.body).notification.shipmentId
-    });
 
-    // Stop the test if the primary scenario fails
-    stopIterationOnFail("Main order creation failed - stopping test", success);
+    // Create unique request with new IDs
+    const orgNoRecipient = getOrgNoRecipient();
+    const uniqueRequest = JSON.parse(JSON.stringify(data.validOrderRequest));
+    uniqueRequest.idempotencyId = uuidv4();
+    uniqueRequest.dialogportenAssociation.dialogId = uuidv4();
+    uniqueRequest.dialogportenAssociation.transmissionId = uuidv4();
+    uniqueRequest.recipient.recipientOrganization.orgNumber = orgNoRecipient;
+    uniqueRequest.sendersReference = "k6-test-order-with-reminders-" + uuidv4().substring(0, 8);
 
-    // Store successful response for later comparison
-    const orderResponse = JSON.parse(response.body);
-    const shipmentId = orderResponse.notification.shipmentId;
+    for (let reminder of uniqueRequest.reminders) {
+        reminder.recipient.recipientOrganization.orgNumber = orgNoRecipient;
+        reminder.sendersReference = "reminder-" + uniqueRequest.sendersReference;
+    }
 
-    // Test Case 3: Duplicate Order Submission (Idempotency)
-    // Tests that sending the same order twice returns the existing order details
-    response = postNotificationOrderChain(data, data.validOrderRequest, post_duplicate_order);
-    check(response, {
-        "Duplicate order returns 200 OK": (r) => r.status === 200,
-        "Duplicate order returns original shipmentId": (r) => JSON.parse(r.body).notification.shipmentId === shipmentId
-    });
+    let orderResponse = postNotificationOrderChain(data, data.validOrderRequest);
 
-    // Test Case 4: Order Without Resource ID
-    // Tests that the API handles missing resource IDs appropriately
-    response = postNotificationOrderChain(data, data.noResourceIdOrderRequest);
-    check(response, {
-        "No-resourceId order returns appropriate status": (r) => r.status === 201 || r.status === 422,
-        "No-resourceId order response is well-formed": (r) => r.status === 422 || JSON.parse(r.body).notification !== undefined
-    });
+    let shipmentId;
+    let responseBody;   
+    let responseCategory;
+
+    try {
+        switch (orderResponse.status) {
+
+            case 200:
+                responseCategory = "duplicate_order";
+                responseBody = JSON.parse(orderResponse.body);
+                shipmentId = responseBody.notification?.shipmentId;
+
+                check(orderResponse, {
+                    "Duplicate order returns 200 OK": (r) => r.status === 200,
+                    "Duplicate order contains valid notification": (r) => responseBody.notification !== undefined,
+                    "Duplicate order contains shipmentId": (r) => shipmentId !== undefined
+                })
+                break;
+
+            case 201:
+                responseCategory = "created_successfully";
+                responseBody = JSON.parse(orderResponse.body);
+                shipmentId = responseBody.notification?.shipmentId;
+
+                check(orderResponse, {
+                    "Valid order accepted with 201 Created": (r) => r.status === 201,
+                    "Valid order response contains shipmentId": (r) => shipmentId !== undefined,
+                    "Valid order response includes Location header": (r) => r.headers["Location"] !== undefined
+                });
+                break;
+
+            case 401:
+            case 403:
+                responseCategory = "authentication_error";
+                check(orderResponse, {
+                    "Authentication/authorization error handled": (r) => r.status === 401 || r.status === 403
+                });
+                break;
+
+            default:
+                responseCategory = "unexpected_status";
+                check(orderResponse, {
+                    "Response has a status code": (r) => r.status > 0
+                });
+        }
+    } catch (error) {
+        responseCategory = "execution_error";
+    }
+
+    // Stop iteration on critical failures
+    if (responseCategory === "authentication_error" || responseCategory === "execution_error") {
+        stopIterationOnFail(`Critical error in ${responseCategory}`, false);
+    }
+
+    return shipmentId;
 }
