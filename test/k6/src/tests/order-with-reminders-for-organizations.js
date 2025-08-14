@@ -208,69 +208,64 @@ export default function (data) {
 
     if (orderChainRequests.validOrder) {
         const validOrderResponse = postNotificationOrderChain(data, orderChainRequests.validOrder, post_order_chain);
-        responses.push({ name: "valid_order", response: validOrderResponse });
-    }
-
-    if (orderChainRequests.duplicateOrder) {
-        const duplicateResponse = postNotificationOrderChain(data, orderChainRequests.duplicateOrder, post_duplicate_order);
-        responses.push({ name: "duplicate_valid_order", response: duplicateResponse });
+        responses.push({ name: "valid-order", response: validOrderResponse });
     }
 
     if (orderChainRequests.invalidOrder) {
         const invalidResponse = postNotificationOrderChain(data, orderChainRequests.invalidOrder, post_invalid_order);
-        responses.push({ name: "invalid_order", response: invalidResponse });
+        responses.push({ name: "invalid-order", response: invalidResponse });
+    }
+
+    if (orderChainRequests.duplicateOrder) {
+        const duplicateResponse = postNotificationOrderChain(data, orderChainRequests.duplicateOrder, post_duplicate_order);
+        responses.push({ name: "duplicate-valid-order", response: duplicateResponse });
     }
 
     if (orderChainRequests.missingResourceOrder) {
         const missingResourceIdentiiferResponse = postNotificationOrderChain(data, orderChainRequests.missingResourceOrder, post_order_chain);
-        responses.push({ name: "order_without_resource_identifier", response: missingResourceIdentiiferResponse });
+        responses.push({ name: "order-without-resource-identifier", response: missingResourceIdentiiferResponse });
     }
 
     let criticalFailure = false;
-    for (const entry of responses) {
-        const r = entry.response;
+    for (const responsesEntry of responses) {
         let body;
+        const requestResponse = responsesEntry.response;
+
         try {
-            body = r.body ? JSON.parse(r.body) : {};
+            body = requestResponse.body ? JSON.parse(requestResponse.body) : {};
         } catch (_) {
             // ignore parse error for paths not returning JSON
         }
 
-        switch (entry.name) {
-            case "invalid_validation":
-                check(r, {
-                    "400 validation (invalid order)": (res) => res.status === 400
-                });
-                break;
-
-            case "missing_resource":
-                check(r, {
-                    "Missing resource returns 201 or 422": (res) => res.status === 201 || res.status === 422
-                });
-                break;
-
-            case "invalid_contact":
-                check(r, {
-                    "Invalid contact org returns 422 or 201 fallback": (res) => res.status === 422 || res.status === 201
-                });
-                break;
-
-            case "valid_first":
-                check(r, {
-                    "Valid order returns 201 Created": (res) => res.status === 201,
+        switch (responsesEntry.name) {
+            case "valid-order":
+                check(requestResponse, {
+                    "Valid order returns 201 Created": (result) => result.status === 201,
                     "Valid order has shipmentId": () => body?.notification?.shipmentId !== undefined
                 });
                 break;
 
-            case "duplicate_second":
-                check(r, {
-                    "Duplicate order returns 200 OK": (res) => res.status === 200,
+            case "invalid-order":
+                check(requestResponse, {
+                    "400 validation (invalid order)": (result) => result.status === 400
+                });
+                break;
+
+            case "duplicate-valid-order":
+                check(requestResponse, {
+                    "Duplicate order returns 200 OK": (result) => result.status === 200,
                     "Duplicate order has existing shipmentId": () => body?.notification?.shipmentId !== undefined
+                });
+                break;
+
+            case "order-without-resource-identifier":
+                check(requestResponse, {
+                    "Missing resource returns 201 or 422": (result) => result.status === 422
                 });
                 break;
         }
 
-        if (r.status === 401 || r.status === 403) {
+        if (responsesEntry.status === 401 || responsesEntry.status === 403) {
             criticalFailure = true;
         }
     }
