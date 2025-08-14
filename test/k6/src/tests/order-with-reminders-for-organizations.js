@@ -24,9 +24,25 @@ import { post_order_chain, post_invalid_order, post_duplicate_order, setEmptyThr
 const orderChainRequestJson = JSON.parse(open("../data/orders/order-with-reminders-for-organizations.json"));
 
 export const options = {
+    scenarios: {
+        orders_mix: {
+            maxVUs: 1000,
+            startRate: 10,
+            timeUnit: '1s',
+            preAllocatedVUs: 100,
+            executor: 'ramping-arrival-rate',
+            stages: [
+                { target: 50, duration: '2m' },
+                { target: 150, duration: '5m' },
+                { target: 300, duration: '10m' },
+                { target: 0, duration: '2m' }
+            ]
+        }
+    },
     summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(95)', 'p(99)', 'p(99.5)', 'p(99.9)', 'count'],
     thresholds: {
-        checks: ['rate>=1']
+        checks: ['rate>=1'],
+        'http_req_duration{scenario:orders_mix}': ['p(95)<1500', 'p(99)<3000']
     }
 };
 
