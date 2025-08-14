@@ -18,7 +18,6 @@ export const get_status_feed = "get_status_feed";
 export const post_valid_order = "post_valid_order";
 export const post_invalid_order = "post_invalid_order";
 export const post_duplicate_order = "post_duplicate_order";
-export const post_order_with_resource_id = "post_order_with_resource_id";
 export const post_order_without_resource_id = "post_order_without_resource_id";
 
 /**

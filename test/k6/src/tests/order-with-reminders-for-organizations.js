@@ -28,7 +28,7 @@ import { getOrgNoRecipient } from "../shared/functions.js";
 import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 import { scopes, resourceId, orderTypes } from "../shared/variables.js";
 import { textSummary } from "https://jslib.k6.io/k6-summary/0.0.1/index.js";
-import { post_valid_order, post_invalid_order, post_duplicate_order, post_order_with_resource_id, post_order_without_resource_id, setEmptyThresholds } from "./threshold-labels.js";
+import { post_valid_order, post_invalid_order, post_duplicate_order, post_order_without_resource_id, setEmptyThresholds } from "./threshold-labels.js";
 
 // Rate to track the proportion of successful requests (non-4xx/5xx responses) to total requests
 const successRate = new Rate("success_rate");
@@ -61,7 +61,6 @@ const missingResourceOrderDuration = new Trend("missing_resource_order_duration"
  * - `post_valid_order`: Label for testing valid orders.
  * - `post_invalid_order`: Label for testing invalid orders.
  * - `post_duplicate_order`: Label for testing duplicate orders.
- * - `post_order_with_resource_id`: Label for testing valid orders with a resource identifier.
  * - `post_order_without_resource_id`: Label for testing valid orders without a resource identifier.
  *
  * @function setEmptyThresholds
@@ -71,7 +70,7 @@ const missingResourceOrderDuration = new Trend("missing_resource_order_duration"
  * This code ensures that each label in the `labels` array has an empty threshold defined in the `options` object.
  * Empty thresholds are useful for scenarios where no specific performance criteria are required but the label must still be tracked.
  */
-const labels = [post_valid_order, post_invalid_order, post_duplicate_order, post_order_with_resource_id, post_order_without_resource_id];
+const labels = [post_valid_order, post_invalid_order, post_duplicate_order, post_order_without_resource_id];
 setEmptyThresholds(labels, options);
 
 /**
@@ -169,68 +168,71 @@ export default function (data) {
 
     if (orderChainRequests.validOrder) {
         const response = postNotificationOrderChain(data, orderChainRequests.validOrder, post_order_chain);
+
         recordResult(response);
         validOrderDuration.add(response.timings.duration);
         responses.push({ name: "valid-order", response: res });
     }
 
     if (orderChainRequests.invalidOrder) {
-        const res = postNotificationOrderChain(data, orderChainRequests.invalidOrder, post_invalid_order);
-        recordResult(res);
-        invalidOrderDuration.add(res.timings.duration);
-        responses.push({ name: "invalid-order", response: res });
+        const response = postNotificationOrderChain(data, orderChainRequests.invalidOrder, post_invalid_order);
+
+        recordResult(response);
+        invalidOrderDuration.add(response.timings.duration);
+        responses.push({ name: "invalid-order", response: response });
     }
 
     if (orderChainRequests.duplicateOrder) {
-        const res = postNotificationOrderChain(data, orderChainRequests.duplicateOrder, post_duplicate_order);
-        duplicateOrderDuration.add(res.timings.duration);
-        recordResult(res);
-        responses.push({ name: "duplicate-valid-order", response: res });
+        const response = postNotificationOrderChain(data, orderChainRequests.duplicateOrder, post_duplicate_order);
+
+        recordResult(response);
+        duplicateOrderDuration.add(response.timings.duration);
+        responses.push({ name: "duplicate-order", response: response });
     }
 
     if (orderChainRequests.missingResourceOrder) {
-        const res = postNotificationOrderChain(data, orderChainRequests.missingResourceOrder, post_order_chain);
-        missingResourceOrderDuration.add(res.timings.duration);
-        recordResult(res);
-        responses.push({ name: "order-without-resource-identifier", response: res });
+        const response = postNotificationOrderChain(data, orderChainRequests.missingResourceOrder, post_order_chain);
+
+        recordResult(response);
+        missingResourceOrderDuration.add(response.timings.duration);
+        responses.push({ name: "missing-resource-id", response: response });
     }
 
-    // --- Validate responses ---
     let criticalFailure = false;
     for (const entry of responses) {
-        let body;
-        const resp = entry.response;
-        try {
-            body = resp.body ? JSON.parse(resp.body) : {};
-        } catch (_) { }
         switch (entry.name) {
             case "valid-order":
-                check(resp, {
+                check(entry.response, {
                     "Valid order returns 201 Created": (r) => r.status === 201,
                     "Valid order has shipmentId": () => body?.notification?.shipmentId !== undefined
                 });
                 break;
+
             case "invalid-order":
-                check(resp, {
+                check(entry.response, {
                     "400 validation (invalid order)": (r) => r.status === 400
                 });
                 break;
-            case "duplicate-valid-order":
-                check(resp, {
+
+            case "duplicate-order":
+                check(entry.response, {
                     "Duplicate order returns 200 OK": (r) => r.status === 200,
                     "Duplicate order has existing shipmentId": () => body?.notification?.shipmentId !== undefined
                 });
                 break;
-            case "order-without-resource-identifier":
-                check(resp, {
+
+            case "missing-resource-id":
+                check(entry.response, {
                     "Missing resource returns 201 or 422": (r) => r.status === 201 || r.status === 422
                 });
                 break;
         }
-        if (resp.status === 401 || resp.status === 403) {
+
+        if (entry.response.status === 401 || entry.response.status === 403) {
             criticalFailure = true;
         }
     }
+
     if (criticalFailure) {
         stopIterationOnFail("Critical authentication/authorization error encountered", false);
     }
