@@ -15,10 +15,11 @@ export const post_sms_instant_order_v2 = "post_sms_instant_order_v2";
 
 export const get_status_feed = "get_status_feed";
 
-export const post_order_chain = "post_order_chain";
+export const post_valid_order = "post_valid_order";
 export const post_invalid_order = "post_invalid_order";
-export const get_order_shipment = "get_order_shipment";
 export const post_duplicate_order = "post_duplicate_order";
+export const post_order_with_resource_id = "post_order_with_resource_id";
+export const post_order_without_resource_id = "post_order_without_resource_id";
 
 /**
  * Sets empty thresholds for the specified labels
