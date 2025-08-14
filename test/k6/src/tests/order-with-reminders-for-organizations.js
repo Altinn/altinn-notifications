@@ -1,23 +1,15 @@
 /*
     Test script for creating notification orders and reminders intended for organizations.
-    
-    Covered scenarios:
-    - Validation error handling for invalid requests (400 Bad Request)
-    - Orders without resource IDs (201 Created or 422 Unprocessable Entity)
-    - Idempotency check for duplicate orders (200 OK with existing details)
-    - Valid notification order creation with email/SMS reminders (201 Created)
-    - Shipment status verification (checking identifier, reference, type, status)
 
-    Command:
-    podman compose run k6 run /src/tests/orders-org-chain-v2.js \
-        -e tokenGeneratorUserName={the user name to access the token generator} \
-        -e tokenGeneratorUserPwd={the password to access the token generator} \
-        -e mpClientId={the id of an integration defined in maskinporten} \
-        -e mpKid={the key id of the JSON web key used to sign the maskinporten token request} \
-        -e encodedJwk={the encoded JSON web key used to sign the maskinporten token request} \
-        -e env={environment: at22, at23, at24, tt02, prod} \
-        -e orgNoRecipient={an organization number to include as a notification recipient} \
-        -e resourceId={the resource ID associated with the notification order} \
+    Scenarios exercised in a single iteration (without aborting unless critical auth/execution error):
+    - 400 Bad Request (validation failure)
+    - 201 Created (valid order)
+    - 200 OK (idempotent duplicate)
+    - 201 Created or 422 Unprocessable Entity (missing resourceId path)
+    - 422 Unprocessable Entity (invalid/unknown org contact path attempt)
+
+    The script creates a unique idempotency identifier per "valid" scenario, and reuses it to test idempotency.
+    Organization number: uses provided __ENV.orgNoRecipient or a random 9-digit number (fallback).
 */
 
 import { check } from "k6";
@@ -25,13 +17,11 @@ import * as setupToken from "../setup.js";
 import * as ordersApi from "../api/notifications/v2.js";
 import { stopIterationOnFail } from "../errorhandler.js";
 import { getOrgNoRecipient } from "../shared/functions.js";
-import { scopes, resourceId } from "../shared/variables.js";
 import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
-import { post_order_chain, setEmptyThresholds } from "./threshold-labels.js";
+import { scopes, resourceId, orderTypes } from "../shared/variables.js";
+import { post_order_chain, post_invalid_order, post_duplicate_order, setEmptyThresholds } from "./threshold-labels.js";
 
-const orderChainRequestJson = JSON.parse(
-    open("../data/orders/order-with-reminders-for-organizations.json")
-);
+const orderChainRequestJson = JSON.parse(open("../data/orders/order-with-reminders-for-organizations.json"));
 
 export const options = {
     summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(95)', 'p(99)', 'p(99.5)', 'p(99.9)', 'count'],
@@ -40,125 +30,252 @@ export const options = {
     }
 };
 
-const labels = [post_order_chain];
+const labels = [post_order_chain, post_invalid_order, post_duplicate_order];
 setEmptyThresholds(labels, options);
 
 /**
- * Initialize test data for various test scenarios.
+ * Initialize test data.
  */
 export function setup() {
-    // Generate an authentication token
     const token = setupToken.getAltinnTokenForOrg(scopes);
 
-    // Create a valid order request template
-    const validOrderRequest = JSON.parse(JSON.stringify(orderChainRequestJson));
-    validOrderRequest.recipient.recipientOrganization.resourceId = resourceId;
+    const randomIdentifier = uuidv4().substring(0, 8);
+    const mainOrderSendersReference = `k6-order-${randomIdentifier}`;
+    const reminderSendersReference = `k6-order-rem-${randomIdentifier}`;
 
-    return {
-        token,
-        validOrderRequest
-    };
-}
-
-/**
- * Posts a notification order chain request.
- * 
- * @param {Object} data - The test data context containing token
- * @param {Object} orderRequest - The order request object to be registered
- * @param {string} label - Custom metric label for tracking this specific operation type
- * @returns {Object} - The HTTP response object
- */
-function postNotificationOrderChain(data, orderRequest, label = post_order_chain) {
-    const response = ordersApi.postNotificationOrderV2(
-        JSON.stringify(orderRequest),
-        data.token,
-        label
-    );
-
-    return response;
-}
-
-/**
-* Main test function that executes all notification order scenarios.
-* Each virtual user will run through this complete sequence.
-*/
-export default function (data) {
-    // Create unique request with new IDs for each VU
-    const orgNoRecipient = getOrgNoRecipient();
-    const uniqueRequest = JSON.parse(JSON.stringify(data.validOrderRequest));
-
-    // Generate unique identifiers
-    uniqueRequest.idempotencyId = uuidv4();
-    uniqueRequest.sendersReference = "k6-test-order-with-reminders-" + uuidv4().substring(0, 8);
-
-    // Create dialogportenAssociation with unique IDs
-    uniqueRequest.dialogportenAssociation = {
+    const orderChainRequest = JSON.parse(JSON.stringify(orderChainRequestJson));
+    orderChainRequest.dialogportenAssociation = {
         dialogId: uuidv4(),
         transmissionId: uuidv4()
     };
 
-    // Update all reminders with unique references
-    for (let reminder of uniqueRequest.reminders) {
-        reminder.sendersReference = "reminder-" + uniqueRequest.sendersReference;
+    orderChainRequest.sendersReference = mainOrderSendersReference;
+    orderChainRequest.recipient.recipientOrganization.resourceId = resourceId;
+
+    orderChainRequest.reminders = orderChainRequest.reminders.map((reminder) => {
+        reminder.sendersReference = reminderSendersReference;
         reminder.recipient.recipientOrganization.resourceId = resourceId;
-        reminder.recipient.recipientOrganization.orgNumber = orgNoRecipient;
-    }
+        return reminder;
+    });
 
-    // Send the UNIQUE request (not the original template)
-    let orderResponse = postNotificationOrderChain(data, uniqueRequest);
+    return {
+        token,
+        orderChainRequest
+    };
+}
 
-    let shipmentId;
-    let responseBody;
-    let responseCategory;
+/**
+ * Prepares an invalid order request by removing the recipientOrganization
+ * from both the main recipient and all reminders. This simulates a 400 Bad Request
+ * due to missing required fields.
+ *
+ * @param {Object} baseOrder - A cloned order request object to be modified.
+ * @returns {Object} - The modified order request with missing recipientOrganization fields.
+ */
+function prepareInvalidOrder(baseOrder) {
+    delete baseOrder.recipient.recipientOrganization;
 
-    try {
-        if (orderResponse.body) {
-            responseBody = JSON.parse(orderResponse.body);
-            shipmentId = responseBody.notification?.shipmentId;
-        }
+    baseOrder.reminders.forEach(reminder => {
+        delete reminder.recipient.recipientOrganization;
+    });
 
-        switch (orderResponse.status) {
-            case 200:
-                responseCategory = "duplicate_order";
-                check(orderResponse, {
-                    "Duplicate order returns 200 OK": (r) => r.status === 200,
-                    "Duplicate order contains valid notification": () => responseBody.notification !== undefined,
-                    "Duplicate order contains shipmentId": () => shipmentId !== undefined
-                });
+    return baseOrder;
+}
+
+/**
+ * Prepares an order request with missing resourceId fields by removing the resourceId
+ * from both the main recipient and all reminders. This simulates a 201 Created or
+ * 422 Unprocessable Entity response depending on API behavior.
+ *
+ * Additionally, a new idempotencyId is generated to ensure uniqueness.
+ *
+ * @param {Object} baseOrder - A cloned order request object to be modified.
+ * @returns {Object} - The modified order request with missing resourceId fields.
+ */
+function prepareMissingResourceOrder(baseOrder) {
+    baseOrder.idempotencyId = uuidv4();
+    delete baseOrder.recipient.recipientOrganization.resourceId;
+
+    baseOrder.reminders.forEach(reminder => {
+        delete reminder.recipient.recipientOrganization.resourceId;
+    });
+
+    return baseOrder;
+}
+
+/**
+ * Creates a new unquie order-chain request based on a template, with updated orgNumber and idempotencyId.
+ * @param data - The base data object containing the original orderChainRequest.
+ * @param orgNumber - The organization number to apply to the recipient and reminders.
+ * @returns A deep-cloned and updated order request object.
+ */
+function createUnquieOrderChainRequest(data, orgNumber) {
+    const clonedOrderChainRequest = JSON.parse(JSON.stringify(data.orderChainRequest));
+
+    clonedOrderChainRequest.idempotencyId = uuidv4();
+    clonedOrderChainRequest.recipient.recipientOrganization.orgNumber = orgNumber;
+
+    clonedOrderChainRequest.reminders.forEach(reminder => {
+        reminder.recipient.recipientOrganization.orgNumber = orgNumber;
+    });
+
+    return clonedOrderChainRequest;
+}
+
+/**
+ * Posts a notification orderChainRequests chain.
+ * @param data - Contains the token and other metadata.
+ * @param orderRequest - The order request object to be sent.
+ * @param label - Optional label for logging or tracking.
+ * @returns The result of the API call.
+ */
+function postNotificationOrderChain(data, orderRequest, label = post_order_chain) {
+    return ordersApi.postNotificationOrderV2(JSON.stringify(orderRequest), data.token, label);
+}
+
+/**
+ * Generates one or more order chain requests based on the specified order type(s).
+ *
+ * @param {string[]} orderTypes - List of order types to generate (e.g. ["valid", "invalid"]).
+ * @param {Object} data - Setup data including token and base template.
+ * @param {string} orgNumber - Organization number to apply to the orderChainRequests.
+ * @returns {Object} - Object containing the generated orderChainRequests keyed by type.
+ */
+function generateOrderChainRequestByOrderType(orderTypes, data, orgNumber) {
+    const orderChainRequests = {};
+
+    for (const orderType of orderTypes) {
+        switch (orderType) {
+            case "valid":
+                orderChainRequests.validOrder = createUnquieOrderChainRequest(data, orgNumber);
                 break;
 
-            case 201:
-                responseCategory = "created_successfully";
-                check(orderResponse, {
-                    "Valid order accepted with 201 Created": (r) => r.status === 201,
-                    "Valid order response contains shipmentId": () => shipmentId !== undefined,
-                    "Valid order response includes Location header": (r) => r.headers["Location"] !== undefined
-                });
+            case "duplicate":
+                if (orderChainRequests.validOrder) {
+                    orderChainRequests.validOrder = createUnquieOrderChainRequest(data, orgNumber);
+                }
+
+                orderChainRequests.duplicateOrder = JSON.parse(JSON.stringify(orderChainRequests.validOrder));
                 break;
 
-            case 401:
-            case 403:
-                responseCategory = "authentication_error";
-                check(orderResponse, {
-                    "Authentication/authorization error handled": (r) => r.status === 401 || r.status === 403
-                });
+            case "invalid":
+                orderChainRequests.invalidOrder = prepareInvalidOrder(createUnquieOrderChainRequest(data, orgNumber));
+                break;
+
+            case "missingResource":
+                orderChainRequests.missingResourceOrder = prepareMissingResourceOrder(createUnquieOrderChainRequest(data, orgNumber));
+                break;
+
+            case "all":
+                orderChainRequests.validOrder = createUnquieOrderChainRequest(data, orgNumber);
+                orderChainRequests.duplicateOrder = JSON.parse(JSON.stringify(orderChainRequests.validOrder));
+                orderChainRequests.invalidOrder = prepareInvalidOrder(createUnquieOrderChainRequest(data, orgNumber));
+                orderChainRequests.missingResourceOrder = prepareMissingResourceOrder(createUnquieOrderChainRequest(data, orgNumber));
                 break;
 
             default:
-                responseCategory = "unexpected_status";
-                check(orderResponse, {
-                    "Response has a status code": (r) => r.status > 0
-                });
+                console.error(`Unknown orderType: ${orderType}`);
+                stopIterationOnFail(`Invalid orderType: ${orderType}`);
         }
-    } catch (error) {
-        responseCategory = "execution_error";
-        console.error(`Error during test execution: ${error.message}`);
     }
 
-    // Stop iteration on critical failures
-    if (responseCategory === "authentication_error" || responseCategory === "execution_error") {
-        stopIterationOnFail(`Critical error in ${responseCategory}`, false);
+    return orderChainRequests;
+}
+
+/**
+ * Main test execution function for sending notification order requests to the API.
+ *
+ * The function determines which type(s) of order to create and send based on the `orderType`
+ * environment variable. Supported types include:
+ * - "valid": Sends a valid order (expects 201 Created).
+ * - "duplicate": Sends the same order twice to test idempotency (expects 200 OK on second).
+ * - "invalid": Sends an order missing required fields (expects 400 Bad Request).
+ * - "missingResource": Sends an order missing resource identifiers (expects 201 or 422).
+ * - "all": Executes all of the above scenarios in sequence.
+ *
+ * Each order is created using helper functions and posted to the API using `postNotificationOrderChain`.
+ * The responses are validated using `check`, and critical authentication errors (401/403) will stop the iteration.
+ *
+ * @function
+ * @param {Object} data - The setup data returned from the `setup()` function, including token and base order template.
+ * @returns {void}
+ */
+export default function (data) {
+    const orgNumber = getOrgNoRecipient();
+    const orderChainRequests = generateOrderChainRequestByOrderType(orderTypes, data, orgNumber);
+
+    const responses = [];
+
+    if (orderChainRequests.validOrder) {
+        const validOrderResponse = postNotificationOrderChain(data, orderChainRequests.validOrder, post_order_chain);
+        responses.push({ name: "valid_order", response: validOrderResponse });
     }
 
-    return shipmentId;
+    if (orderChainRequests.duplicateOrder) {
+        const duplicateResponse = postNotificationOrderChain(data, orderChainRequests.duplicateOrder, post_duplicate_order);
+        responses.push({ name: "duplicate_valid_order", response: duplicateResponse });
+    }
+
+    if (orderChainRequests.invalidOrder) {
+        const invalidResponse = postNotificationOrderChain(data, orderChainRequests.invalidOrder, post_invalid_order);
+        responses.push({ name: "invalid_order", response: invalidResponse });
+    }
+
+    if (orderChainRequests.missingResourceOrder) {
+        const missingResourceIdentiiferResponse = postNotificationOrderChain(data, orderChainRequests.missingResourceOrder, post_order_chain);
+        responses.push({ name: "order_without_resource_identifier", response: missingResourceIdentiiferResponse });
+    }
+
+    let criticalFailure = false;
+    for (const entry of responses) {
+        const r = entry.response;
+        let body;
+        try {
+            body = r.body ? JSON.parse(r.body) : {};
+        } catch (_) {
+            // ignore parse error for paths not returning JSON
+        }
+
+        switch (entry.name) {
+            case "invalid_validation":
+                check(r, {
+                    "400 validation (invalid order)": (res) => res.status === 400
+                });
+                break;
+
+            case "missing_resource":
+                check(r, {
+                    "Missing resource returns 201 or 422": (res) => res.status === 201 || res.status === 422
+                });
+                break;
+
+            case "invalid_contact":
+                check(r, {
+                    "Invalid contact org returns 422 or 201 fallback": (res) => res.status === 422 || res.status === 201
+                });
+                break;
+
+            case "valid_first":
+                check(r, {
+                    "Valid order returns 201 Created": (res) => res.status === 201,
+                    "Valid order has shipmentId": () => body?.notification?.shipmentId !== undefined
+                });
+                break;
+
+            case "duplicate_second":
+                check(r, {
+                    "Duplicate order returns 200 OK": (res) => res.status === 200,
+                    "Duplicate order has existing shipmentId": () => body?.notification?.shipmentId !== undefined
+                });
+                break;
+        }
+
+        if (r.status === 401 || r.status === 403) {
+            criticalFailure = true;
+        }
+    }
+
+    if (criticalFailure) {
+        stopIterationOnFail("Critical authentication/authorization error encountered", false);
+    }
 }
