@@ -54,6 +54,101 @@ const duplicateOrderDuration = new Trend("duplicate_order_duration");
 // Trend to track the response time (duration) for orders missing a resource (expected to return a 201 Created or 200 Ok status)
 const missingResourceOrderDuration = new Trend("missing_resource_order_duration");
 
+// Test data for order chain requests, loaded from a JSON file.
+const orderChainRequestJson = JSON.parse(open("../data/orders/order-with-reminders-for-organizations.json"));
+
+export const options = {
+    scenarios: {
+        post_valid_order: {
+            maxVUs: 50,
+            startRate: 10,
+            timeUnit: '1s',
+            preAllocatedVUs: 50,
+            executor: 'ramping-arrival-rate',
+            stages: [
+                { target: 50, duration: '2m' },
+                { target: 100, duration: '5m' },
+                { target: 150, duration: '10m' },
+                { target: 0, duration: '2m' }
+            ]
+        },
+        post_invalid_order: {
+            maxVUs: 50,
+            startRate: 5,
+            timeUnit: '1s',
+            preAllocatedVUs: 25,
+            executor: 'ramping-arrival-rate',
+            stages: [
+                { target: 25, duration: '2m' },
+                { target: 50, duration: '5m' },
+                { target: 75, duration: '10m' },
+                { target: 0, duration: '2m' }
+            ]
+        },
+        post_duplicate_order: {
+            maxVUs: 50,
+            startRate: 5,
+            timeUnit: '1s',
+            preAllocatedVUs: 25,
+            executor: 'ramping-arrival-rate',
+            stages: [
+                { target: 25, duration: '2m' },
+                { target: 50, duration: '5m' },
+                { target: 75, duration: '10m' },
+                { target: 0, duration: '2m' }
+            ]
+        },
+        post_order_without_resource_id: {
+            maxVUs: 50,
+            startRate: 5,
+            timeUnit: '1s',
+            preAllocatedVUs: 25,
+            executor: 'ramping-arrival-rate',
+            stages: [
+                { target: 25, duration: '2m' },
+                { target: 50, duration: '5m' },
+                { target: 75, duration: '10m' },
+                { target: 0, duration: '2m' }
+            ]
+        },
+        capacity_probe: {
+            maxVUs: 500,
+            startRate: 50,
+            timeUnit: '1s',
+            preAllocatedVUs: 100,
+            executor: 'ramping-arrival-rate',
+            stages: [
+                { target: 100, duration: '1m' },
+                { target: 200, duration: '1m' },
+                { target: 300, duration: '1m' },
+                { target: 400, duration: '1m' },
+                { target: 500, duration: '1m' },
+                { target: 0, duration: '30s' }
+            ]
+        },
+        forecast_load: {
+            rate: 600,
+            maxVUs: 500,
+            timeUnit: '1s',
+            duration: '5m',
+            preAllocatedVUs: 200,
+            executor: 'constant-arrival-rate'
+        }
+    },
+    summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(95)', 'p(99)', 'count'],
+    thresholds: {
+        checks: ['rate>=1'],
+        'http_5xx': ['count<50'],
+        'success_rate': ['rate>0.99'],
+        'failed_requests': ['count<100'],
+        'valid_order_duration': ['p(95)<1500'],
+        'invalid_order_duration': ['p(95)<500'],
+        'duplicate_order_duration': ['p(95)<1000'],
+        'missing_resource_order_duration': ['p(95)<2000'],
+        'http_req_duration': ['p(95)<2000']
+    }
+};
+
 /**
  * Defines threshold labels for specific test scenarios and applies empty thresholds to them.
  *
@@ -91,8 +186,6 @@ setEmptyThresholds(labels, options);
  */
 export function setup() {
     const token = setupToken.getAltinnTokenForOrg(scopes);
-
-    const orderChainRequestJson = JSON.parse(open("../data/orders/order-with-reminders-for-organizations.json"));
 
     const randomIdentifier = uuidv4().substring(0, 8);
     const mainOrderSendersReference = `k6-order-${randomIdentifier}`;
@@ -167,11 +260,11 @@ export default function (data) {
     const responses = [];
 
     if (orderChainRequests.validOrder) {
-        const response = postNotificationOrderChain(data, orderChainRequests.validOrder, post_order_chain);
+        const response = postNotificationOrderChain(data, orderChainRequests.validOrder, post_valid_order);
 
         recordResult(response);
         validOrderDuration.add(response.timings.duration);
-        responses.push({ name: "valid-order", response: res });
+        responses.push({ name: "valid-order", response: response });
     }
 
     if (orderChainRequests.invalidOrder) {
@@ -191,20 +284,24 @@ export default function (data) {
     }
 
     if (orderChainRequests.missingResourceOrder) {
-        const response = postNotificationOrderChain(data, orderChainRequests.missingResourceOrder, post_order_chain);
+        const response = postNotificationOrderChain(data, orderChainRequests.missingResourceOrder, post_order_without_resource_id);
 
         recordResult(response);
         missingResourceOrderDuration.add(response.timings.duration);
         responses.push({ name: "missing-resource-id", response: response });
     }
 
-    let criticalFailure = false;
     for (const entry of responses) {
+        if (entry.response.status === 401 || entry.response.status === 403) {
+            stopIterationOnFail("Critical authentication/authorization error encountered", false);
+            break;
+        }
+
         switch (entry.name) {
             case "valid-order":
                 check(entry.response, {
                     "Valid order returns 201 Created": (r) => r.status === 201,
-                    "Valid order has shipmentId": () => body?.notification?.shipmentId !== undefined
+                    "Valid order has shipmentId": () => entry.response.body?.notification?.shipmentId !== undefined
                 });
                 break;
 
@@ -217,7 +314,7 @@ export default function (data) {
             case "duplicate-order":
                 check(entry.response, {
                     "Duplicate order returns 200 OK": (r) => r.status === 200,
-                    "Duplicate order has existing shipmentId": () => body?.notification?.shipmentId !== undefined
+                    "Duplicate order has existing shipmentId": () => entry.response.body?.notification?.shipmentId !== undefined
                 });
                 break;
 
@@ -227,14 +324,6 @@ export default function (data) {
                 });
                 break;
         }
-
-        if (entry.response.status === 401 || entry.response.status === 403) {
-            criticalFailure = true;
-        }
-    }
-
-    if (criticalFailure) {
-        stopIterationOnFail("Critical authentication/authorization error encountered", false);
     }
 }
 
