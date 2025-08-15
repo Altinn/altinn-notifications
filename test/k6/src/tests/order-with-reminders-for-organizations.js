@@ -7,15 +7,40 @@
     - 400 Bad Request (validation failure)
 
     The script generates a unique idempotency identifier for each "valid" scenario and reuses it to test idempotency.
-    Organization number: uses the provided __ENV.orgNoRecipient or generates a random 9-digit number as a fallback.
+    Organization number: uses the provided `__ENV.orgNoRecipient` or the script will generate a random 9-digit number as a fallback.
 
     Additional Scenarios:
-    - Capacity probe: Determines the maximum sustainable throughput under increasing load.
     - Forecast load: Simulates expected traffic rates to verify system readiness.
+    - Capacity probe: Determines the maximum sustainable throughput under increasing load.
+
+    Metrics Tracked:
+    - `http4xx`: Count of HTTP 4xx responses (client errors).
+    - `http5xx`: Count of HTTP 5xx responses (server errors).
+    - `failedRequests`: Total number of failed requests (4xx or 5xx).
+    - `validOrderDuration`: Response time for valid orders (201 Created).
+    - `duplicateOrderDuration`: Response time for duplicate orders (200 OK).
+    - `successRate`: Proportion of successful requests (non-4xx/5xx responses).
+    - `invalidOrderDuration`: Response time for invalid orders (400 Bad Request).
+    - `missingResourceOrderDuration`: Response time for orders missing a resource (less interacting with external APIs).
+
+    Thresholds:
+    - `http5xx`: Must be < 50.
+    - `successRate`: Must be > 99%.
+    - `failedRequests`: Must be < 100.
+    - Response time thresholds for various scenarios (e.g., `validOrderDuration` < 1500ms).
+
+    Error Handling:
+    - Stops iteration on critical errors (e.g., 401 Unauthorized, 403 Forbidden).
+
+    Test Data:
+    - Loaded from `../data/orders/order-with-reminders-for-organizations.json`.
+
+    Custom Summary:
+    - Generates a JSON summary (`summary.json`) and a human-readable summary for terminal output.
 
     Goals:
-    1. Observe system and third-party behavior under various load conditions.
-    2. Identify the current maximum sustainable capacity.
+    1. Identify the current maximum sustainable capacity.
+    2. Observe system and third-party behavior under various load conditions.
     3. Validate readiness for forecasted traffic and ensure compliance with SLAs.
 */
 
@@ -57,8 +82,35 @@ const missingResourceOrderDuration = new Trend("missing_resource_order_duration"
 // Test data for order chain requests, loaded from a JSON file.
 const orderChainRequestJson = JSON.parse(open("../data/orders/order-with-reminders-for-organizations.json"));
 
+
+/*
+
+*/
 export const options = {
     scenarios: {
+        forecast_load: {
+            rate: 600,
+            maxVUs: 500,
+            timeUnit: '1s',
+            duration: '5m',
+            preAllocatedVUs: 200,
+            executor: 'constant-arrival-rate'
+        },
+        capacity_probe: {
+            maxVUs: 500,
+            startRate: 50,
+            timeUnit: '1s',
+            preAllocatedVUs: 100,
+            executor: 'ramping-arrival-rate',
+            stages: [
+                { target: 100, duration: '1m' },
+                { target: 200, duration: '1m' },
+                { target: 300, duration: '1m' },
+                { target: 400, duration: '1m' },
+                { target: 500, duration: '1m' },
+                { target: 0, duration: '30s' }
+            ]
+        },
         post_valid_order: {
             maxVUs: 50,
             startRate: 10,
@@ -110,29 +162,6 @@ export const options = {
                 { target: 75, duration: '10m' },
                 { target: 0, duration: '2m' }
             ]
-        },
-        capacity_probe: {
-            maxVUs: 500,
-            startRate: 50,
-            timeUnit: '1s',
-            preAllocatedVUs: 100,
-            executor: 'ramping-arrival-rate',
-            stages: [
-                { target: 100, duration: '1m' },
-                { target: 200, duration: '1m' },
-                { target: 300, duration: '1m' },
-                { target: 400, duration: '1m' },
-                { target: 500, duration: '1m' },
-                { target: 0, duration: '30s' }
-            ]
-        },
-        forecast_load: {
-            rate: 600,
-            maxVUs: 500,
-            timeUnit: '1s',
-            duration: '5m',
-            preAllocatedVUs: 200,
-            executor: 'constant-arrival-rate'
         }
     },
     summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(95)', 'p(99)', 'count'],
@@ -141,11 +170,11 @@ export const options = {
         'http_5xx': ['count<50'],
         'success_rate': ['rate>0.99'],
         'failed_requests': ['count<100'],
+        'http_req_duration': ['p(95)<2000'],
         'valid_order_duration': ['p(95)<1500'],
         'invalid_order_duration': ['p(95)<500'],
         'duplicate_order_duration': ['p(95)<1000'],
-        'missing_resource_order_duration': ['p(95)<2000'],
-        'http_req_duration': ['p(95)<2000']
+        'missing_resource_order_duration': ['p(95)<2000']
     }
 };
 
