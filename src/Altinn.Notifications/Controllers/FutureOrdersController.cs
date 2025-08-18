@@ -17,7 +17,7 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace Altinn.Notifications.Controllers;
 
 /// <summary>
-/// Controller to handle notification orders that has non or more reminders.
+/// Controller to handle notification orders that has one or more reminders.
 /// </summary>
 [ApiController]
 [Route("notifications/api/v1/future/orders")]
@@ -32,14 +32,16 @@ public class FutureOrdersController : ControllerBase
     /// <summary>
     /// Initializes a new instance of the <see cref="FutureOrdersController"/> class.
     /// </summary>
-    public FutureOrdersController(IOrderRequestService orderRequestService, IValidator<NotificationOrderChainRequestExt> validator)
+    public FutureOrdersController(
+        IOrderRequestService orderRequestService, 
+        IValidator<NotificationOrderChainRequestExt> validator)
     {
         _validator = validator;
         _orderRequestService = orderRequestService;
     }
 
     /// <summary>
-    /// Creates a new notification order that has non or more reminders.
+    /// Creates a new notification order with zero or more reminders
     /// </summary>
     /// <remarks>
     /// The API will accept the request after some basic validation of the request.

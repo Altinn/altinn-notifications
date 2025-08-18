@@ -21,4 +21,14 @@ public interface IProfileClient
     /// <param name="resourceId">The id of the resource to look up contact points for</param>
     /// <returns>A list of organiation contact points containing user registered contact points</returns>
     public Task<List<OrganizationContactPoints>> GetUserRegisteredContactPoints(List<string> organizationNumbers, string resourceId);
+
+    /// <summary>
+    /// Asynchronously retrieves contact point details for the specified organizations.
+    /// </summary>
+    /// <param name="organizationNumbers">A collection of organization numbers for which contact point details are requested.</param>
+    /// <returns>
+    /// A task that represents the asynchronous operation. 
+    /// The task result contains a list of <see cref="OrganizationContactPoints"/> representing the contact points of the specified organizations.
+    /// </returns>
+    Task<List<OrganizationContactPoints>> GetOrganizationContactPoints(List<string> organizationNumbers);
 }

@@ -13,6 +13,7 @@ using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.Integrations.Kafka.Producers;
 using Altinn.Notifications.Integrations.Register;
 using Altinn.Notifications.Integrations.SendCondition;
+using Altinn.Notifications.Integrations.ShortMessageService;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -59,6 +60,7 @@ public static class ServiceCollectionExtensions
         services.Configure<PlatformSettings>(config.GetSection(nameof(PlatformSettings)));
         services.AddHttpClient<IProfileClient, ProfileClient>();
         services.AddHttpClient<IRegisterClient, RegisterClient>();
+        services.AddHttpClient<IShortMessageServiceClient, ShortMessageServiceClient>();
     }
 
     /// <summary>

@@ -1,12 +1,12 @@
 ﻿using System.Collections.Immutable;
 using System.Data;
-using System.Text.RegularExpressions;
 
+using Altinn.Notifications.Core.Helpers;
 using Altinn.Notifications.Core.Models.Delivery;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Mappers;
-using Npgsql;
 
+using Npgsql;
 using NpgsqlTypes;
 
 namespace Altinn.Notifications.Persistence.Repository;
@@ -144,7 +144,7 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
         var lastUpdate = reader.GetDateTime(lastUpdateOrdinal);
         var destination = reader.GetString(destinationOrdinal);
 
-        IDeliveryManifest deliverableEntity = Utilities.Helpers.MobileNumbersRegex().IsMatch(destination)
+        IDeliveryManifest deliverableEntity = MobileNumberHelper.IsValidMobileNumber(destination)
             ? new SmsDeliveryManifest
             {
                 LastUpdate = lastUpdate,

@@ -1,4 +1,5 @@
 ﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Shared;
 
@@ -10,10 +11,14 @@ namespace Altinn.Notifications.Core.Persistence;
 public interface IOrderRepository
 {
     /// <summary>
-    /// Creates a new notification order in the database
+    /// Creates a new notification order in the database with processing status set to <see cref="OrderProcessingStatus.Registered"/>.
     /// </summary>
     /// <param name="order">The order to save</param>
     /// <returns>The saved notification order</returns>
+    /// <remarks>
+    /// This method persists the notification order with <see cref="OrderProcessingStatus.Registered"/>, 
+    /// indicating it is ready for asynchronous processing by the notification pipeline.
+    /// </remarks>
     public Task<NotificationOrder> Create(NotificationOrder order);
 
     /// <summary>
@@ -32,6 +37,33 @@ public interface IOrderRepository
     /// - Zero or more reminder notifications that will be processed after their respective delays.
     /// </remarks>
     public Task<List<NotificationOrder>> Create(NotificationOrderChainRequest orderChain, NotificationOrder mainOrder, List<NotificationOrder>? reminders, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Creates a new new high-priority instant notification order in the database.
+    /// </summary>
+    /// <param name="instantNotificationOrder">
+    /// The <see cref="InstantNotificationOrder"/> containing recipient, message, and delivery details.
+    /// </param>
+    /// <param name="notificationOrder">
+    /// The <see cref="NotificationOrder"/> representing the standard notification order.
+    /// </param>
+    /// <param name="smsNotification">
+    /// The <see cref="SmsNotification"/> instance containing SMS-specific delivery information.
+    /// </param>
+    /// <param name="smsExpiryDateTime">
+    /// The <see cref="DateTime"/> indicating when the SMS notification expires and should no longer be delivered.
+    /// </param>
+    /// <param name="smsMessageCount">
+    /// The number of SMS messages to be sent based on the message content.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A <see cref="CancellationToken"/> to monitor for cancellation requests. Defaults to <see cref="CancellationToken.None"/>.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task{TResult}"/> containing a <see cref="InstantNotificationOrderTracking"/> with tracking information,
+    /// or <c>null</c> if the operation failed.
+    /// </returns>
+    Task<InstantNotificationOrderTracking?> Create(InstantNotificationOrder instantNotificationOrder, NotificationOrder notificationOrder, SmsNotification smsNotification, DateTime smsExpiryDateTime, int smsMessageCount, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets a list of notification orders where requestedSendTime has passed
@@ -118,4 +150,22 @@ public interface IOrderRepository
     /// related notifications have reached terminal states. The status is only updated to 'Completed' if this condition is met.
     /// </remarks>
     public Task<bool> TryCompleteOrderBasedOnNotificationsState(Guid? notificationId, AlternateIdentifierSource source);
+
+    /// <summary>
+    /// Retrieves tracking information for an instant notification order using the creator's name and idempotency identifier.
+    /// </summary>
+    /// <param name="creatorName">
+    /// The short name of the creator who originally submitted the instant notification order.
+    /// </param>
+    /// <param name="idempotencyId">
+    /// The idempotency identifier specified when the instant notification order was created.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A token to monitor for cancellation requests. Defaults to <see cref="CancellationToken.None"/>.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task{TResult}"/> containing a <see cref="InstantNotificationOrderTracking"/> with tracking information,
+    /// or <c>null</c> if no matching order is found for the provided parameters.
+    /// </returns>
+    Task<InstantNotificationOrderTracking?> RetrieveInstantOrderTrackingInformation(string creatorName, string idempotencyId, CancellationToken cancellationToken = default);
 }

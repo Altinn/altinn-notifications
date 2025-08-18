@@ -24,49 +24,107 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 SmsSendWindowStartHour = 9,
                 SmsSendWindowEndHour = 17
             };
+
             _notificationScheduleService = new(_dateTimeMock.Object, Options.Create(config));
         }
 
         [Fact]
-        public void CanSendSmsNotifications_WithinBusinessHours_ReturnsTrue()
+        public void CanSendSmsNow_WhenCurrentTimeIsWithinSendWindow_ReturnsTrue()
         {
             // Arrange
-            var dateTime = new DateTime(2022, 1, 1, 10, 0, 0, DateTimeKind.Utc); // 10:00 UTC is 11:00 or 12:00 local time
-            _dateTimeMock.Setup(m => m.UtcNow()).Returns(dateTime);
+            var currentDateTime = new DateTime(2022, 1, 1, 10, 0, 0, DateTimeKind.Utc); // 10:00 UTC is 11:00 or 12:00 local time
+            _dateTimeMock.Setup(e => e.UtcNow()).Returns(currentDateTime);
 
             // Act
-            var result = _notificationScheduleService.CanSendSmsNotifications();
+            var result = _notificationScheduleService.CanSendSmsNow();
 
             // Assert
             Assert.True(result);
         }
 
         [Fact]
-        public void CanSendSmsNotifications_AfterBusinessHours_ReturnsFalse()
+        public void CanSendSmsNow_WhenCurrentTimeIsAfterSendWindow_ReturnsFalse()
         {
             // Arrange
-            var dateTime = new DateTime(2022, 1, 1, 20, 0, 0, DateTimeKind.Utc); // 20:00 UTC is 21:00 or 22:00 local time
-            _dateTimeMock.Setup(m => m.UtcNow()).Returns(dateTime);
+            var currentDateTime = new DateTime(2022, 1, 1, 20, 0, 0, DateTimeKind.Utc); // 20:00 UTC is 21:00 or 22:00 local time
+            _dateTimeMock.Setup(e => e.UtcNow()).Returns(currentDateTime);
 
             // Act
-            var result = _notificationScheduleService.CanSendSmsNotifications();
+            var result = _notificationScheduleService.CanSendSmsNow();
 
             // Assert
             Assert.False(result);
         }
 
         [Fact]
-        public void CanSendSmsNotifications_BeforeBusinessHours_ReturnsFalse()
+        public void CanSendSmsNow_WhenCurrentTimeIsBeforeSendWindow_ReturnsFalse()
         {
             // Arrange
-            var dateTime = new DateTime(2022, 1, 1, 5, 0, 0, DateTimeKind.Utc); // 05:00 UTC is 07:00 or 08:00 local time
-            _dateTimeMock.Setup(m => m.UtcNow()).Returns(dateTime);
+            var currentDateTime = new DateTime(2022, 1, 1, 5, 0, 0, DateTimeKind.Utc); // 05:00 UTC is 07:00 or 08:00 local time
+            _dateTimeMock.Setup(e => e.UtcNow()).Returns(currentDateTime);
 
             // Act
-            var result = _notificationScheduleService.CanSendSmsNotifications();
+            var result = _notificationScheduleService.CanSendSmsNow();
 
             // Assert
             Assert.False(result);
+        }
+
+        [Fact]
+        public void GetSmsExpiryDateTime_RequestSendTimeIsWithinSendWindow_ReturnsNextStartTime()
+        {
+            // Arrange
+            var requestedSendTime = new DateTime(2025, 08, 25, 10, 0, 0, DateTimeKind.Utc); // 10:00 UTC is 11:00 or 12:00 local time
+
+            var expectedExpiryDateTime = new DateTime(2025, 08, 27, 10, 0, 0, DateTimeKind.Utc);
+
+            // Act
+            var expiryDateTime = _notificationScheduleService.GetSmsExpirationDateTime(requestedSendTime);
+
+            // Assert
+            Assert.Equal(expectedExpiryDateTime, expiryDateTime);
+        }
+
+        [Fact]
+        public void GetSmsExpiryDateTime_WhenReferenceTimeIsAfterSendWindow_ReturnsNextSendWindowStartDateTime()
+        {
+            // Arrange
+            var requestedSendTime = new DateTime(2025, 08, 25, 20, 0, 0, DateTimeKind.Utc); // 20:00 UTC is 21:00 or 22:00 local time
+
+            var expectedExpiryDateTime = new DateTime(2025, 08, 28, 07, 0, 0, DateTimeKind.Utc);
+
+            // Act
+            var expiryDateTime = _notificationScheduleService.GetSmsExpirationDateTime(requestedSendTime);
+
+            // Assert
+            Assert.Equal(expectedExpiryDateTime, expiryDateTime);
+        }
+
+        [Fact]
+        public void GetSmsExpiryDateTime_WhenReferenceTimeIsBeforeSendWindow_ReturnsNextSendWindowStartDateTime()
+        {
+            // Arrange
+            var requestedSendTime = new DateTime(2025, 08, 25, 05, 0, 0, DateTimeKind.Utc); // 05:00 UTC is 06:00 or 07:00 local time
+
+            var expectedExpiryDateTime = new DateTime(2025, 08, 27, 07, 0, 0, DateTimeKind.Utc);
+
+            // Act
+            var expiryDateTime = _notificationScheduleService.GetSmsExpirationDateTime(requestedSendTime);
+
+            // Assert
+            Assert.Equal(expectedExpiryDateTime, expiryDateTime);
+        }
+
+        [Theory]
+        [InlineData(DateTimeKind.Local)]
+        [InlineData(DateTimeKind.Unspecified)]
+        public void GetSmsExpirationDateTime_WhenReferenceDateTimeIsNotUtc_ThrowsArgumentException(DateTimeKind kind)
+        {
+            // Arrange
+            var nonUtcDateTime = new DateTime(2025, 8, 25, 10, 0, 0, kind);
+
+            // Act & Assert
+            Assert.Throws<ArgumentException>(() => _notificationScheduleService.GetSmsExpirationDateTime(nonUtcDateTime));
         }
     }
 }

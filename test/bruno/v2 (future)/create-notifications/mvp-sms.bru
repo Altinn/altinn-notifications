@@ -1,0 +1,41 @@
+meta {
+  name: MVP - SMS
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "{{random_idempotency_id}}",
+    "recipient": {
+      "recipientSms": {
+        "phoneNumber": "{{process.env.TESTDATA_MY_PHONE}}",
+        "smsSettings": {
+          "sendingTimePolicy": "Daytime",
+          "body": "(TEST) Dette er en testmelding til meg selv (Env.: {{Environment}} - Ref: {{random_idempotency_id}})"
+        }
+      }
+    }
+  }
+}
+
+docs {
+  "\n", "\r\n" and "\r" are converted to " " (single space character). \n\r is thus converted to two spaces ("  "), representing two lines.
+  This is consistent with how the same characters are rendered in the body in plaintext (a new line and a blank line, in Outlook on Windows).
+  
+  ``` 
+  Multiline
+  Email Body -
+  Covering
+  
+  all
+  platforms
+  ``` 
+}

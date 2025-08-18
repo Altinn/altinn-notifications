@@ -1,0 +1,26 @@
+meta {
+  name: validation - technical framework
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {  
+    "sendersReference": "{{random_idempotency_id}}",
+    "recipient": {
+      "recipientSms": {
+        "phoneNumber": "{{process.env.TESTDATA_MY_PHONE}}",
+        "smsSettings": {
+          "sendingTimePolicy": "Daytime",
+          "body": "(TEST) Dette er en testmelding til meg selv (Env.: {{Environment}} - Ref: {{random_idempotency_id}})"
+        }
+      }
+    }
+  }
+}

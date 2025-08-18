@@ -35,13 +35,13 @@ public record OrderStatusExt
     public ProcessingLifecycleExt Status { get; init; }
 
     /// <summary>
-    /// Gets the date and time when the status was was created.
+    /// Gets the date and time when the status was created.
     /// </summary>
     [JsonPropertyName("lastUpdate")]
     public DateTime LastUpdated { get; init; }
 
     /// <summary>
-    /// The type of shipment (e.g. Notificaion or Reminder)
+    /// The type of shipment (e.g. Notification or Reminder)
     /// </summary>
     [JsonPropertyName("shipmentType")]
     public string? ShipmentType { get; init; }

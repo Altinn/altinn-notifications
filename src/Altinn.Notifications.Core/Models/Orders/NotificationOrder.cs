@@ -58,30 +58,32 @@ public class NotificationOrder : IBaseNotificationOrder
     /// </summary>
     public NotificationOrder(
         Guid id,
-        string? sendersReference,
-        List<INotificationTemplate> templates,
-        DateTime requestedSendTime,
-        NotificationChannel notificationChannel,
+        OrderType type,
         Creator creator,
         DateTime created,
-        List<Recipient> recipients,
-        bool? ignoreReservation,
         string? resourceId,
         Uri? conditionEndpoint,
-        OrderType type)
+        bool? ignoreReservation,
+        string? sendersReference,
+        DateTime requestedSendTime,
+        List<Recipient> recipients,
+        SendingTimePolicy? sendingTimePolicy,
+        List<INotificationTemplate> templates,
+        NotificationChannel notificationChannel)
     {
         Id = id;
-        SendersReference = sendersReference;
-        Templates = templates;
-        RequestedSendTime = requestedSendTime;
-        NotificationChannel = notificationChannel;
+        Type = type;
         Creator = creator;
         Created = created;
+        Templates = templates;
         Recipients = recipients;
-        IgnoreReservation = ignoreReservation;
         ResourceId = resourceId;
+        SendersReference = sendersReference;
+        RequestedSendTime = requestedSendTime;
+        IgnoreReservation = ignoreReservation;
         ConditionEndpoint = conditionEndpoint;
-        Type = type;
+        SendingTimePolicy = sendingTimePolicy;
+        NotificationChannel = notificationChannel;
     }
 
     /// <summary>

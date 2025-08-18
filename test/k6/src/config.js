@@ -1,4 +1,5 @@
 import { stopIterationOnFail } from "./errorhandler.js";
+import { environment } from "./shared/variables.js";
 
 // Base URLs for the Altinn platform across different environments.
 const baseUrls = {
@@ -16,7 +17,6 @@ const maskinportenBaseUrls = {
     tt02: "https://test.maskinporten.no/"
 };
 
-const environment = __ENV.env ? __ENV.env.toLowerCase() : null;
 if (!environment) {
     stopIterationOnFail("Environment variable 'env' is not set", false);
 }
@@ -40,6 +40,14 @@ export const notifications = {
     orders_sms: `https://platform.${baseUrl}/notifications/api/v1/orders/sms/`,
 
     orders_email: `https://platform.${baseUrl}/notifications/api/v1/orders/email/`,
+
+    orders_v2: `https://platform.${baseUrl}/notifications/api/v1/future/orders/`,
+
+    orders_sms_instant_v2: `https://platform.${baseUrl}/notifications/api/v1/future/orders/instant`,
+
+    shipment_v2: (orderId) => `https://platform.${baseUrl}/notifications/api/v1/future/shipment/${orderId}`,
+
+    statusfeed_v2: (sequenceNumber) => `https://platform.${baseUrl}/notifications/api/v1/future/shipment/feed?seq=${sequenceNumber}`,
 
     orders_fromId: (orderId) => `https://platform.${baseUrl}/notifications/api/v1/orders/${orderId}`,
 

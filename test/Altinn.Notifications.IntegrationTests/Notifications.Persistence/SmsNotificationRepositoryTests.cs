@@ -266,7 +266,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
             WHERE alternateid = '{smsNotification.Id}';";
 
         await PostgreUtil.RunSql(sql);
-        
+
         // Act
         await sut.TerminateExpiredNotifications();
 

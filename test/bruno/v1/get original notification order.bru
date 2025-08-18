@@ -1,0 +1,15 @@
+meta {
+  name: get original notification order
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{host}}/notifications/api/v1/orders/:notificationId
+  body: none
+  auth: inherit
+}
+
+params:path {
+  notificationId: 848e9bd8-1459-4bc0-bb8f-8e9fade79bf2
+}

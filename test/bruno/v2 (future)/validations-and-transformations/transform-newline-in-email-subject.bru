@@ -1,0 +1,43 @@
+meta {
+  name: transform - newline in email subject
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "sendersReference": "{{random_idempotency_id}}-notif",
+    "idempotencyId": "{{random_idempotency_id}}",
+    "recipient": {
+      "recipientEmail": {
+        "emailAddress": "{{process.env.TESTDATA_MY_EMAIL}}",
+        "emailSettings": {        
+          "subject": "(TEST) Multiline\nEmail Subject - \r\nCovering\n\rall\rplatforms",
+          "body": "(TEST) Multiline\nEmail Body - \r\nCovering\n\rall\rplatforms\n\n(Env.: {{Environment}} - Ref: {{random_idempotency_id}})",
+          "contentType": "Plain",
+          "sendingTimePolicy": "Anytime"
+        }
+      }
+    }
+  }
+}
+
+docs {
+  "\n", "\r\n" and "\r" are converted to " " (single space character). \n\r is thus converted to two spaces ("  "), representing two lines.
+  This is consistent with how the same characters are rendered in the body in plaintext (a new line and a blank line, in Outlook on Windows).
+  
+  ``` 
+  Multiline
+  Email Body -
+  Covering
+  
+  all
+  platforms
+  ``` 
+}

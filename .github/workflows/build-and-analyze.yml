@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres: # note that updating this image might break the pipeline if the agent doesn't support the new version
-        image: postgres:17@sha256:6efd0df010dc3cb40d5e33e3ef84acecc5e73161bd3df06029ee8698e5e12c60
+        image: postgres:16@sha256:3264898409adb05925064daab9158c2d43ff9ad5d8fbcfdb5aad3a937240da7a
         env:
           POSTGRES_USER: platform_notifications_admin
           POSTGRES_PASSWORD: Password
@@ -52,7 +52,7 @@ jobs:
         run: |
           # Restart only the Postgres service
           docker ps \
-            --filter "ancestor=postgres:17@sha256:6efd0df010dc3cb40d5e33e3ef84acecc5e73161bd3df06029ee8698e5e12c60" \
+            --filter "ancestor=postgres:16@sha256:3264898409adb05925064daab9158c2d43ff9ad5d8fbcfdb5aad3a937240da7a" \
             -q \
           | xargs docker restart
       - name: Set up Kafka
@@ -94,7 +94,7 @@ jobs:
           path: '**/TestResults/*.trx'
       - name: Process unit test result
         if: always()
-        uses: NasAmin/trx-parser@d34de965cdf3c5efc1e986bd13b7914e29fed7df # v0.6.0
+        uses: NasAmin/trx-parser@359b39f5319df4478443ef1f0eb952f159896995 # v0.7.0
         with:
           TRX_PATH: ${{ github.workspace }}/TestResults
           REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}

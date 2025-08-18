@@ -41,14 +41,15 @@ public class AuthorizationService : IAuthorizationService
     /// <param name="organizationContactPoints">The list organizations with associated right holders.</param>
     /// <param name="resourceId">The id of the resource.</param>
     /// <returns>A new list of <see cref="OrganizationContactPoints"/> with filtered list of recipients.</returns>
-    public async Task<List<OrganizationContactPoints>> AuthorizeUserContactPointsForResource(
-        List<OrganizationContactPoints> organizationContactPoints, string resourceId)
+    public async Task<List<OrganizationContactPoints>> AuthorizeUserContactPointsForResource(List<OrganizationContactPoints> organizationContactPoints, string resourceId)
     {
-        XacmlJsonRequestRoot jsonRequest = BuildAuthorizationRequest(organizationContactPoints, resourceId);
+        var sanitizedResourceId = GetSanitizedResourceId(resourceId);
+
+        XacmlJsonRequestRoot jsonRequest = BuildAuthorizationRequest(organizationContactPoints, sanitizedResourceId);
 
         XacmlJsonResponse xacmlJsonResponse = await _pdp.GetDecisionForRequest(jsonRequest);
 
-        List<OrganizationContactPoints> filtered = 
+        List<OrganizationContactPoints> filtered =
             organizationContactPoints.Select(o => o.CloneWithoutContactPoints()).ToList();
 
         foreach (var response in xacmlJsonResponse.Response.Where(r => r.Decision == "Permit"))
@@ -78,6 +79,11 @@ public class AuthorizationService : IAuthorizationService
         }
 
         return filtered;
+    }
+
+    private static string GetSanitizedResourceId(string resourceId)
+    {
+        return resourceId.StartsWith("urn:altinn:resource:", StringComparison.Ordinal) ? resourceId["urn:altinn:resource:".Length..] : resourceId;
     }
 
     private static XacmlJsonRequestRoot BuildAuthorizationRequest(List<OrganizationContactPoints> organizationContactPoints, string resourceId)

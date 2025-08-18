@@ -1,0 +1,32 @@
+meta {
+  name: Validation demo - contract
+  type: http
+  seq: 6
+  description: Tests API validation by sending an invalid contract to verify proper error handling
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt}}
+}
+
+body:json {
+  {
+    "this contract will not work": "I am sure!"
+  }
+}
+
+tests {
+  test("should return 400 status code", function() {
+    expect(res.getStatus()).to.equal(400);
+  });
+  
+  test("should contain ValidationError in response", function() {
+    expect(res.getBody()).to.contain("ValidationError");
+  });
+}

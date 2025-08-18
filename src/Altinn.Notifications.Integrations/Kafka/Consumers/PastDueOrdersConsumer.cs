@@ -21,14 +21,13 @@ public class PastDueOrdersConsumer : KafkaConsumerBase<PastDueOrdersConsumer>
     /// Initializes a new instance of the <see cref="PastDueOrdersConsumer"/> class.
     /// </summary>
     public PastDueOrdersConsumer(
-        IOrderProcessingService orderProcessingService,
         IKafkaProducer producer,
         IOptions<KafkaSettings> settings,
-        ILogger<PastDueOrdersConsumer> logger)
-        : base(settings, logger, settings.Value.PastDueOrdersTopicName)
+        ILogger<PastDueOrdersConsumer> logger,
+        IOrderProcessingService orderProcessingService) : base(settings, logger, settings.Value.PastDueOrdersTopicName)
     {
-        _orderProcessingService = orderProcessingService;
         _producer = producer;
+        _orderProcessingService = orderProcessingService;
         _retryTopic = settings.Value.PastDueOrdersRetryTopicName;
     }
 
@@ -47,7 +46,11 @@ public class PastDueOrdersConsumer : KafkaConsumerBase<PastDueOrdersConsumer>
             return;
         }
 
-        await _orderProcessingService.ProcessOrder(order);
+        var processingResult = await _orderProcessingService.ProcessOrder(order);
+        if (processingResult.IsRetryRequired)
+        {
+            await _producer.ProduceAsync(_retryTopic, message);
+        }
     }
 
     private async Task RetryOrder(string message)

@@ -16,7 +16,7 @@
     Notes:
     - To run only use case tests, omit `runFullTestSet` or set it to `false`.
     - The `resourceId` is required and should be a valid resource identifier.
-    - The `orgNoRecipient` is required for sending notifications to an organization.
+    - The `orgNoRecipient` is required for sending notifications to an organization, _unless_ set environment = yt01 .
 
     Command syntax for different shells:
     - Bash: Use the command as written above.
@@ -33,18 +33,11 @@ import { orgNosYt01 } from "../data/orgnos.js";
 import * as ordersApi from "../api/notifications/orders.js";
 import * as notificationsApi from "../api/notifications/notifications.js";
 import { post_mail_order, get_mail_notifications, post_sms_order, get_sms_notifications, setEmptyThresholds } from "./threshold-labels.js";
-
-const environment = __ENV.env;
-const yt01Environment = "yt01";
-const resourceId = __ENV.resourceId;
-const scopes = "altinn:serviceowner/notifications.create";
-
+import { scopes, resourceId, environment, yt01Environment } from "../shared/variables.js";
 
 const emailOrderRequestJson = JSON.parse(
     open("../data/orders/01-email-request.json")
 );
-
-const labels = [post_mail_order, get_mail_notifications, post_sms_order, get_sms_notifications];
 
 export const options = {
     summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(95)', 'p(99)', 'p(99.5)', 'p(99.9)', 'count'],
@@ -53,6 +46,9 @@ export const options = {
         checks: ['rate>=1']
     }
 };
+
+const labels = [post_mail_order, get_mail_notifications, post_sms_order, get_sms_notifications];
+
 setEmptyThresholds(labels, options);
 
 /**

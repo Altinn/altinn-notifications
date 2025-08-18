@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -19,853 +18,1350 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
     public class ContactPointServiceTests
     {
         [Fact]
-        public async Task AddSmsContactPoints_NationalIdentityNumberAvailable_ProfileServiceCalled()
+        public async Task AddSmsContactPoints_WhenUsingNationalId_ShouldEnrichRecipientsWithMobileNumber()
         {
             // Arrange
-            List<Recipient> input = [
-                new Recipient()
-                {
-                    NationalIdentityNumber = "12345678901"
-                }
-            ];
+            string nationalId = "17269942983";
+            string rawMobileNumber = "99999999";
+            string formattedMobileNumber = "+4799999999";
+            string emailAddress = "recipient@example.com";
 
-            List<Recipient> expectedOutput = [
-                new Recipient()
-                {
-                    NationalIdentityNumber = "12345678901",
-                    IsReserved = true,
-                    AddressInfo = [new SmsAddressPoint("+4799999999")]
-                }
-            ];
+            var recipientsToEnrich = new List<Recipient>
+            {
+                new() { NationalIdentityNumber = nationalId }
+            };
 
             var profileClientMock = new Mock<IProfileClient>();
             profileClientMock
-                .Setup(p => p.GetUserContactPoints(It.Is<List<string>>(s => s.Contains("12345678901"))))
-                .ReturnsAsync([new UserContactPoints() { NationalIdentityNumber = "12345678901", MobileNumber = "99999999", IsReserved = true }]);
-
-            var service = GetTestService(profileClient: profileClientMock.Object);
-
-            // Act
-            await service.AddSmsContactPoints(input, null);
-
-            // Assert 
-            Assert.Equivalent(expectedOutput, input);
-            string actualMobileNumber = ((SmsAddressPoint)input[0].AddressInfo[0]).MobileNumber;
-            Assert.Equal("+4799999999", actualMobileNumber);
-        }
-
-        [Fact]
-        public async Task AddSmsContactPoints_OrganizationNumberAvailable_RegisterServiceCalled()
-        {
-            // Arrange
-            List<Recipient> input = [
-                new Recipient()
-                {
-                    OrganizationNumber = "12345678901"
-                }
-            ];
-
-            List<Recipient> expectedOutput = [
-                new Recipient()
-                {
-                    OrganizationNumber = "12345678901",
-                    AddressInfo = [new SmsAddressPoint("+4799999999")]
-                }
-            ];
-
-            var registerClientMock = new Mock<IRegisterClient>();
-            registerClientMock
-                .Setup(p => p.GetOrganizationContactPoints(It.Is<List<string>>(s => s.Contains("12345678901"))))
-                .ReturnsAsync([new OrganizationContactPoints() { OrganizationNumber = "12345678901", MobileNumberList = ["+4799999999"] }]);
-
-            var service = GetTestService(registerClient: registerClientMock.Object);
-
-            // Act
-            await service.AddSmsContactPoints(input, null);
-
-            // Assert 
-            Assert.Equivalent(expectedOutput, input);
-        }
-
-        [Fact]
-        public async Task AddSmsContactPoints_OrganizationNumberAndResourceAvailable_AuthorizationPermitAll()
-        {
-            // Arrange
-            string resource = "urn:altinn:resource";
-
-            List<Recipient> input = [
-                new Recipient()
-                {
-                    OrganizationNumber = "12345678901"
-                }
-            ];
-
-            List<Recipient> expectedOutput = [
-                new Recipient()
-                {
-                    OrganizationNumber = "12345678901",
-                    AddressInfo = [new SmsAddressPoint("+4799999999"), new SmsAddressPoint("+4748123456"), new SmsAddressPoint("+4699999999")]
-                }
-            ];
-
-            var registerClientMock = new Mock<IRegisterClient>();
-            registerClientMock
-                .Setup(r => r.GetOrganizationContactPoints(It.IsAny<List<string>>()))
-                .ReturnsAsync([new OrganizationContactPoints() { OrganizationNumber = "12345678901", MobileNumberList = ["+4799999999"] }]);
-
-            var profileClientMock = new Mock<IProfileClient>();
-            profileClientMock
-                .Setup(p => p.GetUserRegisteredContactPoints(It.IsAny<List<string>>(), It.Is<string>(s => s.Equals("urn:altinn:resource"))))
-                .ReturnsAsync([
-                    new OrganizationContactPoints()
-                    {
-                        PartyId = 78901,
-                        OrganizationNumber = "12345678901",
-                        UserContactPoints = [
-                            new UserContactPoints()
-                            {
-                                UserId = 200001,
-                                MobileNumber = "+4748123456",
-                                Email = "user-1@domain.com"
-                            },
-                            new UserContactPoints()
-                            {
-                                UserId = 200009,
-                                MobileNumber = "004699999999",
-                                Email = "user-9@domain.com"
-                            }
-                        ]
-                    }
-                    ]);
-
-            var authorizationServiceMock = new Mock<IAuthorizationService>();
-            authorizationServiceMock
-                .Setup(a => a.AuthorizeUserContactPointsForResource(It.IsAny<List<OrganizationContactPoints>>(), It.Is<string>(s => s.Equals("urn:altinn:resource"))))
-                .ReturnsAsync((List<OrganizationContactPoints> input, string resource) => input);
-
-            var service = GetTestService(profileClientMock.Object, registerClientMock.Object, authorizationServiceMock.Object);
-
-            // Act
-            await service.AddSmsContactPoints(input, resource);
-
-            // Assert 
-            registerClientMock.VerifyAll();
-            profileClientMock.VerifyAll();
-            authorizationServiceMock.VerifyAll();
-            Assert.Equivalent(expectedOutput, input);
-        }
-
-        [Fact]
-        public async Task AddEmailContactPoints_NationalIdentityNumberAvailable_ProfileServiceCalled()
-        {
-            // Arrange
-            List<Recipient> input = [
-                new Recipient()
-                {
-                    NationalIdentityNumber = "12345678901"
-                }
-            ];
-
-            List<Recipient> expectedOutput = [
-                new Recipient()
-                {
-                    NationalIdentityNumber = "12345678901",
-                    IsReserved = true,
-                    AddressInfo = [new EmailAddressPoint("email@domain.com")]
-                }
-            ];
-
-            var profileClientMock = new Mock<IProfileClient>();
-            profileClientMock
-                .Setup(p => p.GetUserContactPoints(It.Is<List<string>>(s => s.Contains("12345678901"))))
-                .ReturnsAsync([new UserContactPoints() { NationalIdentityNumber = "12345678901", Email = "email@domain.com", IsReserved = true }]);
-
-            var service = GetTestService(profileClient: profileClientMock.Object);
-
-            // Act
-            await service.AddEmailContactPoints(input, null);
-
-            // Assert 
-            Assert.Equivalent(expectedOutput, input);
-        }
-
-        [Fact]
-        public async Task AddEmailContactPoints_OrganizationNumberAvailable_RegisterServiceCalled()
-        {
-            // Arrange
-            List<Recipient> input = [
-                new Recipient()
-                {
-                    OrganizationNumber = "12345678901"
-                }
-            ];
-
-            List<Recipient> expectedOutput = [
-                new Recipient()
-                {
-                    OrganizationNumber = "12345678901",
-                    AddressInfo = [new EmailAddressPoint("email@domain.com")]
-                }
-            ];
-
-            var registerClientMock = new Mock<IRegisterClient>();
-            registerClientMock
-                .Setup(p => p.GetOrganizationContactPoints(It.Is<List<string>>(s => s.Contains("12345678901"))))
-                .ReturnsAsync([new OrganizationContactPoints() { OrganizationNumber = "12345678901", EmailList = ["email@domain.com"] }]);
-
-            var service = GetTestService(registerClient: registerClientMock.Object);
-
-            // Act
-            await service.AddEmailContactPoints(input, null);
-
-            // Assert 
-            Assert.Equivalent(expectedOutput, input);
-        }
-
-        [Fact]
-        public async Task AddEmailContactPoints_OrganizationNumberAndResourceAvailable_NoOfficialContact_AuthorizationDenyOne()
-        {
-            // Arrange
-            string resource = "urn:altinn:resource";
-
-            List<Recipient> input = [
-                new Recipient()
-                {
-                    OrganizationNumber = "12345678901"
-                }
-            ];
-
-            List<Recipient> expectedOutput = [
-                new Recipient()
-                {
-                    OrganizationNumber = "12345678901",
-                    AddressInfo = [new EmailAddressPoint("user-1@domain.com")]
-                }
-            ];
-
-            var registerClientMock = new Mock<IRegisterClient>();
-            registerClientMock
-                .Setup(r => r.GetOrganizationContactPoints(It.IsAny<List<string>>()))
-                .ReturnsAsync([]);
-
-            var profileClientMock = new Mock<IProfileClient>();
-            profileClientMock
-                .Setup(p => p.GetUserRegisteredContactPoints(It.IsAny<List<string>>(), It.Is<string>(s => s.Equals("urn:altinn:resource"))))
-                .ReturnsAsync([
-                    new OrganizationContactPoints()
-                    {
-                        PartyId = 78901,
-                        OrganizationNumber = "12345678901",
-                        UserContactPoints = [
-                          new UserContactPoints()
-                          {
-                              UserId = 200001,
-                              MobileNumber = "+4748123456",
-                              Email = "user-1@domain.com"
-                          },
-                            new UserContactPoints()
-                            {
-                                UserId = 200009,
-                                MobileNumber = "004699999999",
-                                Email = "user-9@domain.com"
-                            }
-                        ]
-                    }
-                    ]);
-
-            var authorizationServiceMock = new Mock<IAuthorizationService>();
-            authorizationServiceMock
-                .Setup(a => a.AuthorizeUserContactPointsForResource(It.IsAny<List<OrganizationContactPoints>>(), It.Is<string>(s => s.Equals("urn:altinn:resource"))))
-                .ReturnsAsync((List<OrganizationContactPoints> input, string resource) =>
-                {
-                    input[0].UserContactPoints.RemoveAll(u => u.UserId == 200009);
-                    return input;
-                });
-
-            var service = GetTestService(profileClientMock.Object, registerClientMock.Object, authorizationServiceMock.Object);
-
-            // Act
-            await service.AddEmailContactPoints(input, resource);
-
-            // Assert 
-            registerClientMock.VerifyAll();
-            profileClientMock.VerifyAll();
-            authorizationServiceMock.VerifyAll();
-            Assert.Equivalent(expectedOutput, input);
-        }
-
-        [Fact]
-        public async Task AddEmailContactPoints_OrganizationNumberAndResourceAvailable_AuthorizationDenyAll()
-        {
-            // Arrange
-            string resource = "urn:altinn:resource";
-
-            List<Recipient> input = [
-                new Recipient()
-                {
-                    OrganizationNumber = "12345678901"
-                }
-            ];
-
-            List<Recipient> expectedOutput = [
-                new Recipient()
-                {
-                    OrganizationNumber = "12345678901",
-                    AddressInfo = [new EmailAddressPoint("official@domain.com")]
-                }
-            ];
-
-            var registerClientMock = new Mock<IRegisterClient>();
-            registerClientMock
-                .Setup(r => r.GetOrganizationContactPoints(It.IsAny<List<string>>()))
-                .ReturnsAsync([new OrganizationContactPoints() { OrganizationNumber = "12345678901", EmailList = ["official@domain.com"] }]);
-
-            var profileClientMock = new Mock<IProfileClient>();
-            profileClientMock
-                .Setup(p => p.GetUserRegisteredContactPoints(It.IsAny<List<string>>(), It.Is<string>(s => s.Equals("urn:altinn:resource"))))
-                .ReturnsAsync([
-                    new OrganizationContactPoints()
-                    {
-                        PartyId = 78901,
-                        OrganizationNumber = "12345678901",
-                        UserContactPoints = [
-                            new UserContactPoints()
-                            {
-                                UserId = 200001,
-                                Email = "user-1@domain.com"
-                            },
-                            new UserContactPoints()
-                            {
-                                UserId = 200009,
-                                Email = "user-9@domain.com"
-                            }
-                            ]
-                    }
-                    ]);
-
-            var authorizationServiceMock = new Mock<IAuthorizationService>();
-            authorizationServiceMock
-                .Setup(a => a.AuthorizeUserContactPointsForResource(It.IsAny<List<OrganizationContactPoints>>(), It.Is<string>(s => s.Equals("urn:altinn:resource"))))
-                .ReturnsAsync((List<OrganizationContactPoints> input, string resource) =>
-                {
-                    input.ForEach(ocp => ocp.UserContactPoints = []);
-                    return input;
-                });
-
-            var service = GetTestService(profileClientMock.Object, registerClientMock.Object, authorizationServiceMock.Object);
-
-            // Act
-            await service.AddEmailContactPoints(input, resource);
-
-            // Assert 
-            registerClientMock.VerifyAll();
-            profileClientMock.VerifyAll();
-            authorizationServiceMock.VerifyAll();
-            Assert.Equivalent(expectedOutput, input);
-        }
-
-        [Fact]
-        public async Task AddPreferredContactPoints_EmailPreferred_PersonRecipient()
-        {
-            // Arrange
-            List<Recipient> recipients = [
-                new Recipient() { NationalIdentityNumber = "0" },
-                new Recipient() { NationalIdentityNumber = "1" },
-                new Recipient() { NationalIdentityNumber = "2" },
-                new Recipient() { NationalIdentityNumber = "3" }
-            ];
-
-            var profileClientMock = new Mock<IProfileClient>();
-
-            profileClientMock
-                .Setup(p => p.GetUserContactPoints(It.IsAny<List<string>>()))
-                .ReturnsAsync([
-                    new UserContactPoints() { NationalIdentityNumber = "0", Email = "user0@email.com" },
-                    new UserContactPoints() { NationalIdentityNumber = "1", MobileNumber = "+4799999991" },
-                    new UserContactPoints() { NationalIdentityNumber = "2", Email = "user2@email.com", MobileNumber = "+4799999992" },
-                    new UserContactPoints() { NationalIdentityNumber = "3" }]);
-
-            var service = GetTestService(profileClientMock.Object, null, null);
-
-            // Act
-            await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipients, null);
-
-            // Assert
-            Recipient user0 = recipients[0];
-            Assert.Single(user0.AddressInfo);
-            Assert.IsType<EmailAddressPoint>(user0.AddressInfo[0]);
-            Assert.Equal("user0@email.com", ((EmailAddressPoint)user0.AddressInfo[0]).EmailAddress);
-
-            Recipient user1 = recipients[1];
-            Assert.Single(user1.AddressInfo);
-            Assert.IsType<SmsAddressPoint>(user1.AddressInfo[0]);
-            Assert.Equal("+4799999991", ((SmsAddressPoint)user1.AddressInfo[0]).MobileNumber);
-
-            Recipient user2 = recipients[2];
-            Assert.Single(user2.AddressInfo);
-            Assert.IsType<EmailAddressPoint>(user2.AddressInfo[0]);
-            Assert.Equal("user2@email.com", ((EmailAddressPoint)user2.AddressInfo[0]).EmailAddress);
-
-            Recipient user3 = recipients[3];
-            Assert.Empty(user3.AddressInfo);
-        }
-
-        [Fact]
-        public async Task AddPreferredContactPoints_SmsPreferred_PersonRecipient()
-        {
-            // Arrange
-            List<Recipient> recipients = [
-                new Recipient() { NationalIdentityNumber = "0" },
-                new Recipient() { NationalIdentityNumber = "1" },
-                new Recipient() { NationalIdentityNumber = "2" },
-                new Recipient() { NationalIdentityNumber = "3" },
-            ];
-
-            var profileClientMock = new Mock<IProfileClient>();
-
-            profileClientMock
-                .Setup(p => p.GetUserContactPoints(It.IsAny<List<string>>()))
-                .ReturnsAsync([
-                    new UserContactPoints() { NationalIdentityNumber = "0", Email = "user0@email.com" },
-                    new UserContactPoints() { NationalIdentityNumber = "1", MobileNumber = "+4799999991" },
-                    new UserContactPoints() { NationalIdentityNumber = "2", Email = "user2@email.com", MobileNumber = "+4799999992" },
-                    new UserContactPoints() { NationalIdentityNumber = "3" }]);
-
-            var service = GetTestService(profileClientMock.Object, null, null);
-
-            // Act
-            await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipients, null);
-
-            // Assert
-            Recipient user0 = recipients[0];
-            Assert.Single(user0.AddressInfo);
-            Assert.IsType<EmailAddressPoint>(user0.AddressInfo[0]);
-            Assert.Equal("user0@email.com", ((EmailAddressPoint)user0.AddressInfo[0]).EmailAddress);
-
-            Recipient user1 = recipients[1];
-            Assert.Single(user1.AddressInfo);
-            Assert.IsType<SmsAddressPoint>(user1.AddressInfo[0]);
-            Assert.Equal("+4799999991", ((SmsAddressPoint)user1.AddressInfo[0]).MobileNumber);
-
-            Recipient user2 = recipients[2];
-            Assert.Single(user2.AddressInfo);
-            Assert.IsType<SmsAddressPoint>(user2.AddressInfo[0]);
-            Assert.Equal("+4799999992", ((SmsAddressPoint)user2.AddressInfo[0]).MobileNumber);
-
-            Recipient user3 = recipients[3];
-            Assert.Empty(user3.AddressInfo);
-        }
-
-        [Fact]
-        public async Task AddPreferredContactPoints_EmailPreferred_OrgRecipient()
-        {
-            // Arrange
-            List<Recipient> recipients = [
-                new Recipient() { OrganizationNumber = "0" },
-                new Recipient() { OrganizationNumber = "1" },
-                new Recipient() { OrganizationNumber = "2" },
-                new Recipient() { OrganizationNumber = "3" },
-            ];
-
-            var registerClientMock = new Mock<IRegisterClient>();
-            registerClientMock
-                .Setup(r => r.GetOrganizationContactPoints(It.IsAny<List<string>>()))
-                .ReturnsAsync([
-                    new OrganizationContactPoints() { OrganizationNumber = "0", EmailList = ["0@org.com"] },
-                    new OrganizationContactPoints() { OrganizationNumber = "1", MobileNumberList = ["+4799999991"] },
-                    new OrganizationContactPoints() { OrganizationNumber = "2", EmailList = ["2@org.com"], MobileNumberList = ["+4799999992"] },
-                    new OrganizationContactPoints() { OrganizationNumber = "3" }]);
-
-            var service = GetTestService(null, registerClientMock.Object, null);
-
-            // Act
-            await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipients, null);
-
-            // Assert
-            Recipient org0 = recipients[0];
-            Assert.Single(org0.AddressInfo);
-            Assert.IsType<EmailAddressPoint>(org0.AddressInfo[0]);
-            Assert.Equal("0@org.com", ((EmailAddressPoint)org0.AddressInfo[0]).EmailAddress);
-
-            Recipient org1 = recipients[1];
-            Assert.Single(org1.AddressInfo);
-            Assert.IsType<SmsAddressPoint>(org1.AddressInfo[0]);
-            Assert.Equal("+4799999991", ((SmsAddressPoint)org1.AddressInfo[0]).MobileNumber);
-
-            Recipient org2 = recipients[2];
-            Assert.Single(org2.AddressInfo);
-            Assert.IsType<EmailAddressPoint>(org2.AddressInfo[0]);
-            Assert.Equal("2@org.com", ((EmailAddressPoint)org2.AddressInfo[0]).EmailAddress);
-
-            Recipient org3 = recipients[3];
-            Assert.Empty(org3.AddressInfo);
-        }
-
-        [Fact]
-        public async Task AddPreferredContactPoints_SmsPreferred_OrgOfficialRecipient()
-        {
-            // Arrange
-            List<Recipient> recipients = [
-                new Recipient() { OrganizationNumber = "0" },
-                new Recipient() { OrganizationNumber = "1" },
-                new Recipient() { OrganizationNumber = "2" },
-                new Recipient() { OrganizationNumber = "3" },
-            ];
-
-            var registerClientMock = new Mock<IRegisterClient>();
-            registerClientMock
-                .Setup(r => r.GetOrganizationContactPoints(It.IsAny<List<string>>()))
-                .ReturnsAsync([
-                    new OrganizationContactPoints() { OrganizationNumber = "0", EmailList = ["0@org.com"] },
-                    new OrganizationContactPoints() { OrganizationNumber = "1", MobileNumberList = ["+4799999991"] },
-                    new OrganizationContactPoints() { OrganizationNumber = "2", EmailList = ["2@org.com"], MobileNumberList = ["+4799999992"] },
-                    new OrganizationContactPoints() { OrganizationNumber = "3" }]);
-
-            var service = GetTestService(null, registerClientMock.Object, null);
-
-            // Act
-            await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipients, null);
-
-            // Assert
-            Recipient org0 = recipients[0];
-            Assert.Single(org0.AddressInfo);
-            Assert.IsType<EmailAddressPoint>(org0.AddressInfo[0]);
-            Assert.Equal("0@org.com", ((EmailAddressPoint)org0.AddressInfo[0]).EmailAddress);
-
-            Recipient org1 = recipients[1];
-            Assert.Single(org1.AddressInfo);
-            Assert.IsType<SmsAddressPoint>(org1.AddressInfo[0]);
-            Assert.Equal("+4799999991", ((SmsAddressPoint)org1.AddressInfo[0]).MobileNumber);
-
-            Recipient org2 = recipients[2];
-            Assert.Single(org2.AddressInfo);
-            Assert.IsType<SmsAddressPoint>(org2.AddressInfo[0]);
-            Assert.Equal("+4799999992", ((SmsAddressPoint)org2.AddressInfo[0]).MobileNumber);
-
-            Recipient org3 = recipients[3];
-            Assert.Empty(org3.AddressInfo);
-        }
-
-        [Fact]
-        public async Task AddPreferredContactPoints_EmailPreferred_OrgUserRegisteredRecipient()
-        {
-            // Arrange
-            List<Recipient> recipients = [
-                new Recipient() { OrganizationNumber = "0" }
-            ];
-
-            var registerClientMock = new Mock<IRegisterClient>();
-            registerClientMock
-                .Setup(r => r.GetOrganizationContactPoints(It.IsAny<List<string>>()))
-                .ReturnsAsync([]);
-
-            var profileClientMock = new Mock<IProfileClient>();
-
-            profileClientMock
-                .Setup(p => p.GetUserRegisteredContactPoints(It.IsAny<List<string>>(), It.IsAny<string>()))
-                .ReturnsAsync([
-                    new OrganizationContactPoints()
-                    {
-                        OrganizationNumber = "0",
-                        UserContactPoints =
-                        [
-                            new UserContactPoints() { NationalIdentityNumber = "0", Email = "user0@email.com" },
-                            new UserContactPoints() { NationalIdentityNumber = "1", MobileNumber = "+4799999991" },
-                            new UserContactPoints() { NationalIdentityNumber = "2", Email = "user2@email.com", MobileNumber = "+4799999992" },
-                            new UserContactPoints() { NationalIdentityNumber = "3" }
-                        ]
-                    }
-                ]);
-
-            var authorizationServiceMock = new Mock<IAuthorizationService>();
-
-            authorizationServiceMock
-                .Setup(a => a.AuthorizeUserContactPointsForResource(It.IsAny<List<OrganizationContactPoints>>(), It.IsAny<string>()))
-                .ReturnsAsync([
-                    new OrganizationContactPoints()
-                    {
-                        OrganizationNumber = "0",
-                        UserContactPoints =
-                        [
-                            new UserContactPoints() { NationalIdentityNumber = "0", Email = "user0@email.com" },
-                            new UserContactPoints() { NationalIdentityNumber = "1", MobileNumber = "+4799999991" },
-                            new UserContactPoints() { NationalIdentityNumber = "2", Email = "user2@email.com", MobileNumber = "+4799999992" },
-                            new UserContactPoints() { NationalIdentityNumber = "3" }
-                        ]
-                    }
-                ]);
-
-            var service = GetTestService(profileClientMock.Object, registerClientMock.Object, authorizationServiceMock.Object);
-
-            // Act
-            await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipients, "resource");
-
-            // Assert
-            Recipient org0 = recipients[0];
-            Assert.Equal(3, org0.AddressInfo.Count);
-            Assert.Equal("user0@email.com", ((EmailAddressPoint)org0.AddressInfo[0]).EmailAddress);
-            Assert.Equal("+4799999991", ((SmsAddressPoint)org0.AddressInfo[1]).MobileNumber);
-            Assert.Equal("user2@email.com", ((EmailAddressPoint)org0.AddressInfo[2]).EmailAddress);
-        }
-
-        [Fact]
-        public async Task AddPreferredContactPoints_SmsPreferred_OrgUserRegisteredRecipient()
-        {
-            // Arrange
-            List<Recipient> recipients = [
-                new Recipient() { OrganizationNumber = "0" }
-            ];
-
-            var registerClientMock = new Mock<IRegisterClient>();
-            registerClientMock
-                .Setup(r => r.GetOrganizationContactPoints(It.IsAny<List<string>>()))
-                .ReturnsAsync([]);
-
-            var profileClientMock = new Mock<IProfileClient>();
-
-            profileClientMock
-                .Setup(p => p.GetUserRegisteredContactPoints(It.IsAny<List<string>>(), It.IsAny<string>()))
-                .ReturnsAsync([
-                    new OrganizationContactPoints()
-                    {
-                        OrganizationNumber = "0",
-                        UserContactPoints =
-                        [
-                            new UserContactPoints() { NationalIdentityNumber = "0", Email = "user0@email.com" },
-                            new UserContactPoints() { NationalIdentityNumber = "1", MobileNumber = "+4799999991" },
-                            new UserContactPoints() { NationalIdentityNumber = "2", Email = "user2@email.com", MobileNumber = "+4799999992" },
-                            new UserContactPoints() { NationalIdentityNumber = "3" }
-                        ]
-                    }
-                ]);
-
-            var authorizationServiceMock = new Mock<IAuthorizationService>();
-
-            authorizationServiceMock
-                .Setup(a => a.AuthorizeUserContactPointsForResource(It.IsAny<List<OrganizationContactPoints>>(), It.IsAny<string>()))
-                .ReturnsAsync([
-                    new OrganizationContactPoints()
-                    {
-                        OrganizationNumber = "0",
-                        UserContactPoints =
-                        [
-                            new UserContactPoints() { NationalIdentityNumber = "0", Email = "user0@email.com" },
-                            new UserContactPoints() { NationalIdentityNumber = "1", MobileNumber = "+4799999991" },
-                            new UserContactPoints() { NationalIdentityNumber = "2", Email = "user2@email.com", MobileNumber = "+4799999992" },
-                            new UserContactPoints() { NationalIdentityNumber = "3" }
-                        ]
-                    }
-                ]);
-
-            var service = GetTestService(profileClientMock.Object, registerClientMock.Object, authorizationServiceMock.Object);
-
-            // Act
-            await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipients, "resource");
-
-            // Assert
-            Recipient org0 = recipients[0];
-            Assert.Equal(3, org0.AddressInfo.Count);
-            Assert.Equal("user0@email.com", ((EmailAddressPoint)org0.AddressInfo[0]).EmailAddress);
-            Assert.Equal("+4799999991", ((SmsAddressPoint)org0.AddressInfo[1]).MobileNumber);
-            Assert.Equal("+4799999992", ((SmsAddressPoint)org0.AddressInfo[2]).MobileNumber);
-        }
-
-        [Fact]
-        public async Task AddEmailAndSmsContactPointsAsync_OrganizationNumber_RegisterServiceCalled()
-        {
-            // Arrange
-            string mobileNumber = "+4799999999";
-            string email = "recipient@domain.com";
-            string organizationNumber = "18874198354";
-
-            List<Recipient> recipients =
-            [
-                new Recipient { OrganizationNumber = organizationNumber }
-            ];
-
-            var registerClientMock = new Mock<IRegisterClient>();
-            registerClientMock
-                .Setup(e => e.GetOrganizationContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber))))
+                .Setup(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))))
                 .ReturnsAsync(
                 [
-                    new OrganizationContactPoints
+                    new()
                     {
-                        EmailList = [email],
-                        MobileNumberList = [mobileNumber],
-                        OrganizationNumber = organizationNumber
-                    }
-                ]);
-
-            var service = GetTestService(registerClient: registerClientMock.Object);
-
-            // Act
-            await service.AddEmailAndSmsContactPointsAsync(recipients, null);
-
-            // Assert
-            registerClientMock.Verify(e => e.GetOrganizationContactPoints(It.Is<List<string>>(s => s.Contains(organizationNumber))), Times.Once);
-
-            Assert.Equal(2, recipients[0].AddressInfo.Count);
-            Assert.Equal(organizationNumber, recipients[0].OrganizationNumber);
-
-            var emailAddress = recipients[0].AddressInfo.OfType<EmailAddressPoint>().FirstOrDefault();
-            Assert.NotNull(emailAddress);
-            Assert.Equal(email, emailAddress.EmailAddress);
-            Assert.Equal(AddressType.Email, emailAddress.AddressType);
-
-            var smsAddress = recipients[0].AddressInfo.OfType<SmsAddressPoint>().FirstOrDefault();
-            Assert.NotNull(smsAddress);
-            Assert.Equal(mobileNumber, smsAddress.MobileNumber);
-            Assert.Equal(AddressType.Sms, smsAddress.AddressType);
-        }
-
-        [Fact]
-        public async Task AddEmailAndSmsContactPointsAsync_NationalIdentityNumber_ProfileServiceCalled()
-        {
-            // Arrange
-            string email = "person@example.com";
-            string mobileNumber = "+4799999999";
-            string nationalIdentityNumber = "29320645032";
-
-            List<Recipient> recipients =
-            [
-                new Recipient { NationalIdentityNumber = nationalIdentityNumber }
-            ];
-
-            var profileClientMock = new Mock<IProfileClient>();
-            profileClientMock
-                .Setup(p => p.GetUserContactPoints(It.Is<List<string>>(s => s.Contains(nationalIdentityNumber))))
-                .ReturnsAsync(
-                [
-                    new UserContactPoints
-                    {
-                        Email = email,
+                        UserId = 90090020,
                         IsReserved = true,
-                        MobileNumber = mobileNumber,
-                        NationalIdentityNumber = nationalIdentityNumber
+                        Email = emailAddress,
+                        MobileNumber = rawMobileNumber,
+                        NationalIdentityNumber = nationalId
                     }
                 ]);
 
-            var service = GetTestService(profileClient: profileClientMock.Object);
+            var authorizationServiceMock = new Mock<IAuthorizationService>();
+
+            var service = GetTestService(
+                profileClient: profileClientMock.Object,
+                authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddEmailAndSmsContactPointsAsync(recipients, null);
+            await service.AddSmsContactPoints(recipientsToEnrich, null);
 
             // Assert
-            profileClientMock.Verify(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalIdentityNumber))), Times.Once);
+            var recipient = Assert.Single(recipientsToEnrich);
 
-            Assert.True(recipients[0].IsReserved);
-            Assert.Equal(2, recipients[0].AddressInfo.Count);
-            Assert.Equal(nationalIdentityNumber, recipients[0].NationalIdentityNumber);
+            Assert.True(recipient.IsReserved);
+            Assert.Null(recipient.OrganizationNumber);
+            Assert.Equal(nationalId, recipient.NationalIdentityNumber);
 
-            var emailAddress = recipients[0].AddressInfo.OfType<EmailAddressPoint>().FirstOrDefault();
-            Assert.NotNull(emailAddress);
-            Assert.Equal(email, emailAddress.EmailAddress);
-            Assert.Equal(AddressType.Email, emailAddress.AddressType);
+            var addressInfo = Assert.Single(recipient.AddressInfo);
 
-            var smsAddress = recipients[0].AddressInfo.OfType<SmsAddressPoint>().FirstOrDefault();
-            Assert.NotNull(smsAddress);
-            Assert.Equal(mobileNumber, smsAddress.MobileNumber);
-            Assert.Equal(AddressType.Sms, smsAddress.AddressType);
+            var smsAddressPoint = Assert.IsType<SmsAddressPoint>(addressInfo);
+            Assert.Equal(AddressType.Sms, smsAddressPoint.AddressType);
+            Assert.Equal(formattedMobileNumber, smsAddressPoint.MobileNumber);
+
+            profileClientMock.Verify(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))), Times.Once);
+            profileClientMock.VerifyNoOtherCalls();
+            authorizationServiceMock.VerifyNoOtherCalls();
         }
 
         [Fact]
-        public async Task AddEmailAndSmsContactPointsAsync_OrganizationNumberAndResource_AuthorizationApplied()
+        public async Task AddEmailContactPoints_WhenUsingNationalId_ShouldEnrichRecipientsWithEmailAddress()
         {
             // Arrange
-            string resourceId = "urn:altinn:resource";
+            string nationalId = "16219001324";
+            string rawMobileNumber = "99999999";
+            string emailAddress = "recipient@example.com";
 
-            string organizationNumber = "07837399275";
-            string officialMobileNumber = "+4748123456";
-            string officialEmail = "official@organization.com";
+            var recipientsToEnrich = new List<Recipient>
+            {
+                new() { NationalIdentityNumber = nationalId }
+            };
 
-            int authorizedUserId = 200001;
-            string authorizedMobileNumber = "+4748123456";
-            string authorizedEmail = "authorized-user@domain.com";
-
-            int unauthorizedUserId = 200009;
-            string unauthorizedMobileNumber = "+4699999999";
-            string unauthorizedEmail = "unauthorized-user@domain.com";
-
-            List<Recipient> recipients =
-            [
-                new Recipient { OrganizationNumber = organizationNumber }
-            ];
-
-            var registerClientMock = new Mock<IRegisterClient>();
-            registerClientMock
-                .Setup(e => e.GetOrganizationContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber))))
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))))
                 .ReturnsAsync(
                 [
-                    new OrganizationContactPoints
+                    new()
                     {
-                        EmailList = [officialEmail],
-                        OrganizationNumber = organizationNumber,
-                        MobileNumberList = [officialMobileNumber]
+                        UserId = 90090020,
+                        IsReserved = true,
+                        Email = emailAddress,
+                        MobileNumber = rawMobileNumber,
+                        NationalIdentityNumber = nationalId
                     }
                 ]);
 
+            var authorizationServiceMock = new Mock<IAuthorizationService>();
+
+            var service = GetTestService(
+                profileClient: profileClientMock.Object,
+                authorizationService: authorizationServiceMock.Object);
+
+            // Act
+            await service.AddEmailContactPoints(recipientsToEnrich, null);
+
+            // Assert
+            var recipient = Assert.Single(recipientsToEnrich);
+
+            Assert.True(recipient.IsReserved);
+            Assert.Null(recipient.OrganizationNumber);
+            Assert.Equal(nationalId, recipient.NationalIdentityNumber);
+
+            var addressInfo = Assert.Single(recipient.AddressInfo);
+
+            var emailAddressPoint = Assert.IsType<EmailAddressPoint>(addressInfo);
+            Assert.Equal(emailAddress, emailAddressPoint.EmailAddress);
+            Assert.Equal(AddressType.Email, emailAddressPoint.AddressType);
+
+            profileClientMock.Verify(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))), Times.Once);
+            profileClientMock.VerifyNoOtherCalls();
+            authorizationServiceMock.VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public async Task AddEmailAndSmsContactPoints_WhenUsingNationalId_ShouldEnrichRecipientsWithMobileNumbersAndEmailAddresses()
+        {
+            // Arrange
+            string nationalId = "17269942983";
+            string rawMobileNumber = "99999999";
+            string formattedMobileNumber = "+4799999999";
+            string emailAddress = "recipient@example.com";
+
+            var recipientsToEnrich = new List<Recipient>
+            {
+                new() { NationalIdentityNumber = nationalId }
+            };
+
             var profileClientMock = new Mock<IProfileClient>();
-            profileClientMock.Setup(e => e.GetUserRegisteredContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber)), It.Is<string>(e => e.Equals(resourceId))))
+            profileClientMock
+                .Setup(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))))
                 .ReturnsAsync(
                 [
-                    new OrganizationContactPoints
+                    new()
                     {
+                        UserId = 90090020,
+                        IsReserved = false,
+                        Email = emailAddress,
+                        MobileNumber = rawMobileNumber,
+                        NationalIdentityNumber = nationalId
+                    }
+                ]);
+
+            var authorizationServiceMock = new Mock<IAuthorizationService>();
+
+            var service = GetTestService(
+                profileClient: profileClientMock.Object,
+                authorizationService: authorizationServiceMock.Object);
+
+            // Act
+            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null);
+
+            // Assert
+            var recipient = Assert.Single(recipientsToEnrich);
+            Assert.False(recipient.IsReserved);
+            Assert.Null(recipient.OrganizationNumber);
+            Assert.Equal(nationalId, recipient.NationalIdentityNumber);
+
+            Assert.Equal(2, recipient.AddressInfo.Count);
+
+            var smsAddressPoint = Assert.Single(recipient.AddressInfo.OfType<SmsAddressPoint>());
+            Assert.Equal(AddressType.Sms, smsAddressPoint.AddressType);
+            Assert.Equal(formattedMobileNumber, smsAddressPoint.MobileNumber);
+
+            var emailAddressPoint = Assert.Single(recipient.AddressInfo.OfType<EmailAddressPoint>());
+            Assert.Equal(AddressType.Email, emailAddressPoint.AddressType);
+            Assert.Equal(emailAddress, emailAddressPoint.EmailAddress);
+
+            profileClientMock.Verify(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))), Times.Once);
+            profileClientMock.VerifyNoOtherCalls();
+            authorizationServiceMock.VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public async Task AddEmailAndSmsContactPoints_WhenUsingNationalId_ShouldEnrichRecipientsWithMobileNumbersOnlyWhenNoEmailAddressesAvailable()
+        {
+            // Arrange
+            string nationalId = "24212205989";
+            string rawMobileNumber = "97777777";
+            string formattedMobileNumber = "+4797777777";
+
+            var recipientsToEnrich = new List<Recipient>
+            {
+                new() { NationalIdentityNumber = nationalId }
+            };
+
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))))
+                .ReturnsAsync(
+                [
+                    new()
+                    {
+                        UserId = 20202020,
+                        IsReserved = false,
+                        MobileNumber = rawMobileNumber,
+                        NationalIdentityNumber = nationalId
+                    }
+                ]);
+
+            var authorizationServiceMock = new Mock<IAuthorizationService>();
+
+            var service = GetTestService(
+                profileClient: profileClientMock.Object,
+                authorizationService: authorizationServiceMock.Object);
+
+            // Act
+            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null);
+
+            // Assert
+            var recipient = Assert.Single(recipientsToEnrich);
+            Assert.False(recipient.IsReserved);
+            Assert.Null(recipient.OrganizationNumber);
+            Assert.Equal(nationalId, recipient.NationalIdentityNumber);
+
+            Assert.Single(recipient.AddressInfo);
+
+            var smsAddressPoint = Assert.Single(recipient.AddressInfo.OfType<SmsAddressPoint>());
+            Assert.Equal(AddressType.Sms, smsAddressPoint.AddressType);
+            Assert.Equal(formattedMobileNumber, smsAddressPoint.MobileNumber);
+
+            profileClientMock.Verify(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))), Times.Once);
+            profileClientMock.VerifyNoOtherCalls();
+            authorizationServiceMock.VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public async Task AddEmailAndSmsContactPoints_WhenUsingNationalId_ShouldEnrichRecipientsWithEmailAddressesOnlyWhenNoMobileNumbersAvailable()
+        {
+            // Arrange
+            string nationalId = "05282945993";
+            string emailAddress = "recipient@example.com";
+
+            var recipientsToEnrich = new List<Recipient>
+            {
+                new() { NationalIdentityNumber = nationalId }
+            };
+
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))))
+                .ReturnsAsync(
+                [
+                    new()
+                    {
+                        UserId = 20020488,
+                        IsReserved = false,
+                        Email = emailAddress,
+                        NationalIdentityNumber = nationalId
+                    }
+                ]);
+
+            var authorizationServiceMock = new Mock<IAuthorizationService>();
+
+            var service = GetTestService(
+                profileClient: profileClientMock.Object,
+                authorizationService: authorizationServiceMock.Object);
+
+            // Act
+            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null);
+
+            // Assert
+            var recipient = Assert.Single(recipientsToEnrich);
+            Assert.False(recipient.IsReserved);
+            Assert.Null(recipient.OrganizationNumber);
+            Assert.Equal(nationalId, recipient.NationalIdentityNumber);
+
+            Assert.Single(recipient.AddressInfo);
+
+            var emailAddressPoint = Assert.Single(recipient.AddressInfo.OfType<EmailAddressPoint>());
+            Assert.Equal(AddressType.Email, emailAddressPoint.AddressType);
+            Assert.Equal(emailAddress, emailAddressPoint.EmailAddress);
+
+            profileClientMock.Verify(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))), Times.Once);
+            profileClientMock.VerifyNoOtherCalls();
+            authorizationServiceMock.VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public async Task AddPreferredContactPoints_WhenUsingNationalIdAndSmsPreferred_ShouldEnrichRecipientsWithMobileNumbersOnly()
+        {
+            // Arrange
+            string nationalId = "17269942983";
+            string rawMobileNumber = "99999999";
+            string formattedMobileNumber = "+4799999999";
+            string emailAddress = "recipient@example.com";
+
+            var recipientsToEnrich = new List<Recipient>
+            {
+                new() { NationalIdentityNumber = nationalId }
+            };
+
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))))
+                .ReturnsAsync(
+                [
+                    new()
+                    {
+                        UserId = 90090020,
+                        IsReserved = false,
+                        Email = emailAddress,
+                        MobileNumber = rawMobileNumber,
+                        NationalIdentityNumber = nationalId
+                    }
+                ]);
+
+            var authorizationServiceMock = new Mock<IAuthorizationService>();
+
+            var service = GetTestService(
+                profileClient: profileClientMock.Object,
+                authorizationService: authorizationServiceMock.Object);
+
+            // Act
+            await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipientsToEnrich, null);
+
+            // Assert
+            var recipient = Assert.Single(recipientsToEnrich);
+            Assert.False(recipient.IsReserved);
+            Assert.Null(recipient.OrganizationNumber);
+            Assert.Equal(nationalId, recipient.NationalIdentityNumber);
+
+            Assert.Single(recipient.AddressInfo);
+
+            var smsAddressPoint = Assert.Single(recipient.AddressInfo.OfType<SmsAddressPoint>());
+            Assert.Equal(AddressType.Sms, smsAddressPoint.AddressType);
+            Assert.Equal(formattedMobileNumber, smsAddressPoint.MobileNumber);
+
+            profileClientMock.Verify(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))), Times.Once);
+            profileClientMock.VerifyNoOtherCalls();
+            authorizationServiceMock.VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public async Task AddPreferredContactPoints_WhenUsingNationalIdAndEmailPreferred_ShouldEnrichRecipientsWithEmailAddressOnly()
+        {
+            // Arrange
+            string nationalId = "17269942983";
+            string rawMobileNumber = "99999999";
+            string emailAddress = "recipient@example.com";
+
+            var recipientsToEnrich = new List<Recipient>
+            {
+                new() { NationalIdentityNumber = nationalId }
+            };
+
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))))
+                .ReturnsAsync(
+                [
+                    new()
+                    {
+                        UserId = 90090020,
+                        IsReserved = true,
+                        Email = emailAddress,
+                        MobileNumber = rawMobileNumber,
+                        NationalIdentityNumber = nationalId
+                    }
+                ]);
+
+            var authorizationServiceMock = new Mock<IAuthorizationService>();
+
+            var service = GetTestService(
+                profileClient: profileClientMock.Object,
+                authorizationService: authorizationServiceMock.Object);
+
+            // Act
+            await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipientsToEnrich, null);
+
+            // Assert
+            var recipient = Assert.Single(recipientsToEnrich);
+            Assert.True(recipient.IsReserved);
+            Assert.Null(recipient.OrganizationNumber);
+            Assert.Equal(nationalId, recipient.NationalIdentityNumber);
+
+            Assert.Single(recipient.AddressInfo);
+
+            var emailAddressPoint = Assert.Single(recipient.AddressInfo.OfType<EmailAddressPoint>());
+            Assert.Equal(AddressType.Email, emailAddressPoint.AddressType);
+            Assert.Equal(emailAddress, emailAddressPoint.EmailAddress);
+
+            profileClientMock.Verify(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))), Times.Once);
+            profileClientMock.VerifyNoOtherCalls();
+            authorizationServiceMock.VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public async Task AddPreferredContactPoints_WhenUsingNationalIdAndSmsPreferred_ShouldEnrichRecipientsWithEmailAddressesWhenNoMobileNumbersAvailable()
+        {
+            // Arrange
+            string nationalId = "17269942983";
+            string emailAddress = "recipient@example.com";
+
+            var recipientsToEnrich = new List<Recipient>
+            {
+                new() { NationalIdentityNumber = nationalId }
+            };
+
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))))
+                .ReturnsAsync(
+                [
+                    new()
+                    {
+                        UserId = 90090020,
+                        IsReserved = false,
+                        Email = emailAddress,
+                        NationalIdentityNumber = nationalId
+                    }
+                ]);
+
+            var authorizationServiceMock = new Mock<IAuthorizationService>();
+
+            var service = GetTestService(
+                profileClient: profileClientMock.Object,
+                authorizationService: authorizationServiceMock.Object);
+
+            // Act
+            await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipientsToEnrich, null);
+
+            // Assert
+            var recipient = Assert.Single(recipientsToEnrich);
+            Assert.False(recipient.IsReserved);
+            Assert.Null(recipient.OrganizationNumber);
+            Assert.Equal(nationalId, recipient.NationalIdentityNumber);
+
+            Assert.Single(recipient.AddressInfo);
+
+            var emailAddressPoint = Assert.Single(recipient.AddressInfo.OfType<EmailAddressPoint>());
+            Assert.Equal(AddressType.Email, emailAddressPoint.AddressType);
+            Assert.Equal(emailAddress, emailAddressPoint.EmailAddress);
+
+            profileClientMock.Verify(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))), Times.Once);
+            profileClientMock.VerifyNoOtherCalls();
+            authorizationServiceMock.VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public async Task AddPreferredContactPoints_WhenUsingNationalIdAndEmailPreferred_ShouldEnrichRecipientsWithMobileNumbersWhenNoEmailAddressesAvailable()
+        {
+            // Arrange
+            string nationalId = "17269942983";
+            string rawMobileNumber = "99999999";
+            string formattedMobileNumber = "+4799999999";
+
+            var recipientsToEnrich = new List<Recipient>
+            {
+                new() { NationalIdentityNumber = nationalId }
+            };
+
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))))
+                .ReturnsAsync(
+                [
+                    new()
+                    {
+                        UserId = 90090020,
+                        IsReserved = true,
+                        MobileNumber = rawMobileNumber,
+                        NationalIdentityNumber = nationalId
+                    }
+                ]);
+
+            var authorizationServiceMock = new Mock<IAuthorizationService>();
+
+            var service = GetTestService(
+                profileClient: profileClientMock.Object,
+                authorizationService: authorizationServiceMock.Object);
+
+            // Act
+            await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipientsToEnrich, null);
+
+            // Assert
+            var recipient = Assert.Single(recipientsToEnrich);
+            Assert.True(recipient.IsReserved);
+            Assert.Null(recipient.OrganizationNumber);
+            Assert.Equal(nationalId, recipient.NationalIdentityNumber);
+
+            Assert.Single(recipient.AddressInfo);
+
+            var smsAddressPoint = Assert.Single(recipient.AddressInfo.OfType<SmsAddressPoint>());
+            Assert.Equal(AddressType.Sms, smsAddressPoint.AddressType);
+            Assert.Equal(formattedMobileNumber, smsAddressPoint.MobileNumber);
+
+            profileClientMock.Verify(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))), Times.Once);
+            profileClientMock.VerifyNoOtherCalls();
+            authorizationServiceMock.VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public async Task AddSmsContactPoints_WhenUsingOrganizationNumber_ShouldEnrichRecipientsWithMobileNumbers()
+        {
+            // Arrange
+            string resourceIdentifier = "urn:altinn:tax-report";
+
+            // Organization details
+            string organizationNumber = "984456321";
+            string organizationRawMobileNumber = "46583920";
+            string organizationFirstFormatMobileNumber = "+4746583920";
+            string organizationSecondFormatMobileNumber = "004746583920";
+            string organizationFirstEmailAddress = "organization-recipient@example.com";
+            string organizationSecondEmailAddress = "organization-support@example.com";
+
+            // Contact person under organization
+            string contactPersonNationalId = "13309224560";
+            string contactPersonRawMobileNumber = "47682930";
+            string contactPersonFormattedMobileNumber = "+4747682930";
+            string contactPersonEmailAddress = "general-manager@example.com";
+
+            // Registered contact persons with access to the resource
+            string firstContactPersonNationalId = "19263535750";
+            string firstContactPersonMobileNumber = "+4745681234";
+            string firstContactPersonEmailAddress = "first-contact-person@example.com";
+
+            string secondContactPersonNationalId = "19217405109";
+            string secondContactPersonMobileNumber = "004745681235";
+
+            string authorizedContactPersonNationalId = "13303439816";
+            string authorizedContactPersonRawMobileNumber = "95681236";
+            string authorizedContactPersonFormattedMobileNumber = "+4795681236";
+            string authorizedContactPersonEmailAddress = "authorized-contact-person@example.com";
+
+            // Recipient
+            var recipientsToEnrich = new List<Recipient>
+            {
+                new() { OrganizationNumber = organizationNumber }
+            };
+
+            var profileClientMock = new Mock<IProfileClient>();
+
+            profileClientMock
+                .Setup(e => e.GetOrganizationContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber))))
+                .ReturnsAsync(
+                [
+                    new()
+                    {
+                        PartyId = 50660768,
+                        OrganizationNumber = organizationNumber,
+                        EmailList = [organizationFirstEmailAddress, organizationSecondEmailAddress, organizationFirstEmailAddress], // Duplicate
+                        MobileNumberList = [organizationRawMobileNumber, organizationSecondFormatMobileNumber, organizationFirstFormatMobileNumber], // Duplicate
+                        UserContactPoints =
+                        [
+                            new()
+                            {
+                                UserId = 200000,
+                                IsReserved = false,
+                                Email = contactPersonEmailAddress,
+                                MobileNumber = contactPersonRawMobileNumber,
+                                NationalIdentityNumber = contactPersonNationalId
+                            }
+                        ]
+                    }
+                ]);
+
+            profileClientMock
+                .Setup(e => e.GetUserRegisteredContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber)), resourceIdentifier))
+                .ReturnsAsync(
+                [
+                    new()
+                    {
+                        PartyId = 50660768,
                         OrganizationNumber = organizationNumber,
                         UserContactPoints =
                         [
-                            new UserContactPoints
+                            new()
                             {
-                                Email = authorizedEmail,
-                                UserId = authorizedUserId,
-                                MobileNumber = authorizedMobileNumber
+                                UserId = 200001,
+                                IsReserved = false,
+                                Email = firstContactPersonEmailAddress,
+                                MobileNumber = firstContactPersonMobileNumber,
+                                NationalIdentityNumber = firstContactPersonNationalId
                             },
-                            new UserContactPoints
+                            new()
                             {
-                                Email = unauthorizedEmail,
-                                UserId = unauthorizedUserId,
-                                MobileNumber = unauthorizedMobileNumber
+                                UserId = 200009,
+                                IsReserved = true,
+                                Email = firstContactPersonEmailAddress,
+                                MobileNumber = secondContactPersonMobileNumber,
+                                NationalIdentityNumber = secondContactPersonNationalId
+                            },
+                            new()
+                            {
+                                UserId = 200011,
+                                IsReserved = false,
+                                Email = authorizedContactPersonEmailAddress,
+                                MobileNumber = authorizedContactPersonRawMobileNumber,
+                                NationalIdentityNumber = authorizedContactPersonNationalId
                             }
                         ]
                     }
                 ]);
 
             var authorizationServiceMock = new Mock<IAuthorizationService>();
-            authorizationServiceMock.Setup(e => e.AuthorizeUserContactPointsForResource(It.IsAny<List<OrganizationContactPoints>>(), It.Is<string>(e => e.Equals(resourceId))))
-                .ReturnsAsync((List<OrganizationContactPoints> input, string _) =>
-                {
-                    input[0].UserContactPoints.RemoveAll(u => u.UserId == unauthorizedUserId);
-                    return input;
-                });
+            authorizationServiceMock
+                .Setup(e => e.AuthorizeUserContactPointsForResource(It.IsAny<List<OrganizationContactPoints>>(), It.Is<string>(e => e.Equals(resourceIdentifier))))
+                .ReturnsAsync(
+                [
+                    new()
+                    {
+                        PartyId = 50660768,
+                        OrganizationNumber = organizationNumber,
+                        UserContactPoints =
+                        [
+                            new()
+                            {
+                                UserId = 200011,
+                                IsReserved = false,
+                                Email = authorizedContactPersonEmailAddress,
+                                MobileNumber = authorizedContactPersonRawMobileNumber,
+                                NationalIdentityNumber = authorizedContactPersonNationalId
+                            }
+                        ]
+                    }
+                ]);
 
-            var service = GetTestService(profileClientMock.Object, registerClientMock.Object, authorizationServiceMock.Object);
+            var service = GetTestService(
+                profileClient: profileClientMock.Object,
+                authorizationService: authorizationServiceMock.Object);
 
             // Act
-            await service.AddEmailAndSmsContactPointsAsync(recipients, resourceId);
+            await service.AddSmsContactPoints(recipientsToEnrich, resourceIdentifier);
 
             // Assert
-            registerClientMock.Verify(e => e.GetOrganizationContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber))), Times.Once);
-            profileClientMock.Verify(e => e.GetUserRegisteredContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber)), It.Is<string>(e => e.Equals(resourceId))), Times.Once);
-            authorizationServiceMock.Verify(e => e.AuthorizeUserContactPointsForResource(It.IsAny<List<OrganizationContactPoints>>(), It.Is<string>(e => e.Equals(resourceId))), Times.Once);
+            var recipient = Assert.Single(recipientsToEnrich);
+            Assert.Null(recipient.IsReserved);
+            Assert.Null(recipient.NationalIdentityNumber);
+            Assert.Equal(organizationNumber, recipient.OrganizationNumber);
 
-            Assert.Equal(organizationNumber, recipients[0].OrganizationNumber);
-            Assert.Equal(4, recipients[0].AddressInfo.Count);
+            // Ensure we only get SMS contact points (not email, etc.)
+            Assert.All(recipient.AddressInfo, e => Assert.IsType<SmsAddressPoint>(e));
 
-            var emailAddresses = recipients[0].AddressInfo.OfType<EmailAddressPoint>().Select(e => e.EmailAddress).ToList();
-            Assert.Contains(officialEmail, emailAddresses);
+            var actualMobileNumbers = recipient.AddressInfo
+                .OfType<SmsAddressPoint>()
+                .Select(e => e.MobileNumber)
+                .OrderBy(e => e)
+                .ToList();
 
-            var mobileNumbers = recipients[0].AddressInfo.OfType<SmsAddressPoint>().Select(s => s.MobileNumber).ToList();
-            Assert.Contains(officialMobileNumber, mobileNumbers);
+            // Expected included numbers (after normalization/deduplication)
+            var expectedMobileNumbers = new List<string>
+            {
+                organizationFirstFormatMobileNumber,
+                contactPersonFormattedMobileNumber,
+                authorizedContactPersonFormattedMobileNumber
+            };
 
-            Assert.Contains(authorizedEmail, emailAddresses);
-            Assert.Contains(authorizedMobileNumber, mobileNumbers);
+            Assert.Equal([.. expectedMobileNumbers.OrderBy(e => e)], actualMobileNumbers);
 
-            Assert.DoesNotContain(unauthorizedEmail, emailAddresses);
-            Assert.DoesNotContain(unauthorizedMobileNumber, mobileNumbers);
+            // Explicit exclusions for raw/duplicate formats and reserved users
+            Assert.DoesNotContain(organizationRawMobileNumber, actualMobileNumbers);
+            Assert.DoesNotContain(contactPersonRawMobileNumber, actualMobileNumbers);
+            Assert.DoesNotContain(firstContactPersonMobileNumber, actualMobileNumbers);
+            Assert.DoesNotContain(secondContactPersonMobileNumber, actualMobileNumbers);
+            Assert.DoesNotContain(organizationSecondFormatMobileNumber, actualMobileNumbers);
+
+            Assert.Equal(1, actualMobileNumbers.Count(e => e == contactPersonFormattedMobileNumber));
+            Assert.Equal(1, actualMobileNumbers.Count(e => e == organizationFirstFormatMobileNumber));
+            Assert.Equal(1, actualMobileNumbers.Count(e => e == authorizedContactPersonFormattedMobileNumber));
+
+            Assert.Equal(0, actualMobileNumbers.Count(e => e == organizationRawMobileNumber));
+            Assert.Equal(0, actualMobileNumbers.Count(e => e == contactPersonRawMobileNumber));
+            Assert.Equal(0, actualMobileNumbers.Count(e => e == secondContactPersonMobileNumber));
+            Assert.Equal(0, actualMobileNumbers.Count(e => e == organizationSecondFormatMobileNumber));
+            Assert.Equal(0, actualMobileNumbers.Count(e => e == authorizedContactPersonRawMobileNumber));
+
+            profileClientMock.Verify(e => e.GetOrganizationContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber))), Times.Once);
+            profileClientMock.Verify(e => e.GetUserRegisteredContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber)), It.Is<string>(e => e.Equals(resourceIdentifier))), Times.Once);
+            authorizationServiceMock.Verify(e => e.AuthorizeUserContactPointsForResource(It.IsAny<List<OrganizationContactPoints>>(), It.Is<string>(e => e.Equals(resourceIdentifier))), Times.Once);
+
+            profileClientMock.VerifyNoOtherCalls();
+            authorizationServiceMock.VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public async Task AddEmailContactPoints_WhenUsingOrganizationNumber_ShouldEnrichRecipientsWithEmailAddresses()
+        {
+            // Arrange
+            string resourceIdentifier = "urn:altinn:tax-report";
+
+            // Organization details
+            string organizationNumber = "984456321";
+            string organizationRawMobileNumber = "46583920";
+            string organizationFirstFormatMobileNumber = "+4746583920";
+            string organizationSecondFormatMobileNumber = "004746583920";
+            string organizationFirstEmailAddress = "organization-recipient@example.com";
+            string organizationSecondEmailAddress = "organization-support@example.com";
+
+            // Contact person under organization
+            string contactPersonNationalId = "08312015790";
+            string contactPersonRawMobileNumber = "47682930";
+            string contactPersonEmailAddress = "general-manager@example.com";
+
+            // Registered contact persons with access to the resource
+            string firstContactPersonNationalId = "19263535750";
+            string firstContactPersonMobileNumber = "+4745681234";
+            string firstContactPersonEmailAddress = "first-contact-person@example.com";
+
+            string secondContactPersonNationalId = "19217405109";
+            string secondContactPersonMobileNumber = "004745681235";
+            string secondContactPersonEmailAddress = "second-contact-person@example.com";
+
+            string authorizedContactPersonNationalId = "13303439816";
+            string authorizedContactPersonRawMobileNumber = "95681236";
+            string authorizedContactPersonEmailAddress = "authorized-contact-person@example.com";
+
+            // Recipient
+            var recipientsToEnrich = new List<Recipient>
+            {
+                new() { OrganizationNumber = organizationNumber }
+            };
+
+            var profileClientMock = new Mock<IProfileClient>();
+
+            profileClientMock
+                .Setup(e => e.GetOrganizationContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber))))
+                .ReturnsAsync(
+                [
+                    new()
+                    {
+                        PartyId = 50660768,
+                        OrganizationNumber = organizationNumber,
+                        EmailList = [organizationFirstEmailAddress, organizationSecondEmailAddress, organizationFirstEmailAddress],
+                        MobileNumberList = [organizationRawMobileNumber, organizationFirstFormatMobileNumber, organizationSecondFormatMobileNumber],
+                        UserContactPoints =
+                        [
+                            new()
+                            {
+                                UserId = 200000,
+                                IsReserved = false,
+                                Email = contactPersonEmailAddress,
+                                MobileNumber = contactPersonRawMobileNumber,
+                                NationalIdentityNumber = contactPersonNationalId
+                            }
+                        ]
+                    }
+                ]);
+
+            profileClientMock
+                .Setup(e => e.GetUserRegisteredContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber)), resourceIdentifier))
+                .ReturnsAsync(
+                [
+                    new()
+                    {
+                        PartyId = 50660768,
+                        OrganizationNumber = organizationNumber,
+                        UserContactPoints =
+                        [
+                            new()
+                            {
+                                UserId = 200001,
+                                IsReserved = false,
+                                Email = firstContactPersonEmailAddress,
+                                MobileNumber = firstContactPersonMobileNumber,
+                                NationalIdentityNumber = firstContactPersonNationalId
+                            },
+                            new()
+                            {
+                                UserId = 200009,
+                                IsReserved = true,
+                                Email = secondContactPersonEmailAddress,
+                                MobileNumber = secondContactPersonMobileNumber,
+                                NationalIdentityNumber = secondContactPersonNationalId
+                            },
+                            new()
+                            {
+                                UserId = 200011,
+                                IsReserved = false,
+                                Email = authorizedContactPersonEmailAddress,
+                                MobileNumber = authorizedContactPersonRawMobileNumber,
+                                NationalIdentityNumber = authorizedContactPersonNationalId
+                            }
+                        ]
+                    }
+                ]);
+
+            var authorizationServiceMock = new Mock<IAuthorizationService>();
+            authorizationServiceMock
+                .Setup(e => e.AuthorizeUserContactPointsForResource(It.IsAny<List<OrganizationContactPoints>>(), It.Is<string>(e => e.Equals(resourceIdentifier))))
+                .ReturnsAsync(
+                [
+                    new()
+                    {
+                        PartyId = 50660768,
+                        OrganizationNumber = organizationNumber,
+                        UserContactPoints =
+                        [
+                            new()
+                            {
+                                UserId = 200011,
+                                IsReserved = false,
+                                Email = authorizedContactPersonEmailAddress,
+                                MobileNumber = authorizedContactPersonRawMobileNumber,
+                                NationalIdentityNumber = authorizedContactPersonNationalId
+                            }
+                        ]
+                    }
+                ]);
+
+            var service = GetTestService(
+                profileClient: profileClientMock.Object,
+                authorizationService: authorizationServiceMock.Object);
+
+            // Act
+            await service.AddEmailContactPoints(recipientsToEnrich, resourceIdentifier);
+
+            // Assert
+            var recipient = Assert.Single(recipientsToEnrich);
+            Assert.Null(recipient.IsReserved);
+            Assert.Null(recipient.NationalIdentityNumber);
+            Assert.Equal(organizationNumber, recipient.OrganizationNumber);
+
+            // Ensure we only get email contact points (not SMS, etc.)
+            Assert.All(recipient.AddressInfo, e => Assert.IsType<EmailAddressPoint>(e));
+
+            var actualEmailAddresses = recipient.AddressInfo
+                .OfType<EmailAddressPoint>()
+                .Select(e => e.EmailAddress)
+                .OrderBy(e => e)
+                .ToList();
+
+            var expectedEmailAddresses = new List<string>
+            {
+                contactPersonEmailAddress,
+                organizationFirstEmailAddress,
+                organizationSecondEmailAddress,
+                authorizedContactPersonEmailAddress
+            };
+
+            Assert.Equal([.. expectedEmailAddresses.OrderBy(e => e)], actualEmailAddresses);
+
+            // Explicit exclusions for duplicates and non-authorized/reserved users
+            Assert.DoesNotContain(firstContactPersonEmailAddress, actualEmailAddresses);
+            Assert.DoesNotContain(secondContactPersonEmailAddress, actualEmailAddresses);
+
+            Assert.Equal(1, actualEmailAddresses.Count(e => e == contactPersonEmailAddress));
+            Assert.Equal(1, actualEmailAddresses.Count(e => e == organizationFirstEmailAddress));
+            Assert.Equal(1, actualEmailAddresses.Count(e => e == organizationSecondEmailAddress));
+            Assert.Equal(1, actualEmailAddresses.Count(e => e == authorizedContactPersonEmailAddress));
+
+            profileClientMock.Verify(e => e.GetOrganizationContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber))), Times.Once);
+            profileClientMock.Verify(e => e.GetUserRegisteredContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber)), It.Is<string>(e => e.Equals(resourceIdentifier))), Times.Once);
+            authorizationServiceMock.Verify(e => e.AuthorizeUserContactPointsForResource(It.IsAny<List<OrganizationContactPoints>>(), It.Is<string>(e => e.Equals(resourceIdentifier))), Times.Once);
+
+            profileClientMock.VerifyNoOtherCalls();
+            authorizationServiceMock.VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public async Task AddEmailAndSmsContactPoints_WhenUsingOrganizationNumber_ShouldEnrichRecipientsWithMobileNumbersAndEmailAddresses()
+        {
+            // Arrange
+            string organizationNumber = "123456789";
+            string organizationFirstRawMobileNumber = "99999999";
+            string organizationSecondRawMobileNumber = "96666666";
+            string organizationFirstFormattedMobileNumber = "+4799999999";
+            string organizationSecondFormattedMobileNumber = "+4796666666";
+            string organizationFirstEmailAddresse = "first-organization-email@example.com";
+            string organizationSecondEmailAddresse = "second-organization-email@example.com";
+
+            string contactPersonNationalId = "29326345553";
+            string contactPersonRawMobileNumber = "95555555";
+            string contactPersonFormattedMobileNumber = "+4795555555";
+            string contactPersonEmailAddresse = "main-recipient@example.com";
+
+            var recipientsToEnrich = new List<Recipient>
+            {
+                new() { OrganizationNumber = organizationNumber }
+            };
+
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(e => e.GetOrganizationContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber))))
+                .ReturnsAsync(
+                [
+                    new()
+                    {
+                        PartyId = 1532451,
+                        OrganizationNumber = organizationNumber,
+                        EmailList = [organizationFirstEmailAddresse, organizationFirstEmailAddresse, organizationSecondEmailAddresse],
+                        MobileNumberList = [organizationFirstRawMobileNumber, organizationSecondRawMobileNumber, organizationSecondRawMobileNumber],
+                        UserContactPoints =
+                        [
+                            new()
+                            {
+                                UserId = 1522021,
+                                IsReserved = false,
+                                Email = contactPersonEmailAddresse,
+                                MobileNumber = contactPersonRawMobileNumber,
+                                NationalIdentityNumber = contactPersonNationalId
+                            }
+                        ]
+                    }
+                ]);
+
+            var authorizationServiceMock = new Mock<IAuthorizationService>();
+
+            var service = GetTestService(
+                profileClient: profileClientMock.Object,
+                authorizationService: authorizationServiceMock.Object);
+
+            // Act
+            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null);
+
+            // Assert
+            var recipient = Assert.Single(recipientsToEnrich);
+            Assert.Null(recipient.IsReserved);
+            Assert.Null(recipient.NationalIdentityNumber);
+            Assert.Equal(organizationNumber, recipient.OrganizationNumber);
+
+            Assert.NotNull(recipient.AddressInfo);
+            Assert.Equal(6, recipient.AddressInfo.Count);
+
+            // Assert email addresses
+            var emailAddresses = recipient.AddressInfo.OfType<EmailAddressPoint>().ToList();
+            Assert.Equal(3, emailAddresses.Count);
+            Assert.Contains(emailAddresses, e => e.EmailAddress == contactPersonEmailAddresse);
+            Assert.Contains(emailAddresses, e => e.EmailAddress == organizationFirstEmailAddresse);
+            Assert.Contains(emailAddresses, e => e.EmailAddress == organizationSecondEmailAddresse);
+
+            // Assert mobile numbers
+            var smsAddresses = recipient.AddressInfo.OfType<SmsAddressPoint>().ToList();
+            Assert.Equal(3, smsAddresses.Count);
+            Assert.Contains(smsAddresses, e => e.MobileNumber == contactPersonFormattedMobileNumber);
+            Assert.Contains(smsAddresses, e => e.MobileNumber == organizationFirstFormattedMobileNumber);
+            Assert.Contains(smsAddresses, e => e.MobileNumber == organizationSecondFormattedMobileNumber);
+
+            profileClientMock.Verify(e => e.GetOrganizationContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber))), Times.Once);
+            profileClientMock.VerifyNoOtherCalls();
+            authorizationServiceMock.VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public async Task AddEmailAndSmsContactPoints_WhenUsingOrganizationNumber_ShouldEnrichRecipientsWithEmailAddressesOnlyWhenNoMobileNumbersAvailable()
+        {
+            // Arrange
+            string organizationNumber = "123456789";
+            string organizationFirstEmailAddresse = "first-organization-email@example.com";
+            string organizationSecondEmailAddresse = "second-organization-email@example.com";
+
+            string contactPersonNationalId = "29326345553";
+            string contactPersonEmailAddresse = "main-recipient@example.com";
+
+            var recipientsToEnrich = new List<Recipient>
+            {
+                new() { OrganizationNumber = organizationNumber }
+            };
+
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(e => e.GetOrganizationContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber))))
+                .ReturnsAsync(
+                [
+                    new()
+                    {
+                        PartyId = 1001,
+                        OrganizationNumber = organizationNumber,
+                        EmailList = [organizationFirstEmailAddresse, organizationSecondEmailAddresse],
+                        UserContactPoints =
+                        [
+                            new()
+                            {
+                                UserId = 200001,
+                                IsReserved = false,
+                                Email = contactPersonEmailAddresse,
+                                NationalIdentityNumber = contactPersonNationalId
+                            }
+                        ]
+                    }
+                ]);
+
+            var authorizationServiceMock = new Mock<IAuthorizationService>();
+
+            var service = GetTestService(
+                profileClient: profileClientMock.Object,
+                authorizationService: authorizationServiceMock.Object);
+
+            // Act
+            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null);
+
+            // Assert
+            var recipient = Assert.Single(recipientsToEnrich);
+            Assert.Null(recipient.IsReserved);
+            Assert.Null(recipient.NationalIdentityNumber);
+            Assert.Equal(organizationNumber, recipient.OrganizationNumber);
+
+            var emailAddresses = recipient.AddressInfo.OfType<EmailAddressPoint>().ToList();
+            Assert.Equal(3, emailAddresses.Count);
+            Assert.Contains(emailAddresses, e => e.EmailAddress == contactPersonEmailAddresse);
+            Assert.Contains(emailAddresses, e => e.EmailAddress == organizationFirstEmailAddresse);
+            Assert.Contains(emailAddresses, e => e.EmailAddress == organizationSecondEmailAddresse);
+
+            Assert.Empty(recipient.AddressInfo.OfType<SmsAddressPoint>());
+
+            profileClientMock.Verify(e => e.GetOrganizationContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber))), Times.Once);
+            profileClientMock.VerifyNoOtherCalls();
+            authorizationServiceMock.VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public async Task AddEmailAndSmsContactPoints_WhenUsingOrganizationNumber_ShouldEnrichRecipientsWithMobileNumbersOnlyWhenNoEmailAddressesAvailable()
+        {
+            // Arrange
+            string organizationNumber = "987654321";
+            string organizationFirstRawMobileNumber = "99999999";
+            string organizationSecondRawMobileNumber = "96666666";
+            string organizationFirstFormattedMobileNumber = "+4799999999";
+            string organizationSecondFormattedMobileNumber = "+4796666666";
+
+            string contactPersonNationalId = "28325649641";
+            string contactPersonRawMobileNumber = "93333333";
+            string contactPersonFormattedMobileNumber = "+4793333333";
+
+            var recipientsToEnrich = new List<Recipient>
+            {
+                new() { OrganizationNumber = organizationNumber }
+            };
+
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(e => e.GetOrganizationContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber))))
+                .ReturnsAsync(
+                [
+                    new()
+                    {
+                        PartyId = 1002,
+                        OrganizationNumber = organizationNumber,
+                        MobileNumberList = [organizationFirstRawMobileNumber, organizationSecondRawMobileNumber],
+                        UserContactPoints =
+                        [
+                            new()
+                            {
+                                UserId = 200002,
+                                IsReserved = false,
+                                MobileNumber = contactPersonRawMobileNumber,
+                                NationalIdentityNumber = contactPersonNationalId
+                            }
+                        ]
+                    }
+                ]);
+
+            var authorizationServiceMock = new Mock<IAuthorizationService>();
+
+            var service = GetTestService(
+                profileClient: profileClientMock.Object,
+                authorizationService: authorizationServiceMock.Object);
+
+            // Act
+            await service.AddEmailAndSmsContactPointsAsync(recipientsToEnrich, null);
+
+            // Assert
+            var recipient = Assert.Single(recipientsToEnrich);
+            Assert.Null(recipient.IsReserved);
+            Assert.Null(recipient.NationalIdentityNumber);
+            Assert.Equal(organizationNumber, recipient.OrganizationNumber);
+
+            var smsAddresses = recipient.AddressInfo.OfType<SmsAddressPoint>().ToList();
+            Assert.Equal(3, smsAddresses.Count);
+            Assert.Contains(smsAddresses, s => s.MobileNumber == contactPersonFormattedMobileNumber);
+            Assert.Contains(smsAddresses, s => s.MobileNumber == organizationFirstFormattedMobileNumber);
+            Assert.Contains(smsAddresses, s => s.MobileNumber == organizationSecondFormattedMobileNumber);
+
+            Assert.Empty(recipient.AddressInfo.OfType<EmailAddressPoint>());
+
+            profileClientMock.Verify(e => e.GetOrganizationContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber))), Times.Once);
+            profileClientMock.VerifyNoOtherCalls();
+            authorizationServiceMock.VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public async Task AddPreferredContactPoints_WhenUsingOrganizationNumberdAndSmsPreferred_ShouldEnrichRecipientsWithMobileNumbers()
+        {
+            // Arrange
+            string organizationNumber = "123456789";
+            string organizationRawMobileNumber = "99999999";
+            string organizationFormattedMobileNumber = "+4799999999";
+            string organizationFirstEmailAddress = "organization@example.com";
+
+            string contactPersonNationalId = "12345678910";
+            string contactPersonRawMobileNumber = "95555555";
+            string contactPersonFormattedMobileNumber = "+4795555555";
+            string contactPersonEmailAddress = "recipient@example.com";
+
+            var recipientsToEnrich = new List<Recipient>
+            {
+                new() { OrganizationNumber = organizationNumber }
+            };
+
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(e => e.GetOrganizationContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber))))
+                .ReturnsAsync(
+                [
+                    new()
+                    {
+                        PartyId = 50301578,
+                        OrganizationNumber = organizationNumber,
+                        EmailList = [organizationFirstEmailAddress, organizationFirstEmailAddress],
+                        MobileNumberList = [organizationRawMobileNumber, organizationFormattedMobileNumber],
+                        UserContactPoints =
+                        [
+                            new()
+                            {
+                                UserId = 20020419,
+                                IsReserved = false,
+                                Email = contactPersonEmailAddress,
+                                MobileNumber = contactPersonRawMobileNumber,
+                                NationalIdentityNumber = contactPersonNationalId
+                            }
+                        ]
+                    }
+                ]);
+
+            var authorizationServiceMock = new Mock<IAuthorizationService>();
+
+            var service = GetTestService(
+                profileClient: profileClientMock.Object,
+                authorizationService: authorizationServiceMock.Object);
+
+            // Act
+            await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipientsToEnrich, null);
+
+            // Assert
+            var recipient = Assert.Single(recipientsToEnrich);
+            Assert.Equal(organizationNumber, recipient.OrganizationNumber);
+            Assert.Equal(2, recipient.AddressInfo.Count);
+
+            var mobileNumbers = recipient.AddressInfo.OfType<SmsAddressPoint>().Select(s => s.MobileNumber).ToList();
+            Assert.Contains(organizationFormattedMobileNumber, mobileNumbers);
+            Assert.Contains(contactPersonFormattedMobileNumber, mobileNumbers);
+
+            profileClientMock.Verify(e => e.GetOrganizationContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber))), Times.Once);
+            profileClientMock.VerifyNoOtherCalls();
+            authorizationServiceMock.VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public async Task AddPreferredContactPoints_WhenUsingOrganizationNumberAndEmailPreferred_ShouldEnrichRecipientsWithEmailAddress()
+        {
+            // Arrange
+            string organizationNumber = "987654321";
+            string organizationRawMobileNumber = "99999999";
+            string organizationFormattedMobileNumber = "+4799999999";
+            string organizationFirstEmailAddress = "organization@example.com";
+            string organizationSecondEmailAddress = "organization-support@example.com";
+
+            string contactPersonNationalId = "12345678910";
+            string contactPersonRawMobileNumber = "95555555";
+            string contactPersonEmailAddress = "recipient@example.com";
+
+            var recipientsToEnrich = new List<Recipient>
+            {
+                new() { OrganizationNumber = organizationNumber }
+            };
+
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(e => e.GetOrganizationContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber))))
+                .ReturnsAsync(
+                [
+                    new()
+                    {
+                        PartyId = 50562806,
+                        OrganizationNumber = organizationNumber,
+                        EmailList = [organizationFirstEmailAddress, organizationSecondEmailAddress],
+                        MobileNumberList = [organizationRawMobileNumber, organizationFormattedMobileNumber],
+                        UserContactPoints =
+                        [
+                            new()
+                            {
+                                UserId = 20020693,
+                                IsReserved = true,
+                                Email = contactPersonEmailAddress,
+                                MobileNumber = contactPersonRawMobileNumber,
+                                NationalIdentityNumber = contactPersonNationalId
+                            }
+                        ]
+                    }
+                ]);
+
+            var authorizationServiceMock = new Mock<IAuthorizationService>();
+
+            var service = GetTestService(
+                profileClient: profileClientMock.Object,
+                authorizationService: authorizationServiceMock.Object);
+
+            // Act
+            await service.AddPreferredContactPoints(NotificationChannel.EmailPreferred, recipientsToEnrich, null);
+
+            // Assert
+            var recipient = Assert.Single(recipientsToEnrich);
+            Assert.Null(recipient.IsReserved);
+            Assert.Null(recipient.NationalIdentityNumber);
+            Assert.Equal(organizationNumber, recipient.OrganizationNumber);
+
+            Assert.Equal(3, recipient.AddressInfo.Count);
+
+            var actualEmailAddresses = recipient.AddressInfo.OfType<EmailAddressPoint>().Select(e => e.EmailAddress).ToList();
+            Assert.Contains(contactPersonEmailAddress, actualEmailAddresses);
+            Assert.Contains(organizationFirstEmailAddress, actualEmailAddresses);
+            Assert.Contains(organizationSecondEmailAddress, actualEmailAddresses);
+
+            profileClientMock.Verify(e => e.GetOrganizationContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber))), Times.Once);
+            profileClientMock.VerifyNoOtherCalls();
+            authorizationServiceMock.VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public async Task AddPreferredContactPoints_WhenUsingOrganizationNumberAndSmsPreferred_ShouldEnrichRecipientsWithMobileNumberWhenNoEmailAddressAvailable()
+        {
+            // Arrange
+            string organizationNumber = "987654321";
+            string organizationFirstEmailAddress = "organization@example.com";
+            string organizationSecondEmailAddress = "organization-support@example.com";
+
+            string contactPersonNationalId = "98765432100";
+            string contactPersonRawMobileNumber = "95555555";
+            string contactPersonFormattedMobileNumber = "+4795555555";
+            string contactPersonEmailAddress = "recipient@example.com";
+
+            var recipientsToEnrich = new List<Recipient>
+            {
+                new() { OrganizationNumber = organizationNumber }
+            };
+
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(e => e.GetOrganizationContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber))))
+                .ReturnsAsync(
+                [
+                    new()
+                    {
+                        PartyId = 50123765,
+                        MobileNumberList = [],
+                        OrganizationNumber = organizationNumber,
+                        EmailList = [organizationFirstEmailAddress, organizationSecondEmailAddress],
+                        UserContactPoints =
+                        [
+                            new()
+                            {
+                                UserId = 20020674,
+                                IsReserved = true,
+                                Email = contactPersonEmailAddress,
+                                MobileNumber = contactPersonRawMobileNumber,
+                                NationalIdentityNumber = contactPersonNationalId
+                            }
+                        ]
+                    }
+                ]);
+
+            var authorizationServiceMock = new Mock<IAuthorizationService>();
+
+            var service = GetTestService(
+                profileClient: profileClientMock.Object,
+                authorizationService: authorizationServiceMock.Object);
+
+            // Act
+            await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipientsToEnrich, null);
+
+            // Assert
+            var recipient = Assert.Single(recipientsToEnrich);
+            Assert.Null(recipient.IsReserved);
+            Assert.Null(recipient.NationalIdentityNumber);
+            Assert.Equal(organizationNumber, recipient.OrganizationNumber);
+
+            var actualMobileNumbers = recipient.AddressInfo.OfType<SmsAddressPoint>().Select(e => e.MobileNumber).ToList();
+            Assert.Equal(1, actualMobileNumbers.Count(e => e == contactPersonFormattedMobileNumber));
+
+            var actualEmailAddresses = recipient.AddressInfo.OfType<EmailAddressPoint>().Select(e => e.EmailAddress).ToList();
+            Assert.Equal(2, actualEmailAddresses.Count);
+            Assert.Equal(1, actualEmailAddresses.Count(e => e == organizationFirstEmailAddress));
+            Assert.Equal(1, actualEmailAddresses.Count(e => e == organizationSecondEmailAddress));
+
+            profileClientMock.Verify(e => e.GetOrganizationContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber))), Times.Once);
+
+            profileClientMock.VerifyNoOtherCalls();
+            authorizationServiceMock.VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public async Task AddPreferredContactPoints_WhenUsingOrganizationNumberAndSmsPreferred_ShouldEnrichRecipientsWithEmailAddressWhenNoMobileNumbersAvailable()
+        {
+            // Arrange
+            string organizationNumber = "123456789";
+            string organizationEmailAddress = "org@example.com";
+
+            string contactPersonNationalId = "12345678910";
+            string contactPersonRawMobileNumber = "95555555";
+            string contactPersonFormattedMobileNumber = "+4795555555";
+            string contactPersonEmailAddress = "recipient@example.com";
+
+            var recipientsToEnrich = new List<Recipient>
+            {
+                new() { OrganizationNumber = organizationNumber }
+            };
+
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(e => e.GetOrganizationContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber))))
+                .ReturnsAsync(
+                [
+                    new()
+                    {
+                        PartyId = 50562806,
+                        OrganizationNumber = organizationNumber,
+                        EmailList = [organizationEmailAddress, organizationEmailAddress],
+                        MobileNumberList = [],
+                        UserContactPoints =
+                        [
+                            new()
+                            {
+                                UserId = 20020693,
+                                IsReserved = false,
+                                Email = contactPersonEmailAddress,
+                                MobileNumber = contactPersonRawMobileNumber,
+                                NationalIdentityNumber = contactPersonNationalId
+                            }
+                        ]
+                    }
+                ]);
+
+            var authorizationServiceMock = new Mock<IAuthorizationService>();
+            var service = GetTestService(profileClient: profileClientMock.Object, authorizationService: authorizationServiceMock.Object);
+
+            // Act
+            await service.AddPreferredContactPoints(NotificationChannel.SmsPreferred, recipientsToEnrich, null);
+
+            // Assert
+            var recipient = Assert.Single(recipientsToEnrich);
+            Assert.Equal(organizationNumber, recipient.OrganizationNumber);
+
+            var actualMobileNumbers = recipient.AddressInfo.OfType<SmsAddressPoint>().Select(e => e.MobileNumber).ToList();
+            Assert.Single(actualMobileNumbers);
+            Assert.Equal(1, actualMobileNumbers.Count(e => e == contactPersonFormattedMobileNumber));
+
+            var actualEmailAddresses = recipient.AddressInfo.OfType<EmailAddressPoint>().Select(e => e.EmailAddress).ToList();
+            Assert.Single(actualEmailAddresses);
+            Assert.Equal(1, actualEmailAddresses.Count(e => e == organizationEmailAddress));
+
+            profileClientMock.Verify(e => e.GetOrganizationContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber))), Times.Once);
+
+            profileClientMock.VerifyNoOtherCalls();
+            authorizationServiceMock.VerifyNoOtherCalls();
         }
 
         private static ContactPointService GetTestService(
             IProfileClient? profileClient = null,
-            IRegisterClient? registerClient = null,
             IAuthorizationService? authorizationService = null)
         {
             if (profileClient == null)
@@ -874,19 +1370,13 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
                 profileClient = profileClientMock.Object;
             }
 
-            if (registerClient == null)
-            {
-                var registerClientMock = new Mock<IRegisterClient>();
-                registerClient = registerClientMock.Object;
-            }
-
             if (authorizationService == null)
             {
                 var authorizationServiceMock = new Mock<IAuthorizationService>();
                 authorizationService = authorizationServiceMock.Object;
             }
 
-            return new ContactPointService(profileClient, registerClient, authorizationService);
+            return new ContactPointService(profileClient, authorizationService);
         }
     }
 }
