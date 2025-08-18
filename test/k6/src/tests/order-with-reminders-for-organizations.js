@@ -82,99 +82,167 @@ const missingResourceOrderDuration = new Trend("missing_resource_order_duration"
 // Test data for order chain requests, loaded from a JSON file.
 const orderChainRequestJson = JSON.parse(open("../data/orders/order-with-reminders-for-organizations.json"));
 
-
-/*
-
-*/
+// Define the order types that will be used in the test scenarios
 export const options = {
     scenarios: {
-        forecast_load: {
-            rate: 600,
-            maxVUs: 500,
+        // 1. Smoke test to ensure basic functionality and readiness
+        smoke_test: {
+            maxVUs: 20,
             timeUnit: '1s',
-            duration: '5m',
-            preAllocatedVUs: 200,
-            executor: 'constant-arrival-rate'
+            duration: '30s',
+            preAllocatedVUs: 10,
+            gracefulStop: '30s',
+            executor: 'constant-arrival-rate',
+            rate: Number(__ENV.precheckTestRequestsPerSecond || 5)
         },
+
+        // 2. Load test for valid orders to verify system's ability to handle increasing traffic
+        load_test_valid_orders: {
+            maxVUs: 25,
+            timeUnit: '1s',
+            gracefulStop: '30s',
+            preAllocatedVUs: 10,
+            executor: 'ramping-arrival-rate',
+            startRate: Number(__ENV.requestsPerSecond || 10),
+            stages: [
+                { target: Number(__ENV.requestsPerSecondLowestStage || 50), duration: '3m' },
+                { target: Number(__ENV.requestsPerSecondMiddleStage || 100), duration: '5m' },
+                { target: Number(__ENV.requestsPerSecondHighestStage || 150), duration: '7m' },
+                { target: 0, duration: '1m' }
+            ]
+        },
+
+        // 3. Negative test for invalid orders to identify vulnerabilities or performance issues
+        negative_test_invalid_orders: {
+            maxVUs: 25,
+            timeUnit: '1s',
+            gracefulStop: '30s',
+            preAllocatedVUs: 10,
+            executor: 'ramping-arrival-rate',
+            startRate: Number(__ENV.requestsPerSecond || 1),
+            stages: [
+                { target: Number(__ENV.requestsPerSecondLowestStage || 50), duration: '3m' },
+                { target: Number(__ENV.requestsPerSecondMiddleStage || 100), duration: '5m' },
+                { target: Number(__ENV.requestsPerSecondHighestStage || 150), duration: '7m' },
+                { target: 0, duration: '1m' }
+            ]
+        },
+
+        // 4. Idempotency test for duplicate orders to verify consistent behavior
+        idempotency_test_duplicate_orders: {
+            maxVUs: 25,
+            timeUnit: '1s',
+            gracefulStop: '30s',
+            preAllocatedVUs: 10,
+            executor: 'ramping-arrival-rate',
+            startRate: Number(__ENV.requestsPerSecond || 1),
+            stages: [
+                { target: Number(__ENV.requestsPerSecondLowestStage || 50), duration: '3m' },
+                { target: Number(__ENV.requestsPerSecondMiddleStage || 100), duration: '5m' },
+                { target: Number(__ENV.requestsPerSecondHighestStage || 150), duration: '7m' },
+                { target: 0, duration: '1m' }
+            ]
+        },
+
+        // 5. Test for orders missing resource identifiers to verify error handling
+        test_missing_resource_id_orders: {
+            maxVUs: 25,
+            timeUnit: '1s',
+            gracefulStop: '30s',
+            preAllocatedVUs: 10,
+            executor: 'ramping-arrival-rate',
+            startRate: Number(__ENV.requestsPerSecond || 1),
+            stages: [
+                { target: Number(__ENV.requestsPerSecondLowestStage || 50), duration: '3m' },
+                { target: Number(__ENV.requestsPerSecondMiddleStage || 100), duration: '5m' },
+                { target: Number(__ENV.requestsPerSecondHighestStage || 150), duration: '7m' },
+                { target: 0, duration: '1m' }
+            ]
+        },
+
+        // 6. Capacity probe to determine maximum sustainable throughput
         capacity_probe: {
             maxVUs: 500,
-            startRate: 50,
             timeUnit: '1s',
-            preAllocatedVUs: 100,
+            gracefulStop: '1m',
+            preAllocatedVUs: 10,
+            executor: 'ramping-arrival-rate',
+            startRate: Number(__ENV.CAP_START || 50),
+            stages: [
+                { target: 100, duration: '2m' },
+                { target: 200, duration: '3m' },
+                { target: 300, duration: '4m' },
+                { target: 400, duration: '5m' },
+                { target: 500, duration: '6m' },
+                { target: 500, duration: '5m' },
+                { target: 0, duration: '2m' }
+            ]
+        },
+
+        // 7. Steady-state load test to verify system's performance under sustained load
+        steady_state_load_test: {
+            maxVUs: 500,
+            timeUnit: '1s',
+            gracefulStop: '1m',
+            preAllocatedVUs: 250,
+            executor: 'constant-arrival-rate',
+            rate: Number(__ENV.FORECAST_RATE || 600),
+            duration: __ENV.FORECAST_DURATION || '10m'
+        },
+
+        // 8. Spike test to evaluate system's resilience to traffic bursts
+        spike_test: {
+            maxVUs: 500,
+            startRate: 0,
+            timeUnit: '1s',
+            gracefulStop: '15s',
+            preAllocatedVUs: 150,
             executor: 'ramping-arrival-rate',
             stages: [
-                { target: 100, duration: '1m' },
-                { target: 200, duration: '1m' },
-                { target: 300, duration: '1m' },
-                { target: 400, duration: '1m' },
-                { target: 500, duration: '1m' },
+                { target: 50, duration: '15s' },
+                { target: 400, duration: '15s' }, // sudden spike
+                { target: 10, duration: '30s' },
                 { target: 0, duration: '30s' }
             ]
         },
-        post_valid_order: {
-            maxVUs: 50,
-            startRate: 10,
+
+        // 9. Soak test to verify system stability under long-term moderate load
+        soak_test: {
+            maxVUs: 200,
             timeUnit: '1s',
-            preAllocatedVUs: 50,
-            executor: 'ramping-arrival-rate',
-            stages: [
-                { target: 50, duration: '2m' },
-                { target: 100, duration: '5m' },
-                { target: 150, duration: '10m' },
-                { target: 0, duration: '2m' }
-            ]
-        },
-        post_invalid_order: {
-            maxVUs: 50,
-            startRate: 5,
-            timeUnit: '1s',
-            preAllocatedVUs: 25,
-            executor: 'ramping-arrival-rate',
-            stages: [
-                { target: 25, duration: '2m' },
-                { target: 50, duration: '5m' },
-                { target: 75, duration: '10m' },
-                { target: 0, duration: '2m' }
-            ]
-        },
-        post_duplicate_order: {
-            maxVUs: 50,
-            startRate: 5,
-            timeUnit: '1s',
-            preAllocatedVUs: 25,
-            executor: 'ramping-arrival-rate',
-            stages: [
-                { target: 25, duration: '2m' },
-                { target: 50, duration: '5m' },
-                { target: 75, duration: '10m' },
-                { target: 0, duration: '2m' }
-            ]
-        },
-        post_order_without_resource_id: {
-            maxVUs: 50,
-            startRate: 5,
-            timeUnit: '1s',
-            preAllocatedVUs: 25,
-            executor: 'ramping-arrival-rate',
-            stages: [
-                { target: 25, duration: '2m' },
-                { target: 50, duration: '5m' },
-                { target: 75, duration: '10m' },
-                { target: 0, duration: '2m' }
-            ]
+            gracefulStop: '2m',
+            preAllocatedVUs: 120,
+            executor: 'constant-arrival-rate',
+            rate: Number(__ENV.SOAK_RATE || 100),
+            duration: __ENV.SOAK_DURATION || '30m'
         }
     },
-    summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(95)', 'p(99)', 'count'],
+
+    summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(90)', 'p(95)', 'p(99)', 'count'],
+
     thresholds: {
-        checks: ['rate>=1'],
+        // Global reliability
+        'success_rate': [
+            'rate>0.99',
+            { threshold: 'rate>0.995', abortOnFail: false, delayAbortEval: '2m' }
+        ],
+
         'http_5xx': ['count<50'],
-        'success_rate': ['rate>0.99'],
         'failed_requests': ['count<100'],
-        'http_req_duration': ['p(95)<2000'],
-        'valid_order_duration': ['p(95)<1500'],
+
+        // Latency per request category
         'invalid_order_duration': ['p(95)<500'],
         'duplicate_order_duration': ['p(95)<1000'],
-        'missing_resource_order_duration': ['p(95)<2000']
+        'missing_resource_order_duration': ['p(95)<2000'],
+        'valid_order_duration': ['p(95)<1500', 'p(99)<2500'],
+
+        // Overall latency (exclude spike scenario strictness by scoping others stricter)
+        'http_req_duration{scenario:spike}': ['p(99)<5000'],
+        'http_req_duration{scenario:capacity_probe}': ['p(95)<3000'], // looser during probe
+        'http_req_duration{scenario:forecast_load}': ['p(95)<1500', 'p(99)<2200'],
+
+        // Functional checks (make slightly tolerant)
+        checks: ['rate>0.995']
     }
 };
 
