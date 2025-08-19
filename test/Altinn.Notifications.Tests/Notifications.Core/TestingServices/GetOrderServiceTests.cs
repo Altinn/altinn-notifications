@@ -147,7 +147,7 @@ public class GetOrderServiceTests
     [Fact]
     public void GetStatusDescription_AllResultTypesHaveDescriptions()
     {
-        foreach (OrderProcessingStatus statusType in Enum.GetValues(typeof(OrderProcessingStatus)))
+        foreach (OrderProcessingStatus statusType in Enum.GetValues<OrderProcessingStatus>())
         {
             string statusDescription = GetOrderService.GetStatusDescription(statusType);
             Assert.NotEmpty(statusDescription);

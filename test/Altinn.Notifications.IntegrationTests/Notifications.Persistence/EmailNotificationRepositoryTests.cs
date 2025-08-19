@@ -307,7 +307,7 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
         _orderIdsToDelete.Add(order.Id);
 
         // Act & Assert
-        foreach (EmailNotificationResultType resultType in Enum.GetValues(typeof(EmailNotificationResultType)))
+        foreach (EmailNotificationResultType resultType in Enum.GetValues<EmailNotificationResultType>())
         {
             try
             {

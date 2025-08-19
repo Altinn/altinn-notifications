@@ -46,7 +46,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
         [Fact]
         public void GetResultDescription_AllResultTypesHaveDescriptions()
         {
-            foreach (EmailNotificationResultType resultType in Enum.GetValues(typeof(EmailNotificationResultType)))
+            foreach (EmailNotificationResultType resultType in Enum.GetValues<EmailNotificationResultType>())
             {
                 string resultDescrption = EmailNotificationSummaryService.GetResultDescription(resultType);
                 Assert.NotEmpty(resultDescrption);

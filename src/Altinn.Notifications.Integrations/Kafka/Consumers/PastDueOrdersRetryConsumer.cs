@@ -59,7 +59,7 @@ public class PastDueOrdersRetryConsumer : KafkaConsumerBase<PastDueOrdersRetryCo
         await _orderProcessingService.ProcessOrderRetry(order!);
     }
 
-    private Task RetryOrder(string message)
+    private static Task RetryOrder(string message)
     {
         return Task.CompletedTask;
     }

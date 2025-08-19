@@ -11,7 +11,7 @@ export const get_sms_instant_shipment = "get_sms_instant_shipment";
 export const get_status_feed = "get_status_feed";
 
 export function setEmptyThresholds(labels, options) {
-    for (var label of labels) {
+    for (let label of labels) {
         options.thresholds[`http_req_duration{name:${label}}`] = [];
         options.thresholds[`http_reqs{name:${label}}`] = [];
     };
