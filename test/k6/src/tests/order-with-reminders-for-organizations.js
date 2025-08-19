@@ -30,6 +30,8 @@ import { scopes, resourceId, orderTypes } from "../shared/variables.js";
 import { textSummary } from "https://jslib.k6.io/k6-summary/0.0.1/index.js";
 import { post_valid_order, post_invalid_order, post_duplicate_order, post_order_without_resource_id, setEmptyThresholds } from "./threshold-labels.js";
 
+let responses = [];
+
 // Variables to cach and renew the token
 let cachedToken = null;
 let tokenExpiration = 0;
@@ -181,7 +183,7 @@ export const options = {
         'success_rate': ['rate>0.995'],
         'server_error_rate': ['rate<0.02'],
         'high_latency_rate': ['rate<0.05'],
-        'dropped_iterations': ['value==0'],
+        'dropped_iterations': ['count==0'],
         'http_req_duration': ['p(95)<1500', 'p(99)<2500'],
         'valid_order_duration': ['p(95)<1200', 'p(99)<1800'],
         'invalid_order_duration': ['p(95)<400', 'p(99)<600'],
@@ -249,7 +251,7 @@ export default function (data) {
 
     const orderChainRequests = generateOrderChainRequestByOrderType(orderTypes, data, orgNumber);
 
-    const responses = [];
+    responses = [];
 
     // Run test orders
     processOrder("valid", orderChainRequests.validOrder, post_valid_order, validOrderDuration);
@@ -523,7 +525,7 @@ function createUniqueOrderChainRequest(data, orgNumber) {
 function processOrder(kind, order, label, durationMetric) {
     if (!order) return;
 
-    const response = sendNotificationOrderChain(data, order, label);
+    const response = sendNotificationOrderChain(order, label);
     recordResult(response);
     durationMetric.add(response.timings.duration);
     responses.push({ kind, response, sourceOrder: order });
@@ -596,12 +598,11 @@ function generateOrderChainRequestByOrderType(orderTypes, data, orgNumber) {
  * - The JWT `exp` claim is intentionally ignored to reduce parsing overhead;
  *   instead, a fixed lifetime is assumed.
  *
- * @param {Object} data - Shared context object (currently unused, reserved for future use).
  * @param {Object} orderRequest - The order chain payload to send.
  * @param {string} [label='post_valid_order'] - Label used for logging/metrics.
  * @returns {Object} The HTTP response from the Notification API.
  */
-function sendNotificationOrderChain(data, orderRequest, label = 'post_valid_order') {
+function sendNotificationOrderChain(orderRequest, label = 'post_valid_order') {
     const requestBody = JSON.stringify(orderRequest);
 
     const secondsNow = Math.floor(Date.now() / 1000);
