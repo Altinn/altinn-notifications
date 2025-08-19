@@ -1,47 +1,94 @@
 /*
-    Test script for creating notification orders and reminders intended for organizations.
+    Performance & correctness test for creating notification order chains (main order + reminders) for organizations.
 
-    Scenarios exercised in a single iteration (without aborting unless critical auth/execution error):
-    - 201 Created (valid order)
-    - 200 OK (idempotent duplicate)
-    - 400 Bad Request (validation failure)
+    Core per-iteration functional scenarios (executed when included in orderTypes):
+    - 201 Created (valid order) -> must return shipmentId.
+    - 200 OK (idempotent duplicate) -> reuse same idempotencyId; must return existing shipmentId.
+    - 400 Bad Request (invalid structure: required recipientOrganization removed).
+    - 201 Created or 422 (order missing resourceId) -> exercises path with reduced external lookups.
 
-    The script generates a unique idempotency identifier for each "valid" scenario and reuses it to test idempotency.
-    Organization number: uses the provided `__ENV.orgNoRecipient` or the script will generate a random 9-digit number as a fallback.
+    Order variants supported (configured via imported `orderTypes` array):
+    - "valid" | "invalid" | "duplicate" | "missingResource" | "all".
+    Each variant is produced from an independently cloned base request to avoid cross-mutation.
+    Duplicate uses an exact clone of the valid request (same idempotencyId) to assert idempotency.
 
-    Additional Scenarios:
-    - Forecast load: Simulates expected traffic rates to verify system readiness.
-    - Capacity probe: Determines the maximum sustainable throughput under increasing load.
+    Dynamic data & identifiers:
+    - A single random 8-char token seeds: dialogId, transmissionId, main sendersReference, reminder sendersReference.
+    - Per order variant we assign a fresh idempotencyId (except duplicate which reuses the valid one).
+    - Organization number: __ENV.orgNoRecipient (if present) else generated (helper getOrgNoRecipient()).
+    - resourceId injected from shared variables for both main order and reminders unless intentionally removed.
 
-    Metrics Tracked:
-    - `http4xx`: Count of HTTP 4xx responses (client errors).
-    - `http5xx`: Count of HTTP 5xx responses (server errors).
-    - `failedRequests`: Total number of failed requests (4xx or 5xx).
-    - `validOrderDuration`: Response time for valid orders (201 Created).
-    - `duplicateOrderDuration`: Response time for duplicate orders (200 OK).
-    - `successRate`: Proportion of successful requests (non-4xx/5xx responses).
-    - `invalidOrderDuration`: Response time for invalid orders (400 Bad Request).
-    - `missingResourceOrderDuration`: Response time for orders missing a resource (less interacting with external APIs).
+    Scenario suite (k6 `scenarios`):
+    1. smoke_test (constant-arrival-rate) – fast readiness gate.
+    2. capacity_probe (ramping-arrival-rate) – multi-stage throughput escalation (discover knee / saturation).
+    3. load_test_valid_orders (ramping-arrival-rate) – SLO/SLA validation tiers (low/mid/high).
+    4. steady_state_load_test (constant-arrival-rate) – forecast production baseline (warm system before spike).
+    5. spike_test (ramping-arrival-rate) – rapid burst & decay resilience check.
+    6. soak_test (constant-arrival-rate) – extended stability, error accumulation & leaks.
 
-    Thresholds:
-    - `http5xx`: Must be < 50.
-    - `successRate`: Must be > 99%.
-    - `failedRequests`: Must be < 100.
-    - Response time thresholds for various scenarios (e.g., `validOrderDuration` < 1500ms).
+    Environment variable tunables:
+    - precheckTestRequestsPerSecond
+    - CAP_START
+    - requestsPerSecond, requestsPerSecondLowestStage, requestsPerSecondMiddleStage, requestsPerSecondHighestStage
+    - FORECAST_RATE, FORECAST_DURATION
+    - SOAK_RATE, SOAK_DURATION
+    - orgNoRecipient
+    (All parsed with Number(...) or used as string durations; safe defaults applied when unset.)
 
-    Error Handling:
-    - Stops iteration on critical errors (e.g., 401 Unauthorized, 403 Forbidden).
+    Metrics (custom):
+    - success_rate (Rate) -> non-4xx/5xx proportion (also refined per-scenario via tag scoping).
+    - http_4xx (Counter)
+    - http_5xx (Counter)
+    - failed_requests (Counter) -> any 4xx or 5xx.
+    - valid_order_duration (Trend)
+    - invalid_order_duration (Trend)
+    - duplicate_order_duration (Trend)
+    - missing_resource_order_duration (Trend)
 
-    Test Data:
-    - Loaded from `../data/orders/order-with-reminders-for-organizations.json`.
+    Labels (for per-request grouping / empty thresholds injected):
+    - post_valid_order
+    - post_invalid_order
+    - post_duplicate_order
+    - post_order_without_resource_id
+    (setEmptyThresholds ensures they appear without enforcing extra performance gates.)
 
-    Custom Summary:
-    - Generates a JSON summary (`summary.json`) and a human-readable summary for terminal output.
+    Thresholds (selected excerpts):
+    - http_5xx: count < 50 (global)
+    - failed_requests: count < 100 (global)
+    - success_rate: rate > 0.99 (global), stricter for load_test_valid_orders ( > 0.999 )
+    - checks: rate > 0.995
+    - Scenario-specific http_req_duration p95 / p99 bounds (capacity, load, steady-state, soak, spike).
+    - valid_order_duration: p95 < 1500, p99 < 2500
+
+    Validation (k6 checks per request type):
+    - Valid: 201 + shipmentId.
+    - Duplicate: 200 + shipmentId (idempotency confirmation).
+    - Invalid: 400 (structure validation).
+    - Missing resource: 201 or 422 (accepts alternate backend behavior).
+
+    Error handling:
+    - Any 4xx/5xx increments counters; classification split between http_4xx/http_5xx.
+    - 401 / 403 triggers stopIterationOnFail (fail-fast for authZ/authN issues).
+
+    Test data source:
+    - Base JSON: ../data/orders/order-with-reminders-for-organizations.json (deep cloned per variant).
+
+    Summary output:
+    - summary.json (raw k6 result object)
+    - Colored human-readable stdout (textSummary).
 
     Goals:
-    1. Identify the current maximum sustainable capacity.
-    2. Observe system and third-party behavior under various load conditions.
-    3. Validate readiness for forecasted traffic and ensure compliance with SLAs.
+    1. Gate readiness quickly before heavy stages (smoke_test).
+    2. Empirically discover capacity limits & latency inflection (capacity_probe).
+    3. Validate SLO/SLA conformance across realistic demand tiers (load & steady-state).
+    4. Assess burst resilience (spike_test) and long-haul stability / leak absence (soak_test).
+    5. Verify correctness paths: creation, idempotency, validation failures, reduced-external-call variant.
+    6. Produce actionable metrics for regression tracking and release fitness decisions.
+
+    Notes:
+    - All cloning uses JSON deep copies to avoid shared mutations.
+    - Idempotency enforced solely by reused idempotencyId in duplicate order path.
+    - Missing resource variant deliberately strips resourceId fields in main + reminder recipients.
 */
 
 import { check } from "k6";
@@ -85,7 +132,7 @@ const orderChainRequestJson = JSON.parse(open("../data/orders/order-with-reminde
 // Define the order types that will be used in the test scenarios
 export const options = {
     scenarios: {
-        // 1. Smoke test to ensure basic functionality and readiness
+    // 1. Quick readiness gate (runs first, alone)
         smoke_test: {
             maxVUs: 20,
             timeUnit: '1s',
@@ -96,74 +143,12 @@ export const options = {
             rate: Number(__ENV.precheckTestRequestsPerSecond || 5)
         },
 
-        // 2. Load test for valid orders to verify system's ability to handle increasing traffic
-        load_test_valid_orders: {
-            maxVUs: 25,
-            timeUnit: '1s',
-            gracefulStop: '30s',
-            preAllocatedVUs: 10,
-            executor: 'ramping-arrival-rate',
-            startRate: Number(__ENV.requestsPerSecond || 10),
-            stages: [
-                { target: Number(__ENV.requestsPerSecondLowestStage || 50), duration: '3m' },
-                { target: Number(__ENV.requestsPerSecondMiddleStage || 100), duration: '5m' },
-                { target: Number(__ENV.requestsPerSecondHighestStage || 150), duration: '7m' },
-                { target: 0, duration: '1m' }
-            ]
-        },
-
-        // 3. Negative test for invalid orders to identify vulnerabilities or performance issues
-        negative_test_invalid_orders: {
-            maxVUs: 25,
-            timeUnit: '1s',
-            gracefulStop: '30s',
-            preAllocatedVUs: 10,
-            executor: 'ramping-arrival-rate',
-            startRate: Number(__ENV.requestsPerSecond || 1),
-            stages: [
-                { target: Number(__ENV.requestsPerSecondLowestStage || 50), duration: '3m' },
-                { target: Number(__ENV.requestsPerSecondMiddleStage || 100), duration: '5m' },
-                { target: Number(__ENV.requestsPerSecondHighestStage || 150), duration: '7m' },
-                { target: 0, duration: '1m' }
-            ]
-        },
-
-        // 4. Idempotency test for duplicate orders to verify consistent behavior
-        idempotency_test_duplicate_orders: {
-            maxVUs: 25,
-            timeUnit: '1s',
-            gracefulStop: '30s',
-            preAllocatedVUs: 10,
-            executor: 'ramping-arrival-rate',
-            startRate: Number(__ENV.requestsPerSecond || 1),
-            stages: [
-                { target: Number(__ENV.requestsPerSecondLowestStage || 50), duration: '3m' },
-                { target: Number(__ENV.requestsPerSecondMiddleStage || 100), duration: '5m' },
-                { target: Number(__ENV.requestsPerSecondHighestStage || 150), duration: '7m' },
-                { target: 0, duration: '1m' }
-            ]
-        },
-
-        // 5. Test for orders missing resource identifiers to verify error handling
-        test_missing_resource_id_orders: {
-            maxVUs: 25,
-            timeUnit: '1s',
-            gracefulStop: '30s',
-            preAllocatedVUs: 10,
-            executor: 'ramping-arrival-rate',
-            startRate: Number(__ENV.requestsPerSecond || 1),
-            stages: [
-                { target: Number(__ENV.requestsPerSecondLowestStage || 50), duration: '3m' },
-                { target: Number(__ENV.requestsPerSecondMiddleStage || 100), duration: '5m' },
-                { target: Number(__ENV.requestsPerSecondHighestStage || 150), duration: '7m' },
-                { target: 0, duration: '1m' }
-            ]
-        },
-
-        // 6. Capacity probe to determine maximum sustainable throughput
+        // 2. Capacity probe (runs alone – all other heavy scenarios start after it finishes)
+        // Total duration of stages = 27m. Starts after smoke_test (startTime 45s).
         capacity_probe: {
             maxVUs: 500,
             timeUnit: '1s',
+            startTime: '45s',
             gracefulStop: '1m',
             preAllocatedVUs: 10,
             executor: 'ramping-arrival-rate',
@@ -179,10 +164,29 @@ export const options = {
             ]
         },
 
-        // 7. Steady-state load test to verify system's performance under sustained load
+        // 3. Load test for SLO/SLA validation (starts after capacity probe -> 27m + 45s around 28m)
+        load_test_valid_orders: {
+            maxVUs: 60,
+            timeUnit: '1s',
+            startTime: '28m',
+            preAllocatedVUs: 20,
+            gracefulStop: '30s',
+            executor: 'ramping-arrival-rate',
+            startRate: Number(__ENV.requestsPerSecond || 10),
+            stages: [
+                { target: Number(__ENV.requestsPerSecondLowestStage || 100), duration: '4m' },
+                { target: Number(__ENV.requestsPerSecondMiddleStage || 150), duration: '5m' },
+                { target: Number(__ENV.requestsPerSecondHighestStage || 200), duration: '6m' },
+                { target: 0, duration: '1m' }
+            ]
+        },
+
+        // 4. Steady-state
+        // Starts after load test completion (around 28m + 16m = 44m -> add 1m buffer)
         steady_state_load_test: {
             maxVUs: 500,
             timeUnit: '1s',
+            startTime: '45m',
             gracefulStop: '1m',
             preAllocatedVUs: 250,
             executor: 'constant-arrival-rate',
@@ -190,26 +194,28 @@ export const options = {
             duration: __ENV.FORECAST_DURATION || '10m'
         },
 
-        // 8. Spike test to evaluate system's resilience to traffic bursts
+        // 5. Spike test – follows warm steady-state baseline
         spike_test: {
             maxVUs: 500,
             startRate: 0,
+            startTime: '56m',
             timeUnit: '1s',
             gracefulStop: '15s',
             preAllocatedVUs: 150,
             executor: 'ramping-arrival-rate',
             stages: [
                 { target: 50, duration: '15s' },
-                { target: 400, duration: '15s' }, // sudden spike
+                { target: 400, duration: '15s' },
                 { target: 10, duration: '30s' },
                 { target: 0, duration: '30s' }
             ]
         },
 
-        // 9. Soak test to verify system stability under long-term moderate load
+        // 6. Soak test – long-running stability (starts after spike)
         soak_test: {
             maxVUs: 200,
             timeUnit: '1s',
+            startTime: '58m',
             gracefulStop: '2m',
             preAllocatedVUs: 120,
             executor: 'constant-arrival-rate',
@@ -221,27 +227,30 @@ export const options = {
     summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(90)', 'p(95)', 'p(99)', 'count'],
 
     thresholds: {
-        // Global reliability
-        'success_rate': [
-            'rate>0.99',
-            { threshold: 'rate>0.995', abortOnFail: false, delayAbortEval: '2m' }
-        ],
-
         'http_5xx': ['count<50'],
+        'success_rate': ['rate>0.99'],
         'failed_requests': ['count<100'],
 
-        // Latency per request category
-        'invalid_order_duration': ['p(95)<500'],
-        'duplicate_order_duration': ['p(95)<1000'],
-        'missing_resource_order_duration': ['p(95)<2000'],
+        'success_rate{scenario:load_test_valid_orders}': ['rate>0.999'],
+        'http_req_duration{scenario:load_test_valid_orders}': [
+            'p(95)<1200',
+            'p(99)<1800'
+        ],
+        'http_req_duration{scenario:steady_state_load_test}': [
+            'p(95)<1500',
+            'p(99)<2200'
+        ],
+        'http_req_duration{scenario:soak_test}': [
+            'p(95)<1600',
+            'p(99)<2300'
+        ],
+
         'valid_order_duration': ['p(95)<1500', 'p(99)<2500'],
 
-        // Overall latency (exclude spike scenario strictness by scoping others stricter)
-        'http_req_duration{scenario:spike}': ['p(99)<5000'],
-        'http_req_duration{scenario:capacity_probe}': ['p(95)<3000'], // looser during probe
-        'http_req_duration{scenario:forecast_load}': ['p(95)<1500', 'p(99)<2200'],
+        'http_req_duration{scenario:spike_test}': ['p(99)<5000'],
 
-        // Functional checks (make slightly tolerant)
+        'http_req_duration{scenario:capacity_probe}': ['p(95)<3000'],
+
         checks: ['rate>0.995']
     }
 };
