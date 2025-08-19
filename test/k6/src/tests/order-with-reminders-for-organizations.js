@@ -30,9 +30,7 @@ import { scopes, resourceId, orderTypes } from "../shared/variables.js";
 import { textSummary } from "https://jslib.k6.io/k6-summary/0.0.1/index.js";
 import { post_valid_order, post_invalid_order, post_duplicate_order, post_order_without_resource_id, setEmptyThresholds } from "./threshold-labels.js";
 
-let responses = [];
-
-// Variables to cach and renew the token
+// Variables to cache and renew the token
 let cachedToken = null;
 let tokenExpiration = 0;
 
@@ -243,25 +241,32 @@ export function setup() {
  * - On critical authentication/authorization errors (401/403), iteration stops early.
  *
  * @param {Object} data - The shared context prepared in the `setup` step, containing:
- * @param {string} data.token - The authentication token for API requests.
  * @param {Object} data.orderChainRequest - The base order chain request template.
  */
 export default function (data) {
     const orgNumber = getOrgNoRecipient();
-
     const orderChainRequests = generateOrderChainRequestByOrderType(orderTypes, data, orgNumber);
 
-    responses = [];
+    // Process orders and collect responses directly
+    const responses = [
+        processOrder("valid", orderChainRequests.validOrder, post_valid_order, validOrderDuration),
+        processOrder("invalid", orderChainRequests.invalidOrder, post_invalid_order, invalidOrderDuration),
+        processOrder("duplicate", orderChainRequests.duplicateOrder, post_duplicate_order, duplicateOrderDuration),
+        processOrder("missingResource", orderChainRequests.missingResourceOrder, post_order_without_resource_id, missingResourceOrderDuration)
+    ].filter(Boolean); // Remove any undefined results (skipped orders)
 
-    // Run test orders
-    processOrder("valid", orderChainRequests.validOrder, post_valid_order, validOrderDuration);
-    processOrder("invalid", orderChainRequests.invalidOrder, post_invalid_order, invalidOrderDuration);
-    processOrder("duplicate", orderChainRequests.duplicateOrder, post_duplicate_order, duplicateOrderDuration);
-    processOrder("missingResource", orderChainRequests.missingResourceOrder, post_order_without_resource_id, missingResourceOrderDuration);
+    // Validate collected responses
+    validateResponses(responses);
+}
 
-    /**
-     * Validators for different order types.
-     */
+/**
+ * Validates a collection of responses based on their type.
+ * 
+ * @param {Array} responses - Array of response objects from different order types
+ */
+function validateResponses(responses) {
+    if (!responses || responses.length === 0) return;
+
     const validators = {
         valid: (response, body, sourceOrder) => {
             check(response, {
@@ -309,19 +314,16 @@ export default function (data) {
         }
     };
 
-    // Validate responses
-    if (responses.length !== 0) {
-        for (const { kind, response, sourceOrder } of responses) {
-            if (response.status === 401 || response.status === 403) {
-                stopIterationOnFail("Critical authentication/authorization error encountered", false);
-                break;
-            }
-
-            let body;
-            try { body = JSON.parse(response.body); } catch { body = {}; }
-
-            validators[kind]?.(response, body, sourceOrder);
+    for (const { kind, response, sourceOrder } of responses) {
+        if (response.status === 401 || response.status === 403) {
+            stopIterationOnFail("Critical authentication/authorization error encountered", false);
+            break;
         }
+
+        let body;
+        try { body = JSON.parse(response.body); } catch { body = {}; }
+
+        validators[kind]?.(response, body, sourceOrder);
     }
 }
 
@@ -515,20 +517,22 @@ function createUniqueOrderChainRequest(data, orgNumber) {
  * - Sends the specified order to the API using the provided label for tagging/metrics.
  * - Records the response status and updates relevant counters (e.g., success, client error, server error).
  * - Tracks the response duration and adds it to the specified duration metric.
- * - Stores the response and associated metadata for further validation or processing.
+ * - Returns the response and associated metadata for further validation or processing.
  *
  * @param {string} kind - The type of order being processed (e.g., "valid", "invalid", "duplicate", "missingResource").
  * @param {Object} order - The order payload to be sent to the API. If null or undefined, the function exits early.
  * @param {string} label - A label used for tagging the request in metrics (e.g., "post_valid_order").
  * @param {Trend} durationMetric - A k6 Trend metric to track the response time for this order type.
+ * @returns {Object|undefined} The response data or undefined if order was skipped
  */
 function processOrder(kind, order, label, durationMetric) {
-    if (!order) return;
+    if (!order) return undefined;
 
     const response = sendNotificationOrderChain(order, label);
     recordResult(response);
     durationMetric.add(response.timings.duration);
-    responses.push({ kind, response, sourceOrder: order });
+
+    return { kind, response, sourceOrder: order };
 }
 
 /**
