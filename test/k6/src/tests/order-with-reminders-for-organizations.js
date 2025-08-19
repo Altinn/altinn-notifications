@@ -1,95 +1,15 @@
 /*
-    Performance & correctness test for creating notification order chains (main order + reminders) for organizations.
+    Test script for creating notification orders and reminders intended for organizations.
 
-    Core per-iteration functional scenarios (executed when included in orderTypes):
-    - 201 Created (valid order) -> must return shipmentId.
-    - 200 OK (idempotent duplicate) -> reuse same idempotencyId; must return existing shipmentId.
-    - 400 Bad Request (invalid structure: required recipientOrganization removed).
-    - 201 Created or 422 (order missing resourceId) -> exercises path with reduced external lookups.
+    Scenarios exercised in a single iteration (without aborting unless critical auth/execution error):
+    - 201 Created (valid order)
+    - 200 OK (idempotent duplicate)
+    - 400 Bad Request (validation failure)
 
-    Order variants supported (configured via imported `orderTypes` array):
-    - "valid" | "invalid" | "duplicate" | "missingResource" | "all".
-    Each variant is produced from an independently cloned base request to avoid cross-mutation.
-    Duplicate uses an exact clone of the valid request (same idempotencyId) to assert idempotency.
-
-    Dynamic data & identifiers:
-    - A single random 8-char token seeds: dialogId, transmissionId, main sendersReference, reminder sendersReference.
-    - Per order variant we assign a fresh idempotencyId (except duplicate which reuses the valid one).
-    - Organization number: __ENV.orgNoRecipient (if present) else generated (helper getOrgNoRecipient()).
-    - resourceId injected from shared variables for both main order and reminders unless intentionally removed.
-
-    Scenario suite (k6 `scenarios`):
-    1. smoke_test (constant-arrival-rate) – fast readiness gate.
-    2. capacity_probe (ramping-arrival-rate) – multi-stage throughput escalation (discover knee / saturation).
-    3. load_test_valid_orders (ramping-arrival-rate) – SLO/SLA validation tiers (low/mid/high).
-    4. steady_state_load_test (constant-arrival-rate) – forecast production baseline (warm system before spike).
-    5. spike_test (ramping-arrival-rate) – rapid burst & decay resilience check.
-    6. soak_test (constant-arrival-rate) – extended stability, error accumulation & leaks.
-
-    Environment variable tunables:
-    - precheckTestRequestsPerSecond
-    - CAP_START
-    - requestsPerSecond, requestsPerSecondLowestStage, requestsPerSecondMiddleStage, requestsPerSecondHighestStage
-    - FORECAST_RATE, FORECAST_DURATION
-    - SOAK_RATE, SOAK_DURATION
-    - orgNoRecipient
-    (All parsed with Number(...) or used as string durations; safe defaults applied when unset.)
-
-    Metrics (custom):
-    - success_rate (Rate) -> non-4xx/5xx proportion (also refined per-scenario via tag scoping).
-    - http_4xx (Counter)
-    - http_5xx (Counter)
-    - failed_requests (Counter) -> any 4xx or 5xx.
-    - valid_order_duration (Trend)
-    - invalid_order_duration (Trend)
-    - duplicate_order_duration (Trend)
-    - missing_resource_order_duration (Trend)
-
-    Labels (for per-request grouping / empty thresholds injected):
-    - post_valid_order
-    - post_invalid_order
-    - post_duplicate_order
-    - post_order_without_resource_id
-    (setEmptyThresholds ensures they appear without enforcing extra performance gates.)
-
-    Thresholds (selected excerpts):
-    - http_5xx: count < 50 (global)
-    - failed_requests: count < 100 (global)
-    - success_rate: rate > 0.99 (global), stricter for load_test_valid_orders ( > 0.999 )
-    - checks: rate > 0.995
-    - Scenario-specific http_req_duration p95 / p99 bounds (capacity, load, steady-state, soak, spike).
-    - valid_order_duration: p95 < 1500, p99 < 2500
-
-    Validation (k6 checks per request type):
-    - Valid: 201 + shipmentId.
-    - Duplicate: 200 + shipmentId (idempotency confirmation).
-    - Invalid: 400 (structure validation).
-    - Missing resource: 201 or 422 (accepts alternate backend behavior).
-
-    Error handling:
-    - Any 4xx/5xx increments counters; classification split between http_4xx/http_5xx.
-    - 401 / 403 triggers stopIterationOnFail (fail-fast for authZ/authN issues).
-
-    Test data source:
-    - Base JSON: ../data/orders/order-with-reminders-for-organizations.json (deep cloned per variant).
-
-    Summary output:
-    - summary.json (raw k6 result object)
-    - Colored human-readable stdout (textSummary).
-
-    Goals:
-    1. Gate readiness quickly before heavy stages (smoke_test).
-    2. Empirically discover capacity limits & latency inflection (capacity_probe).
-    3. Validate SLO/SLA conformance across realistic demand tiers (load & steady-state).
-    4. Assess burst resilience (spike_test) and long-haul stability / leak absence (soak_test).
-    5. Verify correctness paths: creation, idempotency, validation failures, reduced-external-call variant.
-    6. Produce actionable metrics for regression tracking and release fitness decisions.
-
-    Notes:
-    - All cloning uses JSON deep copies to avoid shared mutations.
-    - Idempotency enforced solely by reused idempotencyId in duplicate order path.
-    - Missing resource variant deliberately strips resourceId fields in main + reminder recipients.
+    The script generates a unique idempotency identifier for each "valid" scenario and reuses it to test idempotency.
+    Organization number: uses the provided __ENV.orgNoRecipient or generates a random 9-digit number as a fallback.
 */
+
 
 import { check } from "k6";
 import * as setupToken from "../setup.js";
@@ -129,32 +49,33 @@ const missingResourceOrderDuration = new Trend("missing_resource_order_duration"
 // Test data for order chain requests, loaded from a JSON file.
 const orderChainRequestJson = JSON.parse(open("../data/orders/order-with-reminders-for-organizations.json"));
 
-// Define the order types that will be used in the test scenarios
+// Define the test scenarios for different performance dimensions
 export const options = {
     scenarios: {
-    // 1. Quick readiness gate (runs first, alone)
-        smoke_test: {
-            maxVUs: 20,
+        // 1. Quick readiness gate to verify that the system works and meets minimal expectations.
+        smoke: {
+            rate: 10,
+            maxVUs: 25,
             timeUnit: '1s',
             duration: '30s',
-            preAllocatedVUs: 10,
-            gracefulStop: '30s',
-            executor: 'constant-arrival-rate',
-            rate: Number(__ENV.precheckTestRequestsPerSecond || 5)
+            preAllocatedVUs: 5,
+            gracefulStop: '10s',
+            executor: 'constant-arrival-rate'
         },
 
-        // 2. Capacity probe (runs alone – all other heavy scenarios start after it finishes)
-        // Total duration of stages = 27m. Starts after smoke_test (startTime 45s).
+        // 2. Capacity test with gradually increasing request rate to evaluate system limits.
         capacity_probe: {
-            maxVUs: 500,
+            maxVUs: 350,
+            startRate: 25,
             timeUnit: '1s',
             startTime: '45s',
-            gracefulStop: '1m',
             preAllocatedVUs: 10,
+            gracefulStop: '30s',
             executor: 'ramping-arrival-rate',
-            startRate: Number(__ENV.CAP_START || 50),
             stages: [
+                { target: 50, duration: '2m' },
                 { target: 100, duration: '2m' },
+                { target: 150, duration: '2m' },
                 { target: 200, duration: '3m' },
                 { target: 300, duration: '4m' },
                 { target: 400, duration: '5m' },
@@ -164,63 +85,62 @@ export const options = {
             ]
         },
 
-        // 3. Load test for SLO/SLA validation (starts after capacity probe -> 27m + 45s around 28m)
-        load_test_valid_orders: {
-            maxVUs: 60,
+        // 3. Load test to validate system performance against realistic SLA/SLO expectations.
+        realistic_sla_compliance: {
+            maxVUs: 350,
+            startRate: 20,
             timeUnit: '1s',
-            startTime: '28m',
-            preAllocatedVUs: 20,
+            startTime: '32m',
+            preAllocatedVUs: 30,
             gracefulStop: '30s',
             executor: 'ramping-arrival-rate',
-            startRate: Number(__ENV.requestsPerSecond || 10),
             stages: [
-                { target: Number(__ENV.requestsPerSecondLowestStage || 100), duration: '4m' },
-                { target: Number(__ENV.requestsPerSecondMiddleStage || 150), duration: '5m' },
-                { target: Number(__ENV.requestsPerSecondHighestStage || 200), duration: '6m' },
-                { target: 0, duration: '1m' }
+                { target: 100, duration: '3m' },
+                { target: 150, duration: '5m' },
+                { target: 200, duration: '7m' },
+                { target: 0, duration: '2m' }
             ]
         },
 
-        // 4. Steady-state
-        // Starts after load test completion (around 28m + 16m = 44m -> add 1m buffer)
-        steady_state_load_test: {
-            maxVUs: 500,
+        // 4. Steady-state load to validate system stability under sustained traffic.
+        steady_state_load: {
+            rate: 600,
+            maxVUs: 250,
             timeUnit: '1s',
-            startTime: '45m',
+            duration: '10m',
+            startTime: '49m',
             gracefulStop: '1m',
             preAllocatedVUs: 250,
-            executor: 'constant-arrival-rate',
-            rate: Number(__ENV.FORECAST_RATE || 600),
-            duration: __ENV.FORECAST_DURATION || '10m'
+            executor: 'constant-arrival-rate'
         },
 
-        // 5. Spike test – follows warm steady-state baseline
-        spike_test: {
-            maxVUs: 500,
+        // 5. Sudden spike load to evaluate system resilience under abrupt traffic surges.
+        sudden_spike_resilience: {
+            maxVUs: 350,
             startRate: 0,
-            startTime: '56m',
             timeUnit: '1s',
+            startTime: '59m',
             gracefulStop: '15s',
-            preAllocatedVUs: 150,
+            preAllocatedVUs: 250,
             executor: 'ramping-arrival-rate',
             stages: [
                 { target: 50, duration: '15s' },
-                { target: 400, duration: '15s' },
+                { target: 600, duration: '15s' },
                 { target: 10, duration: '30s' },
                 { target: 0, duration: '30s' }
             ]
         },
 
-        // 6. Soak test – long-running stability (starts after spike)
-        soak_test: {
+        // 6. Soak test – long-running stability validation under sustained load.
+        soak_test_long_term_stability: {
+            rate: 150,
             maxVUs: 200,
             timeUnit: '1s',
-            startTime: '58m',
+            duration: '30m',
+            startTime: '62m',
             gracefulStop: '2m',
             preAllocatedVUs: 120,
-            executor: 'constant-arrival-rate',
-            rate: Number(__ENV.SOAK_RATE || 100),
-            duration: __ENV.SOAK_DURATION || '30m'
+            executor: 'constant-arrival-rate'
         }
     },
 
@@ -231,27 +151,15 @@ export const options = {
         'success_rate': ['rate>0.99'],
         'failed_requests': ['count<100'],
 
-        'success_rate{scenario:load_test_valid_orders}': ['rate>0.999'],
-        'http_req_duration{scenario:load_test_valid_orders}': [
-            'p(95)<1200',
-            'p(99)<1800'
-        ],
-        'http_req_duration{scenario:steady_state_load_test}': [
-            'p(95)<1500',
-            'p(99)<2200'
-        ],
-        'http_req_duration{scenario:soak_test}': [
-            'p(95)<1600',
-            'p(99)<2300'
-        ],
-
-        'valid_order_duration': ['p(95)<1500', 'p(99)<2500'],
-
-        'http_req_duration{scenario:spike_test}': ['p(99)<5000'],
-
         'http_req_duration{scenario:capacity_probe}': ['p(95)<3000'],
+        'success_rate{scenario:realistic_sla_compliance}': ['rate>0.999'],
+        'http_req_duration{scenario:sudden_spike_resilience}': ['p(99)<5000'],
+        'http_req_duration{scenario:steady_state_load}': ['p(95)<1500', 'p(99)<2200'],
+        'http_req_duration{scenario:realistic_sla_compliance}': ['p(95)<1200', 'p(99)<1800'],
+        'http_req_duration{scenario:soak_test_long_term_stability}': ['p(95)<1600', 'p(99)<2300'],
 
-        checks: ['rate>0.995']
+        'checks': ['rate>0.995'],
+        'valid_order_duration': ['p(95)<1500', 'p(99)<2500']
     }
 };
 
@@ -282,17 +190,12 @@ setEmptyThresholds(labels, options);
  *
  * @returns {Object} An object containing:
  * - `token` {string}: The authentication token used for API requests.
- * - `orderChainRequest` {Object}: The prepared order chain request, including:
- *   - `dialogportenAssociation`: An object with unique `dialogId` and `transmissionId`.
- *   - `sendersReference`: A unique reference for the main order.
- *   - `recipient.recipientOrganization.resourceId`: The resource identifier for the recipient organization.
- *   - `reminders`: An array of reminders, each with unique references and resource identifiers.
- *
- * The returned data is shared across all virtual users (VUs) during the test.
+ * - `orderChainRequest` {Object}: The prepared order chain request.
  */
 export function setup() {
     const token = setupToken.getAltinnTokenForOrg(scopes);
 
+    const formattedFutureDate = getFutureDate(7);
     const randomIdentifier = uuidv4().substring(0, 8);
     const mainOrderSendersReference = `k6-order-${randomIdentifier}`;
     const reminderOrderSendersReference = `k6-reminder-order-${randomIdentifier}`;
@@ -303,6 +206,7 @@ export function setup() {
         transmissionId: randomIdentifier
     };
 
+    orderChainRequest.requestedSendTime = formattedFutureDate;
     orderChainRequest.sendersReference = mainOrderSendersReference;
     orderChainRequest.recipient.recipientOrganization.resourceId = resourceId;
 
@@ -317,6 +221,7 @@ export function setup() {
         orderChainRequest
     };
 }
+
 
 /**
  * Generates a custom summary of the test results after the test execution.
@@ -366,7 +271,7 @@ export default function (data) {
     const responses = [];
 
     if (orderChainRequests.validOrder) {
-        const response = postNotificationOrderChain(data, orderChainRequests.validOrder, post_valid_order);
+        const response = sendNotificationOrderChain(data, orderChainRequests.validOrder, post_valid_order);
 
         recordResult(response);
         validOrderDuration.add(response.timings.duration);
@@ -374,7 +279,7 @@ export default function (data) {
     }
 
     if (orderChainRequests.invalidOrder) {
-        const response = postNotificationOrderChain(data, orderChainRequests.invalidOrder, post_invalid_order);
+        const response = sendNotificationOrderChain(data, orderChainRequests.invalidOrder, post_invalid_order);
 
         recordResult(response);
         invalidOrderDuration.add(response.timings.duration);
@@ -382,7 +287,7 @@ export default function (data) {
     }
 
     if (orderChainRequests.duplicateOrder) {
-        const response = postNotificationOrderChain(data, orderChainRequests.duplicateOrder, post_duplicate_order);
+        const response = sendNotificationOrderChain(data, orderChainRequests.duplicateOrder, post_duplicate_order);
 
         recordResult(response);
         duplicateOrderDuration.add(response.timings.duration);
@@ -390,7 +295,7 @@ export default function (data) {
     }
 
     if (orderChainRequests.missingResourceOrder) {
-        const response = postNotificationOrderChain(data, orderChainRequests.missingResourceOrder, post_order_without_resource_id);
+        const response = sendNotificationOrderChain(data, orderChainRequests.missingResourceOrder, post_order_without_resource_id);
 
         recordResult(response);
         missingResourceOrderDuration.add(response.timings.duration);
@@ -434,6 +339,19 @@ export default function (data) {
 }
 
 /**
+ * Generates a date string for the current date plus the specified number of days.
+ *
+ * @param {number} daysToAdd - The number of days to add to the current date.
+ * @returns {string} The formatted future date as a UTC string.
+ */
+function getFutureDate(daysToAdd) {
+    const currentDate = new Date();
+    const futureDate = new Date(currentDate);
+    futureDate.setDate(currentDate.getDate() + daysToAdd);
+    return futureDate.toUTCString();
+}
+
+/**
  * Records the result of an HTTP response by categorizing
  * it as successful or failed and updating relevant performance metrics.
  *
@@ -441,14 +359,27 @@ export default function (data) {
  * - `status` {number}: The HTTP status code of the response.
  */
 function recordResult(httpResponse) {
-    const isFailedRequest = httpResponse.status >= 400;
+    const status = httpResponse.status;
+    const isServerError = status >= 500;
+    const isClientError = status >= 400 && status < 500;
 
-    if (isFailedRequest) {
+    if (isClientError || isServerError) {
         failedRequests.add(1);
-        httpResponse.status >= 500 ? http5xx.add(1) : http4xx.add(1);
+
+        if (isServerError) {
+            http5xx.add(1);
+        } else {
+            http4xx.add(1);
+        }
+        successRate.add(false);
+
+        if (isServerError) {
+            stopIterationOnFail(`Server error ${status} encountered. Aborting iteration.`, false);
+        }
+        return;
     }
 
-    successRate.add(!isFailedRequest);
+    successRate.add(true);
 }
 
 /**
@@ -584,13 +515,13 @@ function generateOrderChainRequestByOrderType(orderTypes, data, orgNumber) {
 /**
  * Sends a notification order chain request to the Notification API.
  *
- * @param {Object} data - Shared data containing the authentication token.
- * @param {Object} orderRequest - The order chain request object to be sent.
- * @param {string} [label=post_valid_order] - A label used for tracking the request in metrics.
+ * @param {Object} data - Contains shared context, including the authentication token.
+ * @param {Object} orderRequest - The payload representing the order chain to be submitted.
+ * @param {string} [label='post_valid_order'] - Optional label for tagging the request in metrics and logs.
  *
- * @returns {Object} The HTTP response object returned by the API.
+ * @returns {Object} The HTTP response returned by the Notification API.
  */
-function postNotificationOrderChain(data, orderRequest, label = post_valid_order) {
+function sendNotificationOrderChain(data, orderRequest, label = 'post_valid_order') {
     const requestBody = JSON.stringify(orderRequest);
     return ordersApi.postNotificationOrderV2(requestBody, data.token, label);
 }

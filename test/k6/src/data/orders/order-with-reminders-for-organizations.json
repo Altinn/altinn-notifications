@@ -1,6 +1,7 @@
 {
 	"idempotencyId": "string",
 	"sendersReference": "string",
+	"requestedSendTime": "string",
 	"dialogportenAssociation": {
 		"dialogId": "string",
 		"transmissionId": "string"
