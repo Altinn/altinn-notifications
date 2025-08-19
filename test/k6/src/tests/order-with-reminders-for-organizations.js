@@ -54,8 +54,8 @@ export const options = {
     scenarios: {
         // 1. Quick readiness gate to verify that the system works and meets minimal expectations.
         smoke: {
-            rate: 10,
-            maxVUs: 25,
+            rate: 5,
+            maxVUs: 10,
             timeUnit: '1s',
             duration: '30s',
             preAllocatedVUs: 5,
@@ -65,7 +65,7 @@ export const options = {
 
         // 2. Capacity test with gradually increasing request rate to evaluate system limits.
         capacity_probe: {
-            maxVUs: 350,
+            maxVUs: 345,
             startRate: 25,
             timeUnit: '1s',
             startTime: '45s',
@@ -87,17 +87,17 @@ export const options = {
 
         // 3. Load test to validate system performance against realistic SLA/SLO expectations.
         realistic_sla_compliance: {
-            maxVUs: 350,
+            maxVUs: 345,
             startRate: 20,
             timeUnit: '1s',
-            startTime: '32m',
+            startTime: '14m',
             preAllocatedVUs: 30,
             gracefulStop: '30s',
             executor: 'ramping-arrival-rate',
             stages: [
-                { target: 100, duration: '3m' },
-                { target: 150, duration: '5m' },
-                { target: 200, duration: '7m' },
+                { target: 500, duration: '2m' },
+                { target: 5000, duration: '4m' },
+                { target: 15000, duration: '7m' },
                 { target: 0, duration: '2m' }
             ]
         },
@@ -108,7 +108,7 @@ export const options = {
             maxVUs: 250,
             timeUnit: '1s',
             duration: '10m',
-            startTime: '49m',
+            startTime: '26m',
             gracefulStop: '1m',
             preAllocatedVUs: 250,
             executor: 'constant-arrival-rate'
@@ -116,28 +116,28 @@ export const options = {
 
         // 5. Sudden spike load to evaluate system resilience under abrupt traffic surges.
         sudden_spike_resilience: {
-            maxVUs: 350,
+            maxVUs: 345,
             startRate: 0,
             timeUnit: '1s',
-            startTime: '59m',
+            startTime: '37m',
             gracefulStop: '15s',
             preAllocatedVUs: 250,
             executor: 'ramping-arrival-rate',
             stages: [
                 { target: 50, duration: '15s' },
-                { target: 600, duration: '15s' },
-                { target: 10, duration: '30s' },
+                { target: 1500, duration: '20s' },
+                { target: 50, duration: '30s' },
                 { target: 0, duration: '30s' }
             ]
         },
 
-        // 6. Soak test – long-running stability validation under sustained load.
-        soak_test_long_term_stability: {
+        // 6. Soak-long-running stability validation under sustained load.
+        soak_long_term_stability: {
             rate: 150,
             maxVUs: 200,
             timeUnit: '1s',
             duration: '30m',
-            startTime: '62m',
+            startTime: '39m',
             gracefulStop: '2m',
             preAllocatedVUs: 120,
             executor: 'constant-arrival-rate'
@@ -156,7 +156,7 @@ export const options = {
         'http_req_duration{scenario:sudden_spike_resilience}': ['p(99)<5000'],
         'http_req_duration{scenario:steady_state_load}': ['p(95)<1500', 'p(99)<2200'],
         'http_req_duration{scenario:realistic_sla_compliance}': ['p(95)<1200', 'p(99)<1800'],
-        'http_req_duration{scenario:soak_test_long_term_stability}': ['p(95)<1600', 'p(99)<2300'],
+        'http_req_duration{scenario:soak_long_term_stability}': ['p(95)<1600', 'p(99)<2300'],
 
         'checks': ['rate>0.995'],
         'valid_order_duration': ['p(95)<1500', 'p(99)<2500']
@@ -189,12 +189,9 @@ setEmptyThresholds(labels, options);
  * an authentication token and prepare the order chain request with unique identifiers.
  *
  * @returns {Object} An object containing:
- * - `token` {string}: The authentication token used for API requests.
  * - `orderChainRequest` {Object}: The prepared order chain request.
  */
 export function setup() {
-    const token = setupToken.getAltinnTokenForOrg(scopes);
-
     const formattedFutureDate = getFutureDate(7);
     const randomIdentifier = uuidv4().substring(0, 8);
     const mainOrderSendersReference = `k6-order-${randomIdentifier}`;
@@ -217,11 +214,9 @@ export function setup() {
     });
 
     return {
-        token,
         orderChainRequest
     };
 }
-
 
 /**
  * Generates a custom summary of the test results after the test execution.
@@ -312,7 +307,10 @@ export default function (data) {
             case "valid-order":
                 check(entry.response, {
                     "Valid order returns 201 Created": (r) => r.status === 201,
-                    "Valid order has shipmentId": () => entry.response.body?.notification?.shipmentId !== undefined
+                    "Response has notificationOrderId": (r) => JSON.parse(r.body)?.notificationOrderId !== undefined,
+                    "Notification has shipmentId": (r) => JSON.parse(r.body)?.notification?.shipmentId !== undefined,
+                    "Notification has reminders": (r) => Array.isArray(JSON.parse(r.body)?.notification?.reminders),
+                    "Each reminder has shipmentId": (r) => JSON.parse(r.body)?.notification?.reminders?.every(reminder => reminder.shipmentId !== undefined)
                 });
                 break;
 
@@ -348,7 +346,7 @@ function getFutureDate(daysToAdd) {
     const currentDate = new Date();
     const futureDate = new Date(currentDate);
     futureDate.setDate(currentDate.getDate() + daysToAdd);
-    return futureDate.toUTCString();
+    return futureDate.toISOString();
 }
 
 /**
@@ -512,10 +510,14 @@ function generateOrderChainRequestByOrderType(orderTypes, data, orgNumber) {
     return orderChainRequests;
 }
 
+
+let cachedToken = null;
+let tokenExpiration = 0;
+
 /**
  * Sends a notification order chain request to the Notification API.
  *
- * @param {Object} data - Contains shared context, including the authentication token.
+ * @param {Object} data - Contains shared context.
  * @param {Object} orderRequest - The payload representing the order chain to be submitted.
  * @param {string} [label='post_valid_order'] - Optional label for tagging the request in metrics and logs.
  *
@@ -523,5 +525,14 @@ function generateOrderChainRequestByOrderType(orderTypes, data, orgNumber) {
  */
 function sendNotificationOrderChain(data, orderRequest, label = 'post_valid_order') {
     const requestBody = JSON.stringify(orderRequest);
-    return ordersApi.postNotificationOrderV2(requestBody, data.token, label);
+
+    // Renew the token if it is expired or not set.
+    const currentTime = Math.floor(Date.now() / 1000);
+    if (!cachedToken || currentTime >= tokenExpiration) {
+        const token = setupToken.getAltinnTokenForOrg(scopes);
+        cachedToken = token;
+        tokenExpiration = token.exp;
+    }
+
+    return ordersApi.postNotificationOrderV2(requestBody, cachedToken, label);
 }
