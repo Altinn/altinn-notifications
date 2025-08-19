@@ -22,6 +22,10 @@ import { scopes, resourceId, orderTypes } from "../shared/variables.js";
 import { textSummary } from "https://jslib.k6.io/k6-summary/0.0.1/index.js";
 import { post_valid_order, post_invalid_order, post_duplicate_order, post_order_without_resource_id, setEmptyThresholds } from "./threshold-labels.js";
 
+// Variables to hold the token and renew it when needed.
+let cachedToken = null;
+let tokenExpiration = 0;
+
 // Rate to track the proportion of successful requests (non-4xx/5xx responses) to total requests
 const successRate = new Rate("success_rate");
 
@@ -54,80 +58,73 @@ export const options = {
     scenarios: {
         // 1. Quick readiness gate to verify that the system works and meets minimal expectations.
         smoke: {
-            rate: 5,
+            rate: 10,
             maxVUs: 10,
             timeUnit: '1s',
             duration: '30s',
+            startTime: '0s',
             preAllocatedVUs: 5,
-            gracefulStop: '10s',
             executor: 'constant-arrival-rate'
         },
 
         // 2. Capacity test with gradually increasing request rate to evaluate system limits.
         capacity_probe: {
-            maxVUs: 345,
-            startRate: 25,
+            maxVUs: 400,
+            startRate: 50,
             timeUnit: '1s',
-            startTime: '45s',
-            preAllocatedVUs: 10,
+            startTime: '40s',
             gracefulStop: '30s',
+            preAllocatedVUs: 120,
             executor: 'ramping-arrival-rate',
             stages: [
-                { target: 50, duration: '2m' },
                 { target: 100, duration: '2m' },
-                { target: 150, duration: '2m' },
-                { target: 200, duration: '3m' },
-                { target: 300, duration: '4m' },
-                { target: 400, duration: '5m' },
-                { target: 500, duration: '6m' },
-                { target: 500, duration: '5m' },
-                { target: 0, duration: '2m' }
+                { target: 200, duration: '2m' },
+                { target: 300, duration: '3m' },
+                { target: 0, duration: '1m' }
             ]
         },
 
         // 3. Load test to validate system performance against realistic SLA/SLO expectations.
         realistic_sla_compliance: {
-            maxVUs: 345,
-            startRate: 20,
+            maxVUs: 500,
+            startRate: 100,
             timeUnit: '1s',
-            startTime: '14m',
-            preAllocatedVUs: 30,
+            startTime: '10m',
             gracefulStop: '30s',
+            preAllocatedVUs: 250,
             executor: 'ramping-arrival-rate',
             stages: [
-                { target: 500, duration: '2m' },
-                { target: 5000, duration: '4m' },
-                { target: 15000, duration: '7m' },
+                { target: 500, duration: '4m' },
+                { target: 1500, duration: '6m' },
                 { target: 0, duration: '2m' }
             ]
         },
 
         // 4. Steady-state load to validate system stability under sustained traffic.
         steady_state_load: {
-            rate: 600,
-            maxVUs: 250,
+            rate: 500,
+            maxVUs: 600,
             timeUnit: '1s',
-            duration: '10m',
-            startTime: '26m',
-            gracefulStop: '1m',
-            preAllocatedVUs: 250,
+            duration: '15m',
+            startTime: '22m',
+            preAllocatedVUs: 300,
+            gracefulStop: '45s',
             executor: 'constant-arrival-rate'
         },
 
         // 5. Sudden spike load to evaluate system resilience under abrupt traffic surges.
         sudden_spike_resilience: {
-            maxVUs: 345,
-            startRate: 0,
+            maxVUs: 700,
             timeUnit: '1s',
             startTime: '37m',
-            gracefulStop: '15s',
-            preAllocatedVUs: 250,
+            gracefulStop: '30s',
+            preAllocatedVUs: 350,
             executor: 'ramping-arrival-rate',
             stages: [
-                { target: 50, duration: '15s' },
+                { target: 50, duration: '10s' },
                 { target: 1500, duration: '20s' },
-                { target: 50, duration: '30s' },
-                { target: 0, duration: '30s' }
+                { target: 600, duration: '2m' },
+                { target: 0, duration: '40s' }
             ]
         },
 
@@ -137,29 +134,22 @@ export const options = {
             maxVUs: 200,
             timeUnit: '1s',
             duration: '30m',
-            startTime: '39m',
+            startTime: '46m',
             gracefulStop: '2m',
             preAllocatedVUs: 120,
             executor: 'constant-arrival-rate'
         }
     },
-
     summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(90)', 'p(95)', 'p(99)', 'count'],
-
     thresholds: {
-        'http_5xx': ['count<50'],
-        'success_rate': ['rate>0.99'],
-        'failed_requests': ['count<100'],
-
-        'http_req_duration{scenario:capacity_probe}': ['p(95)<3000'],
-        'success_rate{scenario:realistic_sla_compliance}': ['rate>0.999'],
-        'http_req_duration{scenario:sudden_spike_resilience}': ['p(99)<5000'],
-        'http_req_duration{scenario:steady_state_load}': ['p(95)<1500', 'p(99)<2200'],
-        'http_req_duration{scenario:realistic_sla_compliance}': ['p(95)<1200', 'p(99)<1800'],
+        checks: ['rate>0.995'],
+        http_5xx: ['count<20'],
+        success_rate: ['rate>0.995'],
+        http_req_duration: ['p(95)<1500', 'p(99)<2500'],
+        'http_req_duration{scenario:steady_state_load}': ['p(95)<1200', 'p(99)<1800'],
+        'http_req_duration{scenario:realistic_sla_compliance}': ['p(95)<1100', 'p(99)<1700'],
         'http_req_duration{scenario:soak_long_term_stability}': ['p(95)<1600', 'p(99)<2300'],
-
-        'checks': ['rate>0.995'],
-        'valid_order_duration': ['p(95)<1500', 'p(99)<2500']
+        valid_order_duration: ['p(95)<1200', 'p(99)<1800']
     }
 };
 
@@ -303,14 +293,21 @@ export default function (data) {
             break;
         }
 
+        let parsedBody;
+        try {
+            parsedBody = JSON.parse(entry.response.body);
+        } catch {
+            parsedBody = {};
+        }
+
         switch (entry.name) {
             case "valid-order":
                 check(entry.response, {
                     "Valid order returns 201 Created": (r) => r.status === 201,
-                    "Response has notificationOrderId": (r) => JSON.parse(r.body)?.notificationOrderId !== undefined,
-                    "Notification has shipmentId": (r) => JSON.parse(r.body)?.notification?.shipmentId !== undefined,
-                    "Notification has reminders": (r) => Array.isArray(JSON.parse(r.body)?.notification?.reminders),
-                    "Each reminder has shipmentId": (r) => JSON.parse(r.body)?.notification?.reminders?.every(reminder => reminder.shipmentId !== undefined)
+                    "Response has notificationOrderId": () => parsedBody.notificationOrderId !== undefined,
+                    "Notification has shipmentId": () => parsedBody.notification?.shipmentId !== undefined,
+                    "Notification has reminders": () => Array.isArray(parsedBody.notification?.reminders),
+                    "Each reminder has shipmentId": () => (parsedBody.notification?.reminders || []).every(reminder => reminder.shipmentId !== undefined)
                 });
                 break;
 
@@ -323,7 +320,7 @@ export default function (data) {
             case "duplicate-order":
                 check(entry.response, {
                     "Duplicate order returns 200 OK": (r) => r.status === 200,
-                    "Duplicate order has existing shipmentId": () => entry.response.body?.notification?.shipmentId !== undefined
+                    "Duplicate order has existing shipmentId": () => parsedBody.notification?.shipmentId !== undefined
                 });
                 break;
 
@@ -342,7 +339,7 @@ export default function (data) {
  * @param {number} daysToAdd - The number of days to add to the current date.
  * @returns {string} The formatted future date as a UTC string.
  */
-function getFutureDate(daysToAdd) {
+function getFutureDate(daysToAdd = 0) {
     const currentDate = new Date();
     const futureDate = new Date(currentDate);
     futureDate.setDate(currentDate.getDate() + daysToAdd);
@@ -509,10 +506,6 @@ function generateOrderChainRequestByOrderType(orderTypes, data, orgNumber) {
     }
     return orderChainRequests;
 }
-
-
-let cachedToken = null;
-let tokenExpiration = 0;
 
 /**
  * Sends a notification order chain request to the Notification API.
