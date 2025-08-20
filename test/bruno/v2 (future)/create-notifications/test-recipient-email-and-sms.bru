@@ -1,0 +1,44 @@
+meta {
+  name: Test RecipientEmailAndSms notification
+  type: http
+  seq: 20
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "test-email-and-sms-{{random_idempotency_id}}",
+    "recipient": {
+      "recipientEmailAndSms": {
+        "emailAddress": "test@example.com",
+        "phoneNumber": "+4799999999",
+        "emailSettings": {
+          "sendingTimePolicy": "Anytime",
+          "contentType": "Plain",
+          "subject": "Test notification - Both Email and SMS",
+          "body": "This is a test notification that should be sent via both email and SMS channels simultaneously. Order ID: {{random_idempotency_id}}"
+        },
+        "smsSettings": {
+          "sendingTimePolicy": "Anytime", 
+          "body": "Test SMS: Both email & SMS channels. Order: {{random_idempotency_id}}"
+        }
+      }
+    },
+    "requestedSendTime": "{{iso_current_time}}"
+  }
+}
+
+tests {
+  test("should create notification with both email and SMS", function() {
+    expect(res.status).to.equal(201);
+    expect(res.body).to.have.property('orderChainId');
+    expect(res.body).to.have.property('orderChainReceipt');
+    expect(res.body.orderChainReceipt).to.have.property('shipmentId');
+  });
+}

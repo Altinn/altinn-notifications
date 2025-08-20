@@ -591,6 +591,19 @@ public class OrderRequestService : IOrderRequestService
 
             recipients.Add(new Recipient([], organizationNumber: recipient.RecipientOrganization.OrgNumber));
         }
+        else if (recipient.RecipientEmailAndSms != null)
+        {
+            notificationChannel = NotificationChannel.EmailAndSms;
+            smsSendingTimePolicy = recipient.RecipientEmailAndSms.SmsSettings.SendingTimePolicy;
+
+            templates.Add(CreateEmailTemplate(recipient.RecipientEmailAndSms.EmailSettings));
+            templates.Add(CreateSmsTemplate(recipient.RecipientEmailAndSms.SmsSettings));
+
+            recipients.Add(new Recipient([
+                new EmailAddressPoint(recipient.RecipientEmailAndSms.EmailAddress),
+                new SmsAddressPoint(recipient.RecipientEmailAndSms.PhoneNumber)
+            ]));
+        }
 
         return (recipients, templates, notificationChannel, ignoreReservation, resourceIdentifier, smsSendingTimePolicy);
     }

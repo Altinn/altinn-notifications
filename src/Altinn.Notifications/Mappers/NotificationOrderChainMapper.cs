@@ -32,7 +32,8 @@ public static partial class NotificationOrderChainMapper
             RecipientSms = notificationOrderChainRequestExt.Recipient.RecipientSms?.MapToRecipientSms(),
             RecipientEmail = notificationOrderChainRequestExt.Recipient.RecipientEmail?.MapToRecipientEmail(),
             RecipientPerson = notificationOrderChainRequestExt.Recipient.RecipientPerson?.MapToRecipientPerson(),
-            RecipientOrganization = notificationOrderChainRequestExt.Recipient.RecipientOrganization?.MapToRecipientOrganization()
+            RecipientOrganization = notificationOrderChainRequestExt.Recipient.RecipientOrganization?.MapToRecipientOrganization(),
+            RecipientEmailAndSms = notificationOrderChainRequestExt.Recipient.RecipientEmailAndSms?.MapToRecipientEmailAndSms()
         };
 
         // Map the reminders and set their RequestedSendTime based on the main notification's requested time plus the delay.
@@ -116,7 +117,8 @@ public static partial class NotificationOrderChainMapper
                 RecipientSms = notificationReminderExt.Recipient.RecipientSms?.MapToRecipientSms(),
                 RecipientEmail = notificationReminderExt.Recipient.RecipientEmail?.MapToRecipientEmail(),
                 RecipientPerson = notificationReminderExt.Recipient.RecipientPerson?.MapToRecipientPerson(),
-                RecipientOrganization = notificationReminderExt.Recipient.RecipientOrganization?.MapToRecipientOrganization()
+                RecipientOrganization = notificationReminderExt.Recipient.RecipientOrganization?.MapToRecipientOrganization(),
+                RecipientEmailAndSms = notificationReminderExt.Recipient.RecipientEmailAndSms?.MapToRecipientEmailAndSms()
             },
 
             OrderId = Guid.NewGuid(),
@@ -196,6 +198,20 @@ public static partial class NotificationOrderChainMapper
             Body = smsSendingOptionsExt.Body,
             Sender = smsSendingOptionsExt.Sender?.Trim(),
             SendingTimePolicy = (SendingTimePolicy)smsSendingOptionsExt.SendingTimePolicy
+        };
+    }
+
+    /// <summary>
+    /// Maps a <see cref="RecipientEmailAndSmsExt"/> to a <see cref="RecipientEmailAndSms"/>.
+    /// </summary>
+    private static RecipientEmailAndSms MapToRecipientEmailAndSms(this RecipientEmailAndSmsExt recipientEmailAndSmsExt)
+    {
+        return new RecipientEmailAndSms
+        {
+            EmailAddress = recipientEmailAndSmsExt.EmailAddress,
+            PhoneNumber = recipientEmailAndSmsExt.PhoneNumber,
+            EmailSettings = recipientEmailAndSmsExt.EmailSettings.MapToEmailSendingOptions(),
+            SmsSettings = recipientEmailAndSmsExt.SmsSettings.MapToSmsSendingOptions()
         };
     }
 

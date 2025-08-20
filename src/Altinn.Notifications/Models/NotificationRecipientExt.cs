@@ -52,4 +52,14 @@ public class NotificationRecipientExt
     /// </remarks>
     [JsonPropertyName("recipientOrganization")]
     public RecipientOrganizationExt? RecipientOrganization { get; set; }
+
+    /// <summary>
+    /// Gets or sets the configuration for delivering notifications through both email and SMS channels.
+    /// </summary>
+    /// <remarks>
+    /// Use when you have both the recipient's email address and phone number and want to send
+    /// notifications through both channels simultaneously.
+    /// </remarks>
+    [JsonPropertyName("recipientEmailAndSms")]
+    public RecipientEmailAndSmsExt? RecipientEmailAndSms { get; set; }
 }

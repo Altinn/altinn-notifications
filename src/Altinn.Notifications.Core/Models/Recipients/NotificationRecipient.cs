@@ -28,4 +28,10 @@ public class NotificationRecipient
     /// to deliver notifications to a contact person identified by an organization number.
     /// </summary>
     public RecipientOrganization? RecipientOrganization { get; set; }
+
+    /// <summary>
+    /// Gets or sets an object capturing all the information needed
+    /// to send both email and SMS notifications to specific addresses.
+    /// </summary>
+    public RecipientEmailAndSms? RecipientEmailAndSms { get; set; }
 }
