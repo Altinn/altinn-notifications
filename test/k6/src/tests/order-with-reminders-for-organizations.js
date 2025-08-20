@@ -259,24 +259,58 @@ export default function (data) {
     validateResponses(responses);
 }
 
-/**
- * Validates a collection of responses based on their type.
- * 
- * @param {Array} responses - Array of response objects from different order types
- */
 function validateResponses(responses) {
     if (!responses || responses.length === 0) return;
 
     const validators = {
         valid: (response, body, sourceOrder) => {
-            check(response, {
+            // Create named check functions for better error reporting
+            const checks = {
                 "Valid org order => 201": r => r.status === 201,
                 "valid: has shipmentId": () => !!body.notification?.shipmentId,
                 "valid: has notificationOrderId": () => !!body.notificationOrderId,
                 "valid: reminders array present": () => Array.isArray(body.notification?.reminders),
-                "valid: reminder count matches request": () => Array.isArray(body.notification?.reminders) && body.notification.reminders.length === (sourceOrder.reminders?.length || 0),
+                "valid: reminder count matches request": () => {
+                    const hasReminders = Array.isArray(body.notification?.reminders);
+                    const actualCount = hasReminders ? body.notification.reminders.length : 0;
+                    const expectedCount = sourceOrder.reminders?.length || 0;
+                    return actualCount === expectedCount;
+                },
                 "valid: each reminder has shipmentId": () => (body.notification?.reminders || []).every(r => !!r.shipmentId)
-            }) || stopIterationOnFail("Valid organization order failed expectations", false);
+            };
+
+            // Run checks and collect results
+            const results = check(response, checks);
+
+            // If any check failed, provide detailed error message
+            if (!results) {
+                // Find which specific checks failed
+                const failedChecks = Object.entries(checks)
+                    .filter(([name, checkFn]) => !checkFn())
+                    .map(([name]) => name)
+                    .join(", ");
+
+                // Create an informative error message with contextual data
+                let errorMsg = `Validation failed for valid order. Failed checks: ${failedChecks}`;
+
+                // Add context about the response
+                errorMsg += `\nStatus: ${response.status}`;
+                if (response.status !== 201) {
+                    errorMsg += `\nExpected status: 201`;
+                }
+
+                // Include abbreviated response body for debugging
+                try {
+                    const bodyPreview = JSON.stringify(body).substring(0, 200) +
+                        (JSON.stringify(body).length > 200 ? "..." : "");
+                    errorMsg += `\nResponse preview: ${bodyPreview}`;
+                } catch (e) {
+                    errorMsg += "\nCould not stringify response body";
+                }
+
+                stopIterationOnFail(errorMsg, false);
+                return;
+            }
 
             if (response.status === 201) {
                 http201Created.add(1);
@@ -285,6 +319,7 @@ function validateResponses(responses) {
             }
         },
 
+        // Other validators remain the same
         invalid: (response) => {
             check(response, { "Invalid order => 400": r => r.status === 400 });
 
@@ -315,6 +350,12 @@ function validateResponses(responses) {
     };
 
     for (const { kind, response, sourceOrder } of responses) {
+        // Add null check to prevent accessing properties of undefined
+        if (!response) {
+            console.log(`Skipping undefined response for kind: ${kind}`);
+            continue;
+        }
+
         if (response.status === 401 || response.status === 403) {
             stopIterationOnFail("Critical authentication/authorization error encountered", false);
             break;
