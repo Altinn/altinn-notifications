@@ -18,7 +18,6 @@
     - Counters: http_201_created, http_200_duplicate, http_400_validation, http_4xx, http_5xx, failed_requests.
 */
 
-
 import { check } from "k6";
 import * as setupToken from "../setup.js";
 import { Trend, Counter, Rate } from "k6/metrics";
@@ -34,8 +33,8 @@ import { post_valid_order, post_invalid_order, post_duplicate_order, post_order_
 let cachedToken = null;
 let tokenExpiration = 0;
 
-// Track first successful 201 for idempotency comparisons
-let firstSuccessful = { notificationOrderId: null, shipmentId: null };
+// Track first successful response with 201 for idempotency comparisons
+let firstSuccessfulResponse = { notificationOrderId: null, shipmentId: null };
 
 // Rate to track the proportion of successful requests (non-4xx/5xx responses) to total requests
 const successRate = new Rate("success_rate");
@@ -98,6 +97,7 @@ export const options = {
             timeUnit: '1s',
             duration: '30s',
             preAllocatedVUs: 5,
+            gracefulStop: '10s',
             executor: 'constant-arrival-rate'
         },
 
@@ -106,7 +106,7 @@ export const options = {
             maxVUs: 400,
             startRate: 50,
             timeUnit: '1s',
-            startTime: '40s',
+            startTime: '45s',
             gracefulStop: '30s',
             preAllocatedVUs: 120,
             executor: 'ramping-arrival-rate',
@@ -123,7 +123,7 @@ export const options = {
             maxVUs: 500,
             startRate: 100,
             timeUnit: '1s',
-            startTime: '10m',
+            startTime: '9m20s',
             gracefulStop: '30s',
             preAllocatedVUs: 250,
             executor: 'ramping-arrival-rate',
@@ -141,8 +141,8 @@ export const options = {
             timeUnit: '1s',
             duration: '15m',
             startTime: '22m',
-            preAllocatedVUs: 300,
-            gracefulStop: '45s',
+            gracefulStop: '30s',
+            preAllocatedVUs: 250,
             executor: 'constant-arrival-rate'
         },
 
@@ -150,14 +150,14 @@ export const options = {
         sudden_spike_resilience: {
             maxVUs: 700,
             timeUnit: '1s',
-            startTime: '37m',
+            startTime: '37m5s',
             gracefulStop: '30s',
             preAllocatedVUs: 350,
             executor: 'ramping-arrival-rate',
             stages: [
                 { target: 50, duration: '10s' },
-                { target: 1500, duration: '20s' },
-                { target: 600, duration: '2m' },
+                { target: 300, duration: '20s' },
+                { target: 1000, duration: '2m' },
                 { target: 0, duration: '40s' }
             ]
         },
@@ -168,8 +168,8 @@ export const options = {
             maxVUs: 200,
             timeUnit: '1s',
             duration: '30m',
-            startTime: '46m',
             gracefulStop: '2m',
+            startTime: '40m45s',
             preAllocatedVUs: 120,
             executor: 'constant-arrival-rate'
         }
@@ -314,8 +314,8 @@ function validateResponses(responses) {
 
             if (response.status === 201) {
                 http201Created.add(1);
-                firstSuccessful.shipmentId ||= body.notification?.shipmentId;
-                firstSuccessful.notificationOrderId ||= body.notificationOrderId;
+                firstSuccessfulResponse.shipmentId ||= body.notification?.shipmentId;
+                firstSuccessfulResponse.notificationOrderId ||= body.notificationOrderId;
             }
         },
 
@@ -331,8 +331,8 @@ function validateResponses(responses) {
         duplicate: (response, body) => {
             check(response, {
                 "Duplicate => 200": r => r.status === 200,
-                "Duplicate: same shipmentId": () => !firstSuccessful.shipmentId || body.notification?.shipmentId === firstSuccessful.shipmentId,
-                "Duplicate: same notificationOrderId": () => !firstSuccessful.notificationOrderId || body.notificationOrderId === firstSuccessful.notificationOrderId
+                "Duplicate: same shipmentId": () => !firstSuccessfulResponse.shipmentId || body.notification?.shipmentId === firstSuccessfulResponse.shipmentId,
+                "Duplicate: same notificationOrderId": () => !firstSuccessfulResponse.notificationOrderId || body.notificationOrderId === firstSuccessfulResponse.notificationOrderId
             });
 
             if (response.status === 200) {
