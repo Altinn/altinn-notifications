@@ -36,6 +36,9 @@ namespace Altinn.Notifications.Validators
 
             RuleFor(specification => specification.RecipientOrganization)
                 .SetValidator(validator: new RecipientOrganizationValidator());
+
+            RuleFor(specification => specification.RecipientEmailAndSms)
+                .SetValidator(validator: new RecipientEmailAndSmsValidator());
         }
 
         /// <summary>
@@ -50,7 +53,8 @@ namespace Altinn.Notifications.Validators
                 specification.RecipientEmail,
                 specification.RecipientSms,
                 specification.RecipientPerson,
-                specification.RecipientOrganization
+                specification.RecipientOrganization,
+                specification.RecipientEmailAndSms
             }.Count(recipient => recipient != null) == 1;
         }
     }
