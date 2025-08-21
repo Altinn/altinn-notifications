@@ -266,15 +266,33 @@ export function setup() {
  * @param {Object} data - Test context from setup phase
  */
 export default function (data) {
-    const orderChainRequests = generateOrderChainRequestByOrderType(data);
+    const orderRequests = generateOrderChainRequestByOrderType(data);
 
-    // Process orders and collect responses directly
-    const responses = [
-        processOrder("valid", orderChainRequests.validOrder, post_valid_order, validOrderDuration),
-        processOrder("invalid", orderChainRequests.invalidOrder, post_invalid_order, invalidOrderDuration),
-        processOrder("duplicate", orderChainRequests.duplicateOrder, post_duplicate_order, duplicateOrderDuration),
-        processOrder("missingResource", orderChainRequests.missingResourceOrder, post_order_without_resource_id, missingResourceOrderDuration)
-    ].filter(Boolean); // Remove any undefined results (skipped orders)
+    const responses = orderRequests.map(orderRequest => {
+        const { orderType, request } = orderRequest;
+
+        switch (orderType) {
+            case "valid":
+                return processOrder(orderType, request, post_valid_order, validOrderDuration);
+
+            case "invalid":
+                return processOrder(orderType, request, post_invalid_order, invalidOrderDuration);
+
+            case "duplicate": {
+                // First call establishes the original record
+                processOrder(orderType, request, post_valid_order, duplicateOrderDuration);
+
+                // Second call should return a duplicate response (this is the one we track)
+                return processOrder(orderType, request, post_duplicate_order, duplicateOrderDuration);
+            }
+
+            case "missingResource":
+                return processOrder(orderType, request, post_order_without_resource_id, missingResourceOrderDuration);
+
+            default:
+                return undefined;
+        }
+    }).filter(Boolean); // Remove any undefined results
 
     // Validate collected responses
     validateResponses(responses);
@@ -368,7 +386,7 @@ function recordResult(httpResponse) {
  * - Stops test iteration on critical authentication failures (401/403)
  *
  * @param {Array<Object>} responses - Collection of response objects with the following structure:
- *   - kind: {string} The type of order ("valid", "invalid", "duplicate", "missingResource")
+ *   - orderType: {string} The type of order ("valid", "invalid", "duplicate", "missingResource")
  *   - response: {Object} The HTTP response object from the API call
  *   - sourceOrder: {Object} The original order request that was sent
  */
@@ -449,7 +467,7 @@ function validateResponses(responses) {
         }
     };
 
-    for (const { kind, response, sourceOrder } of responses) {
+    for (const { orderType, response, sourceOrder } of responses) {
         if (!response) {
             continue;
         }
@@ -462,7 +480,7 @@ function validateResponses(responses) {
         let body;
         try { body = JSON.parse(response.body); } catch { body = {}; }
 
-        validators[kind]?.(response, body, sourceOrder);
+        validators[orderType]?.(response, body, sourceOrder);
     }
 }
 
@@ -587,68 +605,55 @@ function removeRequiredFieldsFromOrder(baseOrder) {
  *
  * @param {Object} data - The shared data containing the base `orderChainRequest`.
  *
- * @returns {Object} An object containing the generated order requests:
- * - `validOrder` {Object}
- * - `invalidOrder` {Object}
- * - `duplicateOrder` {Object}
- * - `missingResourceOrder` {Object}
+ * @returns {Array} An array of order request objects with type information:
+ * - `{ orderType: "valid", request: Object }`
+ * - `{ orderType: "invalid", request: Object }`
+ * - `{ orderType: "duplicate", request: Object }`
+ * - `{ orderType: "missingResource", request: Object }`
  *
  * @throws {Error} If an unsupported order type is provided.
  */
 function generateOrderChainRequestByOrderType(data) {
-    const orderChainRequests = {};
+    const requests = [];
+    let validUniqueOrderChainRequest = {};
 
     for (const orderType of orderTypes) {
         switch (orderType) {
-            case "valid":
-                orderChainRequests.validOrder = createUniqueOrderChainRequest(data);
+            case "valid": {
+                validUniqueOrderChainRequest = createUniqueOrderChainRequest(data);
+                requests.push({ orderType, request: validUniqueOrderChainRequest });
                 break;
+            }
 
-            case "invalid":
-                orderChainRequests.invalidOrder = removeRequiredFieldsFromOrder(createUniqueOrderChainRequest(data));
+            case "invalid": {
+                requests.push({
+                    orderType,
+                    request: removeRequiredFieldsFromOrder(createUniqueOrderChainRequest(data))
+                });
                 break;
+            }
 
-            case "duplicate":
-                orderChainRequests.validOrder = createUniqueOrderChainRequest(data);
-                orderChainRequests.duplicateOrder = JSON.parse(JSON.stringify(orderChainRequests.validOrder));
+            case "duplicate": {
+                validUniqueOrderChainRequest = createUniqueOrderChainRequest(data);
+                requests.push({ orderType: "valid", request: validUniqueOrderChainRequest });
+                requests.push({ orderType: "duplicate", request: JSON.parse(JSON.stringify(validUniqueOrderChainRequest)) });
                 break;
+            }
 
-            case "missingResource":
-                orderChainRequests.missingResourceOrder = removeResourceIdFromOrder(createUniqueOrderChainRequest(data));
+            case "missingResource": {
+                requests.push({
+                    orderType,
+                    request: removeResourceIdFromOrder(createUniqueOrderChainRequest(data))
+                });
                 break;
+            }
 
             default:
                 stopIterationOnFail(`Unsupported order type: ${orderType}`, false);
+                break;
         }
     }
-    return orderChainRequests;
-}
-
-/**
- * Processes an order by sending it to the Notification API, recording metrics, and tracking response duration.
- *
- * This function handles the following:
- * - Sends the specified order to the API using the provided label for tagging/metrics.
- * - Records the response status and updates relevant counters (e.g., success, client error, server error).
- * - Tracks the response duration and adds it to the specified duration metric.
- * - Returns the response and associated metadata for further validation or processing.
- *
- * @param {string} kind - The type of order being processed (e.g., "valid", "invalid", "duplicate", "missingResource").
- * @param {Object} order - The order payload to be sent to the API. If null or undefined, the function exits early.
- * @param {string} label - A label used for tagging the request in metrics (e.g., "post_valid_order").
- * @param {Trend} durationMetric - A k6 Trend metric to track the response time for this order type.
- * @returns {Object|undefined} The response data or undefined if order was skipped
- */
-function processOrder(kind, order, label, durationMetric) {
-    if (!order) {
-        return undefined;
-    }
-
-    const response = sendNotificationOrderChain(order, label);
-    recordResult(response);
-    durationMetric.add(response.timings.duration);
-
-    return { kind, response, sourceOrder: order };
+    return requests;
 }
 
 /**
@@ -673,6 +678,33 @@ function updateRecipientWithOrgNumber(recipient, orgNumber) {
             orgNumber
         }
     };
+}
+
+/**
+ * Processes an order chain request by sending it to the Notification API, recording metrics, and tracking response duration.
+ *
+ * This function handles the following:
+ * - Sends the specified order chain request to the API using the provided label for tagging/metrics.
+ * - Records the response status and updates relevant counters (e.g., success, client error, server error).
+ * - Tracks the response duration and adds it to the specified duration metric.
+ * - Returns the response and associated metadata for further validation or processing.
+ *
+ * @param {string} orderType - The type of order being processed (e.g., "valid", "invalid", "duplicate", "missingResource").
+ * @param {Object} orderChainRequest - The request payload to be sent to the API. If null or undefined, the function exits early.
+ * @param {string} label - A label used for tagging the request in metrics (e.g., "post_valid_order").
+ * @param {Trend} durationMetric - A k6 Trend metric to track the response time for this order type.
+ * @returns {Object|undefined} The response data or undefined if order was skipped
+ */
+function processOrder(orderType, orderChainRequest, label, durationMetric) {
+    if (!orderType || !orderChainRequest) {
+        return undefined;
+    }
+
+    const response = sendNotificationOrderChain(orderChainRequest, label);
+    recordResult(response);
+    durationMetric.add(response.timings.duration);
+
+    return { orderType, response, orderChainRequest };
 }
 
 /**
