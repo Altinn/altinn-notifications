@@ -12,10 +12,21 @@
     Abort policy:
     - Iteration stops early only on 401 or 403 responses.
 
-    Metrics & thresholds:
-    - success_rate reflects non-4xx/5xx success proportion.
-    - Duration trends: valid_order_duration, duplicate_order_duration, invalid_order_duration,
-    - Counters: http_201_created, http_200_duplicate, http_400_validation, http_4xx, http_5xx, failed_requests.
+    Command:
+    podman compose run k6 run /src/tests/order-with-reminders-for-mobile-number.js \
+    -e tokenGeneratorUserName={the user name to access the token generator} \
+    -e tokenGeneratorUserPwd={the password to access the token generator} \
+    -e mpClientId={the identifier of an integration defined in maskinporten} \
+    -e mpKid={the key identifier of the JSON web key used to sign the maskinporten token request} \
+    -e encodedJwk={the encoded JSON web key used to sign the maskinporten token request} \
+    -e env={the environment to run this script within: at22, at23, at24, yt01, tt02, prod} \
+    -e mobileNumber={Mobile phone number in international format to include as notification recipient} \
+    -e orderTypes={types of orders to test, e.g., valid, invalid, duplicate, missingResource} \
+
+    Command syntax for different shells:
+    - Bash: Use the command as written above.
+    - PowerShell: Replace `\` with a backtick (`` ` ``) at the end of each line.
+    - Command Prompt (cmd.exe): Replace `\` with `^` at the end of each line.
 */
 
 import { check } from "k6";
@@ -24,7 +35,7 @@ import { Trend, Counter, Rate } from "k6/metrics";
 import * as ordersApi from "../api/notifications/v2.js";
 import { stopIterationOnFail } from "../errorhandler.js";
 import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
-import { scopes, resourceId, orderTypes } from "../shared/variables.js";
+import { scopes, mobileNumber, orderTypes } from "../shared/variables.js";
 import { textSummary } from "https://jslib.k6.io/k6-summary/0.0.1/index.js";
 import { post_valid_order, post_invalid_order, post_duplicate_order, post_order_without_resource_id, setEmptyThresholds } from "./threshold-labels.js";
 
@@ -199,7 +210,6 @@ export const options = {
  */
 export function setup() {
     // Create unique identifier for this test run
-    const testPhoneNumber = "+4799999999";
     const uniqueIdentifier = uuidv4().substring(0, 8);
 
     // Deep clone the base request template
@@ -211,8 +221,9 @@ export function setup() {
 
     // Set phone number for main recipient
     if (orderChainRequest.recipient?.recipientSms) {
-        orderChainRequest.recipient.recipientSms.phoneNumber = testPhoneNumber;
+        orderChainRequest.recipient.recipientSms.phoneNumber = mobileNumber;
     }
+
     // Configure all reminders with consistent references and phone numbers
     if (Array.isArray(orderChainRequest.reminders)) {
         orderChainRequest.reminders = orderChainRequest.reminders.map(reminder => {
@@ -224,7 +235,7 @@ export function setup() {
 
             // Set phone number for reminder recipient
             if (updatedReminder.recipient?.recipientSms) {
-                updatedReminder.recipient.recipientSms.phoneNumber = testPhoneNumber;
+                updatedReminder.recipient.recipientSms.phoneNumber = mobileNumber;
             }
 
             return updatedReminder;
@@ -251,17 +262,39 @@ export function setup() {
  * @param {Object} data - Test context from setup phase
  */
 export default function (data) {
-    const orderChainRequests = generateOrderChainRequestByOrderType(data);
+    const orderRequests = generateOrderChainRequestByOrderType(data);
 
-    // Process orders and collect responses directly
-    const responses = [
-        processOrder("valid", orderChainRequests.validOrder, post_valid_order, validOrderDuration),
-        processOrder("invalid", orderChainRequests.invalidOrder, post_invalid_order, invalidOrderDuration),
-        processOrder("duplicate", orderChainRequests.duplicateOrder, post_duplicate_order, duplicateOrderDuration),
-        processOrder("missingResource", orderChainRequests.missingResourceOrder, post_order_without_resource_id, missingResourceOrderDuration)
-    ].filter(Boolean); // Remove any undefined results (skipped orders)
+    const responses = orderRequests.map(orderRequest => {
+        const { orderType, request } = orderRequest;
 
-    // Validate collected responses
+        switch (orderType) {
+            case "valid":
+                return processOrder(orderType, request, post_valid_order, validOrderDuration);
+
+            case "invalid":
+                return processOrder(orderType, request, post_invalid_order, invalidOrderDuration);
+
+            case "duplicate": {
+                const firstResponse = processOrder("valid", request, post_valid_order, validOrderDuration);
+                if (firstResponse?.response) {
+                    try {
+                        const body = JSON.parse(firstResponse.response.body);
+                        if (body.notificationOrderId && body.notification) {
+                            firstSuccessfulResponse.shipmentId = body.notification.shipmentId;
+                            firstSuccessfulResponse.notificationOrderId = body.notificationOrderId;
+                        }
+                    } catch (e) {
+                    }
+                }
+
+                return processOrder(orderType, request, post_duplicate_order, duplicateOrderDuration);
+            }
+
+            default:
+                return undefined;
+        }
+    }).filter(Boolean); // Remove any undefined results
+
     validateResponses(responses);
 }
 
@@ -343,7 +376,6 @@ function recordResult(httpResponse) {
  * - Valid orders: Verifies 201 status, required fields, and reminder consistency
  * - Invalid orders: Confirms 400 Bad Request status
  * - Duplicate orders: Ensures 200 OK status and identical IDs with original request
- * - Missing resource orders: Checks for 201 Created status
  * 
  * The function also:
  * - Records metrics for high-latency responses
@@ -353,7 +385,7 @@ function recordResult(httpResponse) {
  * - Stops test iteration on critical authentication failures (401/403)
  *
  * @param {Array<Object>} responses - Collection of response objects with the following structure:
- *   - kind: {string} The type of order ("valid", "invalid", "duplicate", "missingResource")
+ *   - orderType: {string} The type of order ("valid", "invalid", "duplicate", "missingResource")
  *   - response: {Object} The HTTP response object from the API call
  *   - sourceOrder: {Object} The original order request that was sent
  */
@@ -363,9 +395,9 @@ function validateResponses(responses) {
     }
 
     const validators = {
-        valid: (response, body, sourceOrder) => {
+        valid: (response, body, orderChainRequest) => {
             const notificationObj = body.notification || {};
-            const expectedReminderCount = sourceOrder.reminders?.length || 0;
+            const expectedReminderCount = orderChainRequest.reminders?.length || 0;
             const reminderArray = Array.isArray(notificationObj.reminders) ? notificationObj.reminders : [];
 
             // Track high latency for valid orders
@@ -385,8 +417,9 @@ function validateResponses(responses) {
 
             if (response.status === 201) {
                 http201Created.add(1);
-                firstSuccessfulResponse.shipmentId ||= body.notification?.shipmentId;
-                firstSuccessfulResponse.notificationOrderId ||= body.notificationOrderId;
+                // Store these values immediately when we get a valid response
+                firstSuccessfulResponse.shipmentId = notificationObj.shipmentId;
+                firstSuccessfulResponse.notificationOrderId = body.notificationOrderId;
             }
         },
 
@@ -420,21 +453,10 @@ function validateResponses(responses) {
                 const hasMismatch = firstSuccessfulResponse.shipmentId && notificationObj.shipmentId !== firstSuccessfulResponse.shipmentId;
                 duplicateMismatchRate.add(hasMismatch);
             }
-        },
-
-        missingResource: (response) => {
-            // Track high latency for missing resource orders
-            highLatencyRate.add(response.timings.duration > 2000);
-
-            check(response, { "Missing resource => 201": r => r.status === 201 });
-
-            if (response.status === 201) {
-                http201Created.add(1);
-            }
         }
     };
 
-    for (const { kind, response, sourceOrder } of responses) {
+    for (const { orderType, response, orderChainRequest } of responses) {
         if (!response) {
             continue;
         }
@@ -447,7 +469,7 @@ function validateResponses(responses) {
         let body;
         try { body = JSON.parse(response.body); } catch { body = {}; }
 
-        validators[kind]?.(response, body, sourceOrder);
+        validators[orderType]?.(response, body, orderChainRequest);
     }
 }
 
@@ -467,42 +489,6 @@ function getFutureDate(daysToAdd = 0) {
 }
 
 /**
- * Creates a modified copy of an order object without `resourceId` fields.
- * Specifically, it removes the `resourceId` property from:
- * - The main recipient's `recipientOrganization` object.
- * - Each reminder's `recipientOrganization` object.
- *
- * This helper is used in tests to simulate orders that are missing
- * required resource identifiers, e.g. to verify validation logic or
- * behavior when Profile/Authorization API calls are bypassed.
- *
- * @param {Object} baseOrder - The original order object.
- * @param {Object} baseOrder.recipient - The main recipient details.
- * @param {Object} baseOrder.recipient.recipientOrganization - Organization details of the recipient.
- * @param {Array}  baseOrder.reminders - List of reminder objects with recipients.
- * @returns {Object} A cloned order object with all `resourceId` properties removed.
- */
-function removeResourceIdFromOrder(baseOrder) {
-    const stripResourceId = (recipient) => {
-        if (!recipient?.recipientOrganization) {
-            return recipient;
-        }
-
-        const { resourceId, ...restOrg } = recipient.recipientOrganization;
-        return { ...recipient, recipientOrganization: restOrg };
-    };
-
-    return {
-        ...baseOrder,
-        recipient: stripResourceId(baseOrder.recipient),
-        reminders: baseOrder.reminders.map(reminder => ({
-            ...reminder,
-            recipient: stripResourceId(reminder.recipient)
-        }))
-    };
-}
-
-/**
  * Creates a unique copy of an order chain request.
  *
  * @param {Object} data - The shared data object containing the base order chain request
@@ -517,7 +503,7 @@ function createUniqueOrderChainRequest(data) {
 
 /**
  * Creates a modified copy of an order object with missing required fields.
- * Specifically, it removes the `recipientOrganization` property from:
+ * Specifically, it removes the `recipientSms` property from:
  * - The main `recipient` object.
  * - Every reminder's `recipient` object.
  *
@@ -527,20 +513,20 @@ function createUniqueOrderChainRequest(data) {
  * @param {Object} baseOrder - The original order object.
  * @param {Object} baseOrder.recipient - The main order recipient.
  * @param {Array} baseOrder.reminders - List of reminder objects.
- * @returns {Object} A cloned order object with `recipientOrganization` removed.
+ * @returns {Object} A cloned order object with `recipientSms` removed.
  */
 function removeRequiredFieldsFromOrder(baseOrder) {
     return {
         ...baseOrder,
         recipient: {
             ...baseOrder.recipient,
-            recipientOrganization: undefined
+            recipientSms: undefined
         },
         reminders: baseOrder.reminders.map(reminder => ({
             ...reminder,
             recipient: {
                 ...reminder.recipient,
-                recipientOrganization: undefined
+                recipientSms: undefined
             }
         }))
     };
@@ -551,77 +537,62 @@ function removeRequiredFieldsFromOrder(baseOrder) {
  *
  * @param {Object} data - The shared data containing the base `orderChainRequest`.
  *
- * @returns {Object} An object containing the generated order requests:
- * - `validOrder` {Object}
- * - `invalidOrder` {Object}
- * - `duplicateOrder` {Object}
- * - `missingResourceOrder` {Object}
+ * @returns {Array} An array of order request objects with type information:
+ * - `{ orderType: "valid", request: Object }`
+ * - `{ orderType: "invalid", request: Object }`
+ * - `{ orderType: "duplicate", request: Object }`
+ * - `{ orderType: "missingResource", request: Object }`
  *
  * @throws {Error} If an unsupported order type is provided.
  */
 function generateOrderChainRequestByOrderType(data) {
-    const orderChainRequests = {};
-
+    const requests = [];
     for (const orderType of orderTypes) {
         switch (orderType) {
             case "valid":
-                orderChainRequests.validOrder = createUniqueOrderChainRequest(data);
+            case "duplicate": {
+                requests.push({ orderType, request: createUniqueOrderChainRequest(data) });
                 break;
+            }
 
-            case "invalid":
-                orderChainRequests.invalidOrder = removeRequiredFieldsFromOrder(createUniqueOrderChainRequest(data));
+            case "invalid": {
+                requests.push({ orderType, request: removeRequiredFieldsFromOrder(createUniqueOrderChainRequest(data)) });
                 break;
-
-            case "duplicate":
-                if (!orderChainRequests.validOrder) {
-                    orderChainRequests.validOrder = createUniqueOrderChainRequest(data);
-                }
-                orderChainRequests.duplicateOrder = JSON.parse(JSON.stringify(orderChainRequests.validOrder));
-                break;
-
-            case "missingResource":
-                orderChainRequests.missingResourceOrder = removeResourceIdFromOrder(createUniqueOrderChainRequest(data));
-                break;
-
-            case "all":
-                orderChainRequests.validOrder = createUniqueOrderChainRequest(data);
-                orderChainRequests.duplicateOrder = JSON.parse(JSON.stringify(orderChainRequests.validOrder));
-                orderChainRequests.invalidOrder = removeRequiredFieldsFromOrder(createUniqueOrderChainRequest(data));
-                orderChainRequests.missingResourceOrder = removeResourceIdFromOrder(createUniqueOrderChainRequest(data));
-                break;
+            }
 
             default:
                 stopIterationOnFail(`Unsupported order type: ${orderType}`, false);
+                break;
         }
     }
-    return orderChainRequests;
+    return requests;
 }
 
 /**
- * Processes an order by sending it to the Notification API, recording metrics, and tracking response duration.
+ * Processes an order chain request by sending it to the Notification API, recording metrics, and tracking response duration.
  *
  * This function handles the following:
- * - Sends the specified order to the API using the provided label for tagging/metrics.
+ * - Sends the specified order chain request to the API using the provided label for tagging/metrics.
  * - Records the response status and updates relevant counters (e.g., success, client error, server error).
  * - Tracks the response duration and adds it to the specified duration metric.
  * - Returns the response and associated metadata for further validation or processing.
  *
- * @param {string} kind - The type of order being processed (e.g., "valid", "invalid", "duplicate", "missingResource").
- * @param {Object} order - The order payload to be sent to the API. If null or undefined, the function exits early.
+ * @param {string} orderType - The type of order being processed (e.g., "valid", "invalid", "duplicate", "missingResource").
+ * @param {Object} orderChainRequest - The request payload to be sent to the API. If null or undefined, the function exits early.
  * @param {string} label - A label used for tagging the request in metrics (e.g., "post_valid_order").
  * @param {Trend} durationMetric - A k6 Trend metric to track the response time for this order type.
  * @returns {Object|undefined} The response data or undefined if order was skipped
  */
-function processOrder(kind, order, label, durationMetric) {
-    if (!order) {
+function processOrder(orderType, orderChainRequest, label, durationMetric) {
+    if (!orderType || !orderChainRequest) {
         return undefined;
     }
 
-    const response = sendNotificationOrderChain(order, label);
+    const response = sendNotificationOrderChain(orderChainRequest, label);
     recordResult(response);
     durationMetric.add(response.timings.duration);
 
-    return { kind, response, sourceOrder: order };
+    return { orderType, response, orderChainRequest };
 }
 
 /**
