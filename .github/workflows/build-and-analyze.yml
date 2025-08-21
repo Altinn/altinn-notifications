@@ -14,7 +14,7 @@ jobs:
     name: Build, test & analyze
     runs-on: ubuntu-latest
     services:
-      postgres: # note that updating this image might break the pipeline if the agent doesn't support the new version
+      postgres: # note that updating this image (might break the pipeline if the agent doesn't support the new version) AND (requires updating the version on line 55 below)
         image: postgres:16@sha256:66a5efb5677ffac1037774a0e141fd3a4c035c9c0c0e624c9cc980dfa10f45e5
         env:
           POSTGRES_USER: platform_notifications_admin
