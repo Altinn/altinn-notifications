@@ -36,8 +36,8 @@ import * as ordersApi from "../api/notifications/v2.js";
 import { stopIterationOnFail } from "../errorhandler.js";
 import { getOrgNoRecipient } from "../shared/functions.js";
 import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
-import { scopes, resourceId, orderTypes, performanceTestScenario } from "../shared/variables.js";
 import { textSummary } from "https://jslib.k6.io/k6-summary/0.0.1/index.js";
+import { scopes, resourceId, orderTypes, performanceTestScenario } from "../shared/variables.js";
 import { post_valid_order, post_invalid_order, post_duplicate_order, post_order_without_resource_id, setEmptyThresholds } from "./threshold-labels.js";
 
 // Variables to cache and renew the token
