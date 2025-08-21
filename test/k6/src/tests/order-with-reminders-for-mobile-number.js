@@ -34,9 +34,10 @@ import * as setupToken from "../setup.js";
 import { Trend, Counter, Rate } from "k6/metrics";
 import * as ordersApi from "../api/notifications/v2.js";
 import { stopIterationOnFail } from "../errorhandler.js";
+import { getSmsRecipient } from "../shared/functions.js";
 import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 import { textSummary } from "https://jslib.k6.io/k6-summary/0.0.1/index.js";
-import { scopes, mobileNumber, orderTypes, performanceTestScenario } from "../shared/variables.js";
+import { scopes, orderTypes, performanceTestScenario } from "../shared/variables.js";
 import { post_valid_order, post_invalid_order, post_duplicate_order, setEmptyThresholds } from "./threshold-labels.js";
 
 // Variables to cache and renew the token
@@ -233,7 +234,7 @@ export function setup() {
 
     // Set phone number for main recipient
     if (orderChainRequest.recipient?.recipientSms) {
-        orderChainRequest.recipient.recipientSms.phoneNumber = mobileNumber;
+        orderChainRequest.recipient.recipientSms.phoneNumber = getSmsRecipient();
     }
 
     // Configure all reminders with consistent references and phone numbers
@@ -247,7 +248,7 @@ export function setup() {
 
             // Set phone number for reminder recipient
             if (updatedReminder.recipient?.recipientSms) {
-                updatedReminder.recipient.recipientSms.phoneNumber = mobileNumber;
+                updatedReminder.recipient.recipientSms.phoneNumber = getSmsRecipient();
             }
 
             return updatedReminder;
