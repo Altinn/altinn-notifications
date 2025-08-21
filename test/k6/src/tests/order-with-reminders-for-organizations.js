@@ -12,10 +12,21 @@
     Abort policy:
     - Iteration stops early only on 401 or 403 responses.
 
-    Metrics & thresholds:
-    - success_rate reflects non-4xx/5xx success proportion.
-    - Duration trends: valid_order_duration, duplicate_order_duration, invalid_order_duration,
-    - Counters: http_201_created, http_200_duplicate, http_400_validation, http_4xx, http_5xx, failed_requests.
+    Command:
+    podman compose run k6 run /src/tests/order-with-reminders-for-organizations.js \
+    -e tokenGeneratorUserName={the user name to access the token generator} \
+    -e tokenGeneratorUserPwd={the password to access the token generator} \
+    -e mpClientId={the identifier of an integration defined in maskinporten} \
+    -e mpKid={the key identifier of the JSON web key used to sign the maskinporten token request} \
+    -e encodedJwk={the encoded JSON web key used to sign the maskinporten token request} \
+    -e env={the environment to run this script within: at22, at23, at24, yt01, tt02, prod} \
+    -e orgNoRecipient={an organization number to include as a notification recipient} \
+    -e orderTypes={types of orders to test, e.g., valid, invalid, duplicate, missingResource} \
+
+    Command syntax for different shells:
+    - Bash: Use the command as written above.
+    - PowerShell: Replace `\` with a backtick (`` ` ``) at the end of each line.
+    - Command Prompt (cmd.exe): Replace `\` with `^` at the end of each line.
 */
 
 import { check } from "k6";
@@ -471,7 +482,7 @@ function getFutureDate(daysToAdd = 0) {
 }
 
 /**
- * Creates a modified copy of an order object without `resourceId` fields.
+ * Creates a modified copy of an order object without `resourceId` field.
  * Specifically, it removes the `resourceId` property from:
  * - The main recipient's `recipientOrganization` object.
  * - Each reminder's `recipientOrganization` object.
@@ -487,7 +498,7 @@ function getFutureDate(daysToAdd = 0) {
  * @returns {Object} A cloned order object with all `resourceId` properties removed.
  */
 function removeResourceIdFromOrder(baseOrder) {
-    const stripResourceId = (recipient) => {
+    const stripResourceIdentifier = (recipient) => {
         if (!recipient?.recipientOrganization) {
             return recipient;
         }
@@ -498,16 +509,16 @@ function removeResourceIdFromOrder(baseOrder) {
 
     return {
         ...baseOrder,
-        recipient: stripResourceId(baseOrder.recipient),
+        recipient: stripResourceIdentifier(baseOrder.recipient),
         reminders: baseOrder.reminders.map(reminder => ({
             ...reminder,
-            recipient: stripResourceId(reminder.recipient)
+            recipient: stripResourceIdentifier(reminder.recipient)
         }))
     };
 }
 
 /**
- * Creates a unique copy of an order chain request.
+ * Creates a unique order chain request.
  *
  * @param {Object} data - The shared data object containing the base order chain request
  * @returns {Object} A new order chain request with unique idempotency identifier
@@ -598,20 +609,11 @@ function generateOrderChainRequestByOrderType(data) {
                 break;
 
             case "duplicate":
-                if (!orderChainRequests.validOrder) {
-                    orderChainRequests.validOrder = createUniqueOrderChainRequest(data);
-                }
+                orderChainRequests.validOrder = createUniqueOrderChainRequest(data);
                 orderChainRequests.duplicateOrder = JSON.parse(JSON.stringify(orderChainRequests.validOrder));
                 break;
 
             case "missingResource":
-                orderChainRequests.missingResourceOrder = removeResourceIdFromOrder(createUniqueOrderChainRequest(data));
-                break;
-
-            case "all":
-                orderChainRequests.validOrder = createUniqueOrderChainRequest(data);
-                orderChainRequests.duplicateOrder = JSON.parse(JSON.stringify(orderChainRequests.validOrder));
-                orderChainRequests.invalidOrder = removeRequiredFieldsFromOrder(createUniqueOrderChainRequest(data));
                 orderChainRequests.missingResourceOrder = removeResourceIdFromOrder(createUniqueOrderChainRequest(data));
                 break;
 
@@ -650,7 +652,7 @@ function processOrder(kind, order, label, durationMetric) {
 }
 
 /**
- * Update a recipient's organization number
+ * Update the organization number used to identify recipients.
  * 
  * @param {Object} recipient - The recipient object to update
  * @param {string} orgNumber - The organization number to set
@@ -658,6 +660,9 @@ function processOrder(kind, order, label, durationMetric) {
  */
 function updateRecipientWithOrgNumber(recipient, orgNumber) {
     if (!recipient?.recipientOrganization) {
+        stopIterationOnFail("Recipient is missing required recipientOrganization property", false);
+
+        // The line below is included for type safety
         return recipient;
     }
 
