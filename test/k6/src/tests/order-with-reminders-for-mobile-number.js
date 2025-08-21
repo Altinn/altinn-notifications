@@ -88,9 +88,6 @@ const invalidOrderDuration = new Trend("invalid_order_duration");
 // Trend to track the response time (duration) for valid but duplicate orders (expected to return a 200 Ok status)
 const duplicateOrderDuration = new Trend("duplicate_order_duration");
 
-// Trend to track the response time (duration) for orders missing a resource (expected to return a 201 Created or 200 Ok status)
-const missingResourceOrderDuration = new Trend("missing_resource_order_duration");
-
 // Define the order types to be tested based on environment variables or defaults
 const labels = [post_valid_order, post_invalid_order, post_duplicate_order, post_order_without_resource_id];
 
@@ -192,6 +189,7 @@ export const options = {
         'server_error_rate': ['rate<0.02'],
         'high_latency_rate': ['rate<0.05'],
         'dropped_iterations': ['count==0'],
+        'duplicate_mismatch_rate': ['rate==0'],
         'http_req_duration': ['p(95)<1500', 'p(99)<2500'],
         'valid_order_duration': ['p(95)<1200', 'p(99)<1800'],
         'invalid_order_duration': ['p(95)<400', 'p(99)<600'],

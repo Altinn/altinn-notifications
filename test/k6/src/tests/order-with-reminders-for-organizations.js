@@ -193,7 +193,7 @@ export const options = {
         'server_error_rate': ['rate<0.02'],
         'high_latency_rate': ['rate<0.05'],
         'dropped_iterations': ['count==0'],
-        'duplicate_mismatch_rate': ['count==0'],
+        'duplicate_mismatch_rate': ['rate==0'],
         'http_req_duration': ['p(95)<1500', 'p(99)<2500'],
         'valid_order_duration': ['p(95)<1200', 'p(99)<1800'],
         'invalid_order_duration': ['p(95)<400', 'p(99)<600'],
