@@ -30,12 +30,12 @@ import { stopIterationOnFail } from "../errorhandler.js";
 import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 
 import * as setupToken from "../setup.js";
+import { getEmailRecipient } from "../shared/functions.js";
 import * as ordersApi from "../api/notifications/orders.js";
+import { scopes, ninRecipient } from "../shared/variables.js";
 import * as notificationsApi from "../api/notifications/notifications.js";
 import { post_mail_order, get_mail_notifications, setEmptyThresholds } from "./threshold-labels.js";
 import { getNotificationOrderById, getNotificationOrderBySendersReference, getNotificationOrderWithStatus } from "../api/notifications/get-notification-orders.js";
-import { scopes } from "../shared/variables.js";
-import { getEmailRecipient } from "../shared/functions.js";
 
 const labels = [post_mail_order, get_mail_notifications];
 
@@ -43,7 +43,6 @@ const emailOrderRequestJson = JSON.parse(
     open("../data/orders/01-email-request.json")
 );
 
-const ninRecipient = __ENV.ninRecipient ? __ENV.ninRecipient.toLowerCase() : null;
 const emailRecipient = getEmailRecipient();
 
 export const options = {
