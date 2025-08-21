@@ -280,7 +280,18 @@ export default function (data) {
 
             case "duplicate": {
                 // First call establishes the original record
-                processOrder(orderType, request, post_valid_order, duplicateOrderDuration);
+                const validResponse = processOrder(orderType, request, post_valid_order, duplicateOrderDuration);
+                if (validResponse?.response) {
+                    try {
+                        const body = JSON.parse(validResponse.response.body);
+                        if (body.notification && body.notificationOrderId) {
+                            firstSuccessfulResponse.shipmentId = body.notification.shipmentId;
+                            firstSuccessfulResponse.notificationOrderId = body.notificationOrderId;
+                        }
+                    } catch (e) {
+                        // Silently handle parsing errors
+                    }
+                }
 
                 // Second call should return a duplicate response (this is the one we track)
                 return processOrder(orderType, request, post_duplicate_order, duplicateOrderDuration);
@@ -396,9 +407,9 @@ function validateResponses(responses) {
     }
 
     const validators = {
-        valid: (response, body, sourceOrder) => {
+        valid: (response, body, orderChainRequest) => {
             const notificationObj = body.notification || {};
-            const expectedReminderCount = sourceOrder.reminders?.length || 0;
+            const expectedReminderCount = orderChainRequest.reminders?.length || 0;
             const reminderArray = Array.isArray(notificationObj.reminders) ? notificationObj.reminders : [];
 
             // Track high latency for valid orders
@@ -418,8 +429,9 @@ function validateResponses(responses) {
 
             if (response.status === 201) {
                 http201Created.add(1);
-                firstSuccessfulResponse.shipmentId ||= body.notification?.shipmentId;
-                firstSuccessfulResponse.notificationOrderId ||= body.notificationOrderId;
+                // Store these values immediately when we get a valid response
+                firstSuccessfulResponse.shipmentId = notificationObj.shipmentId;
+                firstSuccessfulResponse.notificationOrderId = body.notificationOrderId;
             }
         },
 
@@ -467,7 +479,7 @@ function validateResponses(responses) {
         }
     };
 
-    for (const { orderType, response, sourceOrder } of responses) {
+    for (const { orderType, response, orderChainRequest } of responses) {
         if (!response) {
             continue;
         }
@@ -480,7 +492,7 @@ function validateResponses(responses) {
         let body;
         try { body = JSON.parse(response.body); } catch { body = {}; }
 
-        validators[orderType]?.(response, body, sourceOrder);
+        validators[orderType]?.(response, body, orderChainRequest);
     }
 }
 
