@@ -36,7 +36,7 @@ import * as ordersApi from "../api/notifications/v2.js";
 import { stopIterationOnFail } from "../errorhandler.js";
 import { getOrgNoRecipient } from "../shared/functions.js";
 import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
-import { scopes, resourceId, orderTypes } from "../shared/variables.js";
+import { scopes, resourceId, orderTypes, performanceTestScenario } from "../shared/variables.js";
 import { textSummary } from "https://jslib.k6.io/k6-summary/0.0.1/index.js";
 import { post_valid_order, post_invalid_order, post_duplicate_order, post_order_without_resource_id, setEmptyThresholds } from "./threshold-labels.js";
 
@@ -100,91 +100,106 @@ const orderChainRequestJson = JSON.parse(open("../data/orders/order-with-reminde
 
 // Define the test scenarios for different performance dimensions
 export const options = {
-    scenarios: {
-        // 1. Quick readiness gate to verify that the system works and meets minimal expectations.
-        smoke: {
-            rate: 10,
-            maxVUs: 10,
-            timeUnit: '1s',
-            duration: '30s',
-            preAllocatedVUs: 5,
-            gracefulStop: '10s',
-            executor: 'constant-arrival-rate'
-        },
-
-        // 2. Capacity test with gradually increasing request rate to evaluate system limits.
-        capacity_probe: {
-            maxVUs: 400,
-            startRate: 50,
-            timeUnit: '1s',
-            startTime: '45s',
-            gracefulStop: '30s',
-            preAllocatedVUs: 120,
-            executor: 'ramping-arrival-rate',
-            stages: [
-                { target: 100, duration: '2m' },
-                { target: 200, duration: '2m' },
-                { target: 300, duration: '3m' },
-                { target: 0, duration: '1m' }
-            ]
-        },
-
-        // 3. Load test to validate system performance against realistic SLA/SLO expectations.
-        realistic_sla_compliance: {
-            maxVUs: 500,
-            startRate: 100,
-            timeUnit: '1s',
-            startTime: '9m20s',
-            gracefulStop: '30s',
-            preAllocatedVUs: 250,
-            executor: 'ramping-arrival-rate',
-            stages: [
-                { target: 400, duration: '4m' },
-                { target: 700, duration: '6m' },
-                { target: 0, duration: '2m' }
-            ]
-        },
-
-        // 4. Steady-state load to validate system stability under sustained traffic.
-        steady_state_load: {
-            rate: 300,
-            maxVUs: 600,
-            timeUnit: '1s',
-            duration: '15m',
-            startTime: '22m',
-            gracefulStop: '30s',
-            preAllocatedVUs: 250,
-            executor: 'constant-arrival-rate'
-        },
-
-        // 5. Sudden spike load to evaluate system resilience under abrupt traffic surges.
-        sudden_spike_resilience: {
-            maxVUs: 700,
-            timeUnit: '1s',
-            startTime: '37m5s',
-            gracefulStop: '30s',
-            preAllocatedVUs: 350,
-            executor: 'ramping-arrival-rate',
-            stages: [
-                { target: 50, duration: '10s' },
-                { target: 300, duration: '20s' },
-                { target: 1000, duration: '2m' },
-                { target: 0, duration: '40s' }
-            ]
-        },
-
-        // 6. Soak-long-running stability validation under sustained load.
-        soak_long_term_stability: {
-            rate: 120,
-            maxVUs: 200,
-            timeUnit: '1s',
-            duration: '30m',
-            gracefulStop: '2m',
-            startTime: '40m45s',
-            preAllocatedVUs: 120,
-            executor: 'constant-arrival-rate'
+    scenarios: performanceTestScenario === 'userDefined' ?
+        {
+            // Single custom scenario with configurable parameters
+            userDefined: {
+                //timeUnit: '1s',
+                //rate: customRate,
+                //gracefulStop: '10s',
+                executor: 'constant-vus',
+                tags: { scenario: 'custom' },
+                duration: __ENV.duration || '30s',
+                vus: parseInt(__ENV.vus || '10', 10),
+                //preAllocatedVUs: Math.ceil(customVUs * 0.5)
+            }
         }
-    },
+        :
+        {
+            // 1. Quick readiness gate to verify that the system works and meets minimal expectations.
+            smoke: {
+                rate: 10,
+                maxVUs: 10,
+                timeUnit: '1s',
+                duration: '30s',
+                preAllocatedVUs: 5,
+                gracefulStop: '10s',
+                executor: 'constant-arrival-rate'
+            },
+
+            // 2. Capacity test with gradually increasing request rate to evaluate system limits.
+            capacity_probe: {
+                maxVUs: 400,
+                startRate: 50,
+                timeUnit: '1s',
+                startTime: '45s',
+                gracefulStop: '30s',
+                preAllocatedVUs: 120,
+                executor: 'ramping-arrival-rate',
+                stages: [
+                    { target: 100, duration: '2m' },
+                    { target: 200, duration: '2m' },
+                    { target: 300, duration: '3m' },
+                    { target: 0, duration: '1m' }
+                ]
+            },
+
+            // 3. Load test to validate system performance against realistic SLA/SLO expectations.
+            realistic_sla_compliance: {
+                maxVUs: 500,
+                startRate: 100,
+                timeUnit: '1s',
+                startTime: '9m20s',
+                gracefulStop: '30s',
+                preAllocatedVUs: 250,
+                executor: 'ramping-arrival-rate',
+                stages: [
+                    { target: 400, duration: '4m' },
+                    { target: 700, duration: '6m' },
+                    { target: 0, duration: '2m' }
+                ]
+            },
+
+            // 4. Steady-state load to validate system stability under sustained traffic.
+            steady_state_load: {
+                rate: 300,
+                maxVUs: 600,
+                timeUnit: '1s',
+                duration: '15m',
+                startTime: '22m',
+                gracefulStop: '30s',
+                preAllocatedVUs: 250,
+                executor: 'constant-arrival-rate'
+            },
+
+            // 5. Sudden spike load to evaluate system resilience under abrupt traffic surges.
+            sudden_spike_resilience: {
+                maxVUs: 700,
+                timeUnit: '1s',
+                startTime: '37m5s',
+                gracefulStop: '30s',
+                preAllocatedVUs: 350,
+                executor: 'ramping-arrival-rate',
+                stages: [
+                    { target: 50, duration: '10s' },
+                    { target: 300, duration: '20s' },
+                    { target: 1000, duration: '2m' },
+                    { target: 0, duration: '40s' }
+                ]
+            },
+
+            // 6. Soak-long-running stability validation under sustained load.
+            soak_long_term_stability: {
+                rate: 120,
+                maxVUs: 200,
+                timeUnit: '1s',
+                duration: '30m',
+                gracefulStop: '2m',
+                startTime: '40m45s',
+                preAllocatedVUs: 120,
+                executor: 'constant-arrival-rate'
+            }
+        },
     summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(90)', 'p(95)', 'p(99)', 'count'],
     thresholds: {
         'checks': ['rate>0.995'],
