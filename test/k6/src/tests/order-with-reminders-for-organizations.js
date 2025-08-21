@@ -279,21 +279,18 @@ export default function (data) {
                 return processOrder(orderType, request, post_invalid_order, invalidOrderDuration);
 
             case "duplicate": {
-                // First call establishes the original record
-                const validResponse = processOrder(orderType, request, post_valid_order, duplicateOrderDuration);
-                if (validResponse?.response) {
+                const firstResponse = processOrder("valid", request, post_valid_order, validOrderDuration);
+                if (firstResponse?.response) {
                     try {
-                        const body = JSON.parse(validResponse.response.body);
-                        if (body.notification && body.notificationOrderId) {
+                        const body = JSON.parse(firstResponse.response.body);
+                        if (body.notificationOrderId && body.notification) {
                             firstSuccessfulResponse.shipmentId = body.notification.shipmentId;
                             firstSuccessfulResponse.notificationOrderId = body.notificationOrderId;
                         }
                     } catch (e) {
-                        // Silently handle parsing errors
                     }
                 }
 
-                // Second call should return a duplicate response (this is the one we track)
                 return processOrder(orderType, request, post_duplicate_order, duplicateOrderDuration);
             }
 
@@ -305,7 +302,6 @@ export default function (data) {
         }
     }).filter(Boolean); // Remove any undefined results
 
-    // Validate collected responses
     validateResponses(responses);
 }
 
@@ -627,36 +623,21 @@ function removeRequiredFieldsFromOrder(baseOrder) {
  */
 function generateOrderChainRequestByOrderType(data) {
     const requests = [];
-    let validUniqueOrderChainRequest = {};
-
     for (const orderType of orderTypes) {
         switch (orderType) {
-            case "valid": {
-                validUniqueOrderChainRequest = createUniqueOrderChainRequest(data);
-                requests.push({ orderType, request: validUniqueOrderChainRequest });
+            case "valid":
+            case "duplicate": {
+                requests.push({ orderType, request: createUniqueOrderChainRequest(data) });
                 break;
             }
 
             case "invalid": {
-                requests.push({
-                    orderType,
-                    request: removeRequiredFieldsFromOrder(createUniqueOrderChainRequest(data))
-                });
-                break;
-            }
-
-            case "duplicate": {
-                validUniqueOrderChainRequest = createUniqueOrderChainRequest(data);
-                requests.push({ orderType: "valid", request: validUniqueOrderChainRequest });
-                requests.push({ orderType: "duplicate", request: JSON.parse(JSON.stringify(validUniqueOrderChainRequest)) });
+                requests.push({ orderType, request: removeRequiredFieldsFromOrder(createUniqueOrderChainRequest(data)) });
                 break;
             }
 
             case "missingResource": {
-                requests.push({
-                    orderType,
-                    request: removeResourceIdFromOrder(createUniqueOrderChainRequest(data))
-                });
+                requests.push({ orderType, request: removeResourceIdFromOrder(createUniqueOrderChainRequest(data)) });
                 break;
             }
 
