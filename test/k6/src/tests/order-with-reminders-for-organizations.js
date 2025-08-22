@@ -40,10 +40,6 @@ import { textSummary } from "https://jslib.k6.io/k6-summary/0.0.1/index.js";
 import { scopes, resourceId, orderTypes, performanceTestScenario } from "../shared/variables.js";
 import { post_valid_order, post_invalid_order, post_duplicate_order, post_order_without_resource_id, setEmptyThresholds } from "./threshold-labels.js";
 
-// Variables to cache and renew the token
-let cachedToken = null;
-let tokenExpiration = 0;
-
 // Track first successful response with 201 for idempotency comparisons
 let firstSuccessfulResponse = { notificationOrderId: null, shipmentId: null };
 
@@ -560,16 +556,16 @@ function removeResourceIdFromOrder(baseOrder) {
 }
 
 /**
- * Creates a unique order chain request.
+ * Creates a unique order chain with consistent identifiers for API testing.
  *
- * @param {Object} data - The shared data object containing the base order chain request
- * @returns {Object} A new order chain request with unique idempotency identifier
+ * @param {Object} data - The shared data object containing the base order chain request template
+ * @returns {Object} A new order chain request with unique idempotency identifier and consistent recipient data
  */
 function createUniqueOrderChainRequest(data) {
-    // Obtain an organization number for this request
+    // Obtain a consistent organization number for all recipients in this request
     const orgNumber = getOrgNoRecipient();
 
-    // Create a new request with updated properties
+    // Create a deep copy with updated properties for testing
     return {
         ...data.orderChainRequest,
         idempotencyId: uuidv4(),
@@ -580,7 +576,7 @@ function createUniqueOrderChainRequest(data) {
             orgNumber
         ),
 
-        // Update all reminders with the same organization number
+        // Apply the same organization number to all reminders (if any)
         reminders: Array.isArray(data.orderChainRequest.reminders)
             ? data.orderChainRequest.reminders.map(reminder => ({
                 ...reminder,
@@ -594,33 +590,49 @@ function createUniqueOrderChainRequest(data) {
 }
 
 /**
- * Creates a modified copy of an order object with missing required fields.
- * Specifically, it removes the `recipientOrganization` property from:
- * - The main `recipient` object.
- * - Every reminder's `recipient` object.
+ * Creates an intentionally invalid order chain by removing required organization fields.
  *
- * This is intended for generating invalid orders in tests,
- * ensuring the system correctly validates input and returns error responses.
+ * This function deliberately generates malformed test data to verify that the API:
+ * 1. Properly validates required fields in organization recipients
+ * 2. Returns appropriate 400 Bad Request responses with validation errors
+ * 3. Handles missing data gracefully without server errors
  *
- * @param {Object} baseOrder - The original order object.
- * @param {Object} baseOrder.recipient - The main order recipient.
- * @param {Array} baseOrder.reminders - List of reminder objects.
- * @returns {Object} A cloned order object with `recipientOrganization` removed.
+ * The function preserves the original structure while:
+ * - Setting recipientOrganization to undefined in the main recipient
+ * - Setting recipientOrganization to undefined in all reminder objects
+ * - Handling null/undefined properties safely to prevent runtime errors
+ *
+ * @param {Object} orderChainRequest - The original valid order chain request
+ * @returns {Object} A modified order with validation errors that should be rejected by the API
  */
-function removeRequiredFieldsFromOrder(baseOrder) {
+function removeRequiredFieldsFromOrder(orderChainRequest) {
+    if (!orderChainRequest) {
+        return orderChainRequest;
+    }
+
+    const invalidRecipient = orderChainRequest.recipient ? {
+        ...orderChainRequest.recipient,
+        recipientOrganization: undefined
+    } : undefined;
+
+    const invalidReminders = Array.isArray(orderChainRequest.reminders)
+        ? orderChainRequest.reminders.map(reminder => {
+            if (!reminder) return reminder;
+
+            return {
+                ...reminder,
+                recipient: reminder.recipient ? {
+                    ...reminder.recipient,
+                    recipientOrganization: undefined
+                } : undefined
+            };
+        })
+        : orderChainRequest.reminders;
+
     return {
-        ...baseOrder,
-        recipient: {
-            ...baseOrder.recipient,
-            recipientOrganization: undefined
-        },
-        reminders: baseOrder.reminders.map(reminder => ({
-            ...reminder,
-            recipient: {
-                ...reminder.recipient,
-                recipientOrganization: undefined
-            }
-        }))
+        ...orderChainRequest,
+        recipient: invalidRecipient,
+        reminders: invalidReminders
     };
 }
 
@@ -731,13 +743,7 @@ function processOrder(orderType, orderChainRequest, label, durationMetric) {
 function sendNotificationOrderChain(orderRequest, label = 'post_valid_order') {
     const requestBody = JSON.stringify(orderRequest);
 
-    const secondsNow = Math.floor(Date.now() / 1000);
-    const needsRefresh = !cachedToken || secondsNow >= tokenExpiration;
-    if (needsRefresh) {
-        const token = setupToken.getAltinnTokenForOrg(scopes);
-        cachedToken = token;
-        tokenExpiration = secondsNow + 1680;
-    }
+    const token = setupToken.getAltinnTokenForOrg(scopes);
 
-    return ordersApi.postNotificationOrderV2(requestBody, cachedToken, label);
+    return ordersApi.postNotificationOrderV2(requestBody, token, label);
 }
