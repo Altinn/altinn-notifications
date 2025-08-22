@@ -14,8 +14,8 @@ jobs:
     name: Build, test & analyze
     runs-on: ubuntu-latest
     services:
-      postgres: # note that updating this image might break the pipeline if the agent doesn't support the new version
-        image: postgres:16@sha256:3264898409adb05925064daab9158c2d43ff9ad5d8fbcfdb5aad3a937240da7a
+      postgres: # note that updating this image (might break the pipeline if the agent doesn't support the new version) AND (requires updating the version on line 55 below)
+        image: postgres:16@sha256:66a5efb5677ffac1037774a0e141fd3a4c035c9c0c0e624c9cc980dfa10f45e5
         env:
           POSTGRES_USER: platform_notifications_admin
           POSTGRES_PASSWORD: Password
@@ -38,7 +38,7 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: 17
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
         with:
           fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
       - name: Install SonarCloud scanners
@@ -52,7 +52,7 @@ jobs:
         run: |
           # Restart only the Postgres service
           docker ps \
-            --filter "ancestor=postgres:16@sha256:3264898409adb05925064daab9158c2d43ff9ad5d8fbcfdb5aad3a937240da7a" \
+            --filter "ancestor=postgres:16@sha256:66a5efb5677ffac1037774a0e141fd3a4c035c9c0c0e624c9cc980dfa10f45e5" \
             -q \
           | xargs docker restart
       - name: Set up Kafka
