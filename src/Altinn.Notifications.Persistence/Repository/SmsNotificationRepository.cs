@@ -215,7 +215,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
                 return;
             }
 
-            var parseResult = Guid.TryParse(alternateId?.ToString(), out Guid alternateIdGuid);
+            var parseResult = Guid.TryParse(alternateId.ToString(), out Guid alternateIdGuid);
 
             if (parseResult)
             {
