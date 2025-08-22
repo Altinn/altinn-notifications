@@ -91,8 +91,8 @@ const missingResourceOrderDuration = new Trend("missing_resource_order_duration"
 // Define the order types to be tested based on environment variables or defaults
 const labels = [post_valid_order, post_invalid_order, post_duplicate_order, post_order_without_resource_id];
 
-// Test data for order chain requests, loaded from a JSON file.
-const orderChainRequestJson = JSON.parse(open("../data/orders/order-with-reminders-for-organizations.json"));
+// Test order chain loaded from a JSON file.
+const orderChainJsonPayload = JSON.parse(open("../data/orders/order-with-reminders-for-organizations.json"));
 
 // Define the test scenarios for different performance dimensions
 export const options = {
@@ -217,35 +217,36 @@ export const options = {
 };
 
 /**
- * Prepares test data by creating a customized order-chain-request with unique identifiers.
+ * Prepares test data for k6 load testing by creating a customized notification order chain with unique identifiers.
  * 
- * @returns {Object} Test context containing the prepared order-chain-request
+ * @returns {Object} Test context containing the prepared order chain payload that will be
+ *                   used by the default function for each virtual user iteration
  */
 export function setup() {
     // Create unique identifier for this test run
     const uniqueIdentifier = uuidv4().substring(0, 8);
 
     // Deep clone the base request template
-    const orderChainRequest = JSON.parse(JSON.stringify(orderChainRequestJson));
+    const orderChainPayload = JSON.parse(JSON.stringify(orderChainJsonPayload));
 
     // Configure core properties
-    orderChainRequest.requestedSendTime = getFutureDate(7);
-    orderChainRequest.sendersReference = `k6-order-${uniqueIdentifier}`;
+    orderChainPayload.requestedSendTime = getFutureDate(7);
+    orderChainPayload.sendersReference = `k6-order-${uniqueIdentifier}`;
 
     // Set Dialogporten association
-    orderChainRequest.dialogportenAssociation = {
+    orderChainPayload.dialogportenAssociation = {
         dialogId: uniqueIdentifier,
         transmissionId: uniqueIdentifier
     };
 
     // Configure main recipient
-    if (orderChainRequest.recipient?.recipientOrganization) {
-        orderChainRequest.recipient.recipientOrganization.resourceId = resourceId;
+    if (orderChainPayload.recipient?.recipientOrganization) {
+        orderChainPayload.recipient.recipientOrganization.resourceId = resourceId;
     }
 
-    // Configure all reminders with consistent references and resource IDs
-    if (Array.isArray(orderChainRequest.reminders)) {
-        orderChainRequest.reminders = orderChainRequest.reminders.map(reminder => ({
+    // Configure all reminders with consistent references and resource identifier
+    if (Array.isArray(orderChainPayload.reminders)) {
+        orderChainPayload.reminders = orderChainPayload.reminders.map(reminder => ({
             ...reminder,
             sendersReference: `k6-reminder-order-${uniqueIdentifier}`,
             recipient: {
@@ -258,40 +259,37 @@ export function setup() {
         }));
     }
 
-    return { orderChainRequest };
+    return { orderChainPayload };
 }
 
 /**
- * Main test iteration function executed by k6 for each virtual user.
+ * Main test function executed by k6 for each virtual user iteration.
  * 
- * This function follows a multi-step process:
- * 1. Get organization number for recipient
- * 2. Generate various order types (valid, invalid, duplicate, valid without resource identifier)
- * 3. Process each order type sequentially
- * 4. Validate all collected responses
+ * This is the core test execution function in the k6 lifecycle that runs
+ * once per VU iteration. It tests multiple API scenarios in sequence:
  * 
- * Error handling:
- * - Missing orders are filtered out (null safety)
- * - Auth errors (401/403) abort the iteration
- * - Process continues even if some orders fail
+ * 1. Generates various order requests based on configured order types (valid, invalid, duplicate, missingResource)
+ * 2. Processes each order by sending API requests and capturing responses
+ * 3. For duplicate testing, makes an initial valid request followed by an identical request to verify idempotency behavior
+ * 4. Collects all responses and validates them against expected outcomes
  * 
- * @param {Object} data - Test context from setup phase
+ * @param {Object} data - Test context from setup phase containing the prepared orderChainPayload template
  */
 export default function (data) {
-    const orderRequests = generateOrderChainRequestByOrderType(data);
+    const orderChainPayloads = generateOrderChainPayloadsByOrderType(data);
 
-    const responses = orderRequests.map(orderRequest => {
-        const { orderType, request } = orderRequest;
+    const responses = orderChainPayloads.map(e => {
+        const { orderType, orderChainPayload } = e;
 
         switch (orderType) {
             case "valid":
-                return processOrder(orderType, request, post_valid_order, validOrderDuration);
+                return processOrderChainPayload(orderType, orderChainPayload, post_valid_order, validOrderDuration);
 
             case "invalid":
-                return processOrder(orderType, request, post_invalid_order, invalidOrderDuration);
+                return processOrderChainPayload(orderType, orderChainPayload, post_invalid_order, invalidOrderDuration);
 
             case "duplicate": {
-                const firstResponse = processOrder("valid", request, post_valid_order, validOrderDuration);
+                const firstResponse = processOrderChainPayload("valid", orderChainPayload, post_valid_order, validOrderDuration);
                 if (firstResponse?.response) {
                     try {
                         const body = JSON.parse(firstResponse.response.body);
@@ -303,11 +301,11 @@ export default function (data) {
                     }
                 }
 
-                return processOrder(orderType, request, post_duplicate_order, duplicateOrderDuration);
+                return processOrderChainPayload(orderType, orderChainPayload, post_duplicate_order, duplicateOrderDuration);
             }
 
             case "missingResource":
-                return processOrder(orderType, request, post_order_without_resource_id, missingResourceOrderDuration);
+                return processOrderChainPayload(orderType, orderChainPayload, post_order_without_resource_id, missingResourceOrderDuration);
 
             default:
                 return undefined;
@@ -355,39 +353,6 @@ export function handleSummary(testResults) {
 setEmptyThresholds(labels, options);
 
 /**
- * Updates performance metrics based on an HTTP response.
- *
- * Categorizes the response as successful, client error (4xx), or server error (5xx),
- * then increments the appropriate counters and adjusts success/error rates.
- *
- * @param {Object} httpResponse - The HTTP response object.
- * @param {number} httpResponse.status - The HTTP status code.
- */
-function recordResult(httpResponse) {
-    const status = httpResponse.status;
-    const isServerError = status >= 500;
-    const isClientError = status >= 400 && status < 500;
-
-    if (isClientError || isServerError) {
-        failedRequests.add(1);
-
-        if (isServerError) {
-            http5xx.add(1);
-            serverErrorRate.add(true);
-        } else {
-            http4xx.add(1);
-            serverErrorRate.add(false);
-        }
-
-        successRate.add(false);
-        return;
-    }
-
-    successRate.add(true);
-    serverErrorRate.add(false);
-}
-
-/**
  * Validates responses from different order types against expected outcomes.
  * 
  * This function processes an array of response objects collected during test execution,
@@ -415,9 +380,9 @@ function validateResponses(responses) {
     }
 
     const validators = {
-        valid: (response, body, orderChainRequest) => {
+        valid: (response, body, orderChainPayload) => {
             const notificationObj = body.notification || {};
-            const expectedReminderCount = orderChainRequest.reminders?.length || 0;
+            const expectedReminderCount = orderChainPayload.reminders?.length || 0;
             const reminderArray = Array.isArray(notificationObj.reminders) ? notificationObj.reminders : [];
 
             // Track high latency for valid orders
@@ -487,7 +452,7 @@ function validateResponses(responses) {
         }
     };
 
-    for (const { orderType, response, orderChainRequest } of responses) {
+    for (const { orderType, response, orderChainPayload } of responses) {
         if (!response) {
             continue;
         }
@@ -500,7 +465,7 @@ function validateResponses(responses) {
         let body;
         try { body = JSON.parse(response.body); } catch { body = {}; }
 
-        validators[orderType]?.(response, body, orderChainRequest);
+        validators[orderType]?.(response, body, orderChainPayload);
     }
 }
 
@@ -517,6 +482,51 @@ function getFutureDate(daysToAdd = 0) {
 
     const futureDate = new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000);
     return futureDate.toISOString();
+}
+
+/**
+ * Creates a unique order chain payload with consistent identifiers for API testing.
+ * 
+ * This function:
+ * 1. Generates a UUID-based idempotency identifier that enables testing identical 
+ *    request handling (proper 200 OK responses for duplicates)
+ * 2. Retrieves a consistent organization number and applies it to both the primary 
+ *    notification recipient and all reminder recipients
+ * 3. Preserves the structure and content of the original order chain while ensuring 
+ *    each test iteration uses unique, traceable identifiers
+ * 
+ * @param {Object} data - The shared data object containing the base order chain payload template
+ * @returns {Object} A cloned order chain payload with:
+ *                   - Unique idempotency identifier for duplicate detection
+ *                   - Consistent organization number across all recipients
+ *                   - Preserved reminder structure with updated recipient details
+ */
+function createUniqueOrderChainPayload(data) {
+    // Obtain a consistent organization number for all recipients in this request
+    const orgNumber = getOrgNoRecipient();
+
+    // Create a deep copy with updated properties for testing
+    return {
+        ...data.orderChainPayload,
+        idempotencyId: uuidv4(),
+
+        // Update main recipient organization number
+        recipient: updateRecipientWithOrganizationNumber(
+            data.orderChainPayload.recipient,
+            orgNumber
+        ),
+
+        // Apply the same organization number to all reminders (if any)
+        reminders: Array.isArray(data.orderChainPayload.reminders)
+            ? data.orderChainPayload.reminders.map(reminder => ({
+                ...reminder,
+                recipient: updateRecipientWithOrganizationNumber(
+                    reminder.recipient,
+                    orgNumber
+                )
+            }))
+            : []
+    };
 }
 
 /**
@@ -556,37 +566,91 @@ function removeResourceIdFromOrder(baseOrder) {
 }
 
 /**
- * Creates a unique order chain with consistent identifiers for API testing.
+ * Categorizes HTTP responses by status code and updates performance metrics for test reporting.
+ * 
+ * This function is critical for tracking key metrics that drive test thresholds:
+ * - Status 200-399: Increments success rates and metrics
+ * - Status 400-499: Records client errors (4xx), updates failure counters
+ * - Status 500-599: Records server errors (5xx), updates failure counters
+ * 
+ * The metrics updated include:
+ * - successRate: Proportion of non-error responses (affects 'success_rate' threshold)
+ * - serverErrorRate: Proportion of server (5xx) errors (affects 'server_error_rate' threshold)
+ * - http4xx/http5xx: Count of client/server errors (affects 'http_5xx' threshold)
+ * - failedRequests: Combined count of all error responses
  *
- * @param {Object} data - The shared data object containing the base order chain request template
- * @returns {Object} A new order chain request with unique idempotency identifier and consistent recipient data
+ * @param {Object} httpResponse - The HTTP response object from k6
+ * @param {number} httpResponse.status - The HTTP status code (e.g., 200, 400, 500)
  */
-function createUniqueOrderChainRequest(data) {
-    // Obtain a consistent organization number for all recipients in this request
-    const orgNumber = getOrgNoRecipient();
+function recordHttpResponseMetrics(httpResponse) {
+    const status = httpResponse.status;
+    const isServerError = status >= 500;
+    const isClientError = status >= 400 && status < 500;
 
-    // Create a deep copy with updated properties for testing
-    return {
-        ...data.orderChainRequest,
-        idempotencyId: uuidv4(),
+    if (isClientError || isServerError) {
+        failedRequests.add(1);
 
-        // Update main recipient organization number
-        recipient: updateRecipientWithOrgNumber(
-            data.orderChainRequest.recipient,
-            orgNumber
-        ),
+        if (isServerError) {
+            http5xx.add(1);
+            serverErrorRate.add(true);
+        } else {
+            http4xx.add(1);
+            serverErrorRate.add(false);
+        }
 
-        // Apply the same organization number to all reminders (if any)
-        reminders: Array.isArray(data.orderChainRequest.reminders)
-            ? data.orderChainRequest.reminders.map(reminder => ({
-                ...reminder,
-                recipient: updateRecipientWithOrgNumber(
-                    reminder.recipient,
-                    orgNumber
-                )
-            }))
-            : []
-    };
+        successRate.add(false);
+        return;
+    }
+
+    successRate.add(true);
+    serverErrorRate.add(false);
+}
+
+/**
+ * Generates different types of order chain payloads for API testing scenarios.
+ * 
+ * This function creates specialized test payloads based on the configured order types in the 
+ * global `orderTypes` array. Each order type results in a different modification: * 
+ * - "valid": Standard well-formed order chain with all required fields
+ * - "invalid": Order chain with required recipient organization fields removed to test validation
+ * - "duplicate": Creates an order chain that will later be sent twice to test idempotency
+ * - "missingResource": Order chain with resource identifiers removed to avoid authorization paths
+ * 
+ * Each returned payload maintains consistent organization numbers across the main notification
+ * and all its reminders, ensuring realistic test scenarios for organization notifications.
+ * 
+ * @param {Object} data - The shared data containing the base order chain payload from setup
+ * @returns {Array<Object>} Array of objects with format { orderType: string, orderChainPayload: Object }
+ *                          where each orderChainPayload is crafted for its specific test scenario
+ * @throws {Error} Aborts test iteration via stopIterationOnFail if an unsupported order type is encountered
+ */
+function generateOrderChainPayloadsByOrderType(data) {
+    const orderChainPayloads = [];
+
+    for (const orderType of orderTypes) {
+        switch (orderType) {
+            case "valid":
+            case "duplicate": {
+                orderChainPayloads.push({ orderType, orderChainPayload: createUniqueOrderChainPayload(data) });
+                break;
+            }
+
+            case "invalid": {
+                orderChainPayloads.push({ orderType, orderChainPayload: removeRequiredFieldsFromOrder(createUniqueOrderChainPayload(data)) });
+                break;
+            }
+
+            case "missingResource": {
+                orderChainPayloads.push({ orderType, orderChainPayload: removeResourceIdFromOrder(createUniqueOrderChainPayload(data)) });
+                break;
+            }
+
+            default:
+                stopIterationOnFail(`Unsupported order type: ${orderType}`, false);
+                break;
+        }
+    }
+    return orderChainPayloads;
 }
 
 /**
@@ -602,21 +666,21 @@ function createUniqueOrderChainRequest(data) {
  * - Setting recipientOrganization to undefined in all reminder objects
  * - Handling null/undefined properties safely to prevent runtime errors
  *
- * @param {Object} orderChainRequest - The original valid order chain request
+ * @param {Object} orderChainPayload - The original valid order chain request
  * @returns {Object} A modified order with validation errors that should be rejected by the API
  */
-function removeRequiredFieldsFromOrder(orderChainRequest) {
-    if (!orderChainRequest) {
-        return orderChainRequest;
+function removeRequiredFieldsFromOrder(orderChainPayload) {
+    if (!orderChainPayload) {
+        return orderChainPayload;
     }
 
-    const invalidRecipient = orderChainRequest.recipient ? {
-        ...orderChainRequest.recipient,
+    const invalidRecipient = orderChainPayload.recipient ? {
+        ...orderChainPayload.recipient,
         recipientOrganization: undefined
     } : undefined;
 
-    const invalidReminders = Array.isArray(orderChainRequest.reminders)
-        ? orderChainRequest.reminders.map(reminder => {
+    const invalidReminders = Array.isArray(orderChainPayload.reminders)
+        ? orderChainPayload.reminders.map(reminder => {
             if (!reminder) return reminder;
 
             return {
@@ -627,64 +691,27 @@ function removeRequiredFieldsFromOrder(orderChainRequest) {
                 } : undefined
             };
         })
-        : orderChainRequest.reminders;
+        : orderChainPayload.reminders;
 
     return {
-        ...orderChainRequest,
+        ...orderChainPayload,
         recipient: invalidRecipient,
         reminders: invalidReminders
     };
 }
 
 /**
- * Generates order chain requests based on the specified order types.
- *
- * @param {Object} data - The shared data containing the base `orderChainRequest`.
- *
- * @returns {Array} An array of order request objects with type information:
- * - `{ orderType: "valid", request: Object }`
- * - `{ orderType: "invalid", request: Object }`
- * - `{ orderType: "duplicate", request: Object }`
- * - `{ orderType: "missingResource", request: Object }`
- *
- * @throws {Error} If an unsupported order type is provided.
- */
-function generateOrderChainRequestByOrderType(data) {
-    const requests = [];
-    for (const orderType of orderTypes) {
-        switch (orderType) {
-            case "valid":
-            case "duplicate": {
-                requests.push({ orderType, request: createUniqueOrderChainRequest(data) });
-                break;
-            }
-
-            case "invalid": {
-                requests.push({ orderType, request: removeRequiredFieldsFromOrder(createUniqueOrderChainRequest(data)) });
-                break;
-            }
-
-            case "missingResource": {
-                requests.push({ orderType, request: removeResourceIdFromOrder(createUniqueOrderChainRequest(data)) });
-                break;
-            }
-
-            default:
-                stopIterationOnFail(`Unsupported order type: ${orderType}`, false);
-                break;
-        }
-    }
-    return requests;
-}
-
-/**
- * Update the organization number used to identify recipients.
+ * Updates the organization number in a recipient object.
+ * 
+ * This is used to ensure all notifications within a chain target the same organization, 
+ * which is required for proper end-to-end testing of organization notification chains.
  * 
  * @param {Object} recipient - The recipient object to update
  * @param {string} orgNumber - The organization number to set
- * @returns {Object} Updated recipient with new organization number
+ * @returns {Object} New recipient object with updated organization number
+ * @throws {Error} Indirectly via stopIterationOnFail if recipient is malformed
  */
-function updateRecipientWithOrgNumber(recipient, orgNumber) {
+function updateRecipientWithOrganizationNumber(recipient, orgNumber) {
     if (!recipient?.recipientOrganization) {
         stopIterationOnFail("Recipient is missing required recipientOrganization property", false);
 
@@ -699,33 +726,6 @@ function updateRecipientWithOrgNumber(recipient, orgNumber) {
             orgNumber
         }
     };
-}
-
-/**
- * Processes an order chain request by sending it to the Notification API, recording metrics, and tracking response duration.
- *
- * This function handles the following:
- * - Sends the specified order chain request to the API using the provided label for tagging/metrics.
- * - Records the response status and updates relevant counters (e.g., success, client error, server error).
- * - Tracks the response duration and adds it to the specified duration metric.
- * - Returns the response and associated metadata for further validation or processing.
- *
- * @param {string} orderType - The type of order being processed (e.g., "valid", "invalid", "duplicate", "missingResource").
- * @param {Object} orderChainRequest - The request payload to be sent to the API. If null or undefined, the function exits early.
- * @param {string} label - A label used for tagging the request in metrics (e.g., "post_valid_order").
- * @param {Trend} durationMetric - A k6 Trend metric to track the response time for this order type.
- * @returns {Object|undefined} The response data or undefined if order was skipped
- */
-function processOrder(orderType, orderChainRequest, label, durationMetric) {
-    if (!orderType || !orderChainRequest) {
-        return undefined;
-    }
-
-    const response = sendNotificationOrderChain(orderChainRequest, label);
-    recordResult(response);
-    durationMetric.add(response.timings.duration);
-
-    return { orderType, response, orderChainRequest };
 }
 
 /**
@@ -746,4 +746,39 @@ function sendNotificationOrderChain(orderRequest, label = 'post_valid_order') {
     const token = setupToken.getAltinnTokenForOrg(scopes);
 
     return ordersApi.postNotificationOrderV2(requestBody, token, label);
+}
+
+/**
+ * Processes a notification order chain by sending it to the API and collecting performance metrics.
+ * 
+ * This function is a key part of the k6 testing pipeline that:
+ * 1. Performs input validation and skips processing for null/undefined payloads
+ * 2. Sends the notification order chain to the API with appropriate authentication
+ * 3. Records performance metrics based on the response status code:
+ *    - Success rates for 2xx responses
+ *    - Error counts for 4xx and 5xx responses
+ *    - Response duration metrics for performance analysis
+ * 4. Returns a composite object that will be used by validateResponses() for assertions
+ * 
+ * Each request is tagged with a label to enable filtering metrics by order type
+ * in the test results dashboard.
+ *
+ * @param {string} orderType - The test scenario identifier ("valid", "invalid", "duplicate", "missingResource")
+ * @param {Object} orderChainPayload - The notification order chain payload to send
+ * @param {string} label - Metric label for tracking this specific request type in results
+ * @param {Trend} durationMetric - k6 Trend object for recording response time statistics
+ * @returns {Object|undefined} Object containing { orderType, response, orderChainPayload } for validation, or undefined if payload validation failed
+ */
+function processOrderChainPayload(orderType, orderChainPayload, label, durationMetric) {
+    if (!orderType || !orderChainPayload) {
+        return undefined;
+    }
+
+    const response = sendNotificationOrderChain(orderChainPayload, label);
+
+    recordHttpResponseMetrics(response);
+
+    durationMetric.add(response.timings.duration);
+
+    return { orderType, response, orderChainPayload };
 }
