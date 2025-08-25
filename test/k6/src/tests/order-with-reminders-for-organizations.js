@@ -55,25 +55,25 @@ const serverErrorRate = new Rate("server_error_rate");
 // Rate to track the proportion of requests that result in 201 Created responses
 const orderKindRateValid = new Rate("order_valid_success_rate");
 
-// Rate to track the proportion of requests that result in 200 OK responses
+// Rate to track the proportion of requests with duplicate identifier mismatches
 const duplicateMismatchRate = new Rate("duplicate_mismatch_rate");
 
-// Counter to track the number of HTTP responses with 4xx status codes (client errors).
+// Counter to track the number of HTTP responses with 4xx status codes (client errors)
 const http4xx = new Counter("http_4xx");
 
-// Counter to track the number of HTTP responses with 5xx status codes (server errors).
+// Counter to track the number of HTTP responses with 5xx status codes (server errors)
 const http5xx = new Counter("http_5xx");
 
-// Counter to track the number of failed requests (4xx and 5xx responses).
+// Counter to track the number of failed requests (4xx and 5xx responses)
 const failedRequests = new Counter("failed_requests");
 
-// Counter to track the number of HTTP responses with 201 Created status (valid orders).
+// Counter to track the number of HTTP responses with 201 Created status (valid orders)
 const http201Created = new Counter("http_201_created");
 
-// Counter to track the number of HTTP responses with 200 Ok status (duplicate orders).
+// Counter to track the number of HTTP responses with 200 Ok status (duplicate orders)
 const http200Duplicate = new Counter("http_200_duplicate");
 
-// Counter to track the number of HTTP responses with 400 Bad Request status (validation errors).
+// Counter to track the number of HTTP responses with 400 Bad Request status (validation errors)
 const http400Validation = new Counter("http_400_validation");
 
 // Trend to track the response time (duration) for valid orders (expected to return a 201 Created status)
@@ -198,6 +198,7 @@ export const options = {
         },
     summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(90)', 'p(95)', 'p(99)', 'count'],
     thresholds: {
+        'http_4xx': ['count<5'],
         'checks': ['rate>0.995'],
         'http_5xx': ['count<20'],
         'success_rate': ['rate>0.995'],
@@ -205,6 +206,7 @@ export const options = {
         'high_latency_rate': ['rate<0.05'],
         'dropped_iterations': ['count==0'],
         'duplicate_mismatch_rate': ['rate==0'],
+        'order_valid_success_rate': ['rate>0.995'],
         'http_req_duration': ['p(95)<1500', 'p(99)<2500'],
         'valid_order_duration': ['p(95)<1200', 'p(99)<1800'],
         'invalid_order_duration': ['p(95)<400', 'p(99)<600'],
