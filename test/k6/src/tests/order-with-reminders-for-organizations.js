@@ -217,7 +217,7 @@ export const options = {
 };
 
 /**
- * Prepares test data for k6 load testing by creating a customized notification order chain with unique identifiers.
+ * Prepares test data by creating a customized notification order chain with unique identifiers.
  * 
  * @returns {Object} Test context containing the prepared order chain payload that will be
  *                   used by the default function for each virtual user iteration
@@ -263,11 +263,10 @@ export function setup() {
 }
 
 /**
- * Main test function executed by k6 for each virtual user iteration.
+ * Main test function executed for each virtual user iteration.
  * 
- * This is the core test execution function in the k6 lifecycle that runs
- * once per VU iteration. It tests multiple API scenarios in sequence:
- * 
+ * This is the core test execution function that runs
+ * once per VU iteration. It tests multiple API scenarios in sequence: 
  * 1. Generates various order requests based on configured order types (valid, invalid, duplicate, missingResource)
  * 2. Processes each order by sending API requests and capturing responses
  * 3. For duplicate testing, makes an initial valid request followed by an identical request to verify idempotency behavior
@@ -380,31 +379,32 @@ function validateResponses(responses) {
     }
 
     const validators = {
-        valid: (response, body, orderChainPayload) => {
-            const notificationObj = body.notification || {};
+        valid: (response, responseBody, orderChainPayload) => {
+            const notificationObj = responseBody.notification || {};
             const expectedReminderCount = orderChainPayload.reminders?.length || 0;
             const reminderArray = Array.isArray(notificationObj.reminders) ? notificationObj.reminders : [];
+
+            // Track success rate specifically for valid orders
+            orderKindRateValid.add(response.status === 201);
 
             // Track high latency for valid orders
             highLatencyRate.add(response.timings.duration > 2000);
 
             check(response, {
-                "Status is 201 Created": r => r.status === 201,
+                "Status is 201 Created": e => e.status === 201,
                 "Response contains shipment ID": () => typeof notificationObj.shipmentId === 'string' && notificationObj.shipmentId.length > 0,
-                "Response contains notification order ID": () => typeof body.notificationOrderId === 'string' && body.notificationOrderId.length > 0,
-                "Response includes reminders array": () => Array.isArray(notificationObj.reminders),
+                "Response contains notification order ID": () => typeof responseBody.notificationOrderId === 'string' && responseBody.notificationOrderId.length > 0,
+                "Response includes reminders": () => Array.isArray(notificationObj.reminders),
                 "Reminder count matches request": () => reminderArray.length === expectedReminderCount,
-                "All reminders have shipment IDs": () => reminderArray.length === 0 || reminderArray.every(r => typeof r.shipmentId === 'string' && r.shipmentId.length > 0)
+                "All reminders have shipment IDs": () => reminderArray.length === 0 || reminderArray.every(e => typeof e.shipmentId === 'string' && e.shipmentId.length > 0)
             });
-
-            // Track success rate specifically for valid orders
-            orderKindRateValid.add(response.status === 201);
 
             if (response.status === 201) {
                 http201Created.add(1);
+
                 // Store these values immediately when we get a valid response
                 firstSuccessfulResponse.shipmentId = notificationObj.shipmentId;
-                firstSuccessfulResponse.notificationOrderId = body.notificationOrderId;
+                firstSuccessfulResponse.notificationOrderId = responseBody.notificationOrderId;
             }
         },
 
@@ -412,23 +412,23 @@ function validateResponses(responses) {
             // Track high latency for invalid orders
             highLatencyRate.add(response.timings.duration > 2000);
 
-            check(response, { "Invalid order => 400": r => r.status === 400 });
+            check(response, { "Status is 400 Bad Request": e => e.status === 400 });
 
             if (response.status === 400) {
                 http400Validation.add(1);
             }
         },
 
-        duplicate: (response, body) => {
-            const notificationObj = body.notification || {};
+        duplicate: (response, responseBody) => {
+            const notificationObj = responseBody.notification || {};
 
             // Track high latency for duplicate orders
             highLatencyRate.add(response.timings.duration > 2000);
 
             check(response, {
-                "Status is 200 OK": r => r.status === 200,
+                "Status is 200 OK": e => e.status === 200,
                 "Response contains expected shipment ID": () => { return typeof notificationObj.shipmentId === 'string' && notificationObj.shipmentId === firstSuccessfulResponse.shipmentId; },
-                "Response contains expected notification order ID": () => { return typeof body.notificationOrderId === 'string' && body.notificationOrderId === firstSuccessfulResponse.notificationOrderId; }
+                "Response contains expected notification order ID": () => { return typeof responseBody.notificationOrderId === 'string' && responseBody.notificationOrderId === firstSuccessfulResponse.notificationOrderId; }
             });
 
             if (response.status === 200) {
@@ -444,7 +444,7 @@ function validateResponses(responses) {
             // Track high latency for missing resource orders
             highLatencyRate.add(response.timings.duration > 2000);
 
-            check(response, { "Missing resource => 201": r => r.status === 201 });
+            check(response, { "Status is 201 Created": e => e.status === 201 });
 
             if (response.status === 201) {
                 http201Created.add(1);
@@ -462,10 +462,12 @@ function validateResponses(responses) {
             break;
         }
 
-        let body;
-        try { body = JSON.parse(response.body); } catch { body = {}; }
+        let responseBody;
+        try {
+            responseBody = JSON.parse(response.body);
+        } catch { responseBody = {}; }
 
-        validators[orderType]?.(response, body, orderChainPayload);
+        validators[orderType]?.(response, responseBody, orderChainPayload);
     }
 }
 
@@ -491,18 +493,16 @@ function getFutureDate(daysToAdd = 0) {
  * 1. Generates a UUID-based idempotency identifier that enables testing identical 
  *    request handling (proper 200 OK responses for duplicates)
  * 2. Retrieves a consistent organization number and applies it to both the primary 
- *    notification recipient and all reminder recipients
+ *    notification and all reminder
  * 3. Preserves the structure and content of the original order chain while ensuring 
  *    each test iteration uses unique, traceable identifiers
  * 
  * @param {Object} data - The shared data object containing the base order chain payload template
  * @returns {Object} A cloned order chain payload with:
- *                   - Unique idempotency identifier for duplicate detection
- *                   - Consistent organization number across all recipients
- *                   - Preserved reminder structure with updated recipient details
+ *                   - Unique idempotency identifier
+ *                   - Consistent organization number
  */
 function createUniqueOrderChainPayload(data) {
-    // Obtain a consistent organization number for all recipients in this request
     const orgNumber = getOrgNoRecipient();
 
     // Create a deep copy with updated properties for testing
@@ -526,42 +526,6 @@ function createUniqueOrderChainPayload(data) {
                 )
             }))
             : []
-    };
-}
-
-/**
- * Creates a modified copy of an order object without `resourceId` field.
- * Specifically, it removes the `resourceId` property from:
- * - The main recipient's `recipientOrganization` object.
- * - Each reminder's `recipientOrganization` object.
- *
- * This helper is used in tests to simulate orders that are missing
- * required resource identifiers, e.g. to verify validation logic or
- * behavior when Profile/Authorization API calls are bypassed.
- *
- * @param {Object} baseOrder - The original order object.
- * @param {Object} baseOrder.recipient - The main recipient details.
- * @param {Object} baseOrder.recipient.recipientOrganization - Organization details of the recipient.
- * @param {Array}  baseOrder.reminders - List of reminder objects with recipients.
- * @returns {Object} A cloned order object with all `resourceId` properties removed.
- */
-function removeResourceIdFromOrder(baseOrder) {
-    const stripResourceIdentifier = (recipient) => {
-        if (!recipient?.recipientOrganization) {
-            return recipient;
-        }
-
-        const { resourceId, ...restOrg } = recipient.recipientOrganization;
-        return { ...recipient, recipientOrganization: restOrg };
-    };
-
-    return {
-        ...baseOrder,
-        recipient: stripResourceIdentifier(baseOrder.recipient),
-        reminders: baseOrder.reminders.map(reminder => ({
-            ...reminder,
-            recipient: stripResourceIdentifier(reminder.recipient)
-        }))
     };
 }
 
@@ -610,11 +574,11 @@ function recordHttpResponseMetrics(httpResponse) {
  * Generates different types of order chain payloads for API testing scenarios.
  * 
  * This function creates specialized test payloads based on the configured order types in the 
- * global `orderTypes` array. Each order type results in a different modification: * 
+ * global `orderTypes` array. Each order type results in a different modification: 
  * - "valid": Standard well-formed order chain with all required fields
- * - "invalid": Order chain with required recipient organization fields removed to test validation
+ * - "invalid": Order chain with required recipient organization fields removed
  * - "duplicate": Creates an order chain that will later be sent twice to test idempotency
- * - "missingResource": Order chain with resource identifiers removed to avoid authorization paths
+ * - "missingResource": Order chain with resource identifiers removed to avoid contact lookup and authorization paths
  * 
  * Each returned payload maintains consistent organization numbers across the main notification
  * and all its reminders, ensuring realistic test scenarios for organization notifications.
@@ -630,23 +594,16 @@ function generateOrderChainPayloadsByOrderType(data) {
     for (const orderType of orderTypes) {
         switch (orderType) {
             case "valid":
-            case "duplicate": {
+            case "duplicate":
                 orderChainPayloads.push({ orderType, orderChainPayload: createUniqueOrderChainPayload(data) });
                 break;
-            }
 
-            case "invalid": {
-                orderChainPayloads.push({ orderType, orderChainPayload: removeRequiredFieldsFromOrder(createUniqueOrderChainPayload(data)) });
+            case "invalid":
+                orderChainPayloads.push({ orderType, orderChainPayload: removeRequiredFieldsFromOrderChainPayload(createUniqueOrderChainPayload(data)) });
                 break;
-            }
 
-            case "missingResource": {
-                orderChainPayloads.push({ orderType, orderChainPayload: removeResourceIdFromOrder(createUniqueOrderChainPayload(data)) });
-                break;
-            }
-
-            default:
-                stopIterationOnFail(`Unsupported order type: ${orderType}`, false);
+            case "missingResource":
+                orderChainPayloads.push({ orderType, orderChainPayload: removeResourceIdFromOrderChainPayload(createUniqueOrderChainPayload(data)) });
                 break;
         }
     }
@@ -654,49 +611,47 @@ function generateOrderChainPayloadsByOrderType(data) {
 }
 
 /**
- * Creates an intentionally invalid order chain by removing required organization fields.
- *
- * This function deliberately generates malformed test data to verify that the API:
- * 1. Properly validates required fields in organization recipients
- * 2. Returns appropriate 400 Bad Request responses with validation errors
- * 3. Handles missing data gracefully without server errors
- *
- * The function preserves the original structure while:
- * - Setting recipientOrganization to undefined in the main recipient
- * - Setting recipientOrganization to undefined in all reminder objects
- * - Handling null/undefined properties safely to prevent runtime errors
- *
- * @param {Object} orderChainPayload - The original valid order chain request
- * @returns {Object} A modified order with validation errors that should be rejected by the API
+ * Removes the resourceId from a recipient object.
+ *  * 
+ * @param {Object|null|undefined} recipient - The recipient object to process
+ * @param {Object} [recipient.recipientOrganization] - The organization details for the recipient
+ * @param {string} [recipient.recipientOrganization.resourceId] - The resource identifier to remove
+ * @returns {Object} A new recipient object with resourceId removed from recipientOrganization
  */
-function removeRequiredFieldsFromOrder(orderChainPayload) {
-    if (!orderChainPayload) {
-        return orderChainPayload;
+function stripResourceIdentifierFromRecipient(recipient) {
+    if (!recipient?.recipientOrganization) {
+        return recipient;
     }
 
-    const invalidRecipient = orderChainPayload.recipient ? {
-        ...orderChainPayload.recipient,
-        recipientOrganization: undefined
-    } : undefined;
+    const { resourceId, ...remainingOrgProperties } = recipient.recipientOrganization;
+    return {
+        ...recipient,
+        recipientOrganization: remainingOrgProperties
+    };
+}
 
-    const invalidReminders = Array.isArray(orderChainPayload.reminders)
-        ? orderChainPayload.reminders.map(reminder => {
-            if (!reminder) return reminder;
-
-            return {
-                ...reminder,
-                recipient: reminder.recipient ? {
-                    ...reminder.recipient,
-                    recipientOrganization: undefined
-                } : undefined
-            };
-        })
-        : orderChainPayload.reminders;
+/**
+ * Creates a modified copy of an order chain without resource identifiers.
+ * 
+ * @param {Object} baseOrder - The original order chain payload
+ * @param {Object} [baseOrder.recipient] - The main notification recipient
+ * @param {Array<Object>} [baseOrder.reminders=[]] - List of reminder notifications in the chain
+ * @returns {Object} A new order chain object with all resourceId properties removed
+ */
+function removeResourceIdFromOrderChainPayload(baseOrder) {
+    if (!baseOrder) {
+        return baseOrder;
+    }
 
     return {
-        ...orderChainPayload,
-        recipient: invalidRecipient,
-        reminders: invalidReminders
+        ...baseOrder,
+        recipient: stripResourceIdentifierFromRecipient(baseOrder.recipient),
+        reminders: Array.isArray(baseOrder.reminders)
+            ? baseOrder.reminders.map(reminder => ({
+                ...reminder,
+                recipient: stripResourceIdentifierFromRecipient(reminder.recipient)
+            }))
+            : baseOrder.reminders
     };
 }
 
@@ -725,6 +680,47 @@ function updateRecipientWithOrganizationNumber(recipient, orgNumber) {
             ...recipient.recipientOrganization,
             orgNumber
         }
+    };
+}
+
+/**
+ * Creates an intentionally invalid order chain payload by removing required organization fields.
+ *
+ * The function preserves the original structure while:
+ * - Setting recipientOrganization to undefined in the main recipient
+ * - Setting recipientOrganization to undefined in all reminder objects
+ *
+ * @param {Object} orderChainPayload - The original valid order chain payload
+ * @returns {Object} An invalid order chain payload that should be rejected by the API
+ */
+function removeRequiredFieldsFromOrderChainPayload(orderChainPayload) {
+    if (!orderChainPayload) {
+        return orderChainPayload;
+    }
+
+    const invalidRecipient = orderChainPayload.recipient ? {
+        ...orderChainPayload.recipient,
+        recipientOrganization: undefined
+    } : undefined;
+
+    const invalidReminders = Array.isArray(orderChainPayload.reminders)
+        ? orderChainPayload.reminders.map(reminder => {
+            if (!reminder) return reminder;
+
+            return {
+                ...reminder,
+                recipient: reminder.recipient ? {
+                    ...reminder.recipient,
+                    recipientOrganization: undefined
+                } : undefined
+            };
+        })
+        : orderChainPayload.reminders;
+
+    return {
+        ...orderChainPayload,
+        recipient: invalidRecipient,
+        reminders: invalidReminders
     };
 }
 
