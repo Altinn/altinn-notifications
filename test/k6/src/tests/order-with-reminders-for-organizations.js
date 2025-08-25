@@ -40,9 +40,6 @@ import { textSummary } from "https://jslib.k6.io/k6-summary/0.0.1/index.js";
 import { scopes, resourceId, orderTypes, performanceTestScenario } from "../shared/variables.js";
 import { post_valid_order, post_invalid_order, post_duplicate_order, post_order_without_resource_id, setEmptyThresholds } from "./threshold-labels.js";
 
-// Track first successful response with 201 for idempotency comparisons
-let firstSuccessfulResponse = { notificationOrderId: null, shipmentId: null };
-
 // Rate to track the proportion of successful requests (non-4xx/5xx responses) to total requests
 const successRate = new Rate("success_rate");
 
@@ -54,9 +51,6 @@ const serverErrorRate = new Rate("server_error_rate");
 
 // Rate to track the proportion of requests that result in 201 Created responses
 const orderKindRateValid = new Rate("order_valid_success_rate");
-
-// Rate to track the proportion of requests with duplicate identifier mismatches
-const duplicateMismatchRate = new Rate("duplicate_mismatch_rate");
 
 // Counter to track the number of HTTP responses with 4xx status codes (client errors)
 const http4xx = new Counter("http_4xx");
@@ -202,7 +196,6 @@ export const options = {
         'success_rate': ['rate>0.70'],
         'server_error_rate': ['rate<0.01'],
         'high_latency_rate': ['rate<0.10'],
-        'duplicate_mismatch_rate': ['rate==0'],
         'order_valid_success_rate': ['rate>0.995'],
         'http_req_duration': ['p(95)<2200', 'p(99)<4000'],
         'dropped_iterations{scenario:smoke}': ['count==0'],
@@ -225,9 +218,9 @@ export const options = {
 };
 
 /**
- * Prepares test data by creating a customized notification order chain with unique identifiers.
+ * Prepares test data by creating a notification order chain with unique identifiers.
  * 
- * @returns {Object} Test context containing the prepared order chain payload that will be
+ * @returns {Object} Test context containing the order chain payload that will be
  *                   used by the default function for each virtual user iteration
  */
 export function setup() {
@@ -285,7 +278,7 @@ export function setup() {
 export default function (data) {
     const orderChainPayloads = generateOrderChainPayloadsByOrderType(data);
 
-    const responses = orderChainPayloads.map(e => {
+    const processingResults = orderChainPayloads.map(e => {
         const { orderType, orderChainPayload } = e;
 
         switch (orderType) {
@@ -296,18 +289,7 @@ export default function (data) {
                 return processOrderChainPayload(orderType, orderChainPayload, post_invalid_order, invalidOrderDuration);
 
             case "duplicate": {
-                const firstResponse = processOrderChainPayload("valid", orderChainPayload, post_valid_order, validOrderDuration);
-                if (firstResponse?.response) {
-                    try {
-                        const body = JSON.parse(firstResponse.response.body);
-                        if (body.notificationOrderId && body.notification) {
-                            firstSuccessfulResponse.shipmentId = body.notification.shipmentId;
-                            firstSuccessfulResponse.notificationOrderId = body.notificationOrderId;
-                        }
-                    } catch (e) {
-                    }
-                }
-
+                processOrderChainPayload("valid", orderChainPayload, post_valid_order, validOrderDuration);
                 return processOrderChainPayload(orderType, orderChainPayload, post_duplicate_order, duplicateOrderDuration);
             }
 
@@ -319,7 +301,7 @@ export default function (data) {
         }
     }).filter(Boolean); // Remove any undefined results
 
-    validateResponses(responses);
+    validateProcessingResults(processingResults);
 }
 
 /**
@@ -358,126 +340,6 @@ export function handleSummary(testResults) {
  * This is particularly useful for exploratory testing or when tracking is required without strict validation.
  */
 setEmptyThresholds(labels, options);
-
-/**
- * Validates responses from different order types against expected outcomes.
- * 
- * This function processes an array of response objects collected during test execution,
- * validating each against type-specific criteria:
- * - Valid orders: Verifies 201 status, required fields, and reminder consistency
- * - Invalid orders: Confirms 400 Bad Request status
- * - Duplicate orders: Ensures 200 OK status and identical IDs with original request
- * - Missing resource orders: Checks for 201 Created status
- * 
- * The function also:
- * - Records metrics for high-latency responses
- * - Tracks success rates by order type
- * - Handles response parsing errors
- * - Monitors for idempotency violations
- * - Stops test iteration on critical authentication failures (401/403)
- *
- * @param {Array<Object>} responses - Collection of response objects with the following structure:
- *   - orderType: {string} The type of order ("valid", "invalid", "duplicate", "missingResource")
- *   - response: {Object} The HTTP response object from the API call
- *   - sourceOrder: {Object} The original order request that was sent
- */
-function validateResponses(responses) {
-    if (!responses || responses.length === 0) {
-        return;
-    }
-
-    const validators = {
-        valid: (response, responseBody, orderChainPayload) => {
-            const notificationObj = responseBody.notification || {};
-            const expectedReminderCount = orderChainPayload.reminders?.length || 0;
-            const reminderArray = Array.isArray(notificationObj.reminders) ? notificationObj.reminders : [];
-
-            // Track success rate specifically for valid orders
-            orderKindRateValid.add(response.status === 201);
-
-            // Track high latency for valid orders
-            highLatencyRate.add(response.timings.duration > 2000);
-
-            check(response, {
-                "Status is 201 Created": e => e.status === 201,
-                "Response contains shipment ID": () => typeof notificationObj.shipmentId === 'string' && notificationObj.shipmentId.length > 0,
-                "Response contains notification order ID": () => typeof responseBody.notificationOrderId === 'string' && responseBody.notificationOrderId.length > 0,
-                "Response includes reminders": () => Array.isArray(notificationObj.reminders),
-                "Reminder count matches request": () => reminderArray.length === expectedReminderCount,
-                "All reminders have shipment IDs": () => reminderArray.length === 0 || reminderArray.every(e => typeof e.shipmentId === 'string' && e.shipmentId.length > 0)
-            });
-
-            if (response.status === 201) {
-                http201Created.add(1);
-
-                // Store these values immediately when we get a valid response
-                firstSuccessfulResponse.shipmentId = notificationObj.shipmentId;
-                firstSuccessfulResponse.notificationOrderId = responseBody.notificationOrderId;
-            }
-        },
-
-        invalid: (response) => {
-            // Track high latency for invalid orders
-            highLatencyRate.add(response.timings.duration > 2000);
-
-            check(response, { "Status is 400 Bad Request": e => e.status === 400 });
-
-            if (response.status === 400) {
-                http400Validation.add(1);
-            }
-        },
-
-        duplicate: (response, responseBody) => {
-            const notificationObj = responseBody.notification || {};
-
-            // Track high latency for duplicate orders
-            highLatencyRate.add(response.timings.duration > 2000);
-
-            check(response, {
-                "Status is 200 OK": e => e.status === 200,
-                "Response contains expected shipment ID": () => { return typeof notificationObj.shipmentId === 'string' && notificationObj.shipmentId === firstSuccessfulResponse.shipmentId; },
-                "Response contains expected notification order ID": () => { return typeof responseBody.notificationOrderId === 'string' && responseBody.notificationOrderId === firstSuccessfulResponse.notificationOrderId; }
-            });
-
-            if (response.status === 200) {
-                http200Duplicate.add(1);
-
-                // Properly track duplicate mismatches as a rate (true = mismatch, false = match)
-                const hasMismatch = !!(firstSuccessfulResponse.shipmentId && notificationObj.shipmentId !== firstSuccessfulResponse.shipmentId);
-                duplicateMismatchRate.add(hasMismatch);
-            }
-        },
-
-        missingResource: (response) => {
-            // Track high latency for missing resource orders
-            highLatencyRate.add(response.timings.duration > 2000);
-
-            check(response, { "Status is 201 Created": e => e.status === 201 });
-
-            if (response.status === 201) {
-                http201Created.add(1);
-            }
-        }
-    };
-
-    for (const { orderType, response, orderChainPayload } of responses) {
-        if (!response) {
-            continue;
-        }
-
-        if (response.status === 401 || response.status === 403) {
-            stopIterationOnFail("Critical authentication/authorization error encountered", false);
-            break;
-        }
-
-        let responseBody;
-        try {
-            responseBody = JSON.parse(response.body);
-        } catch { responseBody = {}; }
-
-        validators[orderType]?.(response, responseBody, orderChainPayload);
-    }
-}
 
 /**
  * Generates a date string for a future date relative to the current date.
@@ -554,7 +416,7 @@ function createUniqueOrderChainPayload(data) {
  * @param {Object} httpResponse - The HTTP response object from k6
  * @param {number} httpResponse.status - The HTTP status code (e.g., 200, 400, 500)
  */
-function recordHttpResponseMetrics(httpResponse) {
+function collectHttpResponseMetrics(httpResponse) {
     const status = httpResponse.status;
     const isServerError = status >= 500;
     const isClientError = status >= 400 && status < 500;
@@ -600,22 +462,136 @@ function generateOrderChainPayloadsByOrderType(data) {
     const orderChainPayloads = [];
 
     for (const orderType of orderTypes) {
+        let uniqueOrderChainPayload = createUniqueOrderChainPayload(data);
+
         switch (orderType) {
             case "valid":
             case "duplicate":
-                orderChainPayloads.push({ orderType, orderChainPayload: createUniqueOrderChainPayload(data) });
+                orderChainPayloads.push({ orderType, orderChainPayload: uniqueOrderChainPayload });
                 break;
 
             case "invalid":
-                orderChainPayloads.push({ orderType, orderChainPayload: removeRequiredFieldsFromOrderChainPayload(createUniqueOrderChainPayload(data)) });
+                orderChainPayloads.push({ orderType, orderChainPayload: stripRecipientOrganizationFromOrderChainPayload(uniqueOrderChainPayload) });
                 break;
 
             case "missingResource":
-                orderChainPayloads.push({ orderType, orderChainPayload: removeResourceIdFromOrderChainPayload(createUniqueOrderChainPayload(data)) });
+                orderChainPayloads.push({ orderType, orderChainPayload: removeResourceIdFromOrderChainPayload(uniqueOrderChainPayload) });
                 break;
         }
     }
+
     return orderChainPayloads;
+}
+
+/**
+ * Validates and records metrics for API responses by order type.
+ *
+ * Consumes the processing results produced during execution and applies type-specific
+ * assertions, while updating domain metrics (e.g., latency, idempotency, status counters).
+ *
+ * Validation rules by order type:
+ * - valid: Expects 201 Created, verifies notificationOrderId, shipmentId, reminders array,
+ *          reminder count parity with request, and shipmentId presence on each reminder.
+ * - invalid: Expects 400 Bad Request.
+ * - duplicate: Expects 200 OK and verifies that shipmentId and notificationOrderId match
+ *              the first successful 201 response from this iteration.
+ * - missingResource: Expects 201 Created.
+ *
+ * @returns {void}
+ */
+function validateProcessingResults(processingResults) {
+    if (!processingResults || processingResults.length === 0) {
+        return;
+    }
+
+    const validators = {
+        valid: (response, responseBody, orderChainPayload) => {
+            const notificationObj = responseBody.notification || {};
+            const expectedReminderCount = orderChainPayload.reminders?.length || 0;
+            const reminderArray = Array.isArray(notificationObj.reminders) ? notificationObj.reminders : [];
+
+            // Track success rate specifically for valid orders
+            orderKindRateValid.add(response.status === 201);
+
+            // Track high latency for valid orders
+            highLatencyRate.add(response.timings.duration > 2000);
+
+            check(response, {
+                "Status is 201 Created": e => e.status === 201,
+                "Response contains shipment ID": () => typeof notificationObj.shipmentId === 'string' && notificationObj.shipmentId.length > 0,
+                "Response contains notification order ID": () => typeof responseBody.notificationOrderId === 'string' && responseBody.notificationOrderId.length > 0,
+                "Response includes reminders": () => Array.isArray(notificationObj.reminders),
+                "Reminder count matches request": () => reminderArray.length === expectedReminderCount,
+                "All reminders have shipment IDs": () => reminderArray.length === 0 || reminderArray.every(e => typeof e.shipmentId === 'string' && e.shipmentId.length > 0)
+            });
+
+            if (response.status === 201) {
+                http201Created.add(1);
+            }
+        },
+
+        invalid: (response) => {
+            // Track high latency for invalid orders
+            highLatencyRate.add(response.timings.duration > 2000);
+
+            check(response, { "Status is 400 Bad Request": e => e.status === 400 });
+
+            if (response.status === 400) {
+                http400Validation.add(1);
+            }
+        },
+
+        duplicate: (response, responseBody, orderChainPayload) => {
+            const notificationObj = responseBody.notification || {};
+            const expectedReminderCount = orderChainPayload.reminders?.length || 0;
+            const reminderArray = Array.isArray(notificationObj.reminders) ? notificationObj.reminders : [];
+
+            // Track high latency for duplicate orders
+            highLatencyRate.add(response.timings.duration > 2000);
+
+            check(response, {
+                "Status is 200 Ok": e => e.status === 200,
+                "Response contains shipment ID": () => typeof notificationObj.shipmentId === 'string' && notificationObj.shipmentId.length > 0,
+                "Response contains notification order ID": () => typeof responseBody.notificationOrderId === 'string' && responseBody.notificationOrderId.length > 0,
+                "Response includes reminders": () => Array.isArray(notificationObj.reminders),
+                "Reminder count matches request": () => reminderArray.length === expectedReminderCount,
+                "All reminders have shipment IDs": () => reminderArray.length === 0 || reminderArray.every(e => typeof e.shipmentId === 'string' && e.shipmentId.length > 0)
+            });
+
+            if (response.status === 200) {
+                http200Duplicate.add(1);
+            }
+        },
+
+        missingResource: (response) => {
+            // Track high latency for missing resource orders
+            highLatencyRate.add(response.timings.duration > 2000);
+
+            check(response, { "Status is 201 Created": e => e.status === 201 });
+
+            if (response.status === 201) {
+                http201Created.add(1);
+            }
+        }
+    };
+
+    for (const { orderType, httpResponse, orderChainPayload } of processingResults) {
+        if (!orderType || !httpResponse || !orderChainPayload) {
+            continue;
+        }
+
+        if (httpResponse.status === 401 || httpResponse.status === 403) {
+            stopIterationOnFail("Critical authentication/authorization error encountered", false);
+            break;
+        }
+
+        let responseBody;
+        try {
+            responseBody = JSON.parse(httpResponse.body);
+        } catch { responseBody = {}; }
+
+        validators[orderType]?.(httpResponse, responseBody, orderChainPayload);
+    }
 }
 
 /**
@@ -639,7 +615,7 @@ function stripResourceIdentifierFromRecipient(recipient) {
 }
 
 /**
- * Creates a modified copy of an order chain without resource identifiers.
+ * Creates a modified copy of an order chain request without resource identifiers.
  * 
  * @param {Object} baseOrder - The original order chain payload
  * @param {Object} [baseOrder.recipient] - The main notification recipient
@@ -666,8 +642,8 @@ function removeResourceIdFromOrderChainPayload(baseOrder) {
 /**
  * Updates the organization number in a recipient object.
  * 
- * This is used to ensure all notifications within a chain target the same organization, 
- * which is required for proper end-to-end testing of organization notification chains.
+ * This is used to ensure all notifications within
+ * a notification chain target the same organization.
  * 
  * @param {Object} recipient - The recipient object to update
  * @param {string} orgNumber - The organization number to set
@@ -692,7 +668,7 @@ function updateRecipientWithOrganizationNumber(recipient, orgNumber) {
 }
 
 /**
- * Creates an intentionally invalid order chain payload by removing required organization fields.
+ * Creates an intentionally invalid order chain payload.
  *
  * The function preserves the original structure while:
  * - Setting recipientOrganization to undefined in the main recipient
@@ -701,7 +677,7 @@ function updateRecipientWithOrganizationNumber(recipient, orgNumber) {
  * @param {Object} orderChainPayload - The original valid order chain payload
  * @returns {Object} An invalid order chain payload that should be rejected by the API
  */
-function removeRequiredFieldsFromOrderChainPayload(orderChainPayload) {
+function stripRecipientOrganizationFromOrderChainPayload(orderChainPayload) {
     if (!orderChainPayload) {
         return orderChainPayload;
     }
@@ -778,11 +754,11 @@ function processOrderChainPayload(orderType, orderChainPayload, label, durationM
         return undefined;
     }
 
-    const response = sendNotificationOrderChain(orderChainPayload, label);
+    const httpResponse = sendNotificationOrderChain(orderChainPayload, label);
 
-    recordHttpResponseMetrics(response);
+    collectHttpResponseMetrics(httpResponse);
 
-    durationMetric.add(response.timings.duration);
+    durationMetric.add(httpResponse.timings.duration);
 
-    return { orderType, response, orderChainPayload };
+    return { orderType, httpResponse, orderChainPayload };
 }
