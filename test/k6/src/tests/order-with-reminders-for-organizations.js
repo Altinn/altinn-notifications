@@ -493,8 +493,8 @@ function generateOrderChainPayloadsByOrderType(data) {
  * - valid: Expects 201 Created, verifies notificationOrderId, shipmentId, reminders array,
  *          reminder count parity with request, and shipmentId presence on each reminder.
  * - invalid: Expects 400 Bad Request.
- * - duplicate: Expects 200 OK and verifies that shipmentId and notificationOrderId match
- *              the first successful 201 response from this iteration.
+ * - duplicate: Expects 200 Ok, verifies notificationOrderId, shipmentId, reminders array,
+ *              reminder count parity with request, and shipmentId presence on each reminder.
  * - missingResource: Expects 201 Created.
  *
  * @returns {void}
@@ -507,8 +507,8 @@ function validateProcessingResults(processingResults) {
     const validators = {
         valid: (response, responseBody, orderChainPayload) => {
             const notificationObj = responseBody.notification || {};
-            const expectedReminderCount = orderChainPayload.reminders?.length || 0;
             const reminderArray = Array.isArray(notificationObj.reminders) ? notificationObj.reminders : [];
+            const expectedReminderCount = Array.isArray(orderChainPayload?.reminders) ? orderChainPayload.reminders.length : 0;
 
             // Track success rate specifically for valid orders
             orderKindRateValid.add(response.status === 201);
@@ -543,14 +543,14 @@ function validateProcessingResults(processingResults) {
 
         duplicate: (response, responseBody, orderChainPayload) => {
             const notificationObj = responseBody.notification || {};
-            const expectedReminderCount = orderChainPayload.reminders?.length || 0;
             const reminderArray = Array.isArray(notificationObj.reminders) ? notificationObj.reminders : [];
+            const expectedReminderCount = Array.isArray(orderChainPayload?.reminders) ? orderChainPayload.reminders.length : 0;
 
             // Track high latency for duplicate orders
             highLatencyRate.add(response.timings.duration > 2000);
 
             check(response, {
-                "Status is 200 Ok": e => e.status === 200,
+                "Status is 200 OK": e => e.status === 200,
                 "Response contains shipment ID": () => typeof notificationObj.shipmentId === 'string' && notificationObj.shipmentId.length > 0,
                 "Response contains notification order ID": () => typeof responseBody.notificationOrderId === 'string' && responseBody.notificationOrderId.length > 0,
                 "Response includes reminders": () => Array.isArray(notificationObj.reminders),
@@ -747,7 +747,7 @@ function sendNotificationOrderChain(orderRequest, label = 'post_valid_order') {
  * @param {Object} orderChainPayload - The notification order chain payload to send
  * @param {string} label - Metric label for tracking this specific request type in results
  * @param {Trend} durationMetric - k6 Trend object for recording response time statistics
- * @returns {Object|undefined} Object containing { orderType, response, orderChainPayload } for validation, or undefined if payload validation failed
+ * @returns {Object|undefined} Object containing { orderType, httpResponse, orderChainPayload } for validation, or undefined if payload validation failed
  */
 function processOrderChainPayload(orderType, orderChainPayload, label, durationMetric) {
     if (!orderType || !orderChainPayload) {
