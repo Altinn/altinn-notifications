@@ -13,7 +13,7 @@
     - Iteration stops early only on 401 or 403 responses.
 
     Command:
-    podman compose run k6 run /src/tests/order-with-reminders-for-birth-numbers.js \
+    podman compose run k6 run /src/tests/order-with-reminders-for-persons.js \
     -e tokenGeneratorUserName={the user name to access the token generator} \
     -e tokenGeneratorUserPwd={the password to access the token generator} \
     -e mpClientId={the identifier of an integration defined in maskinporten} \
