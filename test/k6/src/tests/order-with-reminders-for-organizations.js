@@ -456,7 +456,6 @@ function collectHttpResponseMetrics(httpResponse) {
  * @param {Object} data - The shared data containing the base order chain payload from setup
  * @returns {Array<Object>} Array of objects with format { orderType: string, orderChainPayload: Object }
  *                          where each orderChainPayload is crafted for its specific test scenario
- * @throws {Error} Aborts test iteration via stopIterationOnFail if an unsupported order type is encountered
  */
 function generateOrderChainPayloadsByOrderType(data) {
     const orderChainPayloads = [];
