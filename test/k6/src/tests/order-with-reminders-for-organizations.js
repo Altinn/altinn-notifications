@@ -49,7 +49,7 @@ const successRate = new Rate("success_rate");
 // Rate to track the proportion of requests that exceed a defined latency threshold (e.g., 2 seconds)
 const highLatencyRate = new Rate("high_latency_rate");
 
-// Rate to track the proportion of requests that result in 4xx client errors
+// Rate to track the proportion of requests that result in 5xx server errors
 const serverErrorRate = new Rate("server_error_rate");
 
 // Rate to track the proportion of requests that result in 201 Created responses
@@ -85,7 +85,7 @@ const invalidOrderDuration = new Trend("invalid_order_duration");
 // Trend to track the response time (duration) for valid but duplicate orders (expected to return a 200 Ok status)
 const duplicateOrderDuration = new Trend("duplicate_order_duration");
 
-// Trend to track the response time (duration) for orders missing a resource (expected to return a 201 Created or 200 Ok status)
+// Trend to track the response time (duration) for orders missing a resource (expected to return a 201 Created status)
 const missingResourceOrderDuration = new Trend("missing_resource_order_duration");
 
 // Define the order types to be tested based on environment variables or defaults
@@ -435,7 +435,7 @@ function validateResponses(responses) {
                 http200Duplicate.add(1);
 
                 // Properly track duplicate mismatches as a rate (true = mismatch, false = match)
-                const hasMismatch = firstSuccessfulResponse.shipmentId && notificationObj.shipmentId !== firstSuccessfulResponse.shipmentId;
+                const hasMismatch = !!(firstSuccessfulResponse.shipmentId && notificationObj.shipmentId !== firstSuccessfulResponse.shipmentId);
                 duplicateMismatchRate.add(hasMismatch);
             }
         },
