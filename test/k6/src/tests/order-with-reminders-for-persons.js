@@ -82,7 +82,7 @@ const duplicateOrderDuration = new Trend("duplicate_order_duration");
 const labels = [post_valid_order, post_invalid_order, post_duplicate_order];
 
 // Test order chain loaded from a JSON file.
-const orderChainJsonPayload = JSON.parse(open("../data/orders/order-with-reminders-for-birth-numbers.json"));
+const orderChainJsonPayload = JSON.parse(open("../data/orders/order-with-reminders-for-persons.json"));
 
 // Define the test scenarios for different performance dimensions
 export const options = {
