@@ -1,9 +1,11 @@
-﻿using Altinn.Notifications.Core.Models.Status;
+﻿using Altinn.Notifications.Core.Configuration;
+using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Core.Services;
 
@@ -13,16 +15,22 @@ namespace Altinn.Notifications.Core.Services;
 public class StatusFeedService : IStatusFeedService
 {
     private readonly IStatusFeedRepository _statusFeedRepository;
+    private readonly StatusFeedConfig _config;
     private readonly ILogger<StatusFeedService> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="StatusFeedService"/> class.
     /// </summary>
     /// <param name="statusFeedRepository">The repository layer concerned with database integrations</param>
+    /// <param name="config">Configuration settings for status feed</param>
     /// <param name="logger">For logging purposes</param>
-    public StatusFeedService(IStatusFeedRepository statusFeedRepository, ILogger<StatusFeedService> logger)
+    public StatusFeedService(
+        IStatusFeedRepository statusFeedRepository,
+        IOptions<StatusFeedConfig> config,
+        ILogger<StatusFeedService> logger)
     {
         _statusFeedRepository = statusFeedRepository;
+        _config = config.Value;
         _logger = logger;
     }
 
@@ -33,7 +41,7 @@ public class StatusFeedService : IStatusFeedService
     }
 
     /// <inheritdoc />
-    public async Task<Result<List<StatusFeed>, ServiceError>> GetStatusFeed(int seq, string creatorName, CancellationToken cancellationToken)
+    public async Task<Result<List<StatusFeed>, ServiceError>> GetStatusFeed(int seq, int? pageSizeUserInput, string creatorName, CancellationToken cancellationToken)
     {
         if (seq < 0)
         {
@@ -47,8 +55,11 @@ public class StatusFeedService : IStatusFeedService
 
         try
         {
+            var pageSize = FindPageSize(pageSizeUserInput);
+
             var statusFeedEntries = await _statusFeedRepository.GetStatusFeed(
                 seq: seq,
+                maxPageSize: pageSize,
                 creatorName: creatorName,
                 cancellationToken: cancellationToken);
             return statusFeedEntries;
@@ -58,5 +69,20 @@ public class StatusFeedService : IStatusFeedService
             _logger.LogError(ex, "Failed to retrieve status feed");
             return new ServiceError(500, $"Failed to retrieve status feed: {ex.Message}");
         }
+    }
+    
+    private int FindPageSize(int? pageSizeUserInput)
+    {
+        if (!pageSizeUserInput.HasValue)
+        {
+            return _config.MaxPageSizeValue;
+        }
+
+        if (pageSizeUserInput > _config.MaxPageSizeValue)
+        {
+            return _config.MaxPageSizeValue;
+        }
+
+        return pageSizeUserInput.Value;
     }
 }

@@ -12,10 +12,11 @@ public interface IStatusFeedService
     /// Get status feed
     /// </summary>
     /// <param name="seq">The exclusive sequence number starting point of the status feed. Sequence ids after this point will be returned</param>
+    /// <param name="pageSize">Number of items returned per request</param>
     /// <param name="creatorName">Name of the service owner</param>
     /// <param name="cancellationToken">A CancellationToken for cancelling an ongoing asynchronous Task</param>
     /// <returns>Result object containing, on success: a list of order status objects following the sequence number. On failure: contains a ServiceError object</returns>
-    Task<Result<List<StatusFeed>, ServiceError>> GetStatusFeed(int seq, string creatorName, CancellationToken cancellationToken);
+    Task<Result<List<StatusFeed>, ServiceError>> GetStatusFeed(int seq, int? pageSize, string creatorName, CancellationToken cancellationToken);
 
     /// <summary>
     /// Deletes outdated records from the status feed table.
