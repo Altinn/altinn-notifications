@@ -19,9 +19,10 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 
 public class StatusFeedServiceTests
 {
+    private static readonly int _maxPageSize = 500;
     private readonly IOptions<StatusFeedConfig> _options = Options.Create(new StatusFeedConfig
     {
-        MaxPageSize = 500
+        MaxPageSize = _maxPageSize
     });
 
     private const string _creatorName = "test-creator";
@@ -158,9 +159,10 @@ public class StatusFeedServiceTests
     }
 
     [Theory]
-    [InlineData(null)]
-    [InlineData(600)] // Larger than max of 500
-    public async Task GetStatusFeed_OutsideLegalValue_ClipsToMaxPageSizeValue(int? pageSize)
+    [InlineData(null, 500)]
+    [InlineData(600, 500)]
+    [InlineData(0, 1)]
+    public async Task GetStatusFeed_OutsideLegalValue_ClipsToMaxPageSizeOrMinimumValue(int? pageSize, int expected)
     {
         // Arrange
         const int seq = 0;
@@ -189,7 +191,7 @@ public class StatusFeedServiceTests
             x => x.GetStatusFeed(
             seq,
             _creatorName,
-            _options.Value.MaxPageSize,
+            expected,
             It.IsAny<CancellationToken>()), 
             Times.Once);
     }
