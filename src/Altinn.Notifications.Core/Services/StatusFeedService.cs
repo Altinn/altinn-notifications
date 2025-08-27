@@ -41,7 +41,7 @@ public class StatusFeedService : IStatusFeedService
     }
 
     /// <inheritdoc />
-    public async Task<Result<List<StatusFeed>, ServiceError>> GetStatusFeed(int seq, int? pageSizeUserInput, string creatorName, CancellationToken cancellationToken)
+    public async Task<Result<List<StatusFeed>, ServiceError>> GetStatusFeed(int seq, int? pageSize, string creatorName, CancellationToken cancellationToken)
     {
         if (seq < 0)
         {
@@ -55,11 +55,11 @@ public class StatusFeedService : IStatusFeedService
 
         try
         {
-            var pageSize = FindPageSize(pageSizeUserInput);
+            var pageSizeFound = FindPageSize(pageSize);
 
             var statusFeedEntries = await _statusFeedRepository.GetStatusFeed(
                 seq: seq,
-                maxPageSize: pageSize,
+                pageSize: pageSizeFound,
                 creatorName: creatorName,
                 cancellationToken: cancellationToken);
             return statusFeedEntries;
@@ -75,12 +75,12 @@ public class StatusFeedService : IStatusFeedService
     {
         if (!pageSizeUserInput.HasValue)
         {
-            return _config.MaxPageSizeValue;
+            return _config.MaxPageSize;
         }
 
-        if (pageSizeUserInput > _config.MaxPageSizeValue)
+        if (pageSizeUserInput > _config.MaxPageSize)
         {
-            return _config.MaxPageSizeValue;
+            return _config.MaxPageSize;
         }
 
         return pageSizeUserInput.Value;

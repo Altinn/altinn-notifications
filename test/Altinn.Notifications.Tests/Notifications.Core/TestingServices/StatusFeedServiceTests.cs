@@ -21,7 +21,7 @@ public class StatusFeedServiceTests
 {
     private readonly IOptions<StatusFeedConfig> _options = Options.Create(new StatusFeedConfig
     {
-        MaxPageSizeValue = 500
+        MaxPageSize = 500
     });
 
     private const string _creatorName = "test-creator";
@@ -184,12 +184,12 @@ public class StatusFeedServiceTests
         // Assert
         Assert.True(result.IsSuccess);
         
-        // Verify that the repository was called with the clipped page size (maxPageSizeValue)
+        // Verify that the repository was called with the clipped page size (maxPageSize)
         mockRepository.Verify(
             x => x.GetStatusFeed(
             seq,
             _creatorName,
-            _options.Value.MaxPageSizeValue,
+            _options.Value.MaxPageSize,
             It.IsAny<CancellationToken>()), 
             Times.Once);
     }
