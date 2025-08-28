@@ -54,6 +54,11 @@ public class EmailStatusConsumer : KafkaConsumerBase<EmailStatusConsumer>
         {
             await _emailNotificationsService.UpdateSendStatus(result);
         }
+        catch (KeyNotFoundException e)
+        {
+            _logger.LogWarning(e, "Could not update email send status for message: {Message}", message);
+            await RetryStatus(message);
+        }
         catch (Exception e)
         {
             _logger.LogError(e, "Could not update email send status for message: {Message}", message);
@@ -63,6 +68,6 @@ public class EmailStatusConsumer : KafkaConsumerBase<EmailStatusConsumer>
 
     private async Task RetryStatus(string message)
     {
-        await _producer.ProduceAsync(_retryTopicName, message!);
+        await _producer.ProduceAsync(_retryTopicName, message);
     }
 }
