@@ -25,12 +25,13 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     private const string _getEmailNotificationsSql = "select * from notifications.getemails_statusnew_updatestatus()";
     private const string _getEmailRecipients = "select * from notifications.getemailrecipients_v2($1)"; // (_orderid)
     private const string _updateEmailStatus =
-        @"UPDATE notifications.emailnotifications 
-        SET result = $1::emailnotificationresulttype, 
-            resulttime = now(), 
-            operationid = $2
-        WHERE alternateid = $3 OR operationid = $2
-        RETURNING alternateid;"; // (_result, _operationid, _alternateid)
+        @"UPDATE notifications.emailnotifications
+    SET result = $1::emailnotificationresulttype, 
+        resulttime = now(), 
+        operationid = COALESCE($2, operationid)
+    WHERE ($3 IS NOT NULL AND alternateid = $3)
+       OR ($2 IS NOT NULL AND operationid = $2)
+    RETURNING alternateid;"; // (_result, _operationid, _alternateid)
 
     /// <inheritdoc/>
     protected override string SourceIdentifier => _emailSourceIdentifier;
