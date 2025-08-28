@@ -56,7 +56,7 @@ public class EmailStatusConsumer : KafkaConsumerBase<EmailStatusConsumer>
         }
         catch (KeyNotFoundException e)
         {
-            _logger.LogWarning(e, "Could not update email send status for message: {Message}", message);
+            _logger.LogInformation(e, "Could not update email send status for message: {Message}", message);
             await RetryStatus(message);
         }
         catch (Exception e)
