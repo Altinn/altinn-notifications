@@ -23,8 +23,10 @@ public class MetricsRepositoryTests : IAsyncLifetime
             return;
         }
 
-        string deleteSql = $@"DELETE from notifications.orders o where o.alternateid in ('{string.Join("','", _orderIdsToDelete)}')";
-        await PostgreUtil.RunSql(deleteSql);
+        foreach (var id in _orderIdsToDelete)
+        {
+            await PostgreUtil.DeleteOrderFromDb(id);
+        }
     }
 
     [Fact]
