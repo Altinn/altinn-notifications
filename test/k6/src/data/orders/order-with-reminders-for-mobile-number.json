@@ -1,0 +1,29 @@
+{
+	"idempotencyId": "string",
+	"sendersReference": "string",
+	"requestedSendTime": "string",
+	"recipient": {
+		"recipientSms": {
+			"phoneNumber": "string",
+			"smsSettings": {
+				"sendingTimePolicy": "Daytime",
+				"body": "Dear user, please check your inbox for an important update. - Altinn Team"
+			}
+		}
+	},
+	"reminders": [
+		{
+			"delayDays": 1,
+			"sendersReference": "string",
+			"recipient": {
+				"recipientSms": {
+					"phoneNumber": "string",
+					"smsSettings": {
+						"sendingTimePolicy": "Daytime",
+						"body": "Reminder: please check your inbox for an important update. - Altinn Team"
+					}
+				}
+			}
+		}
+	]
+}
