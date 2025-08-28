@@ -1,11 +1,9 @@
-﻿using System.Net.NetworkInformation;
-using Altinn.Notifications.Core.Enums;
+﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Extensions;
 using Altinn.Notifications.Persistence.Repository;
-
 using Npgsql;
 
 namespace Altinn.Notifications.IntegrationTests.Utils;
@@ -167,6 +165,76 @@ public static class PostgreUtil
         }
 
         return (order, smsNotification);
+    }
+
+    public static async Task<NotificationOrder> PopulateDBWithOrderAnd4Notifications()
+    {
+        // Get test data for base order with one notification
+        (NotificationOrder order, SmsNotification smsNotification1) = TestdataUtil.GetOrderAndSmsNotification();
+        order.Creator = new Core.Models.Creator("InflationTest");
+
+        var smsNotification2 = new SmsNotification()
+        {
+            Id = Guid.NewGuid(),
+            OrderId = order.Id,
+            RequestedSendTime = smsNotification1.RequestedSendTime,
+            Recipient = new()
+            {
+                MobileNumber = smsNotification1.Recipient.MobileNumber,
+            },
+            SendResult = new(SmsNotificationResultType.New, DateTime.UtcNow)
+        };
+
+        var emailNotification1 = new EmailNotification()
+        {
+            Id = Guid.NewGuid(),
+            OrderId = order.Id,
+            RequestedSendTime = smsNotification1.RequestedSendTime,
+            Recipient = new()
+            {
+                ToAddress = "noreply@altinn.no"
+            }
+        };
+
+        var emailNotification2 = new EmailNotification()
+        {
+            Id = Guid.NewGuid(),
+            OrderId = order.Id,
+            RequestedSendTime = smsNotification1.RequestedSendTime,
+            Recipient = new()
+            {
+                ToAddress = "noreply@altinn.no"
+            }
+        };
+
+        // Use the SMS order as the base and ensure all 4 notifications reference the same order
+        emailNotification1.OrderId = order.Id;
+        emailNotification2.OrderId = order.Id;
+        smsNotification1.OrderId = order.Id;
+        smsNotification2.OrderId = order.Id;
+
+        // Set up repositories
+        var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IOrderRepository), typeof(ISmsNotificationRepository), typeof(IEmailNotificationRepository) });
+        OrderRepository orderRepo = (OrderRepository)serviceList.First(i => i.GetType() == typeof(OrderRepository));
+        SmsNotificationRepository smsRepo = (SmsNotificationRepository)serviceList.First(i => i.GetType() == typeof(SmsNotificationRepository));
+        EmailNotificationRepository emailRepo = (EmailNotificationRepository)serviceList.First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        await orderRepo.Create(order);
+        await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
+        await smsRepo.AddNotification(smsNotification1, DateTime.UtcNow.AddDays(1), 1);
+        await smsRepo.AddNotification(smsNotification2, DateTime.UtcNow.AddDays(1), 1);
+        await emailRepo.AddNotification(emailNotification1, DateTime.UtcNow.AddDays(1));
+        await emailRepo.AddNotification(emailNotification2, DateTime.UtcNow.AddDays(1));
+
+        await emailRepo.UpdateSendStatus(emailNotification1.Id, EmailNotificationResultType.Delivered);
+        await emailRepo.UpdateSendStatus(emailNotification2.Id, EmailNotificationResultType.Delivered);
+
+        await smsRepo.UpdateSendStatus(smsNotification1.Id, SmsNotificationResultType.Accepted);
+        await smsRepo.UpdateSendStatus(smsNotification2.Id, SmsNotificationResultType.Accepted);
+
+        await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processed);
+
+        return order;
     }
 
     public static async Task DeleteOrderFromDb(string sendersRef)
