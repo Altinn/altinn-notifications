@@ -44,7 +44,6 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     : base(dataSource, logger) // Pass required parameters to the base class constructor
     {
         _dataSource = dataSource;
-        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -105,7 +104,7 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, operationId ?? (object)DBNull.Value);
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId ?? (object)DBNull.Value);
-            
+
             var alternateId = await pgcom.ExecuteScalarAsync() ?? throw new KeyNotFoundException($"Email notification not found for NotificationId '{notificationId}' or OperationId '{operationId}'. Cannot set status '{status}'.");
 
             var parseResult = Guid.TryParse(alternateId.ToString(), out Guid emailNotificationAlternateId);
