@@ -104,14 +104,8 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, operationId ?? (object)DBNull.Value);
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId ?? (object)DBNull.Value);
-            var alternateId = await pgcom.ExecuteScalarAsync();
-
-            if (alternateId == null)
-            {
-                _logger.LogInformation("Status type for email notification {NotificationId} with operation id {OperationId} was updated to {Status}. No alternateId was returned from the updateEmailStatus query.", notificationId, operationId, status);
-                await transaction.RollbackAsync();
-                return;
-            }
+            
+            var alternateId = await pgcom.ExecuteScalarAsync() ?? throw new KeyNotFoundException($"Email notification not found for NotificationId '{notificationId}' or OperationId '{operationId}'. Cannot set status '{status}'.");
 
             var parseResult = Guid.TryParse(alternateId.ToString(), out Guid emailNotificationAlternateId);
 
