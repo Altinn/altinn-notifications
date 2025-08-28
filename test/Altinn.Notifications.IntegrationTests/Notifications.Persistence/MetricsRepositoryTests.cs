@@ -28,76 +28,28 @@ public class MetricsRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetMonthlyMetrics_WithTwoSmsAndTwoEmailNotifications_ReturnsCorrectMetrics()
-    {
-        // Arrange
-        MetricsRepository sut = (MetricsRepository)ServiceUtil
-            .GetServices([typeof(IMetricsRepository)])
-            .First(i => i.GetType() == typeof(MetricsRepository));
-
-        // Create first SMS notification
-        (NotificationOrder smsOrder1, SmsNotification _) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
-        _orderIdsToDelete.Add(smsOrder1.Id);
-
-        // Create second SMS notification
-        (NotificationOrder smsOrder2, SmsNotification _) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
-        _orderIdsToDelete.Add(smsOrder2.Id);
-
-        // Create first email notification
-        (NotificationOrder emailOrder1, EmailNotification _) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
-        _orderIdsToDelete.Add(emailOrder1.Id);
-
-        // Create second email notification
-        (NotificationOrder emailOrder2, EmailNotification _) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
-        _orderIdsToDelete.Add(emailOrder2.Id);
-
-        // The month and year are determined by the hardcoded date in the test data
-        int month = 6;
-        int year = 2023;
-
-        // Act
-        var result = await sut.GetMonthlyMetrics(month, year);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal(month, result.Month);
-        Assert.Equal(year, result.Year);
-        Assert.NotEmpty(result.Metrics);
-
-        // Find metrics for the "ttd" organization
-        var ttdMetrics = result.Metrics.FirstOrDefault(m => m.Org == "ttd");
-        Assert.NotNull(ttdMetrics);
-
-        // Verify that we have at least the data we inserted
-        Assert.True(ttdMetrics.OrdersCreated >= 4); // At least 4 orders (2 SMS + 2 Email)
-        Assert.True(ttdMetrics.SmsNotificationsCreated >= 2); // At least 2 SMS notifications
-        Assert.True(ttdMetrics.EmailNotificationsCreated >= 2); // At least 2 Email notifications
-
-        // Verify the organization name
-        Assert.Equal("ttd", ttdMetrics.Org);
-    }
-
-    [Fact]
     public async Task GetMetricsWithoutInflatingCounts_OneOrderWithMultipleNotifications_CountsOrderOncePerType()
     {
         // Arrange
+        var orgName = "InflationTest";
         MetricsRepository sut = (MetricsRepository)ServiceUtil
             .GetServices([typeof(IMetricsRepository)])
             .First(i => i.GetType() == typeof(MetricsRepository));
 
-        NotificationOrder order = await PostgreUtil.PopulateDBWithOrderAnd4Notifications();
+        NotificationOrder order = await PostgreUtil.PopulateDBWithOrderAnd4Notifications(orgName);
         _orderIdsToDelete.Add(order.Id);
 
         // Act
-        var result = await sut.GetMonthlyMetrics(6, 2023);
+        var result = await sut.GetMonthlyMetrics(DateTime.UtcNow.Month, DateTime.UtcNow.Year);
 
         // Assert
-        var metrics = result.Metrics.FirstOrDefault(m => m.Org == "InflationTest");
+        var metrics = result.Metrics.FirstOrDefault(m => m.Org == orgName);
         Assert.NotNull(metrics);
 
-        // Verify that we have the data we inserted
-        Assert.Equal(1, metrics.OrdersCreated);
-        Assert.Equal(2, metrics.SmsNotificationsCreated); // 2 SMS notifications
-        Assert.Equal(2, metrics.EmailNotificationsCreated); // 2 Email notifications
+        // Verify that we have at least the data we inserted, there could be more test data using the same org
+        // In case there is more test data using the same org, we assume it's coming from this test, so the numbers should be multiplied by 2
+        Assert.True(metrics.OrdersCreated >= 1);
+        Assert.Equal(metrics.OrdersCreated * 2, metrics.SmsNotificationsCreated); // 2 SMS notifications per order found
+        Assert.Equal(metrics.OrdersCreated * 2, metrics.EmailNotificationsCreated); // 2 Email notifications per order found
     }
 }

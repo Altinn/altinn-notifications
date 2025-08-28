@@ -167,29 +167,31 @@ public static class PostgreUtil
         return (order, smsNotification);
     }
 
-    public static async Task<NotificationOrder> PopulateDBWithOrderAnd4Notifications()
+    public static async Task<NotificationOrder> PopulateDBWithOrderAnd4Notifications(string orgName)
     {
         // Get test data for base order with one notification
         (NotificationOrder order, SmsNotification smsNotification1) = TestdataUtil.GetOrderAndSmsNotification();
-        order.Creator = new Core.Models.Creator("InflationTest");
+        order.Creator = new Core.Models.Creator(orgName);
+        var timeStamp = DateTime.UtcNow;
+        order.RequestedSendTime = timeStamp;
 
         var smsNotification2 = new SmsNotification()
         {
             Id = Guid.NewGuid(),
             OrderId = order.Id,
-            RequestedSendTime = smsNotification1.RequestedSendTime,
+            RequestedSendTime = timeStamp,
             Recipient = new()
             {
                 MobileNumber = smsNotification1.Recipient.MobileNumber,
             },
-            SendResult = new(SmsNotificationResultType.New, DateTime.UtcNow)
+            SendResult = new(SmsNotificationResultType.New, timeStamp)
         };
 
         var emailNotification1 = new EmailNotification()
         {
             Id = Guid.NewGuid(),
             OrderId = order.Id,
-            RequestedSendTime = smsNotification1.RequestedSendTime,
+            RequestedSendTime = timeStamp,
             Recipient = new()
             {
                 ToAddress = "noreply@altinn.no"
@@ -200,7 +202,7 @@ public static class PostgreUtil
         {
             Id = Guid.NewGuid(),
             OrderId = order.Id,
-            RequestedSendTime = smsNotification1.RequestedSendTime,
+            RequestedSendTime = timeStamp,
             Recipient = new()
             {
                 ToAddress = "noreply@altinn.no"
