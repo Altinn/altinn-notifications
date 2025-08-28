@@ -33,7 +33,7 @@ public class MetricsRepositoryTests : IAsyncLifetime
     public async Task GetMetricsWithoutInflatingCounts_OneOrderWithMultipleNotifications_CountsOrderOncePerType()
     {
         // Arrange
-        var orgName = "InflationTest";
+        var orgName = $"InflationTest-{Guid.NewGuid():N}";
         MetricsRepository sut = (MetricsRepository)ServiceUtil
             .GetServices([typeof(IMetricsRepository)])
             .First(i => i.GetType() == typeof(MetricsRepository));
@@ -48,10 +48,9 @@ public class MetricsRepositoryTests : IAsyncLifetime
         var metrics = result.Metrics.FirstOrDefault(m => m.Org == orgName);
         Assert.NotNull(metrics);
 
-        // Verify that we have at least the data we inserted, there could be more test data using the same org
-        // In case there is more test data using the same org, we assume it's coming from this test, so the numbers should be multiplied by 2
-        Assert.True(metrics.OrdersCreated >= 1);
-        Assert.Equal(metrics.OrdersCreated * 2, metrics.SmsNotificationsCreated); // 2 SMS notifications per order found
-        Assert.Equal(metrics.OrdersCreated * 2, metrics.EmailNotificationsCreated); // 2 Email notifications per order found
+        // Verify that we have the data we inserted
+        Assert.Equal(1, metrics.OrdersCreated);
+        Assert.Equal(2, metrics.SmsNotificationsCreated); // 2 SMS notifications per order found
+        Assert.Equal(2, metrics.EmailNotificationsCreated); // 2 Email notifications per order found
     }
 }
