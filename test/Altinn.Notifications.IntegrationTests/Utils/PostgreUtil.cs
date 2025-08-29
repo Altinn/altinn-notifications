@@ -195,7 +195,8 @@ public static class PostgreUtil
             Recipient = new()
             {
                 ToAddress = "noreply@altinn.no"
-            }
+            },
+            SendResult = new(EmailNotificationResultType.New, timeStamp)
         };
 
         var emailNotification2 = new EmailNotification()
@@ -206,9 +207,9 @@ public static class PostgreUtil
             Recipient = new()
             {
                 ToAddress = "noreply@altinn.no"
-            }
+            },
+            SendResult = new(EmailNotificationResultType.New, timeStamp)
         };
-
         // Use the SMS order as the base and ensure all 4 notifications reference the same order
         emailNotification1.OrderId = order.Id;
         emailNotification2.OrderId = order.Id;
