@@ -10,7 +10,7 @@ namespace Altinn.Notifications.Core.Exceptions;
 /// <remarks>
 /// Initializes a new instance that carries domain-specific failure context for send-status updates.
 /// </remarks>
-/// <param name="channel">The notification channel the update concerned (Email or Sms)..</param>
+/// <param name="channel">The notification channel the update concerned (Email or Sms).</param>
 /// <param name="identifier">The value of the identifier that was not matched.</param>
 /// <param name="identifierType">The type of the identifier that was not matched.</param>
 [ExcludeFromCodeCoverage]
