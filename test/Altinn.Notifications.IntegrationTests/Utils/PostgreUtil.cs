@@ -174,6 +174,7 @@ public static class PostgreUtil
         order.Creator = new Core.Models.Creator(orgName);
         var timeStamp = DateTime.UtcNow;
         order.RequestedSendTime = timeStamp;
+        smsNotification1.RequestedSendTime = timeStamp;
 
         var smsNotification2 = new SmsNotification()
         {
@@ -210,7 +211,7 @@ public static class PostgreUtil
             },
             SendResult = new(EmailNotificationResultType.New, timeStamp)
         };
-        // Use the SMS order as the base and ensure all 4 notifications reference the same order
+        
         emailNotification1.OrderId = order.Id;
         emailNotification2.OrderId = order.Id;
         smsNotification1.OrderId = order.Id;
