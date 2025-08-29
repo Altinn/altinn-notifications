@@ -3,6 +3,7 @@ using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Integrations.Configuration;
 
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -15,6 +16,7 @@ public class EmailStatusConsumer : KafkaConsumerBase<EmailStatusConsumer>
 {
     private readonly string _retryTopicName;
     private readonly IKafkaProducer _producer;
+    private readonly IMemoryCache _logSuppressionCache;
     private readonly ILogger<EmailStatusConsumer> _logger;
     private readonly IEmailNotificationService _emailNotificationsService;
 
@@ -23,6 +25,7 @@ public class EmailStatusConsumer : KafkaConsumerBase<EmailStatusConsumer>
     /// </summary>
     public EmailStatusConsumer(
         IKafkaProducer producer,
+        IMemoryCache memoryCache,
         IOptions<KafkaSettings> settings,
         ILogger<EmailStatusConsumer> logger,
         IEmailNotificationService emailNotificationsService)
@@ -30,6 +33,7 @@ public class EmailStatusConsumer : KafkaConsumerBase<EmailStatusConsumer>
     {
         _logger = logger;
         _producer = producer;
+        _logSuppressionCache = memoryCache;
         _emailNotificationsService = emailNotificationsService;
         _retryTopicName = settings.Value.EmailStatusUpdatedTopicName;
     }
@@ -56,7 +60,22 @@ public class EmailStatusConsumer : KafkaConsumerBase<EmailStatusConsumer>
         }
         catch (KeyNotFoundException e)
         {
-            _logger.LogInformation(e, "Could not update email send status for message: {Message}", message);
+            string suppressionKey = result.OperationId ?? result.NotificationId?.ToString() ?? "unknown";
+            bool shouldBeLogged = !_logSuppressionCache.TryGetValue(suppressionKey, out _);
+
+            if (shouldBeLogged)
+            {
+                _logSuppressionCache.Set(
+                    suppressionKey,
+                    true,
+                    new MemoryCacheEntryOptions
+                    {
+                        AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(10)
+                    });
+
+                _logger.LogInformation(e, "Could not update email send status for message: {Message}", message);
+            }
+
             await RetryStatus(message);
         }
         catch (Exception e)
