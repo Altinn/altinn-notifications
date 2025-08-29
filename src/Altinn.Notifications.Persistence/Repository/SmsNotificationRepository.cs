@@ -149,7 +149,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     {
         if (smsNotificationAlternateId == Guid.Empty)
         {
-            throw new SendStatusUpdateException(NotificationChannel.Sms, string.Empty, SendStatusIdentifierType.NotificationId);
+            throw new SendStatusUpdateException(NotificationChannel.Sms, smsNotificationAlternateId.ToString(), SendStatusIdentifierType.NotificationId);
         }
 
         await using var connection = await _dataSource.OpenConnectionAsync();

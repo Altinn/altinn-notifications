@@ -52,7 +52,7 @@ public class SmsStatusConsumer : KafkaConsumerBase<SmsStatusConsumer>
     }
 
     /// <summary>
-    /// Background loop that removes entries from the logged-messages cache that are older than 15 seconds.
+    /// Background loop that removes entries from the logged-messages cache that are older than 10 seconds.
     /// </summary>
     /// <param name="stoppingToken">Cancellation token tied to service shutdown.</param>
     private async Task CleanLoggedMessagesCache(CancellationToken stoppingToken)
@@ -87,7 +87,7 @@ public class SmsStatusConsumer : KafkaConsumerBase<SmsStatusConsumer>
     }
 
     /// <summary>
-    /// Processes a SMS status message. If updating the status fails with
+    /// Processes an SMS status message. If updating the status fails with
     /// <see cref="SendStatusUpdateException"/>, the message will be logged and retried.
     /// </summary>
     /// <param name="message">Raw Kafka message payload.</param>
