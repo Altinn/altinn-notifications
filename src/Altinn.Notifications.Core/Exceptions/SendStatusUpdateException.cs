@@ -14,7 +14,7 @@ namespace Altinn.Notifications.Core.Exceptions;
 /// <param name="identifier">The value of the identifier that was not matched.</param>
 /// <param name="identifierType">The type of the identifier that was not matched.</param>
 [ExcludeFromCodeCoverage]
-public class SendStatusUpdateException(NotificationChannel channel, string identifier, SendStatusIdentifierType identifierType) : Exception(BuildMessage(channel, identifier, identifierType))
+public sealed class SendStatusUpdateException(NotificationChannel channel, string identifier, SendStatusIdentifierType identifierType) : Exception(BuildMessage(channel, identifier, identifierType))
 {
     /// <summary>
     /// The notification channel the update concerned (Email or Sms).
