@@ -1,10 +1,10 @@
-﻿using System.Collections.Concurrent;
-using Altinn.Notifications.Core.Exceptions;
+﻿using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Integrations.Configuration;
 
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -19,18 +19,16 @@ public class SmsStatusConsumer : KafkaConsumerBase<SmsStatusConsumer>
 {
     private readonly string _retryTopicName;
     private readonly IKafkaProducer _producer;
+    private readonly IMemoryCache _logSuppressionCache;
     private readonly ILogger<SmsStatusConsumer> _logger;
     private readonly ISmsNotificationService _smsNotificationsService;
-
-    private readonly ConcurrentQueue<string> _cleanupCandidates = new();
-    private readonly TimeSpan _logSuppressionDuration = TimeSpan.FromSeconds(10);
-    private readonly ConcurrentDictionary<string, DateTime> _loggedMessagesCache = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsStatusConsumer"/> class.
     /// </summary>
     public SmsStatusConsumer(
         IKafkaProducer producer,
+        IMemoryCache memoryCache,
         IOptions<KafkaSettings> settings,
         ILogger<SmsStatusConsumer> logger,
         ISmsNotificationService smsNotificationsService)
@@ -38,6 +36,7 @@ public class SmsStatusConsumer : KafkaConsumerBase<SmsStatusConsumer>
     {
         _logger = logger;
         _producer = producer;
+        _logSuppressionCache = memoryCache;
         _smsNotificationsService = smsNotificationsService;
         _retryTopicName = settings.Value.SmsStatusUpdatedTopicName;
     }
@@ -45,45 +44,7 @@ public class SmsStatusConsumer : KafkaConsumerBase<SmsStatusConsumer>
     /// <inheritdoc/>
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var cleanupTask = CleanLoggedMessagesCache(stoppingToken);
-        var consumeTask = ConsumeMessage(ProcessStatus, RetryStatus, stoppingToken);
-
-        return Task.WhenAll(consumeTask, cleanupTask);
-    }
-
-    /// <summary>
-    /// Background loop that removes entries from the logged-messages cache that are older than 10 seconds.
-    /// </summary>
-    /// <param name="stoppingToken">Cancellation token tied to service shutdown.</param>
-    private async Task CleanLoggedMessagesCache(CancellationToken stoppingToken)
-    {
-        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(15));
-
-        try
-        {
-            while (await timer.WaitForNextTickAsync(stoppingToken))
-            {
-                DateTime cutoff = DateTime.UtcNow - _logSuppressionDuration;
-                while (_cleanupCandidates.TryDequeue(out var key))
-                {
-                    if (_loggedMessagesCache.TryGetValue(key, out var lastLogged))
-                    {
-                        if (lastLogged < cutoff)
-                        {
-                            _loggedMessagesCache.TryRemove(key, out _);
-                        }
-                        else
-                        {
-                            _cleanupCandidates.Enqueue(key);
-                        }
-                    }
-                }
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            // Expected on shutdown
-        }
+        return Task.Run(() => ConsumeMessage(ProcessStatus, RetryStatus, stoppingToken), stoppingToken);
     }
 
     /// <summary>
@@ -107,31 +68,19 @@ public class SmsStatusConsumer : KafkaConsumerBase<SmsStatusConsumer>
         }
         catch (SendStatusUpdateException e)
         {
-            bool shouldLog = false;
-            DateTime dateTimeNow = DateTime.UtcNow;
+            string suppressionKey = e.Identifier ?? result.NotificationId?.ToString() ?? result.GatewayReference ?? "unknown";
+            bool shouldBeLogged = !_logSuppressionCache.TryGetValue(suppressionKey, out _);
 
-            DateTime OnFirstSeen()
+            if (shouldBeLogged)
             {
-                shouldLog = true;
-                _cleanupCandidates.Enqueue(e.Identifier);
-                return dateTimeNow;
-            }
-
-            _loggedMessagesCache.AddOrUpdate(
-                e.Identifier,
-                _ => OnFirstSeen(),
-                (_, lastLogged) =>
-                {
-                    if ((dateTimeNow - lastLogged) > _logSuppressionDuration)
+                _logSuppressionCache.Set(
+                    suppressionKey,
+                    true,
+                    new MemoryCacheEntryOptions
                     {
-                        shouldLog = true;
-                    }
+                        AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(10)
+                    });
 
-                    return dateTimeNow;
-                });
-
-            if (shouldLog)
-            {
                 _logger.LogInformation(e, "Could not update SMS send status for message: {Message}", message);
             }
 
