@@ -149,7 +149,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     {
         if (smsNotificationAlternateId == Guid.Empty)
         {
-            throw new ArgumentException("The provided SMS identifier is invalid.");
+            throw new SendStatusUpdateException(NotificationChannel.Sms, string.Empty, SendStatusIdentifierType.NotificationId);
         }
 
         await using var connection = await _dataSource.OpenConnectionAsync();
