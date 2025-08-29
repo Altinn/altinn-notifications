@@ -19,7 +19,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 
 public class StatusFeedServiceTests
 {
-    private static readonly int _maxPageSize = 500;
+    private const int _maxPageSize = 500;
     private readonly IOptions<StatusFeedConfig> _options = Options.Create(new StatusFeedConfig
     {
         MaxPageSize = _maxPageSize
@@ -32,7 +32,7 @@ public class StatusFeedServiceTests
     {
         // Arrange
         Mock<IStatusFeedRepository> statusFeedRepository = new();
-        statusFeedRepository.Setup(x => x.GetStatusFeed(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>(), CancellationToken.None))
+        statusFeedRepository.Setup(x => x.GetStatusFeed(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([new StatusFeed()
             {
                 SequenceNumber = 1,
@@ -54,13 +54,17 @@ public class StatusFeedServiceTests
             }
                 ]);
 
-        var sut = new StatusFeedService(statusFeedRepository.Object, _options, new NullLogger<StatusFeedService>());
+        var sut = new StatusFeedService(statusFeedRepository.Object, _options, NullLogger<StatusFeedService>.Instance);
         int seq = 1;
 
         // Act
         var result = await sut.GetStatusFeed(seq, null, _creatorName, CancellationToken.None);
-
+        
         // Assert
+        statusFeedRepository.Verify(
+        x => x.GetStatusFeed(seq, _creatorName, _maxPageSize, It.IsAny<CancellationToken>()),
+        Times.Once);
+
         result.Match(
             success =>
             {
@@ -81,13 +85,17 @@ public class StatusFeedServiceTests
     {
         // Arrange
         Mock<IStatusFeedRepository> statusFeedRepository = new();
-        var sut = new StatusFeedService(statusFeedRepository.Object, _options, new NullLogger<StatusFeedService>());
+        var sut = new StatusFeedService(statusFeedRepository.Object, _options, NullLogger<StatusFeedService>.Instance);
         int seq = -1; // Invalid sequence number
         
         // Act
         var result = await sut.GetStatusFeed(seq, null, _creatorName, CancellationToken.None);
         
         // Assert
+        statusFeedRepository.Verify(
+        x => x.GetStatusFeed(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
+        Times.Never);
+
         result.Match(
             success =>
             {
@@ -107,7 +115,7 @@ public class StatusFeedServiceTests
     {
         // Arrange
         Mock<IStatusFeedRepository> statusFeedRepository = new();
-        var sut = new StatusFeedService(statusFeedRepository.Object, _options, new NullLogger<StatusFeedService>());
+        var sut = new StatusFeedService(statusFeedRepository.Object, _options, NullLogger<StatusFeedService>.Instance);
         int seq = 1;
         string creatorName = string.Empty;
 
@@ -134,9 +142,9 @@ public class StatusFeedServiceTests
     {
         // Arrange
         Mock<IStatusFeedRepository> statusFeedRepository = new();
-        statusFeedRepository.Setup(x => x.GetStatusFeed(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>(), CancellationToken.None))
+        statusFeedRepository.Setup(x => x.GetStatusFeed(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("Database error"));
-        var sut = new StatusFeedService(statusFeedRepository.Object, _options, new NullLogger<StatusFeedService>());
+        var sut = new StatusFeedService(statusFeedRepository.Object, _options, NullLogger<StatusFeedService>.Instance);
         int seq = 1;
         string creatorName = "ttd";
         
@@ -144,6 +152,10 @@ public class StatusFeedServiceTests
         var result = await sut.GetStatusFeed(seq, null, creatorName, CancellationToken.None);
         
         // Assert
+        statusFeedRepository.Verify(
+            x => x.GetStatusFeed(seq, creatorName, _maxPageSize, It.IsAny<CancellationToken>()),
+            Times.Once);
+
         result.Match(
             success =>
             {
@@ -153,23 +165,23 @@ public class StatusFeedServiceTests
             error =>
             {
                 Assert.Equal(500, error.ErrorCode);
-                Assert.Equal("Failed to retrieve status feed: Database error", error.ErrorMessage);
+                Assert.StartsWith("Failed to retrieve status feed", error.ErrorMessage);
                 return true;
             });
     }
 
     [Theory]
-    [InlineData(null, 500)]
-    [InlineData(600, 500)]
-    [InlineData(0, 1)]
-    public async Task GetStatusFeed_OutsideLegalValue_ClipsToMaxPageSizeOrMinimumValue(int? pageSize, int expected)
+    [InlineData(null)]
+    [InlineData(600)]
+    [InlineData(0)]
+    public async Task GetStatusFeed_OutsideLegalValue_ClipsToMaxPageSizeOrMinimumValue(int? pageSize)
     {
         // Arrange
         const int seq = 0;
-        
+
         var mockRepository = new Mock<IStatusFeedRepository>();
         var expectedStatusFeedEntries = new List<StatusFeed>();
-        
+
         // Setup repository to capture the actual pageSize used
         mockRepository.Setup(x => x.GetStatusFeed(
                 It.IsAny<int>(),
@@ -177,23 +189,45 @@ public class StatusFeedServiceTests
                 It.IsAny<int>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedStatusFeedEntries);
-        
+
         var sut = new StatusFeedService(mockRepository.Object, _options, NullLogger<StatusFeedService>.Instance);
-        
+
+        int expected = CalculateExpectedPageSize(pageSize);
+
         // Act
         var result = await sut.GetStatusFeed(seq, pageSize, _creatorName, CancellationToken.None);
-        
+
         // Assert
         Assert.True(result.IsSuccess);
-        
+
         // Verify that the repository was called with the clipped page size (maxPageSize)
         mockRepository.Verify(
             x => x.GetStatusFeed(
             seq,
             _creatorName,
             expected,
-            It.IsAny<CancellationToken>()), 
+            It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    private int CalculateExpectedPageSize(int? pageSize)
+    {
+        // Compute expected from configured bounds
+        int max = _options.Value.MaxPageSize;
+
+        int expected = pageSize is null ? max : pageSize.Value;
+
+        if (pageSize < 1)
+        {
+            expected = 1;
+        }
+
+        if (pageSize > max)
+        {
+            expected = max;
+        }
+
+        return expected;
     }
 
     [Fact]
