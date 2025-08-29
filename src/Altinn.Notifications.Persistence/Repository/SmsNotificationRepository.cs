@@ -204,13 +204,13 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
             command.Parameters.AddWithValue(NpgsqlDbType.Text, gatewayReference);
 
             // Get the alternate ID from the database
-            var alternateIdObj = await command.ExecuteScalarAsync();
-            if (alternateIdObj == null)
+            var alternateId = await command.ExecuteScalarAsync();
+            if (alternateId == null)
             {
                 throw new SendStatusUpdateException(NotificationChannel.Sms, gatewayReference, SendStatusIdentifierType.GatewayReference);
             }
 
-            if (!Guid.TryParse(alternateIdObj.ToString(), out Guid alternateIdGuid))
+            if (!Guid.TryParse(alternateId.ToString(), out Guid alternateIdGuid))
             {
                 throw new SendStatusUpdateException(NotificationChannel.Sms, gatewayReference, SendStatusIdentifierType.GatewayReference);
             }
@@ -225,6 +225,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
         }
         catch (SendStatusUpdateException)
         {
+            await transaction.DisposeAsync();
             throw;
         }
         catch (Exception)
