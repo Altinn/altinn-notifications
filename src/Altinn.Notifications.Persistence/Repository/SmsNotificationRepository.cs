@@ -223,11 +223,6 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
 
             await transaction.CommitAsync();
         }
-        catch (SendStatusUpdateException)
-        {
-            await transaction.RollbackAsync();
-            throw;
-        }
         catch (Exception)
         {
             await transaction.RollbackAsync();

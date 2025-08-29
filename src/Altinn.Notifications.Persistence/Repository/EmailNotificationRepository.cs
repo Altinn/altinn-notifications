@@ -1,4 +1,5 @@
 ﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
@@ -96,6 +97,11 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     /// <inheritdoc/>
     public async Task UpdateSendStatus(Guid? notificationId, EmailNotificationResultType status, string? operationId = null)
     {
+        if ((!notificationId.HasValue || notificationId.Value == Guid.Empty) && string.IsNullOrWhiteSpace(operationId))
+        {
+            throw new ArgumentException("The provided Email identifier is invalid.");
+        }
+
         await using var connection = await _dataSource.OpenConnectionAsync();
         await using var transaction = await connection.BeginTransactionAsync();
 
@@ -106,13 +112,27 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, operationId ?? (object)DBNull.Value);
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId ?? (object)DBNull.Value);
 
-            var alternateId = await pgcom.ExecuteScalarAsync() ?? throw new KeyNotFoundException($"Email notification not found for NotificationId '{notificationId}' or OperationId '{operationId}'. Cannot set status '{status}'.");
+            var alternateId = await pgcom.ExecuteScalarAsync();
+
+            if (alternateId is null)
+            {
+                if (!string.IsNullOrWhiteSpace(operationId))
+                {
+                    throw new SendStatusUpdateException(NotificationChannel.Email, operationId, SendStatusIdentifierType.OperationId);
+                }
+
+                if (notificationId.HasValue)
+                {
+                    throw new SendStatusUpdateException(NotificationChannel.Email, notificationId.Value.ToString(), SendStatusIdentifierType.NotificationId);
+                }
+
+                throw new ArgumentException("The provided SMS identifier is invalid.");
+            }
 
             var parseResult = Guid.TryParse(alternateId.ToString(), out Guid emailNotificationAlternateId);
-
             if (!parseResult)
             {
-                throw new InvalidOperationException($"Guid could not be parsed");
+                throw new InvalidOperationException("Guid could not be parsed");
             }
 
             var orderIsSetAsCompleted = await TryCompleteOrderBasedOnNotificationsState(emailNotificationAlternateId, connection, transaction);
