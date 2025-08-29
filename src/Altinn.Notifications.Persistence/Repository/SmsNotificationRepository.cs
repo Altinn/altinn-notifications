@@ -1,4 +1,5 @@
 ﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
@@ -19,7 +20,6 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
 {
     private const string _smsSourceIdentifier = "SMS";
     private readonly NpgsqlDataSource _dataSource;
-    private readonly ILogger<SmsNotificationRepository> _logger;
 
     private const string _getNewSmsNotificationsSql = "select * from notifications.getsms_statusnew_updatestatus($1)"; // (_sendingtimepolicy) this is now calling an overload function with the sending time policy parameter
     private const string _getSmsNotificationRecipientsSql = "select * from notifications.getsmsrecipients_v2($1)"; // (_orderid)
@@ -45,12 +45,9 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsNotificationRepository"/> class.
     /// </summary>
-    /// <param name="dataSource">The Npgsql data source.</param>
-    /// <param name="logger">The logger associated with this implementation of the SmsNotificationRepository</param>
     public SmsNotificationRepository(NpgsqlDataSource dataSource, ILogger<SmsNotificationRepository> logger) : base(dataSource, logger)
     {
         _dataSource = dataSource;
-        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -189,12 +186,12 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     /// <param name="gatewayReference">The gateway reference of the SMS notification.</param>
     /// <param name="result">The result status of sending the SMS notification.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when the provided gateway reference is invalid.</exception>
+    /// <exception cref="SendStatusUpdateException">Thrown when the notification cannot be found or the update operation fails.</exception>
     private async Task UpdateSendStatusByGatewayReference(string gatewayReference, SmsNotificationResultType result)
     {
         if (string.IsNullOrWhiteSpace(gatewayReference))
         {
-            throw new ArgumentException("The provided gateway reference is invalid.");
+            throw new SendStatusUpdateException(NotificationChannel.Sms, gatewayReference, SendStatusIdentifierType.GatewayReference);
         }
 
         await using var connection = await _dataSource.OpenConnectionAsync();
@@ -202,35 +199,33 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
 
         try
         {
-            await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_updateSmsNotificationBasedOnGatewayReferenceSql);
-            pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, result.ToString());
-            pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, gatewayReference);
+            await using var command = new NpgsqlCommand(_updateSmsNotificationBasedOnGatewayReferenceSql, connection, transaction);
+            command.Parameters.AddWithValue(NpgsqlDbType.Text, result.ToString());
+            command.Parameters.AddWithValue(NpgsqlDbType.Text, gatewayReference);
 
-            var alternateId = await pgcom.ExecuteScalarAsync();
-
-            if (alternateId == null)
+            // Get the alternate ID from the database
+            var alternateIdObj = await command.ExecuteScalarAsync();
+            if (alternateIdObj == null)
             {
-                await transaction.RollbackAsync();
-                _logger.LogError("No alternateId was returned from the updateSmsStatus query. {GatewayReference}", gatewayReference);
-                return;
+                throw new SendStatusUpdateException(NotificationChannel.Sms, gatewayReference, SendStatusIdentifierType.GatewayReference);
             }
 
-            var parseResult = Guid.TryParse(alternateId.ToString(), out Guid alternateIdGuid);
-
-            if (parseResult)
+            if (!Guid.TryParse(alternateIdObj.ToString(), out Guid alternateIdGuid))
             {
-                var orderIsSetAsCompleted = await TryCompleteOrderBasedOnNotificationsState(alternateIdGuid, connection, transaction);
-                if (orderIsSetAsCompleted)
-                {
-                    await InsertOrderStatusCompletedOrder(connection, transaction, alternateIdGuid);
-                }
+                throw new SendStatusUpdateException(NotificationChannel.Sms, gatewayReference, SendStatusIdentifierType.GatewayReference);
+            }
 
-                await transaction.CommitAsync();
-            }
-            else
+            bool orderIsCompleted = await TryCompleteOrderBasedOnNotificationsState(alternateIdGuid, connection, transaction);
+            if (orderIsCompleted)
             {
-                throw new ArgumentException("The provided gateway reference did not match any existing SMS notification.");
+                await InsertOrderStatusCompletedOrder(connection, transaction, alternateIdGuid);
             }
+
+            await transaction.CommitAsync();
+        }
+        catch (SendStatusUpdateException)
+        {
+            throw;
         }
         catch (Exception)
         {
