@@ -1,9 +1,9 @@
 ﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
-using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
@@ -117,7 +117,7 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UpdateSendStatus_WithNotificationId()
+    public async Task UpdateSendStatus_GivenValidNotificationId_ShouldUpdateStatusAndOperationId()
     {
         // Arrange
         (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
@@ -183,7 +183,7 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UpdateSendStatus_WithoutNotificationId()
+    public async Task UpdateSendStatus_WithOperationIdOnly_ShouldFindAndUpdateNotification()
     {
         // Arrange
         (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
@@ -217,7 +217,7 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UpdateSendStatus_WithNotificationId_WithoutGatewayRef()
+    public async Task UpdateSendStatus_GivenNotificationIdWithoutOperationId_ShouldUpdateStatusSuccessfully()
     {
         // Arrange
         (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
@@ -242,7 +242,7 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UpdateSendStatus_WithNotificationIdThatDoesNotExist_AbortsStatusUpdate()
+    public async Task UpdateSendStatus_GivenNonExistentNotificationId_ThrowsSendStatusUpdateException()
     {
         // Arrange
         EmailNotificationRepository emailNotificationRepository = (EmailNotificationRepository)ServiceUtil
@@ -251,13 +251,42 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
         Guid nonExistentNotificationId = Guid.NewGuid();
 
         // Act + Assert that the method throw an exception when no matching notification is found
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => emailNotificationRepository.UpdateSendStatus(nonExistentNotificationId, EmailNotificationResultType.Succeeded));
+        await Assert.ThrowsAsync<SendStatusUpdateException>(() => emailNotificationRepository.UpdateSendStatus(nonExistentNotificationId, EmailNotificationResultType.Succeeded));
 
         // Assert: no rows updated
         string sql = $@"
         SELECT count(1)
         FROM notifications.emailnotifications email
         WHERE email.alternateid = '{nonExistentNotificationId}'
+          AND email.result = '{EmailNotificationResultType.Succeeded}'";
+
+        int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
+        Assert.Equal(0, actualCount);
+    }
+
+    [Fact]
+    public async Task UpdateSendStatus_GivenNonExistentOperationId_ThrowsSendStatusUpdateException()
+    {
+        // Arrange
+        EmailNotificationRepository emailNotificationRepository = (EmailNotificationRepository)ServiceUtil
+          .GetServices([typeof(IEmailNotificationRepository)])
+          .First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        string operationId = Guid.NewGuid().ToString();
+
+        // Act + Assert that the method throw an exception when no matching notification is found
+        await Assert.ThrowsAsync<SendStatusUpdateException>(
+            () =>
+            emailNotificationRepository.UpdateSendStatus(
+                notificationId: null,
+                status: EmailNotificationResultType.Succeeded,
+                operationId: operationId));
+
+        // Assert: no rows updated
+        string sql = $@"
+        SELECT count(1)
+        FROM notifications.emailnotifications email
+        WHERE email.operationId = '{operationId}'
           AND email.result = '{EmailNotificationResultType.Succeeded}'";
 
         int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
