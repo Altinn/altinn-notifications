@@ -78,7 +78,7 @@ public class SmsStatusConsumer : KafkaConsumerBase<SmsStatusConsumer>
                     true,
                     new MemoryCacheEntryOptions
                     {
-                        AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(10)
+                        AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(5)
                     });
 
                 _logger.LogInformation(e, "Could not update SMS send status for message: {Message}", message);

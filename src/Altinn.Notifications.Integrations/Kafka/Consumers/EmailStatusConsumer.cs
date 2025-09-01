@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Integrations;
+﻿using Altinn.Notifications.Core.Exceptions;
+using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Integrations.Configuration;
@@ -58,7 +59,7 @@ public class EmailStatusConsumer : KafkaConsumerBase<EmailStatusConsumer>
         {
             await _emailNotificationsService.UpdateSendStatus(result);
         }
-        catch (KeyNotFoundException e)
+        catch (SendStatusUpdateException e)
         {
             string suppressionKey = result.OperationId ?? result.NotificationId?.ToString() ?? "unknown";
             bool shouldBeLogged = !_logSuppressionCache.TryGetValue(suppressionKey, out _);
@@ -70,7 +71,7 @@ public class EmailStatusConsumer : KafkaConsumerBase<EmailStatusConsumer>
                     true,
                     new MemoryCacheEntryOptions
                     {
-                        AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(10)
+                        AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(5)
                     });
 
                 _logger.LogInformation(e, "Could not update email send status for message: {Message}", message);
