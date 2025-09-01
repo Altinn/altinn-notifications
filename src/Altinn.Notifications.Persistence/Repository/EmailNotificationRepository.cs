@@ -125,8 +125,7 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
                 throw new SendStatusUpdateException(NotificationChannel.Email, notificationId!.Value.ToString(), SendStatusIdentifierType.NotificationId);
             }
 
-            var parseResult = Guid.TryParse(alternateId.ToString(), out Guid emailNotificationAlternateId);
-            if (!parseResult)
+            if (alternateId is not Guid emailNotificationAlternateId)
             {
                 throw new InvalidOperationException("Guid could not be parsed");
             }
