@@ -27,12 +27,13 @@ public class StatusFeedController(IStatusFeedService statusFeedService) : Contro
     /// Retrieve an array of order status change history.
     /// </summary>
     /// <param name="seq">The sequence number to start fetching status feed entries from</param>
+    /// <param name="pageSize">The number of items to return in one page. The default value is set by the API</param>
     /// <returns>A <see cref="Task{TResult}"/> representing the result of the asynchronous operation.</returns>
     [HttpGet("feed")]
     [Consumes("application/json")]
     [Produces("application/json")]
     [SwaggerResponse(200, "Successfully retrieved status feed entries", typeof(List<StatusFeedExt>))]
-    public async Task<ActionResult<List<StatusFeedExt>>> GetStatusFeed([FromQuery][Range(0, int.MaxValue)] int seq = 0)
+    public async Task<ActionResult<List<StatusFeedExt>>> GetStatusFeed([FromQuery][Range(0, int.MaxValue)] int seq = 0, int? pageSize = null)
     {
         try
         {
@@ -42,7 +43,7 @@ public class StatusFeedController(IStatusFeedService statusFeedService) : Contro
                 return Forbid();
             }
 
-            var result = await statusFeedService.GetStatusFeed(seq, creatorName, HttpContext.RequestAborted);
+            var result = await statusFeedService.GetStatusFeed(seq, pageSize, creatorName, HttpContext.RequestAborted);
 
             return result.Match<ActionResult>(
                 statusFeed =>
