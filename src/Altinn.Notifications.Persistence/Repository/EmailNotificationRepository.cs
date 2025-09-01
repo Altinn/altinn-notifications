@@ -111,7 +111,7 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
         {
             await using NpgsqlCommand pgcom = new(_updateEmailStatus, connection, transaction);
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
-            pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, operationId ?? (object)DBNull.Value);
+            pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(operationId) ? (object)DBNull.Value : operationId);
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId ?? (object)DBNull.Value);
 
             var alternateId = await pgcom.ExecuteScalarAsync();
