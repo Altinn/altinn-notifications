@@ -97,7 +97,9 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     /// <inheritdoc/>
     public async Task UpdateSendStatus(Guid? notificationId, EmailNotificationResultType status, string? operationId = null)
     {
-        if ((!notificationId.HasValue || notificationId.Value == Guid.Empty) && string.IsNullOrWhiteSpace(operationId))
+        var hasOperationId = !string.IsNullOrWhiteSpace(operationId);
+        var hasNotificationId = notificationId is Guid id && id != Guid.Empty;
+        if (!hasOperationId && !hasNotificationId)
         {
             throw new ArgumentException("The provided Email identifier is invalid.");
         }
@@ -113,20 +115,14 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId ?? (object)DBNull.Value);
 
             var alternateId = await pgcom.ExecuteScalarAsync();
-
             if (alternateId is null)
             {
-                if (!string.IsNullOrWhiteSpace(operationId))
+                if (hasOperationId)
                 {
-                    throw new SendStatusUpdateException(NotificationChannel.Email, operationId, SendStatusIdentifierType.OperationId);
+                    throw new SendStatusUpdateException(NotificationChannel.Email, operationId!, SendStatusIdentifierType.OperationId);
                 }
 
-                if (notificationId.HasValue)
-                {
-                    throw new SendStatusUpdateException(NotificationChannel.Email, notificationId.Value.ToString(), SendStatusIdentifierType.NotificationId);
-                }
-
-                throw new ArgumentException("The provided SMS identifier is invalid.");
+                throw new SendStatusUpdateException(NotificationChannel.Email, notificationId!.Value.ToString(), SendStatusIdentifierType.NotificationId);
             }
 
             var parseResult = Guid.TryParse(alternateId.ToString(), out Guid emailNotificationAlternateId);
