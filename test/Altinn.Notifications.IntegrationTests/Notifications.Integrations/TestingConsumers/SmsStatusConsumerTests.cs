@@ -11,8 +11,8 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
 
 public class SmsStatusConsumerTests : IAsyncLifetime
 {
-    private readonly string _statusUpdatedTopicName = Guid.NewGuid().ToString();
     private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
+    private readonly string _statusUpdatedTopicName = Guid.NewGuid().ToString();
 
     [Fact]
     public async Task RunTask_ConfirmExpectedSideEffects()
