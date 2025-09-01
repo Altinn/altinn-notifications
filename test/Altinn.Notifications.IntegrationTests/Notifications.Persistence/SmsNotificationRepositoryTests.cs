@@ -417,7 +417,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
         {
             await repo.UpdateSendStatus(
                 notificationId: null,
-                gatewayReference: gatewayReference,
+                gatewayReference: Guid.NewGuid().ToString(),
                 result: SmsNotificationResultType.Delivered);
         });
 
