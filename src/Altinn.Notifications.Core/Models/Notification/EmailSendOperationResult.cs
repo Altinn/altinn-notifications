@@ -59,7 +59,7 @@ public class EmailSendOperationResult
             parsedOutput = Deserialize(input!);
 
             value = parsedOutput!;
-            return value.NotificationId != Guid.Empty || !string.IsNullOrEmpty(value.OperationId);
+            return (value.NotificationId.HasValue && value.NotificationId.Value != Guid.Empty) || !string.IsNullOrEmpty(value.OperationId);
         }
         catch
         {
