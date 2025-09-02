@@ -405,6 +405,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
           .First(i => i.GetType() == typeof(SmsNotificationRepository));
 
         string gatewayReference = Guid.NewGuid().ToString();
+        string nonExistingGatewayReference = Guid.NewGuid().ToString();
 
         string setGateqwaySql = $@"Update notifications.smsnotifications 
                 SET gatewayreference = '{gatewayReference}'
@@ -417,11 +418,11 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
         {
             await repo.UpdateSendStatus(
                 notificationId: null,
-                gatewayReference: Guid.NewGuid().ToString(),
+                gatewayReference: nonExistingGatewayReference,
                 result: SmsNotificationResultType.Delivered);
         });
 
-        Assert.Equal("The provided SMS identifier is invalid.", exception.Message);
+        Assert.Equal($"Sms status update failed: GatewayReference='{nonExistingGatewayReference}' not found.", exception.Message);
     }
 
     private static async Task<int> SelectOrdersCompletedCount(NotificationOrder order)
