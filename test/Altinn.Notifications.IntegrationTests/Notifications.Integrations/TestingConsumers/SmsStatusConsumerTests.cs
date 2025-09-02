@@ -37,11 +37,20 @@ public class SmsStatusConsumerTests : IAsyncLifetime
             SendResult = SmsNotificationResultType.Accepted
         };
 
+        // Act (publish after consumer starts; then wait until effects are observed)
+        await consumerService.StartAsync(CancellationToken.None);
+        await Task.Delay(250);
+
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
 
-        // Act
-        await consumerService.StartAsync(CancellationToken.None);
-        await Task.Delay(10000);
+        await EventuallyAsync(
+            async () =>
+            {
+                string status = await SelectSmsNotificationStatus(notification.Id);
+                return status == SmsNotificationResultType.Accepted.ToString();
+            },
+            TimeSpan.FromSeconds(10));
+
         await consumerService.StopAsync(CancellationToken.None);
 
         // Assert
@@ -68,11 +77,21 @@ public class SmsStatusConsumerTests : IAsyncLifetime
 
         (_, SmsNotification notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(_sendersRef, simulateCronJob: true, simulateConsumers: true);
 
-        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, string.Empty);
-
         // Act
         await consumerService.StartAsync(CancellationToken.None);
-        await Task.Delay(10000);
+        await Task.Delay(250);
+
+        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, string.Empty);
+
+        await EventuallyAsync(
+            async () =>
+            {
+                string status = await SelectSmsNotificationStatus(notification.Id);
+                long processed = await SelectProcessedOrderCount(notification.Id);
+                return status == SmsNotificationResultType.New.ToString() && processed == 1;
+            },
+            TimeSpan.FromSeconds(10));
+
         await consumerService.StopAsync(CancellationToken.None);
 
         // Assert
@@ -103,11 +122,20 @@ public class SmsStatusConsumerTests : IAsyncLifetime
             SendResult = SmsNotificationResultType.Delivered
         };
 
-        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
-
         // Act
         await sut.StartAsync(CancellationToken.None);
-        await Task.Delay(10000);
+        await Task.Delay(250);
+
+        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
+
+        await EventuallyAsync(
+            async () =>
+            {
+                int count = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+                return count == 1;
+            },
+            TimeSpan.FromSeconds(10));
+
         await sut.StopAsync(CancellationToken.None);
 
         // Assert
@@ -135,11 +163,20 @@ public class SmsStatusConsumerTests : IAsyncLifetime
             SendResult = SmsNotificationResultType.Delivered
         };
 
-        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
-
         // Act
         await sut.StartAsync(CancellationToken.None);
-        await Task.Delay(10000);
+        await Task.Delay(250);
+
+        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
+
+        await EventuallyAsync(
+            async () =>
+            {
+                int count = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+                return count == 1;
+            },
+            TimeSpan.FromSeconds(10));
+
         await sut.StopAsync(CancellationToken.None);
 
         // Assert
@@ -178,5 +215,22 @@ public class SmsStatusConsumerTests : IAsyncLifetime
     {
         string sql = $"select result from notifications.smsnotifications where alternateid = '{notificationId}'";
         return await PostgreUtil.RunSqlReturnOutput<string>(sql);
+    }
+
+    private static async Task EventuallyAsync(Func<Task<bool>> condition, TimeSpan timeout, TimeSpan? pollInterval = null)
+    {
+        var interval = pollInterval ?? TimeSpan.FromMilliseconds(100);
+        var deadline = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < deadline)
+        {
+            if (await condition())
+            {
+                return;
+            }
+
+            await Task.Delay(interval);
+        }
+
+        Assert.Fail("Condition not met within timeout.");
     }
 }
