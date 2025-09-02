@@ -68,7 +68,7 @@ public class NotificationStatusConsumerBaseTests
 
         await KafkaUtil.PublishMessageOnTopic(kafkaSettings.Value.EmailStatusUpdatedTopicName, deliveryReportMessage);
 
-        await EventuallyAsync(() => emailNotificationRepository.Invocations.Any(i => i.Method.Name == nameof(IEmailNotificationRepository.UpdateSendStatus)), TimeSpan.FromSeconds(10));
+        await EventuallyAsync(() => emailNotificationRepository.Invocations.Any(e => e.Method.Name == nameof(IEmailNotificationRepository.UpdateSendStatus)), TimeSpan.FromSeconds(10));
 
         await emailStatusConsumer.StopAsync(CancellationToken.None);
 
