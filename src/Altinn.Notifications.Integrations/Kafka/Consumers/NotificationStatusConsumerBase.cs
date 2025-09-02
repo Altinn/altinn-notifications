@@ -94,9 +94,8 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
 
             await RetryStatus(message);
         }
-        catch (Exception e)
+        catch (Exception e) when (LogProcessingError(e, message))
         {
-            _logger.LogError(e, "Could not update {Channel} send status for message: {Message}", ChannelName, message);
             throw;
         }
     }
@@ -109,6 +108,23 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
     private async Task RetryStatus(string message)
     {
         await _producer.ProduceAsync(_retryTopicName, message);
+    }
+
+    /// <summary>
+    /// Logs an error when an exception occurs while processing a Kafka message.
+    /// </summary>
+    /// <param name="exception">The exception that occurred during processing.</param>
+    /// <param name="kafkaMessage">The Kafka message that caused the error.</param>
+    /// <returns>Always returns <c>false</c> to allow the exception to propagate.</returns>
+    private bool LogProcessingError(Exception exception, string kafkaMessage)
+    {
+        _logger.LogError(
+            exception,
+            "Could not update {Channel} send status for message: {Message}",
+            ChannelName,
+            kafkaMessage);
+
+        return false;
     }
 
     /// <summary>
