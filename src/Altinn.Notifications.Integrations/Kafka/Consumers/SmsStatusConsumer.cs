@@ -68,5 +68,5 @@ public class SmsStatusConsumer : NotificationStatusConsumerBase<SmsStatusConsume
     /// A string key used for log suppression, using either the exception identifier,
     /// notification ID, or gateway reference.
     /// </returns>
-    protected override string? GetSuppressionKey(SmsSendOperationResult result, SendStatusUpdateException exception) => exception.Identifier ?? result.NotificationId?.ToString() ?? result.GatewayReference;
+    protected override string? GetSuppressionKey(SmsSendOperationResult result, SendStatusUpdateException exception) => $"{exception.IdentifierType}:{exception.Identifier}";
 }

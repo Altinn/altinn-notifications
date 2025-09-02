@@ -20,7 +20,7 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
     private readonly string _retryTopicName;
     private readonly IKafkaProducer _producer;
     private readonly IMemoryCache _logSuppressionCache;
-    private readonly ILogger<NotificationStatusConsumerBase<TConsumer, TResult>> _logger;
+    private readonly ILogger<KafkaConsumerBase<TConsumer>> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationStatusConsumerBase{TConsumer, TResult}"/> class.
@@ -76,7 +76,7 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
         }
         catch (SendStatusUpdateException e)
         {
-            string suppressionKey = GetSuppressionKey(result, e) ?? "unknown";
+            string suppressionKey = GetSuppressionKey(result, e) ?? "unknown key";
             bool shouldBeLogged = !_logSuppressionCache.TryGetValue(suppressionKey, out _);
 
             if (shouldBeLogged)
