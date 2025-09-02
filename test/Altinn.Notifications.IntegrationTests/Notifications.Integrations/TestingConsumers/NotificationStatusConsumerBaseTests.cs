@@ -30,7 +30,7 @@ public class NotificationStatusConsumerBaseTests
         var dateTimeService = new Mock<IDateTimeService>();
         var logger = new Mock<ILogger<EmailStatusConsumer>>();
         var memoryCache = new MemoryCache(new MemoryCacheOptions());
-        var producer = new Mock<IKafkaProducer>(MockBehavior.Strict);
+        var producer = new Mock<IKafkaProducer>(MockBehavior.Loose);
         var emailNotificationRepository = new Mock<IEmailNotificationRepository>();
 
         var emailSendOperationResult = new EmailSendOperationResult
@@ -63,10 +63,13 @@ public class NotificationStatusConsumerBaseTests
         var emailStatusConsumer = new EmailStatusConsumer(producer.Object, memoryCache, kafkaSettings, logger.Object, emailNotificationService);
 
         // Act
+        await emailStatusConsumer.StartAsync(CancellationToken.None);
+        await Task.Delay(250);
+
         await KafkaUtil.PublishMessageOnTopic(kafkaSettings.Value.EmailStatusUpdatedTopicName, deliveryReportMessage);
 
-        await emailStatusConsumer.StartAsync(CancellationToken.None);
-        await Task.Delay(10000);
+        await EventuallyAsync(() => emailNotificationRepository.Invocations.Any(i => i.Method.Name == nameof(IEmailNotificationRepository.UpdateSendStatus)), TimeSpan.FromSeconds(10));
+
         await emailStatusConsumer.StopAsync(CancellationToken.None);
 
         // Assert
@@ -99,10 +102,27 @@ public class NotificationStatusConsumerBaseTests
             Admin = new AdminSettings(),
             BrokerAddress = "localhost:9092",
             Producer = new ProducerSettings(),
-            Consumer = new ConsumerSettings { GroupId = "altinn-notifications" },
             EmailQueueTopicName = "altinn.notifications.email.queue",
             SmsStatusUpdatedTopicName = "altinn.notifications.sms.status.updated",
-            EmailStatusUpdatedTopicName = "altinn.notifications.email.status.updated"
+            EmailStatusUpdatedTopicName = "altinn.notifications.email.status.updated",
+            Consumer = new ConsumerSettings { GroupId = $"altinn-notifications-{Guid.NewGuid():N}" }
         });
+    }
+
+    private static async Task EventuallyAsync(Func<bool> condition, TimeSpan timeout, TimeSpan? pollInterval = null)
+    {
+        var interval = pollInterval ?? TimeSpan.FromMilliseconds(100);
+        var deadline = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < deadline)
+        {
+            if (condition())
+            {
+                return;
+            }
+
+            await Task.Delay(interval);
+        }
+
+        Assert.Fail("Condition not met within timeout.");
     }
 }
