@@ -29,8 +29,8 @@ public class NotificationStatusConsumerBaseTests
         var guidService = new Mock<IGuidService>();
         var dateTimeService = new Mock<IDateTimeService>();
         var logger = new Mock<ILogger<EmailStatusConsumer>>();
-        var memoryCache = new MemoryCache(new MemoryCacheOptions());
         var producer = new Mock<IKafkaProducer>(MockBehavior.Loose);
+        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
         var emailNotificationRepository = new Mock<IEmailNotificationRepository>();
 
         var emailSendOperationResult = new EmailSendOperationResult
@@ -85,7 +85,7 @@ public class NotificationStatusConsumerBaseTests
         producer.Verify(e => e.ProduceAsync(kafkaSettings.Value.EmailStatusUpdatedTopicName, It.Is<string>(e => e.Equals(deliveryReportMessage))), Times.AtLeastOnce());
         emailNotificationRepository.Verify(e => e.UpdateSendStatus(null, EmailNotificationResultType.Delivered, emailSendOperationResult.OperationId), Times.AtLeastOnce());
 
-        var suppressionKey = $"{NotificationChannel.Email}:{emailSendOperationResult.OperationId}";
+        var suppressionKey = $"OperationId:{emailSendOperationResult.OperationId}";
         Assert.True(memoryCache.TryGetValue(suppressionKey, out _), "The suppression key was not added to the memory cache.");
     }
 
