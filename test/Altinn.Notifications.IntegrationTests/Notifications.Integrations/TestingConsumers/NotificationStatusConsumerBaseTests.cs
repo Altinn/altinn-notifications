@@ -16,6 +16,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 
 using Xunit;
+using Xunit.Sdk;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.TestingConsumers;
 
@@ -204,6 +205,6 @@ public class NotificationStatusConsumerBaseTests
             await Task.Delay(interval);
         }
 
-        Assert.Fail("Condition not met within timeout.");
+        throw new XunitException($"Condition not met within timeout ({timeout}).");
     }
 }

@@ -7,6 +7,7 @@ using Altinn.Notifications.IntegrationTests.Utils;
 using Microsoft.Extensions.Hosting;
 
 using Xunit;
+using Xunit.Sdk;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.TestingConsumers;
 
@@ -248,6 +249,6 @@ public class EmailStatusConsumerTests : IAsyncLifetime
             await Task.Delay(interval);
         }
 
-        Assert.Fail("Condition not met within timeout.");
+        throw new XunitException($"Condition not met within timeout ({timeout}).");
     }
 }
