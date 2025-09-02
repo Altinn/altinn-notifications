@@ -195,11 +195,11 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
 
         string operationId = Guid.NewGuid().ToString();
 
-        string setGateqwaySql = $@"Update notifications.emailnotifications 
+        string setOperationIdSql = $@"Update notifications.emailnotifications 
                 SET operationid = '{operationId}'
                 WHERE alternateid = '{emailNotification.Id}'";
 
-        await PostgreUtil.RunSql(setGateqwaySql);
+        await PostgreUtil.RunSql(setOperationIdSql);
 
         // Act
         await repo.UpdateSendStatus(null, EmailNotificationResultType.Succeeded, operationId);
@@ -250,8 +250,12 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
           .First(i => i.GetType() == typeof(EmailNotificationRepository));
         Guid nonExistentNotificationId = Guid.NewGuid();
 
-        // Act + Assert that the method throw an exception when no matching notification is found
-        await Assert.ThrowsAsync<SendStatusUpdateException>(() => emailNotificationRepository.UpdateSendStatus(nonExistentNotificationId, EmailNotificationResultType.Succeeded));
+        // Act
+        var ex = await Assert.ThrowsAsync<SendStatusUpdateException>(() => emailNotificationRepository.UpdateSendStatus(nonExistentNotificationId, EmailNotificationResultType.Succeeded));
+
+        // Assert:
+        Assert.Equal(NotificationChannel.Email, ex.Channel);
+        Assert.Equal(SendStatusIdentifierType.NotificationId, ex.IdentifierType);
 
         // Assert: no rows updated
         string sql = $@"
@@ -274,13 +278,12 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
 
         string operationId = Guid.NewGuid().ToString();
 
-        // Act + Assert that the method throw an exception when no matching notification is found
-        await Assert.ThrowsAsync<SendStatusUpdateException>(
-            () =>
-            emailNotificationRepository.UpdateSendStatus(
-                notificationId: null,
-                status: EmailNotificationResultType.Succeeded,
-                operationId: operationId));
+        // Act
+        var ex = await Assert.ThrowsAsync<SendStatusUpdateException>(() => emailNotificationRepository.UpdateSendStatus(notificationId: null, status: EmailNotificationResultType.Succeeded, operationId: operationId));
+
+        // Assert: exception details
+        Assert.Equal(NotificationChannel.Email, ex.Channel);
+        Assert.Equal(SendStatusIdentifierType.OperationId, ex.IdentifierType);
 
         // Assert: no rows updated
         string sql = $@"
