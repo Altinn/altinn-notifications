@@ -23,6 +23,75 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
 public class NotificationStatusConsumerBaseTests
 {
     [Fact]
+    public async Task ProcessEmailDeliveryReport_WhenUnexpectedException_LogsErrorAndRetries()
+    {
+        // Arrange
+        var kafkaSettings = BuildKafkaSettings();
+        var guidService = new Mock<IGuidService>();
+        var dateTimeService = new Mock<IDateTimeService>();
+        var logger = new Mock<ILogger<EmailStatusConsumer>>();
+        var producer = new Mock<IKafkaProducer>(MockBehavior.Loose);
+        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
+        var emailNotificationRepository = new Mock<IEmailNotificationRepository>();
+
+        var emailSendOperationResult = new EmailSendOperationResult
+        {
+            OperationId = Guid.NewGuid().ToString(),
+            SendResult = EmailNotificationResultType.Delivered
+        };
+
+        var deliveryReportMessage = emailSendOperationResult.Serialize();
+
+        emailNotificationRepository
+            .Setup(e => e.UpdateSendStatus(null, EmailNotificationResultType.Delivered, emailSendOperationResult.OperationId))
+            .ThrowsAsync(new InvalidOperationException());
+
+        producer
+            .Setup(e => e.ProduceAsync(kafkaSettings.Value.EmailStatusUpdatedTopicName, It.Is<string>(m => m.Equals(deliveryReportMessage))))
+            .ReturnsAsync(true);
+
+        var emailNotificationService = new EmailNotificationService(
+            guidService.Object,
+            producer.Object,
+            dateTimeService.Object,
+            Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
+            {
+                EmailQueueTopicName = kafkaSettings.Value.EmailQueueTopicName
+            }),
+            emailNotificationRepository.Object);
+
+        var emailStatusConsumer = new EmailStatusConsumer(producer.Object, memoryCache, kafkaSettings, logger.Object, emailNotificationService);
+
+        // Act
+        await emailStatusConsumer.StartAsync(CancellationToken.None);
+        await Task.Delay(250);
+
+        await KafkaUtil.PublishMessageOnTopic(kafkaSettings.Value.EmailStatusUpdatedTopicName, deliveryReportMessage);
+
+        await EventuallyAsync(
+            () => producer.Invocations.Any(i => i.Method.Name == nameof(IKafkaProducer.ProduceAsync) &&
+                                                i.Arguments[0] is string topic && topic == kafkaSettings.Value.EmailStatusUpdatedTopicName &&
+                                                i.Arguments[1] is string msg && msg == deliveryReportMessage),
+            TimeSpan.FromSeconds(10));
+
+        await emailStatusConsumer.StopAsync(CancellationToken.None);
+
+        // Assert
+        emailNotificationRepository.Verify(e => e.UpdateSendStatus(null, EmailNotificationResultType.Delivered, emailSendOperationResult.OperationId), Times.AtLeastOnce());
+
+        logger.Verify(
+            e => e.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((state, _) => state != null),
+                It.Is<InvalidOperationException>(ex => ex != null),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.AtLeastOnce());
+
+        producer.Verify(e => e.ProduceAsync(kafkaSettings.Value.EmailStatusUpdatedTopicName, It.Is<string>(m => m.Equals(deliveryReportMessage))), Times.AtLeastOnce());
+    }
+
+    [Fact]
     public async Task ProcessSmsDeliveryReport_WhenSendStatusUpdateFails_LogsAndRetriesWithSuppression()
     {
         // Arrange
@@ -103,7 +172,6 @@ public class NotificationStatusConsumerBaseTests
 
         var emailSendOperationResult = new EmailSendOperationResult
         {
-            NotificationId = null,
             OperationId = Guid.NewGuid().ToString(),
             SendResult = EmailNotificationResultType.Delivered
         };
