@@ -63,5 +63,5 @@ public class EmailStatusConsumer : NotificationStatusConsumerBase<EmailStatusCon
     /// <param name="result">The parsed result that failed to update.</param>
     /// <param name="exception">The exception that occurred during status update (unused in this implementation).</param>
     /// <returns>A string key used for log suppression, using either the operation ID or notification ID.</returns>
-    protected override string? GetSuppressionKey(EmailSendOperationResult result, SendStatusUpdateException exception) => result.OperationId ?? result.NotificationId?.ToString();
+    protected override string? GetSuppressionKey(EmailSendOperationResult result, SendStatusUpdateException exception) => $"{exception.IdentifierType}:{exception.Identifier ?? result.OperationId ?? result.NotificationId?.ToString()}";
 }
