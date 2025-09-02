@@ -422,7 +422,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
                 result: SmsNotificationResultType.Delivered);
         });
 
-        Assert.Equal($"Sms status update failed: GatewayReference='{nonExistingGatewayReference}' not found.", exception.Message);
+        Assert.Equal($"Sms status update failed: GatewayReference='{nonExistingGatewayReference}' not found", exception.Message);
     }
 
     private static async Task<int> SelectOrdersCompletedCount(NotificationOrder order)
