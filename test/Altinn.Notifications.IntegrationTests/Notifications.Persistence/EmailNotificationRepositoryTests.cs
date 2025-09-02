@@ -145,7 +145,7 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UpdateSendStatusDelivered_WithNotificationId_OrderStatusIsSetToCompleted()
+    public async Task UpdateSendStatus_GivenValidNotificationId_ShouldUpdateOrderStatusToCompleted()
     {
         // Arrange
         (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(simulateConsumers: true, simulateCronJob: true);
@@ -178,12 +178,11 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
 
         // Verify that the order status was updated based on notification delivery
         // Initial state is "Registered", final state should be "Completed"
-        Assert.NotEqual("Registered", processedStatus);
         Assert.Equal("Completed", processedStatus);
     }
 
     [Fact]
-    public async Task UpdateSendStatus_WithOperationIdOnly_ShouldFindAndUpdateNotification()
+    public async Task UpdateSendStatus_GivenValidOperationId_ShouldFindNotificationAndUpdateStatus()
     {
         // Arrange
         (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
@@ -294,6 +293,21 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
 
         int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
         Assert.Equal(0, actualCount);
+    }
+
+    [Fact]
+    public async Task UpdateSendStatus_WithInvalidNotificationAndOperationIdentifiers_ThrowsArgumentException()
+    {
+        // Arrange
+        EmailNotificationRepository repo = (EmailNotificationRepository)ServiceUtil
+            .GetServices([typeof(IEmailNotificationRepository)])
+            .First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<ArgumentException>(
+            () => repo.UpdateSendStatus(null, EmailNotificationResultType.Succeeded, null));
+
+        Assert.Equal("The provided Email identifier is invalid.", exception.Message);
     }
 
     [Fact]
