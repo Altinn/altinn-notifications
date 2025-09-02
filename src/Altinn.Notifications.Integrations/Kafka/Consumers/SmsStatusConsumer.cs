@@ -41,7 +41,7 @@ public class SmsStatusConsumer : NotificationStatusConsumerBase<SmsStatusConsume
     /// <summary>
     /// Gets the name of the notification channel being processed.
     /// </summary>
-    /// <returns>The string "SMS" representing the SMS notification channel.</returns>
+    /// <returns>The string "sms" representing the SMS notification channel.</returns>
     protected override string ChannelName => "sms";
 
     /// <summary>
