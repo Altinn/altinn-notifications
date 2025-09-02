@@ -13,7 +13,7 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers;
 /// <summary>
 /// Kafka consumer class for processing status messages about email notifications.
 /// </summary>
-public class EmailStatusConsumer : NotificationStatusConsumerBase<EmailStatusConsumer, EmailSendOperationResult>
+public sealed class EmailStatusConsumer : NotificationStatusConsumerBase<EmailStatusConsumer, EmailSendOperationResult>
 {
     private readonly IEmailNotificationService _emailNotificationsService;
 

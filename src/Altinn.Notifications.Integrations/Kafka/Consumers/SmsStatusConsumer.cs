@@ -15,7 +15,7 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers;
 /// Responsible for consuming messages, updating notification status,
 /// retrying failed updates, and managing log suppression for repeated failures.
 /// </summary>
-public class SmsStatusConsumer : NotificationStatusConsumerBase<SmsStatusConsumer, SmsSendOperationResult>
+public sealed class SmsStatusConsumer : NotificationStatusConsumerBase<SmsStatusConsumer, SmsSendOperationResult>
 {
     private readonly ISmsNotificationService _smsNotificationsService;
 
@@ -48,7 +48,7 @@ public class SmsStatusConsumer : NotificationStatusConsumerBase<SmsStatusConsume
     /// Attempts to parse a message into a <see cref="SmsSendOperationResult"/> object.
     /// </summary>
     /// <param name="message">The message to parse.</param>
-    /// <param name="result">The parsed result if successful; otherwise, null.</param>
+    /// <param name="result">The parsed result if successful; otherwise, a default-initialized instance.</param>
     /// <returns>True if parsing was successful; otherwise, false.</returns>
     protected override bool TryParse(string message, out SmsSendOperationResult result) => SmsSendOperationResult.TryParse(message, out result);
 
