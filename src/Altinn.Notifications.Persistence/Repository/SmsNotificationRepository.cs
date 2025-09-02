@@ -149,7 +149,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     {
         if (smsNotificationAlternateId == Guid.Empty)
         {
-            throw new SendStatusUpdateException(NotificationChannel.Sms, smsNotificationAlternateId.ToString(), SendStatusIdentifierType.NotificationId);
+            throw new ArgumentException("The provided SMS identifier is invalid.");
         }
 
         await using var connection = await _dataSource.OpenConnectionAsync();
@@ -191,7 +191,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     {
         if (string.IsNullOrWhiteSpace(gatewayReference))
         {
-            throw new SendStatusUpdateException(NotificationChannel.Sms, gatewayReference, SendStatusIdentifierType.GatewayReference);
+            throw new ArgumentException("The provided gateway reference is invalid.");
         }
 
         await using var connection = await _dataSource.OpenConnectionAsync();
