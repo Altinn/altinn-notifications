@@ -37,11 +37,21 @@ public class EmailStatusConsumerTests : IAsyncLifetime
             OperationId = Guid.NewGuid().ToString(),
             SendResult = EmailNotificationResultType.Succeeded
         };
-        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
 
         // Act
         await consumerService.StartAsync(CancellationToken.None);
-        await Task.Delay(10000);
+        await Task.Delay(250);
+
+        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
+
+        await EventuallyAsync(
+            async () =>
+            {
+                string status = await SelectEmailNotificationStatus(notification.Id);
+                return status == EmailNotificationResultType.Succeeded.ToString();
+            }, 
+            TimeSpan.FromSeconds(10));
+
         await consumerService.StopAsync(CancellationToken.None);
 
         // Assert
@@ -79,11 +89,27 @@ public class EmailStatusConsumerTests : IAsyncLifetime
             OperationId = Guid.NewGuid().ToString(),
             SendResult = resultType
         };
-        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
 
         // Act
         await sut.StartAsync(CancellationToken.None);
-        await Task.Delay(10000);
+        await Task.Delay(250);
+
+        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
+
+        await EventuallyAsync(
+            async () =>
+            {
+                string status = await SelectEmailNotificationStatus(notification.Id);
+                if (status != resultType.ToString())
+                {
+                    return false;
+                }
+
+                long completed = await SelectProcessingStatusOrderCount(notification.Id, OrderProcessingStatus.Completed);
+                return completed == 1;
+            }, 
+            TimeSpan.FromSeconds(10));
+
         await sut.StopAsync(CancellationToken.None);
 
         // Assert
@@ -113,16 +139,25 @@ public class EmailStatusConsumerTests : IAsyncLifetime
             SendResult = EmailNotificationResultType.Delivered
         };
 
-        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
-
         // Act
         await sut.StartAsync(CancellationToken.None);
-        await Task.Delay(10000);
+        await Task.Delay(250);
+
+        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
+
+        await EventuallyAsync(
+            async () =>
+            {
+                int count = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+                return count == 1;
+            }, 
+            TimeSpan.FromSeconds(10));
+
         await sut.StopAsync(CancellationToken.None);
 
         // Assert
-        int count = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
-        Assert.Equal(1, count);
+        int finalCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+        Assert.Equal(1, finalCount);
     }
 
     [Fact]
@@ -145,11 +180,20 @@ public class EmailStatusConsumerTests : IAsyncLifetime
             SendResult = EmailNotificationResultType.Delivered
         };
 
-        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
-
         // Act
         await sut.StartAsync(CancellationToken.None);
-        await Task.Delay(10000);
+        await Task.Delay(250);
+
+        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
+
+        await EventuallyAsync(
+            async () =>
+            {
+                int count = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+                return count == 1;
+            }, 
+            TimeSpan.FromSeconds(10));
+
         await sut.StopAsync(CancellationToken.None);
 
         // Assert
@@ -188,5 +232,22 @@ public class EmailStatusConsumerTests : IAsyncLifetime
     {
         string sql = $"select result from notifications.emailnotifications where alternateid = '{notificationId}'";
         return await PostgreUtil.RunSqlReturnOutput<string>(sql);
+    }
+
+    private static async Task EventuallyAsync(Func<Task<bool>> condition, TimeSpan timeout, TimeSpan? pollInterval = null)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+        var interval = pollInterval ?? TimeSpan.FromMilliseconds(100);
+        while (DateTime.UtcNow < deadline)
+        {
+            if (await condition())
+            {
+                return;
+            }
+
+            await Task.Delay(interval);
+        }
+
+        Assert.Fail("Condition not met within timeout.");
     }
 }
