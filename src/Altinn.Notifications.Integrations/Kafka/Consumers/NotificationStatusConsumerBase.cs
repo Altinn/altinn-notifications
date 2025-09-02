@@ -58,6 +58,29 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
     }
 
     /// <summary>
+    /// Updates the notification status based on the parsed result.
+    /// </summary>
+    /// <param name="result">The parsed result containing status update information.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    protected abstract Task UpdateStatusAsync(TResult result);
+
+    /// <summary>
+    /// Attempts to parse a message into the result type.
+    /// </summary>
+    /// <param name="message">The message to parse.</param>
+    /// <param name="result">The parsed result if successful; otherwise, null.</param>
+    /// <returns><c>true</c> if parsing was successful; otherwise, <c>false</c>.</returns>
+    protected abstract bool TryParse(string message, out TResult result);
+
+    /// <summary>
+    /// Gets a key used for suppressing duplicate log entries for the same error.
+    /// </summary>
+    /// <param name="result">The parsed result that failed to update.</param>
+    /// <param name="exception">The exception that occurred during status update.</param>
+    /// <returns>A string key used for log suppression, or null if no suppression should occur.</returns>
+    protected abstract string? GetSuppressionKey(TResult result, SendStatusUpdateException exception);
+
+    /// <summary>
     /// Processes a delivery report message received from Kafka.
     /// </summary>
     /// <param name="message">The raw message to process.</param>
@@ -126,27 +149,4 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
 
         return false;
     }
-
-    /// <summary>
-    /// Updates the notification status based on the parsed result.
-    /// </summary>
-    /// <param name="result">The parsed result containing status update information.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    protected abstract Task UpdateStatusAsync(TResult result);
-
-    /// <summary>
-    /// Attempts to parse a message into the result type.
-    /// </summary>
-    /// <param name="message">The message to parse.</param>
-    /// <param name="result">The parsed result if successful; otherwise, null.</param>
-    /// <returns><c>true</c> if parsing was successful; otherwise, <c>false</c>.</returns>
-    protected abstract bool TryParse(string message, out TResult result);
-
-    /// <summary>
-    /// Gets a key used for suppressing duplicate log entries for the same error.
-    /// </summary>
-    /// <param name="result">The parsed result that failed to update.</param>
-    /// <param name="exception">The exception that occurred during status update.</param>
-    /// <returns>A string key used for log suppression, or null if no suppression should occur.</returns>
-    protected abstract string? GetSuppressionKey(TResult result, SendStatusUpdateException exception);
 }
