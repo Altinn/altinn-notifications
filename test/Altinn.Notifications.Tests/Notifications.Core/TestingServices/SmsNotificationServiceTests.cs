@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Altinn.Notifications.Core.Configuration;
@@ -187,7 +188,7 @@ public class SmsNotificationServiceTests
     {
         // Arrange 
         var repoMock = new Mock<ISmsNotificationRepository>();
-        repoMock.Setup(r => r.GetNewNotifications(It.IsAny<SendingTimePolicy>()))
+        repoMock.Setup(r => r.GetNewNotifications(It.IsAny<CancellationToken>(), It.IsAny<SendingTimePolicy>()))
             .ReturnsAsync(new List<Sms> { _sms, _sms, _sms });
 
         var producerMock = new Mock<IKafkaProducer>();
@@ -197,7 +198,7 @@ public class SmsNotificationServiceTests
         var service = GetTestService(repo: repoMock.Object, producer: producerMock.Object);
 
         // Act
-        await service.SendNotifications();
+        await service.SendNotifications(CancellationToken.None);
 
         // Assert
         repoMock.Verify();
@@ -209,7 +210,7 @@ public class SmsNotificationServiceTests
     {
         // Arrange 
         var repoMock = new Mock<ISmsNotificationRepository>();
-        repoMock.Setup(r => r.GetNewNotifications(It.IsAny<SendingTimePolicy>()))
+        repoMock.Setup(r => r.GetNewNotifications(It.IsAny<CancellationToken>(), It.IsAny<SendingTimePolicy>()))
             .ReturnsAsync(new List<Sms> { _sms });
 
         repoMock
@@ -222,7 +223,7 @@ public class SmsNotificationServiceTests
         var service = GetTestService(repo: repoMock.Object, producer: producerMock.Object);
 
         // Act
-        await service.SendNotifications();
+        await service.SendNotifications(CancellationToken.None);
 
         // Assert
         repoMock.Verify();
