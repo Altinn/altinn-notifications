@@ -45,9 +45,9 @@ public class EmailStatusConsumerTests : IAsyncLifetime
 
         int statusFeedCount = -1;
         await EventuallyAsync(
-            () =>
+            async () =>
             {
-                statusFeedCount = PostgreUtil.SelectStatusFeedEntryCount(order.Id).GetAwaiter().GetResult();
+                statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
                 return statusFeedCount == 1;
             },
             TimeSpan.FromSeconds(15),
@@ -89,9 +89,9 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         // Wait for notification status to become Succeeded
         string? observedEmailStatus = null;
         await EventuallyAsync(
-            () =>
+            async () =>
             {
-                observedEmailStatus = SelectEmailNotificationStatus(notification.Id).GetAwaiter().GetResult();
+                observedEmailStatus = await SelectEmailNotificationStatus(notification.Id);
                 return string.Equals(observedEmailStatus, EmailNotificationResultType.Succeeded.ToString(), StringComparison.Ordinal);
             },
             TimeSpan.FromSeconds(15),
@@ -100,9 +100,9 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         // Then wait for order processing status to reach Processed
         long processedOrderCount = -1;
         await EventuallyAsync(
-            () =>
+            async () =>
             {
-                processedOrderCount = SelectProcessingStatusOrderCount(notification.Id, OrderProcessingStatus.Processed).GetAwaiter().GetResult();
+                processedOrderCount = await SelectProcessingStatusOrderCount(notification.Id, OrderProcessingStatus.Processed);
                 return processedOrderCount == 1;
             },
             TimeSpan.FromSeconds(15),
@@ -148,9 +148,9 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         // Wait until UpdateStatusAsync has executed by observing its side-effect once.
         int statusFeedCount = -1;
         await EventuallyAsync(
-            () =>
+            async () =>
             {
-                statusFeedCount = PostgreUtil.SelectStatusFeedEntryCount(order.Id).GetAwaiter().GetResult();
+                statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
                 return statusFeedCount == 1;
             },
             TimeSpan.FromSeconds(15),
@@ -203,21 +203,21 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         // Wait for email notification status to be updated
         string? observedEmailStatus = null;
         await EventuallyAsync(
-            () =>
+            async () =>
             {
-                observedEmailStatus = SelectEmailNotificationStatus(notification.Id).GetAwaiter().GetResult();
+                observedEmailStatus = await SelectEmailNotificationStatus(notification.Id);
                 return string.Equals(observedEmailStatus, resultType.ToString(), StringComparison.Ordinal);
             },
             TimeSpan.FromSeconds(15),
             TimeSpan.FromMilliseconds(1000));
 
         // Then wait for order processing status to reach Completed
-        long cancelledCount = -1;
+        long completedCount = -1;
         await EventuallyAsync(
-            () =>
+            async () =>
             {
-                cancelledCount = SelectProcessingStatusOrderCount(notification.Id, OrderProcessingStatus.Completed).GetAwaiter().GetResult();
-                return cancelledCount == 1;
+                completedCount = await SelectProcessingStatusOrderCount(notification.Id, OrderProcessingStatus.Completed);
+                return completedCount == 1;
             },
             TimeSpan.FromSeconds(15),
             TimeSpan.FromMilliseconds(1000));
@@ -226,7 +226,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
 
         // Assert using captured values (no extra queries here)
         Assert.Equal(resultType.ToString(), observedEmailStatus);
-        Assert.Equal(1, cancelledCount);
+        Assert.Equal(1, completedCount);
     }
 
     public Task InitializeAsync()
@@ -250,19 +250,18 @@ public class EmailStatusConsumerTests : IAsyncLifetime
     /// <summary>
     /// Repeatedly evaluates a condition until it becomes <c>true</c> or a timeout is reached.
     /// </summary>
-    /// <param name="predicate">A function that evaluates the condition to be met. Returns <c>true</c> if the condition is satisfied, otherwise <c>false</c>.</param>
+    /// <param name="predicate">An async function that evaluates the condition to be met. Returns <c>true</c> if the condition is satisfied, otherwise <c>flase</c>.</param>
     /// <param name="maximumWaitTime">The maximum amount of time to wait for the condition to be met.</param>
     /// <param name="checkInterval">The interval between condition evaluations. Defaults to 100 milliseconds if not specified.</param>
-    /// <returns>A task that completes when the condition is met or the timeout is reached.</returns>
     /// <exception cref="XunitException">Thrown if the condition is not met within the specified timeout.</exception>
-    private static async Task EventuallyAsync(Func<bool> predicate, TimeSpan maximumWaitTime, TimeSpan? checkInterval = null)
+    private static async Task EventuallyAsync(Func<Task<bool>> predicate, TimeSpan maximumWaitTime, TimeSpan? checkInterval = null)
     {
         var deadline = DateTime.UtcNow.Add(maximumWaitTime);
         var pollingInterval = checkInterval ?? TimeSpan.FromMilliseconds(100);
 
         while (DateTime.UtcNow < deadline)
         {
-            if (predicate())
+            if (await predicate())
             {
                 return;
             }
