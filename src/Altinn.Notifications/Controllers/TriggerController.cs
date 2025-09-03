@@ -113,14 +113,14 @@ public class TriggerController : ControllerBase
     [Consumes("application/json")]
     [Route("sendsms")]
     [Route("sendsmsdaytime")]
-    public async Task<ActionResult> Trigger_SendSmsNotificationsDaytime()
+    public async Task<ActionResult> Trigger_SendSmsNotificationsDaytime(CancellationToken cancellationToken)
     {
         if (!_scheduleService.CanSendSmsNow())
         {
             return Ok();
         }
 
-        await _smsNotificationService.SendNotifications(Core.Enums.SendingTimePolicy.Daytime);
+        await _smsNotificationService.SendNotifications(cancellationToken, Core.Enums.SendingTimePolicy.Daytime);
         return Ok();
     }
 
@@ -131,9 +131,9 @@ public class TriggerController : ControllerBase
     [HttpPost]
     [Consumes("application/json")]
     [Route("sendsmsanytime")]
-    public async Task<ActionResult> Trigger_SendSmsNotificationsAnytime()
+    public async Task<ActionResult> Trigger_SendSmsNotificationsAnytime(CancellationToken cancellationToken)
     {
-        await _smsNotificationService.SendNotifications(Core.Enums.SendingTimePolicy.Anytime);
+        await _smsNotificationService.SendNotifications(cancellationToken, Core.Enums.SendingTimePolicy.Anytime);
         return Ok();
     }
 }
