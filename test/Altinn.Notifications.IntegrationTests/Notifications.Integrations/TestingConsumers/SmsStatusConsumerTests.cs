@@ -239,9 +239,9 @@ public class SmsStatusConsumerTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// Repeatedly evaluates a condition until it becomes true or a timeout is reached.
+    /// Repeatedly evaluates a condition until it becomes <c>true</c> or a timeout is reached.
     /// </summary>
-    /// <param name="predicate">An async function that evaluates the condition to be met. Returns true if the condition is satisfied, otherwise false.</param>
+    /// <param name="predicate">An async function that evaluates the condition to be met. Returns <c>true</c> if the condition is satisfied, otherwise <c>false</c>.</param>
     /// <param name="maximumWaitTime">The maximum amount of time to wait for the condition to be met.</param>
     /// <param name="checkInterval">The interval between condition evaluations. Defaults to 100 milliseconds if not specified.</param>
     /// <exception cref="XunitException">Thrown if the condition is not met within the specified timeout.</exception>
