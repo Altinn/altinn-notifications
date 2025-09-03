@@ -137,11 +137,22 @@ public class NotificationStatusConsumerBaseTests
 
         await KafkaUtil.PublishMessageOnTopic(kafkaSettings.Value.SmsStatusUpdatedTopicName, deliveryReportMessage);
 
-        await EventuallyAsync(() => smsNotificationRepository.Invocations.Any(e => e.Method.Name == nameof(ISmsNotificationRepository.UpdateSendStatus)), TimeSpan.FromSeconds(15));
+        await EventuallyAsync(
+            () => smsNotificationRepository.Invocations.Any(i =>
+                i.Method.Name == nameof(ISmsNotificationRepository.UpdateSendStatus) &&
+                i.Arguments.Count == 3 &&
+                i.Arguments[0] is null &&
+                i.Arguments[1] is SmsNotificationResultType deliveryResult && deliveryResult == SmsNotificationResultType.Delivered &&
+                i.Arguments[2] is string gatewayReference && gatewayReference == smsSendOperationResult.GatewayReference),
+            TimeSpan.FromSeconds(15),
+            TimeSpan.FromMilliseconds(1000));
 
         await smsStatusConsumer.StopAsync(CancellationToken.None);
 
         // Assert
+        var suppressionKey = $"GatewayReference:{smsSendOperationResult.GatewayReference}";
+        Assert.True(memoryCache.TryGetValue(suppressionKey, out _), "The suppression key was not added to the memory cache.");
+
         logger.Verify(
             e => e.Log(
                 LogLevel.Information,
@@ -153,9 +164,6 @@ public class NotificationStatusConsumerBaseTests
 
         producer.Verify(e => e.ProduceAsync(kafkaSettings.Value.SmsStatusUpdatedTopicName, It.Is<string>(e => e.Equals(deliveryReportMessage))), Times.AtLeastOnce());
         smsNotificationRepository.Verify(e => e.UpdateSendStatus(null, SmsNotificationResultType.Delivered, smsSendOperationResult.GatewayReference), Times.AtLeastOnce());
-
-        var suppressionKey = $"GatewayReference:{smsSendOperationResult.GatewayReference}";
-        Assert.True(memoryCache.TryGetValue(suppressionKey, out _), "The suppression key was not added to the memory cache.");
     }
 
     [Fact]
@@ -209,6 +217,9 @@ public class NotificationStatusConsumerBaseTests
         await emailStatusConsumer.StopAsync(CancellationToken.None);
 
         // Assert
+        var suppressionKey = $"OperationId:{emailSendOperationResult.OperationId}";
+        Assert.True(memoryCache.TryGetValue(suppressionKey, out _), "The suppression key was not added to the memory cache.");
+
         logger.Verify(
             e => e.Log(
                 LogLevel.Information,
@@ -220,9 +231,6 @@ public class NotificationStatusConsumerBaseTests
 
         producer.Verify(e => e.ProduceAsync(kafkaSettings.Value.EmailStatusUpdatedTopicName, It.Is<string>(e => e.Equals(deliveryReportMessage))), Times.AtLeastOnce());
         emailNotificationRepository.Verify(e => e.UpdateSendStatus(null, EmailNotificationResultType.Delivered, emailSendOperationResult.OperationId), Times.AtLeastOnce());
-
-        var suppressionKey = $"OperationId:{emailSendOperationResult.OperationId}";
-        Assert.True(memoryCache.TryGetValue(suppressionKey, out _), "The suppression key was not added to the memory cache.");
     }
 
     /// <summary>
