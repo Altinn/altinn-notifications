@@ -196,6 +196,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
 
         // Act
         await emailStatusConsumer.StartAsync(CancellationToken.None);
+        await Task.Delay(250);
 
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
 
