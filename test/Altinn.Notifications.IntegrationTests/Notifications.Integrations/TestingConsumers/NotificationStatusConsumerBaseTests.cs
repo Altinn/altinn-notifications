@@ -60,7 +60,7 @@ public class NotificationStatusConsumerBaseTests
             }),
             emailNotificationRepository.Object);
 
-        var emailStatusConsumer = new EmailStatusConsumer(producer.Object, memoryCache, kafkaSettings, logger.Object, emailNotificationService);
+        using var emailStatusConsumer = new EmailStatusConsumer(producer.Object, memoryCache, kafkaSettings, logger.Object, emailNotificationService);
 
         // Act
         await emailStatusConsumer.StartAsync(CancellationToken.None);
@@ -129,7 +129,7 @@ public class NotificationStatusConsumerBaseTests
                 SmsQueueTopicName = kafkaSettings.Value.SmsStatusUpdatedTopicName
             }));
 
-        var smsStatusConsumer = new SmsStatusConsumer(producer.Object, memoryCache, kafkaSettings, logger.Object, smsNotificationService);
+        using var smsStatusConsumer = new SmsStatusConsumer(producer.Object, memoryCache, kafkaSettings, logger.Object, smsNotificationService);
 
         // Act
         await smsStatusConsumer.StartAsync(CancellationToken.None);
@@ -196,7 +196,7 @@ public class NotificationStatusConsumerBaseTests
             }),
             emailNotificationRepository.Object);
 
-        var emailStatusConsumer = new EmailStatusConsumer(producer.Object, memoryCache, kafkaSettings, logger.Object, emailNotificationService);
+        using var emailStatusConsumer = new EmailStatusConsumer(producer.Object, memoryCache, kafkaSettings, logger.Object, emailNotificationService);
 
         // Act
         await emailStatusConsumer.StartAsync(CancellationToken.None);
