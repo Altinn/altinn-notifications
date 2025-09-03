@@ -20,8 +20,25 @@ using Xunit.Sdk;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.TestingConsumers;
 
-public class NotificationStatusConsumerBaseTests
+public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 {
+    /// <summary>
+    /// Called immediately after the class has been created, before it is used.
+    /// </summary>
+    /// <returns></returns>
+    public Task InitializeAsync()
+    {
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Called when an object is no longer needed.
+    /// </summary>
+    public async Task DisposeAsync()
+    {
+        await Dispose(true);
+    }
+
     [Fact]
     public async Task ProcessEmailDeliveryReport_WhenUnexpectedException_LogsErrorAndRetries()
     {
@@ -231,6 +248,17 @@ public class NotificationStatusConsumerBaseTests
 
         producer.Verify(e => e.ProduceAsync(kafkaSettings.Value.EmailStatusUpdatedTopicName, It.Is<string>(e => e.Equals(deliveryReportMessage))), Times.AtLeastOnce());
         emailNotificationRepository.Verify(e => e.UpdateSendStatus(null, EmailNotificationResultType.Delivered, emailSendOperationResult.OperationId), Times.AtLeastOnce());
+    }
+
+    /// <summary>
+    /// Releases unmanaged and - optionally - managed resources.
+    /// </summary>
+    /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
+    protected virtual async Task Dispose(bool disposing)
+    {
+        await KafkaUtil.DeleteTopicAsync("altinn.notifications.email.queue");
+        await KafkaUtil.DeleteTopicAsync("altinn.notifications.sms.status.updated");
+        await KafkaUtil.DeleteTopicAsync("altinn.notifications.email.status.updated");
     }
 
     /// <summary>
