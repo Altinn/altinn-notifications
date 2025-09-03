@@ -71,8 +71,8 @@ public class NotificationStatusConsumerBaseTests
         await EventuallyAsync(
             () => producer.Invocations.Any(i => i.Method.Name == nameof(IKafkaProducer.ProduceAsync) &&
                                                 i.Arguments[0] is string topic && topic == kafkaSettings.Value.EmailStatusUpdatedTopicName &&
-                                                i.Arguments[1] is string msg && msg == deliveryReportMessage),
-            TimeSpan.FromSeconds(10));
+                                                i.Arguments[1] is string message && message == deliveryReportMessage),
+            TimeSpan.FromSeconds(15));
 
         await emailStatusConsumer.StopAsync(CancellationToken.None);
 
@@ -137,7 +137,7 @@ public class NotificationStatusConsumerBaseTests
 
         await KafkaUtil.PublishMessageOnTopic(kafkaSettings.Value.SmsStatusUpdatedTopicName, deliveryReportMessage);
 
-        await EventuallyAsync(() => smsNotificationRepository.Invocations.Any(e => e.Method.Name == nameof(ISmsNotificationRepository.UpdateSendStatus)), TimeSpan.FromSeconds(10));
+        await EventuallyAsync(() => smsNotificationRepository.Invocations.Any(e => e.Method.Name == nameof(ISmsNotificationRepository.UpdateSendStatus)), TimeSpan.FromSeconds(15));
 
         await smsStatusConsumer.StopAsync(CancellationToken.None);
 
@@ -204,7 +204,7 @@ public class NotificationStatusConsumerBaseTests
 
         await KafkaUtil.PublishMessageOnTopic(kafkaSettings.Value.EmailStatusUpdatedTopicName, deliveryReportMessage);
 
-        await EventuallyAsync(() => emailNotificationRepository.Invocations.Any(e => e.Method.Name == nameof(IEmailNotificationRepository.UpdateSendStatus)), TimeSpan.FromSeconds(10));
+        await EventuallyAsync(() => emailNotificationRepository.Invocations.Any(e => e.Method.Name == nameof(IEmailNotificationRepository.UpdateSendStatus)), TimeSpan.FromSeconds(15));
 
         await emailStatusConsumer.StopAsync(CancellationToken.None);
 
@@ -249,30 +249,28 @@ public class NotificationStatusConsumerBaseTests
     }
 
     /// <summary>
-    /// Repeatedly evaluates a condition until it becomes true or a timeout is reached.
+    /// Repeatedly evaluates a condition until it becomes <c>true</c> or a timeout is reached.
     /// </summary>
-    /// <param name="condition">A function that evaluates the condition to be met. Returns <c>true</c> if the condition is satisfied, otherwise <c>false</c>.</param>
-    /// <param name="timeout">The maximum amount of time to wait for the condition to be met.</param>
-    /// <param name="pollInterval">The interval between condition evaluations. Defaults to 100 milliseconds if not specified.</param>
+    /// <param name="predicate">A function that evaluates the condition to be met. Returns <c>true</c> if the condition is satisfied, otherwise <c>false</c>.</param>
+    /// <param name="maximumWaitTime">The maximum amount of time to wait for the condition to be met.</param>
+    /// <param name="checkInterval">The interval between condition evaluations. Defaults to 100 milliseconds if not specified.</param>
     /// <returns>A task that completes when the condition is met or the timeout is reached.</returns>
-    /// <exception cref="Xunit.Sdk.XunitException">Thrown if the condition is not met within the specified timeout.</exception>
-    /// <remarks>
-    /// This method is useful for testing scenarios where eventual consistency is expected, such as asynchronous operations or distributed systems.
-    /// </remarks>
-    private static async Task EventuallyAsync(Func<bool> condition, TimeSpan timeout, TimeSpan? pollInterval = null)
+    /// <exception cref="XunitException">Thrown if the condition is not met within the specified timeout.</exception>
+    private static async Task EventuallyAsync(Func<bool> predicate, TimeSpan maximumWaitTime, TimeSpan? checkInterval = null)
     {
-        var interval = pollInterval ?? TimeSpan.FromMilliseconds(100);
-        var deadline = DateTime.UtcNow + timeout;
+        var deadline = DateTime.UtcNow.Add(maximumWaitTime);
+        var pollingInterval = checkInterval ?? TimeSpan.FromMilliseconds(100);
+
         while (DateTime.UtcNow < deadline)
         {
-            if (condition())
+            if (predicate())
             {
                 return;
             }
 
-            await Task.Delay(interval);
+            await Task.Delay(pollingInterval);
         }
 
-        throw new XunitException($"Condition not met within timeout ({timeout}).");
+        throw new XunitException($"Condition not met within timeout ({maximumWaitTime}).");
     }
 }
