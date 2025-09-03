@@ -24,11 +24,21 @@ public interface ISmsNotificationService : INotificationService
     Task CreateNotification(Guid orderId, DateTime requestedSendTime, DateTime expiryDateTime, List<SmsAddressPoint> addressPoints, SmsRecipient recipient, int count, bool ignoreReservation = false);
 
     /// <summary>
-    /// Initiates the process of sending all ready-to-send SMS notifications.
+    /// Sends pending SMS notifications that are eligible under the specified sending time policy.
     /// </summary>
-    /// <param name="sendingTimePolicy">The sending time policy to filter the notifications. Defaults to daytime for SMS.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
-    Task SendNotifications(SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime);
+    /// <param name="cancellationToken">
+    /// A token to observe for cancellation.
+    /// </param>
+    /// <param name="sendingTimePolicy">
+    /// Policy that determines which notifications are eligible for processing (for example, Daytime or Anytime).
+    /// </param>
+    /// <returns>
+    /// A task that completes when processing finishes (no more eligible items or the processing window ends) or when cancellation is requested.
+    /// </returns>
+    /// <exception cref="OperationCanceledException">
+    /// Thrown if cancellation is requested before or during processing.
+    /// </exception>
+    Task SendNotifications(CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime);
 
     /// <summary>
     /// Updates the send status of an SMS notification based on the provided send operation result.
