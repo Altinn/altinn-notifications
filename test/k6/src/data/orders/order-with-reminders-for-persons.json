@@ -1,0 +1,49 @@
+{
+  "idempotencyId": "string",
+  "sendersReference": "string",
+  "requestedSendTime": "string",
+  "dialogportenAssociation": {
+    "dialogId": "string",
+    "transmissionId": "string"
+  },
+  "recipient": {
+    "recipientPerson": {
+      "ignoreReservation": true,
+      "channelSchema": "EmailPreferred",
+      "nationalIdentityNumber": "string",
+      "smsSettings": {
+        "sendingTimePolicy": "Daytime",
+        "body": "Dear $recipientName$, please check your email for an important update regarding your account $recipientNumber$. - Altinn Team"
+      },
+      "emailSettings": {
+        "contentType": "Html",
+        "sendingTimePolicy": "Anytime",
+        "subject": "Important Update Regarding Your Account",
+        "body": "Dear $recipientName$,\n\nWe wanted to inform you about an important update to your account $recipientNumber$. Please log in to your dashboard to review the changes.\n\nBest regards,\nAltinn Team"
+      }
+    }
+  },
+  "reminders": [
+    {
+      "delayDays": 15,
+      "sendersReference": "string",
+      "recipient": {
+        "recipientPerson": {
+          "ignoreReservation": true,
+          "channelSchema": "SmsPreferred",
+          "nationalIdentityNumber": "string",
+          "smsSettings": {
+            "sendingTimePolicy": "Daytime",
+            "body": "Dear $recipientName$, please check your email for an important update regarding your account $recipientNumber$. - Altinn Team"
+          },
+          "emailSettings": {
+            "contentType": "Html",
+            "sendingTimePolicy": "Anytime",
+            "subject": "Important Update Regarding Your Account",
+            "body": "Dear $recipientName$,\n\nWe wanted to inform you about an important update to your account $recipientNumber$. Please log in to your dashboard to review the changes.\n\nBest regards,\nAltinn Team"
+          }
+        }
+      }
+    }
+  ]
+}
