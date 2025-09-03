@@ -1,4 +1,5 @@
 ﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Orders;
@@ -282,7 +283,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UpdateSendStatus_WithEmptyGuid_ThrowsArgumentException()
+    public async Task UpdateSendStatus_WithInvalidNotificationId_ThrowsArgumentException()
     {
         // Arrange
         SmsNotificationRepository repo = (SmsNotificationRepository)ServiceUtil
@@ -390,6 +391,38 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
         int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
 
         Assert.Equal(1, actualCount);
+    }
+
+    [Fact]
+    public async Task UpdateSendStatus_UsingNonExistingGatewayRef_ThrowsSendStatusUpdateException()
+    {
+        // Arrange
+        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(simulateConsumers: true, simulateCronJob: true);
+        _orderIdsToDelete.Add(order.Id);
+
+        SmsNotificationRepository repo = (SmsNotificationRepository)ServiceUtil
+          .GetServices([typeof(ISmsNotificationRepository)])
+          .First(i => i.GetType() == typeof(SmsNotificationRepository));
+
+        string gatewayReference = Guid.NewGuid().ToString();
+        string nonExistingGatewayReference = Guid.NewGuid().ToString();
+
+        string setGateqwaySql = $@"Update notifications.smsnotifications 
+                SET gatewayreference = '{gatewayReference}'
+                WHERE alternateid = '{smsNotification.Id}'";
+
+        await PostgreUtil.RunSql(setGateqwaySql);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<SendStatusUpdateException>(async () =>
+        {
+            await repo.UpdateSendStatus(
+                notificationId: null,
+                gatewayReference: nonExistingGatewayReference,
+                result: SmsNotificationResultType.Delivered);
+        });
+
+        Assert.Equal($"Sms status update failed: GatewayReference='{nonExistingGatewayReference}' not found", exception.Message);
     }
 
     private static async Task<int> SelectOrdersCompletedCount(NotificationOrder order)
