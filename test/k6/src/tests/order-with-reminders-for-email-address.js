@@ -284,9 +284,6 @@ export default function (data) {
                 return processOrderChainPayload(orderType, orderChainPayload, post_duplicate_order, duplicateOrderDuration);
             }
 
-            case "missingResource":
-                return processOrderChainPayload(orderType, orderChainPayload, post_order_without_resource_id, missingResourceOrderDuration);
-
             default:
                 return undefined;
         }
@@ -320,7 +317,6 @@ export function handleSummary(testResults) {
  * - `post_valid_order`: Tracks metrics for valid orders.
  * - `post_invalid_order`: Tracks metrics for invalid orders.
  * - `post_duplicate_order`: Tracks metrics for duplicate orders.
- * - `post_order_without_resource_id`: Tracks metrics for orders missing a resource identifier.
  *
  * @function setEmptyThresholds
  * @param {string[]} labels - The array of labels for which thresholds are being configured.
@@ -359,7 +355,7 @@ function getFutureDate(daysToAdd = 0) {
  */
 function createUniqueOrderChainPayload(data) {
     return {
-        ...data.orderChainRequest,
+        ...data.orderChainPayload,
         idempotencyId: uuidv4()
     };
 }
