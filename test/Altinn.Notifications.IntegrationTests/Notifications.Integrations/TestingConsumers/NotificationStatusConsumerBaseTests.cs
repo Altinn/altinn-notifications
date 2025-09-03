@@ -22,6 +22,10 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
 
 public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 {
+    private const string _emailTopic = "altinn.notifications.email.queue";
+    private const string _smsStatusTopic = "altinn.notifications.sms.status.updated";
+    private const string _emailStatusTopic = "altinn.notifications.email.status.updated";
+
     /// <summary>
     /// Called immediately after the class has been created, before it is used.
     /// </summary>
@@ -256,9 +260,9 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
     /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
     protected virtual async Task Dispose(bool disposing)
     {
-        await KafkaUtil.DeleteTopicAsync("altinn.notifications.email.queue");
-        await KafkaUtil.DeleteTopicAsync("altinn.notifications.sms.status.updated");
-        await KafkaUtil.DeleteTopicAsync("altinn.notifications.email.status.updated");
+        await KafkaUtil.DeleteTopicAsync(_emailTopic);
+        await KafkaUtil.DeleteTopicAsync(_smsStatusTopic);
+        await KafkaUtil.DeleteTopicAsync(_emailStatusTopic);
     }
 
     /// <summary>
@@ -277,9 +281,9 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             Admin = new AdminSettings(),
             BrokerAddress = "localhost:9092",
             Producer = new ProducerSettings(),
-            EmailQueueTopicName = "altinn.notifications.email.queue",
-            SmsStatusUpdatedTopicName = "altinn.notifications.sms.status.updated",
-            EmailStatusUpdatedTopicName = "altinn.notifications.email.status.updated",
+            EmailQueueTopicName = _emailTopic,
+            SmsStatusUpdatedTopicName = _smsStatusTopic,
+            EmailStatusUpdatedTopicName = _emailStatusTopic,
             Consumer = new ConsumerSettings { GroupId = $"altinn-notifications-{Guid.NewGuid():N}" }
         });
     }
