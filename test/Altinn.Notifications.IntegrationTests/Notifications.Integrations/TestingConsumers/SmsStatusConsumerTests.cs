@@ -40,6 +40,8 @@ public class SmsStatusConsumerTests : IAsyncLifetime
 
         // Act
         await consumerService.StartAsync(CancellationToken.None);
+        await Task.Delay(250);
+
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
 
         // Wait for SMS notification status to become Accepted
@@ -89,6 +91,8 @@ public class SmsStatusConsumerTests : IAsyncLifetime
 
         // Act
         await consumerService.StartAsync(CancellationToken.None);
+        await Task.Delay(250);
+
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, string.Empty);
 
         // Wait until order is processed, capture status once when it happens
