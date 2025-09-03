@@ -47,9 +47,9 @@ public class SmsStatusConsumerTests : IAsyncLifetime
         // Wait for SMS notification status to become Accepted
         string? observedSmsStatus = null;
         await EventuallyAsync(
-            () =>
+            async () =>
             {
-                observedSmsStatus = SelectSmsNotificationStatus(notification.Id).GetAwaiter().GetResult();
+                observedSmsStatus = await SelectSmsNotificationStatus(notification.Id);
                 return string.Equals(observedSmsStatus, SmsNotificationResultType.Accepted.ToString(), StringComparison.Ordinal);
             },
             TimeSpan.FromSeconds(15),
@@ -58,9 +58,9 @@ public class SmsStatusConsumerTests : IAsyncLifetime
         // Then wait for order processing status to reach Processed
         long processedOrderCount = -1;
         await EventuallyAsync(
-            () =>
+            async () =>
             {
-                processedOrderCount = SelectProcessedOrderCount(notification.Id).GetAwaiter().GetResult();
+                processedOrderCount = await SelectProcessedOrderCount(notification.Id);
                 return processedOrderCount == 1;
             },
             TimeSpan.FromSeconds(15),
@@ -99,13 +99,13 @@ public class SmsStatusConsumerTests : IAsyncLifetime
         long processedOrderCount = -1;
         string? observedSmsStatus = null;
         await EventuallyAsync(
-            () =>
+            async () =>
             {
-                processedOrderCount = SelectProcessedOrderCount(notification.Id).GetAwaiter().GetResult();
+                processedOrderCount = await SelectProcessedOrderCount(notification.Id);
 
                 if (processedOrderCount == 1)
                 {
-                    observedSmsStatus = SelectSmsNotificationStatus(notification.Id).GetAwaiter().GetResult();
+                    observedSmsStatus = await SelectSmsNotificationStatus(notification.Id);
                     return true;
                 }
 
@@ -149,9 +149,9 @@ public class SmsStatusConsumerTests : IAsyncLifetime
 
         int statusFeedCount = -1;
         await EventuallyAsync(
-            () =>
+            async () =>
             {
-                statusFeedCount = PostgreUtil.SelectStatusFeedEntryCount(order.Id).GetAwaiter().GetResult();
+                statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
                 return statusFeedCount == 1;
             },
             TimeSpan.FromSeconds(15),
@@ -177,7 +177,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
             .First(consumer => consumer is SmsStatusConsumer);
 
         (NotificationOrder order, SmsNotification notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(forceSendersReferenceToBeNull: true, simulateCronJob: true);
-        
+
         SmsSendOperationResult sendOperationResult = new()
         {
             NotificationId = notification.Id,
@@ -191,9 +191,9 @@ public class SmsStatusConsumerTests : IAsyncLifetime
 
         int statusFeedCount = -1;
         await EventuallyAsync(
-            () =>
+            async () =>
             {
-                statusFeedCount = PostgreUtil.SelectStatusFeedEntryCount(order.Id).GetAwaiter().GetResult();
+                statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
                 return statusFeedCount == 1;
             },
             TimeSpan.FromSeconds(15),
@@ -239,21 +239,20 @@ public class SmsStatusConsumerTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// Repeatedly evaluates a condition until it becomes <c>true</c> or a timeout is reached.
+    /// Repeatedly evaluates a condition until it becomes true or a timeout is reached.
     /// </summary>
-    /// <param name="predicate">A function that evaluates the condition to be met. Returns <c>true</c> if the condition is satisfied, otherwise <c>false</c>.</param>
+    /// <param name="predicate">An async function that evaluates the condition to be met. Returns true if the condition is satisfied, otherwise false.</param>
     /// <param name="maximumWaitTime">The maximum amount of time to wait for the condition to be met.</param>
     /// <param name="checkInterval">The interval between condition evaluations. Defaults to 100 milliseconds if not specified.</param>
-    /// <returns>A task that completes when the condition is met or the timeout is reached.</returns>
     /// <exception cref="XunitException">Thrown if the condition is not met within the specified timeout.</exception>
-    private static async Task EventuallyAsync(Func<bool> predicate, TimeSpan maximumWaitTime, TimeSpan? checkInterval = null)
+    private static async Task EventuallyAsync(Func<Task<bool>> predicate, TimeSpan maximumWaitTime, TimeSpan? checkInterval = null)
     {
         var deadline = DateTime.UtcNow.Add(maximumWaitTime);
         var pollingInterval = checkInterval ?? TimeSpan.FromMilliseconds(100);
 
         while (DateTime.UtcNow < deadline)
         {
-            if (predicate())
+            if (await predicate())
             {
                 return;
             }
