@@ -26,8 +26,8 @@ public class SmsStatusConsumerTests : IAsyncLifetime
         };
 
         using SmsStatusConsumer consumerService = (SmsStatusConsumer)ServiceUtil
-                                                  .GetServices([typeof(IHostedService)], vars)
-                                                  .First(s => s.GetType() == typeof(SmsStatusConsumer))!;
+            .GetServices([typeof(IHostedService)], vars)
+            .First(consumer => consumer is SmsStatusConsumer);
 
         (_, SmsNotification notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(_sendersRef, simulateCronJob: true);
 
@@ -38,27 +38,36 @@ public class SmsStatusConsumerTests : IAsyncLifetime
             SendResult = SmsNotificationResultType.Accepted
         };
 
-        // Act (publish after consumer starts; then wait until effects are observed)
+        // Act
         await consumerService.StartAsync(CancellationToken.None);
-        await Task.Delay(250);
-
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
 
+        // Wait for SMS notification status to become Accepted
+        string? observedSmsStatus = null;
         await EventuallyAsync(
-            async () =>
+            () =>
             {
-                string status = await SelectSmsNotificationStatus(notification.Id);
-                return status == SmsNotificationResultType.Accepted.ToString();
+                observedSmsStatus = SelectSmsNotificationStatus(notification.Id).GetAwaiter().GetResult();
+                return string.Equals(observedSmsStatus, SmsNotificationResultType.Accepted.ToString(), StringComparison.Ordinal);
             },
-            TimeSpan.FromSeconds(10));
+            TimeSpan.FromSeconds(15),
+            TimeSpan.FromMilliseconds(1000));
+
+        // Then wait for order processing status to reach Processed
+        long processedOrderCount = -1;
+        await EventuallyAsync(
+            () =>
+            {
+                processedOrderCount = SelectProcessedOrderCount(notification.Id).GetAwaiter().GetResult();
+                return processedOrderCount == 1;
+            },
+            TimeSpan.FromSeconds(15),
+            TimeSpan.FromMilliseconds(1000));
 
         await consumerService.StopAsync(CancellationToken.None);
 
         // Assert
-        string smsNotificationStatus = await SelectSmsNotificationStatus(notification.Id);
-        Assert.Equal(SmsNotificationResultType.Accepted.ToString(), smsNotificationStatus);
-
-        long processedOrderCount = await SelectProcessedOrderCount(notification.Id);
+        Assert.Equal(SmsNotificationResultType.Accepted.ToString(), observedSmsStatus);
         Assert.Equal(1, processedOrderCount);
     }
 
@@ -73,34 +82,39 @@ public class SmsStatusConsumerTests : IAsyncLifetime
         };
 
         using SmsStatusConsumer consumerService = (SmsStatusConsumer)ServiceUtil
-                                            .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
-                                            .First(s => s.GetType() == typeof(SmsStatusConsumer))!;
+            .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
+            .First(consumer => consumer is SmsStatusConsumer);
 
         (_, SmsNotification notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(_sendersRef, simulateCronJob: true, simulateConsumers: true);
 
         // Act
         await consumerService.StartAsync(CancellationToken.None);
-        await Task.Delay(250);
-
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, string.Empty);
 
+        // Wait until order is processed, capture status once when it happens
+        long processedOrderCount = -1;
+        string? observedSmsStatus = null;
         await EventuallyAsync(
-            async () =>
+            () =>
             {
-                string status = await SelectSmsNotificationStatus(notification.Id);
-                long processed = await SelectProcessedOrderCount(notification.Id);
-                return status == SmsNotificationResultType.New.ToString() && processed == 1;
+                processedOrderCount = SelectProcessedOrderCount(notification.Id).GetAwaiter().GetResult();
+
+                if (processedOrderCount == 1)
+                {
+                    observedSmsStatus = SelectSmsNotificationStatus(notification.Id).GetAwaiter().GetResult();
+                    return true;
+                }
+
+                return false;
             },
-            TimeSpan.FromSeconds(10));
+            TimeSpan.FromSeconds(15),
+            TimeSpan.FromMilliseconds(1000));
 
         await consumerService.StopAsync(CancellationToken.None);
 
         // Assert
-        string smsNotificationStatus = await SelectSmsNotificationStatus(notification.Id);
-        Assert.Equal(SmsNotificationResultType.New.ToString(), smsNotificationStatus);
-
-        long processedOrderCount = await SelectProcessedOrderCount(notification.Id);
         Assert.Equal(1, processedOrderCount);
+        Assert.Equal(SmsNotificationResultType.New.ToString(), observedSmsStatus);
     }
 
     [Fact]
@@ -113,9 +127,11 @@ public class SmsStatusConsumerTests : IAsyncLifetime
             { "KafkaSettings__Admin__TopicList", $"[\"{_statusUpdatedTopicName}\"]" }
         };
         using SmsStatusConsumer sut = (SmsStatusConsumer)ServiceUtil
-                                                    .GetServices([typeof(IHostedService)], vars)
-                                                    .First(s => s.GetType() == typeof(SmsStatusConsumer))!;
+            .GetServices([typeof(IHostedService)], vars)
+            .First(consumer => consumer is SmsStatusConsumer);
+
         (NotificationOrder order, SmsNotification notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(_sendersRef, simulateCronJob: true);
+
         SmsSendOperationResult sendOperationResult = new()
         {
             NotificationId = notification.Id,
@@ -125,23 +141,22 @@ public class SmsStatusConsumerTests : IAsyncLifetime
 
         // Act
         await sut.StartAsync(CancellationToken.None);
-        await Task.Delay(250);
-
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
 
+        int statusFeedCount = -1;
         await EventuallyAsync(
-            async () =>
+            () =>
             {
-                int count = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
-                return count == 1;
+                statusFeedCount = PostgreUtil.SelectStatusFeedEntryCount(order.Id).GetAwaiter().GetResult();
+                return statusFeedCount == 1;
             },
-            TimeSpan.FromSeconds(10));
+            TimeSpan.FromSeconds(15),
+            TimeSpan.FromMilliseconds(1000));
 
         await sut.StopAsync(CancellationToken.None);
 
         // Assert
-        int count = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
-        Assert.Equal(1, count);
+        Assert.Equal(1, statusFeedCount);
     }
 
     [Fact]
@@ -154,9 +169,11 @@ public class SmsStatusConsumerTests : IAsyncLifetime
             { "KafkaSettings__Admin__TopicList", $"[\"{_statusUpdatedTopicName}\"]" }
         };
         using SmsStatusConsumer sut = (SmsStatusConsumer)ServiceUtil
-                                                    .GetServices([typeof(IHostedService)], vars)
-                                                    .First(s => s.GetType() == typeof(SmsStatusConsumer))!;
+            .GetServices([typeof(IHostedService)], vars)
+            .First(consumer => consumer is SmsStatusConsumer);
+
         (NotificationOrder order, SmsNotification notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(forceSendersReferenceToBeNull: true, simulateCronJob: true);
+        
         SmsSendOperationResult sendOperationResult = new()
         {
             NotificationId = notification.Id,
@@ -166,23 +183,22 @@ public class SmsStatusConsumerTests : IAsyncLifetime
 
         // Act
         await sut.StartAsync(CancellationToken.None);
-        await Task.Delay(250);
-
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
 
+        int statusFeedCount = -1;
         await EventuallyAsync(
-            async () =>
+            () =>
             {
-                int count = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
-                return count == 1;
+                statusFeedCount = PostgreUtil.SelectStatusFeedEntryCount(order.Id).GetAwaiter().GetResult();
+                return statusFeedCount == 1;
             },
-            TimeSpan.FromSeconds(10));
+            TimeSpan.FromSeconds(15),
+            TimeSpan.FromMilliseconds(1000));
 
         await sut.StopAsync(CancellationToken.None);
 
         // Assert
-        int count = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
-        Assert.Equal(1, count);
+        Assert.Equal(1, statusFeedCount);
 
         // cleanup
         await PostgreUtil.DeleteOrderFromDb(order.Id);
@@ -218,20 +234,29 @@ public class SmsStatusConsumerTests : IAsyncLifetime
         return await PostgreUtil.RunSqlReturnOutput<string>(sql);
     }
 
-    private static async Task EventuallyAsync(Func<Task<bool>> condition, TimeSpan timeout, TimeSpan? pollInterval = null)
+    /// <summary>
+    /// Repeatedly evaluates a condition until it becomes <c>true</c> or a timeout is reached.
+    /// </summary>
+    /// <param name="predicate">A function that evaluates the condition to be met. Returns <c>true</c> if the condition is satisfied, otherwise <c>false</c>.</param>
+    /// <param name="maximumWaitTime">The maximum amount of time to wait for the condition to be met.</param>
+    /// <param name="checkInterval">The interval between condition evaluations. Defaults to 100 milliseconds if not specified.</param>
+    /// <returns>A task that completes when the condition is met or the timeout is reached.</returns>
+    /// <exception cref="XunitException">Thrown if the condition is not met within the specified timeout.</exception>
+    private static async Task EventuallyAsync(Func<bool> predicate, TimeSpan maximumWaitTime, TimeSpan? checkInterval = null)
     {
-        var interval = pollInterval ?? TimeSpan.FromMilliseconds(100);
-        var deadline = DateTime.UtcNow + timeout;
+        var deadline = DateTime.UtcNow.Add(maximumWaitTime);
+        var pollingInterval = checkInterval ?? TimeSpan.FromMilliseconds(100);
+
         while (DateTime.UtcNow < deadline)
         {
-            if (await condition())
+            if (predicate())
             {
                 return;
             }
 
-            await Task.Delay(interval);
+            await Task.Delay(pollingInterval);
         }
 
-        throw new XunitException($"Condition not met within timeout ({timeout}).");
+        throw new XunitException($"Condition not met within timeout ({maximumWaitTime}).");
     }
 }
