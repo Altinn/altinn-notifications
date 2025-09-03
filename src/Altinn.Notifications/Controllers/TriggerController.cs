@@ -86,19 +86,6 @@ public class TriggerController : ControllerBase
     }
 
     /// <summary>
-    /// Endpoint for starting the processing of sms that are ready to be sent with policy anytime
-    /// </summary>
-    /// <returns>A <see cref="Task{TResult}"/> representing the result of the asynchronous operation.</returns>
-    [HttpPost]
-    [Route("sendsmsanytime")]
-    [Consumes("application/json")]
-    public async Task<ActionResult> Trigger_SendSmsNotificationsAnytime(CancellationToken cancellationToken = default)
-    {
-        await _smsNotificationService.SendNotifications(cancellationToken, SendingTimePolicy.Anytime);
-        return Ok();
-    }
-
-    /// <summary>
     /// Endpoint for deleting old status feed records (older than 90 days)
     /// </summary>
     [HttpPost]
@@ -119,9 +106,36 @@ public class TriggerController : ControllerBase
     }
 
     /// <summary>
-    /// Endpoint for starting the processing of sms that are ready to be sent with policy daytime
-    /// Automatically filtered to process daytime sms only
+    /// Initiates processing of SMS notifications that are configured to be sent at any time of day.
     /// </summary>
+    /// <param name="cancellationToken">
+    /// Token to monitor for cancellation requests from the client or server shutdown.
+    /// When canceled, processing will stop after the current batch is complete.
+    /// </param>
+    /// <returns>
+    /// 200 OK when processing completes successfully or is canceled gracefully.
+    /// 500 Internal Server Error if an unhandled exception occurs.
+    /// </returns>
+    [HttpPost]
+    [Route("sendsmsanytime")]
+    [Consumes("application/json")]
+    public async Task<ActionResult> Trigger_SendSmsNotificationsAnytime(CancellationToken cancellationToken = default)
+    {
+        await _smsNotificationService.SendNotifications(cancellationToken, SendingTimePolicy.Anytime);
+        return Ok();
+    }
+
+    /// <summary>
+    /// Initiates processing of SMS notifications that are configured to be sent only during business hours.
+    /// </summary>
+    /// <param name="cancellationToken">
+    /// Token to monitor for cancellation requests from the client or server shutdown.
+    /// When canceled, processing will stop after the current batch is complete.
+    /// </param>
+    /// <returns>
+    /// 200 OK when processing completes successfully, is canceled gracefully, or is skipped due to schedule restrictions.
+    /// 500 Internal Server Error if an unhandled exception occurs.
+    /// </returns>
     [HttpPost]
     [Route("sendsms")]
     [Route("sendsmsdaytime")]
