@@ -85,7 +85,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
           .First(i => i.GetType() == typeof(SmsNotificationRepository));
 
         // Act
-        List<Sms> smsToBeSent = await repo.GetNewNotifications();
+        List<Sms> smsToBeSent = await repo.GetNewNotifications(CancellationToken.None);
 
         // Assert
         Assert.Contains(smsToBeSent, s => s.NotificationId == smsNotification.Id);
@@ -103,7 +103,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
           .First(i => i.GetType() == typeof(SmsNotificationRepository));
 
         // Act
-        List<Sms> smsToBeSent = await repo.GetNewNotifications(SendingTimePolicy.Anytime);
+        List<Sms> smsToBeSent = await repo.GetNewNotifications(CancellationToken.None, SendingTimePolicy.Anytime);
 
         // Assert
         Assert.Contains(smsToBeSent, s => s.NotificationId == smsNotification.Id);

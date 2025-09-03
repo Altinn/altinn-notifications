@@ -21,7 +21,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     private const string _smsSourceIdentifier = "SMS";
     private readonly NpgsqlDataSource _dataSource;
 
-    private const string _getNewSmsNotificationsSql = "select * from notifications.getsms_statusnew_updatestatus($1)"; // (_sendingtimepolicy) this is now calling an overload function with the sending time policy parameter
+    private const string _claimSmsBatchForSending = "select * from notifications.claim_sms_batch_for_sending(@sendingtimepolicy, @batchsize)";
     private const string _getSmsNotificationRecipientsSql = "select * from notifications.getsmsrecipients_v2($1)"; // (_orderid)
     private const string _insertNewSmsNotificationSql = "call notifications.insertsmsnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _customizedbody, _result, _smscount, _resulttime, _expirytime)
 
@@ -97,17 +97,17 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     /// <inheritdoc/>   
     public async Task<List<Sms>> GetNewNotifications(CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime)
     {
-        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getNewSmsNotificationsSql);
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_claimSmsBatchForSending);
 
         List<Sms> readyToSendSMS = [];
 
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Integer, (int)sendingTimePolicy);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Integer, 50);
+
         await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken))
         {
             while (await reader.ReadAsync(cancellationToken))
             {
-                cancellationToken.ThrowIfCancellationRequested();
-
                 var sms = new Sms(
                     reader.GetValue<Guid>("alternateid"),
                     reader.GetValue<string>("sendernumber"),
