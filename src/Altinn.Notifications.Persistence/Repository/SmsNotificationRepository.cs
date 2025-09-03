@@ -101,7 +101,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
 
         List<Sms> readyToSendSMS = [];
 
-        pgcom.Parameters.AddWithValue("@batchsize", NpgsqlDbType.Text, 50);
+        pgcom.Parameters.AddWithValue("@batchsize", NpgsqlDbType.Integer, 50);
         pgcom.Parameters.AddWithValue("@sendingtimepolicy", NpgsqlDbType.Integer, (int)sendingTimePolicy);
 
         await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken))
