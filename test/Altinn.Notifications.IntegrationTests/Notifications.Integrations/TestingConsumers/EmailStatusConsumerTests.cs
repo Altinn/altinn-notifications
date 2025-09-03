@@ -25,9 +25,11 @@ public class EmailStatusConsumerTests : IAsyncLifetime
             { "KafkaSettings__EmailStatusUpdatedTopicName", _statusUpdatedTopicName },
             { "KafkaSettings__Admin__TopicList", $"[\"{_statusUpdatedTopicName}\"]" }
         };
-        using EmailStatusConsumer emailStatusConsumer = (EmailStatusConsumer)ServiceUtil
+
+        using EmailStatusConsumer emailStatusConsumer = ServiceUtil
             .GetServices([typeof(IHostedService)], vars)
-            .First(consumer => consumer is EmailStatusConsumer);
+            .OfType<EmailStatusConsumer>()
+            .First();
 
         (NotificationOrder order, EmailNotification notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(_sendersRef, simulateCronJob: true);
         EmailSendOperationResult sendOperationResult = new()
@@ -69,9 +71,10 @@ public class EmailStatusConsumerTests : IAsyncLifetime
             { "KafkaSettings__Admin__TopicList", $"[\"{_statusUpdatedTopicName}\"]" }
         };
 
-        using EmailStatusConsumer consumerService = (EmailStatusConsumer)ServiceUtil
+        using EmailStatusConsumer emailStatusConsumer = ServiceUtil
             .GetServices([typeof(IHostedService)], vars)
-            .First(consumer => consumer is EmailStatusConsumer);
+            .OfType<EmailStatusConsumer>()
+            .First();
 
         (_, EmailNotification notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(_sendersRef, simulateCronJob: true);
 
@@ -83,7 +86,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         };
 
         // Act
-        await consumerService.StartAsync(CancellationToken.None);
+        await emailStatusConsumer.StartAsync(CancellationToken.None);
         await Task.Delay(250);
 
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
@@ -110,7 +113,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
             TimeSpan.FromSeconds(15),
             TimeSpan.FromMilliseconds(1000));
 
-        await consumerService.StopAsync(CancellationToken.None);
+        await emailStatusConsumer.StopAsync(CancellationToken.None);
 
         // Assert using captured values
         Assert.Equal(1, processedOrderCount);
@@ -127,9 +130,10 @@ public class EmailStatusConsumerTests : IAsyncLifetime
             { "KafkaSettings__Admin__TopicList", $"[\"{_statusUpdatedTopicName}\"]" }
         };
 
-        using EmailStatusConsumer emailStatusConsumer = (EmailStatusConsumer)ServiceUtil
+        using EmailStatusConsumer emailStatusConsumer = ServiceUtil
             .GetServices([typeof(IHostedService)], vars)
-            .First(consumer => consumer is EmailStatusConsumer);
+            .OfType<EmailStatusConsumer>()
+            .First();
 
         (NotificationOrder order, EmailNotification notification) =
             await PostgreUtil.PopulateDBWithOrderAndEmailNotification(forceSendersReferenceToBeNull: true, simulateCronJob: true);
@@ -184,9 +188,11 @@ public class EmailStatusConsumerTests : IAsyncLifetime
             { "KafkaSettings__EmailStatusUpdatedTopicName", _statusUpdatedTopicName },
             { "KafkaSettings__Admin__TopicList", $"[\"{_statusUpdatedTopicName}\"]" }
         };
-        using EmailStatusConsumer emailStatusConsumer = (EmailStatusConsumer)ServiceUtil
+
+        using EmailStatusConsumer emailStatusConsumer = ServiceUtil
             .GetServices([typeof(IHostedService)], vars)
-            .First(consumer => consumer is EmailStatusConsumer);
+            .OfType<EmailStatusConsumer>()
+            .First();
 
         (_, EmailNotification notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(_sendersRef, simulateCronJob: true);
         EmailSendOperationResult sendOperationResult = new()

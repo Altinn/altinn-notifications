@@ -25,9 +25,10 @@ public class SmsStatusConsumerTests : IAsyncLifetime
             { "KafkaSettings__Admin__TopicList", $"[\"{_statusUpdatedTopicName}\"]" }
         };
 
-        using SmsStatusConsumer consumerService = (SmsStatusConsumer)ServiceUtil
+        using SmsStatusConsumer smsStatusConsumer = ServiceUtil
             .GetServices([typeof(IHostedService)], vars)
-            .First(consumer => consumer is SmsStatusConsumer);
+            .OfType<SmsStatusConsumer>()
+            .First();
 
         (_, SmsNotification notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(_sendersRef, simulateCronJob: true);
 
@@ -39,7 +40,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
         };
 
         // Act
-        await consumerService.StartAsync(CancellationToken.None);
+        await smsStatusConsumer.StartAsync(CancellationToken.None);
         await Task.Delay(250);
 
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
@@ -66,7 +67,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
             TimeSpan.FromSeconds(15),
             TimeSpan.FromMilliseconds(1000));
 
-        await consumerService.StopAsync(CancellationToken.None);
+        await smsStatusConsumer.StopAsync(CancellationToken.None);
 
         // Assert
         Assert.Equal(SmsNotificationResultType.Accepted.ToString(), observedSmsStatus);
@@ -83,14 +84,15 @@ public class SmsStatusConsumerTests : IAsyncLifetime
             { "KafkaSettings__Admin__TopicList", $"[\"{_statusUpdatedTopicName}\"]" }
         };
 
-        using SmsStatusConsumer consumerService = (SmsStatusConsumer)ServiceUtil
-            .GetServices(new List<Type>() { typeof(IHostedService) }, vars)
-            .First(consumer => consumer is SmsStatusConsumer);
+        using SmsStatusConsumer smsStatusConsumer = ServiceUtil
+            .GetServices([typeof(IHostedService)], vars)
+            .OfType<SmsStatusConsumer>()
+            .First();
 
         (_, SmsNotification notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(_sendersRef, simulateCronJob: true, simulateConsumers: true);
 
         // Act
-        await consumerService.StartAsync(CancellationToken.None);
+        await smsStatusConsumer.StartAsync(CancellationToken.None);
         await Task.Delay(250);
 
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, string.Empty);
@@ -114,7 +116,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
             TimeSpan.FromSeconds(15),
             TimeSpan.FromMilliseconds(1000));
 
-        await consumerService.StopAsync(CancellationToken.None);
+        await smsStatusConsumer.StopAsync(CancellationToken.None);
 
         // Assert
         Assert.Equal(1, processedOrderCount);
@@ -130,9 +132,11 @@ public class SmsStatusConsumerTests : IAsyncLifetime
             { "KafkaSettings__SmsStatusUpdatedTopicName", _statusUpdatedTopicName },
             { "KafkaSettings__Admin__TopicList", $"[\"{_statusUpdatedTopicName}\"]" }
         };
-        using SmsStatusConsumer sut = (SmsStatusConsumer)ServiceUtil
+
+        using SmsStatusConsumer smsStatusConsumer = ServiceUtil
             .GetServices([typeof(IHostedService)], vars)
-            .First(consumer => consumer is SmsStatusConsumer);
+            .OfType<SmsStatusConsumer>()
+            .First();
 
         (NotificationOrder order, SmsNotification notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(_sendersRef, simulateCronJob: true);
 
@@ -144,7 +148,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
         };
 
         // Act
-        await sut.StartAsync(CancellationToken.None);
+        await smsStatusConsumer.StartAsync(CancellationToken.None);
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
 
         int statusFeedCount = -1;
@@ -157,7 +161,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
             TimeSpan.FromSeconds(15),
             TimeSpan.FromMilliseconds(1000));
 
-        await sut.StopAsync(CancellationToken.None);
+        await smsStatusConsumer.StopAsync(CancellationToken.None);
 
         // Assert
         Assert.Equal(1, statusFeedCount);
@@ -172,9 +176,11 @@ public class SmsStatusConsumerTests : IAsyncLifetime
             { "KafkaSettings__SmsStatusUpdatedTopicName", _statusUpdatedTopicName },
             { "KafkaSettings__Admin__TopicList", $"[\"{_statusUpdatedTopicName}\"]" }
         };
-        using SmsStatusConsumer sut = (SmsStatusConsumer)ServiceUtil
+
+        using SmsStatusConsumer smsStatusConsumer = ServiceUtil
             .GetServices([typeof(IHostedService)], vars)
-            .First(consumer => consumer is SmsStatusConsumer);
+            .OfType<SmsStatusConsumer>()
+            .First();
 
         (NotificationOrder order, SmsNotification notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(forceSendersReferenceToBeNull: true, simulateCronJob: true);
 
@@ -186,7 +192,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
         };
 
         // Act
-        await sut.StartAsync(CancellationToken.None);
+        await smsStatusConsumer.StartAsync(CancellationToken.None);
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
 
         int statusFeedCount = -1;
@@ -199,7 +205,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
             TimeSpan.FromSeconds(15),
             TimeSpan.FromMilliseconds(1000));
 
-        await sut.StopAsync(CancellationToken.None);
+        await smsStatusConsumer.StopAsync(CancellationToken.None);
 
         // Assert
         Assert.Equal(1, statusFeedCount);
