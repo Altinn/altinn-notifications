@@ -95,16 +95,19 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     }
 
     /// <inheritdoc/>   
-    public async Task<List<Sms>> GetNewNotifications(SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime)
+    public async Task<List<Sms>> GetNewNotifications(CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime)
     {
-        List<Sms> readyToSendSMS = [];
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getNewSmsNotificationsSql);
 
+        List<Sms> readyToSendSMS = [];
+
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Integer, (int)sendingTimePolicy);
-        await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync())
+        await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken))
         {
-            while (await reader.ReadAsync())
+            while (await reader.ReadAsync(cancellationToken))
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 var sms = new Sms(
                     reader.GetValue<Guid>("alternateid"),
                     reader.GetValue<string>("sendernumber"),

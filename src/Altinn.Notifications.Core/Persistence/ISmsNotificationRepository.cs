@@ -20,11 +20,21 @@ public interface ISmsNotificationRepository : INotificationRepository
     Task AddNotification(SmsNotification notification, DateTime expiry, int count);
 
     /// <summary>
-    /// Retrieves all SMS notifications that have the status 'New'.
+    /// Retrieves pending SMS notifications that are eligible under the specified sending time policy.
     /// </summary>
-    /// <param name="sendingTimePolicy">The sending time policy to filter the notifications. Defaults to daytime for sms</param>
-    /// <returns>A task that represents the asynchronous operation. The task result contains a list of new SMS notifications.</returns>
-    Task<List<Sms>> GetNewNotifications(SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime);
+    /// <param name="cancellationToken">
+    /// A token to observe for cancellation.
+    /// </param>
+    /// <param name="sendingTimePolicy">
+    /// Policy that determines which notifications are eligible for retrieval (for example, Daytime or Anytime).
+    /// </param>
+    /// <returns>
+    /// A task that completes when retrieval finishes (no more eligible items or the retrieval window ends) or when cancellation is requested.
+    /// </returns>
+    /// <exception cref="OperationCanceledException">
+    /// Thrown if cancellation is requested before or during retrieval.
+    /// </exception>
+    Task<List<Sms>> GetNewNotifications(CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime);
 
     /// <summary>
     /// Retrieves all processed SMS recipients for a specified order.
