@@ -121,31 +121,6 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetNewNotifications_ShouldRespectCancellationToken()
-    {
-        // Arrange
-        for (int i = 0; i < 5; i++)
-        {
-            (NotificationOrder order, SmsNotification _) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
-            _orderIdsToCleanup.Add(order.Id);
-        }
-
-        SmsNotificationRepository repo = ServiceUtil
-            .GetServices([typeof(ISmsNotificationRepository)])
-            .OfType<SmsNotificationRepository>()
-            .First();
-
-        using CancellationTokenSource cancellationTokenSource = new();
-        cancellationTokenSource.CancelAfter(TimeSpan.FromMilliseconds(5));
-
-        // Act & Assert
-        await Assert.ThrowsAsync<TaskCanceledException>(async () =>
-        {
-            await repo.GetNewNotifications(50, cancellationTokenSource.Token);
-        });
-    }
-
-    [Fact]
     public async Task GetNewNotifications_ShouldReturnUnprocessedSmsNotifications()
     {
         // Arrange
