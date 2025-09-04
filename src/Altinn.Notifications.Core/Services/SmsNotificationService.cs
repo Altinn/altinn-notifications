@@ -97,7 +97,7 @@ public class SmsNotificationService : ISmsNotificationService
                     }
                 }
             }
-            while (newSmsNotifications.Count == _publishBatchSize && stopwatch.ElapsedMilliseconds < 60_000);
+            while (newSmsNotifications.Count >= _publishBatchSize && stopwatch.ElapsedMilliseconds < 60_000);
         }
         finally
         {
