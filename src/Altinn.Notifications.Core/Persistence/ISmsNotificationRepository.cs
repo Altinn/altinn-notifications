@@ -24,7 +24,7 @@ public interface ISmsNotificationRepository : INotificationRepository
     /// </summary>
     /// <param name="publishBatchSize">
     /// Maximum number of SMS notifications to retrieve in a single batch. Controls how many notifications 
-    /// will be transitioned from "new" to "sending" status and published to Kafka.
+    /// will be atomically transitioned from "new" to "sending" status and returned for publishing by the service layer.
     /// </param>
     /// <param name="cancellationToken">
     /// A token to observe for cancellation.

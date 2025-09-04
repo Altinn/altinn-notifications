@@ -74,6 +74,7 @@ public class SmsNotificationService : ISmsNotificationService
     {
         List<Sms> newSmsNotifications;
         var stopwatch = Stopwatch.StartNew();
+        var timeBudget = TimeSpan.FromMinutes(1);
 
         try
         {
@@ -99,7 +100,7 @@ public class SmsNotificationService : ISmsNotificationService
                     }
                 }
             }
-            while (newSmsNotifications.Count >= _publishBatchSize && stopwatch.ElapsedMilliseconds < 60_000);
+            while (newSmsNotifications.Count >= _publishBatchSize && stopwatch.Elapsed < timeBudget);
         }
         finally
         {

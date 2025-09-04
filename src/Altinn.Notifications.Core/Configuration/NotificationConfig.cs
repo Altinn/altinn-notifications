@@ -30,7 +30,7 @@ public class NotificationConfig
     /// </summary>
     /// <remarks>
     /// Setting an appropriate batch size helps optimize performance and resource utilization during high-volume processing.
-    /// The default value is 500 notifications per batch.
+    /// The default value is 50 notifications per batch.
     /// </remarks>
-    public int SmsPublishBatchSize { get; set; } = 100;
+    public int SmsPublishBatchSize { get; set; } = 50;
 }

@@ -82,7 +82,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
             {
                 MobileNumber = "+4799999999",
                 NationalIdentityNumber = "16069412345",
-                CustomizedBody = "Testing sending ut an SMS to $recipientName$"
+                CustomizedBody = "Testing sending out an SMS to $recipientName"
             },
 
             SendResult = new NotificationResult<SmsNotificationResultType>(SmsNotificationResultType.New, DateTime.UtcNow)
