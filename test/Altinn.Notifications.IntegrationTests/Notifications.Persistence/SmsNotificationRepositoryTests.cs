@@ -141,7 +141,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
         // Act & Assert
         await Assert.ThrowsAsync<OperationCanceledException>(async () =>
         {
-            await repo.GetNewNotifications(_defaultBatchSize, cancellationTokenSource.Token);
+            await repo.GetNewNotifications(50, cancellationTokenSource.Token);
         });
     }
 

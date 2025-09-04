@@ -318,9 +318,10 @@ public class SmsNotificationServiceTests
         const int customBatchSize = 7;
 
         var repoMock = new Mock<ISmsNotificationRepository>();
+        
         // Return empty immediately to end loop
         repoMock.Setup(r => r.GetNewNotifications(It.IsAny<int>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime))
-            .ReturnsAsync(new List<Sms>());
+            .ReturnsAsync([]);
 
         var producerMock = new Mock<IKafkaProducer>();
 
