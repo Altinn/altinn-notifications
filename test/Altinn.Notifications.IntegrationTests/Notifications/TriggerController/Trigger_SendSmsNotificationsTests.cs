@@ -1,5 +1,6 @@
 ﻿using System.Net;
 
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Integrations.Configuration;
@@ -19,14 +20,20 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.TriggerController;
 
+/// <summary>
+/// Integration tests for the TriggerController SMS notification endpoints.
+/// Tests both daytime and anytime SMS sending, including schedule restrictions
+/// and cancellation handling.
+/// </summary>
 public class Trigger_SendSmsNotificationsTests : IClassFixture<IntegrationTestWebApplicationFactory<Controllers.TriggerController>>, IAsyncLifetime
 {
-    private const string _basePath = "/notifications/api/v1/trigger/sendsms";
+    private const string _sendSmsDaytimePath = "/notifications/api/v1/trigger/sendsms";
+    private const string _sendSmsAnytimePath = "/notifications/api/v1/trigger/sendsmsanytime";
 
-    private readonly IntegrationTestWebApplicationFactory<Controllers.TriggerController> _factory;
-    private readonly string _topicName = Guid.NewGuid().ToString();
     private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
-    private readonly DateTime currentTime = DateTime.UtcNow.Date.AddHours(10);
+    private readonly string _topicName = Guid.NewGuid().ToString();
+    private readonly DateTime _currentTime = DateTime.UtcNow.Date.AddHours(10);
+    private readonly IntegrationTestWebApplicationFactory<Controllers.TriggerController> _factory;
 
     public Trigger_SendSmsNotificationsTests(IntegrationTestWebApplicationFactory<Controllers.TriggerController> factory)
     {
@@ -45,18 +52,67 @@ public class Trigger_SendSmsNotificationsTests : IClassFixture<IntegrationTestWe
     }
 
     /// <summary>
-    /// When the send sms endpoint is triggered, we expect all sms notifications with status 'New' to be pushed to the
-    /// send sms kafka topic and that each notification gets the result status 'Sending' in the database.
+    /// Tests that SMS notifications are not processed when the daytime endpoint
+    /// is called outside allowed business hours. The endpoint returns OK,
+    /// but no notifications are processed.
     /// </summary>
     [Fact]
-    public async Task Post_Ok()
+    public async Task SendSmsDaytime_OutsideAllowedHours_DoesNotProcess()
+    {
+        // Arrange
+        (_, SmsNotification notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendersReference: _sendersRef);
+
+        HttpClient client = GetTestClient(canSendSmsNow: false);
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _sendSmsDaytimePath);
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
+        string sql = $"select count(1) from notifications.smsnotifications where result = 'Sending' and alternateid='{notification.Id}'";
+        long actual = await PostgreUtil.RunSqlReturnOutput<long>(sql);
+
+        Assert.Equal(0, actual);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    /// <summary>
+    /// Tests that the anytime SMS endpoint processes notifications even when
+    /// outside of business hours, showing that time restrictions are bypassed.
+    /// </summary>
+    [Fact]
+    public async Task SendSmsAnytime_OutsideAllowedHours_StillProcesses()
+    {
+        // Arrange
+        (_, SmsNotification notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendersReference: _sendersRef, sendingTimePolicy: SendingTimePolicy.Anytime);
+
+        HttpClient client = GetTestClient(canSendSmsNow: false);
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _sendSmsAnytimePath);
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
+        string sql = $"select count(1) from notifications.smsnotifications where result = 'Sending' and alternateid='{notification.Id}'";
+        long actual = await PostgreUtil.RunSqlReturnOutput<long>(sql);
+
+        Assert.Equal(1, actual);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    /// <summary>
+    /// Tests that SMS notifications with status 'New' are successfully processed
+    /// when sent through the anytime endpoint, regardless of business hours.
+    /// The notifications should be pushed to Kafka and updated to 'Sending' status.
+    /// </summary>
+    [Fact]
+    public async Task SendSmsAnytime_ProcessesSuccessfully_RegardlessOfHours()
     {
         // Arrange
         (_, SmsNotification notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendersReference: _sendersRef);
 
         HttpClient client = GetTestClient();
-
-        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _basePath);
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _sendSmsAnytimePath);
 
         // Act
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
@@ -69,7 +125,37 @@ public class Trigger_SendSmsNotificationsTests : IClassFixture<IntegrationTestWe
         Assert.Equal(1, actual);
     }
 
-    private HttpClient GetTestClient()
+    /// <summary>
+    /// Tests that SMS notifications with status 'New' are successfully processed
+    /// when sent through the daytime endpoint during allowed hours.
+    /// The notifications should be pushed to Kafka and updated to 'Sending' status.
+    /// </summary>
+    [Fact]
+    public async Task SendSmsDaytime_DuringAllowedHours_ProcessesSuccessfully()
+    {
+        // Arrange
+        (_, SmsNotification notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendersReference: _sendersRef);
+
+        HttpClient client = GetTestClient();
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _sendSmsDaytimePath);
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
+        string sql = $"select count(1) from notifications.smsnotifications where result = 'Sending' and alternateid='{notification.Id}'";
+        long actual = await PostgreUtil.RunSqlReturnOutput<long>(sql);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(1, actual);
+    }
+
+    /// <summary>
+    /// Creates a test client with appropriate configuration for testing SMS notification endpoints.
+    /// </summary>
+    /// <param name="canSendSmsNow">Whether the schedule service should allow SMS sending now</param>
+    /// <returns>A configured HTTP client for making requests to the test server</returns>
+    private HttpClient GetTestClient(bool canSendSmsNow = true)
     {
         HttpClient client = _factory.WithWebHostBuilder(builder =>
         {
@@ -77,19 +163,29 @@ public class Trigger_SendSmsNotificationsTests : IClassFixture<IntegrationTestWe
 
             builder.ConfigureTestServices(services =>
             {
-                // set up temp topic
+                // Set up temp topic
                 services.Configure<KafkaSettings>(opts =>
                 {
-                    opts.Admin.TopicList = new List<string> { _topicName };
+                    opts.Admin.TopicList = [_topicName];
                 });
+
                 services.Configure<Altinn.Notifications.Core.Configuration.KafkaSettings>(opts =>
                 {
                     opts.SmsQueueTopicName = _topicName;
                 });
 
+                // Configure test time
                 Mock<IDateTimeService> dateMock = new();
-                dateMock.Setup(d => d.UtcNow()).Returns(currentTime);
+                dateMock.Setup(e => e.UtcNow()).Returns(_currentTime);
                 services.AddSingleton(dateMock.Object);
+
+                // Mock schedule service when needed
+                if (!canSendSmsNow)
+                {
+                    Mock<INotificationScheduleService> scheduleMock = new();
+                    scheduleMock.Setup(e => e.CanSendSmsNow()).Returns(false);
+                    services.AddSingleton(scheduleMock.Object);
+                }
 
                 // Set up mock authentication and authorization               
                 services.AddSingleton<IPostConfigureOptions<JwtCookieOptions>, JwtCookiePostConfigureOptionsStub>();
