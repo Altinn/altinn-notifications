@@ -59,9 +59,9 @@ COMMENT ON FUNCTION notifications.claim_sms_batch_for_sending(INTEGER, INTEGER) 
 'Atomically claims and returns batches of SMS notifications ready for sending.
 
 Parameters:
-  _sendingtimepolicy - Controls which notifications to process:
-    1 (Daytime): Only process notifications with Daytime policy
-    2 (Anytime): Process notifications with Anytime policy or NULL policy (treated as Daytime)
+  _sendingtimepolicy - Controls which notifications to process (per Altinn.Notifications.Core.Enums.SendingTimePolicy):
+    1 (Anytime): Only process notifications with Anytime policy
+    2 (Daytime): Process notifications with Daytime policy; NULL policy is treated as Daytime
   
   _batchsize - Maximum number of notifications to claim in a single call (default: 50)
   
