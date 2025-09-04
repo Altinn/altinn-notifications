@@ -109,7 +109,7 @@ public class Trigger_SendSmsNotificationsTests : IClassFixture<IntegrationTestWe
     public async Task SendSmsAnytime_ProcessesSuccessfully_RegardlessOfHours()
     {
         // Arrange
-        (_, SmsNotification notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendersReference: _sendersRef);
+        (_, SmsNotification notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendersReference: _sendersRef, SendingTimePolicy.Anytime);
 
         HttpClient client = GetTestClient();
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _sendSmsAnytimePath);
