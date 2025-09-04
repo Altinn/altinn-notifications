@@ -42,7 +42,9 @@ public class SmsNotificationService : ISmsNotificationService
         _producer = producer;
         _repository = repository;
         _smsQueueTopicName = kafkaSettings.Value.SmsQueueTopicName;
-        _publishBatchSize = notificationConfig.Value.SmsPublishBatchSize;
+
+        var configuredBatchSize = notificationConfig.Value.SmsPublishBatchSize;
+        _publishBatchSize = configuredBatchSize > 0 ? configuredBatchSize : 50;
     }
 
     /// <inheritdoc/>
