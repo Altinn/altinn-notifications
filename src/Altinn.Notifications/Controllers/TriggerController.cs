@@ -8,8 +8,8 @@ namespace Altinn.Notifications.Controllers;
 /// <summary>
 /// Controller for all trigger operations
 /// </summary>
-[Route("notifications/api/v1/trigger")]
 [ApiController]
+[Route("notifications/api/v1/trigger")]
 [ApiExplorerSettings(IgnoreApi = true)]
 public class TriggerController : ControllerBase
 {
