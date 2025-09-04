@@ -24,4 +24,13 @@ public class NotificationConfig
     /// End hour of the SMS send window
     /// </summary>
     public int SmsSendWindowEndHour { get; set; } = 17;
+
+    /// <summary>
+    /// Maximum number of SMS notifications to process in a single batch when transitioning from "new" to "sending" status and publishing to Kafka.
+    /// </summary>
+    /// <remarks>
+    /// Setting an appropriate batch size helps optimize performance and resource utilization during high-volume processing.
+    /// The default value is 500 notifications per batch.
+    /// </remarks>
+    public int SmsPublishBatchSize { get; set; } = 100;
 }
