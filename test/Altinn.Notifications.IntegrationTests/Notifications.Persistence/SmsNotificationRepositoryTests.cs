@@ -13,11 +13,17 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
 public class SmsNotificationRepositoryTests : IAsyncLifetime
 {
-    private readonly List<Guid> _orderIdsToDelete;
+    private readonly List<Guid> _orderIdsToCleanup = [];
 
-    public SmsNotificationRepositoryTests()
+    public async Task DisposeAsync()
     {
-        _orderIdsToDelete = [];
+        if (_orderIdsToCleanup.Count == 0)
+        {
+            return;
+        }
+
+        string deleteSql = $@"DELETE from notifications.orders o where o.alternateid in ('{string.Join("','", _orderIdsToCleanup)}')";
+        await PostgreUtil.RunSql(deleteSql);
     }
 
     public async Task InitializeAsync()
@@ -25,100 +31,17 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
         await Task.CompletedTask;
     }
 
-    public async Task DisposeAsync()
-    {
-        if (_orderIdsToDelete.Count == 0)
-        {
-            return;
-        }
-
-        string deleteSql = $@"DELETE from notifications.orders o where o.alternateid in ('{string.Join("','", _orderIdsToDelete)}')";
-        await PostgreUtil.RunSql(deleteSql);
-    }
-
     [Fact]
-    public async Task AddNotification()
+    public async Task GetRecipients_ShouldReturnRecipientsForGivenOrderId()
     {
         // Arrange
-        Guid orderId = await PostgreUtil.PopulateDBWithSmsOrderAndReturnId();
-        _orderIdsToDelete.Add(orderId);
-
-        // Arrange
-        SmsNotificationRepository repo = (SmsNotificationRepository)ServiceUtil
-            .GetServices(new List<Type>() { typeof(ISmsNotificationRepository) })
-            .First(i => i.GetType() == typeof(SmsNotificationRepository));
-
-        Guid notificationId = Guid.NewGuid();
-        SmsNotification smsNotification = new()
-        {
-            Id = notificationId,
-            OrderId = orderId,
-            RequestedSendTime = DateTime.UtcNow,
-            Recipient = new()
-            {
-                NationalIdentityNumber = "16069412345",
-                MobileNumber = "999999999"
-            }
-        };
-
-        await repo.AddNotification(smsNotification, DateTime.UtcNow, 1);
-
-        // Assert
-        string sql = $@"SELECT count(1) 
-              FROM notifications.smsnotifications o
-              WHERE o.alternateid = '{notificationId}'";
-
-        int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
-
-        Assert.Equal(1, actualCount);
-    }
-
-    [Fact]
-    public async Task GetNewNotifications()
-    {
-        // Arrange
-        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
-        _orderIdsToDelete.Add(order.Id);
-
-        SmsNotificationRepository repo = (SmsNotificationRepository)ServiceUtil
-          .GetServices(new List<Type>() { typeof(ISmsNotificationRepository) })
-          .First(i => i.GetType() == typeof(SmsNotificationRepository));
-
-        // Act
-        List<Sms> smsToBeSent = await repo.GetNewNotifications(CancellationToken.None);
-
-        // Assert
-        Assert.Contains(smsToBeSent, s => s.NotificationId == smsNotification.Id);
-    }
-
-    [Fact]
-    public async Task GetNewNotificationWithSendingPolicyAnytime()
-    {
-        // Arrange
-        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendersReference: null, sendingTimePolicy: SendingTimePolicy.Anytime);
-        _orderIdsToDelete.Add(order.Id);
-
-        SmsNotificationRepository repo = (SmsNotificationRepository)ServiceUtil
-          .GetServices(new List<Type>() { typeof(ISmsNotificationRepository) })
-          .First(i => i.GetType() == typeof(SmsNotificationRepository));
-
-        // Act
-        List<Sms> smsToBeSent = await repo.GetNewNotifications(CancellationToken.None, SendingTimePolicy.Anytime);
-
-        // Assert
-        Assert.Contains(smsToBeSent, s => s.NotificationId == smsNotification.Id);
-    }
-
-    [Fact]
-    public async Task GetRecipients()
-    {
-        // Arrange
-        SmsNotificationRepository repo = (SmsNotificationRepository)ServiceUtil
-           .GetServices(new List<Type>() { typeof(ISmsNotificationRepository) })
-           .First(i => i.GetType() == typeof(SmsNotificationRepository));
+        SmsNotificationRepository repo = ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>()
+            .First();
 
         (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
-        _orderIdsToDelete.Add(order.Id);
+        _orderIdsToCleanup.Add(order.Id);
         SmsRecipient expectedRecipient = smsNotification.Recipient;
 
         // Act
@@ -129,33 +52,165 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
         // Assert
         Assert.Single(actual);
         Assert.Equal(expectedRecipient.MobileNumber, actualRecipient.MobileNumber);
-        Assert.Equal(expectedRecipient.NationalIdentityNumber, actualRecipient.NationalIdentityNumber);
         Assert.Equal(expectedRecipient.OrganizationNumber, actualRecipient.OrganizationNumber);
+        Assert.Equal(expectedRecipient.NationalIdentityNumber, actualRecipient.NationalIdentityNumber);
+    }
+
+    [Fact]
+    public async Task AddNotification_ShouldInsertSmsNotificationIntoDatabase()
+    {
+        // Arrange
+        Guid orderId = await PostgreUtil.PopulateDBWithSmsOrderAndReturnId();
+        _orderIdsToCleanup.Add(orderId);
+
+        // Arrange
+        SmsNotificationRepository repo = ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>()
+            .First();
+
+        Guid smsNotificationId = Guid.NewGuid();
+        DateTime requestedSendTime = DateTime.UtcNow;
+
+        SmsNotification smsNotification = new()
+        {
+            OrderId = orderId,
+            Id = smsNotificationId,
+            RequestedSendTime = requestedSendTime.AddHours(2),
+
+            Recipient = new()
+            {
+                MobileNumber = "+4799999999",
+                NationalIdentityNumber = "16069412345",
+                CustomizedBody = "Testing sending ut an SMS to $recipientName$"
+            },
+
+            SendResult = new NotificationResult<SmsNotificationResultType>(SmsNotificationResultType.New, DateTime.UtcNow)
+        };
+
+        await repo.AddNotification(smsNotification, requestedSendTime.AddHours(50), 1);
+
+        // Assert
+        string sql = $@"SELECT count(1) FROM notifications.smsnotifications s WHERE s.alternateid = '{smsNotificationId}'";
+
+        int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
+
+        Assert.Equal(1, actualCount);
+    }
+
+    [Fact]
+    public async Task GetNewNotifications_ShouldRespectBatchSize()
+    {
+        // Arrange
+        for (int i = 0; i < 15; i++)
+        {
+            (NotificationOrder order, SmsNotification _) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
+            _orderIdsToCleanup.Add(order.Id);
+        }
+
+        SmsNotificationRepository repo = ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>()
+            .First();
+
+        // Act
+        List<Sms> smsToBeSent = await repo.GetNewNotifications(15, CancellationToken.None);
+
+        // Assert
+        Assert.Equal(15, smsToBeSent.Count);
+    }
+
+    [Fact]
+    public async Task GetNewNotifications_ShouldRespectCancellationToken()
+    {
+        // Arrange
+        for (int i = 0; i < 50; i++)
+        {
+            (NotificationOrder order, SmsNotification _) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
+            _orderIdsToCleanup.Add(order.Id);
+        }
+
+        SmsNotificationRepository repo = ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>()
+            .First();
+
+        using CancellationTokenSource cancellationTokenSource = new();
+        cancellationTokenSource.CancelAfter(TimeSpan.FromMilliseconds(50));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<OperationCanceledException>(async () =>
+        {
+            await repo.GetNewNotifications(_defaultBatchSize, cancellationTokenSource.Token);
+        });
+    }
+
+    [Fact]
+    public async Task GetNewNotifications_ShouldReturnUnprocessedSmsNotifications()
+    {
+        // Arrange
+        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
+        _orderIdsToCleanup.Add(order.Id);
+
+        SmsNotificationRepository repo = ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>()
+            .First();
+
+        // Act
+        List<Sms> smsToBeSent = await repo.GetNewNotifications(50, CancellationToken.None);
+
+        // Assert
+        Assert.Contains(smsToBeSent, e => e.NotificationId == smsNotification.Id);
+    }
+
+    [Theory]
+    [InlineData(SendingTimePolicy.Anytime)]
+    [InlineData(SendingTimePolicy.Daytime)]
+    public async Task GetNewNotifications_WithSendingPolicy_ShouldReturnEligibleSmsNotifications(SendingTimePolicy sendingTimePolicy)
+    {
+        // Arrange
+        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendingTimePolicy: sendingTimePolicy);
+        _orderIdsToCleanup.Add(order.Id);
+
+        SmsNotificationRepository repo = ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>()
+            .First();
+
+        // Act
+        List<Sms> smsToBeSent = await repo.GetNewNotifications(50, CancellationToken.None, sendingTimePolicy);
+
+        // Assert
+        Assert.Contains(smsToBeSent, s => s.NotificationId == smsNotification.Id);
     }
 
     [Theory]
     [InlineData(SmsNotificationResultType.Failed)]
-    [InlineData(SmsNotificationResultType.Failed_BarredReceiver)]
-    [InlineData(SmsNotificationResultType.Failed_InvalidRecipient)]
     [InlineData(SmsNotificationResultType.Failed_Deleted)]
     [InlineData(SmsNotificationResultType.Failed_Expired)]
-    [InlineData(SmsNotificationResultType.Failed_RecipientReserved)]
     [InlineData(SmsNotificationResultType.Failed_Rejected)]
     [InlineData(SmsNotificationResultType.Failed_Undelivered)]
+    [InlineData(SmsNotificationResultType.Failed_BarredReceiver)]
+    [InlineData(SmsNotificationResultType.Failed_InvalidRecipient)]
+    [InlineData(SmsNotificationResultType.Failed_RecipientReserved)]
     [InlineData(SmsNotificationResultType.Failed_RecipientNotIdentified)]
     public async Task ParseSmsSendOperationResult_StatusFailed_ShouldUpdateOrderStatusToCompleted(SmsNotificationResultType resultType)
     {
         // Arrange
         (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendersReference: null, simulateCronJob: true);
-        _orderIdsToDelete.Add(order.Id);
-        SmsNotificationRepository repo = (SmsNotificationRepository)ServiceUtil
-          .GetServices(new List<Type>() { typeof(ISmsNotificationRepository) })
-          .First(i => i.GetType() == typeof(SmsNotificationRepository));
+        _orderIdsToCleanup.Add(order.Id);
+
+        SmsNotificationRepository repo = ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>()
+            .First();
+
         SmsSendOperationResult sendOperationResult = new()
         {
+            SendResult = resultType,
             NotificationId = smsNotification.Id,
-            GatewayReference = Guid.NewGuid().ToString(),
-            SendResult = resultType
+            GatewayReference = Guid.NewGuid().ToString()
         };
 
         // Act
@@ -164,20 +219,22 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
         // Assert
         var status = await SelectSmsNotificationStatus(smsNotification.Id);
         Assert.Equal(resultType.ToString(), status);
+
         int actualCount = await SelectOrdersCompletedCount(order);
         Assert.Equal(1, actualCount);
     }
 
     [Fact]
-    public async Task UpdateSendStatus_WithNotificationId_WithGatewayRef()
+    public async Task UpdateSendStatus_WithNotificationId_ShouldUpdateNotificationStatusAndGatewayReference()
     {
         // Arrange
         (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
-        _orderIdsToDelete.Add(order.Id);
+        _orderIdsToCleanup.Add(order.Id);
 
-        SmsNotificationRepository repo = (SmsNotificationRepository)ServiceUtil
-          .GetServices(new List<Type>() { typeof(ISmsNotificationRepository) })
-          .First(i => i.GetType() == typeof(SmsNotificationRepository));
+        SmsNotificationRepository repo = ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>()
+            .First();
 
         string gatewayReference = Guid.NewGuid().ToString();
 
@@ -197,15 +254,16 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UpdateSendStatus_WithNotificationId_WithoutGatewayRef()
+    public async Task UpdateSendStatus_WithNotificationId_ShouldUpdateNotificationStatus()
     {
         // Arrange
         (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
-        _orderIdsToDelete.Add(order.Id);
+        _orderIdsToCleanup.Add(order.Id);
 
-        SmsNotificationRepository repo = (SmsNotificationRepository)ServiceUtil
-          .GetServices(new List<Type>() { typeof(ISmsNotificationRepository) })
-          .First(i => i.GetType() == typeof(SmsNotificationRepository));
+        SmsNotificationRepository repo = ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>()
+            .First();
 
         // Act
         await repo.UpdateSendStatus(smsNotification.Id, SmsNotificationResultType.Accepted);
@@ -222,11 +280,11 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task SetSmsResult_AllEnumValuesExistInDb()
+    public async Task UpdateSmsNotificationResult_ShouldSupportAllEnumValuesInDatabase()
     {
         // Arrange
         (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
-        _orderIdsToDelete.Add(order.Id);
+        _orderIdsToCleanup.Add(order.Id);
 
         // Act & Assert
         foreach (SmsNotificationResultType resultType in Enum.GetValues<SmsNotificationResultType>())
@@ -252,11 +310,12 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
     {
         // Arrange
         (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(simulateConsumers: true, simulateCronJob: true);
-        _orderIdsToDelete.Add(order.Id);
+        _orderIdsToCleanup.Add(order.Id);
 
-        SmsNotificationRepository sut = (SmsNotificationRepository)ServiceUtil
+        SmsNotificationRepository repo = ServiceUtil
             .GetServices([typeof(ISmsNotificationRepository)])
-            .First(i => i.GetType() == typeof(SmsNotificationRepository));
+            .OfType<SmsNotificationRepository>()
+            .First();
 
         // modify the notification to simulate an expired notification
         string sql = $@"
@@ -268,16 +327,17 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
         await PostgreUtil.RunSql(sql);
 
         // Act
-        await sut.TerminateExpiredNotifications();
+        await repo.TerminateExpiredNotifications();
 
         // Assert
         var result = await SelectSmsNotificationStatus(smsNotification.Id);
-        var count = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
-        var orderStatus = await PostgreUtil.RunSqlReturnOutput<string>(
-            $"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'");
         Assert.NotNull(result);
         Assert.Equal(SmsNotificationResultType.Failed_TTL.ToString(), result);
+
+        var count = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
         Assert.Equal(1, count); // Ensure that the status feed entry was created
+
+        var orderStatus = await PostgreUtil.RunSqlReturnOutput<string>($"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'");
         Assert.Equal(OrderProcessingStatus.Completed.ToString(), orderStatus);
     }
 
@@ -285,9 +345,10 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
     public async Task UpdateSendStatus_WithEmptyGuid_ThrowsArgumentException()
     {
         // Arrange
-        SmsNotificationRepository repo = (SmsNotificationRepository)ServiceUtil
+        SmsNotificationRepository repo = ServiceUtil
             .GetServices([typeof(ISmsNotificationRepository)])
-            .First(i => i.GetType() == typeof(SmsNotificationRepository));
+            .OfType<SmsNotificationRepository>()
+            .First();
 
         Guid emptyGuid = Guid.Empty;
         SmsNotificationResultType resultType = SmsNotificationResultType.Failed;
@@ -306,11 +367,12 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
     {
         // Arrange
         (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
-        _orderIdsToDelete.Add(order.Id);
+        _orderIdsToCleanup.Add(order.Id);
 
-        SmsNotificationRepository repo = (SmsNotificationRepository)ServiceUtil
-          .GetServices(new List<Type>() { typeof(ISmsNotificationRepository) })
-          .First(i => i.GetType() == typeof(SmsNotificationRepository));
+        SmsNotificationRepository repo = ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>()
+            .First();
 
         string gatewayReference = Guid.NewGuid().ToString();
 
@@ -340,11 +402,12 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
     {
         // Arrange
         (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(simulateConsumers: true, simulateCronJob: true);
-        _orderIdsToDelete.Add(order.Id);
+        _orderIdsToCleanup.Add(order.Id);
 
-        SmsNotificationRepository repo = (SmsNotificationRepository)ServiceUtil
-          .GetServices(new List<Type>() { typeof(ISmsNotificationRepository) })
-          .First(i => i.GetType() == typeof(SmsNotificationRepository));
+        SmsNotificationRepository repo = ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>()
+            .First();
 
         // Act
         await repo.UpdateSendStatus(smsNotification.Id, SmsNotificationResultType.Delivered);
@@ -365,11 +428,13 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
     {
         // Arrange
         (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(simulateConsumers: true, simulateCronJob: true);
-        _orderIdsToDelete.Add(order.Id);
+        _orderIdsToCleanup.Add(order.Id);
 
-        SmsNotificationRepository repo = (SmsNotificationRepository)ServiceUtil
-          .GetServices(new List<Type>() { typeof(ISmsNotificationRepository) })
-          .First(i => i.GetType() == typeof(SmsNotificationRepository));
+        SmsNotificationRepository repo = ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>()
+            .First();
+
         string gatewayReference = Guid.NewGuid().ToString();
 
         string setGateqwaySql = $@"Update notifications.smsnotifications 

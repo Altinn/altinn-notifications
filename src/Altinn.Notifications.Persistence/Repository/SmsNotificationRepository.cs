@@ -95,13 +95,13 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     }
 
     /// <inheritdoc/>   
-    public async Task<List<Sms>> GetNewNotifications(CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime)
+    public async Task<List<Sms>> GetNewNotifications(int publishBatchSize, CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_claimSmsBatchForSending);
 
         List<Sms> readyToSendSMS = [];
 
-        pgcom.Parameters.AddWithValue("@batchsize", NpgsqlDbType.Integer, 50);
+        pgcom.Parameters.AddWithValue("@batchsize", NpgsqlDbType.Integer, publishBatchSize);
         pgcom.Parameters.AddWithValue("@sendingtimepolicy", NpgsqlDbType.Integer, (int)sendingTimePolicy);
 
         await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken))

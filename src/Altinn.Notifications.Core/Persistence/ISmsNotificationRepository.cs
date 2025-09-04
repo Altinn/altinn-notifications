@@ -22,6 +22,10 @@ public interface ISmsNotificationRepository : INotificationRepository
     /// <summary>
     /// Retrieves pending SMS notifications that are eligible under the specified sending time policy.
     /// </summary>
+    /// <param name="publishBatchSize">
+    /// Maximum number of SMS notifications to retrieve in a single batch. Controls how many notifications 
+    /// will be transitioned from "new" to "sending" status and published to Kafka.
+    /// </param>
     /// <param name="cancellationToken">
     /// A token to observe for cancellation.
     /// </param>
@@ -30,11 +34,12 @@ public interface ISmsNotificationRepository : INotificationRepository
     /// </param>
     /// <returns>
     /// A task that completes when retrieval finishes (no more eligible items or the retrieval window ends) or when cancellation is requested.
+    /// The task result contains a list of SMS notifications to be processed, limited by the specified batch size.
     /// </returns>
     /// <exception cref="OperationCanceledException">
     /// Thrown if cancellation is requested before or during retrieval.
     /// </exception>
-    Task<List<Sms>> GetNewNotifications(CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime);
+    Task<List<Sms>> GetNewNotifications(int publishBatchSize, CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime);
 
     /// <summary>
     /// Retrieves all processed SMS recipients for a specified order.
