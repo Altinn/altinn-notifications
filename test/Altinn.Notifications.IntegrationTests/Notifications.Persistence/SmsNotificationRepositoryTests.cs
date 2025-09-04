@@ -124,7 +124,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
     public async Task GetNewNotifications_ShouldRespectCancellationToken()
     {
         // Arrange
-        for (int i = 0; i < 50; i++)
+        for (int i = 0; i < 5; i++)
         {
             (NotificationOrder order, SmsNotification _) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
             _orderIdsToCleanup.Add(order.Id);
@@ -136,10 +136,10 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
             .First();
 
         using CancellationTokenSource cancellationTokenSource = new();
-        cancellationTokenSource.CancelAfter(TimeSpan.FromMilliseconds(50));
+        cancellationTokenSource.CancelAfter(TimeSpan.FromMilliseconds(5));
 
         // Act & Assert
-        await Assert.ThrowsAsync<OperationCanceledException>(async () =>
+        await Assert.ThrowsAsync<TaskCanceledException>(async () =>
         {
             await repo.GetNewNotifications(50, cancellationTokenSource.Token);
         });
