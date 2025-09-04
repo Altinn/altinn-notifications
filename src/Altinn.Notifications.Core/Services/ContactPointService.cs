@@ -179,6 +179,11 @@ public class ContactPointService(
             });
     }
 
+    private static string GetSanitizedResourceId(string resourceId)
+    {
+        return resourceId.StartsWith("urn:altinn:resource:", StringComparison.Ordinal) ? resourceId["urn:altinn:resource:".Length..] : resourceId;
+    }
+
     private static void AddPreferredOrFallbackContactPointList<TPreferred, TFallback>(
     Recipient recipient,
     List<TPreferred> preferredList,
@@ -346,9 +351,11 @@ public class ContactPointService(
 
         if (!string.IsNullOrWhiteSpace(resourceId))
         {
-            var allUserContactPoints = await _profileClient.GetUserRegisteredContactPoints(organizationNumbers, resourceId);
+            var sanitizedResourceId = GetSanitizedResourceId(resourceId);
 
-            var authorizedUserContactPoints = await _authorizationService.AuthorizeUserContactPointsForResource(allUserContactPoints, resourceId);
+            var allUserContactPoints = await _profileClient.GetUserRegisteredContactPoints(organizationNumbers, sanitizedResourceId);
+
+            var authorizedUserContactPoints = await _authorizationService.AuthorizeUserContactPointsForResource(allUserContactPoints, sanitizedResourceId);
 
             foreach (var authorizedUserContactPoint in authorizedUserContactPoints)
             {
