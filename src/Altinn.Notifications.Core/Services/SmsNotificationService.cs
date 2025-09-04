@@ -20,6 +20,7 @@ namespace Altinn.Notifications.Core.Services;
 public class SmsNotificationService : ISmsNotificationService
 {
     private readonly IGuidService _guid;
+    private readonly int _publishBatchSize;
     private readonly IKafkaProducer _producer;
     private readonly string _smsQueueTopicName;
     private readonly IDateTimeService _dateTime;
@@ -33,13 +34,15 @@ public class SmsNotificationService : ISmsNotificationService
         IKafkaProducer producer,
         IDateTimeService dateTime,
         ISmsNotificationRepository repository,
-        IOptions<KafkaSettings> kafkaSettings)
+        IOptions<KafkaSettings> kafkaSettings,
+        IOptions<NotificationConfig> notificationConfig)
     {
         _guid = guid;
         _dateTime = dateTime;
         _producer = producer;
         _repository = repository;
         _smsQueueTopicName = kafkaSettings.Value.SmsQueueTopicName;
+        _publishBatchSize = notificationConfig.Value.SmsPublishBatchSize;
     }
 
     /// <inheritdoc/>
@@ -77,7 +80,7 @@ public class SmsNotificationService : ISmsNotificationService
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                newSmsNotifications = await _repository.GetNewNotifications(cancellationToken, sendingTimePolicy);
+                newSmsNotifications = await _repository.GetNewNotifications(_publishBatchSize, cancellationToken, sendingTimePolicy);
 
                 foreach (var newSmsNotification in newSmsNotifications)
                 {
