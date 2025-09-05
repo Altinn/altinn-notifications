@@ -194,16 +194,15 @@ public class ContactPointService(
     /// </returns>
     private static string GetSanitizedResourceId(string? resourceId)
     {
-        if (string.IsNullOrWhiteSpace(resourceId))
+        var trimmedResourceId = resourceId?.Trim();
+        if (string.IsNullOrWhiteSpace(trimmedResourceId))
         {
             return string.Empty;
         }
 
         const string prefix = "urn:altinn:resource:";
 
-        return resourceId.StartsWith(prefix, StringComparison.Ordinal)
-            ? resourceId[prefix.Length..]
-            : resourceId;
+        return trimmedResourceId.StartsWith(prefix, StringComparison.Ordinal) ? trimmedResourceId[prefix.Length..] : trimmedResourceId;
     }
 
     private static void AddPreferredOrFallbackContactPointList<TPreferred, TFallback>(
