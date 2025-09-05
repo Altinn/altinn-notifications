@@ -43,7 +43,7 @@ public class AuthorizationService : IAuthorizationService
     /// <returns>A new list of <see cref="OrganizationContactPoints"/> with filtered list of recipients.</returns>
     public async Task<List<OrganizationContactPoints>> AuthorizeUserContactPointsForResource(List<OrganizationContactPoints> organizationContactPoints, string resourceId)
     {
-        XacmlJsonRequestRoot jsonRequest = BuildAuthorizationRequest(organizationContactPoints, sanitizedResourceId);
+        XacmlJsonRequestRoot jsonRequest = BuildAuthorizationRequest(organizationContactPoints, resourceId);
 
         XacmlJsonResponse xacmlJsonResponse = await _pdp.GetDecisionForRequest(jsonRequest);
 
