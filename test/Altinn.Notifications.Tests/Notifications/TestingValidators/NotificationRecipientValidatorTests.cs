@@ -1,5 +1,6 @@
 ﻿using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Email;
+using Altinn.Notifications.Models.Recipient;
 using Altinn.Notifications.Models.Sms;
 using Altinn.Notifications.Validators;
 
@@ -95,6 +96,73 @@ public class NotificationRecipientValidatorTests
                 {
                     Sender = "Test message",
                     Body = "hello world"
+                }
+            }
+        };
+
+        // Act
+        var actual = _validator.TestValidate(recipient);
+
+        // Assert
+        actual.ShouldHaveValidationErrorFor(recipient => recipient).WithErrorMessage("Must have exactly one recipient.");
+    }
+
+    [Fact]
+    public void Should_Have_No_Validation_Errors_When_Only_RecipientEmailAndSms()
+    {
+        // Arrange
+        var recipient = new NotificationRecipientExt
+        {
+            RecipientEmailAndSms = new RecipientEmailAndSmsExt
+            {
+                EmailAddress = "noreply@digdir.no",
+                PhoneNumber = "+4740000000",
+                EmailSettings = new EmailSendingOptionsExt
+                {
+                    Body = "Test body",
+                    Subject = "Test subject",
+                },
+                SmsSettings = new SmsSendingOptionsExt
+                {
+                    Body = "Test message"
+                }
+            }
+        };
+
+        // Act
+        var actual = _validator.TestValidate(recipient);
+
+        // Assert
+        actual.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void Should_Have_Validation_Error_When_RecipientEmailAndSms_Plus_Another_Recipient()
+    {
+        // Arrange
+        var recipient = new NotificationRecipientExt
+        {
+            RecipientEmailAndSms = new RecipientEmailAndSmsExt
+            {
+                EmailAddress = "noreply@digdir.no",
+                PhoneNumber = "+4740000000",
+                EmailSettings = new EmailSendingOptionsExt
+                {
+                    Body = "Test body",
+                    Subject = "Test subject",
+                },
+                SmsSettings = new SmsSendingOptionsExt
+                {
+                    Body = "Test message"
+                }
+            },
+            RecipientEmail = new RecipientEmailExt
+            {
+                EmailAddress = "another@digdir.no",
+                Settings = new EmailSendingOptionsExt
+                {
+                    Body = "Test body",
+                    Subject = "Test subject",
                 }
             }
         };
