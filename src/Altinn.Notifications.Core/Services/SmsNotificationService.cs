@@ -1,4 +1,6 @@
-﻿using Altinn.Notifications.Core.Configuration;
+﻿using System.Diagnostics;
+
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
@@ -18,10 +20,11 @@ namespace Altinn.Notifications.Core.Services;
 public class SmsNotificationService : ISmsNotificationService
 {
     private readonly IGuidService _guid;
-    private readonly IDateTimeService _dateTime;
-    private readonly ISmsNotificationRepository _repository;
+    private readonly int _publishBatchSize;
     private readonly IKafkaProducer _producer;
     private readonly string _smsQueueTopicName;
+    private readonly IDateTimeService _dateTime;
+    private readonly ISmsNotificationRepository _repository;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsNotificationService"/> class.
@@ -31,13 +34,17 @@ public class SmsNotificationService : ISmsNotificationService
         IKafkaProducer producer,
         IDateTimeService dateTime,
         ISmsNotificationRepository repository,
-        IOptions<KafkaSettings> kafkaSettings)
+        IOptions<KafkaSettings> kafkaSettings,
+        IOptions<NotificationConfig> notificationConfig)
     {
         _guid = guid;
         _dateTime = dateTime;
         _producer = producer;
         _repository = repository;
         _smsQueueTopicName = kafkaSettings.Value.SmsQueueTopicName;
+
+        var configuredBatchSize = notificationConfig.Value.SmsPublishBatchSize;
+        _publishBatchSize = configuredBatchSize > 0 ? configuredBatchSize : 50;
     }
 
     /// <inheritdoc/>
@@ -63,16 +70,41 @@ public class SmsNotificationService : ISmsNotificationService
     }
 
     /// <inheritdoc/>
-    public async Task SendNotifications(SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime)
+    public async Task SendNotifications(CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime)
     {
-        var smsList = await _repository.GetNewNotifications(sendingTimePolicy);
-        foreach (Sms sms in smsList)
+        List<Sms> newSmsNotifications;
+        var stopwatch = Stopwatch.StartNew();
+        var timeBudget = TimeSpan.FromMinutes(1);
+
+        try
         {
-            bool success = await _producer.ProduceAsync(_smsQueueTopicName, sms.Serialize());
-            if (!success)
+            do
             {
-                await _repository.UpdateSendStatus(sms.NotificationId, SmsNotificationResultType.New);
+                cancellationToken.ThrowIfCancellationRequested();
+
+                newSmsNotifications = await _repository.GetNewNotifications(_publishBatchSize, cancellationToken, sendingTimePolicy);
+
+                foreach (var newSmsNotification in newSmsNotifications)
+                {
+                    try
+                    {
+                        var success = await _producer.ProduceAsync(_smsQueueTopicName, newSmsNotification.Serialize());
+                        if (!success)
+                        {
+                            await _repository.UpdateSendStatus(newSmsNotification.NotificationId, SmsNotificationResultType.New);
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        await _repository.UpdateSendStatus(newSmsNotification.NotificationId, SmsNotificationResultType.New);
+                    }
+                }
             }
+            while (newSmsNotifications.Count >= _publishBatchSize && stopwatch.Elapsed < timeBudget);
+        }
+        finally
+        {
+            stopwatch.Stop();
         }
     }
 
