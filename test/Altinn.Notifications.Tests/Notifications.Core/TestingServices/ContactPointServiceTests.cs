@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -124,6 +125,83 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
             Assert.Equal(AddressType.Email, emailAddressPoint.AddressType);
 
             profileClientMock.Verify(e => e.GetUserContactPoints(It.Is<List<string>>(e => e.Contains(nationalId))), Times.Once);
+            profileClientMock.VerifyNoOtherCalls();
+            authorizationServiceMock.VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public async Task AddEmailContactPoints_WhenResourceIdContainsUrnPrefix_ShouldSanitizeAndUseSlug()
+        {
+            // Arrange
+            string organizationNumber = "123456789";
+            string expectedSanitized = "tax-report";
+            string contactEmail = "user@example.com";
+            string rawResourceIdWithPrefixAndWhitespace = "urn:altinn:resource:tax-report   ";
+
+            var recipients = new List<Recipient>
+            {
+                new() { OrganizationNumber = organizationNumber }
+            };
+
+            var profileClientMock = new Mock<IProfileClient>();
+            profileClientMock
+                .Setup(e => e.GetOrganizationContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber))))
+                .ReturnsAsync(
+                [
+                    new OrganizationContactPoints
+                    {
+                        PartyId = 1,
+                        EmailList = [],
+                        MobileNumberList = [],
+                        UserContactPoints = [],
+                        OrganizationNumber = organizationNumber
+                    }
+                ]);
+
+            profileClientMock
+                .Setup(e => e.GetUserRegisteredContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber)), expectedSanitized))
+                .ReturnsAsync(
+                [
+                    new OrganizationContactPoints
+                    {
+                        PartyId = 1,
+                        OrganizationNumber = organizationNumber,
+                        UserContactPoints =
+                        [
+                            new UserContactPoints
+                            {
+                                UserId = 10,
+                                IsReserved = false,
+                                Email = contactEmail,
+                                MobileNumber = "99999999",
+                                NationalIdentityNumber = "01010112345"
+                            }
+                        ]
+                    }
+                ]);
+
+            var authorizationServiceMock = new Mock<IAuthorizationService>();
+            authorizationServiceMock
+                .Setup(e => e.AuthorizeUserContactPointsForResource(It.IsAny<List<OrganizationContactPoints>>(), expectedSanitized))
+                .ReturnsAsync((List<OrganizationContactPoints> cps, string _) => cps);
+
+            var service = GetTestService(profileClientMock.Object, authorizationServiceMock.Object);
+
+            // Act
+            await service.AddEmailContactPoints(recipients, rawResourceIdWithPrefixAndWhitespace);
+
+            // Assert
+            var recipient = Assert.Single(recipients);
+            var emailPoint = Assert.Single(recipient.AddressInfo.OfType<EmailAddressPoint>());
+            Assert.Equal(contactEmail, emailPoint.EmailAddress);
+
+            profileClientMock.Verify(e => e.GetOrganizationContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber))), Times.Once);
+            profileClientMock.Verify(e => e.GetUserRegisteredContactPoints(It.Is<List<string>>(e => e.Contains(organizationNumber)), It.Is<string>(e => e == expectedSanitized)), Times.Once);
+
+            profileClientMock.Verify(e => e.GetUserRegisteredContactPoints(It.IsAny<List<string>>(), It.Is<string>(e => e.StartsWith("urn:altinn:resource:", StringComparison.Ordinal))), Times.Never);
+
+            authorizationServiceMock.Verify(e => e.AuthorizeUserContactPointsForResource(It.IsAny<List<OrganizationContactPoints>>(), expectedSanitized), Times.Once);
+
             profileClientMock.VerifyNoOtherCalls();
             authorizationServiceMock.VerifyNoOtherCalls();
         }
