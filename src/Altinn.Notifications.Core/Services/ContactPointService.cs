@@ -179,9 +179,31 @@ public class ContactPointService(
             });
     }
 
-    private static string GetSanitizedResourceId(string resourceId)
+    /// <summary>
+    /// Normalizes a resource identifier value by removing the leading
+    /// 'urn:altinn:resource:' prefix if it is present.
+    /// </summary>
+    /// <param name="resourceId">
+    /// The raw resource identifier (may be a plain slug like 'tax-report', or
+    /// a full attribute value starting with 'urn:altinn:resource:').
+    /// Can be <c>null</c> or whitespace.
+    /// </param>
+    /// <returns>
+    /// The resource identifier without the 'urn:altinn:resource:' prefix, or
+    /// <see cref="string.Empty"/> when the input is <c>null</c> or whitespace.
+    /// </returns>
+    private static string GetSanitizedResourceId(string? resourceId)
     {
-        return resourceId.StartsWith("urn:altinn:resource:", StringComparison.Ordinal) ? resourceId["urn:altinn:resource:".Length..] : resourceId;
+        if (string.IsNullOrWhiteSpace(resourceId))
+        {
+            return string.Empty;
+        }
+
+        const string prefix = "urn:altinn:resource:";
+
+        return resourceId.StartsWith(prefix, StringComparison.Ordinal)
+            ? resourceId[prefix.Length..]
+            : resourceId;
     }
 
     private static void AddPreferredOrFallbackContactPointList<TPreferred, TFallback>(
@@ -349,10 +371,9 @@ public class ContactPointService(
             contactPoint.MobileNumberList = [.. contactPoint.MobileNumberList.Select(MobileNumberHelper.EnsureCountryCodeIfValidNumber)];
         });
 
-        if (!string.IsNullOrWhiteSpace(resourceId))
+        var sanitizedResourceId = GetSanitizedResourceId(resourceId);
+        if (!string.IsNullOrWhiteSpace(sanitizedResourceId))
         {
-            var sanitizedResourceId = GetSanitizedResourceId(resourceId);
-
             var allUserContactPoints = await _profileClient.GetUserRegisteredContactPoints(organizationNumbers, sanitizedResourceId);
 
             var authorizedUserContactPoints = await _authorizationService.AuthorizeUserContactPointsForResource(allUserContactPoints, sanitizedResourceId);
