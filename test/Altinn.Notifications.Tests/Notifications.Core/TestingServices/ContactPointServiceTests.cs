@@ -1,14 +1,17 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.ContactPoints;
 using Altinn.Notifications.Core.Services;
+
 using Moq;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices
