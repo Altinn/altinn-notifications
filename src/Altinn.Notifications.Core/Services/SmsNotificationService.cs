@@ -96,7 +96,7 @@ public class SmsNotificationService : ISmsNotificationService
                 }
             }
         }
-        while (newSmsNotifications.Count == _publishBatchSize);
+        while (newSmsNotifications.Count > 0);
     }
 
     /// <inheritdoc/>
