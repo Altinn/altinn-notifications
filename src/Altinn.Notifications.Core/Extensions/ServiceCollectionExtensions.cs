@@ -38,7 +38,7 @@ public static class ServiceCollectionExtensions
             .AddSingleton<ICancelOrderService, CancelOrderService>()
             .AddSingleton<IContactPointService, ContactPointService>()
             .AddSingleton<IOrderRequestService, OrderRequestService>()
-            .AddSingleton<ISmsSendBackgroundQueue, SmsSendBackgroundQueue>()
+            .AddSingleton<ISmsPublishTaskQueue, SmsPublishTaskQueue>()
             .AddSingleton<ISmsNotificationService, SmsNotificationService>()
             .AddSingleton<IOrderProcessingService, OrderProcessingService>()
             .AddSingleton<IEmailNotificationService, EmailNotificationService>()
@@ -55,6 +55,6 @@ public static class ServiceCollectionExtensions
             .AddSingleton<INotificationsEmailServiceUpdateService, NotificationsEmailServiceUpdateService>()
             .Configure<KafkaSettings>(config.GetSection("KafkaSettings"))
             .Configure<NotificationConfig>(config.GetSection("NotificationConfig"))
-            .AddHostedService<SmsSendBackgroundService>();
+            .AddHostedService<SmsPublishBackgroundService>();
     }
 }

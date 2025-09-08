@@ -15,8 +15,8 @@ namespace Altinn.Notifications.Controllers;
 public class TriggerController : ControllerBase
 {
     private readonly ILogger<TriggerController> _logger;
-    private readonly ISmsSendBackgroundQueue _smsSendQueue;
     private readonly IStatusFeedService _statusFeedService;
+    private readonly ISmsPublishTaskQueue _smsPublishTaskQueue;
     private readonly INotificationScheduleService _scheduleService;
     private readonly ISmsNotificationService _smsNotificationService;
     private readonly IOrderProcessingService _orderProcessingService;
@@ -27,17 +27,17 @@ public class TriggerController : ControllerBase
     /// </summary>
     public TriggerController(
         ILogger<TriggerController> logger,
-        ISmsSendBackgroundQueue smsSendQueue,
         IStatusFeedService statusFeedService,
+        ISmsPublishTaskQueue smsPublishTaskQueue,
         INotificationScheduleService scheduleService,
         IOrderProcessingService orderProcessingService,
         ISmsNotificationService smsNotificationService,
         IEmailNotificationService emailNotificationService)
     {
         _logger = logger;
-        _smsSendQueue = smsSendQueue;
         _scheduleService = scheduleService;
         _statusFeedService = statusFeedService;
+        _smsPublishTaskQueue = smsPublishTaskQueue;
         _smsNotificationService = smsNotificationService;
         _orderProcessingService = orderProcessingService;
         _emailNotificationService = emailNotificationService;
@@ -125,7 +125,7 @@ public class TriggerController : ControllerBase
     [Consumes("application/json")]
     public ActionResult Trigger_SendSmsNotificationsAnytime()
     {
-        _smsSendQueue.TryEnqueue(SendingTimePolicy.Anytime);
+        _smsPublishTaskQueue.TryEnqueue(SendingTimePolicy.Anytime);
         return Ok();
     }
 
@@ -151,7 +151,7 @@ public class TriggerController : ControllerBase
             return Ok();
         }
 
-        _smsSendQueue.TryEnqueue(SendingTimePolicy.Daytime);
+        _smsPublishTaskQueue.TryEnqueue(SendingTimePolicy.Daytime);
         return Ok();
     }
 }

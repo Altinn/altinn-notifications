@@ -22,7 +22,7 @@ public class TriggerControllerTests
     private readonly TriggerController _controller;
 
     private readonly Mock<IStatusFeedService> _statusFeedServiceMock = new();
-    private readonly Mock<ISmsSendBackgroundQueue> _smsSendBackgroundQueue = new();
+    private readonly Mock<ISmsPublishTaskQueue> _smsPublishTaskQueueMock = new();
     private readonly Mock<ISmsNotificationService> _smsNotificationServiceMock = new();
     private readonly Mock<IOrderProcessingService> _orderProcessingServiceMock = new();
     private readonly Mock<INotificationScheduleService> _notificationScheduleMock = new();
@@ -32,8 +32,8 @@ public class TriggerControllerTests
     {
         _controller = new TriggerController(
             NullLogger<TriggerController>.Instance,
-            _smsSendBackgroundQueue.Object,
             _statusFeedServiceMock.Object,
+            _smsPublishTaskQueueMock.Object,
             _notificationScheduleMock.Object,
             _orderProcessingServiceMock.Object,
             _smsNotificationServiceMock.Object,

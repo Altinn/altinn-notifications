@@ -65,7 +65,6 @@ $$;
 
 
 -- claimsmsbatchforsending.sql:
-
 -- FUNCTION: notifications.claim_sms_batch_for_sending(integer, integer DEFAULT 50)
 CREATE OR REPLACE FUNCTION notifications.claim_sms_batch_for_sending (
   _sendingtimepolicy integer,
@@ -83,19 +82,26 @@ VOLATILE
 PARALLEL UNSAFE
 ROWS 1000
 AS $$
+DECLARE
+  v_batchsize integer := GREATEST(1, LEAST(COALESCE(_batchsize, 50), 1000));
 BEGIN
   RETURN QUERY
   WITH to_process AS (
     SELECT s._id, s._orderid
     FROM notifications.smsnotifications s
-    JOIN notifications.orders o ON s._orderid = o._id
     WHERE s.result = 'New'
-      AND (
-           (_sendingtimepolicy = 1 AND o.sendingtimepolicy = 1)
-        OR (_sendingtimepolicy = 2 AND (o.sendingtimepolicy = 2 OR o.sendingtimepolicy IS NULL))
+      AND EXISTS (
+            SELECT 1
+            FROM notifications.orders o
+            WHERE o._id = s._orderid
+              AND (
+                   (_sendingtimepolicy = 1 AND o.sendingtimepolicy = 1)
+                OR (_sendingtimepolicy = 2 AND (o.sendingtimepolicy = 2 OR o.sendingtimepolicy IS NULL))
+              )
       )
-    FOR UPDATE OF s, o SKIP LOCKED
-    LIMIT GREATEST(1, COALESCE(_batchsize, 50))
+    ORDER BY s._id
+    FOR UPDATE OF s SKIP LOCKED
+    LIMIT v_batchsize
   ),
   updated AS (
     UPDATE notifications.smsnotifications s
@@ -104,8 +110,8 @@ BEGIN
     FROM to_process tp
     WHERE s._id = tp._id
     RETURNING
-      s.alternateid,
       s._orderid,
+      s.alternateid,
       s.mobilenumber,
       s.customizedbody
   )
@@ -118,7 +124,7 @@ BEGIN
       ELSE st.body
     END AS body
   FROM updated u
-  JOIN notifications.smstexts st ON u._orderid = st._orderid;
+  JOIN notifications.smstexts st ON st._orderid = u._orderid;
 END;
 $$;
 
@@ -126,19 +132,9 @@ COMMENT ON FUNCTION notifications.claim_sms_batch_for_sending(INTEGER, INTEGER) 
 'Atomically claims and returns batches of SMS notifications ready for sending.
 
 Parameters:
-  _sendingtimepolicy - Controls which notifications to process (per Altinn.Notifications.Core.Enums.SendingTimePolicy):
-    1 (Anytime): Only process notifications with Anytime policy
-    2 (Daytime): Process notifications with Daytime policy; NULL policy is treated as Daytime
-  
-  _batchsize - Maximum number of notifications to claim in a single call (default: 50)
-  
-The function:
-  1. Uses FOR UPDATE SKIP LOCKED to allow concurrent workers without contention
-  2. Atomically transitions notifications from "New" to "Sending" status
-  3. Returns notification details including alternateid, sender number, recipient number, and message body
-  
-Each row is guaranteed to be processed by only one caller, making this function
-safe for concurrent use across multiple application instances.';
+  _sendingtimepolicy - 1 (Anytime) or 2 (Daytime; NULL is treated as Daytime)
+  _batchsize - Max notifications claimed (default: 50; clamped to [1,1000])
+
 
 -- deleteoldstatusfeedrecords.sql:
 -- Creates or replaces a function to delete statusfeed records older than 90 days
