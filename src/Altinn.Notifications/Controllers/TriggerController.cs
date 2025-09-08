@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using Altinn.Notifications.Core.BackgroundQueue;
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Services.Interfaces;
 
 using Microsoft.AspNetCore.Mvc;
@@ -14,6 +15,7 @@ namespace Altinn.Notifications.Controllers;
 public class TriggerController : ControllerBase
 {
     private readonly ILogger<TriggerController> _logger;
+    private readonly ISmsSendBackgroundQueue _smsSendQueue;
     private readonly IStatusFeedService _statusFeedService;
     private readonly INotificationScheduleService _scheduleService;
     private readonly ISmsNotificationService _smsNotificationService;
@@ -25,6 +27,7 @@ public class TriggerController : ControllerBase
     /// </summary>
     public TriggerController(
         ILogger<TriggerController> logger,
+        ISmsSendBackgroundQueue smsSendQueue,
         IStatusFeedService statusFeedService,
         INotificationScheduleService scheduleService,
         IOrderProcessingService orderProcessingService,
@@ -32,6 +35,7 @@ public class TriggerController : ControllerBase
         IEmailNotificationService emailNotificationService)
     {
         _logger = logger;
+        _smsSendQueue = smsSendQueue;
         _scheduleService = scheduleService;
         _statusFeedService = statusFeedService;
         _smsNotificationService = smsNotificationService;
@@ -119,9 +123,9 @@ public class TriggerController : ControllerBase
     [HttpPost]
     [Route("sendsmsanytime")]
     [Consumes("application/json")]
-    public async Task<ActionResult> Trigger_SendSmsNotificationsAnytime(CancellationToken cancellationToken = default)
+    public ActionResult Trigger_SendSmsNotificationsAnytime()
     {
-        await _smsNotificationService.SendNotifications(cancellationToken, SendingTimePolicy.Anytime);
+        _smsSendQueue.TryEnqueue(SendingTimePolicy.Anytime);
         return Ok();
     }
 
@@ -140,14 +144,14 @@ public class TriggerController : ControllerBase
     [Route("sendsms")]
     [Route("sendsmsdaytime")]
     [Consumes("application/json")]
-    public async Task<ActionResult> Trigger_SendSmsNotificationsDaytime(CancellationToken cancellationToken = default)
+    public ActionResult Trigger_SendSmsNotificationsDaytime()
     {
         if (!_scheduleService.CanSendSmsNow())
         {
             return Ok();
         }
 
-        await _smsNotificationService.SendNotifications(cancellationToken, SendingTimePolicy.Daytime);
+        _smsSendQueue.TryEnqueue(SendingTimePolicy.Daytime);
         return Ok();
     }
 }
