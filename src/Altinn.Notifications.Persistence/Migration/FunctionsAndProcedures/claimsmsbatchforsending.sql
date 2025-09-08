@@ -66,4 +66,4 @@ COMMENT ON FUNCTION notifications.claim_sms_batch_for_sending(INTEGER, INTEGER) 
 
 Parameters:
   _sendingtimepolicy - 1 (Anytime) or 2 (Daytime; NULL is treated as Daytime)
-  _batchsize - Max notifications claimed (default: 50; clamped to [1,1000])
+  _batchsize - Max notifications claimed (default: 50; clamped to [1,1000])';
