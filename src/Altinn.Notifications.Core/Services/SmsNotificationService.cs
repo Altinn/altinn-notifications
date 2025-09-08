@@ -73,39 +73,30 @@ public class SmsNotificationService : ISmsNotificationService
     public async Task SendNotifications(CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime)
     {
         List<Sms> newSmsNotifications;
-        var stopwatch = Stopwatch.StartNew();
-        var timeBudget = TimeSpan.FromMinutes(1);
 
-        try
+        do
         {
-            do
+            cancellationToken.ThrowIfCancellationRequested();
+
+            newSmsNotifications = await _repository.GetNewNotifications(_publishBatchSize, cancellationToken, sendingTimePolicy);
+
+            foreach (var newSmsNotification in newSmsNotifications)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                newSmsNotifications = await _repository.GetNewNotifications(_publishBatchSize, cancellationToken, sendingTimePolicy);
-
-                foreach (var newSmsNotification in newSmsNotifications)
+                try
                 {
-                    try
-                    {
-                        var success = await _producer.ProduceAsync(_smsQueueTopicName, newSmsNotification.Serialize());
-                        if (!success)
-                        {
-                            await _repository.UpdateSendStatus(newSmsNotification.NotificationId, SmsNotificationResultType.New);
-                        }
-                    }
-                    catch (Exception)
+                    var success = await _producer.ProduceAsync(_smsQueueTopicName, newSmsNotification.Serialize());
+                    if (!success)
                     {
                         await _repository.UpdateSendStatus(newSmsNotification.NotificationId, SmsNotificationResultType.New);
                     }
                 }
+                catch (Exception)
+                {
+                    await _repository.UpdateSendStatus(newSmsNotification.NotificationId, SmsNotificationResultType.New);
+                }
             }
-            while (newSmsNotifications.Count >= _publishBatchSize && stopwatch.Elapsed < timeBudget);
         }
-        finally
-        {
-            stopwatch.Stop();
-        }
+        while (newSmsNotifications.Count == _publishBatchSize);
     }
 
     /// <inheritdoc/>
