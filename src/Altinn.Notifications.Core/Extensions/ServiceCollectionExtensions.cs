@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Configuration;
+﻿using Altinn.Notifications.Core.BackgroundQueue;
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 
@@ -37,6 +38,7 @@ public static class ServiceCollectionExtensions
             .AddSingleton<ICancelOrderService, CancelOrderService>()
             .AddSingleton<IContactPointService, ContactPointService>()
             .AddSingleton<IOrderRequestService, OrderRequestService>()
+            .AddSingleton<ISmsSendBackgroundQueue, SmsSendBackgroundQueue>()
             .AddSingleton<ISmsNotificationService, SmsNotificationService>()
             .AddSingleton<IOrderProcessingService, OrderProcessingService>()
             .AddSingleton<IEmailNotificationService, EmailNotificationService>()
@@ -52,6 +54,7 @@ public static class ServiceCollectionExtensions
             .AddSingleton<INotificationDeliveryManifestService, NotificationDeliveryManifestService>()
             .AddSingleton<INotificationsEmailServiceUpdateService, NotificationsEmailServiceUpdateService>()
             .Configure<KafkaSettings>(config.GetSection("KafkaSettings"))
-            .Configure<NotificationConfig>(config.GetSection("NotificationConfig"));
+            .Configure<NotificationConfig>(config.GetSection("NotificationConfig"))
+            .AddHostedService<SmsSendBackgroundService>();
     }
 }
