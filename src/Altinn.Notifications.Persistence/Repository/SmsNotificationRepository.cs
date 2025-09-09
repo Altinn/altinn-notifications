@@ -21,8 +21,8 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     private const string _smsSourceIdentifier = "SMS";
     private readonly NpgsqlDataSource _dataSource;
 
-    private const string _getNewSmsNotificationsSql = "select * from notifications.getsms_statusnew_updatestatus($1)"; // (_sendingtimepolicy) this is now calling an overload function with the sending time policy parameter
     private const string _getSmsNotificationRecipientsSql = "select * from notifications.getsmsrecipients_v2($1)"; // (_orderid)
+    private const string _claimSmsBatchForSending = "select * from notifications.claim_sms_batch_for_sending(_sendingtimepolicy := @sendingtimepolicy, _batchsize := @batchsize)";
     private const string _insertNewSmsNotificationSql = "call notifications.insertsmsnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _customizedbody, _result, _smscount, _resulttime, _expirytime)
 
     private const string _updateSmsNotificationBasedOnIdentifierSql =
@@ -95,15 +95,18 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     }
 
     /// <inheritdoc/>   
-    public async Task<List<Sms>> GetNewNotifications(SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime)
+    public async Task<List<Sms>> GetNewNotifications(int publishBatchSize, CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime)
     {
-        List<Sms> readyToSendSMS = [];
-        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getNewSmsNotificationsSql);
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_claimSmsBatchForSending);
 
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Integer, (int)sendingTimePolicy);
-        await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync())
+        List<Sms> readyToSendSMS = [];
+
+        pgcom.Parameters.AddWithValue("@batchsize", NpgsqlDbType.Integer, publishBatchSize);
+        pgcom.Parameters.AddWithValue("@sendingtimepolicy", NpgsqlDbType.Integer, (int)sendingTimePolicy);
+
+        await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken))
         {
-            while (await reader.ReadAsync())
+            while (await reader.ReadAsync(cancellationToken))
             {
                 var sms = new Sms(
                     reader.GetValue<Guid>("alternateid"),
