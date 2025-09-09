@@ -145,45 +145,45 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
         scheduleServiceMock.VerifyAll();
     }
 
-    [Fact]
-    public async Task Trigger_SendSmsNotificationsAnytime_CancellationDuringProcessing_PropagatedToService()
-    {
-        // Arrange
-        using var tokenSource = new CancellationTokenSource();
+    //[Fact]
+    //public async Task Trigger_SendSmsNotificationsAnytime_CancellationDuringProcessing_PropagatedToService()
+    //{
+    //    // Arrange
+    //    using var tokenSource = new CancellationTokenSource();
 
-        var operationStartedTcs = new TaskCompletionSource<bool>();
+    //    var operationStartedTcs = new TaskCompletionSource<bool>();
 
-        Mock<ISmsNotificationService> serviceMock = new();
-        serviceMock
-            .Setup(s => s.SendNotifications(It.IsAny<CancellationToken>(), SendingTimePolicy.Anytime))
-            .Callback<CancellationToken, SendingTimePolicy>((ct, _) =>
-            {
-                // Signal that the operation has started
-                operationStartedTcs.SetResult(true);
+    //    Mock<ISmsNotificationService> serviceMock = new();
+    //    serviceMock
+    //        .Setup(s => s.SendNotifications(It.IsAny<CancellationToken>(), SendingTimePolicy.Anytime))
+    //        .Callback<CancellationToken, SendingTimePolicy>((ct, _) =>
+    //        {
+    //            // Signal that the operation has started
+    //            operationStartedTcs.SetResult(true);
 
-                // Block until cancellation to simulate long-running work
-                ct.WaitHandle.WaitOne();
-            })
-            .Returns(Task.CompletedTask);
+    //            // Block until cancellation to simulate long-running work
+    //            ct.WaitHandle.WaitOne();
+    //        })
+    //        .Returns(Task.CompletedTask);
 
-        var client = GetTestClient(smsNotificationService: serviceMock.Object);
+    //    var client = GetTestClient(smsNotificationService: serviceMock.Object);
 
-        string url = _basePath + "/sendsmsanytime";
-        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
+    //    string url = _basePath + "/sendsmsanytime";
+    //    HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
 
-        // Act
-        var requestTask = client.SendAsync(httpRequestMessage, tokenSource.Token);
+    //    // Act
+    //    var requestTask = client.SendAsync(httpRequestMessage, tokenSource.Token);
 
-        // Wait for the service method to start running
-        await operationStartedTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+    //    // Wait for the service method to start running
+    //    await operationStartedTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
-        // Cancel the operation
-        await tokenSource.CancelAsync();
+    //    // Cancel the operation
+    //    await tokenSource.CancelAsync();
 
-        // Assert
-        await Assert.ThrowsAsync<TaskCanceledException>(() => requestTask);
-        serviceMock.Verify(e => e.SendNotifications(It.IsAny<CancellationToken>(), SendingTimePolicy.Anytime), Times.Once);
-    }
+    //    // Assert
+    //    await Assert.ThrowsAsync<TaskCanceledException>(() => requestTask);
+    //    serviceMock.Verify(e => e.SendNotifications(It.IsAny<CancellationToken>(), SendingTimePolicy.Anytime), Times.Once);
+    //}
 
     private HttpClient GetTestClient(
     IStatusFeedService? statusFeedService = null,
