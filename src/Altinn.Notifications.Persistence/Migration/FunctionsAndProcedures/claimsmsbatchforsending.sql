@@ -1,7 +1,7 @@
 -- FUNCTION: notifications.claim_sms_batch_for_sending(integer, integer DEFAULT 50)
 CREATE OR REPLACE FUNCTION notifications.claim_sms_batch_for_sending (
   _sendingtimepolicy integer,
-  _batchsize integer DEFAULT 50
+  _batchsize integer DEFAULT 1000
 )
 RETURNS TABLE (
   alternateid uuid,
@@ -16,7 +16,7 @@ PARALLEL UNSAFE
 ROWS 1000
 AS $$
 DECLARE
-  v_batchsize integer := GREATEST(1, LEAST(COALESCE(_batchsize, 50), 1000));
+  v_batchsize integer := GREATEST(1, LEAST(COALESCE(_batchsize, 1000), 1000));
 BEGIN
   RETURN QUERY
   WITH to_process AS (
@@ -66,4 +66,4 @@ COMMENT ON FUNCTION notifications.claim_sms_batch_for_sending(INTEGER, INTEGER) 
 
 Parameters:
   _sendingtimepolicy - 1 (Anytime) or 2 (Daytime; NULL is treated as Daytime)
-  _batchsize - Max notifications claimed (default: 50; clamped to [1,1000])';
+  _batchsize - Max notifications claimed (default: 1000; clamped to [1,1000])';
