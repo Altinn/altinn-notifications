@@ -52,7 +52,7 @@ jobs:
         run: |
           # Restart only the Postgres service
           docker ps \
-            --filter "ancestor=postgres:16" \
+            --filter "name=^/postgres" \
             -q \
           | xargs docker restart
       - name: Set up Kafka
