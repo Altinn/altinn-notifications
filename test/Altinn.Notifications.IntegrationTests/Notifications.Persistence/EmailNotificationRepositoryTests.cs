@@ -245,23 +245,22 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
     public async Task UpdateSendStatus_WithNotificationIdThatDoesNotExist_AbortsStatusUpdate()
     {
         // Arrange
-        EmailNotificationRepository sut = (EmailNotificationRepository)ServiceUtil
-          .GetServices(new List<Type>() { typeof(IEmailNotificationRepository) })
+        EmailNotificationRepository emailNotificationRepository = (EmailNotificationRepository)ServiceUtil
+          .GetServices([typeof(IEmailNotificationRepository)])
           .First(i => i.GetType() == typeof(EmailNotificationRepository));
         Guid nonExistentNotificationId = Guid.NewGuid();
 
-        // Act 
-        await sut.UpdateSendStatus(nonExistentNotificationId, EmailNotificationResultType.Succeeded);
+        // Act + Assert that the method throw an exception when no matching notification is found
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => emailNotificationRepository.UpdateSendStatus(nonExistentNotificationId, EmailNotificationResultType.Succeeded));
 
-        // Assert
+        // Assert: no rows updated
         string sql = $@"
-            SELECT count(1)
-            FROM notifications.emailnotifications email
-            WHERE email.alternateid = '{nonExistentNotificationId}'
-            AND email.result = '{EmailNotificationResultType.Succeeded}'";
+        SELECT count(1)
+        FROM notifications.emailnotifications email
+        WHERE email.alternateid = '{nonExistentNotificationId}'
+          AND email.result = '{EmailNotificationResultType.Succeeded}'";
 
         int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
-
         Assert.Equal(0, actualCount);
     }
 
@@ -292,7 +291,7 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
         var result = await SelectEmailNotificationStatus(emailNotification.Id);
         var count = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
         var orderStatus = await PostgreUtil.RunSqlReturnOutput<string>($"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order.Id}'");
-        
+
         Assert.NotNull(result);
         Assert.Equal(EmailNotificationResultType.Failed_TTL.ToString(), result);
         Assert.Equal(1, count);
