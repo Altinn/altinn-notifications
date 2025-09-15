@@ -32,7 +32,7 @@ public class StatusFeedServiceTests
     {
         // Arrange
         Mock<IStatusFeedRepository> statusFeedRepository = new();
-        statusFeedRepository.Setup(x => x.GetStatusFeed(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+        statusFeedRepository.Setup(x => x.GetStatusFeed(It.IsAny<long>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([new StatusFeed()
             {
                 SequenceNumber = 1,
@@ -81,36 +81,6 @@ public class StatusFeedServiceTests
     }
 
     [Fact]
-    public async Task GetStatusFeed_InvalidSequenceNumber_ReturnsServiceErrorResult()
-    {
-        // Arrange
-        Mock<IStatusFeedRepository> statusFeedRepository = new();
-        var sut = new StatusFeedService(statusFeedRepository.Object, _options, NullLogger<StatusFeedService>.Instance);
-        int seq = -1; // Invalid sequence number
-        
-        // Act
-        var result = await sut.GetStatusFeed(seq, null, _creatorName, CancellationToken.None);
-        
-        // Assert
-        statusFeedRepository.Verify(
-        x => x.GetStatusFeed(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
-        Times.Never);
-
-        result.Match(
-            success =>
-            {
-                Assert.Fail("Expected error but got success");
-                return false;
-            },
-            error =>
-            {
-                Assert.Equal(400, error.ErrorCode);
-                Assert.Equal("Sequence number cannot be less than 0", error.ErrorMessage);
-                return true;
-            });
-    }
-
-    [Fact]
     public async Task GetStatusFeed_MissingCreatorName_ReturnsError()
     {
         // Arrange
@@ -142,10 +112,10 @@ public class StatusFeedServiceTests
     {
         // Arrange
         Mock<IStatusFeedRepository> statusFeedRepository = new();
-        statusFeedRepository.Setup(x => x.GetStatusFeed(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+        statusFeedRepository.Setup(x => x.GetStatusFeed(It.IsAny<long>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("Database error"));
         var sut = new StatusFeedService(statusFeedRepository.Object, _options, NullLogger<StatusFeedService>.Instance);
-        int seq = 1;
+        long seq = 1;
         string creatorName = "ttd";
         
         // Act

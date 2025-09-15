@@ -10,10 +10,10 @@ using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Models.Status;
+using Altinn.Notifications.Validators;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
 
@@ -22,21 +22,20 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
     public class StatusFeedControllerTests
     {
         private readonly Mock<IStatusFeedService> _statusFeedService;
-        private readonly StatusFeedController _statusFeedController;
+        private readonly GetStatusFeedRequestValidator _validator = new();
+        private readonly StatusFeedController _sut;
 
         public StatusFeedControllerTests()
         {
             _statusFeedService = new Mock<IStatusFeedService>();
-            _statusFeedController = new StatusFeedController(_statusFeedService.Object)
+            
+            _sut = new StatusFeedController(_statusFeedService.Object, _validator)
             {
                 ControllerContext = new ControllerContext
                 {
                     HttpContext = new DefaultHttpContext
                     {
-                        Items =
-                    {
-                        ["Org"] = "ttd"
-                    }
+                        Items = { ["Org"] = "ttd" }
                     }
                 }
             };
@@ -46,7 +45,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
         public async Task Get_WithNoOrgSetInHttpContext_ReturnsForbidden()
         {
             // Arrange
-            var controller = new StatusFeedController(_statusFeedService.Object)
+            var controller = new StatusFeedController(_statusFeedService.Object, _validator)
             {
                 ControllerContext =
                 {
@@ -55,7 +54,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
             };
 
             // Act
-            var result = await controller.GetStatusFeed(1);
+            var result = await controller.GetStatusFeed(new GetStatusFeedRequest { Seq = 1 });
 
             // Assert
             Assert.NotNull(result);
@@ -91,11 +90,11 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
                     }
                 }
             };
-            _statusFeedService.Setup(x => x.GetStatusFeed(It.IsAny<int>(), It.IsAny<int?>(), expectedCreatorName, CancellationToken.None))
+            _statusFeedService.Setup(x => x.GetStatusFeed(It.IsAny<long>(), It.IsAny<int?>(), expectedCreatorName, CancellationToken.None))
                     .ReturnsAsync(statusFeedList);
 
             // Act
-            var result = await _statusFeedController.GetStatusFeed(expectedSequenceNumber);
+            var result = await _sut.GetStatusFeed(new GetStatusFeedRequest { Seq = expectedSequenceNumber });
 
             // Assert
             Assert.NotNull(result);
@@ -111,11 +110,11 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
         public async Task Get_WhenServiceThrowsOperationCanceledException_IsCaughtWithCorrectStatusCodeReturned()
         {
             // Arrange
-            _statusFeedService.Setup(x => x.GetStatusFeed(It.IsAny<int>(), It.IsAny<int?>(), It.IsAny<string>(), CancellationToken.None))
+            _statusFeedService.Setup(x => x.GetStatusFeed(It.IsAny<long>(), It.IsAny<int?>(), It.IsAny<string>(), CancellationToken.None))
                 .ThrowsAsync(new OperationCanceledException());
 
             // Act
-            var result = await _statusFeedController.GetStatusFeed(1);
+            var result = await _sut.GetStatusFeed(new GetStatusFeedRequest { Seq = 1 });
 
             // Assert
             Assert.NotNull(result);
@@ -129,11 +128,11 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
         {
             // Arrange
             var error = new ServiceError(400, "Bad request");
-            _statusFeedService.Setup(x => x.GetStatusFeed(It.IsAny<int>(), It.IsAny<int?>(), It.IsAny<string>(), CancellationToken.None))
+            _statusFeedService.Setup(x => x.GetStatusFeed(It.IsAny<long>(), It.IsAny<int?>(), It.IsAny<string>(), CancellationToken.None))
                 .ReturnsAsync(error);
 
             // Act
-            var result = await _statusFeedController.GetStatusFeed(1);
+            var result = await _sut.GetStatusFeed(new GetStatusFeedRequest { Seq = 1 });
 
             // Assert
             Assert.NotNull(result);
