@@ -20,7 +20,7 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
     private readonly string _retryTopicName;
     private readonly IKafkaProducer _producer;
     private readonly IMemoryCache _logSuppressionCache;
-    private readonly ILogger<KafkaConsumerBase<TConsumer>> _logger;
+    private readonly ILogger<TConsumer> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationStatusConsumerBase{TConsumer, TResult}"/> class.
@@ -37,7 +37,7 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
         IKafkaProducer producer,
         IMemoryCache memoryCache,
         IOptions<KafkaSettings> settings,
-        ILogger<NotificationStatusConsumerBase<TConsumer, TResult>> logger)
+        ILogger<TConsumer> logger)
         : base(settings, logger, topicName)
     {
         _logger = logger;
