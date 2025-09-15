@@ -1,4 +1,5 @@
 ﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
@@ -96,6 +97,13 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     /// <inheritdoc/>
     public async Task UpdateSendStatus(Guid? notificationId, EmailNotificationResultType status, string? operationId = null)
     {
+        var hasOperationId = !string.IsNullOrWhiteSpace(operationId);
+        var hasNotificationId = notificationId is Guid id && id != Guid.Empty;
+        if (!hasOperationId && !hasNotificationId)
+        {
+            throw new ArgumentException("The provided Email identifier is invalid.");
+        }
+
         await using var connection = await _dataSource.OpenConnectionAsync();
         await using var transaction = await connection.BeginTransactionAsync();
 
@@ -103,16 +111,23 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
         {
             await using NpgsqlCommand pgcom = new(_updateEmailStatus, connection, transaction);
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
-            pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, operationId ?? (object)DBNull.Value);
-            pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId ?? (object)DBNull.Value);
+            pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(operationId) ? DBNull.Value : operationId);
+            pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, (notificationId == null || notificationId == Guid.Empty) ? DBNull.Value : notificationId);
 
-            var alternateId = await pgcom.ExecuteScalarAsync() ?? throw new KeyNotFoundException($"Email notification not found for NotificationId '{notificationId}' or OperationId '{operationId}'. Cannot set status '{status}'.");
-
-            var parseResult = Guid.TryParse(alternateId.ToString(), out Guid emailNotificationAlternateId);
-
-            if (!parseResult)
+            var alternateId = await pgcom.ExecuteScalarAsync();
+            if (alternateId is null)
             {
-                throw new InvalidOperationException($"Guid could not be parsed");
+                if (hasOperationId)
+                {
+                    throw new SendStatusUpdateException(NotificationChannel.Email, operationId!, SendStatusIdentifierType.OperationId);
+                }
+
+                throw new SendStatusUpdateException(NotificationChannel.Email, notificationId!.Value.ToString(), SendStatusIdentifierType.NotificationId);
+            }
+
+            if (alternateId is not Guid emailNotificationAlternateId)
+            {
+                throw new InvalidOperationException("Guid could not be parsed");
             }
 
             var orderIsSetAsCompleted = await TryCompleteOrderBasedOnNotificationsState(emailNotificationAlternateId, connection, transaction);

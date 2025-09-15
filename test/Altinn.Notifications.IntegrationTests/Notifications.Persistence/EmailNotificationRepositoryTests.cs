@@ -1,9 +1,9 @@
 ﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
-using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
@@ -117,7 +117,7 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UpdateSendStatus_WithNotificationId()
+    public async Task UpdateSendStatus_GivenValidNotificationId_ShouldUpdateStatusAndOperationId()
     {
         // Arrange
         (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
@@ -145,7 +145,7 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UpdateSendStatusDelivered_WithNotificationId_OrderStatusIsSetToCompleted()
+    public async Task UpdateSendStatus_GivenValidNotificationId_ShouldUpdateOrderStatusToCompleted()
     {
         // Arrange
         (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(simulateConsumers: true, simulateCronJob: true);
@@ -178,12 +178,11 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
 
         // Verify that the order status was updated based on notification delivery
         // Initial state is "Registered", final state should be "Completed"
-        Assert.NotEqual("Registered", processedStatus);
         Assert.Equal("Completed", processedStatus);
     }
 
     [Fact]
-    public async Task UpdateSendStatus_WithoutNotificationId()
+    public async Task UpdateSendStatus_GivenValidOperationId_ShouldFindNotificationAndUpdateStatus()
     {
         // Arrange
         (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
@@ -195,11 +194,11 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
 
         string operationId = Guid.NewGuid().ToString();
 
-        string setGateqwaySql = $@"Update notifications.emailnotifications 
+        string setOperationIdSql = $@"Update notifications.emailnotifications 
                 SET operationid = '{operationId}'
                 WHERE alternateid = '{emailNotification.Id}'";
 
-        await PostgreUtil.RunSql(setGateqwaySql);
+        await PostgreUtil.RunSql(setOperationIdSql);
 
         // Act
         await repo.UpdateSendStatus(null, EmailNotificationResultType.Succeeded, operationId);
@@ -217,7 +216,7 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UpdateSendStatus_WithNotificationId_WithoutGatewayRef()
+    public async Task UpdateSendStatus_GivenNotificationIdWithoutOperationId_ShouldUpdateStatusSuccessfully()
     {
         // Arrange
         (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
@@ -242,7 +241,7 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UpdateSendStatus_WithNotificationIdThatDoesNotExist_AbortsStatusUpdate()
+    public async Task UpdateSendStatus_GivenNonExistentNotificationId_ThrowsSendStatusUpdateException()
     {
         // Arrange
         EmailNotificationRepository emailNotificationRepository = (EmailNotificationRepository)ServiceUtil
@@ -250,8 +249,12 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
           .First(i => i.GetType() == typeof(EmailNotificationRepository));
         Guid nonExistentNotificationId = Guid.NewGuid();
 
-        // Act + Assert that the method throw an exception when no matching notification is found
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => emailNotificationRepository.UpdateSendStatus(nonExistentNotificationId, EmailNotificationResultType.Succeeded));
+        // Act
+        var ex = await Assert.ThrowsAsync<SendStatusUpdateException>(() => emailNotificationRepository.UpdateSendStatus(nonExistentNotificationId, EmailNotificationResultType.Succeeded));
+
+        // Assert:
+        Assert.Equal(NotificationChannel.Email, ex.Channel);
+        Assert.Equal(SendStatusIdentifierType.NotificationId, ex.IdentifierType);
 
         // Assert: no rows updated
         string sql = $@"
@@ -262,6 +265,49 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
 
         int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
         Assert.Equal(0, actualCount);
+    }
+
+    [Fact]
+    public async Task UpdateSendStatus_GivenNonExistentOperationId_ThrowsSendStatusUpdateException()
+    {
+        // Arrange
+        EmailNotificationRepository emailNotificationRepository = (EmailNotificationRepository)ServiceUtil
+          .GetServices([typeof(IEmailNotificationRepository)])
+          .First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        string operationId = Guid.NewGuid().ToString();
+
+        // Act
+        var ex = await Assert.ThrowsAsync<SendStatusUpdateException>(() => emailNotificationRepository.UpdateSendStatus(notificationId: null, status: EmailNotificationResultType.Succeeded, operationId: operationId));
+
+        // Assert: exception details
+        Assert.Equal(NotificationChannel.Email, ex.Channel);
+        Assert.Equal(SendStatusIdentifierType.OperationId, ex.IdentifierType);
+
+        // Assert: no rows updated
+        string sql = $@"
+        SELECT count(1)
+        FROM notifications.emailnotifications email
+        WHERE email.operationId = '{operationId}'
+          AND email.result = '{EmailNotificationResultType.Succeeded}'";
+
+        int actualCount = await PostgreUtil.RunSqlReturnOutput<int>(sql);
+        Assert.Equal(0, actualCount);
+    }
+
+    [Fact]
+    public async Task UpdateSendStatus_WithInvalidNotificationAndOperationIdentifiers_ThrowsArgumentException()
+    {
+        // Arrange
+        EmailNotificationRepository repo = (EmailNotificationRepository)ServiceUtil
+            .GetServices([typeof(IEmailNotificationRepository)])
+            .First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<ArgumentException>(
+            () => repo.UpdateSendStatus(null, EmailNotificationResultType.Succeeded, null));
+
+        Assert.Equal("The provided Email identifier is invalid.", exception.Message);
     }
 
     [Fact]
