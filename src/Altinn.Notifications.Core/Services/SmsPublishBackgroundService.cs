@@ -9,7 +9,6 @@ namespace Altinn.Notifications.Core.Services;
 
 /// <summary>
 /// Background service that runs a dedicated processing loop per <see cref="SendingTimePolicy"/>.
-/// 
 /// Each loop waits for queued work, executes SMS publishing, and then marks the policy as available.
 /// </summary>
 public class SmsPublishBackgroundService : BackgroundService
