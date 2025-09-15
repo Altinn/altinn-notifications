@@ -86,7 +86,7 @@ public class SmsClient : ISmsClient
             };
         }
 
-        _logger.LogInformation("// SmsClient // SendAsync // Failed to send SMS. Status: {StatusText}", result.StatusText);
+        _logger.LogWarning("// SmsClient // SendAsync // Failed to send SMS. Status: {StatusText}", result.StatusText);
 
         return new SmsClientErrorResponse
         {
