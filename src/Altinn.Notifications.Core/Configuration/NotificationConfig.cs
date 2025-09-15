@@ -24,4 +24,10 @@ public class NotificationConfig
     /// End hour of the SMS send window
     /// </summary>
     public int SmsSendWindowEndHour { get; set; } = 17;
+
+    /// <summary>
+    /// The maximum number of entries to return in one page
+    /// </summary>
+    [System.ComponentModel.DataAnnotations.Range(1, 1000)]
+    public int MaxPageSize { get; set; }
 }

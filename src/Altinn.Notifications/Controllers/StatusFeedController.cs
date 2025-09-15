@@ -33,7 +33,7 @@ public class StatusFeedController(IStatusFeedService statusFeedService) : Contro
     [Consumes("application/json")]
     [Produces("application/json")]
     [SwaggerResponse(200, "Successfully retrieved status feed entries", typeof(List<StatusFeedExt>))]
-    public async Task<ActionResult<List<StatusFeedExt>>> GetStatusFeed([FromQuery][Range(0, int.MaxValue)] int seq = 0, int? pageSize = null)
+    public async Task<ActionResult<List<StatusFeedExt>>> GetStatusFeed([FromQuery][Range(0, int.MaxValue)] long seq = 0, int? pageSize = null)
     {
         try
         {

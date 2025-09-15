@@ -52,7 +52,6 @@ public static class ServiceCollectionExtensions
             .AddSingleton<INotificationDeliveryManifestService, NotificationDeliveryManifestService>()
             .AddSingleton<INotificationsEmailServiceUpdateService, NotificationsEmailServiceUpdateService>()
             .Configure<KafkaSettings>(config.GetSection("KafkaSettings"))
-            .Configure<NotificationConfig>(config.GetSection("NotificationConfig"))
-            .Configure<StatusFeedConfig>(config.GetSection("StatusFeedConfig"));
+            .Configure<NotificationConfig>(config.GetSection("NotificationConfig"));
     }
 }

@@ -20,7 +20,7 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 public class StatusFeedServiceTests
 {
     private const int _maxPageSize = 500;
-    private readonly IOptions<StatusFeedConfig> _options = Options.Create(new StatusFeedConfig
+    private readonly IOptions<NotificationConfig> _options = Options.Create(new NotificationConfig
     {
         MaxPageSize = _maxPageSize
     });

@@ -15,7 +15,7 @@ namespace Altinn.Notifications.Core.Services;
 public class StatusFeedService : IStatusFeedService
 {
     private readonly IStatusFeedRepository _statusFeedRepository;
-    private readonly StatusFeedConfig _config;
+    private readonly NotificationConfig _config;
     private readonly ILogger<StatusFeedService> _logger;
 
     /// <summary>
@@ -26,7 +26,7 @@ public class StatusFeedService : IStatusFeedService
     /// <param name="logger">For logging purposes</param>
     public StatusFeedService(
         IStatusFeedRepository statusFeedRepository,
-        IOptions<StatusFeedConfig> config,
+        IOptions<NotificationConfig> config,
         ILogger<StatusFeedService> logger)
     {
         _statusFeedRepository = statusFeedRepository;
@@ -41,7 +41,7 @@ public class StatusFeedService : IStatusFeedService
     }
 
     /// <inheritdoc />
-    public async Task<Result<List<StatusFeed>, ServiceError>> GetStatusFeed(int seq, int? pageSize, string creatorName, CancellationToken cancellationToken)
+    public async Task<Result<List<StatusFeed>, ServiceError>> GetStatusFeed(long seq, int? pageSize, string creatorName, CancellationToken cancellationToken)
     {
         if (seq < 0)
         {

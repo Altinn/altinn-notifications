@@ -29,5 +29,5 @@ public interface IStatusFeedRepository
     /// <param name="pageSize">Parameter for setting the total number of entries returned</param>
     /// <param name="cancellationToken">Token for cancelling the current asynchronous request</param>
     /// <returns>List of status feed entries</returns>
-    public Task<List<StatusFeed>> GetStatusFeed(int seq, string creatorName, int pageSize, CancellationToken cancellationToken);
+    public Task<List<StatusFeed>> GetStatusFeed(long seq, string creatorName, int pageSize, CancellationToken cancellationToken);
 }
