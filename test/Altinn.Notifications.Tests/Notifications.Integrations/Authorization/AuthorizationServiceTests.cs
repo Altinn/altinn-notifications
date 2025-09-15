@@ -17,9 +17,8 @@ namespace Altinn.Notifications.Tests.Notifications.Integrations.Authorization;
 
 public class AuthorizationServiceTests
 {
-    private Mock<IPDP> _pdpMock = new Mock<IPDP>();
-
-    private AuthorizationService _target;
+    private readonly AuthorizationService _target;
+    private readonly Mock<IPDP> _pdpMock = new();
 
     public AuthorizationServiceTests()
     {
@@ -51,7 +50,7 @@ public class AuthorizationServiceTests
 
         // Act
         List<OrganizationContactPoints> actualResult =
-            await _target.AuthorizeUserContactPointsForResource(organizationContactPoints, "urn:altinn:resource:app_ttd_apps-test");
+            await _target.AuthorizeUserContactPointsForResource(organizationContactPoints, "app_ttd_apps-test");
 
         // Assert
         XacmlJsonRequestRoot expectedRequest = await TestDataLoader.Load<XacmlJsonRequestRoot>("PermitAll");
@@ -132,7 +131,7 @@ public class AuthorizationServiceTests
 
         // Act
         List<OrganizationContactPoints> actualResult =
-            await _target.AuthorizeUserContactPointsForResource(organizationContactPoints, "urn:altinn:resource:app_ttd_apps-test");
+            await _target.AuthorizeUserContactPointsForResource(organizationContactPoints, "app_ttd_apps-test");
 
         // Assert
         XacmlJsonRequestRoot expectedRequest = await TestDataLoader.Load<XacmlJsonRequestRoot>("DenyAll");

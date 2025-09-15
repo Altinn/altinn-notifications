@@ -2,7 +2,6 @@
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
-using Altinn.Notifications.Core.Models.Status;
 
 namespace Altinn.Notifications.Core.Persistence;
 

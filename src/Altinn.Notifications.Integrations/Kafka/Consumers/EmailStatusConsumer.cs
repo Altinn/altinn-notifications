@@ -1,21 +1,20 @@
-﻿using Altinn.Notifications.Core.Integrations;
+﻿using Altinn.Notifications.Core.Exceptions;
+using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Integrations.Configuration;
 
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Integrations.Kafka.Consumers;
 
 /// <summary>
-/// Kafka consumer class for status messages about email notifications
+/// Kafka consumer class for processing status messages about email notifications.
 /// </summary>
-public class EmailStatusConsumer : KafkaConsumerBase<EmailStatusConsumer>
+public sealed class EmailStatusConsumer : NotificationStatusConsumerBase<EmailStatusConsumer, EmailSendOperationResult>
 {
-    private readonly string _retryTopicName;
-    private readonly IKafkaProducer _producer;
-    private readonly ILogger<EmailStatusConsumer> _logger;
     private readonly IEmailNotificationService _emailNotificationsService;
 
     /// <summary>
@@ -23,46 +22,41 @@ public class EmailStatusConsumer : KafkaConsumerBase<EmailStatusConsumer>
     /// </summary>
     public EmailStatusConsumer(
         IKafkaProducer producer,
+        IMemoryCache memoryCache,
         IOptions<KafkaSettings> settings,
         ILogger<EmailStatusConsumer> logger,
         IEmailNotificationService emailNotificationsService)
-        : base(settings, logger, settings.Value.EmailStatusUpdatedTopicName)
+        : base(settings.Value.EmailStatusUpdatedTopicName, settings.Value.EmailStatusUpdatedTopicName, producer, memoryCache, settings, logger)
     {
-        _logger = logger;
-        _producer = producer;
         _emailNotificationsService = emailNotificationsService;
-        _retryTopicName = settings.Value.EmailStatusUpdatedTopicName;
     }
 
-    /// <inheritdoc/>
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        return Task.Run(() => ConsumeMessage(ProcessStatus, RetryStatus, stoppingToken), stoppingToken);
-    }
+    /// <summary>
+    /// Gets the name of the notification channel being processed.
+    /// </summary>
+    /// <returns>The string "email" representing the email notification channel.</returns>
+    protected override string ChannelName => "email";
 
-    private async Task ProcessStatus(string message)
-    {
-        bool succeeded = EmailSendOperationResult.TryParse(message, out EmailSendOperationResult result);
+    /// <summary>
+    /// Attempts to parse a message into an <see cref="EmailSendOperationResult"/> object.
+    /// </summary>
+    /// <param name="message">The message to parse.</param>
+    /// <param name="result">The parsed result if successful; otherwise, null.</param>
+    /// <returns>True if parsing was successful; otherwise, false.</returns>
+    protected override bool TryParse(string message, out EmailSendOperationResult result) => EmailSendOperationResult.TryParse(message, out result);
 
-        if (!succeeded)
-        {
-            _logger.LogError("// EmailStatusConsumer // ProcessStatus // Deserialization of message failed. {Message}", message);
-            return;
-        }
+    /// <summary>
+    /// Updates the email notification status based on the parsed result.
+    /// </summary>
+    /// <param name="result">The parsed result containing email status update information.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    protected override Task UpdateStatusAsync(EmailSendOperationResult result) => _emailNotificationsService.UpdateSendStatus(result);
 
-        try
-        {
-            await _emailNotificationsService.UpdateSendStatus(result);
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "Could not update email send status for message: {Message}", message);
-            throw;
-        }
-    }
-
-    private async Task RetryStatus(string message)
-    {
-        await _producer.ProduceAsync(_retryTopicName, message!);
-    }
+    /// <summary>
+    /// Gets a key used for suppressing duplicate log entries for the same error.
+    /// </summary>
+    /// <param name="result">The parsed result that failed to update.</param>
+    /// <param name="exception">The exception that occurred during status update (unused in this implementation).</param>
+    /// <returns>A string key used for log suppression, using either the operation ID or notification ID.</returns>
+    protected override string? GetSuppressionKey(EmailSendOperationResult result, SendStatusUpdateException exception) => $"{exception.IdentifierType}:{exception.Identifier}";
 }
