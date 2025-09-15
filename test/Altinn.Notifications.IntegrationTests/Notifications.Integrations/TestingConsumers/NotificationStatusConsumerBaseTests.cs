@@ -179,7 +179,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
                 LogLevel.Information,
                 It.IsAny<EventId>(),
                 It.Is<It.IsAnyType>((s, _) => !string.IsNullOrWhiteSpace(s.ToString())),
-                It.Is<SendStatusUpdateException>(ex => ex != null),
+                It.Is<SendStatusUpdateException>(ex => ex == null),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.AtLeastOnce());
 
@@ -246,7 +246,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
                 LogLevel.Information,
                 It.IsAny<EventId>(),
                 It.Is<It.IsAnyType>((s, _) => !string.IsNullOrWhiteSpace(s.ToString())),
-                It.Is<SendStatusUpdateException>(ex => ex != null),
+                It.Is<SendStatusUpdateException>(ex => ex == null),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.AtLeastOnce());
 
