@@ -20,11 +20,6 @@ public sealed class EmailStatusConsumer : NotificationStatusConsumerBase<EmailSt
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailStatusConsumer"/> class.
     /// </summary>
-    /// <param name="producer">The Kafka producer used for publishing retry messages.</param>
-    /// <param name="memoryCache">Memory cache for log suppression.</param>
-    /// <param name="settings">Kafka configuration settings.</param>
-    /// <param name="logger">Logger for the consumer.</param>
-    /// <param name="emailNotificationsService">Service for handling email notification operations.</param>
     public EmailStatusConsumer(
         IKafkaProducer producer,
         IMemoryCache memoryCache,

@@ -112,7 +112,7 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
                         AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(5)
                     });
 
-                _logger.LogInformation(e, "Could not update {Channel} send status for message: {Message}", ChannelName, message);
+                LogSendStatusUpdateException(e, message);
             }
 
             await RetryStatus(message);
@@ -148,5 +148,15 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
             kafkaMessage);
 
         return false;
+    }
+
+    /// <summary>
+    /// Logs send status update failures.
+    /// </summary>
+    /// <param name="exception">The domain exception.</param>
+    /// <param name="kafkaMessage">The original Kafka message.</param>
+    private void LogSendStatusUpdateException(SendStatusUpdateException exception, string kafkaMessage)
+    {
+        _logger.LogInformation("Exception Message={ExceptionMessage}. Kafka Message={KafkaMessage}", exception.Message, kafkaMessage);
     }
 }
