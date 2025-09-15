@@ -82,15 +82,8 @@ public class SmsNotificationService : ISmsNotificationService
 
             foreach (var newSmsNotification in newSmsNotifications)
             {
-                try
-                {
-                    var success = await _producer.ProduceAsync(_smsQueueTopicName, newSmsNotification.Serialize());
-                    if (!success)
-                    {
-                        await _repository.UpdateSendStatus(newSmsNotification.NotificationId, SmsNotificationResultType.New);
-                    }
-                }
-                catch (Exception)
+                var success = await _producer.ProduceAsync(_smsQueueTopicName, newSmsNotification.Serialize());
+                if (!success)
                 {
                     await _repository.UpdateSendStatus(newSmsNotification.NotificationId, SmsNotificationResultType.New);
                 }
