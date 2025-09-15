@@ -128,7 +128,9 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     {
         KeyValuePair.Create("service.name", (object)"platform-notifications-sms"),
     };
-    
+
+    services.AddHttpContextAccessor();
+
     services.AddOpenTelemetry()
         .ConfigureResource(resourceBuilder => resourceBuilder.AddAttributes(attributes))
         .WithMetrics(metrics => 
@@ -148,7 +150,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
 
             tracing.AddAspNetCoreInstrumentation();
             tracing.AddHttpClientInstrumentation();
-            tracing.AddProcessor(new RequestFilterProcessor(new HttpContextAccessor()));
+            tracing.AddProcessor<RequestFilterProcessor>();
         });
 
     if (!string.IsNullOrEmpty(applicationInsightsConnectionString))
