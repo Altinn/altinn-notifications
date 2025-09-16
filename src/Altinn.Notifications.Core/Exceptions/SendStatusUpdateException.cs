@@ -10,11 +10,11 @@ namespace Altinn.Notifications.Core.Exceptions;
 /// <remarks>
 /// Initializes a new instance that carries domain-specific failure context for send-status updates.
 /// </remarks>
-/// <param name="channel">The notification channel the update concerned (Email or Sms)..</param>
+/// <param name="channel">The notification channel the update concerned (Email or Sms).</param>
 /// <param name="identifier">The value of the identifier that was not matched.</param>
 /// <param name="identifierType">The type of the identifier that was not matched.</param>
 [ExcludeFromCodeCoverage]
-public class SendStatusUpdateException(NotificationChannel channel, string identifier, SendStatusIdentifierType identifierType) : Exception(BuildMessage(channel, identifier, identifierType))
+public sealed class SendStatusUpdateException(NotificationChannel channel, string identifier, SendStatusIdentifierType identifierType) : Exception(BuildMessage(channel, identifier, identifierType))
 {
     /// <summary>
     /// The notification channel the update concerned (Email or Sms).
