@@ -124,7 +124,8 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
     public async Task GetNewNotifications_ShouldReturnUnprocessedSmsNotifications()
     {
         // Arrange
-        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
+        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendingTimePolicy: SendingTimePolicy.Anytime);
+
         _orderIdsToCleanup.Add(order.Id);
 
         SmsNotificationRepository repo = ServiceUtil
@@ -133,7 +134,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
             .First();
 
         // Act
-        List<Sms> smsToBeSent = await repo.GetNewNotifications(50, CancellationToken.None);
+        List<Sms> smsToBeSent = await repo.GetNewNotifications(50, CancellationToken.None, SendingTimePolicy.Anytime);
 
         // Assert
         Assert.Contains(smsToBeSent, e => e.NotificationId == smsNotification.Id);
