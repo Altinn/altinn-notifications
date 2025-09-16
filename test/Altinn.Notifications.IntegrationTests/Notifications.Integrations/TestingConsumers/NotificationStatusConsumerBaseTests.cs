@@ -148,6 +148,10 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
             {
                 SmsQueueTopicName = kafkaSettings.Value.SmsStatusUpdatedTopicName
+            }), 
+            Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig
+            {
+                SmsPublishBatchSize = 500
             }));
 
         using var smsStatusConsumer = new SmsStatusConsumer(producer.Object, memoryCache, kafkaSettings, logger.Object, smsNotificationService);

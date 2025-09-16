@@ -437,7 +437,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
     {
         // Arrange
         (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(simulateConsumers: true, simulateCronJob: true);
-        _orderIdsToDelete.Add(order.Id);
+        _orderIdsToCleanup.Add(order.Id);
 
         SmsNotificationRepository repo = (SmsNotificationRepository)ServiceUtil
           .GetServices([typeof(ISmsNotificationRepository)])
