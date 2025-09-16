@@ -159,6 +159,114 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
         Assert.Contains(smsToBeSent, s => s.NotificationId == smsNotification.Id);
     }
 
+    [Fact]
+    public async Task GetNewNotifications_ShouldTransitionStatusFromNewToSending()
+    {
+        // Arrange
+        const int count = 3;
+        List<Guid> claimedIds = [];
+        SmsNotificationRepository repo = ServiceUtil.GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>().First();
+
+        for (int i = 0; i < count; i++)
+        {
+            (NotificationOrder order, SmsNotification sms) =
+                await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendingTimePolicy: SendingTimePolicy.Anytime);
+            
+            _orderIdsToCleanup.Add(order.Id);
+
+            claimedIds.Add(sms.Id);
+        }
+
+        // Act
+        var claimed = await repo.GetNewNotifications(count, CancellationToken.None, SendingTimePolicy.Anytime);
+
+        // Assert
+        Assert.Equal(count, claimed.Count);
+
+        foreach (var id in claimedIds)
+        {
+            Assert.Contains(claimed, c => c.NotificationId == id);
+            string status = await SelectSmsNotificationStatus(id);
+            Assert.Equal(SmsNotificationResultType.Sending.ToString(), status);
+        }
+    }
+
+    [Fact]
+    public async Task GetNewNotifications_SecondCallShouldNotReturnAlreadyClaimed()
+    {
+        // Arrange
+        const int count = 5;
+
+        SmsNotificationRepository repo = ServiceUtil.GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>().First();
+
+        List<Guid> notificationIds = [];
+
+        for (int i = 0; i < count; i++)
+        {
+            (NotificationOrder order, SmsNotification sms) =
+                await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendingTimePolicy: SendingTimePolicy.Anytime);
+            _orderIdsToCleanup.Add(order.Id);
+            notificationIds.Add(sms.Id);
+        }
+
+        // Act
+        var firstBatch = await repo.GetNewNotifications(count, CancellationToken.None, SendingTimePolicy.Anytime);
+        var secondBatch = await repo.GetNewNotifications(count, CancellationToken.None, SendingTimePolicy.Anytime);
+
+        // Assert
+        Assert.Equal(count, firstBatch.Count);
+        Assert.Empty(secondBatch);
+
+        foreach (var id in notificationIds)
+        {
+            string status = await SelectSmsNotificationStatus(id);
+            Assert.Equal(SmsNotificationResultType.Sending.ToString(), status);
+        }
+    }
+
+    [Fact]
+    public async Task GetNewNotifications_BatchSizeZero_ShouldReturnEmpty_AndNotChangeState()
+    {
+        // Arrange
+        (NotificationOrder order, SmsNotification sms) =
+            await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendingTimePolicy: SendingTimePolicy.Anytime);
+
+        _orderIdsToCleanup.Add(order.Id);
+
+        SmsNotificationRepository repo = ServiceUtil.GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>().First();
+
+        // Act
+        var result = await repo.GetNewNotifications(0, CancellationToken.None, SendingTimePolicy.Anytime);
+
+        // Assert
+        Assert.Empty(result);
+        string status = await SelectSmsNotificationStatus(sms.Id);
+        Assert.Equal(SmsNotificationResultType.New.ToString(), status);
+    }
+
+    [Fact]
+    public async Task GetNewNotifications_BatchSizeNegative_ShouldReturnEmpty_AndNotChangeState()
+    {
+        // Arrange
+        (NotificationOrder order, SmsNotification sms) =
+            await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendingTimePolicy: SendingTimePolicy.Anytime);
+        _orderIdsToCleanup.Add(order.Id);
+
+        SmsNotificationRepository repo = ServiceUtil.GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>().First();
+
+        // Act
+        var result = await repo.GetNewNotifications(-10, CancellationToken.None, SendingTimePolicy.Anytime);
+
+        // Assert
+        Assert.Empty(result);
+        string status = await SelectSmsNotificationStatus(sms.Id);
+        Assert.Equal(SmsNotificationResultType.New.ToString(), status);
+    }
+
     [Theory]
     [InlineData(SmsNotificationResultType.Failed)]
     [InlineData(SmsNotificationResultType.Failed_Deleted)]
