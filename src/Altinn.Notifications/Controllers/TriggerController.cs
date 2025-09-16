@@ -110,15 +110,10 @@ public class TriggerController : ControllerBase
     }
 
     /// <summary>
-    /// Initiates processing of SMS notifications that are configured to be sent at any time of day.
+    /// Signals background processing of SMS notifications that use the <see cref="SendingTimePolicy.Anytime"/> policy.
     /// </summary>
-    /// <param name="cancellationToken">
-    /// Token to monitor for cancellation requests from the client or server shutdown.
-    /// When canceled, processing will stop after the current batch is complete.
-    /// </param>
     /// <returns>
-    /// 200 OK when processing completes successfully or is canceled gracefully.
-    /// 500 Internal Server Error if an unhandled exception occurs.
+    /// Always returns 200 OK. The response does not indicate whether a new task was actually queued.
     /// </returns>
     [HttpPost]
     [Route("sendsmsanytime")]
@@ -130,15 +125,10 @@ public class TriggerController : ControllerBase
     }
 
     /// <summary>
-    /// Initiates processing of SMS notifications that are configured to be sent only during business hours.
+    /// Signals background processing of SMS notifications restricted to the <see cref="SendingTimePolicy.Daytime"/> window.
     /// </summary>
-    /// <param name="cancellationToken">
-    /// Token to monitor for cancellation requests from the client or server shutdown.
-    /// When canceled, processing will stop after the current batch is complete.
-    /// </param>
     /// <returns>
-    /// 200 OK when processing completes successfully, is canceled gracefully, or is skipped due to schedule restrictions.
-    /// 500 Internal Server Error if an unhandled exception occurs.
+    /// Always returns 200 OK, regardless of whether processing was skipped (outside window) or a new task was enqueued.
     /// </returns>
     [HttpPost]
     [Route("sendsms")]
