@@ -47,10 +47,8 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
         // Act
         List<SmsRecipient> actual = await repo.GetRecipients(order.Id);
 
-        SmsRecipient actualRecipient = actual[0];
-
         // Assert
-        Assert.Single(actual);
+        SmsRecipient actualRecipient = Assert.Single(actual);
         Assert.Equal(expectedRecipient.MobileNumber, actualRecipient.MobileNumber);
         Assert.Equal(expectedRecipient.OrganizationNumber, actualRecipient.OrganizationNumber);
         Assert.Equal(expectedRecipient.NationalIdentityNumber, actualRecipient.NationalIdentityNumber);
