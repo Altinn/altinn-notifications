@@ -32,19 +32,16 @@ public class SmsPublishTaskQueue : ISmsPublishTaskQueue
     /// <inheritdoc/>
     public bool TryEnqueue(SendingTimePolicy sendingTimePolicy)
     {
-        lock (_sync)
+        using var scope = _sync.EnterScope();
+
+        if (_inFlightOrQueued.Contains(sendingTimePolicy))
         {
-            if (_inFlightOrQueued.Contains(sendingTimePolicy))
-            {
-                return false;
-            }
-
-            _inFlightOrQueued.Add(sendingTimePolicy);
-
-            _channels[sendingTimePolicy].Writer.TryWrite(true);
-
-            return true;
+            return false;
         }
+
+        _inFlightOrQueued.Add(sendingTimePolicy);
+        _channels[sendingTimePolicy].Writer.TryWrite(true);
+        return true;
     }
 
     /// <inheritdoc/>
@@ -56,9 +53,8 @@ public class SmsPublishTaskQueue : ISmsPublishTaskQueue
     /// <inheritdoc/>
     public void MarkCompleted(SendingTimePolicy sendingTimePolicy)
     {
-        lock (_sync)
-        {
-            _inFlightOrQueued.Remove(sendingTimePolicy);
-        }
+        using var scope = _sync.EnterScope();
+
+        _inFlightOrQueued.Remove(sendingTimePolicy);
     }
 }
