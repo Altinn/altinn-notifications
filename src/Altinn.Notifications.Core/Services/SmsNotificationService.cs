@@ -1,6 +1,4 @@
-﻿using System.Diagnostics;
-
-using Altinn.Notifications.Core.Configuration;
+﻿using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
@@ -43,8 +41,8 @@ public class SmsNotificationService : ISmsNotificationService
         _repository = repository;
         _smsQueueTopicName = kafkaSettings.Value.SmsQueueTopicName;
 
-        var configuredBatchSize = notificationConfig.Value.SmsPublishBatchSize;
-        _publishBatchSize = configuredBatchSize > 0 ? configuredBatchSize : 50;
+        var configuredPublishBatchSize = notificationConfig.Value.SmsPublishBatchSize;
+        _publishBatchSize = configuredPublishBatchSize > 0 ? configuredPublishBatchSize : 1000;
     }
 
     /// <inheritdoc/>
