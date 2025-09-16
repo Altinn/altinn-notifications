@@ -1,7 +1,7 @@
--- FUNCTION: notifications.claim_sms_batch_for_sending(integer, integer DEFAULT 50)
+-- FUNCTION: notifications.claim_sms_batch_for_sending(integer, integer)
 CREATE OR REPLACE FUNCTION notifications.claim_sms_batch_for_sending (
   _sendingtimepolicy integer,
-  _batchsize integer DEFAULT 1000
+  _batchsize integer DEFAULT NULL
 )
 RETURNS TABLE (
   alternateid uuid,
@@ -13,10 +13,10 @@ LANGUAGE plpgsql
 COST 100
 VOLATILE
 PARALLEL UNSAFE
-ROWS 1000
+ROWS 10000
 AS $$
 DECLARE
-  v_batchsize integer := GREATEST(1, LEAST(COALESCE(_batchsize, 1000), 1000));
+  v_batchsize integer := GREATEST(1, COALESCE(_batchsize, 1000));
 BEGIN
   RETURN QUERY
   WITH claimed_new_rows AS (
@@ -54,9 +54,7 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION notifications.claim_sms_batch_for_sending(INTEGER, INTEGER) IS 
-'Atomically claims and returns batches of SMS notifications ready for sending.
-
-Parameters:
-  _sendingtimepolicy - 1 (Anytime) or 2 (Daytime; NULL is treated as Daytime)
-  _batchsize - Max notifications claimed (default: 1000; clamped to [1,1000])';
+COMMENT ON FUNCTION notifications.claim_sms_batch_for_sending(INTEGER, INTEGER) IS
+'Claims and returns batches of SMS notifications ready for sending.
+_sendingtimepolicy: 1 (Anytime) or 2 (Daytime; NULL order policy treated as Daytime)
+_batchsize: Requested batch size (no internal hard cap; fallback 1000 if NULL).';
