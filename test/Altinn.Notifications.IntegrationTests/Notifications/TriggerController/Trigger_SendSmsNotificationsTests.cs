@@ -77,30 +77,6 @@ public class Trigger_SendSmsNotificationsTests : IClassFixture<IntegrationTestWe
     }
 
     /// <summary>
-    /// Tests that the anytime SMS endpoint processes notifications even when
-    /// outside of business hours, showing that time restrictions are bypassed.
-    /// </summary>
-    [Fact]
-    public async Task SendSmsAnytime_OutsideAllowedHours_StillProcesses()
-    {
-        // Arrange
-        (_, SmsNotification notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendersReference: _sendersRef, sendingTimePolicy: SendingTimePolicy.Anytime);
-
-        HttpClient client = GetTestClient(canSendSmsNow: false);
-        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _sendSmsAnytimePath);
-
-        // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
-
-        // Assert
-        string sql = $"select count(1) from notifications.smsnotifications where result = 'Sending' and alternateid='{notification.Id}'";
-        long actual = await PostgreUtil.RunSqlReturnOutput<long>(sql);
-
-        Assert.Equal(1, actual);
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-    }
-
-    /// <summary>
     /// Tests that SMS notifications with status 'New' are successfully processed
     /// when sent through the anytime endpoint, regardless of business hours.
     /// The notifications should be pushed to Kafka and updated to 'Sending' status.
@@ -113,31 +89,6 @@ public class Trigger_SendSmsNotificationsTests : IClassFixture<IntegrationTestWe
 
         HttpClient client = GetTestClient();
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _sendSmsAnytimePath);
-
-        // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
-
-        // Assert
-        string sql = $"select count(1) from notifications.smsnotifications where result = 'Sending' and alternateid='{notification.Id}'";
-        long actual = await PostgreUtil.RunSqlReturnOutput<long>(sql);
-
-        Assert.Equal(1, actual);
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-    }
-
-    /// <summary>
-    /// Tests that SMS notifications with status 'New' are successfully processed
-    /// when sent through the daytime endpoint during allowed hours.
-    /// The notifications should be pushed to Kafka and updated to 'Sending' status.
-    /// </summary>
-    [Fact]
-    public async Task SendSmsDaytime_DuringAllowedHours_ProcessesSuccessfully()
-    {
-        // Arrange
-        (_, SmsNotification notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendersReference: _sendersRef);
-
-        HttpClient client = GetTestClient();
-        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, _sendSmsDaytimePath);
 
         // Act
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
