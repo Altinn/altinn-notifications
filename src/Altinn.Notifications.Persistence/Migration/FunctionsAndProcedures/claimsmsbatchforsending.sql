@@ -19,45 +19,38 @@ DECLARE
   v_batchsize integer := GREATEST(1, LEAST(COALESCE(_batchsize, 1000), 1000));
 BEGIN
   RETURN QUERY
-  WITH to_process AS (
-    SELECT s._id, s._orderid
-    FROM notifications.smsnotifications s
-    WHERE s.result = 'New'
-      AND EXISTS (
-            SELECT 1
-            FROM notifications.orders o
-            WHERE o._id = s._orderid
-              AND (
-                   (_sendingtimepolicy = 1 AND o.sendingtimepolicy = 1)
-                OR (_sendingtimepolicy = 2 AND (o.sendingtimepolicy = 2 OR o.sendingtimepolicy IS NULL))
-              )
+  WITH claimed_new_rows AS (
+    SELECT sms._id, sms._orderid
+    FROM notifications.smsnotifications sms
+    JOIN notifications.orders ord ON ord._id = sms._orderid
+    WHERE sms.result = 'New'::smsnotificationresulttype
+      AND (
+            (_sendingtimepolicy = 1 AND ord.sendingtimepolicy = 1)
+         OR (_sendingtimepolicy = 2 AND (ord.sendingtimepolicy = 2 OR ord.sendingtimepolicy IS NULL))
       )
-    ORDER BY s._id
-    FOR UPDATE OF s SKIP LOCKED
+    ORDER BY sms._id
+    FOR UPDATE OF sms SKIP LOCKED
     LIMIT v_batchsize
   ),
-  updated AS (
-    UPDATE notifications.smsnotifications s
-    SET result = 'Sending',
+  updated_rows AS (
+    UPDATE notifications.smsnotifications sms
+    SET result = 'Sending'::smsnotificationresulttype,
         resulttime = now()
-    FROM to_process tp
-    WHERE s._id = tp._id
+    FROM claimed_new_rows claimed
+    WHERE sms._id = claimed._id
     RETURNING
-      s._orderid,
-      s.alternateid,
-      s.mobilenumber,
-      s.customizedbody
+      sms._orderid,
+      sms.alternateid,
+      sms.mobilenumber,
+      sms.customizedbody
   )
   SELECT
-    u.alternateid,
-    st.sendernumber,
-    u.mobilenumber,
-    CASE
-      WHEN u.customizedbody IS NOT NULL AND u.customizedbody <> '' THEN u.customizedbody
-      ELSE st.body
-    END AS body
-  FROM updated u
-  JOIN notifications.smstexts st ON st._orderid = u._orderid;
+    upd.alternateid,
+    txt.sendernumber,
+    upd.mobilenumber,
+    COALESCE(NULLIF(upd.customizedbody, ''), txt.body) AS body
+  FROM updated_rows upd
+  JOIN notifications.smstexts txt ON txt._orderid = upd._orderid;
 END;
 $$;
 
