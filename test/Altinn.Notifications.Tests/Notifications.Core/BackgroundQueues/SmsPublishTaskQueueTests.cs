@@ -16,7 +16,7 @@ public class SmsPublishTaskQueueTests
     private static readonly TimeSpan _shortTimeout = TimeSpan.FromSeconds(2);
 
     [Fact]
-    public void TryEnqueue_DifferentSendingTimePolicies_AreIndependent()
+    public void TryEnqueue_DifferentSendingTimePolicies_EnqueuesIndependently()
     {
         // Arrange
         var queue = new SmsPublishTaskQueue();
@@ -27,7 +27,7 @@ public class SmsPublishTaskQueueTests
     }
 
     [Fact]
-    public void TryEnqueue_FirstTimeEnqueued_SecondNotEnqueued_UntilCompleted()
+    public void TryEnqueue_FirstTimeEnqueued_SecondTimeNotEnqueued_UntilCompleted()
     {
         // Arrange
         var queue = new SmsPublishTaskQueue();
