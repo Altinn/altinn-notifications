@@ -104,7 +104,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
         // Arrange
         for (int i = 0; i < 15; i++)
         {
-            (NotificationOrder order, SmsNotification _) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
+            (NotificationOrder order, SmsNotification _) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendingTimePolicy: SendingTimePolicy.Anytime);
             _orderIdsToCleanup.Add(order.Id);
         }
 
@@ -114,7 +114,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
             .First();
 
         // Act
-        List<Sms> smsToBeSent = await repo.GetNewNotifications(15, CancellationToken.None);
+        List<Sms> smsToBeSent = await repo.GetNewNotifications(15, CancellationToken.None, SendingTimePolicy.Anytime);
 
         // Assert
         Assert.Equal(15, smsToBeSent.Count);
