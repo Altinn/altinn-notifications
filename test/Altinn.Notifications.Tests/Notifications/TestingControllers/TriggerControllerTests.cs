@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 
 using Altinn.Notifications.Controllers;
 using Altinn.Notifications.Core.BackgroundQueue;
-using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Services.Interfaces;
 
 using Microsoft.AspNetCore.Http;
@@ -108,50 +107,4 @@ public class TriggerControllerTests
         var statusCodeResult = (ObjectResult)result;
         Assert.Equal(StatusCodes.Status500InternalServerError, statusCodeResult.StatusCode);
     }
-
-    //[Fact]
-    //public async Task Trigger_SendSmsNotificationsDaytime_ServiceThrowsException_PropagatesException()
-    //{
-    //    // Arrange
-    //    _notificationScheduleMock.Setup(e => e.CanSendSmsNow()).Returns(true);
-
-    //    _smsNotificationServiceMock
-    //        .Setup(e => e.SendNotifications(It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime))
-    //        .ThrowsAsync(new Exception("Test exception"));
-
-    //    // Act & Assert
-    //    await Assert.ThrowsAsync<Exception>(() => _controller.Trigger_SendSmsNotificationsDaytime());
-    //}
-
-//    [Fact]
-//    public async Task Trigger_SendSmsNotificationsDaytime_CanSendSmsNowReturnsFalse_ServiceNotCalled()
-//    {
-//        // Arrange
-//        _notificationScheduleMock.Setup(e => e.CanSendSmsNow()).Returns(false);
-
-//        // Act
-//        ActionResult result = await _controller.Trigger_SendSmsNotificationsDaytime(CancellationToken.None);
-
-//        // Assert
-//        Assert.IsType<OkResult>(result);
-//        _smsNotificationServiceMock.Verify(x => x.SendNotifications(It.IsAny<CancellationToken>(), It.IsAny<SendingTimePolicy>()), Times.Never);
-//    }
-
-//    [Fact]
-//    public async Task Trigger_SendSmsNotificationsDaytime_DuringBusinessHours_CallsServiceAndReturnsOk()
-//    {
-//        // Arrange
-//        _notificationScheduleMock.Setup(s => s.CanSendSmsNow()).Returns(true);
-
-//        _smsNotificationServiceMock
-//            .Setup(e => e.SendNotifications(It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime))
-//            .Returns(Task.CompletedTask);
-
-//        // Act
-//        var result = await _controller.Trigger_SendSmsNotificationsDaytime();
-
-//        // Assert
-//        Assert.IsType<OkResult>(result);
-//        _smsNotificationServiceMock.Verify(s => s.SendNotifications(It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime), Times.Once);
-//    }
 }
