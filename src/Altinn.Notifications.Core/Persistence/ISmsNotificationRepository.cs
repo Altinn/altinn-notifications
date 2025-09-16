@@ -23,17 +23,16 @@ public interface ISmsNotificationRepository : INotificationRepository
     /// Retrieves pending SMS notifications that are eligible under the specified sending time policy.
     /// </summary>
     /// <param name="publishBatchSize">
-    /// Maximum number of SMS notifications to retrieve in a single batch. Controls how many notifications 
-    /// will be atomically transitioned from "new" to "sending" status and returned for publishing by the service layer.
+    /// Maximum number of SMS notifications to retrieve in a single batch.
     /// </param>
     /// <param name="cancellationToken">
     /// A token to observe for cancellation.
     /// </param>
     /// <param name="sendingTimePolicy">
-    /// Policy that determines which notifications are eligible for retrieval (for example, Daytime or Anytime).
+    /// Policy that determines which notifications are eligible for retrieval.
     /// </param>
     /// <returns>
-    /// A task that completes when retrieval finishes (no more eligible items or the retrieval window ends) or when cancellation is requested.
+    /// A task that completes when retrieval finishes (no more eligible items) or when cancellation is requested.
     /// The task result contains a list of SMS notifications to be processed, limited by the specified batch size.
     /// </returns>
     /// <exception cref="OperationCanceledException">

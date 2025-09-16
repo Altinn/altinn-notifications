@@ -97,28 +97,30 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     /// <inheritdoc/>   
     public async Task<List<Sms>> GetNewNotifications(int publishBatchSize, CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime)
     {
-        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_claimSmsBatchForSending);
-
-        List<Sms> readyToSendSMS = [];
-
-        pgcom.Parameters.AddWithValue("@batchsize", NpgsqlDbType.Integer, publishBatchSize);
-        pgcom.Parameters.AddWithValue("@sendingtimepolicy", NpgsqlDbType.Integer, (int)sendingTimePolicy);
-
-        await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken))
+        if (publishBatchSize <= 0)
         {
-            while (await reader.ReadAsync(cancellationToken))
-            {
-                var sms = new Sms(
-                    reader.GetValue<Guid>("alternateid"),
-                    reader.GetValue<string>("sendernumber"),
-                    reader.GetValue<string>("mobilenumber"),
-                    reader.GetValue<string>("body"));
-
-                readyToSendSMS.Add(sms);
-            }
+            return [];
         }
 
-        return readyToSendSMS;
+        await using var command = _dataSource.CreateCommand(_claimSmsBatchForSending);
+
+        command.Parameters.AddWithValue("@batchsize", NpgsqlDbType.Integer, publishBatchSize);
+        command.Parameters.AddWithValue("@sendingtimepolicy", NpgsqlDbType.Integer, (int)sendingTimePolicy);
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+
+        var result = new List<Sms>(publishBatchSize);
+
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            result.Add(new(
+                reader.GetValue<Guid>("alternateid"),
+                reader.GetValue<string>("sendernumber"),
+                reader.GetValue<string>("mobilenumber"),
+                reader.GetValue<string>("body")));
+        }
+
+        return result;
     }
 
     /// <inheritdoc/>
