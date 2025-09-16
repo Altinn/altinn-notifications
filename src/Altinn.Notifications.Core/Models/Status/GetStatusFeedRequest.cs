@@ -10,7 +10,7 @@ public class GetStatusFeedRequest
     /// <summary>
     /// The sequence number to start fetching status feed entries from
     /// </summary>
-    [Range(typeof(long), "0", "9223372036854775807")]
+    [Range(0, long.MaxValue)]
     public long Seq { get; set; } = 0;
 
     /// <summary>
