@@ -23,6 +23,7 @@ public class TriggerControllerTests
     private readonly Mock<INotificationScheduleService> _notificationScheduleMock = new();
     private readonly Mock<IEmailNotificationService> _emailNotificationServiceMock = new();
     private readonly Mock<IStatusFeedService> _statusFeedServiceMock = new();
+    private readonly Mock<IMetricsService> _metricsServiceMock = new();
 
     public TriggerControllerTests()
     {
@@ -32,6 +33,7 @@ public class TriggerControllerTests
             _smsNotificationServiceMock.Object,
             _notificationScheduleMock.Object,
             _statusFeedServiceMock.Object,
+            _metricsServiceMock.Object,
             NullLogger<TriggerController>.Instance);
     }
 
