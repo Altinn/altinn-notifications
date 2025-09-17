@@ -29,7 +29,7 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
     }
 
     [Fact]
-    public async Task Trigger_PastDueOrders_OrderProcessingServiceCalled()  
+    public async Task Trigger_PastDueOrders_OrderProcessingServiceCalled()
     {
         // Arrange
         Mock<IOrderProcessingService> serviceMock = new();
@@ -44,10 +44,10 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
             smsPublishTaskQueue: smsPublishTaskQueueMock.Object);
 
         string url = _basePath + "/pastdueorders";
-        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
+        using HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        using HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -71,10 +71,10 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
             smsPublishTaskQueue: smsPublishTaskQueueMock.Object);
 
         string url = _basePath + "/sendemail";
-        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
+        using HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        using HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -94,10 +94,10 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
         var client = GetTestClient(smsPublishTaskQueue: smsPublishTaskQueueMock.Object);
 
         string url = _basePath + "/sendsmsanytime";
-        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
+        using HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        using HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -125,10 +125,10 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
             notificationScheduleService: scheduleServiceMock.Object);
 
         string url = _basePath + "/sendsmsdaytime";
-        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
+        using HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        using HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -153,10 +153,10 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
             notificationScheduleService: scheduleServiceMock.Object);
 
         string url = _basePath + "/sendsmsdaytime";
-        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
+        using HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
 
         // Act
-        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+        using HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
