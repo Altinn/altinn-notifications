@@ -33,7 +33,9 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
     {
         // Arrange
         Mock<IOrderProcessingService> serviceMock = new();
-        serviceMock.Setup(e => e.StartProcessingPastDueOrders()).Returns(Task.CompletedTask);
+        serviceMock
+            .Setup(e => e.StartProcessingPastDueOrders())
+            .Returns(Task.CompletedTask);
 
         var smsPublishTaskQueueMock = CreateIdleQueueMock();
 
@@ -49,7 +51,7 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        serviceMock.VerifyAll();
+        serviceMock.Verify(e => e.StartProcessingPastDueOrders(), Times.Once);
     }
 
     [Fact]
@@ -57,7 +59,10 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
     {
         // Arrange
         Mock<IEmailNotificationService> serviceMock = new();
-        serviceMock.Setup(e => e.SendNotifications());
+        serviceMock
+            .Setup(e => e.SendNotifications())
+            .Returns(Task.CompletedTask)
+            .Verifiable();
 
         var smsPublishTaskQueueMock = CreateIdleQueueMock();
 
@@ -73,7 +78,7 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        serviceMock.VerifyAll();
+        serviceMock.Verify(e => e.SendNotifications(), Times.Once);
     }
 
     [Fact]
