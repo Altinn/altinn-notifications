@@ -31,13 +31,23 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
     [Fact]
     public async Task Trigger_PastDueOrders_OrderProcessingServiceCalled()
     {
+        // Arrange
         Mock<IOrderProcessingService> serviceMock = new();
         serviceMock.Setup(e => e.StartProcessingPastDueOrders());
 
-        var client = GetTestClient(orderProcessingService: serviceMock.Object);
+        var smsPublishTaskQueueMock = CreateIdleQueueMock();
 
-        var response = await client.PostAsync(_basePath + "/pastdueorders", new StringContent(string.Empty));
+        var client = GetTestClient(
+            orderProcessingService: serviceMock.Object,
+            smsPublishTaskQueue: smsPublishTaskQueueMock.Object);
 
+        string url = _basePath + "/pastdueorders";
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         serviceMock.VerifyAll();
     }
@@ -45,13 +55,23 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
     [Fact]
     public async Task Trigger_SendEmailNotifications_EmailNotificationServiceCalled()
     {
+        // Arrange
         Mock<IEmailNotificationService> serviceMock = new();
         serviceMock.Setup(e => e.SendNotifications());
 
-        var client = GetTestClient(emailNotificationService: serviceMock.Object);
+        var smsPublishTaskQueueMock = CreateIdleQueueMock();
 
-        var response = await client.PostAsync(_basePath + "/sendemail", new StringContent(string.Empty));
+        var client = GetTestClient(
+            emailNotificationService: serviceMock.Object,
+            smsPublishTaskQueue: smsPublishTaskQueueMock.Object);
 
+        string url = _basePath + "/sendemail";
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         serviceMock.VerifyAll();
     }
@@ -59,25 +79,32 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
     [Fact]
     public async Task Trigger_SendSmsNotificationsAnytime_TaskQueued()
     {
-        var queueMock = new Mock<ISmsPublishTaskQueue>();
-        queueMock
+        // Arrange
+        var smsPublishTaskQueueMock = CreateIdleQueueMock();
+        smsPublishTaskQueueMock
             .Setup(e => e.TryEnqueue(SendingTimePolicy.Anytime))
             .Returns(true)
             .Verifiable();
 
-        var client = GetTestClient(smsPublishTaskQueue: queueMock.Object);
+        var client = GetTestClient(smsPublishTaskQueue: smsPublishTaskQueueMock.Object);
 
-        var response = await client.PostAsync(_basePath + "/sendsmsanytime", new StringContent(string.Empty));
+        string url = _basePath + "/sendsmsanytime";
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
 
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        queueMock.Verify(e => e.TryEnqueue(SendingTimePolicy.Anytime), Times.Once);
+        smsPublishTaskQueueMock.Verify(e => e.TryEnqueue(SendingTimePolicy.Anytime), Times.Once);
     }
 
     [Fact]
     public async Task Trigger_SendSmsNotificationsDaytime_WhenAllowed_TaskQueued()
     {
-        var queueMock = new Mock<ISmsPublishTaskQueue>();
-        queueMock
+        // Arrange
+        var smsPublishTaskQueueMock = CreateIdleQueueMock();
+        smsPublishTaskQueueMock
             .Setup(e => e.TryEnqueue(SendingTimePolicy.Daytime))
             .Returns(true)
             .Verifiable();
@@ -89,20 +116,29 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
             .Verifiable();
 
         var client = GetTestClient(
-            smsPublishTaskQueue: queueMock.Object,
+            smsPublishTaskQueue: smsPublishTaskQueueMock.Object,
             notificationScheduleService: scheduleServiceMock.Object);
 
-        var response = await client.PostAsync(_basePath + "/sendsmsdaytime", new StringContent(string.Empty));
+        string url = _basePath + "/sendsmsdaytime";
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
 
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         scheduleServiceMock.Verify(e => e.CanSendSmsNow(), Times.Once);
-        queueMock.Verify(e => e.TryEnqueue(SendingTimePolicy.Daytime), Times.Once);
+        smsPublishTaskQueueMock.Verify(e => e.TryEnqueue(SendingTimePolicy.Daytime), Times.Once);
     }
 
     [Fact]
     public async Task Trigger_SendSmsNotificationsDaytime_WhenNotAllowed_TaskNotQueued()
     {
-        var queueMock = new Mock<ISmsPublishTaskQueue>();
+        // Arrange
+        var smsPublishTaskQueueMock = CreateIdleQueueMock();
+        smsPublishTaskQueueMock
+            .Setup(e => e.TryEnqueue(It.IsAny<SendingTimePolicy>()))
+            .Returns(true);
 
         var scheduleServiceMock = new Mock<INotificationScheduleService>();
         scheduleServiceMock
@@ -111,14 +147,40 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
             .Verifiable();
 
         var client = GetTestClient(
-            smsPublishTaskQueue: queueMock.Object,
+            smsPublishTaskQueue: smsPublishTaskQueueMock.Object,
             notificationScheduleService: scheduleServiceMock.Object);
 
-        var response = await client.PostAsync(_basePath + "/sendsmsdaytime", new StringContent(string.Empty));
+        string url = _basePath + "/sendsmsdaytime";
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
 
+        // Act
+        HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+
+        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         scheduleServiceMock.Verify(e => e.CanSendSmsNow(), Times.Once);
-        queueMock.Verify(e => e.TryEnqueue(It.IsAny<SendingTimePolicy>()), Times.Never);
+        smsPublishTaskQueueMock.Verify(e => e.TryEnqueue(It.IsAny<SendingTimePolicy>()), Times.Never);
+    }
+
+    private static Mock<ISmsPublishTaskQueue> CreateIdleQueueMock()
+    {
+        var anytimeTaskCompletionSource = new TaskCompletionSource();
+        var daytimeTaskCompletionSource = new TaskCompletionSource();
+
+        var smsPublishTaskQueueMock = new Mock<ISmsPublishTaskQueue>();
+
+        smsPublishTaskQueueMock
+            .Setup(e => e.WaitAsync(SendingTimePolicy.Anytime, It.IsAny<CancellationToken>()))
+            .Returns(anytimeTaskCompletionSource.Task);
+
+        smsPublishTaskQueueMock
+            .Setup(e => e.WaitAsync(SendingTimePolicy.Daytime, It.IsAny<CancellationToken>()))
+            .Returns(daytimeTaskCompletionSource.Task);
+
+        smsPublishTaskQueueMock
+            .Setup(e => e.MarkCompleted(It.IsAny<SendingTimePolicy>()));
+
+        return smsPublishTaskQueueMock;
     }
 
     private HttpClient GetTestClient(
@@ -130,7 +192,7 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
         INotificationScheduleService? notificationScheduleService = null)
     {
         statusFeedService ??= new Mock<IStatusFeedService>().Object;
-        smsPublishTaskQueue ??= new Mock<ISmsPublishTaskQueue>().Object;
+        smsPublishTaskQueue ??= CreateIdleQueueMock().Object;
         smsNotificationService ??= new Mock<ISmsNotificationService>().Object;
         orderProcessingService ??= new Mock<IOrderProcessingService>().Object;
         emailNotificationService ??= new Mock<IEmailNotificationService>().Object;
