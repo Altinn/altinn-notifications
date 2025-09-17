@@ -22,7 +22,8 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     private readonly NpgsqlDataSource _dataSource;
 
     private const string _getSmsNotificationRecipientsSql = "select * from notifications.getsmsrecipients_v2($1)"; // (_orderid)
-    private const string _claimSmsBatchForSending = "select * from notifications.claim_sms_batch_for_sending(_sendingtimepolicy := @sendingtimepolicy, _batchsize := @batchsize)";
+    private const string _claimAnytimeSmsBatchSql = "select * from notifications.claim_anytime_sms_batch(_batchsize := @batchsize)";
+    private const string _claimDaytimeSmsBatchSql = "select * from notifications.claim_daytime_sms_batch(_batchsize := @batchsize)";
     private const string _insertNewSmsNotificationSql = "call notifications.insertsmsnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _customizedbody, _result, _smscount, _resulttime, _expirytime)
 
     private const string _updateSmsNotificationBasedOnIdentifierSql =
@@ -102,10 +103,15 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
             return [];
         }
 
-        await using var command = _dataSource.CreateCommand(_claimSmsBatchForSending);
+        var claimSmsBatchForSending = sendingTimePolicy switch
+        {
+            SendingTimePolicy.Anytime => _claimAnytimeSmsBatchSql,
+            _ => _claimDaytimeSmsBatchSql,
+        };
+       
+        await using var command = _dataSource.CreateCommand(claimSmsBatchForSending);
 
         command.Parameters.AddWithValue("@batchsize", NpgsqlDbType.Integer, publishBatchSize);
-        command.Parameters.AddWithValue("@sendingtimepolicy", NpgsqlDbType.Integer, (int)sendingTimePolicy);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
