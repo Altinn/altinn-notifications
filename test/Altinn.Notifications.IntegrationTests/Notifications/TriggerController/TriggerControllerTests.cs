@@ -29,11 +29,11 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
     }
 
     [Fact]
-    public async Task Trigger_PastDueOrders_OrderProcessingServiceCalled()
+    public async Task Trigger_PastDueOrders_OrderProcessingServiceCalled()  
     {
         // Arrange
         Mock<IOrderProcessingService> serviceMock = new();
-        serviceMock.Setup(e => e.StartProcessingPastDueOrders());
+        serviceMock.Setup(e => e.StartProcessingPastDueOrders()).Returns(Task.CompletedTask);
 
         var smsPublishTaskQueueMock = CreateIdleQueueMock();
 
