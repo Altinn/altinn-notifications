@@ -28,5 +28,5 @@ public class NotificationConfig
     /// <summary>
     /// Maximum number of SMS notifications claimed and published in one batch.
     /// </summary>
-    public int SmsPublishBatchSize { get; set; } = 1000;
+    public int SmsPublishBatchSize { get; set; } = 250;
 }
