@@ -136,9 +136,6 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
     {
         // Arrange
         var smsPublishTaskQueueMock = CreateIdleQueueMock();
-        smsPublishTaskQueueMock
-            .Setup(e => e.TryEnqueue(It.IsAny<SendingTimePolicy>()))
-            .Returns(true);
 
         var scheduleServiceMock = new Mock<INotificationScheduleService>();
         scheduleServiceMock
@@ -191,8 +188,8 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
         IEmailNotificationService? emailNotificationService = null,
         INotificationScheduleService? notificationScheduleService = null)
     {
-        statusFeedService ??= new Mock<IStatusFeedService>().Object;
         smsPublishTaskQueue ??= CreateIdleQueueMock().Object;
+        statusFeedService ??= new Mock<IStatusFeedService>().Object;
         smsNotificationService ??= new Mock<ISmsNotificationService>().Object;
         orderProcessingService ??= new Mock<IOrderProcessingService>().Object;
         emailNotificationService ??= new Mock<IEmailNotificationService>().Object;
