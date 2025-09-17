@@ -1,6 +1,5 @@
--- FUNCTION: notifications.claim_sms_batch_for_sending(integer, integer)
-CREATE OR REPLACE FUNCTION notifications.claim_sms_batch_for_sending (
-  _sendingtimepolicy integer,
+-- FUNCTION: notifications.claim_daytime_sms_batch(integer)
+CREATE OR REPLACE FUNCTION notifications.claim_daytime_sms_batch (
   _batchsize integer DEFAULT NULL
 )
 RETURNS TABLE (
@@ -10,13 +9,10 @@ RETURNS TABLE (
   body text
 )
 LANGUAGE plpgsql
-COST 100
 VOLATILE
-PARALLEL UNSAFE
-ROWS 10000
 AS $$
 DECLARE
-  v_batchsize integer := GREATEST(1, COALESCE(_batchsize, 1000));
+  v_batchsize integer := GREATEST(1, COALESCE(_batchsize, 500));
 BEGIN
   RETURN QUERY
   WITH claimed_new_rows AS (
@@ -24,18 +20,15 @@ BEGIN
     FROM notifications.smsnotifications sms
     JOIN notifications.orders ord ON ord._id = sms._orderid
     WHERE sms.result = 'New'::smsnotificationresulttype
-      AND (
-            (_sendingtimepolicy = 1 AND ord.sendingtimepolicy = 1)
-         OR (_sendingtimepolicy = 2 AND (ord.sendingtimepolicy = 2 OR ord.sendingtimepolicy IS NULL))
-      )
+      AND (ord.sendingtimepolicy = 2 OR ord.sendingtimepolicy IS NULL)
     ORDER BY sms._id
     FOR UPDATE OF sms SKIP LOCKED
     LIMIT v_batchsize
   ),
   updated_rows AS (
     UPDATE notifications.smsnotifications sms
-    SET result = 'Sending'::smsnotificationresulttype,
-        resulttime = now()
+    SET resulttime = now(),
+        result = 'Sending'::smsnotificationresulttype
     FROM claimed_new_rows claimed
     WHERE sms._id = claimed._id
     RETURNING
@@ -54,7 +47,6 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION notifications.claim_sms_batch_for_sending(INTEGER, INTEGER) IS
-'Claims and returns batches of SMS notifications ready for sending.
-_sendingtimepolicy: 1 (Anytime) or 2 (Daytime; NULL order policy treated as Daytime)
-_batchsize: Requested batch size (no internal hard cap; fallback 1000 if NULL).';
+COMMENT ON FUNCTION notifications.claim_daytime_sms_batch(INTEGER) IS
+'Claims and returns batches of SMS notifications (sendingtimepolicy = 2 or NULL).
+_batchsize: requested batch size (defaults to 500 if NULL or <1).';
