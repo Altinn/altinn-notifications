@@ -55,7 +55,7 @@ public class StatusFeedServiceTests
                 ]);
 
         var sut = new StatusFeedService(statusFeedRepository.Object, _options, NullLogger<StatusFeedService>.Instance);
-        int seq = 1;
+        long seq = 1;
 
         // Act
         var result = await sut.GetStatusFeed(seq, null, _creatorName, CancellationToken.None);
@@ -86,7 +86,7 @@ public class StatusFeedServiceTests
         // Arrange
         Mock<IStatusFeedRepository> statusFeedRepository = new();
         var sut = new StatusFeedService(statusFeedRepository.Object, _options, NullLogger<StatusFeedService>.Instance);
-        int seq = 1;
+        long seq = 1;
         string creatorName = string.Empty;
 
         // Act
@@ -147,14 +147,14 @@ public class StatusFeedServiceTests
     public async Task GetStatusFeed_OutsideLegalValue_ClipsToMaxPageSizeOrMinimumValue(int? pageSize)
     {
         // Arrange
-        const int seq = 0;
+        const long seq = 0;
 
         var mockRepository = new Mock<IStatusFeedRepository>();
         var expectedStatusFeedEntries = new List<StatusFeed>();
 
         // Setup repository to capture the actual pageSize used
         mockRepository.Setup(x => x.GetStatusFeed(
-                It.IsAny<int>(),
+                It.IsAny<long>(),
                 It.IsAny<string>(),
                 It.IsAny<int>(),
                 It.IsAny<CancellationToken>()))
@@ -205,14 +205,14 @@ public class StatusFeedServiceTests
     {
         // Arrange
         const int requestedPageSize = 100; // Smaller than max of 500
-        const int seq = 0;
+        const long seq = 0;
         
         var mockRepository = new Mock<IStatusFeedRepository>();
         var expectedStatusFeedEntries = new List<StatusFeed>();
         
         // Setup repository to capture the actual pageSize used
         mockRepository.Setup(x => x.GetStatusFeed(
-                It.IsAny<int>(),
+                It.IsAny<long>(),
                 It.IsAny<string>(),
                 It.IsAny<int>(),
                 It.IsAny<CancellationToken>()))
