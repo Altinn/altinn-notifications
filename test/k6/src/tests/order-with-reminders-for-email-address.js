@@ -21,7 +21,7 @@
     -e encodedJwk={the encoded JSON web key used to sign the maskinporten token request} \
     -e env={the environment to run this script within: at22, at23, at24, yt01, tt02, prod} \
     -e emailRecipient={Email address to include as notification recipient} \
-    -e orderTypes={types of orders to test, e.g., valid, invalid and duplicate} \
+    -e orderTypes={types of orders to test, e.g., valid, invalid or duplicate} \
 
     Command syntax for different shells:
     - Bash: Use the command as written above.   
