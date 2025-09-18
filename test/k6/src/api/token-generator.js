@@ -85,7 +85,7 @@ function getTokenExpiration(token) {
         throw new Error("Invalid JWT token format");
     }
 
-    const payloadJson = encoding.b64decode(parts[1], 'url', 's');
+    const payloadJson = encoding.b64decode(parts[1], 'rawurl', 's');
     const payload = JSON.parse(payloadJson);
     const exp = Number(payload.exp);
     if (!Number.isFinite(exp)) {
