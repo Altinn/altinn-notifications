@@ -184,20 +184,18 @@ public class StatusFeedServiceTests
     {
         // Compute expected from configured bounds
         int max = _options.Value.StatusFeedMaxPageSize;
-
-        int expected = pageSize is null ? max : pageSize.Value;
-
-        if (pageSize < 1)
+        int value = pageSize ?? max;
+        if (value < 1)
         {
-            expected = 1;
+            return 1;
         }
 
-        if (pageSize > max)
+        if (value > max)
         {
-            expected = max;
+            return max;
         }
 
-        return expected;
+        return value;
     }
 
     [Fact]
