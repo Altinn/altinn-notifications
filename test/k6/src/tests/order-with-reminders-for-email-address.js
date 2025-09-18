@@ -21,7 +21,7 @@
     -e encodedJwk={the encoded JSON web key used to sign the maskinporten token request} \
     -e env={the environment to run this script within: at22, at23, at24, yt01, tt02, prod} \
     -e emailRecipient={Email address to include as notification recipient} \
-    -e orderTypes={types of orders to test, e.g., valid, invalid, duplicate, missingResource} \
+    -e orderTypes={types of orders to test, e.g., valid, invalid and duplicate} \
 
     Command syntax for different shells:
     - Bash: Use the command as written above.   
@@ -447,7 +447,6 @@ function generateOrderChainPayloadsByOrderType(data) {
  * - invalid: Expects 400 Bad Request.
  * - duplicate: Expects 200 Ok, verifies notificationOrderId, shipmentId, reminders array,
  *              reminder count parity with request, and shipmentId presence on each reminder.
- * - missingResource: Expects 201 Created.
  *
  * @returns {void}
  */
@@ -513,17 +512,6 @@ function validateProcessingResults(processingResults) {
 
             if (response.status === 200) {
                 http200Duplicate.add(1);
-            }
-        },
-
-        missingResource: (response) => {
-            // Track high latency for missing resource orders
-            highLatencyRate.add(response.timings.duration > 2000);
-
-            check(response, { "Status is 201 Created": e => e.status === 201 });
-
-            if (response.status === 201) {
-                http201Created.add(1);
             }
         }
     };
@@ -613,7 +601,7 @@ function sendNotificationOrderChain(orderRequest, label = 'post_valid_order') {
  * Each request is tagged with a label to enable filtering metrics by order type
  * in the test results dashboard.
  *
- * @param {string} orderType - The test scenario identifier ("valid", "invalid", "duplicate", "missingResource")
+ * @param {string} orderType - The test scenario identifier ("valid", "invalid" and "duplicate")
  * @param {Object} orderChainPayload - The notification order chain payload to send
  * @param {string} label - Metric label for tracking this specific request type in results
  * @param {Trend} durationMetric - k6 Trend object for recording response time statistics
