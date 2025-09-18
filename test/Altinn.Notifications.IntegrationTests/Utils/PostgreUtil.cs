@@ -176,6 +176,7 @@ public static class PostgreUtil
         order.RequestedSendTime = timeStamp;
         smsNotificationFirst.RequestedSendTime = timeStamp;
         smsNotificationFirst.SendResult = new(SmsNotificationResultType.Sending, timeStamp);
+        smsNotificationFirst.OrderId = order.Id;
 
         var smsNotificationSecond = new SmsNotification()
         {
@@ -213,11 +214,6 @@ public static class PostgreUtil
             SendResult = new(EmailNotificationResultType.Sending, timeStamp)
         };
         
-        emailNotificationFirst.OrderId = order.Id;
-        emailNotificationSecond.OrderId = order.Id;
-        smsNotificationFirst.OrderId = order.Id;
-        smsNotificationSecond.OrderId = order.Id;
-
         // Set up repositories
         var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IOrderRepository), typeof(ISmsNotificationRepository), typeof(IEmailNotificationRepository) });
         OrderRepository orderRepo = (OrderRepository)serviceList.First(i => i.GetType() == typeof(OrderRepository));

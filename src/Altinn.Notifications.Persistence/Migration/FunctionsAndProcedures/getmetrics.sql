@@ -89,4 +89,4 @@ ALTER FUNCTION notifications.get_metrics_v2(integer, integer)
     OWNER TO platform_notifications_admin;
 
 COMMENT ON FUNCTION notifications.get_metrics_v2(integer, integer) IS 
-'This function aggregates data by creator name, returning the total order count and the sum of notifications sent, as well as with a successful status (Succeeded or Delivered for emails, Accepted or Delivered for SMS).'
+'This function aggregates data by creator name, returning the total order count and the sum of notifications sent, as well as with a successful status (Succeeded or Delivered for emails, Accepted or Delivered for SMS).';
