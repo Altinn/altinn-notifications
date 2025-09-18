@@ -230,9 +230,14 @@ export function setup() {
     orderChainPayload.requestedSendTime = getFutureDate(7);
     orderChainPayload.sendersReference = `k6-order-${uniqueIdentifier}`;
 
+    const emailRecipient = getEmailRecipient();
+    if (!emailRecipient) {
+        stopIterationOnFail("Missing emailRecipient for this environment", false);
+    }
+
     // Set email address for main recipient
     if (orderChainPayload.recipient?.recipientEmail) {
-        orderChainPayload.recipient.recipientEmail.emailAddress = getEmailRecipient();
+        orderChainPayload.recipient.recipientEmail.emailAddress = emailRecipient;
     }
 
     // Configure all reminders with consistent references and email address
@@ -244,7 +249,7 @@ export function setup() {
             };
 
             if (updatedReminder.recipient?.recipientEmail) {
-                updatedReminder.recipient.recipientEmail.emailAddress = getEmailRecipient();
+                updatedReminder.recipient.recipientEmail.emailAddress = emailRecipient;
             }
 
             return updatedReminder;
