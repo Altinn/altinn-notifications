@@ -36,13 +36,13 @@ export function generateEnterpriseToken(queryParams) {
  */
 function generateToken(endpoint) {
     const currentTime = Math.floor(Date.now() / 1000);
+    const skewSeconds = 30;
 
     // Return cached token if it exists and is not expired
-    if (authenticationStorage.cachedToken && authenticationStorage.expiresAt > currentTime) {
-
+    if (authenticationStorage.cachedToken &&(authenticationStorage.expiresAt - skewSeconds) > currentTime) {
         return authenticationStorage.cachedToken;
     }
-
+    
     if (!tokenGeneratorUserName) {
         stopIterationOnFail(`Invalid value for environment variable 'tokenGeneratorUserName': '${tokenGeneratorUserName}'.`, false);
     }
