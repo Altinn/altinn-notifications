@@ -561,13 +561,15 @@ function stripRecipientEmailFromOrderChainPayload(orderChainPayload) {
             ...orderChainPayload.recipient,
             recipientEmail: undefined
         },
-        reminders: orderChainPayload.reminders.map(reminder => ({
-            ...reminder,
-            recipient: {
-                ...reminder.recipient,
-                recipientEmail: undefined
-            }
-        }))
+        reminders: Array.isArray(orderChainPayload.reminders)
+            ? orderChainPayload.reminders.map(reminder => ({
+                ...reminder,
+                recipient: {
+                    ...reminder.recipient,
+                    recipientEmail: undefined
+                }
+            }))
+            : orderChainPayload.reminders
     };
 }
 
