@@ -11,5 +11,5 @@ public record StatusFeedExt : OrderStatusExt
     /// The sequence number of the status feed 
     /// </summary>
     [JsonPropertyName("sequenceNumber")]
-    public required int SequenceNumber { get; init; }
+    public required long SequenceNumber { get; init; }
 }
