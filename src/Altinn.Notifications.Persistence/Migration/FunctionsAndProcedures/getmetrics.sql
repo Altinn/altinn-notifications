@@ -36,24 +36,26 @@ CREATE OR REPLACE FUNCTION notifications.get_metrics_v2(
     RETURNS TABLE(org text, placed_orders bigint, sent_emails bigint, succeeded_emails bigint, sent_sms bigint, succeeded_sms bigint) 
     LANGUAGE 'plpgsql'
     COST 100
-    VOLATILE PARALLEL UNSAFE
+    STABLE PARALLEL SAFE
     ROWS 1000
 
 AS $BODY$
-
+DECLARE
+  start_date DATE;
 BEGIN
+  start_date = MAKE_DATE(year_input, month_input, 1);
 
   RETURN QUERY
     WITH filtered_orders AS (
 		SELECT o._id, o.creatorname
 		FROM Notifications.orders o
-		WHERE EXTRACT(MONTH FROM o.requestedsendtime) = month_input
-			AND EXTRACT(YEAR FROM o.requestedsendtime) = year_input
+		WHERE o.requestedsendtime >= start_date
+			AND o.requestedsendtime < start_date + INTERVAL '1 month'
 	),
     email_per_order AS (
         SELECT
             e._orderid,
-            COUNT(*)::bigint AS sent_emails,
+            COUNT(e._id)::bigint AS sent_emails,
             COALESCE(SUM(CASE WHEN e.result IN ('Delivered', 'Succeeded') THEN 1 ELSE 0 END), 0)::bigint AS succeeded_emails
         FROM notifications.emailnotifications e
 		JOIN filtered_orders fo ON fo._id = e._orderid
@@ -70,7 +72,7 @@ BEGIN
     )
     SELECT
         fo.creatorname AS org,
-        COUNT(DISTINCT fo._id) AS placed_orders,
+        COUNT(fo._id) AS placed_orders,
         COALESCE(SUM(eo.sent_emails), 0)::bigint AS sent_emails,
         COALESCE(SUM(eo.succeeded_emails), 0)::bigint AS succeeded_emails,
         COALESCE(SUM(so.sent_sms), 0)::bigint AS sent_sms,
@@ -85,3 +87,6 @@ $BODY$;
 
 ALTER FUNCTION notifications.get_metrics_v2(integer, integer)
     OWNER TO platform_notifications_admin;
+
+COMMENT ON FUNCTION notifications.get_metrics_v2(integer, integer) IS 
+'This function aggregates data by creator name, returning the total order count and the sum of notifications sent, as well as with a successful status (Succeeded or Delivered for emails, Accepted or Delivered for SMS).'

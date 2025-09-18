@@ -170,25 +170,26 @@ public static class PostgreUtil
     public static async Task<NotificationOrder> PopulateDBWithOrderAnd4Notifications(string orgName)
     {
         // Get test data for base order with one notification
-        (NotificationOrder order, SmsNotification smsNotification1) = TestdataUtil.GetOrderAndSmsNotification();
+        (NotificationOrder order, SmsNotification smsNotificationFirst) = TestdataUtil.GetOrderAndSmsNotification();
         order.Creator = new Core.Models.Creator(orgName);
         var timeStamp = DateTime.UtcNow;
         order.RequestedSendTime = timeStamp;
-        smsNotification1.RequestedSendTime = timeStamp;
+        smsNotificationFirst.RequestedSendTime = timeStamp;
+        smsNotificationFirst.SendResult = new(SmsNotificationResultType.Sending, timeStamp);
 
-        var smsNotification2 = new SmsNotification()
+        var smsNotificationSecond = new SmsNotification()
         {
             Id = Guid.NewGuid(),
             OrderId = order.Id,
             RequestedSendTime = timeStamp,
             Recipient = new()
             {
-                MobileNumber = smsNotification1.Recipient.MobileNumber,
+                MobileNumber = smsNotificationFirst.Recipient.MobileNumber,
             },
-            SendResult = new(SmsNotificationResultType.New, timeStamp)
+            SendResult = new(SmsNotificationResultType.Sending, timeStamp)
         };
 
-        var emailNotification1 = new EmailNotification()
+        var emailNotificationFirst = new EmailNotification()
         {
             Id = Guid.NewGuid(),
             OrderId = order.Id,
@@ -197,10 +198,10 @@ public static class PostgreUtil
             {
                 ToAddress = "noreply@altinn.no"
             },
-            SendResult = new(EmailNotificationResultType.New, timeStamp)
+            SendResult = new(EmailNotificationResultType.Sending, timeStamp)
         };
 
-        var emailNotification2 = new EmailNotification()
+        var emailNotificationSecond = new EmailNotification()
         {
             Id = Guid.NewGuid(),
             OrderId = order.Id,
@@ -209,13 +210,13 @@ public static class PostgreUtil
             {
                 ToAddress = "noreply@altinn.no"
             },
-            SendResult = new(EmailNotificationResultType.New, timeStamp)
+            SendResult = new(EmailNotificationResultType.Sending, timeStamp)
         };
         
-        emailNotification1.OrderId = order.Id;
-        emailNotification2.OrderId = order.Id;
-        smsNotification1.OrderId = order.Id;
-        smsNotification2.OrderId = order.Id;
+        emailNotificationFirst.OrderId = order.Id;
+        emailNotificationSecond.OrderId = order.Id;
+        smsNotificationFirst.OrderId = order.Id;
+        smsNotificationSecond.OrderId = order.Id;
 
         // Set up repositories
         var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IOrderRepository), typeof(ISmsNotificationRepository), typeof(IEmailNotificationRepository) });
@@ -225,16 +226,16 @@ public static class PostgreUtil
 
         await orderRepo.Create(order);
         await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
-        await smsRepo.AddNotification(smsNotification1, DateTime.UtcNow.AddDays(1), 1);
-        await smsRepo.AddNotification(smsNotification2, DateTime.UtcNow.AddDays(1), 1);
-        await emailRepo.AddNotification(emailNotification1, DateTime.UtcNow.AddDays(1));
-        await emailRepo.AddNotification(emailNotification2, DateTime.UtcNow.AddDays(1));
+        await smsRepo.AddNotification(smsNotificationFirst, DateTime.UtcNow.AddDays(1), 1);
+        await smsRepo.AddNotification(smsNotificationSecond, DateTime.UtcNow.AddDays(1), 1);
+        await emailRepo.AddNotification(emailNotificationFirst, DateTime.UtcNow.AddDays(1));
+        await emailRepo.AddNotification(emailNotificationSecond, DateTime.UtcNow.AddDays(1));
 
-        await emailRepo.UpdateSendStatus(emailNotification1.Id, EmailNotificationResultType.Delivered);
-        await emailRepo.UpdateSendStatus(emailNotification2.Id, EmailNotificationResultType.Delivered);
+        await emailRepo.UpdateSendStatus(emailNotificationFirst.Id, EmailNotificationResultType.Delivered);
+        await emailRepo.UpdateSendStatus(emailNotificationSecond.Id, EmailNotificationResultType.Delivered);
 
-        await smsRepo.UpdateSendStatus(smsNotification1.Id, SmsNotificationResultType.Accepted);
-        await smsRepo.UpdateSendStatus(smsNotification2.Id, SmsNotificationResultType.Accepted);
+        await smsRepo.UpdateSendStatus(smsNotificationFirst.Id, SmsNotificationResultType.Accepted);
+        await smsRepo.UpdateSendStatus(smsNotificationSecond.Id, SmsNotificationResultType.Accepted);
 
         await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processed);
 
