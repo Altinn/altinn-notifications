@@ -31,7 +31,7 @@
 				"recipientOrganization": {
 					"orgNumber": "string",
 					"resourceId": "string",
-					"channelSchema": "SMS",
+					"channelSchema": "Sms",
 					"smsSettings": {
 						"sendingTimePolicy": "Daytime",
 						"body": "REMINDER 1: Important update for $recipientNumber$. - Altinn"
