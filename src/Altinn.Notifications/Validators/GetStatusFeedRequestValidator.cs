@@ -1,4 +1,4 @@
-﻿using Altinn.Notifications.Core.Models.Status;
+﻿using Altinn.Notifications.Models.Status;
 using FluentValidation;
 
 namespace Altinn.Notifications.Validators
@@ -7,7 +7,7 @@ namespace Altinn.Notifications.Validators
     /// Validator for GetStatusFeedRequest objects using FluentValidation.
     /// Ensures that requests to fetch status feed entries contain valid parameters.
     /// </summary>
-    internal sealed class GetStatusFeedRequestValidator : AbstractValidator<GetStatusFeedRequest>
+    internal sealed class GetStatusFeedRequestValidator : AbstractValidator<GetStatusFeedRequestExt>
     {
         /// <summary>
         /// Initializes a new instance of the GetStatusFeedRequestValidator class.

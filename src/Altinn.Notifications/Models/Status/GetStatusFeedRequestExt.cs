@@ -1,11 +1,11 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Altinn.Notifications.Core.Models.Status;
+namespace Altinn.Notifications.Models.Status;
 
 /// <summary>
 /// Request model for fetching status feed entries
 /// </summary>
-public class GetStatusFeedRequest
+public class GetStatusFeedRequestExt
 {
     /// <summary>
     /// The sequence number to start fetching status feed entries from

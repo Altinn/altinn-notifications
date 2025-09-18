@@ -26,7 +26,7 @@ public class NotificationConfig
     public int SmsSendWindowEndHour { get; set; } = 17;
 
     /// <summary>
-    /// The maximum number of entries to return in one page.
+    /// The maximum number of entries to return in one status feed page.
     /// </summary>
-    public int MaxPageSize { get; set; }
+    public int StatusFeedMaxPageSize { get; set; } = 500;
 }

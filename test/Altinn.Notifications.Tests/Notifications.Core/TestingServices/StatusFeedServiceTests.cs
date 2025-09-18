@@ -22,7 +22,7 @@ public class StatusFeedServiceTests
     private const int _maxPageSize = 500;
     private readonly IOptions<NotificationConfig> _options = Options.Create(new NotificationConfig
     {
-        MaxPageSize = _maxPageSize
+        StatusFeedMaxPageSize = _maxPageSize
     });
 
     private const string _creatorName = "test-creator";
@@ -183,7 +183,7 @@ public class StatusFeedServiceTests
     private int CalculateExpectedPageSize(int? pageSize)
     {
         // Compute expected from configured bounds
-        int max = _options.Value.MaxPageSize;
+        int max = _options.Value.StatusFeedMaxPageSize;
 
         int expected = pageSize is null ? max : pageSize.Value;
 

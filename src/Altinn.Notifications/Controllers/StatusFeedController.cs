@@ -1,5 +1,4 @@
 ﻿using Altinn.Notifications.Configuration;
-using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
@@ -22,9 +21,9 @@ namespace Altinn.Notifications.Controllers;
 [SwaggerResponse(403, "Caller is not authorized to access the requested resource")]
 [SwaggerResponse(499, "The operation was cancelled by the caller")]
 [Authorize(Policy = AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS)]
-public class StatusFeedController(IStatusFeedService statusFeedService, IValidator<GetStatusFeedRequest> validator) : ControllerBase
+public class StatusFeedController(IStatusFeedService statusFeedService, IValidator<GetStatusFeedRequestExt> validator) : ControllerBase
 {
-    private readonly IValidator<GetStatusFeedRequest> _validator = validator;
+    private readonly IValidator<GetStatusFeedRequestExt> _validator = validator;
 
     /// <summary>
     /// Retrieve an array of order status change history.
@@ -35,7 +34,7 @@ public class StatusFeedController(IStatusFeedService statusFeedService, IValidat
     [Consumes("application/json")]
     [Produces("application/json")]
     [SwaggerResponse(200, "Successfully retrieved status feed entries", typeof(List<StatusFeedExt>))]
-    public async Task<ActionResult<List<StatusFeedExt>>> GetStatusFeed([FromQuery] GetStatusFeedRequest statusFeedRequest)
+    public async Task<ActionResult<List<StatusFeedExt>>> GetStatusFeed([FromQuery] GetStatusFeedRequestExt statusFeedRequest)
     {
         try
         {
@@ -47,7 +46,7 @@ public class StatusFeedController(IStatusFeedService statusFeedService, IValidat
             }
 
             string? creatorName = HttpContext.GetOrg();
-            if (creatorName == null)
+            if (string.IsNullOrWhiteSpace(creatorName))
             {
                 return Forbid();
             }

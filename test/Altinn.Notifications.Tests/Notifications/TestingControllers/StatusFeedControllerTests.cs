@@ -54,7 +54,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
             };
 
             // Act
-            var result = await controller.GetStatusFeed(new GetStatusFeedRequest { Seq = 1 });
+            var result = await controller.GetStatusFeed(new GetStatusFeedRequestExt { Seq = 1 });
 
             // Assert
             Assert.NotNull(result);
@@ -94,7 +94,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
                     .ReturnsAsync(statusFeedList);
 
             // Act
-            var result = await _sut.GetStatusFeed(new GetStatusFeedRequest { Seq = expectedSequenceNumber });
+            var result = await _sut.GetStatusFeed(new GetStatusFeedRequestExt { Seq = expectedSequenceNumber });
 
             // Assert
             Assert.NotNull(result);
@@ -114,7 +114,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
                 .ThrowsAsync(new OperationCanceledException());
 
             // Act
-            var result = await _sut.GetStatusFeed(new GetStatusFeedRequest { Seq = 1 });
+            var result = await _sut.GetStatusFeed(new GetStatusFeedRequestExt { Seq = 1 });
 
             // Assert
             Assert.NotNull(result);
@@ -132,7 +132,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
                 .ReturnsAsync(error);
 
             // Act
-            var result = await _sut.GetStatusFeed(new GetStatusFeedRequest { Seq = 1 });
+            var result = await _sut.GetStatusFeed(new GetStatusFeedRequestExt { Seq = 1 });
 
             // Assert
             Assert.NotNull(result);

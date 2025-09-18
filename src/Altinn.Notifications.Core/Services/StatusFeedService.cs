@@ -68,7 +68,7 @@ public class StatusFeedService : IStatusFeedService
     
     private int FindPageSize(int? pageSizeUserInput)
     {
-        int max = _config.MaxPageSize;
+        int max = _config.StatusFeedMaxPageSize;
         int value = pageSizeUserInput ?? max;
         if (value < 1)
         {

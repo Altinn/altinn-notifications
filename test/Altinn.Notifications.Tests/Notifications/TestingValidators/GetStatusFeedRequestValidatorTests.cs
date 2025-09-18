@@ -1,4 +1,4 @@
-﻿using Altinn.Notifications.Core.Models.Status;
+﻿using Altinn.Notifications.Models.Status;
 using Altinn.Notifications.Validators;
 
 using FluentValidation.TestHelper;
@@ -14,7 +14,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingValidators
         public void Should_Have_Validation_Error_For_Seq_When_Negative()
         {
             // arrange
-            var request = new GetStatusFeedRequest
+            var request = new GetStatusFeedRequestExt
             {
                 Seq = -1,
             };
