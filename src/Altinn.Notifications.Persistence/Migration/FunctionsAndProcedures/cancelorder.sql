@@ -29,7 +29,8 @@ BEGIN
     SELECT o.requestedsendtime, o.processedstatus
     INTO order_record
     FROM notifications.orders o
-    WHERE o.alternateid = _alternateid AND o.creatorname = _creatorname;
+    WHERE o.alternateid = _alternateid AND o.creatorname = _creatorname
+    FOR UPDATE;  -- Lock the row for update
 
     -- If no order is found, return an empty result set
     IF NOT FOUND THEN
