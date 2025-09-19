@@ -8,7 +8,7 @@ public record StatusFeed
     /// <summary>
     /// The sequence number id of the status feed entry 
     /// </summary>
-    public required int SequenceNumber { get; set; }
+    public required long SequenceNumber { get; set; }
 
     /// <summary>
     /// The OrderStatus of the status feed entry <see cref="OrderStatus"/>.
