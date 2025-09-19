@@ -16,6 +16,7 @@ public class TriggerController : ControllerBase
     private readonly IEmailNotificationService _emailNotificationService;
     private readonly ISmsNotificationService _smsNotificationService;
     private readonly IStatusFeedService _statusFeedService;
+    private readonly IMetricsService _metricsService;
     private readonly INotificationScheduleService _scheduleService;
     private readonly ILogger<TriggerController> _logger;
 
@@ -28,6 +29,7 @@ public class TriggerController : ControllerBase
         ISmsNotificationService smsNotificationService,
         INotificationScheduleService scheduleService,
         IStatusFeedService statusFeedService,
+        IMetricsService metricsService,
         ILogger<TriggerController> logger)
     {
         _orderProcessingService = orderProcessingService;
@@ -35,6 +37,7 @@ public class TriggerController : ControllerBase
         _smsNotificationService = smsNotificationService;
         _scheduleService = scheduleService;
         _statusFeedService = statusFeedService;
+        _metricsService = metricsService;
         _logger = logger;
     }
 
@@ -46,6 +49,7 @@ public class TriggerController : ControllerBase
     [Route("pastdueorders")]
     public async Task<ActionResult> Trigger_PastDueOrders()
     {
+        _metricsService.TriggerPastDueOrdersCounter.Add(1);
         await _orderProcessingService.StartProcessingPastDueOrders();
         return Ok();
     }
@@ -61,6 +65,7 @@ public class TriggerController : ControllerBase
     {
         try
         {
+            _metricsService.TriggerDeleteOldStatusFeedRecords.Add(1);
             await _statusFeedService.DeleteOldStatusFeedRecords(cancellationToken);
             return Ok();
         }
@@ -79,6 +84,7 @@ public class TriggerController : ControllerBase
     [Route("sendemail")]
     public async Task<ActionResult> Trigger_SendEmailNotifications()
     {
+        _metricsService.TriggerSendEmailNotificationsCounter.Add(1);
         await _emailNotificationService.SendNotifications();
         return Ok();
     }
@@ -94,6 +100,7 @@ public class TriggerController : ControllerBase
     {
         try
         {
+            _metricsService.TriggerTerminateExpiredNotificationsCounter.Add(1);
             await _emailNotificationService.TerminateExpiredNotifications();
             await _smsNotificationService.TerminateExpiredNotifications();
             return Ok();
@@ -115,6 +122,8 @@ public class TriggerController : ControllerBase
     [Route("sendsmsdaytime")]
     public async Task<ActionResult> Trigger_SendSmsNotificationsDaytime()
     {
+        _metricsService.TriggerSendSmsNotificationsDaytimeCounter.Add(1);
+
         if (!_scheduleService.CanSendSmsNow())
         {
             return Ok();
@@ -133,6 +142,7 @@ public class TriggerController : ControllerBase
     [Route("sendsmsanytime")]
     public async Task<ActionResult> Trigger_SendSmsNotificationsAnytime()
     {
+        _metricsService.TriggerSendSmsNotificationsAnytimeCounter.Add(1);
         await _smsNotificationService.SendNotifications(Core.Enums.SendingTimePolicy.Anytime);
         return Ok();
     }

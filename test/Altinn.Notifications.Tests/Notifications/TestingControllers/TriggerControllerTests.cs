@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.Metrics;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -23,6 +24,9 @@ public class TriggerControllerTests
     private readonly Mock<INotificationScheduleService> _notificationScheduleMock = new();
     private readonly Mock<IEmailNotificationService> _emailNotificationServiceMock = new();
     private readonly Mock<IStatusFeedService> _statusFeedServiceMock = new();
+    private readonly Mock<IMetricsService> _metricsServiceMock = new();
+    private readonly Meter _testMeter = new Meter("test-meter");
+    private readonly Counter<long> _testCounter;
 
     public TriggerControllerTests()
     {
@@ -32,7 +36,10 @@ public class TriggerControllerTests
             _smsNotificationServiceMock.Object,
             _notificationScheduleMock.Object,
             _statusFeedServiceMock.Object,
+            _metricsServiceMock.Object,
             NullLogger<TriggerController>.Instance);
+    
+        _testCounter = _testMeter.CreateCounter<long>("test-counter");
     }
 
     [Fact]
@@ -40,6 +47,7 @@ public class TriggerControllerTests
     {
         // Arrange
         _notificationScheduleMock.Setup(x => x.CanSendSmsNow()).Returns(false);
+        _metricsServiceMock.Setup(x => x.TriggerSendSmsNotificationsDaytimeCounter).Returns(_testCounter);
 
         // Act
         ActionResult result = await _controller.Trigger_SendSmsNotificationsDaytime();
@@ -55,6 +63,7 @@ public class TriggerControllerTests
         // Arrange
         _smsNotificationServiceMock.Setup(x => x.TerminateExpiredNotifications()).Returns(Task.CompletedTask);
         _emailNotificationServiceMock.Setup(x => x.TerminateExpiredNotifications()).Returns(Task.CompletedTask);
+        _metricsServiceMock.Setup(x => x.TriggerTerminateExpiredNotificationsCounter).Returns(_testCounter);
 
         // Act
         IActionResult result = await _controller.Trigger_TerminateExpiredNotifications();
@@ -72,6 +81,7 @@ public class TriggerControllerTests
         // Arrange
         _smsNotificationServiceMock.Setup(x => x.TerminateExpiredNotifications()).Returns(Task.CompletedTask);
         _emailNotificationServiceMock.Setup(x => x.TerminateExpiredNotifications()).ThrowsAsync(new Exception("Simulated exception"));
+        _metricsServiceMock.Setup(x => x.TriggerTerminateExpiredNotificationsCounter).Returns(_testCounter);
 
         // Act
         IActionResult result = await _controller.Trigger_TerminateExpiredNotifications();
@@ -91,6 +101,7 @@ public class TriggerControllerTests
         // Arrange
         _emailNotificationServiceMock.Setup(x => x.TerminateExpiredNotifications()).Returns(Task.CompletedTask);
         _smsNotificationServiceMock.Setup(x => x.TerminateExpiredNotifications()).ThrowsAsync(new Exception("Simulated exception"));
+        _metricsServiceMock.Setup(x => x.TriggerTerminateExpiredNotificationsCounter).Returns(_testCounter);
 
         // Act
         IActionResult result = await _controller.Trigger_TerminateExpiredNotifications();
@@ -109,6 +120,7 @@ public class TriggerControllerTests
     {
         // Arrange
         _statusFeedServiceMock.Setup(x => x.DeleteOldStatusFeedRecords(CancellationToken.None)).Returns(Task.CompletedTask);
+        _metricsServiceMock.Setup(x => x.TriggerDeleteOldStatusFeedRecords).Returns(_testCounter);
 
         // Act
         var result = await _controller.Trigger_DeleteOldStatusFeedRecords(CancellationToken.None);

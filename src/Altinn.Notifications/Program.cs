@@ -10,6 +10,7 @@ using Altinn.Common.PEP.Authorization;
 using Altinn.Notifications.Authorization;
 using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core.Extensions;
+using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Health;
 using Altinn.Notifications.Integrations.Extensions;
@@ -157,7 +158,8 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
             metrics.AddMeter(
                 "Microsoft.AspNetCore.Hosting",
                 "Microsoft.AspNetCore.Server.Kestrel",
-                "System.Net.Http");
+                "System.Net.Http",
+                MetricsService.MeterName);
         })
         .WithTracing(tracing =>
         {
