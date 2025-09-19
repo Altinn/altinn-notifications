@@ -19,8 +19,8 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
 {
     private readonly string _retryTopicName;
     private readonly IKafkaProducer _producer;
-    private readonly IMemoryCache _logSuppressionCache;
     private readonly ILogger<TConsumer> _logger;
+    private readonly IMemoryCache _logSuppressionCache;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationStatusConsumerBase{TConsumer, TResult}"/> class.

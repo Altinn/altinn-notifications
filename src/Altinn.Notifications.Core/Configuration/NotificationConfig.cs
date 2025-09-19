@@ -29,4 +29,9 @@ public class NotificationConfig
     /// The maximum number of entries to return in one status feed page.
     /// </summary>
     public int StatusFeedMaxPageSize { get; set; } = 500;
+
+    /// <summary>
+    /// The maximum number of SMS notifications claimed and published in one batch.
+    /// </summary>
+    public int SmsPublishBatchSize { get; set; } = 500;
 }

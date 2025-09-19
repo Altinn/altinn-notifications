@@ -5,6 +5,7 @@ using Altinn.Common.PEP.Clients;
 using Altinn.Common.PEP.Implementation;
 using Altinn.Common.PEP.Interfaces;
 using Altinn.Notifications.Core.Integrations;
+using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Integrations.Authorization;
 using Altinn.Notifications.Integrations.Clients;
 using Altinn.Notifications.Integrations.Configuration;
@@ -38,11 +39,12 @@ public static class ServiceCollectionExtensions
 
         services
         .AddSingleton<IKafkaProducer, KafkaProducer>()
+        .AddHostedService<SmsStatusConsumer>()
+        .AddHostedService<EmailStatusConsumer>()
         .AddHostedService<PastDueOrdersConsumer>()
         .AddHostedService<PastDueOrdersRetryConsumer>()
-        .AddHostedService<EmailStatusConsumer>()
-        .AddHostedService<SmsStatusConsumer>()
         .AddHostedService<AltinnServiceUpdateConsumer>()
+        .AddHostedService<SmsPublishBackgroundService>()
         .Configure<KafkaSettings>(config.GetSection(nameof(KafkaSettings)));
     }
 

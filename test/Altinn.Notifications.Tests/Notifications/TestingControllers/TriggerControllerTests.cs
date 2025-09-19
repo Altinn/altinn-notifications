@@ -3,11 +3,13 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Altinn.Notifications.Controllers;
-using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.BackgroundQueue;
 using Altinn.Notifications.Core.Services.Interfaces;
+
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
+
 using Moq;
 
 using Xunit;
@@ -18,34 +20,36 @@ public class TriggerControllerTests
 {
     private readonly TriggerController _controller;
 
+    private readonly Mock<IStatusFeedService> _statusFeedServiceMock = new();
+    private readonly Mock<ISmsPublishTaskQueue> _smsPublishTaskQueueMock = new();
     private readonly Mock<ISmsNotificationService> _smsNotificationServiceMock = new();
     private readonly Mock<IOrderProcessingService> _orderProcessingServiceMock = new();
     private readonly Mock<INotificationScheduleService> _notificationScheduleMock = new();
     private readonly Mock<IEmailNotificationService> _emailNotificationServiceMock = new();
-    private readonly Mock<IStatusFeedService> _statusFeedServiceMock = new();
 
     public TriggerControllerTests()
     {
         _controller = new TriggerController(
-            _orderProcessingServiceMock.Object,
-            _emailNotificationServiceMock.Object,
-            _smsNotificationServiceMock.Object,
-            _notificationScheduleMock.Object,
+            NullLogger<TriggerController>.Instance,
             _statusFeedServiceMock.Object,
-            NullLogger<TriggerController>.Instance);
+            _smsPublishTaskQueueMock.Object,
+            _notificationScheduleMock.Object,
+            _orderProcessingServiceMock.Object,
+            _smsNotificationServiceMock.Object,
+            _emailNotificationServiceMock.Object);
     }
 
     [Fact]
-    public async Task Trigger_SendSmsNotificationsDaytime_CanSendSmsNowReturnsFalse_ServiceNotCalled()
+    public async Task Trigger_DeleteOldStatusFeedRecords_CallsServiceAndReturnsOk()
     {
         // Arrange
-        _notificationScheduleMock.Setup(x => x.CanSendSmsNow()).Returns(false);
+        _statusFeedServiceMock.Setup(x => x.DeleteOldStatusFeedRecords(CancellationToken.None)).Returns(Task.CompletedTask);
 
         // Act
-        ActionResult result = await _controller.Trigger_SendSmsNotificationsDaytime();
+        var result = await _controller.Trigger_DeleteOldStatusFeedRecords(CancellationToken.None);
 
         // Assert
-        _smsNotificationServiceMock.Verify(x => x.SendNotifications(It.IsAny<SendingTimePolicy>()), Times.Never);
+        _statusFeedServiceMock.Verify(x => x.DeleteOldStatusFeedRecords(CancellationToken.None), Times.Once);
         Assert.IsType<OkResult>(result);
     }
 
@@ -64,25 +68,6 @@ public class TriggerControllerTests
         _emailNotificationServiceMock.Verify(x => x.TerminateExpiredNotifications(), Times.Once);
 
         Assert.IsType<OkResult>(result);
-    }
-
-    [Fact]
-    public async Task Trigger_TerminateExpiredNotifications_EmailServiceThrowsException_ReturnsInternalServerError()
-    {
-        // Arrange
-        _smsNotificationServiceMock.Setup(x => x.TerminateExpiredNotifications()).Returns(Task.CompletedTask);
-        _emailNotificationServiceMock.Setup(x => x.TerminateExpiredNotifications()).ThrowsAsync(new Exception("Simulated exception"));
-
-        // Act
-        IActionResult result = await _controller.Trigger_TerminateExpiredNotifications();
-
-        // Assert
-        _smsNotificationServiceMock.Verify(x => x.TerminateExpiredNotifications(), Times.Never);
-        _emailNotificationServiceMock.Verify(x => x.TerminateExpiredNotifications(), Times.Once);
-
-        Assert.IsType<ObjectResult>(result);
-        var statusCodeResult = (ObjectResult)result;
-        Assert.Equal(StatusCodes.Status500InternalServerError, statusCodeResult.StatusCode);
     }
 
     [Fact]
@@ -105,16 +90,21 @@ public class TriggerControllerTests
     }
 
     [Fact]
-    public async Task Trigger_DeleteOldStatusFeedRecords_CallsServiceAndReturnsOk()
+    public async Task Trigger_TerminateExpiredNotifications_EmailServiceThrowsException_ReturnsInternalServerError()
     {
         // Arrange
-        _statusFeedServiceMock.Setup(x => x.DeleteOldStatusFeedRecords(CancellationToken.None)).Returns(Task.CompletedTask);
+        _smsNotificationServiceMock.Setup(x => x.TerminateExpiredNotifications()).Returns(Task.CompletedTask);
+        _emailNotificationServiceMock.Setup(x => x.TerminateExpiredNotifications()).ThrowsAsync(new Exception("Simulated exception"));
 
         // Act
-        var result = await _controller.Trigger_DeleteOldStatusFeedRecords(CancellationToken.None);
+        IActionResult result = await _controller.Trigger_TerminateExpiredNotifications();
 
         // Assert
-        _statusFeedServiceMock.Verify(x => x.DeleteOldStatusFeedRecords(CancellationToken.None), Times.Once);
-        Assert.IsType<OkResult>(result);
+        _smsNotificationServiceMock.Verify(x => x.TerminateExpiredNotifications(), Times.Never);
+        _emailNotificationServiceMock.Verify(x => x.TerminateExpiredNotifications(), Times.Once);
+
+        Assert.IsType<ObjectResult>(result);
+        var statusCodeResult = (ObjectResult)result;
+        Assert.Equal(StatusCodes.Status500InternalServerError, statusCodeResult.StatusCode);
     }
 }
