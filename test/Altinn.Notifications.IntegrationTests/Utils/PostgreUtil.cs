@@ -1,11 +1,9 @@
-﻿using System.Net.NetworkInformation;
-using Altinn.Notifications.Core.Enums;
+﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Extensions;
 using Altinn.Notifications.Persistence.Repository;
-
 using Npgsql;
 
 namespace Altinn.Notifications.IntegrationTests.Utils;
@@ -167,6 +165,77 @@ public static class PostgreUtil
         }
 
         return (order, smsNotification);
+    }
+
+    public static async Task<NotificationOrder> PopulateDBWithOrderAnd4Notifications(string orgName)
+    {
+        // Get test data for base order with one notification
+        (NotificationOrder order, SmsNotification smsNotificationFirst) = TestdataUtil.GetOrderAndSmsNotification();
+        order.Creator = new Core.Models.Creator(orgName);
+        var timeStamp = DateTime.UtcNow;
+        order.RequestedSendTime = timeStamp;
+        smsNotificationFirst.RequestedSendTime = timeStamp;
+        smsNotificationFirst.SendResult = new(SmsNotificationResultType.Sending, timeStamp);
+        smsNotificationFirst.OrderId = order.Id;
+
+        var smsNotificationSecond = new SmsNotification()
+        {
+            Id = Guid.NewGuid(),
+            OrderId = order.Id,
+            RequestedSendTime = timeStamp,
+            Recipient = new()
+            {
+                MobileNumber = smsNotificationFirst.Recipient.MobileNumber,
+            },
+            SendResult = new(SmsNotificationResultType.Sending, timeStamp)
+        };
+
+        var emailNotificationFirst = new EmailNotification()
+        {
+            Id = Guid.NewGuid(),
+            OrderId = order.Id,
+            RequestedSendTime = timeStamp,
+            Recipient = new()
+            {
+                ToAddress = "noreply@altinn.no"
+            },
+            SendResult = new(EmailNotificationResultType.Sending, timeStamp)
+        };
+
+        var emailNotificationSecond = new EmailNotification()
+        {
+            Id = Guid.NewGuid(),
+            OrderId = order.Id,
+            RequestedSendTime = timeStamp,
+            Recipient = new()
+            {
+                ToAddress = "noreply@altinn.no"
+            },
+            SendResult = new(EmailNotificationResultType.Sending, timeStamp)
+        };
+        
+        // Set up repositories
+        var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IOrderRepository), typeof(ISmsNotificationRepository), typeof(IEmailNotificationRepository) });
+        OrderRepository orderRepo = (OrderRepository)serviceList.First(i => i.GetType() == typeof(OrderRepository));
+        SmsNotificationRepository smsRepo = (SmsNotificationRepository)serviceList.First(i => i.GetType() == typeof(SmsNotificationRepository));
+        EmailNotificationRepository emailRepo = (EmailNotificationRepository)serviceList.First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        await orderRepo.Create(order);
+        await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processing);
+        await smsRepo.AddNotification(smsNotificationFirst, DateTime.UtcNow.AddDays(1), 1);
+        await smsRepo.AddNotification(smsNotificationSecond, DateTime.UtcNow.AddDays(1), 1);
+        await emailRepo.AddNotification(emailNotificationFirst, DateTime.UtcNow.AddDays(1));
+        await emailRepo.AddNotification(emailNotificationSecond, DateTime.UtcNow.AddDays(1));
+
+        await emailRepo.UpdateSendStatus(emailNotificationFirst.Id, EmailNotificationResultType.Delivered);
+        await emailRepo.UpdateSendStatus(emailNotificationSecond.Id, EmailNotificationResultType.Delivered);
+
+        await smsRepo.UpdateSendStatus(smsNotificationFirst.Id, SmsNotificationResultType.Accepted);
+        await smsRepo.UpdateSendStatus(smsNotificationSecond.Id, SmsNotificationResultType.Accepted);
+
+        await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Processed);
+
+        return order;
     }
 
     public static async Task DeleteOrderFromDb(string sendersRef)
