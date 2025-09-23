@@ -1,0 +1,29 @@
+{
+	"idempotencyId": "string",
+	"sendersReference": "string",
+	"requestedSendTime": "string",
+	"recipient": {
+		"recipientEmail": {
+			"emailAddress": "string",
+			"emailSettings": {
+				"subject": "Important update",
+				"body": "Dear user, please check your inbox for an important update. - Altinn Team"
+			}
+		}
+	},
+	"reminders": [
+		{
+			"delayDays": 1,
+			"sendersReference": "string",
+			"recipient": {
+				"recipientEmail": {
+					"emailAddress": "string",
+					"emailSettings": {
+						"subject": "Important update",
+						"body": "Dear user, please check your inbox for an important update. - Altinn Team"
+					}
+				}
+			}
+		}
+	]
+}
