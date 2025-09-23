@@ -21,6 +21,7 @@ import * as setupToken from "../setup.js";
 import { Trend, Counter, Rate } from "k6/metrics";
 import * as ordersApi from "../api/notifications/v2.js";
 import { stopIterationOnFail } from "../errorhandler.js";
+import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 import { scopes, performanceTestScenario } from "../shared/variables.js";
 import { textSummary } from "https://jslib.k6.io/k6-summary/0.0.1/index.js";
 
@@ -205,17 +206,6 @@ export function getFutureDate(daysToAdd = 0) {
 /**
  * Categorizes HTTP responses by status code and updates performance metrics for test reporting.
  * 
- * This function is critical for tracking key metrics that drive test thresholds:
- * - Status 200-399: Increments success rates and metrics
- * - Status 400-499: Records client errors (4xx), updates failure counters
- * - Status 500-599: Records server errors (5xx), updates failure counters
- * 
- * The metrics updated include:
- * - successRate
- * - serverErrorRate
- * - http4xx/http5xx
- * - failedRequests
- *
  * @param {Object} httpResponse - The HTTP response object from k6
  * @param {number} httpResponse.status - The HTTP status code
  */
@@ -246,11 +236,6 @@ export function collectHttpResponseMetrics(httpResponse) {
 /**
  * Sends a notification order chain request to the Notification API.
  *
- * Token handling:
- * - Uses a cached Altinn token until its artificial expiration (1680s from acquisition).
- * - The JWT `exp` claim is intentionally ignored to reduce parsing overhead;
- *   instead, a fixed lifetime is assumed.
- *
  * @param {Object} orderRequest - The order chain payload to send.
  * @param {string} [label='post_valid_order'] - Label used for logging/metrics.
  * @returns {Object} The HTTP response from the Notification API.
@@ -263,12 +248,6 @@ export function sendNotificationOrderChain(orderRequest, label = 'post_valid_ord
 
 /**
  * Processes a notification order chain by sending it to the API and collecting performance metrics.
- * 
- * This function:
- * 1. Validates inputs
- * 2. Sends the request
- * 3. Records metrics
- * 4. Returns a composite result for later validation
  *
  * @param {string} orderType - "valid", "invalid", "duplicate", etc.
  * @param {Object} orderChainPayload - The notification order chain payload to send
@@ -290,10 +269,6 @@ export function processOrderChainPayload(orderType, orderChainPayload, label, du
 
 /**
  * Runs supplied validator functions against collected processing results.
- *
- * Shared logic:
- * - Aborts iteration early (stopIterationOnFail) on 401/403
- * - Safely parses JSON response body
  *
  * @param {Array<Object>} processingResults - Array of { orderType, httpResponse, orderChainPayload }
  * @param {Object<string,function>} validators - Map of orderType -> validator(response, body, payload)
@@ -357,4 +332,169 @@ export function validateStandardNotificationShape(response, responseBody, orderC
         "Reminder count matches request": () => reminderArray.length === expectedReminderCount,
         "All reminders have shipment IDs": () => reminderArray.length === 0 || reminderArray.every(e => typeof e.shipmentId === 'string' && e.shipmentId.length > 0)
     });
+}
+
+/**
+ * Prepares a base order chain payload for setup().
+ *
+ * @param {Object} orderChainJsonPayload - Raw JSON template (already parsed)
+ * @param {Object} [options]
+ * @param {number} [options.futureDays=7] - Days in future for requestedSendTime
+ * @param {boolean} [options.addDialogAssociation=false] - Whether to add dialogportenAssociation
+ * @param {string} [options.orderSenderPrefix='k6-order'] - Prefix for main sendersReference
+ * @param {string} [options.reminderSenderPrefix='k6-reminder-order'] - Prefix for reminder sendersReference
+ * @param {function(Object,string):void} [options.mutate] - Custom mutation callback (payload, uniqueId)
+ * @returns {{orderChainPayload:Object, uniqueIdentifier:string}}
+ */
+export function prepareBaseOrderChain(orderChainJsonPayload, {
+    futureDays = 7,
+    addDialogAssociation = false,
+    orderSenderPrefix = 'k6-order',
+    reminderSenderPrefix = 'k6-reminder-order',
+    mutate
+} = {}) {
+    const uniqueIdentifier = uuidv4().substring(0, 8);
+    const orderChainPayload = JSON.parse(JSON.stringify(orderChainJsonPayload));
+
+    orderChainPayload.requestedSendTime = getFutureDate(futureDays);
+    orderChainPayload.sendersReference = `${orderSenderPrefix}-${uniqueIdentifier}`;
+
+    if (addDialogAssociation) {
+        orderChainPayload.dialogportenAssociation = {
+            dialogId: uniqueIdentifier,
+            transmissionId: uniqueIdentifier
+        };
+    }
+
+    if (Array.isArray(orderChainPayload.reminders)) {
+        orderChainPayload.reminders = orderChainPayload.reminders.map(reminder => ({
+            ...reminder,
+            sendersReference: `${reminderSenderPrefix}-${uniqueIdentifier}`
+        }));
+    }
+
+    if (typeof mutate === 'function') {
+        mutate(orderChainPayload, uniqueIdentifier);
+    }
+
+    return { orderChainPayload, uniqueIdentifier };
+}
+
+/**
+ * Generates order chain payload variants based on orderTypes.
+ *
+ * @param {Array<string>} orderTypes - e.g. ['valid','invalid','duplicate']
+ * @param {Object} basePayload - Base payload from setup
+ * @param {Object} transforms
+ * @param {function(Object):Object} transforms.uniqueFactory - Produces a unique payload (adds idempotencyId + channel specific fields)
+ * @param {function(Object):Object} [transforms.invalidTransform] - Produces invalid variant
+ * @param {function(Object):Object} [transforms.missingResourceTransform] - Produces missingResource variant (org script)
+ * @returns {Array<{orderType:string, orderChainPayload:Object}>}
+ */
+export function generateOrderChainPayloads(orderTypes, basePayload, {
+    uniqueFactory,
+    invalidTransform,
+    missingResourceTransform
+}) {
+    const variants = [];
+    for (const orderType of orderTypes) {
+        const unique = uniqueFactory(basePayload);
+        switch (orderType) {
+            case "valid":
+            case "duplicate":
+                variants.push({ orderType, orderChainPayload: unique });
+                break;
+            case "invalid":
+                if (invalidTransform) {
+                    variants.push({ orderType, orderChainPayload: invalidTransform(unique) });
+                }
+                break;
+            case "missingResource":
+                if (missingResourceTransform) {
+                    variants.push({ orderType, orderChainPayload: missingResourceTransform(unique) });
+                }
+                break;
+        }
+    }
+    return variants;
+}
+
+/**
+ * Processes variants into HTTP requests & metrics.
+ *
+ * Handles duplicate pattern by issuing an extra "valid" request first.
+ *
+ * @param {Array<{orderType:string, orderChainPayload:Object}>} variants
+ * @param {Object} config
+ * @param {Object<string,string>} config.labelMap - orderType -> label constant
+ * @param {Object<string,Trend>} config.durationMetrics - orderType -> Trend
+ * @returns {Array<Object>} processingResults
+ */
+export function processVariants(variants, {
+    labelMap,
+    durationMetrics
+}) {
+    return variants.map(v => {
+        const { orderType, orderChainPayload } = v;
+        switch (orderType) {
+            case "valid":
+                return processOrderChainPayload(orderType, orderChainPayload, labelMap.valid, durationMetrics.valid);
+            case "invalid":
+                return processOrderChainPayload(orderType, orderChainPayload, labelMap.invalid, durationMetrics.invalid);
+            case "duplicate":
+                // Send initial valid for idempotency before expecting 200
+                processOrderChainPayload("valid", orderChainPayload, labelMap.valid, durationMetrics.valid);
+                return processOrderChainPayload(orderType, orderChainPayload, labelMap.duplicate, durationMetrics.duplicate);
+            case "missingResource":
+                return processOrderChainPayload(orderType, orderChainPayload, labelMap.missingResource, durationMetrics.missingResource);
+            default:
+                return undefined;
+        }
+    }).filter(Boolean);
+}
+
+/**
+ * Builds a standard validator set (with optional missingResource).
+ *
+ * @param {Object} [options]
+ * @param {boolean} [options.includeMissingResource=false]
+ * @returns {Object<string,function>}
+ */
+export function buildStandardValidators({ includeMissingResource = false } = {}) {
+    const base = {
+        valid: (response, body, payload) => {
+            orderKindRateValid.add(response.status === 201);
+            highLatencyRate.add(response.timings.duration > 2000);
+            validateStandardNotificationShape(response, body, payload, 201);
+            if (response.status === 201) {
+                http201Created.add(1);
+            }
+        },
+        invalid: (response) => {
+            highLatencyRate.add(response.timings.duration > 2000);
+            check(response, { "Status is 400 Bad Request": r => r.status === 400 });
+            if (response.status === 400) {
+                http400Validation.add(1);
+            }
+        },
+        duplicate: (response, body, payload) => {
+            highLatencyRate.add(response.timings.duration > 2000);
+            validateStandardNotificationShape(response, body, payload, 200);
+            if (response.status === 200) {
+                http200Duplicate.add(1);
+            }
+        }
+    };
+
+    if (includeMissingResource) {
+        base.missingResource = (response, body, payload) => {
+            highLatencyRate.add(response.timings.duration > 2000);
+            validateStandardNotificationShape(response, body, payload, 201);
+            if (response.status === 201) {
+                http201Created.add(1);
+            }
+        };
+    }
+
+    return base;
 }
