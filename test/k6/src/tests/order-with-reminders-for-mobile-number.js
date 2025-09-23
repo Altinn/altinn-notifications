@@ -34,19 +34,15 @@ import { getSmsRecipient } from "../shared/functions.js";
 import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 import {
     buildOptions,
-    getFutureDate,
-    processOrderChainPayload,
-    runValidators,
     handleSummary,
+    runValidators,
+    processVariants,
     validOrderDuration,
     invalidOrderDuration,
+    prepareBaseOrderChain,
     duplicateOrderDuration,
-    highLatencyRate,
-    orderKindRateValid,
-    http201Created,
-    http200Duplicate,
-    http400Validation,
-    validateStandardNotificationShape
+    buildStandardValidators,
+    generateOrderChainPayloads,
 } from "./order-with-reminders-functions.js";
 import { post_valid_order, post_invalid_order, post_duplicate_order, setEmptyThresholds } from "./threshold-labels.js";
 
@@ -68,28 +64,22 @@ setEmptyThresholds(labels, options);
  * @returns {Object} Test context containing the order chain payload
  */
 export function setup() {
-    const uniqueIdentifier = uuidv4().substring(0, 8);
-    const orderChainPayload = JSON.parse(JSON.stringify(orderChainJsonPayload));
-
-    orderChainPayload.requestedSendTime = getFutureDate(7);
-    orderChainPayload.sendersReference = `k6-order-${uniqueIdentifier}`;
-
-    if (orderChainPayload.recipient?.recipientSms) {
-        orderChainPayload.recipient.recipientSms.phoneNumber = getSmsRecipient();
-    }
-
-    if (Array.isArray(orderChainPayload.reminders)) {
-        orderChainPayload.reminders = orderChainPayload.reminders.map(reminder => {
-            const updatedReminder = {
-                ...reminder,
-                sendersReference: `k6-reminder-${uniqueIdentifier}`
-            };
-            if (updatedReminder.recipient?.recipientSms) {
-                updatedReminder.recipient.recipientSms.phoneNumber = getSmsRecipient();
+    const { orderChainPayload } = prepareBaseOrderChain(orderChainJsonPayload, {
+        mutate: (payload) => {
+            if (payload.recipient?.recipientSms) {
+                payload.recipient.recipientSms.phoneNumber = getSmsRecipient();
             }
-            return updatedReminder;
-        });
-    }
+            if (Array.isArray(payload.reminders)) {
+                payload.reminders = payload.reminders.map(r => {
+                    if (r?.recipient?.recipientSms) {
+                        r.recipient.recipientSms.phoneNumber = getSmsRecipient();
+                    }
+                    return r;
+                });
+            }
+        },
+        reminderSenderPrefix: 'k6-reminder'
+    });
 
     return { orderChainPayload };
 }
@@ -136,76 +126,30 @@ function stripRecipientSmsFromOrderChainPayload(orderChainPayload) {
 }
 
 /**
- * Generates order chain payload variants by order type.
- *
- * @param {Object} data - Setup data
- * @returns {Array<Object>} Variants
- */
-function generateOrderChainPayloadsByOrderType(data) {
-    const variants = [];
-    for (const orderType of orderTypes) {
-        const uniquePayload = createUniqueOrderChainPayload(data);
-        switch (orderType) {
-            case "valid":
-            case "duplicate":
-                variants.push({ orderType, orderChainPayload: uniquePayload });
-                break;
-            case "invalid":
-                variants.push({ orderType, orderChainPayload: stripRecipientSmsFromOrderChainPayload(uniquePayload) });
-                break;
-        }
-    }
-    return variants;
-}
-
-/**
  * Main iteration function.
  *
  * @param {Object} data - From setup
  */
 export default function (data) {
-    const variants = generateOrderChainPayloadsByOrderType(data);
+    const variants = generateOrderChainPayloads(orderTypes, data.orderChainPayload, {
+        uniqueFactory: createUniqueOrderChainPayload,
+        invalidTransform: stripRecipientSmsFromOrderChainPayload
+    });
 
-    const processingResults = variants.map(v => {
-        const { orderType, orderChainPayload } = v;
-        switch (orderType) {
-            case "valid":
-                return processOrderChainPayload(orderType, orderChainPayload, post_valid_order, validOrderDuration);
-            case "invalid":
-                return processOrderChainPayload(orderType, orderChainPayload, post_invalid_order, invalidOrderDuration);
-            case "duplicate":
-                processOrderChainPayload("valid", orderChainPayload, post_valid_order, validOrderDuration);
-                return processOrderChainPayload(orderType, orderChainPayload, post_duplicate_order, duplicateOrderDuration);
-            default:
-                return undefined;
-        }
-    }).filter(Boolean);
-
-    const validators = {
-        valid: (response, body, payload) => {
-            orderKindRateValid.add(response.status === 201);
-            highLatencyRate.add(response.timings.duration > 2000);
-            validateStandardNotificationShape(response, body, payload, 201);
-            if (response.status === 201) {
-                http201Created.add(1);
-            }
+    const processingResults = processVariants(variants, {
+        labelMap: {
+            valid: post_valid_order,
+            invalid: post_invalid_order,
+            duplicate: post_duplicate_order
         },
-        invalid: (response) => {
-            highLatencyRate.add(response.timings.duration > 2000);
-            check(response, { "Status is 400 Bad Request": r => r.status === 400 });
-            if (response.status === 400) {
-                http400Validation.add(1);
-            }
-        },
-        duplicate: (response, body, payload) => {
-            highLatencyRate.add(response.timings.duration > 2000);
-            validateStandardNotificationShape(response, body, payload, 200);
-            if (response.status === 200) {
-                http200Duplicate.add(1);
-            }
+        durationMetrics: {
+            valid: validOrderDuration,
+            invalid: invalidOrderDuration,
+            duplicate: duplicateOrderDuration
         }
-    };
+    });
 
+    const validators = buildStandardValidators();
     runValidators(processingResults, validators);
 }
 

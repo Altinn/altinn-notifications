@@ -30,20 +30,16 @@ import { resourceId, orderTypes } from "../shared/variables.js";
 import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 import {
     buildOptions,
-    getFutureDate,
-    processOrderChainPayload,
     runValidators,
     handleSummary,
+    processVariants,
     validOrderDuration,
     invalidOrderDuration,
+    prepareBaseOrderChain,
     duplicateOrderDuration,
-    missingResourceOrderDuration,
-    highLatencyRate,
-    orderKindRateValid,
-    http201Created,
-    http200Duplicate,
-    http400Validation,
-    validateStandardNotificationShape
+    buildStandardValidators,
+    generateOrderChainPayloads,
+    missingResourceOrderDuration
 } from "./order-with-reminders-functions.js";
 import { post_valid_order, post_invalid_order, post_duplicate_order, post_order_without_resource_id, setEmptyThresholds } from "./threshold-labels.js";
 
@@ -67,34 +63,26 @@ setEmptyThresholds(labels, options);
  * @returns {Object} Test context
  */
 export function setup() {
-    const uniqueIdentifier = uuidv4().substring(0, 8);
-    const orderChainPayload = JSON.parse(JSON.stringify(orderChainJsonPayload));
-
-    orderChainPayload.requestedSendTime = getFutureDate(7);
-    orderChainPayload.sendersReference = `k6-order-${uniqueIdentifier}`;
-
-    orderChainPayload.dialogportenAssociation = {
-        dialogId: uniqueIdentifier,
-        transmissionId: uniqueIdentifier
-    };
-
-    if (orderChainPayload.recipient?.recipientOrganization) {
-        orderChainPayload.recipient.recipientOrganization.resourceId = resourceId;
-    }
-
-    if (Array.isArray(orderChainPayload.reminders)) {
-        orderChainPayload.reminders = orderChainPayload.reminders.map(reminder => ({
-            ...reminder,
-            sendersReference: `k6-reminder-order-${uniqueIdentifier}`,
-            recipient: {
-                ...reminder.recipient,
-                recipientOrganization: {
-                    ...reminder.recipient.recipientOrganization,
-                    resourceId
-                }
+    const { orderChainPayload } = prepareBaseOrderChain(orderChainJsonPayload, {
+        addDialogAssociation: true,
+        mutate: (payload) => {
+            if (payload.recipient?.recipientOrganization) {
+                payload.recipient.recipientOrganization.resourceId = resourceId;
             }
-        }));
-    }
+            if (Array.isArray(payload.reminders)) {
+                payload.reminders = payload.reminders.map(r => ({
+                    ...r,
+                    recipient: {
+                        ...r.recipient,
+                        recipientOrganization: {
+                            ...r.recipient.recipientOrganization,
+                            resourceId
+                        }
+                    }
+                }));
+            }
+        }
+    });
 
     return { orderChainPayload };
 }
@@ -226,88 +214,33 @@ function stripRecipientOrganizationFromOrderChainPayload(orderChainPayload) {
 }
 
 /**
- * Generates order chain payload variants by order type.
- *
- * @param {Object} data - Setup data
- * @returns {Array<Object>} Variants
- */
-function generateOrderChainPayloadsByOrderType(data) {
-    const variants = [];
-    for (const orderType of orderTypes) {
-        const unique = createUniqueOrderChainPayload(data);
-        switch (orderType) {
-            case "valid":
-            case "duplicate":
-                variants.push({ orderType, orderChainPayload: unique });
-                break;
-            case "invalid":
-                variants.push({ orderType, orderChainPayload: stripRecipientOrganizationFromOrderChainPayload(unique) });
-                break;
-            case "missingResource":
-                variants.push({ orderType, orderChainPayload: removeResourceIdFromOrderChainPayload(unique) });
-                break;
-        }
-    }
-    return variants;
-}
-
-/**
  * Main iteration function.
  *
  * @param {Object} data - Setup context
  */
 export default function (data) {
-    const variants = generateOrderChainPayloadsByOrderType(data);
+    const variants = generateOrderChainPayloads(orderTypes, data.orderChainPayload, {
+        uniqueFactory: createUniqueOrderChainPayload,
+        invalidTransform: stripRecipientOrganizationFromOrderChainPayload,
+        missingResourceTransform: removeResourceIdFromOrderChainPayload
+    });
 
-    const processingResults = variants.map(v => {
-        const { orderType, orderChainPayload } = v;
-        switch (orderType) {
-            case "valid":
-                return processOrderChainPayload(orderType, orderChainPayload, post_valid_order, validOrderDuration);
-            case "invalid":
-                return processOrderChainPayload(orderType, orderChainPayload, post_invalid_order, invalidOrderDuration);
-            case "duplicate":
-                processOrderChainPayload("valid", orderChainPayload, post_valid_order, validOrderDuration);
-                return processOrderChainPayload(orderType, orderChainPayload, post_duplicate_order, duplicateOrderDuration);
-            case "missingResource":
-                return processOrderChainPayload(orderType, orderChainPayload, post_order_without_resource_id, missingResourceOrderDuration);
-            default:
-                return undefined;
+    const processingResults = processVariants(variants, {
+        labelMap: {
+            valid: post_valid_order,
+            invalid: post_invalid_order,
+            duplicate: post_duplicate_order,
+            missingResource: post_order_without_resource_id
+        },
+        durationMetrics: {
+            valid: validOrderDuration,
+            invalid: invalidOrderDuration,
+            duplicate: duplicateOrderDuration,
+            missingResource: missingResourceOrderDuration
         }
-    }).filter(Boolean);
+    });
 
-    const validators = {
-        valid: (response, body, payload) => {
-            orderKindRateValid.add(response.status === 201);
-            highLatencyRate.add(response.timings.duration > 2000);
-            validateStandardNotificationShape(response, body, payload, 201);
-            if (response.status === 201) {
-                http201Created.add(1);
-            }
-        },
-        invalid: (response) => {
-            highLatencyRate.add(response.timings.duration > 2000);
-            check(response, { "Status is 400 Bad Request": r => r.status === 400 });
-            if (response.status === 400) {
-                http400Validation.add(1);
-            }
-        },
-        duplicate: (response, body, payload) => {
-            highLatencyRate.add(response.timings.duration > 2000);
-            validateStandardNotificationShape(response, body, payload, 200);
-            if (response.status === 200) {
-                http200Duplicate.add(1);
-            }
-        },
-        missingResource: (response, body, payload) => {
-            highLatencyRate.add(response.timings.duration > 2000);
-            validateStandardNotificationShape(response, body, payload, 201);
-            if (response.status === 201) {
-                http201Created.add(1);
-            }
-        }
-    };
-
+    const validators = buildStandardValidators({ includeMissingResource: true });
     runValidators(processingResults, validators);
 }
 
