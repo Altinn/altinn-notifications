@@ -10,19 +10,19 @@
     - Response validation runner (script-specific validators supplied externally)
     - handleSummary for custom output
 
-    Script–specific files now only implement:
+    Script-specific files now only implement:
     - Unique payload cloning / mutation (idempotency / channel specific fields)
     - Invalid / edge-case transformations
     - Order type enumeration & validators referencing the shared metrics
 */
 
-import { Trend, Counter, Rate } from "k6/metrics";
 import { check } from "k6";
-import * as setupToken from "../../tests/setup.js";
-import * as ordersApi from "../../tests/api/notifications/v2.js";
+import * as setupToken from "../setup.js";
+import { Trend, Counter, Rate } from "k6/metrics";
+import * as ordersApi from "../api/notifications/v2.js";
+import { stopIterationOnFail } from "../errorhandler.js";
+import { scopes, performanceTestScenario } from "../shared/variables.js";
 import { textSummary } from "https://jslib.k6.io/k6-summary/0.0.1/index.js";
-import { stopIterationOnFail } from "../../tests/errorhandler.js";
-import { scopes, performanceTestScenario } from "../../tests/shared/variables.js";
 
 // Rate to track the proportion of successful requests (non-4xx/5xx responses) to total requests
 export const successRate = new Rate("success_rate");
