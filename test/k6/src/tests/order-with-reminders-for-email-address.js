@@ -43,7 +43,7 @@ import {
     prepareBaseOrderChain,
     duplicateOrderDuration,
     buildStandardValidators,
-    generateOrderChainPayloads
+    generateOrderChainPayloads,
 } from "./order-with-reminders-functions.js";
 
 import { post_valid_order, post_invalid_order, post_duplicate_order, setEmptyThresholds } from "./threshold-labels.js";
@@ -94,13 +94,13 @@ export function setup() {
 
 /**
  * Creates a unique order chain payload with consistent identifiers for API testing.
- * 
- * @param {Object} data - The shared data object containing the base order chain payload template
+ *
+ * @param {Object} baseOrderChainPayload - The shared data object containing the base order chain payload template
  * @returns {Object} A cloned order chain payload with unique idempotency identifier
  */
-function createUniqueOrderChainPayload(data) {
+function createUniqueOrderChainPayload(baseOrderChainPayload) {
     return {
-        ...data.orderChainPayload,
+        ...baseOrderChainPayload,
         idempotencyId: uuidv4()
     };
 }

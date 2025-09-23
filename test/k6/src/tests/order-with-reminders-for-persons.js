@@ -37,7 +37,7 @@ import {
     prepareBaseOrderChain,
     duplicateOrderDuration,
     buildStandardValidators,
-    generateOrderChainPayloads,
+    generateOrderChainPayloads
 } from "./order-with-reminders-functions.js";
 import { post_valid_order, post_invalid_order, post_duplicate_order, setEmptyThresholds } from "./threshold-labels.js";
 
@@ -59,10 +59,10 @@ setEmptyThresholds(labels, options);
  * @returns {Object} Test context containing the order chain payload
  */
 export function setup() {
-    // Person script needs dialogportenAssociation
     const { orderChainPayload } = prepareBaseOrderChain(orderChainJsonPayload, {
         addDialogAssociation: true
     });
+
     return { orderChainPayload };
 }
 
@@ -91,19 +91,19 @@ function updateRecipientWithBirthNumber(recipient, nationalIdentityNumber) {
 /**
  * Creates a unique order chain payload with consistent identifiers for API testing.
  *
- * @param {Object} data - Shared setup data
+ * @param {Object} baseOrderChainPayload- Shared setup data
  * @returns {Object} Modified payload
  */
-function createUniqueOrderChainPayload(data) {
+function createUniqueOrderChainPayload(baseOrderChainPayload) {
     return {
-        ...data.orderChainPayload,
+        ...baseOrderChainPayload,
         idempotencyId: uuidv4(),
         recipient: updateRecipientWithBirthNumber(
-            data.orderChainPayload.recipient,
+            baseOrderChainPayload.recipient,
             ninRecipient
         ),
-        reminders: Array.isArray(data.orderChainPayload.reminders)
-            ? data.orderChainPayload.reminders.map(reminder => ({
+        reminders: Array.isArray(baseOrderChainPayload.reminders)
+            ? baseOrderChainPayload.reminders.map(reminder => ({
                 ...reminder,
                 recipient: updateRecipientWithBirthNumber(
                     reminder.recipient,

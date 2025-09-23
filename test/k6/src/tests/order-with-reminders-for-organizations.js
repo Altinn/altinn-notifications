@@ -152,20 +152,20 @@ function removeResourceIdFromOrderChainPayload(baseOrder) {
 /**
  * Creates a unique order chain payload with consistent identifiers for API testing.
  *
- * @param {Object} data - Shared setup data
+ * @param {Object} baseOrderChainPayload - The base order chain payload
  * @returns {Object} Modified payload
  */
-function createUniqueOrderChainPayload(data) {
+function createUniqueOrderChainPayload(baseOrderChainPayload) {
     const orgNumber = getOrgNoRecipient();
     return {
-        ...data.orderChainPayload,
+        ...baseOrderChainPayload,
         idempotencyId: uuidv4(),
         recipient: updateRecipientWithOrganizationNumber(
-            data.orderChainPayload.recipient,
+            baseOrderChainPayload.recipient,
             orgNumber
         ),
-        reminders: Array.isArray(data.orderChainPayload.reminders)
-            ? data.orderChainPayload.reminders.map(reminder => ({
+        reminders: Array.isArray(baseOrderChainPayload.reminders)
+            ? baseOrderChainPayload.reminders.map(reminder => ({
                 ...reminder,
                 recipient: updateRecipientWithOrganizationNumber(
                     reminder.recipient,

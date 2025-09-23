@@ -87,12 +87,12 @@ export function setup() {
 /**
  * Creates a unique order chain payload with consistent identifiers for API testing.
  *
- * @param {Object} data - The shared data object
+ * @param {Object} baseOrderChainPayload- The shared data object
  * @returns {Object} Modified order chain payload
  */
-function createUniqueOrderChainPayload(data) {
+function createUniqueOrderChainPayload(baseOrderChainPayload) {
     return {
-        ...data.orderChainPayload,
+        ...baseOrderChainPayload,
         idempotencyId: uuidv4()
     };
 }
