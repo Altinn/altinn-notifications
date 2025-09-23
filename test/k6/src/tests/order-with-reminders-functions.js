@@ -82,7 +82,7 @@ export function buildOptions(extraThresholds = {}) {
                     executor: 'constant-vus',
                     tags: { scenario: 'custom' },
                     duration: __ENV.duration || '30s',
-                    vus: parseInt(__ENV.vus || '10', 10)
+                    vus: Number.parseInt(__ENV.vus || '10', 10)
                 }
             }
             :
@@ -196,7 +196,7 @@ export function buildOptions(extraThresholds = {}) {
  * @returns {string} The formatted future date as an ISO UTC string
  */
 export function getFutureDate(daysToAdd = 0) {
-    if (typeof daysToAdd !== 'number' || isNaN(daysToAdd)) {
+    if (typeof daysToAdd !== 'number' || Number.isNaN(daysToAdd)) {
         daysToAdd = 0;
     }
     const futureDate = new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000);
