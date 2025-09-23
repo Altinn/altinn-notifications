@@ -24,4 +24,9 @@ public class NotificationConfig
     /// End hour of the SMS send window
     /// </summary>
     public int SmsSendWindowEndHour { get; set; } = 17;
+
+    /// <summary>
+    /// The maximum number of entries to return in one status feed page.
+    /// </summary>
+    public int StatusFeedMaxPageSize { get; set; } = 500;
 }

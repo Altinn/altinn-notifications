@@ -12,6 +12,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
 public class StatusFeedRepositoryTests : IAsyncLifetime
 {
+    private const int _maxPageSize = 500;
     private readonly string _creatorName = "testcase";
 
     public async Task DisposeAsync()
@@ -36,7 +37,7 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
             .First(i => i.GetType() == typeof(StatusFeedRepository));
 
         // Act
-        var results = await statusFeedRepository.GetStatusFeed(0, _creatorName, CancellationToken.None);
+        var results = await statusFeedRepository.GetStatusFeed(0, _creatorName, _maxPageSize, CancellationToken.None);
 
         // Assert
         var item = Assert.Single(results);
@@ -53,7 +54,7 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
             .First(i => i.GetType() == typeof(StatusFeedRepository));
         
         // Act
-        var results = await statusFeedRepository.GetStatusFeed(1, string.Empty, CancellationToken.None);
+        var results = await statusFeedRepository.GetStatusFeed(1, string.Empty, _maxPageSize, CancellationToken.None);
         
         // Assert
         Assert.Empty(results);
@@ -85,7 +86,7 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
         Assert.Equal(1, rowsAffected); // Only the old row should be deleted
 
         // Additional verification: ensure old record is gone, recent remains
-        var remaining = await sut.GetStatusFeed(0, _creatorName, CancellationToken.None);
+        var remaining = await sut.GetStatusFeed(0, _creatorName, _maxPageSize, CancellationToken.None);
         Assert.DoesNotContain(remaining, x => x.OrderStatus.ShipmentId == oldShipmentId);
         Assert.Contains(remaining, x => x.OrderStatus.ShipmentId == recentShipmentId);
     }

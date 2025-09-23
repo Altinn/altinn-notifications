@@ -32,12 +32,12 @@ public class StatusFeedRepository(NpgsqlDataSource dataSource) : IStatusFeedRepo
     };
 
     /// <inheritdoc/>
-    public async Task<List<StatusFeed>> GetStatusFeed(int seq, string creatorName, CancellationToken cancellationToken, int limit = 50)
+    public async Task<List<StatusFeed>> GetStatusFeed(long seq, string creatorName, int pageSize, CancellationToken cancellationToken)
     {
         await using NpgsqlCommand command = _dataSource.CreateCommand(_getStatusFeedSql);
-        command.Parameters.AddWithValue("seq", NpgsqlDbType.Integer, seq);
+        command.Parameters.AddWithValue("seq", NpgsqlDbType.Bigint, seq);
         command.Parameters.AddWithValue("creatorName", NpgsqlDbType.Varchar, creatorName);
-        command.Parameters.AddWithValue("limit", NpgsqlDbType.Integer, limit);
+        command.Parameters.AddWithValue("limit", NpgsqlDbType.Integer, pageSize);
 
         List<StatusFeed> statusFeedEntries = [];
 
@@ -45,7 +45,7 @@ public class StatusFeedRepository(NpgsqlDataSource dataSource) : IStatusFeedRepo
         {
             while (await reader.ReadAsync(cancellationToken))
             {
-                var sequenceNumber = await reader.GetFieldValueAsync<int>("_id", cancellationToken: cancellationToken);
+                var sequenceNumber = await reader.GetFieldValueAsync<long>("_id", cancellationToken: cancellationToken);
                 var orderStatus = await reader.GetFieldValueAsync<string>("orderstatus", cancellationToken: cancellationToken);
                 var orderStatusObj = JsonSerializer.Deserialize<OrderStatus>(orderStatus, _jsonSerializerOptions);
 
