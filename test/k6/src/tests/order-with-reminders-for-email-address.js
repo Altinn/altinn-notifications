@@ -35,20 +35,17 @@ import { getEmailRecipient } from "../shared/functions.js";
 import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 import {
     buildOptions,
-    getFutureDate,
-    processOrderChainPayload,
     runValidators,
     handleSummary,
+    processVariants,
     validOrderDuration,
     invalidOrderDuration,
+    prepareBaseOrderChain,
     duplicateOrderDuration,
-    highLatencyRate,
-    orderKindRateValid,
-    http201Created,
-    http200Duplicate,
-    http400Validation,
-    validateStandardNotificationShape
+    buildStandardValidators,
+    generateOrderChainPayloads
 } from "./order-with-reminders-functions.js";
+
 import { post_valid_order, post_invalid_order, post_duplicate_order, setEmptyThresholds } from "./threshold-labels.js";
 
 // Define the order types to be tested based on environment variables or defaults
@@ -70,33 +67,27 @@ setEmptyThresholds(labels, options);
  *                   used by the default function for each virtual user iteration
  */
 export function setup() {
-    const uniqueIdentifier = uuidv4().substring(0, 8);
-    const orderChainPayload = JSON.parse(JSON.stringify(orderChainJsonPayload));
-
-    orderChainPayload.requestedSendTime = getFutureDate(7);
-    orderChainPayload.sendersReference = `k6-order-${uniqueIdentifier}`;
-
     const emailRecipient = getEmailRecipient();
     if (!emailRecipient) {
         stopIterationOnFail("Missing emailRecipient for this environment", false);
     }
 
-    if (orderChainPayload.recipient?.recipientEmail) {
-        orderChainPayload.recipient.recipientEmail.emailAddress = emailRecipient;
-    }
-
-    if (Array.isArray(orderChainPayload.reminders)) {
-        orderChainPayload.reminders = orderChainPayload.reminders.map(reminder => {
-            const updatedReminder = {
-                ...reminder,
-                sendersReference: `k6-reminder-${uniqueIdentifier}`
-            };
-            if (updatedReminder.recipient?.recipientEmail) {
-                updatedReminder.recipient.recipientEmail.emailAddress = emailRecipient;
+    const { orderChainPayload } = prepareBaseOrderChain(orderChainJsonPayload, {
+        mutate: (payload) => {
+            if (payload.recipient?.recipientEmail) {
+                payload.recipient.recipientEmail.emailAddress = emailRecipient;
             }
-            return updatedReminder;
-        });
-    }
+            if (Array.isArray(payload.reminders)) {
+                payload.reminders = payload.reminders.map(r => {
+                    if (r?.recipient?.recipientEmail) {
+                        r.recipient.recipientEmail.emailAddress = emailRecipient;
+                    }
+                    return r;
+                });
+            }
+        },
+        reminderSenderPrefix: 'k6-reminder'
+    });
 
     return { orderChainPayload };
 }
@@ -104,12 +95,8 @@ export function setup() {
 /**
  * Creates a unique order chain payload with consistent identifiers for API testing.
  * 
- * This function:
- * 1. Generates a UUID-based idempotency identifier that enables testing identical 
- *    request handling (proper 200 OK responses for duplicates)
  * @param {Object} data - The shared data object containing the base order chain payload template
- * @returns {Object} A cloned order chain payload with:
- *                   - Unique idempotency identifier
+ * @returns {Object} A cloned order chain payload with unique idempotency identifier
  */
 function createUniqueOrderChainPayload(data) {
     return {
@@ -120,10 +107,6 @@ function createUniqueOrderChainPayload(data) {
 
 /**
  * Creates an intentionally invalid order chain payload.
- *
- * The function preserves the original structure while:
- * - Setting recipientEmail to undefined in the main recipient
- * - Setting recipientEmail to undefined in all reminder objects
  *
  * @param {Object} orderChainPayload - The original valid order chain payload
  * @returns {Object} An invalid order chain payload that should be rejected by the API
@@ -152,76 +135,30 @@ function stripRecipientEmailFromOrderChainPayload(orderChainPayload) {
 }
 
 /**
- * Generates different types of order chain payloads for API testing scenarios.
- * 
- * @param {Object} data - The shared data containing the base order chain payload from setup
- * @returns {Array<Object>} Array of objects with format { orderType: string, orderChainPayload: Object }
- */
-function generateOrderChainPayloadsByOrderType(data) {
-    const orderChainPayloads = [];
-    for (const orderType of orderTypes) {
-        let uniqueOrderChainPayload = createUniqueOrderChainPayload(data);
-        switch (orderType) {
-            case "valid":
-            case "duplicate":
-                orderChainPayloads.push({ orderType, orderChainPayload: uniqueOrderChainPayload });
-                break;
-            case "invalid":
-                orderChainPayloads.push({ orderType, orderChainPayload: stripRecipientEmailFromOrderChainPayload(uniqueOrderChainPayload) });
-                break;
-        }
-    }
-    return orderChainPayloads;
-}
-
-/**
  * Main test function executed for each virtual user iteration.
  *
  * @param {Object} data - Test context from setup phase
  */
 export default function (data) {
-    const orderChainPayloads = generateOrderChainPayloadsByOrderType(data);
+    const variants = generateOrderChainPayloads(orderTypes, data.orderChainPayload, {
+        uniqueFactory: createUniqueOrderChainPayload,
+        invalidTransform: stripRecipientEmailFromOrderChainPayload
+    });
 
-    const processingResults = orderChainPayloads.map(e => {
-        const { orderType, orderChainPayload } = e;
-        switch (orderType) {
-            case "valid":
-                return processOrderChainPayload(orderType, orderChainPayload, post_valid_order, validOrderDuration);
-            case "invalid":
-                return processOrderChainPayload(orderType, orderChainPayload, post_invalid_order, invalidOrderDuration);
-            case "duplicate":
-                processOrderChainPayload("valid", orderChainPayload, post_valid_order, validOrderDuration);
-                return processOrderChainPayload(orderType, orderChainPayload, post_duplicate_order, duplicateOrderDuration);
-            default:
-                return undefined;
-        }
-    }).filter(Boolean);
-
-    const validators = {
-        valid: (response, body, payload) => {
-            orderKindRateValid.add(response.status === 201);
-            highLatencyRate.add(response.timings.duration > 2000);
-            validateStandardNotificationShape(response, body, payload, 201);
-            if (response.status === 201) {
-                http201Created.add(1);
-            }
+    const processingResults = processVariants(variants, {
+        labelMap: {
+            valid: post_valid_order,
+            invalid: post_invalid_order,
+            duplicate: post_duplicate_order
         },
-        invalid: (response) => {
-            highLatencyRate.add(response.timings.duration > 2000);
-            check(response, { "Status is 400 Bad Request": r => r.status === 400 });
-            if (response.status === 400) {
-                http400Validation.add(1);
-            }
-        },
-        duplicate: (response, body, payload) => {
-            highLatencyRate.add(response.timings.duration > 2000);
-            validateStandardNotificationShape(response, body, payload, 200);
-            if (response.status === 200) {
-                http200Duplicate.add(1);
-            }
+        durationMetrics: {
+            valid: validOrderDuration,
+            invalid: invalidOrderDuration,
+            duplicate: duplicateOrderDuration
         }
-    };
+    });
 
+    const validators = buildStandardValidators();
     runValidators(processingResults, validators);
 }
 
