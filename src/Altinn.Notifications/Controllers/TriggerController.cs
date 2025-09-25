@@ -1,4 +1,6 @@
-﻿using Altinn.Notifications.Core.Services.Interfaces;
+﻿using Altinn.Notifications.Core.BackgroundQueue;
+using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Services.Interfaces;
 
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,43 +9,46 @@ namespace Altinn.Notifications.Controllers;
 /// <summary>
 /// Controller for all trigger operations
 /// </summary>
-[Route("notifications/api/v1/trigger")]
 [ApiController]
+[Route("notifications/api/v1/trigger")]
 [ApiExplorerSettings(IgnoreApi = true)]
 public class TriggerController : ControllerBase
 {
+    private readonly ILogger<TriggerController> _logger;
+    private readonly IStatusFeedService _statusFeedService;
+    private readonly ISmsPublishTaskQueue _smsPublishTaskQueue;
+    private readonly INotificationScheduleService _scheduleService;
+    private readonly ISmsNotificationService _smsNotificationService;
     private readonly IOrderProcessingService _orderProcessingService;
     private readonly IEmailNotificationService _emailNotificationService;
-    private readonly ISmsNotificationService _smsNotificationService;
-    private readonly IStatusFeedService _statusFeedService;
-    private readonly INotificationScheduleService _scheduleService;
-    private readonly ILogger<TriggerController> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TriggerController"/> class.
     /// </summary>
     public TriggerController(
-        IOrderProcessingService orderProcessingService,
-        IEmailNotificationService emailNotificationService,
-        ISmsNotificationService smsNotificationService,
-        INotificationScheduleService scheduleService,
+        ILogger<TriggerController> logger,
         IStatusFeedService statusFeedService,
-        ILogger<TriggerController> logger)
+        ISmsPublishTaskQueue smsPublishTaskQueue,
+        INotificationScheduleService scheduleService,
+        IOrderProcessingService orderProcessingService,
+        ISmsNotificationService smsNotificationService,
+        IEmailNotificationService emailNotificationService)
     {
-        _orderProcessingService = orderProcessingService;
-        _emailNotificationService = emailNotificationService;
-        _smsNotificationService = smsNotificationService;
+        _logger = logger;
         _scheduleService = scheduleService;
         _statusFeedService = statusFeedService;
-        _logger = logger;
+        _smsPublishTaskQueue = smsPublishTaskQueue;
+        _smsNotificationService = smsNotificationService;
+        _orderProcessingService = orderProcessingService;
+        _emailNotificationService = emailNotificationService;
     }
 
     /// <summary>
     /// Endpoint for starting the processing of past due orders
     /// </summary>
     [HttpPost]
-    [Consumes("application/json")]
     [Route("pastdueorders")]
+    [Consumes("application/json")]
     public async Task<ActionResult> Trigger_PastDueOrders()
     {
         await _orderProcessingService.StartProcessingPastDueOrders();
@@ -51,32 +56,11 @@ public class TriggerController : ControllerBase
     }
 
     /// <summary>
-    /// Endpoint for deleting old status feed records (older than 90 days)
-    /// </summary>
-    /// <returns></returns>
-    [HttpPost]
-    [Consumes("application/json")]
-    [Route("deleteoldstatusfeedrecords")]
-    public async Task<ActionResult> Trigger_DeleteOldStatusFeedRecords(CancellationToken cancellationToken)
-    {
-        try
-        {
-            await _statusFeedService.DeleteOldStatusFeedRecords(cancellationToken);
-            return Ok();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to delete old status feed records");
-            return StatusCode(500, "Failed to delete old status feed records");
-        }
-    }
-
-    /// <summary>
     /// Endpoint for starting the processing of emails that are ready to be sent
     /// </summary>
     [HttpPost]
-    [Consumes("application/json")]
     [Route("sendemail")]
+    [Consumes("application/json")]
     public async Task<ActionResult> Trigger_SendEmailNotifications()
     {
         await _emailNotificationService.SendNotifications();
@@ -106,34 +90,58 @@ public class TriggerController : ControllerBase
     }
 
     /// <summary>
-    /// Endpoint for starting the processing of sms that are ready to be sent with policy daytime
-    /// Automatically filtered to process daytime sms only
+    /// Endpoint for deleting old status feed records (older than 90 days)
     /// </summary>
     [HttpPost]
     [Consumes("application/json")]
+    [Route("deleteoldstatusfeedrecords")]
+    public async Task<ActionResult> Trigger_DeleteOldStatusFeedRecords(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _statusFeedService.DeleteOldStatusFeedRecords(cancellationToken);
+            return Ok();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to delete old status feed records");
+            return StatusCode(500, "Failed to delete old status feed records");
+        }
+    }
+
+    /// <summary>
+    /// Signals background processing of SMS notifications that use the <see cref="SendingTimePolicy.Anytime"/> policy.
+    /// </summary>
+    /// <returns>
+    /// Always returns 200 OK. The response does not indicate whether a new task was actually queued.
+    /// </returns>
+    [HttpPost]
+    [Route("sendsmsanytime")]
+    [Consumes("application/json")]
+    public ActionResult Trigger_SendSmsNotificationsAnytime()
+    {
+        _smsPublishTaskQueue.TryEnqueue(SendingTimePolicy.Anytime);
+        return Ok();
+    }
+
+    /// <summary>
+    /// Signals background processing of SMS notifications restricted to the <see cref="SendingTimePolicy.Daytime"/> window.
+    /// </summary>
+    /// <returns>
+    /// Always returns 200 OK, regardless of whether processing was skipped (outside window) or a new task was enqueued.
+    /// </returns>
+    [HttpPost]
     [Route("sendsms")]
     [Route("sendsmsdaytime")]
-    public async Task<ActionResult> Trigger_SendSmsNotificationsDaytime()
+    [Consumes("application/json")]
+    public ActionResult Trigger_SendSmsNotificationsDaytime()
     {
         if (!_scheduleService.CanSendSmsNow())
         {
             return Ok();
         }
 
-        await _smsNotificationService.SendNotifications(Core.Enums.SendingTimePolicy.Daytime);
-        return Ok();
-    }
-
-    /// <summary>
-    /// Endpoint for starting the processing of sms that are ready to be sent with policy anytime
-    /// </summary>
-    /// <returns>A <see cref="Task{TResult}"/> representing the result of the asynchronous operation.</returns>
-    [HttpPost]
-    [Consumes("application/json")]
-    [Route("sendsmsanytime")]
-    public async Task<ActionResult> Trigger_SendSmsNotificationsAnytime()
-    {
-        await _smsNotificationService.SendNotifications(Core.Enums.SendingTimePolicy.Anytime);
+        _smsPublishTaskQueue.TryEnqueue(SendingTimePolicy.Daytime);
         return Ok();
     }
 }

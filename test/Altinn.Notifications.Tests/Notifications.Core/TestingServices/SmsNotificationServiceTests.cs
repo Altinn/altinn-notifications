@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Altinn.Notifications.Core.Configuration;
@@ -52,7 +53,7 @@ public class SmsNotificationServiceTests
         var repoMock = new Mock<ISmsNotificationRepository>();
         repoMock.Setup(r => r.AddNotification(It.Is<SmsNotification>(e => AssertUtils.AreEquivalent(expected, e)), It.Is<DateTime>(d => d == expectedExpiry), It.IsAny<int>()));
 
-        var service = GetTestService(repo: repoMock.Object, guidOutput: id, dateTimeOutput: dateTimeOutput);
+        var service = GetTestService(repository: repoMock.Object, guidOutput: id, dateTimeOutput: dateTimeOutput);
 
         // Act
         await service.CreateNotification(orderId, requestedSendTime, requestedSendTime.AddHours(48), [new("+4799999999")], new SmsRecipient(), 1);
@@ -86,7 +87,7 @@ public class SmsNotificationServiceTests
         var repoMock = new Mock<ISmsNotificationRepository>();
         repoMock.Setup(r => r.AddNotification(It.Is<SmsNotification>(e => AssertUtils.AreEquivalent(expected, e)), It.Is<DateTime>(d => d == expectedExpiry), It.IsAny<int>()));
 
-        var service = GetTestService(repo: repoMock.Object, guidOutput: id, dateTimeOutput: dateTimeOutput);
+        var service = GetTestService(repository: repoMock.Object, guidOutput: id, dateTimeOutput: dateTimeOutput);
 
         // Act
         await service.CreateNotification(orderId, requestedSendTime, requestedSendTime.AddHours(48), [], new SmsRecipient { IsReserved = true }, 1);
@@ -121,7 +122,7 @@ public class SmsNotificationServiceTests
         var repoMock = new Mock<ISmsNotificationRepository>();
         repoMock.Setup(r => r.AddNotification(It.Is<SmsNotification>(e => AssertUtils.AreEquivalent(expected, e)), It.Is<DateTime>(d => d == expectedExpiry), It.IsAny<int>()));
 
-        var service = GetTestService(repo: repoMock.Object, guidOutput: id, dateTimeOutput: dateTimeOutput);
+        var service = GetTestService(repository: repoMock.Object, guidOutput: id, dateTimeOutput: dateTimeOutput);
 
         // Act
         await service.CreateNotification(orderId, requestedSendTime, requestedSendTime.AddHours(48), [new("+4799999999")], new SmsRecipient { IsReserved = true }, 1, true);
@@ -151,7 +152,7 @@ public class SmsNotificationServiceTests
         var repoMock = new Mock<ISmsNotificationRepository>();
         repoMock.Setup(r => r.AddNotification(It.Is<SmsNotification>(e => AssertUtils.AreEquivalent(expected, e)), It.Is<DateTime>(d => d == expectedExpiry), It.IsAny<int>()));
 
-        var service = GetTestService(repo: repoMock.Object, guidOutput: id, dateTimeOutput: dateTimeOutput);
+        var service = GetTestService(repository: repoMock.Object, guidOutput: id, dateTimeOutput: dateTimeOutput);
 
         // Act
         await service.CreateNotification(orderId, requestedSendTime, requestedSendTime.AddHours(48), [], new SmsRecipient(), 1);
@@ -173,7 +174,7 @@ public class SmsNotificationServiceTests
         var repoMock = new Mock<ISmsNotificationRepository>();
         repoMock.Setup(r => r.AddNotification(It.Is<SmsNotification>(s => s.Recipient.OrganizationNumber == "org"), It.IsAny<DateTime>(), It.IsAny<int>()));
 
-        var service = GetTestService(repo: repoMock.Object);
+        var service = GetTestService(repository: repoMock.Object);
 
         // Act
         await service.CreateNotification(Guid.NewGuid(), DateTime.UtcNow, DateTime.UtcNow.AddHours(48), recipient.AddressInfo.OfType<SmsAddressPoint>().ToList(), new SmsRecipient { OrganizationNumber = "org" }, 1, true);
@@ -183,55 +184,154 @@ public class SmsNotificationServiceTests
     }
 
     [Fact]
-    public async Task SendNotifications_ProducerCalledOnceForEachRetrievedSms()
+    public async Task SendNotifications_MultipleBatches_AllProduced()
     {
-        // Arrange 
+        // Arrange
+        var firstBatch = new List<Sms>
+        {
+            new(Guid.NewGuid(), "Altinn", "+4799999999", "SMS notification 1"),
+            new(Guid.NewGuid(), "Altinn", "+4799999999", "SMS notification 2")
+        };
+
+        var secondBatch = new List<Sms>
+        {
+            new(Guid.NewGuid(), "Altinn", "+4799999999", "SMS notification 3")
+        };
+
+        var thirdBatch = new List<Sms>
+        {
+            new(Guid.NewGuid(), "Altinn", "+4799999999", "SMS notification 4"),
+            new(Guid.NewGuid(), "Altinn", "+4799999999", "SMS notification 5"),
+            new(Guid.NewGuid(), "Altinn", "+4799999999", "SMS notification 6"),
+            new(Guid.NewGuid(), "Altinn", "+4799999999", "SMS notification 7"),
+            new(Guid.NewGuid(), "Altinn", "+4799999999", "SMS notification 8")
+        };
+
+        int allBatches = firstBatch.Count + secondBatch.Count + thirdBatch.Count;
+
         var repoMock = new Mock<ISmsNotificationRepository>();
-        repoMock.Setup(r => r.GetNewNotifications(It.IsAny<SendingTimePolicy>()))
-            .ReturnsAsync(new List<Sms> { _sms, _sms, _sms });
+        repoMock.SetupSequence(r => r.GetNewNotifications(It.IsAny<int>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Anytime))
+            .ReturnsAsync(firstBatch)
+            .ReturnsAsync(secondBatch)
+            .ReturnsAsync(thirdBatch)
+            .ReturnsAsync([]);
 
         var producerMock = new Mock<IKafkaProducer>();
-        producerMock.Setup(p => p.ProduceAsync(It.Is<string>(s => s.Equals(_smsQueueTopicName)), It.IsAny<string>()))
+        producerMock.Setup(p => p.ProduceAsync(_smsQueueTopicName, It.IsAny<string>()))
             .ReturnsAsync(true);
 
-        var service = GetTestService(repo: repoMock.Object, producer: producerMock.Object);
+        var service = GetTestService(repository: repoMock.Object, producer: producerMock.Object, publishBatchSize: 1);
 
         // Act
-        await service.SendNotifications();
+        await service.SendNotifications(CancellationToken.None, SendingTimePolicy.Anytime);
 
         // Assert
-        repoMock.Verify();
-        producerMock.Verify(p => p.ProduceAsync(It.Is<string>(s => s.Equals(_smsQueueTopicName)), It.IsAny<string>()), Times.Exactly(3));
+        producerMock.Verify(p => p.ProduceAsync(_smsQueueTopicName, It.IsAny<string>()), Times.Exactly(allBatches));
+        repoMock.Verify(r => r.GetNewNotifications(It.IsAny<int>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Anytime), Times.Exactly(4));
     }
 
     [Fact]
-    public async Task SendNotifications_ProducerReturnsFalse_RepositoryCalledToUpdateDB()
+    public async Task SendNotifications_ProduceReturnedFalse_StatusResetToNew()
     {
-        // Arrange 
+        // Arrange
         var repoMock = new Mock<ISmsNotificationRepository>();
-        repoMock.Setup(r => r.GetNewNotifications(It.IsAny<SendingTimePolicy>()))
-            .ReturnsAsync(new List<Sms> { _sms });
 
-        repoMock
-            .Setup(r => r.UpdateSendStatus(It.IsAny<Guid>(), It.Is<SmsNotificationResultType>(t => t == SmsNotificationResultType.New), It.IsAny<string?>()));
+        repoMock.SetupSequence(r => r.GetNewNotifications(It.IsAny<int>(), It.IsAny<CancellationToken>(), It.IsAny<SendingTimePolicy>()))
+            .ReturnsAsync([_sms])
+            .ReturnsAsync([]);
+
+        repoMock.Setup(r => r.UpdateSendStatus(It.Is<Guid>(g => g == _sms.NotificationId), SmsNotificationResultType.New, It.IsAny<string?>()));
 
         var producerMock = new Mock<IKafkaProducer>();
-        producerMock.Setup(p => p.ProduceAsync(It.Is<string>(s => s.Equals(_smsQueueTopicName)), It.IsAny<string>()))
+        producerMock.Setup(p => p.ProduceAsync(_smsQueueTopicName, It.IsAny<string>()))
             .ReturnsAsync(false);
 
-        var service = GetTestService(repo: repoMock.Object, producer: producerMock.Object);
+        var service = GetTestService(repository: repoMock.Object, producer: producerMock.Object);
 
         // Act
-        await service.SendNotifications();
+        await service.SendNotifications(CancellationToken.None);
 
         // Assert
-        repoMock.Verify();
-        producerMock.VerifyAll();
-        repoMock.VerifyAll();
+        producerMock.Verify(p => p.ProduceAsync(_smsQueueTopicName, It.IsAny<string>()), Times.Once);
+        repoMock.Verify(r => r.UpdateSendStatus(_sms.NotificationId, SmsNotificationResultType.New, It.IsAny<string?>()), Times.Once);
+        repoMock.Verify(r => r.GetNewNotifications(It.IsAny<int>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime), Times.AtLeastOnce);
     }
 
     [Fact]
-    public async Task UpdateSendStatus_SendResultDefined_Succeeded()
+    public async Task SendNotifications_SingleBatchThenEmpty_ProducesEachAndStops()
+    {
+        // Arrange
+        List<Sms> firstBatch = [_sms, _sms, _sms];
+
+        var repositoryMock = new Mock<ISmsNotificationRepository>();
+
+        // First call returns 3, second returns empty => loop stops
+        repositoryMock.SetupSequence(e => e.GetNewNotifications(It.IsAny<int>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime))
+            .ReturnsAsync(firstBatch)
+            .ReturnsAsync([]);
+
+        var producerMock = new Mock<IKafkaProducer>();
+        producerMock.Setup(e => e.ProduceAsync(_smsQueueTopicName, It.IsAny<string>())).ReturnsAsync(true);
+
+        var service = GetTestService(repository: repositoryMock.Object, producer: producerMock.Object);
+
+        // Act
+        await service.SendNotifications(CancellationToken.None);
+
+        // Assert
+        producerMock.Verify(p => p.ProduceAsync(_smsQueueTopicName, It.IsAny<string>()), Times.Exactly(firstBatch.Count));
+        repositoryMock.Verify(r => r.GetNewNotifications(It.IsAny<int>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime), Times.AtLeastOnce);
+    }
+
+    [Fact]
+    public async Task SendNotifications_PublishBatchSize_ConfiguredValuePassedToRepository()
+    {
+        // Arrange
+        const int customBatchSize = 7;
+
+        var repoMock = new Mock<ISmsNotificationRepository>();
+
+        // Return empty immediately to end loop
+        repoMock.Setup(r => r.GetNewNotifications(It.IsAny<int>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime))
+            .ReturnsAsync([]);
+
+        var producerMock = new Mock<IKafkaProducer>();
+
+        var service = GetTestService(repository: repoMock.Object, producer: producerMock.Object, publishBatchSize: customBatchSize);
+
+        // Act
+        await service.SendNotifications(CancellationToken.None);
+
+        // Assert
+        repoMock.Verify(r => r.GetNewNotifications(It.Is<int>(b => b == customBatchSize), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime), Times.Once);
+    }
+
+    [Fact]
+    public async Task SendNotifications_DefaultSendingTimePolicy_DaytimeUsed_NoStatusUpdatesOnSuccess()
+    {
+        // Arrange
+        var repoMock = new Mock<ISmsNotificationRepository>();
+        repoMock.SetupSequence(e => e.GetNewNotifications(It.IsAny<int>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime))
+            .ReturnsAsync([_sms, _sms])
+            .ReturnsAsync([]);
+
+        var producerMock = new Mock<IKafkaProducer>();
+        producerMock.Setup(p => p.ProduceAsync(_smsQueueTopicName, It.IsAny<string>()))
+            .ReturnsAsync(true);
+
+        var service = GetTestService(repository: repoMock.Object, producer: producerMock.Object);
+
+        // Act
+        await service.SendNotifications(CancellationToken.None); // rely on default parameter
+
+        // Assert
+        producerMock.Verify(e => e.ProduceAsync(_smsQueueTopicName, It.IsAny<string>()), Times.Exactly(2));
+        repoMock.Verify(e => e.UpdateSendStatus(It.IsAny<Guid>(), It.IsAny<SmsNotificationResultType>(), It.IsAny<string?>()), Times.Never);
+        repoMock.Verify(e => e.GetNewNotifications(It.Is<int>(e => e == 50), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime), Times.AtLeastOnce);
+    }
+
+    [Fact]
+    public async Task UpdateSendStatus_WithValidNotificationAndGatewayReference_DelegatesToRepository()
     {
         // Arrange
         Guid notificationId = Guid.NewGuid();
@@ -250,7 +350,7 @@ public class SmsNotificationServiceTests
             It.Is<SmsNotificationResultType>(e => e == SmsNotificationResultType.Accepted),
             It.Is<string>(s => s.Equals(gatewayReference))));
 
-        var service = GetTestService(repo: repoMock.Object);
+        var service = GetTestService(repository: repoMock.Object);
 
         // Act
         await service.UpdateSendStatus(sendOperationResult);
@@ -259,30 +359,40 @@ public class SmsNotificationServiceTests
         repoMock.Verify();
     }
 
-    private static SmsNotificationService GetTestService(ISmsNotificationRepository? repo = null, IKafkaProducer? producer = null, Guid? guidOutput = null, DateTime? dateTimeOutput = null)
+    private static SmsNotificationService GetTestService(
+        Guid? guidOutput = null,
+        DateTime? dateTimeOutput = null,
+        IKafkaProducer? producer = null,
+        ISmsNotificationRepository? repository = null,
+        int? publishBatchSize = null)
     {
-        var guidService = new Mock<IGuidService>();
-        guidService
-            .Setup(g => g.NewGuid())
-            .Returns(guidOutput ?? Guid.NewGuid());
+        var guidService = MockGuidService(guidOutput);
+        var dateTimeService = MockDateTimeService(dateTimeOutput);
 
-        var dateTimeService = new Mock<IDateTimeService>();
-        dateTimeService
-            .Setup(d => d.UtcNow())
+        producer ??= new Mock<IKafkaProducer>().Object;
+        repository ??= new Mock<ISmsNotificationRepository>().Object;
+
+        return new SmsNotificationService(
+            guidService,
+            producer,
+            dateTimeService,
+            repository,
+            Options.Create(new KafkaSettings { SmsQueueTopicName = _smsQueueTopicName }),
+            Options.Create(new NotificationConfig { SmsPublishBatchSize = publishBatchSize ?? 50 }));
+    }
+
+    private static IGuidService MockGuidService(Guid? guidOutput)
+    {
+        var mock = new Mock<IGuidService>();
+        mock.Setup(g => g.NewGuid()).Returns(guidOutput ?? Guid.NewGuid());
+        return mock.Object;
+    }
+
+    private static IDateTimeService MockDateTimeService(DateTime? dateTimeOutput)
+    {
+        var mock = new Mock<IDateTimeService>();
+        mock.Setup(d => d.UtcNow())
             .Returns(dateTimeOutput ?? DateTime.UtcNow);
-
-        if (repo == null)
-        {
-            var repoMock = new Mock<ISmsNotificationRepository>();
-            repo = repoMock.Object;
-        }
-
-        if (producer == null)
-        {
-            var producerMock = new Mock<IKafkaProducer>();
-            producer = producerMock.Object;
-        }
-
-        return new SmsNotificationService(guidService.Object, producer, dateTimeService.Object, repo, Options.Create(new KafkaSettings { SmsQueueTopicName = _smsQueueTopicName }));
+        return mock.Object;
     }
 }
