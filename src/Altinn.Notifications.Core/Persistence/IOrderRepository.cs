@@ -66,6 +66,54 @@ public interface IOrderRepository
     Task<InstantNotificationOrderTracking?> Create(InstantNotificationOrder instantNotificationOrder, NotificationOrder notificationOrder, SmsNotification smsNotification, DateTime smsExpiryDateTime, int smsMessageCount, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Creates a new high-priority instant SMS notification order with flattened structure in the database.
+    /// </summary>
+    /// <param name="instantSmsNotificationOrder">
+    /// The <see cref="InstantSmsNotificationOrder"/> containing SMS delivery details.
+    /// </param>
+    /// <param name="notificationOrder">
+    /// The <see cref="NotificationOrder"/> representing the standard notification order.
+    /// </param>
+    /// <param name="smsNotification">
+    /// The <see cref="SmsNotification"/> instance containing SMS-specific delivery information.
+    /// </param>
+    /// <param name="smsExpiryDateTime">
+    /// The <see cref="DateTime"/> indicating when the SMS notification expires and should no longer be delivered.
+    /// </param>
+    /// <param name="smsMessageCount">
+    /// The number of SMS messages to be sent based on the message content.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A <see cref="CancellationToken"/> to monitor for cancellation requests. Defaults to <see cref="CancellationToken.None"/>.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task{TResult}"/> containing a <see cref="InstantNotificationOrderTracking"/> with tracking information,
+    /// or <c>null</c> if the operation failed.
+    /// </returns>
+    Task<InstantNotificationOrderTracking?> Create(InstantSmsNotificationOrder instantSmsNotificationOrder, NotificationOrder notificationOrder, SmsNotification smsNotification, DateTime smsExpiryDateTime, int smsMessageCount, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Creates a new high-priority instant email notification order in the database.
+    /// </summary>
+    /// <param name="instantEmailNotificationOrder">
+    /// The <see cref="InstantEmailNotificationOrder"/> containing email delivery details.
+    /// </param>
+    /// <param name="notificationOrder">
+    /// The <see cref="NotificationOrder"/> representing the standard notification order.
+    /// </param>
+    /// <param name="emailNotification">
+    /// The <see cref="EmailNotification"/> instance containing email-specific delivery information.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A <see cref="CancellationToken"/> to monitor for cancellation requests. Defaults to <see cref="CancellationToken.None"/>.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task{TResult}"/> containing a <see cref="InstantNotificationOrderTracking"/> with tracking information,
+    /// or <c>null</c> if the operation failed.
+    /// </returns>
+    Task<InstantNotificationOrderTracking?> Create(InstantEmailNotificationOrder instantEmailNotificationOrder, NotificationOrder notificationOrder, EmailNotification emailNotification, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets a list of notification orders where requestedSendTime has passed
     /// </summary>
     /// <returns>A list of notification orders</returns>
