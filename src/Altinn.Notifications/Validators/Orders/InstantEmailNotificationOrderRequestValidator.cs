@@ -20,6 +20,8 @@ internal sealed class InstantEmailNotificationOrderRequestValidator : AbstractVa
             .WithMessage("IdempotencyId is required");
 
         RuleFor(request => request.InstantEmailDetails)
+            .NotNull()
+            .WithMessage("Email details are required")
             .SetValidator(new InstantEmailDetailsValidator());
     }
 }
