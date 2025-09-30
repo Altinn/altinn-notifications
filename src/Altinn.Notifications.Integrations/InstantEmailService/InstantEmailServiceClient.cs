@@ -54,7 +54,7 @@ public class InstantEmailServiceClient : IInstantEmailServiceClient
             {
                 string errorDetails = await response.Content.ReadAsStringAsync();
 
-                _logger.LogWarning("Failed to send instant email: {EmailContent}. Status: {StatusCode}, Details: {ErrorDetails}", serializedInstantEmail, response.StatusCode, errorDetails);
+                _logger.LogWarning("Failed to send instant email for notification {NotificationId}. Status: {StatusCode}, Details: {ErrorDetails}", instantEmail.NotificationId, response.StatusCode, errorDetails);
 
                 return new InstantEmailSendResult
                 {
