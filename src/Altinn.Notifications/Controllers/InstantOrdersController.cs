@@ -1,4 +1,5 @@
 ﻿using Altinn.Notifications.Configuration;
+using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
@@ -66,48 +67,13 @@ public class InstantOrdersController : ControllerBase
     [Obsolete("This endpoint is deprecated. Use the /instant/sms endpoint for SMS notifications instead.")]
     public async Task<IActionResult> Post([FromBody] InstantNotificationOrderRequestExt request, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            // 1. Validate the instant notification order.
-            var validationError = ValidateRequest(_validator, request);
-            if (validationError != null)
-            {
-                return validationError;
-            }
-
-            // 2. Ensure the request is associated with a valid organization.
-            var creatorError = GetCreatorOrForbid(out string creator);
-            if (creatorError != null)
-            {
-                return creatorError;
-            }
-
-            // 3. Check for existing order by organization short name and idempotency identifier.
-            var trackingInformation = await _instantOrderRequestService.RetrieveTrackingInformation(creator, request.IdempotencyId, cancellationToken);
-            if (trackingInformation != null)
-            {
-                return Ok(trackingInformation.MapToInstantNotificationOrderResponse());
-            }
-
-            // 4. Map and persist the instant notification order.
-            var instantNotificationOrder = request.MapToInstantNotificationOrder(creator, _dateTimeService.UtcNow());
-            trackingInformation = await _instantOrderRequestService.PersistInstantSmsNotificationAsync(instantNotificationOrder, cancellationToken);
-
-            if (trackingInformation == null)
-            {
-                return StatusCode(500, CreateProblemDetails(
-                    500,
-                    "Instant notification order registration failed",
-                    "An internal server error occurred while processing the notification order."));
-            }
-
-            // 5. Return tracking information and location header.
-            return Created(trackingInformation.OrderChainId.GetSelfLinkFromOrderChainId(), trackingInformation.MapToInstantNotificationOrderResponse());
-        }
-        catch (Exception ex)
-        {
-            return HandleCommonExceptions(ex);
-        }
+        return await ProcessInstantOrderAsync(
+            request,
+            _validator,
+            (req, creator, timestamp) => req.MapToInstantNotificationOrder(creator, timestamp),
+            _instantOrderRequestService.PersistInstantSmsNotificationAsync,
+            "notification",
+            cancellationToken);
     }
 
     /// <summary>
@@ -128,48 +94,13 @@ public class InstantOrdersController : ControllerBase
     [SwaggerResponse(500, "An internal server error occurred while processing the SMS notification order")]
     public async Task<IActionResult> PostSms([FromBody] InstantSmsNotificationOrderRequestExt request, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            // 1. Validate the instant SMS notification order.
-            var validationError = ValidateRequest(_smsValidator, request);
-            if (validationError != null)
-            {
-                return validationError;
-            }
-
-            // 2. Ensure the request is associated with a valid organization.
-            var creatorError = GetCreatorOrForbid(out string creator);
-            if (creatorError != null)
-            {
-                return creatorError;
-            }
-
-            // 3. Check for existing order by organization short name and idempotency identifier.
-            var trackingInformation = await _instantOrderRequestService.RetrieveTrackingInformation(creator, request.IdempotencyId, cancellationToken);
-            if (trackingInformation != null)
-            {
-                return Ok(trackingInformation.MapToInstantNotificationOrderResponse());
-            }
-
-            // 4. Map and persist the instant SMS notification order.
-            var instantSmsNotificationOrder = request.MapToInstantSmsNotificationOrder(creator, _dateTimeService.UtcNow());
-            trackingInformation = await _instantOrderRequestService.PersistInstantSmsNotificationAsync(instantSmsNotificationOrder, cancellationToken);
-
-            if (trackingInformation == null)
-            {
-                return StatusCode(500, CreateProblemDetails(
-                    500,
-                    "Instant SMS notification order registration failed",
-                    "An internal server error occurred while processing the SMS notification order."));
-            }
-
-            // 5. Return tracking information and location header.
-            return Created(trackingInformation.OrderChainId.GetSelfLinkFromOrderChainId(), trackingInformation.MapToInstantNotificationOrderResponse());
-        }
-        catch (Exception ex)
-        {
-            return HandleCommonExceptions(ex);
-        }
+        return await ProcessInstantOrderAsync(
+            request,
+            _smsValidator,
+            (req, creator, timestamp) => req.MapToInstantSmsNotificationOrder(creator, timestamp),
+            _instantOrderRequestService.PersistInstantSmsNotificationAsync,
+            "SMS",
+            cancellationToken);
     }
 
     /// <summary>
@@ -190,10 +121,31 @@ public class InstantOrdersController : ControllerBase
     [SwaggerResponse(500, "An internal server error occurred while processing the email notification order")]
     public async Task<IActionResult> PostEmail([FromBody] InstantEmailNotificationOrderRequestExt request, CancellationToken cancellationToken = default)
     {
+        return await ProcessInstantOrderAsync(
+            request,
+            _emailValidator,
+            (req, creator, timestamp) => req.MapToInstantEmailNotificationOrder(creator, timestamp),
+            _instantOrderRequestService.PersistInstantEmailNotificationAsync,
+            "email",
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Processes an instant notification order with common workflow steps.
+    /// </summary>
+    private async Task<IActionResult> ProcessInstantOrderAsync<TRequest, TOrder>(
+        TRequest request,
+        IValidator<TRequest> validator,
+        Func<TRequest, string, DateTime, TOrder> mapToOrder,
+        Func<TOrder, CancellationToken, Task<InstantNotificationOrderTracking?>> persistOrder,
+        string orderType,
+        CancellationToken cancellationToken)
+        where TRequest : class
+    {
         try
         {
-            // 1. Validate the instant email notification order.
-            var validationError = ValidateRequest(_emailValidator, request);
+            // 1. Validate the instant notification order.
+            var validationError = ValidateRequest(validator, request);
             if (validationError != null)
             {
                 return validationError;
@@ -207,22 +159,23 @@ public class InstantOrdersController : ControllerBase
             }
 
             // 3. Check for existing order by organization short name and idempotency identifier.
-            var trackingInformation = await _instantOrderRequestService.RetrieveTrackingInformation(creator, request.IdempotencyId, cancellationToken);
+            var idempotencyId = GetIdempotencyId(request);
+            var trackingInformation = await _instantOrderRequestService.RetrieveTrackingInformation(creator, idempotencyId, cancellationToken);
             if (trackingInformation != null)
             {
                 return Ok(trackingInformation.MapToInstantNotificationOrderResponse());
             }
 
-            // 4. Map and persist the instant email notification order.
-            var instantEmailNotificationOrder = request.MapToInstantEmailNotificationOrder(creator, _dateTimeService.UtcNow());
-            trackingInformation = await _instantOrderRequestService.PersistInstantEmailNotificationAsync(instantEmailNotificationOrder, cancellationToken);
+            // 4. Map and persist the instant notification order.
+            var instantOrder = mapToOrder(request, creator, _dateTimeService.UtcNow());
+            trackingInformation = await persistOrder(instantOrder, cancellationToken);
 
             if (trackingInformation == null)
             {
                 return StatusCode(500, CreateProblemDetails(
                     500,
-                    "Instant email notification order registration failed",
-                    "An internal server error occurred while processing the email notification order."));
+                    $"Instant {orderType} notification order registration failed",
+                    $"An internal server error occurred while processing the {orderType} notification order."));
             }
 
             // 5. Return tracking information and location header.
@@ -232,6 +185,20 @@ public class InstantOrdersController : ControllerBase
         {
             return HandleCommonExceptions(ex);
         }
+    }
+
+    /// <summary>
+    /// Extracts the idempotency ID from a request object.
+    /// </summary>
+    private static string GetIdempotencyId<T>(T request)
+    {
+        return request switch
+        {
+            InstantNotificationOrderRequestExt notificationRequest => notificationRequest.IdempotencyId,
+            InstantSmsNotificationOrderRequestExt smsRequest => smsRequest.IdempotencyId,
+            InstantEmailNotificationOrderRequestExt emailRequest => emailRequest.IdempotencyId,
+            _ => throw new ArgumentException($"Unsupported request type: {typeof(T)}")
+        };
     }
 
     /// <summary>
