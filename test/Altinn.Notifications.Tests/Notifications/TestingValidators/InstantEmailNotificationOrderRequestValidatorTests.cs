@@ -77,7 +77,7 @@ public class InstantEmailNotificationOrderRequestValidatorTests
     }
 
     [Fact]
-    public void Validate_NullInstantEmailDetails_NoValidationError()
+    public void Validate_NullInstantEmailDetails_HasValidationError()
     {
         // Arrange
         var request = new InstantEmailNotificationOrderRequestExt
@@ -90,7 +90,7 @@ public class InstantEmailNotificationOrderRequestValidatorTests
         var result = _validator.TestValidate(request);
 
         // Assert
-        result.ShouldNotHaveValidationErrorFor(x => x.InstantEmailDetails);
+        result.ShouldHaveValidationErrorFor(x => x.InstantEmailDetails);
     }
 
     [Theory]
