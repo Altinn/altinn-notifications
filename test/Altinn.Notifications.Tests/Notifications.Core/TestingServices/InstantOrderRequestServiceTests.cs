@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Core.Models.InstantEmailService;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
@@ -14,11 +14,8 @@ using Altinn.Notifications.Core.Models.ShortMessageService;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
-
 using Microsoft.Extensions.Options;
-
 using Moq;
-
 using Xunit;
 
 namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
@@ -546,12 +543,294 @@ public class InstantOrderRequestServiceTests
         Assert.Equal(defaultSmsSenderIdentifier, initiatedShortMessage.Sender);
     }
 
-    private static InstantOrderRequestService GetTestService(IGuidService? guidService = null, IDateTimeService? dateTimeService = null, IOrderRepository? orderRepository = null, IShortMessageServiceClient? shortMessageServiceClient = null)
+    [Fact]
+    public async Task PersistInstantEmailNotificationAsync_ValidEmailOrder_CreatesEmailNotificationSuccessfully()
+    {
+        // Arrange
+        var emailOrderId = Guid.NewGuid();
+        var orderCreationDateTime = DateTime.UtcNow;
+        var expectedEmailOrderTracking = new InstantNotificationOrderTracking
+        {
+            OrderChainId = Guid.NewGuid(),
+            Notification = new NotificationOrderChainShipment
+            {
+                ShipmentId = emailOrderId,
+                SendersReference = "email-test-reference"
+            }
+        };
+
+        var guidServiceMock = new Mock<IGuidService>();
+        guidServiceMock.Setup(e => e.NewGuid()).Returns(emailOrderId);
+        var dateTimeServiceMock = new Mock<IDateTimeService>();
+        dateTimeServiceMock.Setup(e => e.UtcNow()).Returns(orderCreationDateTime);
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock
+            .Setup(e => e.Create(It.IsAny<InstantEmailNotificationOrder>(), It.IsAny<NotificationOrder>(), It.IsAny<EmailNotification>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedEmailOrderTracking);
+        var instantEmailServiceClient = new Mock<IInstantEmailServiceClient>();
+
+        var service = GetTestService(
+            guidService: guidServiceMock.Object,
+            dateTimeService: dateTimeServiceMock.Object,
+            orderRepository: orderRepositoryMock.Object,
+            instantEmailServiceClient: instantEmailServiceClient.Object);
+
+        var emailOrder = new InstantEmailNotificationOrder
+        {
+            Creator = new Creator("test-org"),
+            Created = orderCreationDateTime,
+            IdempotencyId = "email-idempotency-id",
+            OrderChainId = Guid.NewGuid(),
+            OrderId = emailOrderId,
+            SendersReference = "email-test-reference",
+            InstantEmailDetails = new InstantEmailDetails
+            {
+                EmailAddress = "test@example.com",
+                EmailContent = new InstantEmailContent
+                {
+                    FromAddress = "sender@example.com",
+                    Subject = "Test Subject",
+                    Body = "Test email body content",
+                    ContentType = Altinn.Notifications.Core.Enums.EmailContentType.Plain
+                }
+            }
+        };
+
+        // Act
+        var result = await service.PersistInstantEmailNotificationAsync(emailOrder, CancellationToken.None);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(expectedEmailOrderTracking.OrderChainId, result.OrderChainId);
+        Assert.Equal(expectedEmailOrderTracking.Notification.ShipmentId, result.Notification.ShipmentId);
+        Assert.Equal(expectedEmailOrderTracking.Notification.SendersReference, result.Notification.SendersReference);
+
+        orderRepositoryMock.Verify(
+            e => e.Create(
+                It.Is<InstantEmailNotificationOrder>(order =>
+                    order.OrderId == emailOrderId &&
+                    order.IdempotencyId == "email-idempotency-id"),
+                It.IsAny<NotificationOrder>(),
+                It.IsAny<EmailNotification>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task PersistInstantEmailNotificationAsync_CallsEmailServiceClient_WithCorrectPayload()
+    {
+        // Arrange
+        var emailOrderId = Guid.NewGuid();
+        var orderCreationDateTime = DateTime.UtcNow;
+        InstantEmail? sentEmail = null;
+        var taskCompletionSource = new TaskCompletionSource();
+
+        var guidServiceMock = new Mock<IGuidService>();
+        guidServiceMock.Setup(e => e.NewGuid()).Returns(emailOrderId);
+        var dateTimeServiceMock = new Mock<IDateTimeService>();
+        dateTimeServiceMock.Setup(e => e.UtcNow()).Returns(orderCreationDateTime);
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock
+            .Setup(e => e.Create(It.IsAny<InstantEmailNotificationOrder>(), It.IsAny<NotificationOrder>(), It.IsAny<EmailNotification>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new InstantNotificationOrderTracking
+            {
+                OrderChainId = Guid.NewGuid(),
+                Notification = new NotificationOrderChainShipment { ShipmentId = emailOrderId, SendersReference = "test" }
+            });
+
+        var instantEmailServiceClient = new Mock<IInstantEmailServiceClient>();
+        instantEmailServiceClient
+            .Setup(e => e.SendAsync(It.IsAny<InstantEmail>()))
+            .Callback<InstantEmail>(email =>
+            {
+                sentEmail = email;
+                taskCompletionSource.SetResult();
+            })
+            .ReturnsAsync(new InstantEmailSendResult());
+
+        var service = GetTestService(
+            guidService: guidServiceMock.Object,
+            dateTimeService: dateTimeServiceMock.Object,
+            orderRepository: orderRepositoryMock.Object,
+            instantEmailServiceClient: instantEmailServiceClient.Object);
+
+        var emailOrder = new InstantEmailNotificationOrder
+        {
+            Creator = new Creator("test-org"),
+            Created = orderCreationDateTime,
+            IdempotencyId = "email-idempotency-id",
+            OrderChainId = Guid.NewGuid(),
+            OrderId = emailOrderId,
+            SendersReference = "email-test-reference",
+            InstantEmailDetails = new InstantEmailDetails
+            {
+                EmailAddress = "recipient@example.com",
+                EmailContent = new InstantEmailContent
+                {
+                    FromAddress = "sender@example.com",
+                    Subject = "Integration Test Subject",
+                    Body = "Integration test email body content",
+                    ContentType = Altinn.Notifications.Core.Enums.EmailContentType.Html
+                }
+            }
+        };
+
+        // Act
+        await service.PersistInstantEmailNotificationAsync(emailOrder, CancellationToken.None);
+        await taskCompletionSource.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        // Assert
+        Assert.NotNull(sentEmail);
+        Assert.Equal("sender@example.com", sentEmail.Sender);
+        Assert.Equal("recipient@example.com", sentEmail.Recipient);
+        Assert.Equal("Integration Test Subject", sentEmail.Subject);
+        Assert.Equal("Integration test email body content", sentEmail.Body);
+        Assert.Equal(Altinn.Notifications.Core.Enums.EmailContentType.Html, sentEmail.ContentType);
+        Assert.Equal(emailOrderId, sentEmail.NotificationId);
+
+        instantEmailServiceClient.Verify(e => e.SendAsync(It.IsAny<InstantEmail>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task PersistInstantEmailNotificationAsync_WhenRepositoryCreateFails_ReturnsNull()
+    {
+        // Arrange
+        var emailOrderId = Guid.NewGuid();
+        var orderCreationDateTime = DateTime.UtcNow;
+
+        var guidServiceMock = new Mock<IGuidService>();
+        guidServiceMock.Setup(e => e.NewGuid()).Returns(emailOrderId);
+        var dateTimeServiceMock = new Mock<IDateTimeService>();
+        dateTimeServiceMock.Setup(e => e.UtcNow()).Returns(orderCreationDateTime);
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock
+            .Setup(e => e.Create(It.IsAny<InstantEmailNotificationOrder>(), It.IsAny<NotificationOrder>(), It.IsAny<EmailNotification>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((InstantNotificationOrderTracking?)null);
+        var instantEmailServiceClient = new Mock<IInstantEmailServiceClient>();
+
+        var service = GetTestService(
+            guidService: guidServiceMock.Object,
+            dateTimeService: dateTimeServiceMock.Object,
+            orderRepository: orderRepositoryMock.Object,
+            instantEmailServiceClient: instantEmailServiceClient.Object);
+
+        var emailOrder = new InstantEmailNotificationOrder
+        {
+            Creator = new Creator("test-org"),
+            Created = orderCreationDateTime,
+            IdempotencyId = "email-idempotency-id",
+            OrderChainId = Guid.NewGuid(),
+            OrderId = emailOrderId,
+            SendersReference = "email-test-reference",
+            InstantEmailDetails = new InstantEmailDetails
+            {
+                EmailAddress = "test@example.com",
+                EmailContent = new InstantEmailContent
+                {
+                    FromAddress = "sender@example.com",
+                    Subject = "Test Subject",
+                    Body = "Test email body content",
+                    ContentType = Altinn.Notifications.Core.Enums.EmailContentType.Plain
+                }
+            }
+        };
+
+        // Act
+        var result = await service.PersistInstantEmailNotificationAsync(emailOrder, CancellationToken.None);
+
+        // Assert
+        Assert.Null(result);
+
+        // Verify email service was NOT called when repository fails
+        instantEmailServiceClient.Verify(e => e.SendAsync(It.IsAny<InstantEmail>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(null)]
+    [InlineData("   ")]
+    public async Task PersistInstantEmailNotificationAsync_UsesDefaultSender_WhenSenderEmailAddressIsNullOrEmpty(string? senderEmailAddress)
+    {
+        // Arrange
+        var emailOrderId = Guid.NewGuid();
+        var orderCreationDateTime = DateTime.UtcNow;
+        InstantEmail? sentEmail = null;
+        var taskCompletionSource = new TaskCompletionSource();
+        var defaultEmailFromAddress = "noreply@altinn.no";
+
+        var guidServiceMock = new Mock<IGuidService>();
+        guidServiceMock.Setup(e => e.NewGuid()).Returns(emailOrderId);
+        var dateTimeServiceMock = new Mock<IDateTimeService>();
+        dateTimeServiceMock.Setup(e => e.UtcNow()).Returns(orderCreationDateTime);
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock
+            .Setup(e => e.Create(It.IsAny<InstantEmailNotificationOrder>(), It.IsAny<NotificationOrder>(), It.IsAny<EmailNotification>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new InstantNotificationOrderTracking
+            {
+                OrderChainId = Guid.NewGuid(),
+                Notification = new NotificationOrderChainShipment { ShipmentId = emailOrderId, SendersReference = "test" }
+            });
+
+        var instantEmailServiceClient = new Mock<IInstantEmailServiceClient>();
+        instantEmailServiceClient
+            .Setup(e => e.SendAsync(It.IsAny<InstantEmail>()))
+            .Callback<InstantEmail>(email =>
+            {
+                sentEmail = email;
+                taskCompletionSource.SetResult();
+            })
+            .ReturnsAsync(new InstantEmailSendResult());
+
+        var service = GetTestService(
+            guidService: guidServiceMock.Object,
+            dateTimeService: dateTimeServiceMock.Object,
+            orderRepository: orderRepositoryMock.Object,
+            instantEmailServiceClient: instantEmailServiceClient.Object);
+
+        var emailOrder = new InstantEmailNotificationOrder
+        {
+            Creator = new Creator("test-org"),
+            Created = orderCreationDateTime,
+            IdempotencyId = "email-idempotency-id",
+            OrderChainId = Guid.NewGuid(),
+            OrderId = emailOrderId,
+            SendersReference = "email-test-reference",
+            InstantEmailDetails = new InstantEmailDetails
+            {
+                EmailAddress = "recipient@example.com",
+                EmailContent = new InstantEmailContent
+                {
+                    FromAddress = senderEmailAddress,
+                    Subject = "Test Subject",
+                    Body = "Test email body content",
+                    ContentType = Altinn.Notifications.Core.Enums.EmailContentType.Plain
+                }
+            }
+        };
+
+        // Act
+        await service.PersistInstantEmailNotificationAsync(emailOrder, CancellationToken.None);
+        await taskCompletionSource.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        // Assert
+        Assert.NotNull(sentEmail);
+        Assert.Equal(defaultEmailFromAddress, sentEmail.Sender);
+        Assert.Equal("recipient@example.com", sentEmail.Recipient);
+        Assert.Equal("Test Subject", sentEmail.Subject);
+        Assert.Equal("Test email body content", sentEmail.Body);
+        Assert.Equal(Altinn.Notifications.Core.Enums.EmailContentType.Plain, sentEmail.ContentType);
+        Assert.Equal(emailOrderId, sentEmail.NotificationId);
+
+        instantEmailServiceClient.Verify(e => e.SendAsync(It.IsAny<InstantEmail>()), Times.Once);
+    }
+
+    private static InstantOrderRequestService GetTestService(IGuidService? guidService = null, IDateTimeService? dateTimeService = null, IOrderRepository? orderRepository = null, IShortMessageServiceClient? shortMessageServiceClient = null, IInstantEmailServiceClient? instantEmailServiceClient = null)
     {
         guidService ??= Mock.Of<IGuidService>();
         dateTimeService ??= Mock.Of<IDateTimeService>();
         orderRepository ??= Mock.Of<IOrderRepository>();
         shortMessageServiceClient ??= Mock.Of<IShortMessageServiceClient>();
+        instantEmailServiceClient ??= Mock.Of<IInstantEmailServiceClient>();
 
         var configurationOptions = Options.Create<NotificationConfig>(new()
         {
@@ -559,6 +838,6 @@ public class InstantOrderRequestServiceTests
             DefaultEmailFromAddress = "noreply@altinn.no"
         });
 
-        return new InstantOrderRequestService(guidService, dateTimeService, orderRepository, configurationOptions, shortMessageServiceClient);
+        return new InstantOrderRequestService(guidService, dateTimeService, orderRepository, configurationOptions, shortMessageServiceClient, instantEmailServiceClient);
     }
 }
