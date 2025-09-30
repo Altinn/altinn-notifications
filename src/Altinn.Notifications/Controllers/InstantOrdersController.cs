@@ -1,4 +1,5 @@
 ﻿using Altinn.Notifications.Configuration;
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
@@ -68,12 +69,12 @@ public class InstantOrdersController : ControllerBase
     public async Task<IActionResult> Post([FromBody] InstantNotificationOrderRequestExt request, CancellationToken cancellationToken = default)
     {
         return await ProcessInstantOrderAsync(
-            request,
-            _validator,
-            (req, creator, timestamp) => req.MapToInstantNotificationOrder(creator, timestamp),
-            _instantOrderRequestService.PersistInstantSmsNotificationAsync,
-            "notification",
-            cancellationToken);
+            request: request,
+            validator: _validator,
+            mapToOrder: (req, creator, timestamp) => req.MapToInstantNotificationOrder(creator, timestamp),
+            persistOrder: _instantOrderRequestService.PersistInstantSmsNotificationAsync,
+            notificationChannel: NotificationChannel.Sms,
+            cancellationToken: cancellationToken);
     }
 
     /// <summary>
@@ -95,12 +96,12 @@ public class InstantOrdersController : ControllerBase
     public async Task<IActionResult> PostSms([FromBody] InstantSmsNotificationOrderRequestExt request, CancellationToken cancellationToken = default)
     {
         return await ProcessInstantOrderAsync(
-            request,
-            _smsValidator,
-            (req, creator, timestamp) => req.MapToInstantSmsNotificationOrder(creator, timestamp),
-            _instantOrderRequestService.PersistInstantSmsNotificationAsync,
-            "SMS",
-            cancellationToken);
+            request: request,
+            validator: _smsValidator,
+            mapToOrder: (req, creator, timestamp) => req.MapToInstantSmsNotificationOrder(creator, timestamp),
+            persistOrder: _instantOrderRequestService.PersistInstantSmsNotificationAsync,
+            notificationChannel: NotificationChannel.Sms,
+            cancellationToken: cancellationToken);
     }
 
     /// <summary>
@@ -122,12 +123,12 @@ public class InstantOrdersController : ControllerBase
     public async Task<IActionResult> PostEmail([FromBody] InstantEmailNotificationOrderRequestExt request, CancellationToken cancellationToken = default)
     {
         return await ProcessInstantOrderAsync(
-            request,
-            _emailValidator,
-            (req, creator, timestamp) => req.MapToInstantEmailNotificationOrder(creator, timestamp),
-            _instantOrderRequestService.PersistInstantEmailNotificationAsync,
-            "email",
-            cancellationToken);
+            request: request,
+            validator: _emailValidator,
+            mapToOrder: (req, creator, timestamp) => req.MapToInstantEmailNotificationOrder(creator, timestamp),
+            persistOrder: _instantOrderRequestService.PersistInstantEmailNotificationAsync,
+            notificationChannel: NotificationChannel.Email,
+            cancellationToken: cancellationToken);
     }
 
     /// <summary>
@@ -138,7 +139,7 @@ public class InstantOrdersController : ControllerBase
         IValidator<TRequest> validator,
         Func<TRequest, string, DateTime, TOrder> mapToOrder,
         Func<TOrder, CancellationToken, Task<InstantNotificationOrderTracking?>> persistOrder,
-        string orderType,
+        NotificationChannel notificationChannel,
         CancellationToken cancellationToken)
         where TRequest : class
     {
@@ -172,10 +173,11 @@ public class InstantOrdersController : ControllerBase
 
             if (trackingInformation == null)
             {
+                var channelName = notificationChannel.ToString().ToLowerInvariant();
                 return StatusCode(500, CreateProblemDetails(
                     500,
-                    $"Instant {orderType} notification order registration failed",
-                    $"An internal server error occurred while processing the {orderType} notification order."));
+                    $"Instant {channelName} notification order registration failed",
+                    $"An internal server error occurred while processing the {channelName} notification order."));
             }
 
             // 5. Return tracking information and location header.
