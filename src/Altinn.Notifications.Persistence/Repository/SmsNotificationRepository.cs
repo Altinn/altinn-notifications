@@ -21,8 +21,9 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     private const string _smsSourceIdentifier = "SMS";
     private readonly NpgsqlDataSource _dataSource;
 
-    private const string _getNewSmsNotificationsSql = "select * from notifications.getsms_statusnew_updatestatus($1)"; // (_sendingtimepolicy) this is now calling an overload function with the sending time policy parameter
     private const string _getSmsNotificationRecipientsSql = "select * from notifications.getsmsrecipients_v2($1)"; // (_orderid)
+    private const string _claimAnytimeSmsBatchSql = "select * from notifications.claim_anytime_sms_batch(_batchsize := @batchsize)";
+    private const string _claimDaytimeSmsBatchSql = "select * from notifications.claim_daytime_sms_batch(_batchsize := @batchsize)";
     private const string _insertNewSmsNotificationSql = "call notifications.insertsmsnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _customizedbody, _result, _smscount, _resulttime, _expirytime)
 
     private const string _updateSmsNotificationBasedOnIdentifierSql =
@@ -95,27 +96,37 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     }
 
     /// <inheritdoc/>   
-    public async Task<List<Sms>> GetNewNotifications(SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime)
+    public async Task<List<Sms>> GetNewNotifications(int publishBatchSize, CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime)
     {
-        List<Sms> readyToSendSMS = [];
-        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getNewSmsNotificationsSql);
-
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Integer, (int)sendingTimePolicy);
-        await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync())
+        if (publishBatchSize <= 0)
         {
-            while (await reader.ReadAsync())
-            {
-                var sms = new Sms(
-                    reader.GetValue<Guid>("alternateid"),
-                    reader.GetValue<string>("sendernumber"),
-                    reader.GetValue<string>("mobilenumber"),
-                    reader.GetValue<string>("body"));
-
-                readyToSendSMS.Add(sms);
-            }
+            return [];
         }
 
-        return readyToSendSMS;
+        var claimSmsBatchForSending = sendingTimePolicy switch
+        {
+            SendingTimePolicy.Anytime => _claimAnytimeSmsBatchSql,
+            _ => _claimDaytimeSmsBatchSql,
+        };
+       
+        await using var command = _dataSource.CreateCommand(claimSmsBatchForSending);
+
+        command.Parameters.AddWithValue("@batchsize", NpgsqlDbType.Integer, publishBatchSize);
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+
+        var result = new List<Sms>(publishBatchSize);
+
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            result.Add(new(
+                reader.GetValue<Guid>("alternateid"),
+                reader.GetValue<string>("sendernumber"),
+                reader.GetValue<string>("mobilenumber"),
+                reader.GetValue<string>("body")));
+        }
+
+        return result;
     }
 
     /// <inheritdoc/>
