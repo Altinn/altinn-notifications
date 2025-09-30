@@ -69,18 +69,17 @@ public class InstantOrdersController : ControllerBase
         try
         {
             // 1. Validate the instant notification order.
-            var validationResult = _validator.Validate(request);
-            if (!validationResult.IsValid)
+            var validationError = ValidateRequest(_validator, request);
+            if (validationError != null)
             {
-                validationResult.AddToModelState(ModelState);
-                return ValidationProblem(ModelState);
+                return validationError;
             }
 
             // 2. Ensure the request is associated with a valid organization.
-            var creator = HttpContext.GetOrg();
-            if (string.IsNullOrWhiteSpace(creator))
+            var creatorError = GetCreatorOrForbid(out string creator);
+            if (creatorError != null)
             {
-                return Forbid();
+                return creatorError;
             }
 
             // 3. Check for existing order by organization short name and idempotency identifier.
@@ -96,38 +95,18 @@ public class InstantOrdersController : ControllerBase
 
             if (trackingInformation == null)
             {
-                var problemDetails = new ProblemDetails
-                {
-                    Status = 500,
-                    Title = "Instant notification order registration failed",
-                    Detail = "An internal server error occurred while processing the notification order."
-                };
-
-                return StatusCode(500, problemDetails);
+                return StatusCode(500, CreateProblemDetails(
+                    500,
+                    "Instant notification order registration failed",
+                    "An internal server error occurred while processing the notification order."));
             }
 
             // 5. Return tracking information and location header.
             return Created(trackingInformation.OrderChainId.GetSelfLinkFromOrderChainId(), trackingInformation.MapToInstantNotificationOrderResponse());
         }
-        catch (InvalidOperationException ex)
+        catch (Exception ex)
         {
-            var problemDetails = new ProblemDetails
-            {
-                Status = 400,
-                Detail = ex.Message,
-                Title = "Invalid notification order request"
-            };
-            return StatusCode(400, problemDetails);
-        }
-        catch (OperationCanceledException)
-        {
-            var problemDetails = new ProblemDetails
-            {
-                Status = 499,
-                Title = "Request terminated",
-                Detail = "The client disconnected or cancelled the request before the server could complete processing."
-            };
-            return StatusCode(499, problemDetails);
+            return HandleCommonExceptions(ex);
         }
     }
 
@@ -152,18 +131,17 @@ public class InstantOrdersController : ControllerBase
         try
         {
             // 1. Validate the instant SMS notification order.
-            var validationResult = _smsValidator.Validate(request);
-            if (!validationResult.IsValid)
+            var validationError = ValidateRequest(_smsValidator, request);
+            if (validationError != null)
             {
-                validationResult.AddToModelState(ModelState);
-                return ValidationProblem(ModelState);
+                return validationError;
             }
 
             // 2. Ensure the request is associated with a valid organization.
-            var creator = HttpContext.GetOrg();
-            if (string.IsNullOrWhiteSpace(creator))
+            var creatorError = GetCreatorOrForbid(out string creator);
+            if (creatorError != null)
             {
-                return Forbid();
+                return creatorError;
             }
 
             // 3. Check for existing order by organization short name and idempotency identifier.
@@ -179,38 +157,18 @@ public class InstantOrdersController : ControllerBase
 
             if (trackingInformation == null)
             {
-                var problemDetails = new ProblemDetails
-                {
-                    Status = 500,
-                    Title = "Instant SMS notification order registration failed",
-                    Detail = "An internal server error occurred while processing the SMS notification order."
-                };
-
-                return StatusCode(500, problemDetails);
+                return StatusCode(500, CreateProblemDetails(
+                    500,
+                    "Instant SMS notification order registration failed",
+                    "An internal server error occurred while processing the SMS notification order."));
             }
 
             // 5. Return tracking information and location header.
             return Created(trackingInformation.OrderChainId.GetSelfLinkFromOrderChainId(), trackingInformation.MapToInstantNotificationOrderResponse());
         }
-        catch (InvalidOperationException ex)
+        catch (Exception ex)
         {
-            var problemDetails = new ProblemDetails
-            {
-                Status = 400,
-                Detail = ex.Message,
-                Title = "Invalid SMS notification order request"
-            };
-            return StatusCode(400, problemDetails);
-        }
-        catch (OperationCanceledException)
-        {
-            var problemDetails = new ProblemDetails
-            {
-                Status = 499,
-                Title = "Request terminated",
-                Detail = "The client disconnected or cancelled the request before the server could complete processing."
-            };
-            return StatusCode(499, problemDetails);
+            return HandleCommonExceptions(ex);
         }
     }
 
@@ -235,18 +193,17 @@ public class InstantOrdersController : ControllerBase
         try
         {
             // 1. Validate the instant email notification order.
-            var validationResult = _emailValidator.Validate(request);
-            if (!validationResult.IsValid)
+            var validationError = ValidateRequest(_emailValidator, request);
+            if (validationError != null)
             {
-                validationResult.AddToModelState(ModelState);
-                return ValidationProblem(ModelState);
+                return validationError;
             }
 
             // 2. Ensure the request is associated with a valid organization.
-            var creator = HttpContext.GetOrg();
-            if (string.IsNullOrWhiteSpace(creator))
+            var creatorError = GetCreatorOrForbid(out string creator);
+            if (creatorError != null)
             {
-                return Forbid();
+                return creatorError;
             }
 
             // 3. Check for existing order by organization short name and idempotency identifier.
@@ -262,38 +219,79 @@ public class InstantOrdersController : ControllerBase
 
             if (trackingInformation == null)
             {
-                var problemDetails = new ProblemDetails
-                {
-                    Status = 500,
-                    Title = "Instant email notification order registration failed",
-                    Detail = "An internal server error occurred while processing the email notification order."
-                };
-
-                return StatusCode(500, problemDetails);
+                return StatusCode(500, CreateProblemDetails(
+                    500,
+                    "Instant email notification order registration failed",
+                    "An internal server error occurred while processing the email notification order."));
             }
 
             // 5. Return tracking information and location header.
             return Created(trackingInformation.OrderChainId.GetSelfLinkFromOrderChainId(), trackingInformation.MapToInstantNotificationOrderResponse());
         }
-        catch (InvalidOperationException ex)
+        catch (Exception ex)
         {
-            var problemDetails = new ProblemDetails
-            {
-                Status = 400,
-                Detail = ex.Message,
-                Title = "Invalid email notification order request"
-            };
-            return StatusCode(400, problemDetails);
+            return HandleCommonExceptions(ex);
         }
-        catch (OperationCanceledException)
+    }
+
+    /// <summary>
+    /// Validates a request and returns validation problem if invalid.
+    /// </summary>
+    private IActionResult? ValidateRequest<T>(IValidator<T> validator, T request)
+    {
+        var validationResult = validator.Validate(request);
+        if (!validationResult.IsValid)
         {
-            var problemDetails = new ProblemDetails
-            {
-                Status = 499,
-                Title = "Request terminated",
-                Detail = "The client disconnected or cancelled the request before the server could complete processing."
-            };
-            return StatusCode(499, problemDetails);
+            validationResult.AddToModelState(ModelState);
+            return ValidationProblem(ModelState);
         }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Gets organization from HTTP context and returns Forbid if invalid.
+    /// </summary>
+    private IActionResult? GetCreatorOrForbid(out string creator)
+    {
+        creator = HttpContext.GetOrg() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(creator))
+        {
+            return Forbid();
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Creates appropriate problem details for different error scenarios.
+    /// </summary>
+    private static ProblemDetails CreateProblemDetails(int statusCode, string title, string detail)
+    {
+        return new ProblemDetails
+        {
+            Status = statusCode,
+            Title = title,
+            Detail = detail
+        };
+    }
+
+    /// <summary>
+    /// Handles common exceptions and returns appropriate error responses.
+    /// </summary>
+    private IActionResult HandleCommonExceptions(Exception ex)
+    {
+        return ex switch
+        {
+            InvalidOperationException => StatusCode(400, CreateProblemDetails(
+                400,
+                "Invalid notification order request",
+                ex.Message)),
+            OperationCanceledException => StatusCode(499, CreateProblemDetails(
+                499,
+                "Request terminated",
+                "The client disconnected or cancelled the request before the server could complete processing.")),
+            _ => throw ex
+        };
     }
 }
