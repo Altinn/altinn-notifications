@@ -20,6 +20,8 @@ internal sealed class InstantSmsNotificationOrderRequestValidator : AbstractVali
             .WithMessage("IdempotencyId is required");
 
         RuleFor(request => request.RecipientSms)
+            .NotNull()
+            .WithMessage("RecipientSms is required")
             .SetValidator(new ShortMessageDeliveryDetailsValidator());
     }
 }

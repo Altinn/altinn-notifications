@@ -15,33 +15,34 @@ internal sealed class InstantEmailDetailsValidator : AbstractValidator<InstantEm
     /// </summary>
     public InstantEmailDetailsValidator()
     {
-        RuleFor(deliveryDetails => deliveryDetails.EmailAddress)
+        RuleFor(details => details.EmailAddress)
             .Must(RecipientRules.IsValidEmail)
             .WithMessage("The recipient email address is not a valid email address.");
 
-        RuleFor(deliveryDetails => deliveryDetails.EmailSettings)
+        RuleFor(details => details.EmailSettings)
             .NotNull()
-            .WithMessage("Email settings cannot be null.")
-            .ChildRules(emailSettings =>
+            .WithMessage("Email settings cannot be null.");
+
+        When(details => details.EmailSettings != null, () =>
+        {
+            When(details => details.EmailSettings!.SenderEmailAddress != null, () =>
             {
-                emailSettings.When(settings => settings.SenderEmailAddress != null, () =>
-                {
-                    emailSettings.RuleFor(settings => settings.SenderEmailAddress)
-                        .Must(RecipientRules.IsValidEmail!)
-                        .WithMessage("The sender email address is not a valid email address.");
-                });
-
-                emailSettings.RuleFor(settings => settings.Subject)
-                    .NotEmpty()
-                    .WithMessage("The email subject must not be empty.");
-
-                emailSettings.RuleFor(settings => settings.Body)
-                    .NotEmpty()
-                    .WithMessage("The email body must not be empty.");
-
-                emailSettings.RuleFor(settings => settings.ContentType)
-                    .IsInEnum()
-                    .WithMessage("Email content type must be either Plain or HTML.");
+                RuleFor(details => details.EmailSettings!.SenderEmailAddress)
+                    .Must(RecipientRules.IsValidEmail!)
+                    .WithMessage("The sender email address is not a valid email address.");
             });
+
+            RuleFor(details => details.EmailSettings!.Subject)
+                .NotEmpty()
+                .WithMessage("The email subject must not be empty.");
+
+            RuleFor(details => details.EmailSettings!.Body)
+                .NotEmpty()
+                .WithMessage("The email body must not be empty.");
+
+            RuleFor(details => details.EmailSettings!.ContentType)
+                .IsInEnum()
+                .WithMessage("Email content type must be either Plain or HTML.");
+        });
     }
 }
