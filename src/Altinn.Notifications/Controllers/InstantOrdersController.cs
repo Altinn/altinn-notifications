@@ -70,6 +70,7 @@ public class InstantOrdersController : ControllerBase
     {
         return await ProcessInstantOrderAsync(
             request: request,
+            idempotencyId: request.IdempotencyId,
             validator: _validator,
             mapToOrder: (req, creator, timestamp) => req.MapToInstantNotificationOrder(creator, timestamp),
             persistOrder: _instantOrderRequestService.PersistInstantSmsNotificationAsync,
@@ -97,6 +98,7 @@ public class InstantOrdersController : ControllerBase
     {
         return await ProcessInstantOrderAsync(
             request: request,
+            idempotencyId: request.IdempotencyId,
             validator: _smsValidator,
             mapToOrder: (req, creator, timestamp) => req.MapToInstantSmsNotificationOrder(creator, timestamp),
             persistOrder: _instantOrderRequestService.PersistInstantSmsNotificationAsync,
@@ -124,6 +126,7 @@ public class InstantOrdersController : ControllerBase
     {
         return await ProcessInstantOrderAsync(
             request: request,
+            idempotencyId: request.IdempotencyId,
             validator: _emailValidator,
             mapToOrder: (req, creator, timestamp) => req.MapToInstantEmailNotificationOrder(creator, timestamp),
             persistOrder: _instantOrderRequestService.PersistInstantEmailNotificationAsync,
@@ -136,6 +139,7 @@ public class InstantOrdersController : ControllerBase
     /// </summary>
     private async Task<IActionResult> ProcessInstantOrderAsync<TRequest, TOrder>(
         TRequest request,
+        string idempotencyId,
         IValidator<TRequest> validator,
         Func<TRequest, string, DateTime, TOrder> mapToOrder,
         Func<TOrder, CancellationToken, Task<InstantNotificationOrderTracking?>> persistOrder,
@@ -160,7 +164,6 @@ public class InstantOrdersController : ControllerBase
             }
 
             // 3. Check for existing order by organization short name and idempotency identifier.
-            var idempotencyId = GetIdempotencyId(request);
             var trackingInformation = await _instantOrderRequestService.RetrieveTrackingInformation(creator, idempotencyId, cancellationToken);
             if (trackingInformation != null)
             {
@@ -187,20 +190,6 @@ public class InstantOrdersController : ControllerBase
         {
             return HandleCommonExceptions(ex);
         }
-    }
-
-    /// <summary>
-    /// Extracts the idempotency ID from a request object.
-    /// </summary>
-    private static string GetIdempotencyId<T>(T request)
-    {
-        return request switch
-        {
-            InstantNotificationOrderRequestExt notificationRequest => notificationRequest.IdempotencyId,
-            InstantSmsNotificationOrderRequestExt smsRequest => smsRequest.IdempotencyId,
-            InstantEmailNotificationOrderRequestExt emailRequest => emailRequest.IdempotencyId,
-            _ => throw new ArgumentException($"Unsupported request type: {typeof(T)}")
-        };
     }
 
     /// <summary>
