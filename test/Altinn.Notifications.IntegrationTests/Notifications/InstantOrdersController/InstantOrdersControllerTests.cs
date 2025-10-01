@@ -590,6 +590,69 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    [Fact]
+    public async Task Post_WhenUnhandledExceptionOccurs_Returns500InternalServerError()
+    {
+        // Arrange
+        var request = new InstantNotificationOrderRequestExt
+        {
+            IdempotencyId = ValidIdempotencyId,
+            InstantNotificationRecipient = new InstantNotificationRecipientExt
+            {
+                ShortMessageDeliveryDetails = new ShortMessageDeliveryDetailsExt
+                {
+                    PhoneNumber = ValidPhoneNumber,
+                    TimeToLiveInSeconds = ValidTimeToLive,
+                    ShortMessageContent = new ShortMessageContentExt
+                    {
+                        Body = ValidMessageBody,
+                        Sender = SenderIdentifier
+                    }
+                }
+            }
+        };
+
+        var dateTimeServiceMock = new Mock<IDateTimeService>();
+        dateTimeServiceMock.Setup(e => e.UtcNow()).Returns(DateTime.UtcNow);
+
+        var validatorMock = new Mock<IValidator<InstantNotificationOrderRequestExt>>();
+        validatorMock.Setup(v => v.Validate(request)).Returns(new ValidationResult());
+
+        var orderRequestServiceMock = new Mock<IInstantOrderRequestService>();
+
+        orderRequestServiceMock
+            .Setup(s => s.RetrieveTrackingInformation(CreatorShortName, ValidIdempotencyId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((InstantNotificationOrderTracking?)null);
+
+        // Setup an unhandled exception (not InvalidOperationException or OperationCanceledException)
+        // This will trigger the "_ => throw ex" path in HandleCommonExceptions method
+        orderRequestServiceMock
+            .Setup(s => s.PersistInstantSmsNotificationAsync(It.IsAny<InstantNotificationOrder>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new NotSupportedException("Unhandled exception example"));
+
+        var client = GetTestClient(
+            validator: validatorMock.Object,
+            dateTimeService: dateTimeServiceMock.Object,
+            instantOrderRequestService: orderRequestServiceMock.Object);
+
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken(CreatorShortName, scope: NotificationCreationScope));
+
+        using var requestContent = new StringContent(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
+
+        // Act
+        var response = await client.PostAsync(BasePath, requestContent);
+        
+        // Assert
+        // The unhandled exception should result in a 500 Internal Server Error
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+
+        // Verify that the expected methods were called
+        dateTimeServiceMock.Verify(e => e.UtcNow(), Times.Once);
+        validatorMock.Verify(e => e.Validate(request), Times.Once);
+        orderRequestServiceMock.Verify(e => e.RetrieveTrackingInformation(CreatorShortName, ValidIdempotencyId, It.IsAny<CancellationToken>()), Times.Once);
+        orderRequestServiceMock.Verify(e => e.PersistInstantSmsNotificationAsync(It.IsAny<InstantNotificationOrder>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     private HttpClient GetTestClient(IDateTimeService? dateTimeService = null, IInstantOrderRequestService? instantOrderRequestService = null, IValidator<InstantNotificationOrderRequestExt>? validator = null)
     {
         dateTimeService ??= Mock.Of<IDateTimeService>();
