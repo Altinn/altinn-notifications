@@ -10,20 +10,20 @@ namespace Altinn.Notifications.Persistence.Repository;
 public class DeadDeliveryReportsRepository(NpgsqlDataSource npgsqlDataSource) : IDeadDeliveryReportRepository
 {
     private readonly NpgsqlDataSource _dataSource = npgsqlDataSource;
-    private const string _addDeadDeliveryReport = "placeholder";
+    private const string _addDeadDeliveryReport = "SELECT notifications.insertdeaddeliveryreport(@channel, @attemptcount, @deliveryreport, @resolved, @firstseen, @lastattempt)";
 
     /// <inheritdoc/>
-    public async Task Add(DeadDeliveryReport report)
+    public async Task Add(DeadDeliveryReport report, CancellationToken cancellationToken)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_addDeadDeliveryReport);
 
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Integer, report.Channel);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Integer, report.AttemptCount);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Jsonb, report.DeliveryReport);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Boolean, report.Resolved);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, report.FirstSeen);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, report.LastAttempt);
+        pgcom.Parameters.AddWithValue("channel", NpgsqlDbType.Integer, (int)report.Channel);
+        pgcom.Parameters.AddWithValue("attemptcount", NpgsqlDbType.Integer, report.AttemptCount);
+        pgcom.Parameters.AddWithValue("deliveryreport", NpgsqlDbType.Jsonb, report.DeliveryReport);
+        pgcom.Parameters.AddWithValue("resolved", NpgsqlDbType.Boolean, report.Resolved);
+        pgcom.Parameters.AddWithValue("firstseen", NpgsqlDbType.TimestampTz, report.FirstSeen);
+        pgcom.Parameters.AddWithValue("lastattempt", NpgsqlDbType.TimestampTz, report.LastAttempt);
 
-        await pgcom.ExecuteNonQueryAsync();
+        await pgcom.ExecuteNonQueryAsync(cancellationToken);
     }
 }

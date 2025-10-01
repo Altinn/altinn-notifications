@@ -6,9 +6,9 @@
 public enum DeliveryReportChannel
 {
     /// <summary>
-    /// Azure Email Communication Services
+    /// Azure Communication Services Email
     /// </summary>
-    AzureEmailCommunicationServices = 1,
+    AzureCommunicationServices = 1,
 
     /// <summary>
     /// Link Mobility SMS

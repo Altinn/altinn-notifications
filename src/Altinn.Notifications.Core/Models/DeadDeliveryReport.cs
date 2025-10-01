@@ -20,12 +20,12 @@ public class DeadDeliveryReport
     /// <summary>
     /// Gets or sets a value indicating whether the delivery issue has been resolved.
     /// </summary>
-    public bool Resolved { get; set; }
+    public bool Resolved { get; set; } = false;
 
     /// <summary>
     /// Gets or sets the total number of delivery attempts made.
     /// </summary>
-    public int AttemptCount { get; set; }
+    public int AttemptCount { get; set; } = 0;
 
     /// <summary>
     /// Gets or sets the communication channel through which the delivery was attempted.
@@ -35,6 +35,7 @@ public class DeadDeliveryReport
     /// <summary>
     /// Gets or sets the detailed delivery report containing additional information about the failed delivery.
     /// The structure of this object varies based on the <see cref="Channel"/>.
+    /// Should be in the format of a JSON string.
     /// </summary>
     public required string DeliveryReport { get; set; }
 }
