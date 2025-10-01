@@ -20,7 +20,7 @@ public class OrderMapperTests
 {
     public OrderMapperTests()
     {
-        ResourceLinkExtensions.Initialize("https://platform.at22.altinn.cloud");
+        ResourceLinkExtensions.Initialize("http://localhost:5050");
     }
 
     [Fact]
@@ -69,8 +69,8 @@ public class OrderMapperTests
             },
             Links = new OrderResourceLinksExt()
             {
-                Self = $"https://platform.at22.altinn.cloud/notifications/api/v1/orders/{order.Id}",
-                Status = $"https://platform.at22.altinn.cloud/notifications/api/v1/orders/{order.Id}/status"
+                Self = $"http://localhost:5050/notifications/api/v1/orders/{order.Id}",
+                Status = $"http://localhost:5050/notifications/api/v1/orders/{order.Id}/status"
             },
             IgnoreReservation = true
         };
@@ -390,7 +390,7 @@ public class OrderMapperTests
                     Succeeded = 10,
                     Links = new()
                     {
-                        Self = $"https://platform.at22.altinn.cloud/notifications/api/v1/orders/{orderToMap.Id}/notifications/email"
+                        Self = $"http://localhost:5050/notifications/api/v1/orders/{orderToMap.Id}/notifications/email"
                     }
                 }
             }
