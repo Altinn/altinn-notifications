@@ -7,9 +7,9 @@ using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
+using Altinn.Notifications.Core.Persistence;
+using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
-using Altinn.Notifications.Tests.Notifications.Utils;
-using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
@@ -17,21 +17,44 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 /// <summary>
 /// Integration tests for OrderRepository focusing on instant notification functionality with flattened structures.
 /// </summary>
-public class InstantOrderRepositoryTests : IClassFixture<IntegrationTestWebApplicationFactory<OrderRepository>>
+public class InstantOrderRepositoryTests : IAsyncLifetime
 {
-    private readonly IntegrationTestWebApplicationFactory<OrderRepository> _factory;
+    private readonly List<Guid> _orderIdsToDelete;
+    private readonly List<Guid> _ordersChainIdsToDelete;
 
-    public InstantOrderRepositoryTests(IntegrationTestWebApplicationFactory<OrderRepository> factory)
+    public InstantOrderRepositoryTests()
     {
-        _factory = factory;
+        _orderIdsToDelete = [];
+        _ordersChainIdsToDelete = [];
+    }
+
+    public async Task InitializeAsync()
+    {
+        await Task.CompletedTask;
+    }
+
+    public async Task DisposeAsync()
+    {
+        if (_orderIdsToDelete.Count != 0)
+        {
+            string deleteSql = $@"DELETE from notifications.orders o where o.alternateid in ('{string.Join("','", _orderIdsToDelete)}')";
+            await PostgreUtil.RunSql(deleteSql);
+        }
+
+        if (_ordersChainIdsToDelete.Count != 0)
+        {
+            string deleteSql = $@"DELETE from notifications.orderschain oc where oc.orderid in ('{string.Join("','", _ordersChainIdsToDelete)}')";
+            await PostgreUtil.RunSql(deleteSql);
+        }
     }
 
     [Fact]
     public async Task Create_InstantSmsNotificationOrder_ReturnsTrackingInformation()
     {
         // Arrange
-        await using var scope = _factory.Services.CreateAsyncScope();
-        var repository = scope.ServiceProvider.GetRequiredService<OrderRepository>();
+        OrderRepository repository = (OrderRepository)ServiceUtil
+            .GetServices(new List<Type>() { typeof(IOrderRepository) })
+            .First(i => i.GetType() == typeof(OrderRepository));
 
         var orderId = Guid.NewGuid();
         var orderChainId = Guid.NewGuid();
@@ -45,6 +68,9 @@ public class InstantOrderRepositoryTests : IClassFixture<IntegrationTestWebAppli
         var idempotencyId = "idempotency-123";
         var timeToLiveSeconds = 3600;
         var smsMessageCount = 1;
+
+        _orderIdsToDelete.Add(orderId);
+        _ordersChainIdsToDelete.Add(orderChainId);
 
         var instantSmsNotificationOrder = new InstantSmsNotificationOrder
         {
@@ -109,8 +135,9 @@ public class InstantOrderRepositoryTests : IClassFixture<IntegrationTestWebAppli
     public async Task Create_InstantEmailNotificationOrder_ReturnsTrackingInformation()
     {
         // Arrange
-        await using var scope = _factory.Services.CreateAsyncScope();
-        var repository = scope.ServiceProvider.GetRequiredService<OrderRepository>();
+        OrderRepository repository = (OrderRepository)ServiceUtil
+            .GetServices(new List<Type>() { typeof(IOrderRepository) })
+            .First(i => i.GetType() == typeof(OrderRepository));
 
         var orderId = Guid.NewGuid();
         var orderChainId = Guid.NewGuid();
@@ -123,6 +150,9 @@ public class InstantOrderRepositoryTests : IClassFixture<IntegrationTestWebAppli
         var creatorShortName = "ttd";
         var sendersReference = "test-email-ref-123";
         var idempotencyId = "email-idempotency-123";
+
+        _orderIdsToDelete.Add(orderId);
+        _ordersChainIdsToDelete.Add(orderChainId);
 
         var instantEmailNotificationOrder = new InstantEmailNotificationOrder
         {
@@ -184,8 +214,9 @@ public class InstantOrderRepositoryTests : IClassFixture<IntegrationTestWebAppli
     public async Task Create_InstantSmsNotificationOrder_WithLongMessage_CalculatesCorrectMessageCount()
     {
         // Arrange
-        await using var scope = _factory.Services.CreateAsyncScope();
-        var repository = scope.ServiceProvider.GetRequiredService<OrderRepository>();
+        OrderRepository repository = (OrderRepository)ServiceUtil
+            .GetServices(new List<Type>() { typeof(IOrderRepository) })
+            .First(i => i.GetType() == typeof(OrderRepository));
 
         var orderId = Guid.NewGuid();
         var orderChainId = Guid.NewGuid();
@@ -197,6 +228,9 @@ public class InstantOrderRepositoryTests : IClassFixture<IntegrationTestWebAppli
         var creatorShortName = "ttd";
         var timeToLiveSeconds = 3600;
         var expectedSmsMessageCount = 4; // Expected count for 500 character message
+
+        _orderIdsToDelete.Add(orderId);
+        _ordersChainIdsToDelete.Add(orderChainId);
 
         var instantSmsNotificationOrder = new InstantSmsNotificationOrder
         {
@@ -258,8 +292,9 @@ public class InstantOrderRepositoryTests : IClassFixture<IntegrationTestWebAppli
     public async Task Create_InstantEmailNotificationOrder_WithHtmlContent_HandlesCorrectly()
     {
         // Arrange
-        await using var scope = _factory.Services.CreateAsyncScope();
-        var repository = scope.ServiceProvider.GetRequiredService<OrderRepository>();
+        OrderRepository repository = (OrderRepository)ServiceUtil
+            .GetServices(new List<Type>() { typeof(IOrderRepository) })
+            .First(i => i.GetType() == typeof(OrderRepository));
 
         var orderId = Guid.NewGuid();
         var orderChainId = Guid.NewGuid();
@@ -270,6 +305,9 @@ public class InstantOrderRepositoryTests : IClassFixture<IntegrationTestWebAppli
         var htmlBody = "<html><body><h1>Test</h1><p>HTML email content</p></body></html>";
         var fromAddress = "sender@altinn.no";
         var creatorShortName = "ttd";
+
+        _orderIdsToDelete.Add(orderId);
+        _ordersChainIdsToDelete.Add(orderChainId);
 
         var instantEmailNotificationOrder = new InstantEmailNotificationOrder
         {
@@ -328,8 +366,9 @@ public class InstantOrderRepositoryTests : IClassFixture<IntegrationTestWebAppli
     public async Task Create_InstantSmsNotificationOrder_WithNullSender_HandlesCorrectly()
     {
         // Arrange
-        await using var scope = _factory.Services.CreateAsyncScope();
-        var repository = scope.ServiceProvider.GetRequiredService<OrderRepository>();
+        OrderRepository repository = (OrderRepository)ServiceUtil
+            .GetServices(new List<Type>() { typeof(IOrderRepository) })
+            .First(i => i.GetType() == typeof(OrderRepository));
 
         var orderId = Guid.NewGuid();
         var orderChainId = Guid.NewGuid();
@@ -340,6 +379,9 @@ public class InstantOrderRepositoryTests : IClassFixture<IntegrationTestWebAppli
         var defaultSender = "Altinn"; // This would come from configuration
         var creatorShortName = "ttd";
         var timeToLiveSeconds = 3600;
+
+        _orderIdsToDelete.Add(orderId);
+        _ordersChainIdsToDelete.Add(orderChainId);
 
         var instantSmsNotificationOrder = new InstantSmsNotificationOrder
         {
@@ -401,8 +443,9 @@ public class InstantOrderRepositoryTests : IClassFixture<IntegrationTestWebAppli
     public async Task Create_InstantEmailNotificationOrder_WithNullFromAddress_HandlesCorrectly()
     {
         // Arrange
-        await using var scope = _factory.Services.CreateAsyncScope();
-        var repository = scope.ServiceProvider.GetRequiredService<OrderRepository>();
+        OrderRepository repository = (OrderRepository)ServiceUtil
+            .GetServices(new List<Type>() { typeof(IOrderRepository) })
+            .First(i => i.GetType() == typeof(OrderRepository));
 
         var orderId = Guid.NewGuid();
         var orderChainId = Guid.NewGuid();
@@ -413,6 +456,9 @@ public class InstantOrderRepositoryTests : IClassFixture<IntegrationTestWebAppli
         var body = "Email content with default sender";
         var defaultFromAddress = "noreply@altinn.no"; // This would come from configuration
         var creatorShortName = "ttd";
+
+        _orderIdsToDelete.Add(orderId);
+        _ordersChainIdsToDelete.Add(orderChainId);
 
         var instantEmailNotificationOrder = new InstantEmailNotificationOrder
         {
@@ -471,8 +517,9 @@ public class InstantOrderRepositoryTests : IClassFixture<IntegrationTestWebAppli
     public async Task RetrieveInstantOrderTrackingInformation_ForExistingOrder_ReturnsTrackingInfo()
     {
         // Arrange
-        await using var scope = _factory.Services.CreateAsyncScope();
-        var repository = scope.ServiceProvider.GetRequiredService<OrderRepository>();
+        OrderRepository repository = (OrderRepository)ServiceUtil
+            .GetServices(new List<Type>() { typeof(IOrderRepository) })
+            .First(i => i.GetType() == typeof(OrderRepository));
 
         var creatorName = "test-creator";
         var idempotencyId = Guid.NewGuid().ToString();
@@ -483,6 +530,9 @@ public class InstantOrderRepositoryTests : IClassFixture<IntegrationTestWebAppli
         var smsNotificationId = Guid.NewGuid();
         var creationDateTime = DateTime.UtcNow;
         var sendersReference = "tracking-test-ref";
+
+        _orderIdsToDelete.Add(orderId);
+        _ordersChainIdsToDelete.Add(orderChainId);
 
         var instantSmsNotificationOrder = new InstantSmsNotificationOrder
         {
@@ -547,8 +597,9 @@ public class InstantOrderRepositoryTests : IClassFixture<IntegrationTestWebAppli
     public async Task RetrieveInstantOrderTrackingInformation_ForNonExistentOrder_ReturnsNull()
     {
         // Arrange
-        await using var scope = _factory.Services.CreateAsyncScope();
-        var repository = scope.ServiceProvider.GetRequiredService<OrderRepository>();
+        OrderRepository repository = (OrderRepository)ServiceUtil
+            .GetServices(new List<Type>() { typeof(IOrderRepository) })
+            .First(i => i.GetType() == typeof(OrderRepository));
 
         var creatorName = "non-existent-creator";
         var idempotencyId = "non-existent-id";
