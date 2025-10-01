@@ -104,6 +104,9 @@ public interface IOrderRepository
     /// <param name="emailNotification">
     /// The <see cref="EmailNotification"/> instance containing email-specific delivery information.
     /// </param>
+    /// <param name="emailExpiryDateTime">
+    /// The <see cref="DateTime"/> when the email notification expires and should be considered failed if not delivered.
+    /// </param>
     /// <param name="cancellationToken">
     /// A <see cref="CancellationToken"/> to monitor for cancellation requests. Defaults to <see cref="CancellationToken.None"/>.
     /// </param>
@@ -111,7 +114,7 @@ public interface IOrderRepository
     /// A <see cref="Task{TResult}"/> containing a <see cref="InstantNotificationOrderTracking"/> with tracking information,
     /// or <c>null</c> if the operation failed.
     /// </returns>
-    Task<InstantNotificationOrderTracking?> Create(InstantEmailNotificationOrder instantEmailNotificationOrder, NotificationOrder notificationOrder, EmailNotification emailNotification, CancellationToken cancellationToken = default);
+    Task<InstantNotificationOrderTracking?> Create(InstantEmailNotificationOrder instantEmailNotificationOrder, NotificationOrder notificationOrder, EmailNotification emailNotification, DateTime emailExpiryDateTime, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets a list of notification orders where requestedSendTime has passed

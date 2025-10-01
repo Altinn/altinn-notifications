@@ -216,7 +216,7 @@ public class OrderRepository : IOrderRepository
     }
 
     /// <inheritdoc/>
-    public async Task<InstantNotificationOrderTracking?> Create(InstantEmailNotificationOrder instantEmailNotificationOrder, NotificationOrder notificationOrder, EmailNotification emailNotification, CancellationToken cancellationToken = default)
+    public async Task<InstantNotificationOrderTracking?> Create(InstantEmailNotificationOrder instantEmailNotificationOrder, NotificationOrder notificationOrder, EmailNotification emailNotification, DateTime emailExpiryDateTime, CancellationToken cancellationToken = default)
     {
         var emailTemplate = notificationOrder.Templates.Find(e => e.Type == NotificationTemplateType.Email) as EmailTemplate ?? throw new InvalidOperationException("Email template is missing.");
 
@@ -225,7 +225,7 @@ public class OrderRepository : IOrderRepository
             getOrderChainId: () => instantEmailNotificationOrder.OrderChainId,
             insertInstantOrderAction: (connection, transaction, token) => InsertInstantEmailNotificationOrderAsync(instantEmailNotificationOrder, connection, transaction, token),
             insertTemplateAction: (mainOrderId, connection, transaction, token) => InsertEmailTextAsync(mainOrderId, emailTemplate, connection, transaction, token),
-            insertNotificationAction: (connection, transaction, token) => InsertEmailNotificationAsync(emailNotification, connection, transaction, token),
+            insertNotificationAction: (connection, transaction, token) => InsertEmailNotificationAsync(emailNotification, emailExpiryDateTime, connection, transaction, token),
             cancellationToken: cancellationToken);
     }
 
@@ -756,10 +756,11 @@ public class OrderRepository : IOrderRepository
     /// Persists an email notification with send result to the database.
     /// </summary>
     /// <param name="notification">The email notification to persist.</param>
+    /// <param name="emailExpiryDateTime">The expiry time for the email notification.</param>
     /// <param name="connection">The active database connection.</param>
     /// <param name="transaction">The active database transaction.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    private static async Task InsertEmailNotificationAsync(EmailNotification notification, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
+    private static async Task InsertEmailNotificationAsync(EmailNotification notification, DateTime emailExpiryDateTime, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
     {
         await using NpgsqlCommand pgcom = new(_insertEmailNotificationSql, connection, transaction);
 
@@ -772,7 +773,7 @@ public class OrderRepository : IOrderRepository
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.CustomizedSubject ?? (object)DBNull.Value);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.SendResult.Result.ToString());
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, notification.SendResult.ResultTime);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, DBNull.Value); // No expiry time for email
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, emailExpiryDateTime);
 
         await pgcom.ExecuteNonQueryAsync(cancellationToken);
     }

@@ -196,11 +196,14 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
             SendResult = new(EmailNotificationResultType.Sending, creationDateTime)
         };
 
+        var emailExpiryDateTime = creationDateTime.AddHours(48);
+
         // Act
         var result = await repository.Create(
             instantEmailNotificationOrder,
             notificationOrder,
-            emailNotification);
+            emailNotification,
+            emailExpiryDateTime);
 
         // Assert
         Assert.NotNull(result);
@@ -349,11 +352,14 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
             SendResult = new(EmailNotificationResultType.Sending, creationDateTime)
         };
 
+        var emailExpiryDateTime = creationDateTime.AddHours(48);
+
         // Act
         var result = await repository.Create(
             instantEmailNotificationOrder,
             notificationOrder,
-            emailNotification);
+            emailNotification,
+            emailExpiryDateTime);
 
         // Assert
         Assert.NotNull(result);
@@ -500,11 +506,14 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
             SendResult = new(EmailNotificationResultType.Sending, creationDateTime)
         };
 
+        var emailExpiryDateTime = creationDateTime.AddHours(48);
+
         // Act
         var result = await repository.Create(
             instantEmailNotificationOrder,
             notificationOrder,
-            emailNotification);
+            emailNotification,
+            emailExpiryDateTime);
 
         // Assert
         Assert.NotNull(result);

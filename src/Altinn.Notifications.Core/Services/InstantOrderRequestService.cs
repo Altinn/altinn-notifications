@@ -253,10 +253,12 @@ public class InstantOrderRequestService : IInstantOrderRequestService
 
         var notificationOrder = CreateNotificationOrderFromEmail(instantEmailNotificationOrder, deliveryDetails, emailContent);
 
+        var emailExpiryDateTime = notificationOrder.RequestedSendTime.AddHours(48);
+
         cancellationToken.ThrowIfCancellationRequested();
 
         // Create the tracking information for the order.
-        var trackingInformation = await _orderRepository.Create(instantEmailNotificationOrder, notificationOrder, emailNotification, cancellationToken);
+        var trackingInformation = await _orderRepository.Create(instantEmailNotificationOrder, notificationOrder, emailNotification, emailExpiryDateTime, cancellationToken);
         if (trackingInformation != null)
         {
             _ = Task.Run(
