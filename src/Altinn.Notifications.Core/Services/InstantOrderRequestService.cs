@@ -99,6 +99,49 @@ public class InstantOrderRequestService : IInstantOrderRequestService
         return trackingInformation;
     }
 
+    /// <inheritdoc/>
+    public async Task<InstantNotificationOrderTracking?> PersistInstantSmsNotificationAsync(InstantSmsNotificationOrder instantSmsNotificationOrder, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var deliveryDetails = instantSmsNotificationOrder.ShortMessageDeliveryDetails;
+        var messageContent = instantSmsNotificationOrder.ShortMessageDeliveryDetails.ShortMessageContent;
+        var senderIdentifier = string.IsNullOrWhiteSpace(messageContent.Sender) ? _defaultSmsSender : messageContent.Sender;
+
+        var messagesCount = CalculateNumberOfMessages(messageContent.Message);
+
+        var smsNotification = CreateSmsNotificationFromSms(instantSmsNotificationOrder, deliveryDetails);
+
+        var notificationOrder = CreateNotificationOrderFromSms(instantSmsNotificationOrder, deliveryDetails, messageContent);
+
+        var expirationDateTime = notificationOrder.RequestedSendTime.AddSeconds(deliveryDetails.TimeToLiveInSeconds);
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // Create the tracking information for the order.
+        var trackingInformation = await _orderRepository.Create(instantSmsNotificationOrder, notificationOrder, smsNotification, expirationDateTime, messagesCount, cancellationToken);
+        if (trackingInformation != null)
+        {
+            _ = Task.Run(
+                async () =>
+                {
+                    var shortMessage = new ShortMessage
+                    {
+                        Message = messageContent.Message,
+                        NotificationId = smsNotification.Id,
+                        TimeToLive = deliveryDetails.TimeToLiveInSeconds,
+                        Recipient = smsNotification.Recipient.MobileNumber,
+                        Sender = senderIdentifier
+                    };
+
+                    await _shortMessageServiceClient.SendAsync(shortMessage);
+                },
+                CancellationToken.None);
+        }
+
+        return trackingInformation;
+    }
+
     /// <summary>
     /// Calculates the number of SMS messages required to deliver the specified message,
     /// applying SMS gateway concatenation rules:
@@ -195,49 +238,6 @@ public class InstantOrderRequestService : IInstantOrderRequestService
             Recipients = [new([new SmsAddressPoint(deliveryDetails.PhoneNumber)])],
             Templates = [new SmsTemplate(senderIdentifier, messageContent.Message)]
         };
-    }
-
-    /// <inheritdoc/>
-    public async Task<InstantNotificationOrderTracking?> PersistInstantSmsNotificationAsync(InstantSmsNotificationOrder instantSmsNotificationOrder, CancellationToken cancellationToken = default)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-
-        var deliveryDetails = instantSmsNotificationOrder.ShortMessageDeliveryDetails;
-        var messageContent = instantSmsNotificationOrder.ShortMessageDeliveryDetails.ShortMessageContent;
-        var senderIdentifier = string.IsNullOrWhiteSpace(messageContent.Sender) ? _defaultSmsSender : messageContent.Sender;
-
-        var messagesCount = CalculateNumberOfMessages(messageContent.Message);
-
-        var smsNotification = CreateSmsNotificationFromSms(instantSmsNotificationOrder, deliveryDetails);
-
-        var notificationOrder = CreateNotificationOrderFromSms(instantSmsNotificationOrder, deliveryDetails, messageContent);
-
-        var expirationDateTime = notificationOrder.RequestedSendTime.AddSeconds(deliveryDetails.TimeToLiveInSeconds);
-
-        cancellationToken.ThrowIfCancellationRequested();
-
-        // Create the tracking information for the order.
-        var trackingInformation = await _orderRepository.Create(instantSmsNotificationOrder, notificationOrder, smsNotification, expirationDateTime, messagesCount, cancellationToken);
-        if (trackingInformation != null)
-        {
-            _ = Task.Run(
-                async () =>
-                {
-                    var shortMessage = new ShortMessage
-                    {
-                        Message = messageContent.Message,
-                        NotificationId = smsNotification.Id,
-                        TimeToLive = deliveryDetails.TimeToLiveInSeconds,
-                        Recipient = smsNotification.Recipient.MobileNumber,
-                        Sender = senderIdentifier
-                    };
-
-                    await _shortMessageServiceClient.SendAsync(shortMessage);
-                },
-                CancellationToken.None);
-        }
-
-        return trackingInformation;
     }
 
     /// <inheritdoc/>

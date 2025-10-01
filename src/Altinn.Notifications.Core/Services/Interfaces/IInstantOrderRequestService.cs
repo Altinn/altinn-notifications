@@ -44,7 +44,6 @@ public interface IInstantOrderRequestService
     /// <exception cref="OperationCanceledException">
     /// Thrown if the operation is canceled via the <paramref name="cancellationToken"/>.
     /// </exception>
-    [Obsolete("This method is deprecated. Use PersistInstantSmsNotificationAsync(InstantSmsNotificationOrder) instead.")]
     Task<InstantNotificationOrderTracking?> PersistInstantSmsNotificationAsync(InstantNotificationOrder instantNotificationOrder, CancellationToken cancellationToken = default);
 
     /// <summary>

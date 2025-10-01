@@ -193,13 +193,40 @@ public class OrderRepository : IOrderRepository
         var smsTemplate = notificationOrder.Templates.Find(e => e.Type == NotificationTemplateType.Sms) as SmsTemplate ?? throw new InvalidOperationException("SMS template is missing.");
 
         return await CreateInstantOrderWithTransactionAsync(
-            instantNotificationOrder,
-            notificationOrder,
-            () => instantNotificationOrder.OrderChainId,
-            (connection, transaction, token) => InsertInstantNotificationOrderAsync(instantNotificationOrder, connection, transaction, token),
-            (mainOrderId, connection, transaction, token) => InsertSmsTextAsync(mainOrderId, smsTemplate, connection, transaction, token),
-            (connection, transaction, token) => InsertSmsNotificationAsync(smsNotification, smsExpiryDateTime, smsMessageCount, connection, transaction, token),
-            cancellationToken);
+            notificationOrder: notificationOrder,
+            getOrderChainId: () => instantNotificationOrder.OrderChainId,
+            insertInstantOrderAction: (connection, transaction, token) => InsertInstantNotificationOrderAsync(instantNotificationOrder, connection, transaction, token),
+            insertTemplateAction: (mainOrderId, connection, transaction, token) => InsertSmsTextAsync(mainOrderId, smsTemplate, connection, transaction, token),
+            insertNotificationAction: (connection, transaction, token) => InsertSmsNotificationAsync(smsNotification, smsExpiryDateTime, smsMessageCount, connection, transaction, token),
+            cancellationToken: cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<InstantNotificationOrderTracking?> Create(InstantSmsNotificationOrder instantSmsNotificationOrder, NotificationOrder notificationOrder, SmsNotification smsNotification, DateTime smsExpiryDateTime, int smsMessageCount, CancellationToken cancellationToken = default)
+    {
+        var smsTemplate = notificationOrder.Templates.Find(e => e.Type == NotificationTemplateType.Sms) as SmsTemplate ?? throw new InvalidOperationException("SMS template is missing.");
+
+        return await CreateInstantOrderWithTransactionAsync(
+            notificationOrder: notificationOrder,
+            getOrderChainId: () => instantSmsNotificationOrder.OrderChainId,
+            insertInstantOrderAction: (connection, transaction, token) => InsertInstantSmsNotificationOrderAsync(instantSmsNotificationOrder, connection, transaction, token),
+            insertTemplateAction: (mainOrderId, connection, transaction, token) => InsertSmsTextAsync(mainOrderId, smsTemplate, connection, transaction, token),
+            insertNotificationAction: (connection, transaction, token) => InsertSmsNotificationAsync(smsNotification, smsExpiryDateTime, smsMessageCount, connection, transaction, token),
+            cancellationToken: cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<InstantNotificationOrderTracking?> Create(InstantEmailNotificationOrder instantEmailNotificationOrder, NotificationOrder notificationOrder, EmailNotification emailNotification, CancellationToken cancellationToken = default)
+    {
+        var emailTemplate = notificationOrder.Templates.Find(e => e.Type == NotificationTemplateType.Email) as EmailTemplate ?? throw new InvalidOperationException("Email template is missing.");
+
+        return await CreateInstantOrderWithTransactionAsync(
+            notificationOrder: notificationOrder,
+            getOrderChainId: () => instantEmailNotificationOrder.OrderChainId,
+            insertInstantOrderAction: (connection, transaction, token) => InsertInstantEmailNotificationOrderAsync(instantEmailNotificationOrder, connection, transaction, token),
+            insertTemplateAction: (mainOrderId, connection, transaction, token) => InsertEmailTextAsync(mainOrderId, emailTemplate, connection, transaction, token),
+            insertNotificationAction: (connection, transaction, token) => InsertEmailNotificationAsync(emailNotification, connection, transaction, token),
+            cancellationToken: cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -630,41 +657,10 @@ public class OrderRepository : IOrderRepository
         await pgcom.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    /// <inheritdoc/>
-    public async Task<InstantNotificationOrderTracking?> Create(InstantSmsNotificationOrder instantSmsNotificationOrder, NotificationOrder notificationOrder, SmsNotification smsNotification, DateTime smsExpiryDateTime, int smsMessageCount, CancellationToken cancellationToken = default)
-    {
-        var smsTemplate = notificationOrder.Templates.Find(e => e.Type == NotificationTemplateType.Sms) as SmsTemplate ?? throw new InvalidOperationException("SMS template is missing.");
-
-        return await CreateInstantOrderWithTransactionAsync(
-            instantSmsNotificationOrder,
-            notificationOrder,
-            () => instantSmsNotificationOrder.OrderChainId,
-            (connection, transaction, token) => InsertInstantSmsNotificationOrderAsync(instantSmsNotificationOrder, connection, transaction, token),
-            (mainOrderId, connection, transaction, token) => InsertSmsTextAsync(mainOrderId, smsTemplate, connection, transaction, token),
-            (connection, transaction, token) => InsertSmsNotificationAsync(smsNotification, smsExpiryDateTime, smsMessageCount, connection, transaction, token),
-            cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public async Task<InstantNotificationOrderTracking?> Create(InstantEmailNotificationOrder instantEmailNotificationOrder, NotificationOrder notificationOrder, EmailNotification emailNotification, CancellationToken cancellationToken = default)
-    {
-        var emailTemplate = notificationOrder.Templates.Find(e => e.Type == NotificationTemplateType.Email) as EmailTemplate ?? throw new InvalidOperationException("Email template is missing.");
-
-        return await CreateInstantOrderWithTransactionAsync(
-            instantEmailNotificationOrder,
-            notificationOrder,
-            () => instantEmailNotificationOrder.OrderChainId,
-            (connection, transaction, token) => InsertInstantEmailNotificationOrderAsync(instantEmailNotificationOrder, connection, transaction, token),
-            (mainOrderId, connection, transaction, token) => InsertEmailTextAsync(mainOrderId, emailTemplate, connection, transaction, token),
-            (connection, transaction, token) => InsertEmailNotificationAsync(emailNotification, connection, transaction, token),
-            cancellationToken);
-    }
-
     /// <summary>
     /// Common pattern for creating instant notification orders with database transaction handling.
     /// </summary>
-    private async Task<InstantNotificationOrderTracking> CreateInstantOrderWithTransactionAsync<TInstantOrder>(
-        TInstantOrder instantOrder,
+    private async Task<InstantNotificationOrderTracking> CreateInstantOrderWithTransactionAsync(
         NotificationOrder notificationOrder,
         Func<Guid> getOrderChainId,
         Func<NpgsqlConnection, NpgsqlTransaction, CancellationToken, Task> insertInstantOrderAction,
