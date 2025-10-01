@@ -241,7 +241,7 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
             OrderChainId = orderChainId,
             Created = creationDateTime,
             Creator = new Creator(creatorShortName),
-            IdempotencyId = "long-message-test",
+            IdempotencyId = $"long-message-test-{Guid.NewGuid()}",
             ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
             {
                 PhoneNumber = phoneNumber,
@@ -318,7 +318,7 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
             OrderChainId = orderChainId,
             Created = creationDateTime,
             Creator = new Creator(creatorShortName),
-            IdempotencyId = "html-email-test",
+            IdempotencyId = $"html-email-test-{Guid.NewGuid()}",
             InstantEmailDetails = new InstantEmailDetails
             {
                 EmailAddress = emailAddress,
@@ -395,7 +395,7 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
             OrderChainId = orderChainId,
             Created = creationDateTime,
             Creator = new Creator(creatorShortName),
-            IdempotencyId = "null-sender-test",
+            IdempotencyId = $"null-sender-test-{Guid.NewGuid()}",
             ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
             {
                 PhoneNumber = phoneNumber,
@@ -472,7 +472,7 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
             OrderChainId = orderChainId,
             Created = creationDateTime,
             Creator = new Creator(creatorShortName),
-            IdempotencyId = "null-email-sender-test",
+            IdempotencyId = $"null-email-sender-test-{Guid.NewGuid()}",
             InstantEmailDetails = new InstantEmailDetails
             {
                 EmailAddress = emailAddress,
