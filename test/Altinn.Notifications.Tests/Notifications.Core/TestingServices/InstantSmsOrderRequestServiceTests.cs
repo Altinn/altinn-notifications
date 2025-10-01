@@ -21,12 +21,12 @@ using Xunit;
 namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 
 /// <summary>
-/// Tests for the new flattened SMS notification functionality in InstantOrderRequestService.
+/// Tests for the SMS notification functionality in InstantOrderRequestService.
 /// </summary>
 public class InstantSmsOrderRequestServiceTests
 {
     [Fact]
-    public async Task PersistInstantSmsNotificationAsync_WithFlattenedStructure_CreatesNotificationSuccessfully()
+    public async Task PersistInstantSmsNotificationAsync_WhenValidInput_ReturnsTrackingInformation()
     {
         // Arrange
         var orderId = Guid.NewGuid();
@@ -83,8 +83,12 @@ public class InstantSmsOrderRequestServiceTests
         var dateTimeServiceMock = new Mock<IDateTimeService>();
         dateTimeServiceMock.Setup(e => e.UtcNow()).Returns(orderCreationDateTime);
 
+        var taskCompletionSource = new TaskCompletionSource();
         var shortMessageServiceClient = new Mock<IShortMessageServiceClient>();
-        shortMessageServiceClient.Setup(e => e.SendAsync(It.IsAny<ShortMessage>())).ReturnsAsync((ShortMessageSendResult?)null!);
+        shortMessageServiceClient
+            .Setup(e => e.SendAsync(It.Is<ShortMessage>(m => m.NotificationId == smsOrderId)))
+            .Callback(() => taskCompletionSource.SetResult())
+            .ReturnsAsync(new ShortMessageSendResult());
 
         var service = GetTestService(
             guidService: guidServiceMock.Object,
@@ -94,6 +98,9 @@ public class InstantSmsOrderRequestServiceTests
 
         // Act
         var result = await service.PersistInstantSmsNotificationAsync(instantSmsNotificationOrder);
+
+        // Wait for the background Task.Run to complete
+        await taskCompletionSource.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
         // Assert
         Assert.NotNull(result);
@@ -126,7 +133,7 @@ public class InstantSmsOrderRequestServiceTests
     }
 
     [Fact]
-    public async Task PersistInstantSmsNotificationAsync_WithFlattenedStructure_WhenRepositoryCreateFails_ReturnsNull()
+    public async Task PersistInstantSmsNotificationAsync_WhenRepositoryCreateFails_ReturnsNull()
     {
         // Arrange
         var orderId = Guid.NewGuid();
@@ -204,7 +211,7 @@ public class InstantSmsOrderRequestServiceTests
     }
 
     [Fact]
-    public async Task PersistInstantSmsNotificationAsync_WithFlattenedStructure_CancellationRequested_ThrowsOperationCanceledException()
+    public async Task PersistInstantSmsNotificationAsync_WhenCancellationRequested_ThrowsOperationCanceledException()
     {
         // Arrange
         var instantSmsNotificationOrder = new InstantSmsNotificationOrder
@@ -262,7 +269,7 @@ public class InstantSmsOrderRequestServiceTests
     [InlineData("")]
     [InlineData(null)]
     [InlineData("   ")]
-    public async Task PersistInstantSmsNotificationAsync_WithFlattenedStructure_UsesDefaultSender_WhenSenderIsNullOrEmpty(string? senderIdentifier)
+    public async Task PersistInstantSmsNotificationAsync_WhenSenderIsNullOrEmpty_UsesDefaultSender(string? senderIdentifier)
     {
         // Arrange
         var orderId = Guid.NewGuid();
@@ -317,8 +324,12 @@ public class InstantSmsOrderRequestServiceTests
         var dateTimeServiceMock = new Mock<IDateTimeService>();
         dateTimeServiceMock.Setup(e => e.UtcNow()).Returns(orderCreationDateTime);
 
+        var taskCompletionSource = new TaskCompletionSource();
         var shortMessageServiceClient = new Mock<IShortMessageServiceClient>();
-        shortMessageServiceClient.Setup(e => e.SendAsync(It.IsAny<ShortMessage>())).ReturnsAsync((ShortMessageSendResult?)null!);
+        shortMessageServiceClient
+            .Setup(e => e.SendAsync(It.Is<ShortMessage>(m => m.NotificationId == smsOrderId)))
+            .Callback(() => taskCompletionSource.SetResult())
+            .ReturnsAsync(new ShortMessageSendResult());
 
         var service = GetTestService(
             guidService: guidServiceMock.Object,
@@ -329,6 +340,9 @@ public class InstantSmsOrderRequestServiceTests
 
         // Act
         var result = await service.PersistInstantSmsNotificationAsync(instantSmsNotificationOrder);
+
+        // Wait for the background Task.Run to complete
+        await taskCompletionSource.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
         // Assert
         Assert.NotNull(result);
@@ -354,7 +368,7 @@ public class InstantSmsOrderRequestServiceTests
     }
 
     [Fact]
-    public async Task PersistInstantSmsNotificationAsync_WithFlattenedStructure_CalculatesCorrectMessageCount_ForLongMessage()
+    public async Task PersistInstantSmsNotificationAsync_WhenMessageIsLong_CalculatesCorrectMessageCount()
     {
         // Arrange
         var orderId = Guid.NewGuid();
@@ -437,7 +451,7 @@ public class InstantSmsOrderRequestServiceTests
     }
 
     [Fact]
-    public async Task PersistInstantSmsNotificationAsync_WithFlattenedStructure_CreatesCorrectNotificationOrder()
+    public async Task PersistInstantSmsNotificationAsync_WhenValidInput_CreatesCorrectNotificationOrder()
     {
         // Arrange
         var orderId = Guid.NewGuid();
