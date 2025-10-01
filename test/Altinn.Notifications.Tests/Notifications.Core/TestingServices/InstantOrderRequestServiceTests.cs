@@ -565,7 +565,7 @@ public class InstantOrderRequestServiceTests
         dateTimeServiceMock.Setup(e => e.UtcNow()).Returns(orderCreationDateTime);
         var orderRepositoryMock = new Mock<IOrderRepository>();
         orderRepositoryMock
-            .Setup(e => e.Create(It.IsAny<InstantEmailNotificationOrder>(), It.IsAny<NotificationOrder>(), It.IsAny<EmailNotification>(), It.IsAny<CancellationToken>()))
+            .Setup(e => e.Create(It.IsAny<InstantEmailNotificationOrder>(), It.IsAny<NotificationOrder>(), It.IsAny<EmailNotification>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedEmailOrderTracking);
         var instantEmailServiceClient = new Mock<IInstantEmailServiceClient>();
 
@@ -612,6 +612,7 @@ public class InstantOrderRequestServiceTests
                     order.IdempotencyId == "email-idempotency-id"),
                 It.IsAny<NotificationOrder>(),
                 It.IsAny<EmailNotification>(),
+                It.IsAny<DateTime>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -631,7 +632,7 @@ public class InstantOrderRequestServiceTests
         dateTimeServiceMock.Setup(e => e.UtcNow()).Returns(orderCreationDateTime);
         var orderRepositoryMock = new Mock<IOrderRepository>();
         orderRepositoryMock
-            .Setup(e => e.Create(It.IsAny<InstantEmailNotificationOrder>(), It.IsAny<NotificationOrder>(), It.IsAny<EmailNotification>(), It.IsAny<CancellationToken>()))
+            .Setup(e => e.Create(It.IsAny<InstantEmailNotificationOrder>(), It.IsAny<NotificationOrder>(), It.IsAny<EmailNotification>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new InstantNotificationOrderTracking
             {
                 OrderChainId = Guid.NewGuid(),
@@ -704,7 +705,7 @@ public class InstantOrderRequestServiceTests
         dateTimeServiceMock.Setup(e => e.UtcNow()).Returns(orderCreationDateTime);
         var orderRepositoryMock = new Mock<IOrderRepository>();
         orderRepositoryMock
-            .Setup(e => e.Create(It.IsAny<InstantEmailNotificationOrder>(), It.IsAny<NotificationOrder>(), It.IsAny<EmailNotification>(), It.IsAny<CancellationToken>()))
+            .Setup(e => e.Create(It.IsAny<InstantEmailNotificationOrder>(), It.IsAny<NotificationOrder>(), It.IsAny<EmailNotification>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((InstantNotificationOrderTracking?)null);
         var instantEmailServiceClient = new Mock<IInstantEmailServiceClient>();
 
@@ -764,7 +765,7 @@ public class InstantOrderRequestServiceTests
         dateTimeServiceMock.Setup(e => e.UtcNow()).Returns(orderCreationDateTime);
         var orderRepositoryMock = new Mock<IOrderRepository>();
         orderRepositoryMock
-            .Setup(e => e.Create(It.IsAny<InstantEmailNotificationOrder>(), It.IsAny<NotificationOrder>(), It.IsAny<EmailNotification>(), It.IsAny<CancellationToken>()))
+            .Setup(e => e.Create(It.IsAny<InstantEmailNotificationOrder>(), It.IsAny<NotificationOrder>(), It.IsAny<EmailNotification>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new InstantNotificationOrderTracking
             {
                 OrderChainId = Guid.NewGuid(),
