@@ -7,7 +7,7 @@ using NpgsqlTypes;
 namespace Altinn.Notifications.Persistence.Repository;
 
 /// <inheritdoc/>
-public class DeadDeliveryReportsRepository(NpgsqlDataSource npgsqlDataSource) : IDeadDeliveryReportRepository
+public class DeadDeliveryReportRepository(NpgsqlDataSource npgsqlDataSource) : IDeadDeliveryReportRepository
 {
     private readonly NpgsqlDataSource _dataSource = npgsqlDataSource;
     private const string _addDeadDeliveryReport = "SELECT notifications.insertdeaddeliveryreport(@channel, @attemptcount, @deliveryreport, @resolved, @firstseen, @lastattempt)";

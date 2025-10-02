@@ -14,9 +14,9 @@ public class DeadDeliveryReportsRepositoryTests : IAsyncLifetime
     public async Task AddDeadDeliveryReport_ShouldCompleteWithoutException()
     {
         // Arrange
-        DeadDeliveryReportsRepository repo = (DeadDeliveryReportsRepository)ServiceUtil
+        DeadDeliveryReportRepository repo = (DeadDeliveryReportRepository)ServiceUtil
             .GetServices([typeof(IDeadDeliveryReportRepository)])
-            .First(s => s is DeadDeliveryReportsRepository);
+            .First(s => s is DeadDeliveryReportRepository);
 
         var testReport = new DeadDeliveryReport
         {
