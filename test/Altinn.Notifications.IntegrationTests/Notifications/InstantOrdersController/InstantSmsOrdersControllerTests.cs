@@ -423,7 +423,7 @@ public class InstantSmsOrdersControllerTests : IClassFixture<IntegrationTestWebA
                 failures.Add(new ValidationFailure(nameof(ShortMessageDeliveryDetailsExt.PhoneNumber), "Recipient phone number is not a valid mobile number."));
             }
 
-            if (request.RecipientSms.TimeToLiveInSeconds != MaximumTimeToLive)
+            if (request.RecipientSms.TimeToLiveInSeconds < MinimumTimeToLive || request.RecipientSms.TimeToLiveInSeconds > MaximumTimeToLive)
             {
                 failures.Add(new ValidationFailure(nameof(ShortMessageDeliveryDetailsExt.TimeToLiveInSeconds), "Time-to-live must be between 60 and 172800 seconds (48 hours)."));
             }

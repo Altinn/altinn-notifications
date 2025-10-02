@@ -69,8 +69,8 @@ public class OrderMapperTests
             },
             Links = new OrderResourceLinksExt()
             {
-                Self = $"http://localhost:5050/notifications/api/v1/orders/{order.Id}",
-                Status = $"http://localhost:5050/notifications/api/v1/orders/{order.Id}/status"
+                Self = $"http://localhost:5090/notifications/api/v1/orders/{order.Id}",
+                Status = $"http://localhost:5090/notifications/api/v1/orders/{order.Id}/status"
             },
             IgnoreReservation = true
         };
