@@ -10,6 +10,8 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
 public class DeadDeliveryReportRepositoryTests() : IAsyncLifetime
 {
+    private readonly List<long> _createdIds = new();
+    
     [Fact]
     public async Task AddDeadDeliveryReport_ShouldCompleteWithoutException()
     {
@@ -28,16 +30,21 @@ public class DeadDeliveryReportRepositoryTests() : IAsyncLifetime
             LastAttempt = DateTime.UtcNow
         };
 
-        // Act & Assert - Should not throw any exception
-        var exception = await Record.ExceptionAsync(async () =>
-            await repo.Insert(testReport, CancellationToken.None));
-        
-        Assert.Null(exception);
+        // Act
+        var result = await repo.Insert(testReport, CancellationToken.None);
+        _createdIds.Add(result);
+
+        // Assert
+        Assert.True(result > 0);
     }
 
-    public Task DisposeAsync()
+    public async Task DisposeAsync()
     {
-        return Task.CompletedTask;
+        if (_createdIds.Count != 0)
+        {
+            string deleteSql = $@"DELETE from notifications.deaddeliveryreports where id in ('{string.Join("','", _createdIds)}')";
+            await PostgreUtil.RunSql(deleteSql);
+        }
     }
 
     public Task InitializeAsync()
