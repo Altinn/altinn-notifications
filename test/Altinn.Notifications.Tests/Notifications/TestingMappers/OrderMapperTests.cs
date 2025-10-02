@@ -390,7 +390,7 @@ public class OrderMapperTests
                     Succeeded = 10,
                     Links = new()
                     {
-                        Self = $"http://localhost:5050/notifications/api/v1/orders/{orderToMap.Id}/notifications/email"
+                        Self = $"http://localhost:5090/notifications/api/v1/orders/{orderToMap.Id}/notifications/email"
                     }
                 }
             }
