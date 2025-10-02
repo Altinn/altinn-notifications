@@ -3,7 +3,7 @@ using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
-
+using Npgsql;
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
@@ -42,8 +42,13 @@ public class DeadDeliveryReportRepositoryTests() : IAsyncLifetime
     {
         if (_createdIds.Count != 0)
         {
-            string deleteSql = $@"DELETE from notifications.deaddeliveryreports where id in ('{string.Join("','", _createdIds)}')";
-            await PostgreUtil.RunSql(deleteSql);
+            string deleteSql = $@"DELETE from notifications.deaddeliveryreports where id = ANY(@ids)";
+            NpgsqlParameter[] parameters =
+            [
+                new("ids", _createdIds.ToArray())
+            ];
+
+            await PostgreUtil.RunSql(deleteSql, parameters);
         }
     }
 

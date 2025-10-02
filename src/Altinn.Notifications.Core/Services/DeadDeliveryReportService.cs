@@ -14,7 +14,7 @@ public class DeadDeliveryReportService(IDeadDeliveryReportRepository reportRepos
     {
         if (string.IsNullOrWhiteSpace(report.DeliveryReport))
         {
-            throw new ArgumentException("DeliveryReport cannot be null or empty", nameof(report.DeliveryReport));
+            throw new ArgumentException("report.DeliveryReport cannot be null or empty", nameof(report.DeliveryReport));
         }
 
         return _reportRepository.Insert(report, cancellationToken);
