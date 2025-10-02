@@ -1,41 +1,28 @@
--- FUNCTION: notifications.insertdeaddeliveryreport(integer, integer, jsonb, boolean, timestamp with time zone, timestamp with time zone)
-
--- DROP FUNCTION IF EXISTS notifications.insertdeaddeliveryreport(integer, integer, jsonb, boolean, timestamp with time zone, timestamp with time zone);
-
-CREATE OR REPLACE FUNCTION notifications.insertdeaddeliveryreport(
-	_channel integer,
-	_attemptcount integer,
-	_deliveryreport jsonb,
-	_resolved boolean,
-	_firstseen timestamp with time zone,
-	_lastattempt timestamp with time zone)
-    RETURNS BIGINT
-    LANGUAGE 'plpgsql'
-    COST 100
-    VOLATILE PARALLEL UNSAFE
-AS $BODY$
+-- Creates or replaces a function to delete statusfeed records older than 90 days
+CREATE OR REPLACE FUNCTION notifications.delete_old_status_feed_records()
+RETURNS bigint -- Returns the number of rows deleted
+LANGUAGE 'plpgsql'
+VOLATILE
+AS $$
 DECLARE
-	new_id BIGINT;
+    -- Variable to hold the count of deleted rows
+    deleted_count bigint;
 BEGIN
-    -- Insert the delivery report into the dead delivery report table
-    INSERT INTO notifications.deaddeliveryreports (channel, attemptcount, deliveryreport, resolved, firstseen, lastattempt)
-    VALUES (_channel, _attemptcount, _deliveryreport, _resolved, _firstseen, _lastattempt)
-	RETURNING id INTO new_id;
+    -- The DELETE operation is performed within a Common Table Expression (CTE)
+    -- to capture the deleted rows using the RETURNING clause.
+    WITH deleted_rows AS (
+        DELETE FROM notifications.statusfeed 
+        WHERE created <= NOW() - INTERVAL '90 days'
+        RETURNING * -- Returns all columns of the deleted rows
+    )
+    -- Count the rows that were captured in the CTE
+    SELECT count(*) INTO deleted_count FROM deleted_rows;
 
-	RETURN new_id;
+    -- Return the final count
+    RETURN deleted_count;
 END;
-$BODY$;
+$$;
 
-ALTER FUNCTION notifications.insertdeaddeliveryreport(integer, integer, jsonb, boolean, timestamp with time zone, timestamp with time zone)
-    OWNER TO platform_notifications_admin;
-
-COMMENT ON FUNCTION notifications.insertdeaddeliveryreport(integer, integer, jsonb, boolean, timestamp with time zone, timestamp with time zone)
-    IS 'This function inserts a new delivery report record into the notifications.deaddeliveryreports table.
-
-Arguments:
-- _channel (integer): The unique identifier for the channel, meaning what type of delivery report to expect.
-- _attemptcount (integer): The number of delivery attempts made.
-- _deliveryreport (jsonb): A JSONB object containing the details of the delivery report.
-- _resolved (boolean): A flag indicating whether the delivery issue has been resolved.
-- _firstseen (TIMESTAMPTZ): The timestamp when the delivery issue was first detected.
-- _lastattempt (TIMESTAMPTZ): The timestamp of the last delivery attempt.';
+-- Add a comment to describe the function's purpose
+COMMENT ON FUNCTION notifications.delete_old_status_feed_records() IS
+'Deletes records from notifications.statusfeed where the "created" timestamp is 90 days or older. Returns the count of deleted records.';

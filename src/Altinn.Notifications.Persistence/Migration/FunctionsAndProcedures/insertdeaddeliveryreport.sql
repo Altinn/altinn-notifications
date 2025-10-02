@@ -2,26 +2,30 @@ CREATE OR REPLACE FUNCTION notifications.insertdeaddeliveryreport(
 	_channel integer,
 	_attemptcount integer,
 	_deliveryreport jsonb,
-    _resolved BOOLEAN,
-    _firstseen TIMESTAMPTZ,
-    _lastattempt TIMESTAMPTZ)
+	_resolved boolean,
+	_firstseen timestamp with time zone,
+	_lastattempt timestamp with time zone)
     RETURNS BIGINT
-    LANGUAGE plpgsql
+    LANGUAGE 'plpgsql'
     COST 100
     VOLATILE PARALLEL UNSAFE
 AS $BODY$
+DECLARE
+	new_id BIGINT;
 BEGIN
     -- Insert the delivery report into the dead delivery report table
     INSERT INTO notifications.deaddeliveryreports (channel, attemptcount, deliveryreport, resolved, firstseen, lastattempt)
     VALUES (_channel, _attemptcount, _deliveryreport, _resolved, _firstseen, _lastattempt)
-    RETURNING id;
+	RETURNING id INTO new_id;
+
+	RETURN new_id;
 END;
 $BODY$;
 
-ALTER FUNCTION notifications.insertdeaddeliveryreport(_channel integer, _attemptcount integer, _deliveryreport jsonb, _resolved boolean, _firstseen TIMESTAMPTZ, _lastattempt TIMESTAMPTZ)
+ALTER FUNCTION notifications.insertdeaddeliveryreport(integer, integer, jsonb, boolean, timestamp with time zone, timestamp with time zone)
     OWNER TO platform_notifications_admin;
 
-COMMENT ON FUNCTION notifications.insertdeaddeliveryreport(_channel integer, _attemptcount integer, _deliveryreport jsonb, _resolved boolean, _firstseen TIMESTAMPTZ, _lastattempt TIMESTAMPTZ)
+COMMENT ON FUNCTION notifications.insertdeaddeliveryreport(integer, integer, jsonb, boolean, timestamp with time zone, timestamp with time zone)
     IS 'This function inserts a new delivery report record into the notifications.deaddeliveryreports table.
 
 Arguments:
