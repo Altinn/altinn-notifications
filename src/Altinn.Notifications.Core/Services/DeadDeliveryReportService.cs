@@ -18,10 +18,11 @@ public class DeadDeliveryReportService(IDeadDeliveryReportRepository reportRepos
             throw new ArgumentException("Report cannot be null or empty", nameof(report));
         }
 
+        var now = DateTime.UtcNow;
         var deadDeliveryReport = new DeadDeliveryReport
         {
-            FirstSeen = DateTime.UtcNow,
-            LastAttempt = DateTime.UtcNow,
+            FirstSeen = now,
+            LastAttempt = now,
             DeliveryReport = report,
             Channel = channel,
         };

@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
-public class DeadDeliveryReportsRepositoryTests : IAsyncLifetime
+public class DeadDeliveryReportRepositoryTests() : IAsyncLifetime
 {
     [Fact]
     public async Task AddDeadDeliveryReport_ShouldCompleteWithoutException()
