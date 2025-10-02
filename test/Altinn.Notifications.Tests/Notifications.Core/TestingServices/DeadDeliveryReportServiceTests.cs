@@ -40,12 +40,12 @@ public class DeadDeliveryReportServiceTests
         var exception = await Assert.ThrowsAsync<ArgumentException>(
             () => _sut.Insert(deadDeliveryReport, CancellationToken.None));
 
-        Assert.Equal("report.DeliveryReport cannot be null or empty (Parameter 'DeliveryReport')", exception.Message);
-        Assert.Equal("DeliveryReport", exception.ParamName);
+        Assert.Equal("report.DeliveryReport cannot be null or empty (Parameter 'report')", exception.Message);
+        Assert.Equal("report", exception.ParamName);
 
         // Verify repository was never called
         _repositoryMock.Verify(
-            x => x.Insert(It.IsAny<Altinn.Notifications.Core.Models.DeadDeliveryReport>(), It.IsAny<CancellationToken>()),
+            x => x.Insert(It.IsAny<DeadDeliveryReport>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
