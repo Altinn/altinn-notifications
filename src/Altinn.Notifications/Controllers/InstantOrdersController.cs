@@ -195,7 +195,7 @@ public class InstantOrdersController : ControllerBase
     /// <summary>
     /// Validates a request and returns validation problem if invalid.
     /// </summary>
-    private IActionResult? ValidateRequest<T>(IValidator<T> validator, T request)
+    private ActionResult? ValidateRequest<T>(IValidator<T> validator, T request)
     {
         var validationResult = validator.Validate(request);
         if (!validationResult.IsValid)
@@ -210,7 +210,7 @@ public class InstantOrdersController : ControllerBase
     /// <summary>
     /// Gets organization from HTTP context and returns Forbid if invalid.
     /// </summary>
-    private IActionResult? GetCreatorOrForbid(out string creator)
+    private ActionResult? GetCreatorOrForbid(out string creator)
     {
         creator = HttpContext.GetOrg() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(creator))
@@ -237,7 +237,7 @@ public class InstantOrdersController : ControllerBase
     /// <summary>
     /// Handles common exceptions and returns appropriate error responses.
     /// </summary>
-    private IActionResult HandleCommonExceptions(Exception ex)
+    private ActionResult HandleCommonExceptions(Exception ex)
     {
         return ex switch
         {
