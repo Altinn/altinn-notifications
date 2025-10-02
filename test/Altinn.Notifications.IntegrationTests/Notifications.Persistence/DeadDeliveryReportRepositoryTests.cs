@@ -20,18 +20,16 @@ public class DeadDeliveryReportRepositoryTests() : IAsyncLifetime
             .GetServices([typeof(IDeadDeliveryReportRepository)])
             .First(s => s is DeadDeliveryReportRepository);
 
-        var testReport = new DeadDeliveryReport
+        var mockReport = new DeadDeliveryReport
         {
             Channel = DeliveryReportChannel.AzureCommunicationServices,
-            AttemptCount = 1,
             DeliveryReport = "{}",
-            Resolved = false,
             FirstSeen = DateTime.UtcNow,
             LastAttempt = DateTime.UtcNow
         };
 
         // Act
-        var result = await repo.Insert(testReport, CancellationToken.None);
+        var result = await repo.Insert(mockReport, CancellationToken.None);
         _createdIds.Add(result);
 
         // Assert
