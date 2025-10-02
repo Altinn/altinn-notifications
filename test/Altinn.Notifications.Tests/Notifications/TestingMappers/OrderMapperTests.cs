@@ -20,7 +20,7 @@ public class OrderMapperTests
 {
     public OrderMapperTests()
     {
-        ResourceLinkExtensions.Initialize("http://localhost:5050");
+        ResourceLinkExtensions.Initialize("http://localhost:5090");
     }
 
     [Fact]

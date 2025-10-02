@@ -13,7 +13,7 @@ public record InstantEmailDetailsExt
     /// </summary>
     [Required]
     [JsonPropertyName("emailAddress")]
-    public required string EmailAddress { get; init; } = string.Empty;
+    public required string EmailAddress { get; init; }
 
     /// <summary>
     /// The email content settings.
