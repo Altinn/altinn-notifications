@@ -13,7 +13,7 @@ public class DeadDeliveryReportRepository(NpgsqlDataSource npgsqlDataSource) : I
     private const string _addDeadDeliveryReport = "SELECT notifications.insertdeaddeliveryreport(@channel, @attemptcount, @deliveryreport, @resolved, @firstseen, @lastattempt)";
 
     /// <inheritdoc/>
-    public async Task Add(DeadDeliveryReport report, CancellationToken cancellationToken)
+    public async Task<long> Insert(DeadDeliveryReport report, CancellationToken cancellationToken)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_addDeadDeliveryReport);
 
@@ -24,6 +24,7 @@ public class DeadDeliveryReportRepository(NpgsqlDataSource npgsqlDataSource) : I
         pgcom.Parameters.AddWithValue("firstseen", NpgsqlDbType.TimestampTz, report.FirstSeen);
         pgcom.Parameters.AddWithValue("lastattempt", NpgsqlDbType.TimestampTz, report.LastAttempt);
 
-        await pgcom.ExecuteNonQueryAsync(cancellationToken);
+        var result = await pgcom.ExecuteScalarAsync(cancellationToken);
+        return (long)result!;
     }
 }

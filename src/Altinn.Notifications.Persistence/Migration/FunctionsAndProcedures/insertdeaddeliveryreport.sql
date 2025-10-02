@@ -5,7 +5,7 @@ CREATE OR REPLACE FUNCTION notifications.insertdeaddeliveryreport(
     _resolved BOOLEAN,
     _firstseen TIMESTAMPTZ,
     _lastattempt TIMESTAMPTZ)
-    RETURNS void
+    RETURNS BIGINT
     LANGUAGE plpgsql
     COST 100
     VOLATILE PARALLEL UNSAFE
@@ -13,7 +13,8 @@ AS $BODY$
 BEGIN
     -- Insert the delivery report into the dead delivery report table
     INSERT INTO notifications.deaddeliveryreports (channel, attemptcount, deliveryreport, resolved, firstseen, lastattempt)
-    VALUES (_channel, _attemptcount, _deliveryreport, _resolved, _firstseen, _lastattempt);
+    VALUES (_channel, _attemptcount, _deliveryreport, _resolved, _firstseen, _lastattempt)
+    RETURNING id;
 END;
 $BODY$;
 

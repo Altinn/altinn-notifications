@@ -30,7 +30,7 @@ public class DeadDeliveryReportRepositoryTests() : IAsyncLifetime
 
         // Act & Assert - Should not throw any exception
         var exception = await Record.ExceptionAsync(async () =>
-            await repo.Add(testReport, CancellationToken.None));
+            await repo.Insert(testReport, CancellationToken.None));
         
         Assert.Null(exception);
     }

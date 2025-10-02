@@ -1,5 +1,4 @@
-﻿using Altinn.Notifications.Core.Enums;
-using Altinn.Notifications.Core.Models;
+﻿using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
 
@@ -11,22 +10,13 @@ public class DeadDeliveryReportService(IDeadDeliveryReportRepository reportRepos
     private readonly IDeadDeliveryReportRepository _reportRepository = reportRepository;
 
     /// <inheritdoc/>
-    public Task Add(string report, DeliveryReportChannel channel, CancellationToken cancellationToken = default)
+    public Task<long> Insert(DeadDeliveryReport report, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(report))
+        if (string.IsNullOrWhiteSpace(report.DeliveryReport))
         {
             throw new ArgumentException("Report cannot be null or empty", nameof(report));
         }
 
-        var now = DateTime.UtcNow;
-        var deadDeliveryReport = new DeadDeliveryReport
-        {
-            FirstSeen = now,
-            LastAttempt = now,
-            DeliveryReport = report,
-            Channel = channel,
-        };
-
-        return _reportRepository.Add(deadDeliveryReport, cancellationToken);
+        return _reportRepository.Insert(report, cancellationToken);
     }
 }

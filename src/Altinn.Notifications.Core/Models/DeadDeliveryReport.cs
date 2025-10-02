@@ -5,7 +5,7 @@ namespace Altinn.Notifications.Core.Models;
 /// <summary>
 /// Represents a report for a delivery that has failed multiple times and is considered dead.
 /// </summary>
-public class DeadDeliveryReport
+public record DeadDeliveryReport
 {
     /// <summary>
     /// Gets or sets the date and time when the delivery failure was first detected.
