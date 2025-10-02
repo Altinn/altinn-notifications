@@ -210,7 +210,7 @@ public class InstantOrdersController : ControllerBase
     /// <summary>
     /// Gets organization from HTTP context and returns Forbid if invalid.
     /// </summary>
-    private ActionResult? GetCreatorOrForbid(out string creator)
+    private ForbidResult? GetCreatorOrForbid(out string creator)
     {
         creator = HttpContext.GetOrg() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(creator))
@@ -237,7 +237,7 @@ public class InstantOrdersController : ControllerBase
     /// <summary>
     /// Handles common exceptions and returns appropriate error responses.
     /// </summary>
-    private ActionResult HandleCommonExceptions(Exception ex)
+    private ObjectResult HandleCommonExceptions(Exception ex)
     {
         return ex switch
         {
