@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="libphonenumber-csharp" Version="9.0.13" />
+    <PackageReference Include="libphonenumber-csharp" Version="9.0.15" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.9" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.9" />
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="9.0.9" />
