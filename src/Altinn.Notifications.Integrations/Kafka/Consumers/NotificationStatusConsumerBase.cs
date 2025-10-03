@@ -121,7 +121,6 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
             {
                 NotificationId = e.IdentifierType == SendStatusIdentifierType.NotificationId ? Guid.Parse(e.Identifier) : null,
                 OperationId = e.IdentifierType == SendStatusIdentifierType.OperationId ? Guid.Parse(e.Identifier) : null,
-                GatewayReference = e.IdentifierType == SendStatusIdentifierType.GatewayReference ? e.Identifier : null,
                 SendResult = message
             };
 

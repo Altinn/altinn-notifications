@@ -29,5 +29,4 @@ public record RetryMessage
     /// Gets or sets the delivery report result object to be put on the retry topic.
     /// </summary>
     public string? SendResult { get; set; }
-    public string? GatewayReference { get; set; }
 }

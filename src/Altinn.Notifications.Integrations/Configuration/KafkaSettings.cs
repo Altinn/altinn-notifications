@@ -11,6 +11,11 @@ public class KafkaSettings
     public string BrokerAddress { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the threshold, in seconds, for retrying status updates.
+    /// </summary>
+    public int StatusUpdatedRetryThresholdSeconds { get; set; } = 300;
+
+    /// <summary>
     /// The consumer settings
     /// </summary>
     public ConsumerSettings Consumer { get; set; } = new();
