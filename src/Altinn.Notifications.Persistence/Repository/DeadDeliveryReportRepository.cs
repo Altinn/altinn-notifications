@@ -17,7 +17,7 @@ public class DeadDeliveryReportRepository(NpgsqlDataSource npgsqlDataSource) : I
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_addDeadDeliveryReport);
 
-        pgcom.Parameters.AddWithValue("channel", NpgsqlDbType.Integer, (int)report.Channel);
+        pgcom.Parameters.AddWithValue("channel", NpgsqlDbType.Smallint, (short)report.Channel);
         pgcom.Parameters.AddWithValue("attemptcount", NpgsqlDbType.Integer, report.AttemptCount);
         pgcom.Parameters.AddWithValue("deliveryreport", NpgsqlDbType.Jsonb, report.DeliveryReport);
         pgcom.Parameters.AddWithValue("resolved", NpgsqlDbType.Boolean, report.Resolved);

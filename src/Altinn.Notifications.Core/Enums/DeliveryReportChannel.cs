@@ -3,7 +3,7 @@
 /// <summary>
 /// Used to denote what type of delivery report is contained in a <see cref="Models.DeadDeliveryReport"/>
 /// </summary>
-public enum DeliveryReportChannel
+public enum DeliveryReportChannel : short
 {
     /// <summary>
     /// Azure Communication Services Email
