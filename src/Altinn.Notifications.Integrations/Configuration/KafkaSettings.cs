@@ -11,6 +11,11 @@ public class KafkaSettings
     public string BrokerAddress { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the threshold, in seconds, for retrying status updates.
+    /// </summary>
+    public int StatusUpdatedRetryThresholdSeconds { get; set; } = 300;
+
+    /// <summary>
     /// The consumer settings
     /// </summary>
     public ConsumerSettings Consumer { get; set; } = new();
@@ -44,6 +49,11 @@ public class KafkaSettings
     /// The name of the email status updated topic
     /// </summary>
     public string EmailStatusUpdatedTopicName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The name of the email status updated retry topic
+    /// </summary>  
+    public string EmailStatusUpdatedRetryTopicName { get; set; } = string.Empty;
 
     /// <summary>
     /// The name of the sms status updated topic

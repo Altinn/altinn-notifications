@@ -325,4 +325,18 @@ public static class PostgreUtil
         await using NpgsqlCommand pgcom = dataSource.CreateCommand(query);
         await pgcom.ExecuteNonQueryAsync();
     }
+
+    public static async Task RunSql(string query, params NpgsqlParameter[] parameters)
+    {
+        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices([typeof(NpgsqlDataSource)])[0]!;
+
+        await using NpgsqlCommand pgcom = dataSource.CreateCommand(query);
+        
+        if (parameters.Length > 0)
+        {
+            pgcom.Parameters.AddRange(parameters);
+        }
+        
+        await pgcom.ExecuteNonQueryAsync();
+    }
 }

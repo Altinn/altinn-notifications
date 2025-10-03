@@ -25,6 +25,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
     private const string _emailTopic = "altinn.notifications.email.queue";
     private const string _smsStatusTopic = "altinn.notifications.sms.status.updated";
     private const string _emailStatusTopic = "altinn.notifications.email.status.updated";
+    private const string _emailStatusRetryTopic = "altinn.notifications.email.status.updated.retry";
 
     /// <summary>
     /// Called immediately after the class has been created, before it is used.
@@ -267,6 +268,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         await KafkaUtil.DeleteTopicAsync(_emailTopic);
         await KafkaUtil.DeleteTopicAsync(_smsStatusTopic);
         await KafkaUtil.DeleteTopicAsync(_emailStatusTopic);
+        await KafkaUtil.DeleteTopicAsync(_emailStatusRetryTopic);
     }
 
     /// <summary>
