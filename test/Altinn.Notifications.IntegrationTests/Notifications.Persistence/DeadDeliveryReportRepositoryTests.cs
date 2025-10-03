@@ -37,7 +37,7 @@ public class DeadDeliveryReportRepositoryTests() : IAsyncLifetime
     public async Task Insert_WithDifferentChannels_ShouldStoreBothChannelTypes()
     {
         // Arrange
-        var repo = GetRepository();
+        var sut = GetRepository();
         var azureReport = new DeadDeliveryReport
         {
             Channel = DeliveryReportChannel.AzureCommunicationServices,
@@ -55,8 +55,8 @@ public class DeadDeliveryReportRepositoryTests() : IAsyncLifetime
         };
 
         // Act
-        var azureId = await repo.Insert(azureReport, CancellationToken.None);
-        var linkId = await repo.Insert(linkMobilityReport, CancellationToken.None);
+        var azureId = await sut.Insert(azureReport, CancellationToken.None);
+        var linkId = await sut.Insert(linkMobilityReport, CancellationToken.None);
 
         _createdIds.AddRange([azureId, linkId]);
 
@@ -72,7 +72,7 @@ public class DeadDeliveryReportRepositoryTests() : IAsyncLifetime
     public async Task Insert_WithMinAttemptCount_ShouldStoreCorrectly()
     {
         // Arrange
-        var repo = GetRepository();
+        var sut = GetRepository();
         var report = new DeadDeliveryReport
         {
             Channel = DeliveryReportChannel.AzureCommunicationServices,
@@ -83,12 +83,30 @@ public class DeadDeliveryReportRepositoryTests() : IAsyncLifetime
         };
 
         // Act
-        var id = await repo.Insert(report, CancellationToken.None);
+        var id = await sut.Insert(report, CancellationToken.None);
         _createdIds.Add(id);
 
         // Assert
         var storedAttemptCount = await GetAttemptCountById(id);
         Assert.Equal(1, storedAttemptCount);
+    }
+
+    [Fact]
+    public async Task Insert_WithInvalidAttemptCount_ShouldThrowDatabaseException()
+    {
+        // Arrange
+        var sut = GetRepository();
+        var report = new DeadDeliveryReport
+        {
+            Channel = DeliveryReportChannel.AzureCommunicationServices,
+            DeliveryReport = "{}",
+            FirstSeen = DateTime.UtcNow,
+            LastAttempt = DateTime.UtcNow,
+            AttemptCount = 0 // invalid, should be > 0
+        };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<PostgresException>(() => sut.Insert(report, CancellationToken.None));
     }
 
     private static DeadDeliveryReportRepository GetRepository()

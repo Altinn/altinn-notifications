@@ -28,7 +28,7 @@ public record DeadDeliveryReport
     public int AttemptCount { get; set; } = 1;
 
     /// <summary>
-    /// Gets or sets the communication channel through which the delivery was attempted.
+    /// Gets or sets the communication channel source of the delivery report.
     /// </summary>
     public required DeliveryReportChannel Channel { get; set; }
 
