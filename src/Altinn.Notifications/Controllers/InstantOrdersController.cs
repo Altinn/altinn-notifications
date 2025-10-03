@@ -1,4 +1,6 @@
 ﻿using Altinn.Notifications.Configuration;
+using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
@@ -27,6 +29,8 @@ public class InstantOrdersController : ControllerBase
     private readonly IDateTimeService _dateTimeService;
     private readonly IInstantOrderRequestService _instantOrderRequestService;
     private readonly IValidator<InstantNotificationOrderRequestExt> _validator;
+    private readonly IValidator<InstantSmsNotificationOrderRequestExt> _smsValidator;
+    private readonly IValidator<InstantEmailNotificationOrderRequestExt> _emailValidator;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="InstantOrdersController"/> class.
@@ -34,15 +38,19 @@ public class InstantOrdersController : ControllerBase
     public InstantOrdersController(
         IDateTimeService dateTimeService,
         IInstantOrderRequestService instantOrderRequestService,
-        IValidator<InstantNotificationOrderRequestExt> validator)
+        IValidator<InstantNotificationOrderRequestExt> validator,
+        IValidator<InstantSmsNotificationOrderRequestExt> smsValidator,
+        IValidator<InstantEmailNotificationOrderRequestExt> emailValidator)
     {
         _validator = validator;
+        _smsValidator = smsValidator;
+        _emailValidator = emailValidator;
         _dateTimeService = dateTimeService;
         _instantOrderRequestService = instantOrderRequestService;
     }
 
     /// <summary>
-    /// Creates and sends an instant notification to a single recipient.
+    /// Creates and sends an instant SMS notification to a single recipient (deprecated - use /sms endpoint instead).
     /// </summary>
     /// <param name="request">The request payload containing the details of the instant notification to be sent.</param>
     /// <param name="cancellationToken">A token used to monitor for cancellation requests, allowing the operation to be aborted if needed.</param>
@@ -57,70 +65,191 @@ public class InstantOrdersController : ControllerBase
     [SwaggerResponse(400, "The notification order is invalid", typeof(ValidationProblemDetails))]
     [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request before the server could complete processing")]
     [SwaggerResponse(500, "An internal server error occurred while processing the notification order")]
+    [Obsolete("This endpoint is deprecated. Use the /instant/sms endpoint for SMS notifications instead.")]
     public async Task<IActionResult> Post([FromBody] InstantNotificationOrderRequestExt request, CancellationToken cancellationToken = default)
+    {
+        return await ProcessInstantOrderAsync(
+            request: request,
+            idempotencyId: request.IdempotencyId,
+            validator: _validator,
+            mapToOrder: (req, creator, timestamp) => req.MapToInstantNotificationOrder(creator, timestamp),
+            persistOrder: _instantOrderRequestService.PersistInstantSmsNotificationAsync,
+            notificationChannel: NotificationChannel.Sms,
+            cancellationToken: cancellationToken);
+    }
+
+    /// <summary>
+    /// Creates and sends an instant SMS notification to a single recipient.
+    /// </summary>
+    /// <param name="request">The request payload containing the details of the instant SMS notification to be sent.</param>
+    /// <param name="cancellationToken">A token used to monitor for cancellation requests, allowing the operation to be aborted if needed.</param>
+    /// <returns>
+    /// A response containing tracking information for the created SMS notification order or an error response if the operation fails.
+    /// </returns>
+    [HttpPost("sms")]
+    [Consumes("application/json")]
+    [Produces("application/json")]
+    [SwaggerResponse(201, "The instant SMS notification was created.", typeof(InstantNotificationOrderResponseExt))]
+    [SwaggerResponse(200, "The SMS notification order was created previously.", typeof(InstantNotificationOrderResponseExt))]
+    [SwaggerResponse(400, "The SMS notification order is invalid", typeof(ValidationProblemDetails))]
+    [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request before the server could complete processing")]
+    [SwaggerResponse(500, "An internal server error occurred while processing the SMS notification order")]
+    public async Task<IActionResult> PostSms([FromBody] InstantSmsNotificationOrderRequestExt request, CancellationToken cancellationToken = default)
+    {
+        return await ProcessInstantOrderAsync(
+            request: request,
+            idempotencyId: request.IdempotencyId,
+            validator: _smsValidator,
+            mapToOrder: (req, creator, timestamp) => req.MapToInstantSmsNotificationOrder(creator, timestamp),
+            persistOrder: _instantOrderRequestService.PersistInstantSmsNotificationAsync,
+            notificationChannel: NotificationChannel.Sms,
+            cancellationToken: cancellationToken);
+    }
+
+    /// <summary>
+    /// Creates and sends an instant email notification to a single recipient.
+    /// </summary>
+    /// <param name="request">The request payload containing the details of the instant email notification to be sent.</param>
+    /// <param name="cancellationToken">A token used to monitor for cancellation requests, allowing the operation to be aborted if needed.</param>
+    /// <returns>
+    /// A response containing tracking information for the created email notification order or an error response if the operation fails.
+    /// </returns>
+    [HttpPost("email")]
+    [Consumes("application/json")]
+    [Produces("application/json")]
+    [SwaggerResponse(201, "The instant email notification was created.", typeof(InstantNotificationOrderResponseExt))]
+    [SwaggerResponse(200, "The email notification order was created previously.", typeof(InstantNotificationOrderResponseExt))]
+    [SwaggerResponse(400, "The email notification order is invalid", typeof(ValidationProblemDetails))]
+    [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request before the server could complete processing")]
+    [SwaggerResponse(500, "An internal server error occurred while processing the email notification order")]
+    public async Task<IActionResult> PostEmail([FromBody] InstantEmailNotificationOrderRequestExt request, CancellationToken cancellationToken = default)
+    {
+        return await ProcessInstantOrderAsync(
+            request: request,
+            idempotencyId: request.IdempotencyId,
+            validator: _emailValidator,
+            mapToOrder: (req, creator, timestamp) => req.MapToInstantEmailNotificationOrder(creator, timestamp),
+            persistOrder: _instantOrderRequestService.PersistInstantEmailNotificationAsync,
+            notificationChannel: NotificationChannel.Email,
+            cancellationToken: cancellationToken);
+    }
+
+    /// <summary>
+    /// Processes an instant notification order with common workflow steps.
+    /// </summary>
+    private async Task<IActionResult> ProcessInstantOrderAsync<TRequest, TOrder>(
+        TRequest request,
+        string idempotencyId,
+        IValidator<TRequest> validator,
+        Func<TRequest, string, DateTime, TOrder> mapToOrder,
+        Func<TOrder, CancellationToken, Task<InstantNotificationOrderTracking?>> persistOrder,
+        NotificationChannel notificationChannel,
+        CancellationToken cancellationToken)
+        where TRequest : class
     {
         try
         {
             // 1. Validate the instant notification order.
-            var validationResult = _validator.Validate(request);
-            if (!validationResult.IsValid)
+            var validationError = ValidateRequest(validator, request);
+            if (validationError != null)
             {
-                validationResult.AddToModelState(ModelState);
-                return ValidationProblem(ModelState);
+                return validationError;
             }
 
             // 2. Ensure the request is associated with a valid organization.
-            var creator = HttpContext.GetOrg();
-            if (string.IsNullOrWhiteSpace(creator))
+            var creatorError = GetCreatorOrForbid(out string creator);
+            if (creatorError != null)
             {
-                return Forbid();
+                return creatorError;
             }
 
             // 3. Check for existing order by organization short name and idempotency identifier.
-            var trackingInformation = await _instantOrderRequestService.RetrieveTrackingInformation(creator, request.IdempotencyId, cancellationToken);
+            var trackingInformation = await _instantOrderRequestService.RetrieveTrackingInformation(creator, idempotencyId, cancellationToken);
             if (trackingInformation != null)
             {
                 return Ok(trackingInformation.MapToInstantNotificationOrderResponse());
             }
 
             // 4. Map and persist the instant notification order.
-            var instantNotificationOrder = request.MapToInstantNotificationOrder(creator, _dateTimeService.UtcNow());
-            trackingInformation = await _instantOrderRequestService.PersistInstantSmsNotificationAsync(instantNotificationOrder, cancellationToken);
+            var instantOrder = mapToOrder(request, creator, _dateTimeService.UtcNow());
+            trackingInformation = await persistOrder(instantOrder, cancellationToken);
 
             if (trackingInformation == null)
             {
-                var problemDetails = new ProblemDetails
-                {
-                    Status = 500,
-                    Title = "Instant notification order registration failed",
-                    Detail = "An internal server error occurred while processing the notification order."
-                };
-
-                return StatusCode(500, problemDetails);
+                var channelName = notificationChannel.ToString().ToLowerInvariant();
+                return StatusCode(500, CreateProblemDetails(
+                    500,
+                    $"Instant {channelName} notification order registration failed",
+                    $"An internal server error occurred while processing the {channelName} notification order."));
             }
 
             // 5. Return tracking information and location header.
             return Created(trackingInformation.OrderChainId.GetSelfLinkFromOrderChainId(), trackingInformation.MapToInstantNotificationOrderResponse());
         }
-        catch (InvalidOperationException ex)
+        catch (Exception ex)
         {
-            var problemDetails = new ProblemDetails
-            {
-                Status = 400,
-                Detail = ex.Message,
-                Title = "Invalid notification order request"
-            };
-            return StatusCode(400, problemDetails);
+            return HandleCommonExceptions(ex);
         }
-        catch (OperationCanceledException)
+    }
+
+    /// <summary>
+    /// Validates a request and returns validation problem if invalid.
+    /// </summary>
+    private ActionResult? ValidateRequest<T>(IValidator<T> validator, T request)
+    {
+        var validationResult = validator.Validate(request);
+        if (!validationResult.IsValid)
         {
-            var problemDetails = new ProblemDetails
-            {
-                Status = 499,
-                Title = "Request terminated",
-                Detail = "The client disconnected or cancelled the request before the server could complete processing."
-            };
-            return StatusCode(499, problemDetails);
+            validationResult.AddToModelState(ModelState);
+            return ValidationProblem(ModelState);
         }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Gets organization from HTTP context and returns Forbid if invalid.
+    /// </summary>
+    private ForbidResult? GetCreatorOrForbid(out string creator)
+    {
+        creator = HttpContext.GetOrg() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(creator))
+        {
+            return Forbid();
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Creates appropriate problem details for different error scenarios.
+    /// </summary>
+    private static ProblemDetails CreateProblemDetails(int statusCode, string title, string detail)
+    {
+        return new ProblemDetails
+        {
+            Status = statusCode,
+            Title = title,
+            Detail = detail
+        };
+    }
+
+    /// <summary>
+    /// Handles common exceptions and returns appropriate error responses.
+    /// </summary>
+    private ObjectResult HandleCommonExceptions(Exception ex)
+    {
+        return ex switch
+        {
+            InvalidOperationException => StatusCode(400, CreateProblemDetails(
+                400,
+                "Invalid notification order request",
+                ex.Message)),
+            OperationCanceledException => StatusCode(499, CreateProblemDetails(
+                499,
+                "Request terminated",
+                "The client disconnected or cancelled the request before the server could complete processing.")),
+            _ => throw ex
+        };
     }
 }

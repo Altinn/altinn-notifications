@@ -20,4 +20,9 @@ public class PlatformSettings
     /// Gets or sets the URL for the Altinn Notifications SMS API.
     /// </summary>
     public string ApiShortMessageServiceEndpoint { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the URL for the Altinn Notifications Email API.
+    /// </summary>
+    public string ApiInstantEmailServiceEndpoint { get; set; } = string.Empty;
 }

@@ -41,6 +41,7 @@ public class OrderRepository : IOrderRepository
     private const string _getOrdersChainTrackingSql = "SELECT * FROM notifications.get_orders_chain_tracking($1, $2)"; // (_creatorname, _idempotencyid)
     private const string _tryMarkOrderAsCompletedSql = "SELECT notifications.trymarkorderascompleted($1, $2)"; // (_alternateid, _alternateidsource)
     private const string _insertSmsNotificationSql = "call notifications.insertsmsnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (_orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _customizedbody, _result, _smscount, _resulttime, _expirytime)
+    private const string _insertEmailNotificationSql = "call notifications.insertemailnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (_orderid, _alternateid, _recipientorgno, _recipientnin, _toaddress, _customizedbody, _customizedsubject, _result, _resulttime, _expirytime)
     private const string _getInstantOrderTrackingInformationSql = "SELECT * FROM notifications.get_instant_order_tracking(_creatorname := @creatorName, _idempotencyid := @idempotencyId)";
 
     /// <summary>
@@ -191,48 +192,41 @@ public class OrderRepository : IOrderRepository
     {
         var smsTemplate = notificationOrder.Templates.Find(e => e.Type == NotificationTemplateType.Sms) as SmsTemplate ?? throw new InvalidOperationException("SMS template is missing.");
 
-        cancellationToken.ThrowIfCancellationRequested();
+        return await CreateInstantOrderWithTransactionAsync(
+            notificationOrder: notificationOrder,
+            getOrderChainId: () => instantNotificationOrder.OrderChainId,
+            insertInstantOrderAction: (connection, transaction, token) => InsertInstantNotificationOrderAsync(instantNotificationOrder, connection, transaction, token),
+            insertTemplateAction: (mainOrderId, connection, transaction, token) => InsertSmsTextAsync(mainOrderId, smsTemplate, connection, transaction, token),
+            insertNotificationAction: (connection, transaction, token) => InsertSmsNotificationAsync(smsNotification, smsExpiryDateTime, smsMessageCount, connection, transaction, token),
+            cancellationToken: cancellationToken);
+    }
 
-        await using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
-        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+    /// <inheritdoc/>
+    public async Task<InstantNotificationOrderTracking?> Create(InstantSmsNotificationOrder instantSmsNotificationOrder, NotificationOrder notificationOrder, SmsNotification smsNotification, DateTime smsExpiryDateTime, int smsMessageCount, CancellationToken cancellationToken = default)
+    {
+        var smsTemplate = notificationOrder.Templates.Find(e => e.Type == NotificationTemplateType.Sms) as SmsTemplate ?? throw new InvalidOperationException("SMS template is missing.");
 
-        try
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            await InsertInstantNotificationOrderAsync(instantNotificationOrder, connection, transaction, cancellationToken);
+        return await CreateInstantOrderWithTransactionAsync(
+            notificationOrder: notificationOrder,
+            getOrderChainId: () => instantSmsNotificationOrder.OrderChainId,
+            insertInstantOrderAction: (connection, transaction, token) => InsertInstantSmsNotificationOrderAsync(instantSmsNotificationOrder, connection, transaction, token),
+            insertTemplateAction: (mainOrderId, connection, transaction, token) => InsertSmsTextAsync(mainOrderId, smsTemplate, connection, transaction, token),
+            insertNotificationAction: (connection, transaction, token) => InsertSmsNotificationAsync(smsNotification, smsExpiryDateTime, smsMessageCount, connection, transaction, token),
+            cancellationToken: cancellationToken);
+    }
 
-            cancellationToken.ThrowIfCancellationRequested();
-            long mainOrderId = await InsertOrder(notificationOrder, connection, transaction, OrderProcessingStatus.Processed, cancellationToken);
+    /// <inheritdoc/>
+    public async Task<InstantNotificationOrderTracking?> Create(InstantEmailNotificationOrder instantEmailNotificationOrder, NotificationOrder notificationOrder, EmailNotification emailNotification, DateTime emailExpiryDateTime, CancellationToken cancellationToken = default)
+    {
+        var emailTemplate = notificationOrder.Templates.Find(e => e.Type == NotificationTemplateType.Email) as EmailTemplate ?? throw new InvalidOperationException("Email template is missing.");
 
-            cancellationToken.ThrowIfCancellationRequested();
-            await InsertSmsTextAsync(mainOrderId, smsTemplate, connection, transaction, cancellationToken);
-
-            cancellationToken.ThrowIfCancellationRequested();
-            await InsertSmsNotificationAsync(smsNotification, smsExpiryDateTime, smsMessageCount, connection, transaction, cancellationToken);
-
-            cancellationToken.ThrowIfCancellationRequested();
-            await transaction.CommitAsync(cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-            await transaction.RollbackAsync(CancellationToken.None);
-            throw;
-        }
-        catch (Exception)
-        {
-            await transaction.RollbackAsync(CancellationToken.None);
-            throw;
-        }
-
-        return new InstantNotificationOrderTracking
-        {
-            OrderChainId = instantNotificationOrder.OrderChainId,
-            Notification = new NotificationOrderChainShipment
-            {
-                ShipmentId = notificationOrder.Id,
-                SendersReference = notificationOrder.SendersReference
-            }
-        };
+        return await CreateInstantOrderWithTransactionAsync(
+            notificationOrder: notificationOrder,
+            getOrderChainId: () => instantEmailNotificationOrder.OrderChainId,
+            insertInstantOrderAction: (connection, transaction, token) => InsertInstantEmailNotificationOrderAsync(instantEmailNotificationOrder, connection, transaction, token),
+            insertTemplateAction: (mainOrderId, connection, transaction, token) => InsertEmailTextAsync(mainOrderId, emailTemplate, connection, transaction, token),
+            insertNotificationAction: (connection, transaction, token) => InsertEmailNotificationAsync(emailNotification, emailExpiryDateTime, connection, transaction, token),
+            cancellationToken: cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -659,6 +653,127 @@ public class OrderRepository : IOrderRepository
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Integer, smsMessageCount);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, notification.SendResult.ResultTime);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, smsExpiryDateTime);
+
+        await pgcom.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Common pattern for creating instant notification orders with database transaction handling.
+    /// </summary>
+    private async Task<InstantNotificationOrderTracking> CreateInstantOrderWithTransactionAsync(
+        NotificationOrder notificationOrder,
+        Func<Guid> getOrderChainId,
+        Func<NpgsqlConnection, NpgsqlTransaction, CancellationToken, Task> insertInstantOrderAction,
+        Func<long, NpgsqlConnection, NpgsqlTransaction, CancellationToken, Task> insertTemplateAction,
+        Func<NpgsqlConnection, NpgsqlTransaction, CancellationToken, Task> insertNotificationAction,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        await using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await insertInstantOrderAction(connection, transaction, cancellationToken);
+
+            cancellationToken.ThrowIfCancellationRequested();
+            long mainOrderId = await InsertOrder(notificationOrder, connection, transaction, OrderProcessingStatus.Processed, cancellationToken);
+
+            cancellationToken.ThrowIfCancellationRequested();
+            await insertTemplateAction(mainOrderId, connection, transaction, cancellationToken);
+
+            cancellationToken.ThrowIfCancellationRequested();
+            await insertNotificationAction(connection, transaction, cancellationToken);
+
+            cancellationToken.ThrowIfCancellationRequested();
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            throw;
+        }
+        catch (Exception)
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            throw;
+        }
+
+        return new InstantNotificationOrderTracking
+        {
+            OrderChainId = getOrderChainId(),
+            Notification = new NotificationOrderChainShipment
+            {
+                ShipmentId = notificationOrder.Id,
+                SendersReference = notificationOrder.SendersReference
+            }
+        };
+    }
+
+    /// <summary>
+    /// Persists an instant SMS notification order with flattened structure to the database.
+    /// </summary>
+    /// <param name="instantSmsNotificationOrder">The instant SMS notification order to persist.</param>
+    /// <param name="connection">The active database connection.</param>
+    /// <param name="transaction">The active database transaction.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    private static async Task InsertInstantSmsNotificationOrderAsync(InstantSmsNotificationOrder instantSmsNotificationOrder, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
+    {
+        await using NpgsqlCommand pgcom = new(_insertOrderChainSql, connection, transaction);
+
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, instantSmsNotificationOrder.OrderChainId);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, instantSmsNotificationOrder.IdempotencyId);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, instantSmsNotificationOrder.Creator.ShortName);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, instantSmsNotificationOrder.Created);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Jsonb, instantSmsNotificationOrder);
+
+        await pgcom.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Persists an instant email notification order to the database.
+    /// </summary>
+    /// <param name="instantEmailNotificationOrder">The instant email notification order to persist.</param>
+    /// <param name="connection">The active database connection.</param>
+    /// <param name="transaction">The active database transaction.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    private static async Task InsertInstantEmailNotificationOrderAsync(InstantEmailNotificationOrder instantEmailNotificationOrder, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
+    {
+        await using NpgsqlCommand pgcom = new(_insertOrderChainSql, connection, transaction);
+
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, instantEmailNotificationOrder.OrderChainId);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, instantEmailNotificationOrder.IdempotencyId);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, instantEmailNotificationOrder.Creator.ShortName);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, instantEmailNotificationOrder.Created);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Jsonb, instantEmailNotificationOrder);
+
+        await pgcom.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Persists an email notification with send result to the database.
+    /// </summary>
+    /// <param name="notification">The email notification to persist.</param>
+    /// <param name="emailExpiryDateTime">The expiry time for the email notification.</param>
+    /// <param name="connection">The active database connection.</param>
+    /// <param name="transaction">The active database transaction.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    private static async Task InsertEmailNotificationAsync(EmailNotification notification, DateTime emailExpiryDateTime, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken = default)
+    {
+        await using NpgsqlCommand pgcom = new(_insertEmailNotificationSql, connection, transaction);
+
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notification.OrderId);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notification.Id);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.OrganizationNumber ?? (object)DBNull.Value);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.NationalIdentityNumber ?? (object)DBNull.Value);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.ToAddress);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.CustomizedBody ?? (object)DBNull.Value);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.CustomizedSubject ?? (object)DBNull.Value);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.SendResult.Result.ToString());
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, notification.SendResult.ResultTime);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, emailExpiryDateTime);
 
         await pgcom.ExecuteNonQueryAsync(cancellationToken);
     }
