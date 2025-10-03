@@ -25,7 +25,7 @@ public record DeadDeliveryReport
     /// <summary>
     /// Gets or sets the total number of delivery attempts made.
     /// </summary>
-    public int AttemptCount { get; set; } = 0;
+    public int AttemptCount { get; set; } = 1;
 
     /// <summary>
     /// Gets or sets the communication channel through which the delivery was attempted.

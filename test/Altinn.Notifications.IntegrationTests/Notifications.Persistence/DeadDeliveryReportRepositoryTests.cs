@@ -11,15 +11,12 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 public class DeadDeliveryReportRepositoryTests() : IAsyncLifetime
 {
     private readonly List<long> _createdIds = new();
-    
+
     [Fact]
     public async Task AddDeadDeliveryReport_ShouldCompleteWithoutException()
     {
         // Arrange
-        DeadDeliveryReportRepository repo = (DeadDeliveryReportRepository)ServiceUtil
-            .GetServices([typeof(IDeadDeliveryReportRepository)])
-            .First(s => s is DeadDeliveryReportRepository);
-
+        var sut = GetRepository();
         var mockReport = new DeadDeliveryReport
         {
             Channel = DeliveryReportChannel.AzureCommunicationServices,
@@ -29,11 +26,88 @@ public class DeadDeliveryReportRepositoryTests() : IAsyncLifetime
         };
 
         // Act
-        var result = await repo.Insert(mockReport, CancellationToken.None);
+        var result = await sut.Insert(mockReport, CancellationToken.None);
         _createdIds.Add(result);
 
         // Assert
         Assert.True(result > 0);
+    }
+
+    [Fact]
+    public async Task Insert_WithDifferentChannels_ShouldStoreBothChannelTypes()
+    {
+        // Arrange
+        var repo = GetRepository();
+        var azureReport = new DeadDeliveryReport
+        {
+            Channel = DeliveryReportChannel.AzureCommunicationServices,
+            DeliveryReport = "{}",
+            FirstSeen = DateTime.UtcNow,
+            LastAttempt = DateTime.UtcNow
+        };
+
+        var linkMobilityReport = new DeadDeliveryReport
+        {
+            Channel = DeliveryReportChannel.LinkMobility,
+            DeliveryReport = "{}",
+            FirstSeen = DateTime.UtcNow,
+            LastAttempt = DateTime.UtcNow
+        };
+
+        // Act
+        var azureId = await repo.Insert(azureReport, CancellationToken.None);
+        var linkId = await repo.Insert(linkMobilityReport, CancellationToken.None);
+
+        _createdIds.AddRange([azureId, linkId]);
+
+        // Assert
+        var azureCount = await GetReportCountByChannel(DeliveryReportChannel.AzureCommunicationServices);
+        var linkCount = await GetReportCountByChannel(DeliveryReportChannel.LinkMobility);
+
+        Assert.True(azureCount >= 1);
+        Assert.True(linkCount >= 1);
+    }
+
+    [Fact]
+    public async Task Insert_WithMinAttemptCount_ShouldStoreCorrectly()
+    {
+        // Arrange
+        var repo = GetRepository();
+        var report = new DeadDeliveryReport
+        {
+            Channel = DeliveryReportChannel.AzureCommunicationServices,
+            DeliveryReport = "{}",
+            FirstSeen = DateTime.UtcNow,
+            LastAttempt = DateTime.UtcNow,
+            AttemptCount = 1
+        };
+
+        // Act
+        var id = await repo.Insert(report, CancellationToken.None);
+        _createdIds.Add(id);
+
+        // Assert
+        var storedAttemptCount = await GetAttemptCountById(id);
+        Assert.Equal(1, storedAttemptCount);
+    }
+
+    private static DeadDeliveryReportRepository GetRepository()
+    {
+        return (DeadDeliveryReportRepository)ServiceUtil
+            .GetServices([typeof(IDeadDeliveryReportRepository)])
+            .First(s => s is DeadDeliveryReportRepository);
+    }
+
+    private static async Task<int> GetReportCountByChannel(DeliveryReportChannel channel)
+    {
+        string sql = $"SELECT COUNT(1) FROM notifications.deaddeliveryreports WHERE channel = {(int)channel}";
+        return await PostgreUtil.RunSqlReturnOutput<int>(sql);
+    }
+
+    private static async Task<int> GetAttemptCountById(long id)
+    {
+        string sql = $"SELECT attemptcount FROM notifications.deaddeliveryreports WHERE id = {id}";
+        return await PostgreUtil.RunSqlReturnOutput<int>(sql);
     }
 
     public async Task DisposeAsync()
