@@ -46,6 +46,11 @@ public class KafkaSettings
     public string EmailStatusUpdatedTopicName { get; set; } = string.Empty;
 
     /// <summary>
+    /// The name of the email status updated retry topic
+    /// </summary>  
+    public string EmailStatusUpdatedRetryTopicName { get; set; } = string.Empty;
+
+    /// <summary>
     /// The name of the sms status updated topic
     /// </summary>
     public string SmsStatusUpdatedTopicName { get; set; } = string.Empty;

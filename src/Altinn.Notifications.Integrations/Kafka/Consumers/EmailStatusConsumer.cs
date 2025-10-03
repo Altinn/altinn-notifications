@@ -26,7 +26,7 @@ public sealed class EmailStatusConsumer : NotificationStatusConsumerBase<EmailSt
         IOptions<KafkaSettings> settings,
         ILogger<EmailStatusConsumer> logger,
         IEmailNotificationService emailNotificationsService)
-        : base(settings.Value.EmailStatusUpdatedTopicName, settings.Value.EmailStatusUpdatedTopicName, producer, memoryCache, settings, logger)
+        : base(settings.Value.EmailStatusUpdatedTopicName, settings.Value.EmailStatusUpdatedRetryTopicName, producer, memoryCache, settings, logger)
     {
         _emailNotificationsService = emailNotificationsService;
     }

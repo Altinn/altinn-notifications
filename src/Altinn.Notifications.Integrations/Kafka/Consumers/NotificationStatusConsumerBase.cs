@@ -1,5 +1,7 @@
-﻿using Altinn.Notifications.Core.Exceptions;
+﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Integrations;
+using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Integrations.Configuration;
 
 using Microsoft.Extensions.Caching.Memory;
@@ -114,6 +116,14 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
 
                 LogSendStatusUpdateException(e, message);
             }
+
+            var retryMessage = new RetryMessage
+            {
+                NotificationId = e.IdentifierType == SendStatusIdentifierType.NotificationId ? Guid.Parse(e.Identifier) : null,
+                OperationId = e.IdentifierType == SendStatusIdentifierType.OperationId ? Guid.Parse(e.Identifier) : null,
+                GatewayReference = e.IdentifierType == SendStatusIdentifierType.GatewayReference ? e.Identifier : null,
+                SendResult = message
+            };
 
             await RetryStatus(message);
         }
