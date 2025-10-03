@@ -25,6 +25,8 @@ public class DeadDeliveryReportRepository(NpgsqlDataSource npgsqlDataSource) : I
         pgcom.Parameters.AddWithValue("lastattempt", NpgsqlDbType.TimestampTz, report.LastAttempt);
 
         var result = await pgcom.ExecuteScalarAsync(cancellationToken);
-        return (long)result!;
+        return result is null
+            ? throw new InvalidOperationException("Database function insertdeaddeliveryreport returned null.")
+            : (long)result;
     }
 }
