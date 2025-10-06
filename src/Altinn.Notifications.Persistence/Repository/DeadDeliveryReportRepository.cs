@@ -13,7 +13,7 @@ public class DeadDeliveryReportRepository(NpgsqlDataSource npgsqlDataSource) : I
     private const string _addDeadDeliveryReport = "SELECT notifications.insertdeaddeliveryreport(@channel, @attemptcount, @deliveryreport, @resolved, @firstseen, @lastattempt)";
 
     /// <inheritdoc/>
-    public async Task<long> Insert(DeadDeliveryReport report, CancellationToken cancellationToken)
+    public async Task<long> InsertAsync(DeadDeliveryReport report, CancellationToken cancellationToken)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_addDeadDeliveryReport);
 

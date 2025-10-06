@@ -1,5 +1,4 @@
-﻿using Altinn.Notifications.Core.Enums;
-using Altinn.Notifications.Core.Models;
+﻿using Altinn.Notifications.Core.Models;
 
 namespace Altinn.Notifications.Core.Services.Interfaces;
 
@@ -14,5 +13,5 @@ public interface IDeadDeliveryReportService
     /// <param name="report">The dead delivery report to insert</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the operation</param>
     /// <returns>An asynchronous Task containing the ID of the inserted row</returns>
-    Task<long> Insert(DeadDeliveryReport report, CancellationToken cancellationToken = default);
+    Task<long> InsertAsync(DeadDeliveryReport report, CancellationToken cancellationToken = default);
 }

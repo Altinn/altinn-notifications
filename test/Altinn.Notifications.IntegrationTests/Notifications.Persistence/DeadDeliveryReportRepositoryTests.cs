@@ -10,7 +10,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 
 public class DeadDeliveryReportRepositoryTests() : IAsyncLifetime
 {
-    private readonly List<long> _createdIds = new();
+    private readonly List<long> _createdIds = [];
 
     [Fact]
     public async Task AddDeadDeliveryReport_ShouldCompleteWithoutException()
@@ -26,7 +26,7 @@ public class DeadDeliveryReportRepositoryTests() : IAsyncLifetime
         };
 
         // Act
-        var result = await sut.Insert(mockReport, CancellationToken.None);
+        var result = await sut.InsertAsync(mockReport, CancellationToken.None);
         _createdIds.Add(result);
 
         // Assert
@@ -55,8 +55,8 @@ public class DeadDeliveryReportRepositoryTests() : IAsyncLifetime
         };
 
         // Act
-        var azureId = await sut.Insert(azureReport, CancellationToken.None);
-        var linkId = await sut.Insert(linkMobilityReport, CancellationToken.None);
+        var azureId = await sut.InsertAsync(azureReport, CancellationToken.None);
+        var linkId = await sut.InsertAsync(linkMobilityReport, CancellationToken.None);
 
         _createdIds.AddRange([azureId, linkId]);
 
@@ -83,7 +83,7 @@ public class DeadDeliveryReportRepositoryTests() : IAsyncLifetime
         };
 
         // Act
-        var id = await sut.Insert(report, CancellationToken.None);
+        var id = await sut.InsertAsync(report, CancellationToken.None);
         _createdIds.Add(id);
 
         // Assert
@@ -106,7 +106,7 @@ public class DeadDeliveryReportRepositoryTests() : IAsyncLifetime
         };
 
         // Act & Assert
-        await Assert.ThrowsAsync<PostgresException>(() => sut.Insert(report, CancellationToken.None));
+        await Assert.ThrowsAsync<PostgresException>(() => sut.InsertAsync(report, CancellationToken.None));
     }
 
     private static DeadDeliveryReportRepository GetRepository()
@@ -118,7 +118,7 @@ public class DeadDeliveryReportRepositoryTests() : IAsyncLifetime
 
     private static async Task<int> GetReportCountByChannel(DeliveryReportChannel channel)
     {
-        string sql = $"SELECT COUNT(1) FROM notifications.deaddeliveryreports WHERE channel = {(int)channel}";
+        string sql = $"SELECT COUNT(1) FROM notifications.deaddeliveryreports WHERE channel = {(short)channel}";
         return await PostgreUtil.RunSqlReturnOutput<int>(sql);
     }
 
