@@ -36,8 +36,7 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     private const string _updateEmailStatusByOperationId =
         @"UPDATE notifications.emailnotifications
     SET result = $1::emailnotificationresulttype,
-        resulttime = now(),
-        operationid = COALESCE($2, operationid)
+        resulttime = now()
     WHERE operationid = $2
     RETURNING alternateid;"; // (_result, _operationid)
 
