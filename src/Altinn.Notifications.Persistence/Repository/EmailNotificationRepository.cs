@@ -109,7 +109,7 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
 
             var alternateId = await pgcom.ExecuteScalarAsync();
 
-            if (alternateId is null)
+            if (alternateId is null or DBNull)
             {
                 if (hasOperationId)
                 {

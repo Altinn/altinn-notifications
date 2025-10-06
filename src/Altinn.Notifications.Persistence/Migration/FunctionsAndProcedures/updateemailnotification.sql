@@ -17,14 +17,6 @@ BEGIN
         WHERE alternateid = _alternateid
         RETURNING alternateid INTO v_alternateid;
 
-        -- If no rows were updated by alternateid and we have an operationid, try fallback
-        IF NOT FOUND AND _operationid IS NOT NULL THEN
-            UPDATE notifications.emailnotifications
-            SET result = _result::emailnotificationresulttype,
-                resulttime = now()
-            WHERE operationid = _operationid
-            RETURNING alternateid INTO v_alternateid;
-        END IF;
 
     ELSIF _operationid IS NOT NULL THEN
         UPDATE notifications.emailnotifications
