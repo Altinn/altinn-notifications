@@ -2,5 +2,6 @@
 -- Issue #1050: Intermittent 30s+ timeout in EmailNotificationRepository.UpdateSendStatus
 
 -- Index for operationid lookups - critical for email status updates
-CREATE INDEX IF NOT EXISTS idx_emailnotifications_operationid ON notifications.emailnotifications (operationid)
+CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS notifications_emailnotifications_operationid 
+ON notifications.emailnotifications (operationid) 
 WHERE operationid IS NOT NULL;
