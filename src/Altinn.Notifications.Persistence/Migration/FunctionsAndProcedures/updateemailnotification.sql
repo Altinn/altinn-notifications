@@ -4,7 +4,7 @@
 -- Replaces separate UPDATE queries in EmailNotificationRepository.UpdateSendStatus
 
 CREATE OR REPLACE FUNCTION notifications.updateemailnotification(
-    _result emailnotificationresulttype,
+    _result text,
     _operationid text,
     _alternateid uuid
 )
@@ -16,7 +16,7 @@ DECLARE
 BEGIN
     IF _alternateid IS NOT NULL THEN
         UPDATE notifications.emailnotifications
-        SET result = _result,
+        SET result = _result::emailnotificationresulttype,
             resulttime = now(),
             operationid = COALESCE(_operationid, operationid)
         WHERE alternateid = _alternateid
@@ -24,7 +24,7 @@ BEGIN
 
     ELSIF _operationid IS NOT NULL THEN
         UPDATE notifications.emailnotifications
-        SET result = _result,
+        SET result = _result::emailnotificationresulttype,
             resulttime = now()
         WHERE operationid = _operationid
         RETURNING alternateid INTO v_alternateid;
