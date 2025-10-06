@@ -25,20 +25,7 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     private const string _insertEmailNotificationSql = "call notifications.insertemailnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _toaddress, _customizedbody, _customizedsubject, _result, _resulttime, _expirytime)
     private const string _getEmailNotificationsSql = "select * from notifications.getemails_statusnew_updatestatus()";
     private const string _getEmailRecipients = "select * from notifications.getemailrecipients_v2($1)"; // (_orderid)
-    private const string _updateEmailStatusByAlternateId =
-        @"UPDATE notifications.emailnotifications
-    SET result = $1::emailnotificationresulttype,
-        resulttime = now(),
-        operationid = COALESCE($2, operationid)
-    WHERE alternateid = $3
-    RETURNING alternateid;"; // (_result, _operationid, _alternateid)
-
-    private const string _updateEmailStatusByOperationId =
-        @"UPDATE notifications.emailnotifications
-    SET result = $1::emailnotificationresulttype,
-        resulttime = now()
-    WHERE operationid = $2
-    RETURNING alternateid;"; // (_result, _operationid)
+    private const string _updateEmailNotificationSql = "SELECT notifications.updateemailnotification($1, $2, $3)"; // (_result, _operationid, _alternateid)
 
     /// <inheritdoc/>
     protected override string SourceIdentifier => _emailSourceIdentifier;
@@ -115,25 +102,12 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
 
         try
         {
-            object? alternateId;
+            await using NpgsqlCommand pgcom = new(_updateEmailNotificationSql, connection, transaction);
+            pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
+            pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, operationId ?? (object)DBNull.Value);
+            pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId ?? (object)DBNull.Value);
 
-            if (hasNotificationId)
-            {
-                await using NpgsqlCommand pgcom = new(_updateEmailStatusByAlternateId, connection, transaction);
-                pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
-                pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(operationId) ? DBNull.Value : operationId);
-                pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notificationId!.Value);
-
-                alternateId = await pgcom.ExecuteScalarAsync();
-            }
-            else
-            {
-                await using NpgsqlCommand pgcom = new(_updateEmailStatusByOperationId, connection, transaction);
-                pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
-                pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, operationId!);
-
-                alternateId = await pgcom.ExecuteScalarAsync();
-            }
+            var alternateId = await pgcom.ExecuteScalarAsync();
 
             if (alternateId is null)
             {
