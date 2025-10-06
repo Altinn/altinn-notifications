@@ -1,8 +1,3 @@
--- Create function for updating email notification status
--- Issue #1050: Intermittent 30s+ timeout in EmailNotificationRepository.UpdateSendStatus
--- This consolidates the conditional logic for updating by alternateid or operationid
--- Replaces separate UPDATE queries in EmailNotificationRepository.UpdateSendStatus
-
 CREATE OR REPLACE FUNCTION notifications.updateemailnotification(
     _result text,
     _operationid text,
@@ -21,6 +16,15 @@ BEGIN
             operationid = COALESCE(_operationid, operationid)
         WHERE alternateid = _alternateid
         RETURNING alternateid INTO v_alternateid;
+
+        -- If no rows were updated by alternateid and we have an operationid, try fallback
+        IF NOT FOUND AND _operationid IS NOT NULL THEN
+            UPDATE notifications.emailnotifications
+            SET result = _result::emailnotificationresulttype,
+                resulttime = now()
+            WHERE operationid = _operationid
+            RETURNING alternateid INTO v_alternateid;
+        END IF;
 
     ELSIF _operationid IS NOT NULL THEN
         UPDATE notifications.emailnotifications
