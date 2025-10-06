@@ -20,12 +20,12 @@ public record DeadDeliveryReport
     /// <summary>
     /// Gets or sets a value indicating whether the delivery issue has been resolved.
     /// </summary>
-    public bool Resolved { get; init; } = false;
+    public required bool Resolved { get; init; } = false;
 
     /// <summary>
     /// Gets or sets the total number of delivery attempts made.
     /// </summary>
-    public int AttemptCount { get; init; } = 1;
+    public required int AttemptCount { get; init; } = 1;
 
     /// <summary>
     /// Gets or sets the communication channel source of the delivery report.

@@ -12,9 +12,16 @@ public class DeadDeliveryReportService(IDeadDeliveryReportRepository reportRepos
     /// <inheritdoc/>
     public Task<long> InsertAsync(DeadDeliveryReport report, CancellationToken cancellationToken = default)
     {
+        if (report is null)
+        {
+            throw new ArgumentNullException(nameof(report));
+        }
+
         if (string.IsNullOrWhiteSpace(report.DeliveryReport))
         {
-            throw new ArgumentException("report.DeliveryReport cannot be null or empty", nameof(report));
+            throw new ArgumentException(
+                "DeliveryReport cannot be null or empty",
+                nameof(DeadDeliveryReport.DeliveryReport));
         }
 
         return _reportRepository.InsertAsync(report, cancellationToken);

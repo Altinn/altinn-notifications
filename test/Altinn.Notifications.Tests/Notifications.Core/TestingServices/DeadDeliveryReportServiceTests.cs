@@ -36,6 +36,8 @@ public class DeadDeliveryReportServiceTests
             LastAttempt = DateTime.UtcNow.AddMinutes(5),
             DeliveryReport = report!, 
             Channel = DeliveryReportChannel.AzureCommunicationServices, 
+            Resolved = false,
+            AttemptCount = 1
         };
 
         // Act & Assert
@@ -61,6 +63,8 @@ public class DeadDeliveryReportServiceTests
             LastAttempt = DateTime.UtcNow.AddMinutes(5),
             DeliveryReport = "{}",
             Channel = DeliveryReportChannel.AzureCommunicationServices,
+            Resolved = false,
+            AttemptCount = 1
         };
         
         _repositoryMock
