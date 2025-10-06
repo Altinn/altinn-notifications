@@ -289,7 +289,6 @@ void AddAuthorizationRulesAndHandlers(IServiceCollection services, IConfiguratio
     services.AddTransient<IAuthorizationHandler, ScopeAccessHandler>();
 
     // services required for access token handler
-    services.AddMemoryCache();
     services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
     services.AddSingleton<IPublicSigningKeyProvider, PublicSigningKeyProvider>();
     services.Configure<Altinn.Common.AccessToken.Configuration.KeyVaultSettings>(config.GetSection("kvSetting"));

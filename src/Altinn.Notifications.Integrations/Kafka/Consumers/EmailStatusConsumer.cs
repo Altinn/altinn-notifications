@@ -4,7 +4,6 @@ using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Integrations.Configuration;
 
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -22,11 +21,10 @@ public sealed class EmailStatusConsumer : NotificationStatusConsumerBase<EmailSt
     /// </summary>
     public EmailStatusConsumer(
         IKafkaProducer producer,
-        IMemoryCache memoryCache,
         IOptions<KafkaSettings> settings,
         ILogger<EmailStatusConsumer> logger,
         IEmailNotificationService emailNotificationsService)
-        : base(settings.Value.EmailStatusUpdatedTopicName, settings.Value.EmailStatusUpdatedRetryTopicName, producer, memoryCache, settings, logger)
+        : base(settings.Value.EmailStatusUpdatedTopicName, settings.Value.EmailStatusUpdatedTopicName, producer, settings, logger)
     {
         _emailNotificationsService = emailNotificationsService;
     }
@@ -51,12 +49,4 @@ public sealed class EmailStatusConsumer : NotificationStatusConsumerBase<EmailSt
     /// <param name="result">The parsed result containing email status update information.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     protected override Task UpdateStatusAsync(EmailSendOperationResult result) => _emailNotificationsService.UpdateSendStatus(result);
-
-    /// <summary>
-    /// Gets a key used for suppressing duplicate log entries for the same error.
-    /// </summary>
-    /// <param name="result">The parsed result that failed to update.</param>
-    /// <param name="exception">The exception that occurred during status update (unused in this implementation).</param>
-    /// <returns>A string key used for log suppression, using either the operation ID or notification ID.</returns>
-    protected override string? GetSuppressionKey(EmailSendOperationResult result, SendStatusUpdateException exception) => $"{exception.IdentifierType}:{exception.Identifier}";
 }

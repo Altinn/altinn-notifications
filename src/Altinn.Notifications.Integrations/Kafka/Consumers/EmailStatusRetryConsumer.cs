@@ -1,4 +1,10 @@
-﻿using Altinn.Notifications.Core.Integrations;
+﻿using System.Text.Json;
+
+using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Integrations;
+using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Core.Services.Interfaces;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -7,12 +13,15 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers;
 /// <summary>
 /// Kafka consumer for processing email status retry messages
 /// </summary>
-public sealed class EmailStatusRetryConsumer(IKafkaProducer producer, IOptions<Configuration.KafkaSettings> settings, ILogger<EmailStatusRetryConsumer> logger) 
+public sealed class EmailStatusRetryConsumer(IKafkaProducer producer, IDeadDeliveryReportService deadDeliveryReportService, IOptions<Configuration.KafkaSettings> settings, ILogger<EmailStatusRetryConsumer> logger)
     : KafkaConsumerBase<EmailStatusRetryConsumer>(settings, logger, settings.Value.EmailStatusUpdatedRetryTopicName)
 {
     private readonly IKafkaProducer _producer = producer;
+    private readonly IDeadDeliveryReportService _deadDeliveryReportService = deadDeliveryReportService;
     private readonly ILogger<EmailStatusRetryConsumer> _logger = logger;
     private readonly string _retryTopicName = settings.Value.EmailStatusUpdatedRetryTopicName;
+    private readonly int _statusUpdateRetrySeconds = settings.Value.StatusUpdatedRetryThresholdSeconds;
+    private readonly DeliveryReportChannel _channel = DeliveryReportChannel.AzureCommunicationServices;
 
     /// <summary>
     /// Executes the email status retry consumer to process messages from the Kafka topic
@@ -24,9 +33,40 @@ public sealed class EmailStatusRetryConsumer(IKafkaProducer producer, IOptions<C
         return Task.Run(() => ConsumeMessage(ProcessStatus, RetryStatus, stoppingToken), stoppingToken);
     }
 
-    private Task ProcessStatus(string message)
+    private async Task ProcessStatus(string message)
     {
-        return Task.CompletedTask;
+        var retryMessage = JsonSerializer.Deserialize<RetryMessage>(message) ?? throw new InvalidOperationException("Could not deserialize message");
+        
+        var elapsedSeconds = (DateTime.UtcNow - retryMessage.FirstSeen).TotalSeconds;
+    
+        if (elapsedSeconds >= _statusUpdateRetrySeconds)
+        {
+            _logger.LogInformation("Processing retry message after {ElapsedSeconds} seconds", elapsedSeconds);
+
+            // Persist the dead delivery report after hitting the retry threshold
+            var deadDeliveryReport = new DeadDeliveryReport
+            {
+                AttemptCount = retryMessage.Attempts,
+                Channel = _channel,
+                FirstSeen = retryMessage.FirstSeen,
+                LastAttempt = DateTime.UtcNow,
+                DeliveryReport = retryMessage.SendResult ?? string.Empty
+            };
+
+            await _deadDeliveryReportService.Insert(deadDeliveryReport);
+        }
+        else
+        {
+            // increment retries before putting it back on the retry topic
+            var incrementedRetryMessage = retryMessage with { Attempts = retryMessage.Attempts + 1 };
+
+            _logger.LogDebug(
+                "Message not ready for retry. Elapsed: {ElapsedSeconds}s, Threshold: {ThresholdSeconds}s",
+                elapsedSeconds,
+                _statusUpdateRetrySeconds);
+
+            await _producer.ProduceAsync(_retryTopicName, incrementedRetryMessage.Serialize());
+        }
     }
 
     /// <summary>

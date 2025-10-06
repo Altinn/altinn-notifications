@@ -11,7 +11,7 @@ using Microsoft.Extensions.Options;
 namespace Altinn.Notifications.Integrations.Kafka.Consumers;
 
 /// <summary>
-/// Base class for notification status consumers handling deserialize, status update, selective retry, and log suppression.
+/// Base class for notification status consumers handling deserialize, status update, and selective retry.
 /// </summary>
 /// <typeparam name="TConsumer">The type of the consumer.</typeparam>
 /// <typeparam name="TResult">The type of the result after deserializing the message.</typeparam>
@@ -22,7 +22,6 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
     private readonly string _retryTopicName;
     private readonly IKafkaProducer _producer;
     private readonly ILogger<TConsumer> _logger;
-    private readonly IMemoryCache _logSuppressionCache;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationStatusConsumerBase{TConsumer, TResult}"/> class.
@@ -30,14 +29,12 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
     /// <param name="topicName">The name of the Kafka topic to consume from.</param>
     /// <param name="retryTopicName">The name of the Kafka topic to publish retry messages to.</param>
     /// <param name="producer">The Kafka producer used for publishing retry messages.</param>
-    /// <param name="memoryCache">Memory cache for log suppression.</param>
     /// <param name="settings">Kafka configuration settings.</param>
     /// <param name="logger">Logger for the consumer.</param>
     protected NotificationStatusConsumerBase(
         string topicName,
         string retryTopicName,
         IKafkaProducer producer,
-        IMemoryCache memoryCache,
         IOptions<KafkaSettings> settings,
         ILogger<TConsumer> logger)
         : base(settings, logger, topicName)
@@ -45,7 +42,6 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
         _logger = logger;
         _producer = producer;
         _retryTopicName = retryTopicName;
-        _logSuppressionCache = memoryCache;
     }
 
     /// <summary>
@@ -75,14 +71,6 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
     protected abstract bool TryParse(string message, out TResult result);
 
     /// <summary>
-    /// Gets a key used for suppressing duplicate log entries for the same error.
-    /// </summary>
-    /// <param name="result">The parsed result that failed to update.</param>
-    /// <param name="exception">The exception that occurred during status update.</param>
-    /// <returns>A string key used for log suppression, or null if no suppression should occur.</returns>
-    protected abstract string? GetSuppressionKey(TResult result, SendStatusUpdateException exception);
-
-    /// <summary>
     /// Processes a delivery report message received from Kafka.
     /// </summary>
     /// <param name="message">The raw message to process.</param>
@@ -101,22 +89,6 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
         }
         catch (SendStatusUpdateException e)
         {
-            string suppressionKey = GetSuppressionKey(result, e) ?? "unknown key";
-            bool shouldBeLogged = !_logSuppressionCache.TryGetValue(suppressionKey, out _);
-
-            if (shouldBeLogged)
-            {
-                _logSuppressionCache.Set(
-                    suppressionKey,
-                    true,
-                    new MemoryCacheEntryOptions
-                    {
-                        AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(5)
-                    });
-
-                LogSendStatusUpdateException(e, message);
-            }
-
             var retryMessage = new RetryMessage
             {
                 NotificationId = e.IdentifierType == SendStatusIdentifierType.NotificationId ? Guid.Parse(e.Identifier) : null,

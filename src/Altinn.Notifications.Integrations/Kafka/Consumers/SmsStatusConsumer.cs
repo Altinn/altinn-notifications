@@ -23,17 +23,15 @@ public sealed class SmsStatusConsumer : NotificationStatusConsumerBase<SmsStatus
     /// Initializes a new instance of the <see cref="SmsStatusConsumer"/> class.
     /// </summary>
     /// <param name="producer">The Kafka producer used for publishing retry messages.</param>
-    /// <param name="memoryCache">Memory cache for log suppression.</param>
     /// <param name="settings">Kafka configuration settings.</param>
     /// <param name="logger">Logger for the consumer.</param>
     /// <param name="smsNotificationsService">Service for handling SMS notification operations.</param>
     public SmsStatusConsumer(
         IKafkaProducer producer,
-        IMemoryCache memoryCache,
         IOptions<KafkaSettings> settings,
         ILogger<SmsStatusConsumer> logger,
         ISmsNotificationService smsNotificationsService)
-        : base(settings.Value.SmsStatusUpdatedTopicName, settings.Value.SmsStatusUpdatedTopicName, producer, memoryCache, settings, logger)
+        : base(settings.Value.SmsStatusUpdatedTopicName, settings.Value.SmsStatusUpdatedTopicName, producer, settings, logger)
     {
         _smsNotificationsService = smsNotificationsService;
     }
@@ -58,15 +56,4 @@ public sealed class SmsStatusConsumer : NotificationStatusConsumerBase<SmsStatus
     /// <param name="result">The parsed result containing SMS status update information.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     protected override Task UpdateStatusAsync(SmsSendOperationResult result) => _smsNotificationsService.UpdateSendStatus(result);
-
-    /// <summary>
-    /// Gets a key used for suppressing duplicate log entries for the same error.
-    /// </summary>
-    /// <param name="result">The parsed result that failed to update.</param>
-    /// <param name="exception">The exception that occurred during status update.</param>
-    /// <returns>
-    /// A string key used for log suppression, using either the exception identifier,
-    /// notification ID, or gateway reference.
-    /// </returns>
-    protected override string? GetSuppressionKey(SmsSendOperationResult result, SendStatusUpdateException exception) => $"{exception.IdentifierType}:{exception.Identifier}";
 }
