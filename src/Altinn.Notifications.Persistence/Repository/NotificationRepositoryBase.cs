@@ -37,7 +37,7 @@ public abstract class NotificationRepositoryBase
 
     private readonly NpgsqlDataSource _dataSource;
     private readonly ILogger _logger;
-    private readonly NotificationConfig _config;
+    private readonly int _terminationBatchSize;
 
     private const string _insertStatusFeedEntrySql = @"SELECT notifications.insertstatusfeed(o._id, o.creatorname, @orderstatus)
                                                        FROM notifications.orders o
@@ -57,7 +57,7 @@ public abstract class NotificationRepositoryBase
     {
         _dataSource = dataSource;
         _logger = logger;
-        _config = config.Value;
+        _terminationBatchSize = config.Value.TerminationBatchSize;
     }
 
     /// <summary>
@@ -117,7 +117,7 @@ public abstract class NotificationRepositoryBase
         {
             await using NpgsqlCommand pgcom = new(_updateExpiredNotifications, connection, transaction);
             pgcom.Parameters.AddWithValue("source", NpgsqlDbType.Text, SourceIdentifier); // Source identifier for the notifications
-            pgcom.Parameters.AddWithValue("limit", NpgsqlDbType.Integer, _config.TerminationBatchSize);
+            pgcom.Parameters.AddWithValue("limit", NpgsqlDbType.Integer, _terminationBatchSize);
 
             await using var reader = await pgcom.ExecuteReaderAsync();
 
