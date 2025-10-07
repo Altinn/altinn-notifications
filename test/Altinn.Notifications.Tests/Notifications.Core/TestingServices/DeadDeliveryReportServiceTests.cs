@@ -44,7 +44,7 @@ public class DeadDeliveryReportServiceTests
     [Theory]
     [InlineData("")]
     [InlineData("   \t\n\r   ")]
-    public async Task Insert_WithNullReport_ThrowsArgumentException(string? report)
+    public async Task Insert_WithEmptyOrWhiteSpaceReport_ThrowsArgumentException(string? report)
     {
         // Arrange
         var deadDeliveryReport = new DeadDeliveryReport
