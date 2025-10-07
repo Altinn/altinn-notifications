@@ -10,7 +10,7 @@ public record UpdateStatusRetryMessage
     /// <summary>
     /// Gets or sets the unique identifier for the delivery report operation id that failed.
     /// </summary>
-    public Guid? OperationId { get; init; }
+    public Guid? ExternalReferenceId { get; init; }
 
     /// <summary>
     /// Gets or sets the number of retry attempts made. Defaults to 1.
