@@ -35,7 +35,7 @@ public sealed class EmailStatusRetryConsumer(IKafkaProducer producer, IDeadDeliv
 
     private async Task ProcessStatus(string message)
     {
-        var retryMessage = JsonSerializer.Deserialize<RetryMessage>(message) ?? throw new InvalidOperationException("Could not deserialize message");
+        var retryMessage = JsonSerializer.Deserialize<UpdateStatusRetryMessage>(message) ?? throw new InvalidOperationException("Could not deserialize message");
         
         var elapsedSeconds = (DateTime.UtcNow - retryMessage.FirstSeen).TotalSeconds;
     
@@ -50,10 +50,11 @@ public sealed class EmailStatusRetryConsumer(IKafkaProducer producer, IDeadDeliv
                 Channel = _channel,
                 FirstSeen = retryMessage.FirstSeen,
                 LastAttempt = DateTime.UtcNow,
+                Resolved = false,
                 DeliveryReport = retryMessage.SendResult ?? string.Empty
             };
 
-            await _deadDeliveryReportService.Insert(deadDeliveryReport);
+            await _deadDeliveryReportService.InsertAsync(deadDeliveryReport);
         }
         else
         {

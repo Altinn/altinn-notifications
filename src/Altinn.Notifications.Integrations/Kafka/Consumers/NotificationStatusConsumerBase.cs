@@ -4,7 +4,6 @@ using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Integrations.Configuration;
 
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -89,8 +88,10 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
         }
         catch (SendStatusUpdateException e)
         {
-            var retryMessage = new RetryMessage
+            var retryMessage = new UpdateStatusRetryMessage
             {
+                FirstSeen = DateTime.UtcNow,
+                Attempts = 1,
                 NotificationId = e.IdentifierType == SendStatusIdentifierType.NotificationId ? Guid.Parse(e.Identifier) : null,
                 OperationId = e.IdentifierType == SendStatusIdentifierType.OperationId ? Guid.Parse(e.Identifier) : null,
                 SendResult = message

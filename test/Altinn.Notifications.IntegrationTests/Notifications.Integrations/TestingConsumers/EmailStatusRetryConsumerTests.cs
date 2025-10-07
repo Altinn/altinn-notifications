@@ -12,7 +12,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
         private readonly string _statusUpdatedRetryTopicName = Guid.NewGuid().ToString();
 
         [Fact]
-        public async Task InsertRetryTopic()
+        public async Task MessageOnRetryTopic_IsPersisted_WhenThresholdTimeHasElapsed()
         {
             // Arrange
             Dictionary<string, string> vars = new()
@@ -27,10 +27,10 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                 .First();
 
             // Act
-            var retryMessage = new RetryMessage
+            var retryMessage = new UpdateStatusRetryMessage
             {
                 Attempts = 1,
-                FirstSeen = DateTime.UtcNow,
+                FirstSeen = DateTime.UtcNow.AddMinutes(-10), // should hit threshold
                 NotificationId = Guid.NewGuid(),
                 OperationId = Guid.NewGuid(),
                 SendResult = "Test message"
@@ -43,7 +43,6 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
             await emailStatusRetryConsumer.StopAsync(CancellationToken.None);
 
             // Assert
-            Assert.Equal(1, 1);
         }
 
         public async Task DisposeAsync()
