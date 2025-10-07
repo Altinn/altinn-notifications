@@ -3,7 +3,7 @@ using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
-using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+
 using Npgsql;
 using Xunit;
 
@@ -14,7 +14,7 @@ public class DeadDeliveryReportRepositoryTests() : IAsyncLifetime
     private readonly List<long> _createdIds = [];
 
     [Fact]
-    public async Task AddDeadDeliveryReport_ShouldCompleteWithoutException()
+    public async Task InsertDeadDeliveryReport_ShouldCompleteWithoutException()
     {
         // Arrange
         var sut = GetRepository();
@@ -35,17 +35,17 @@ public class DeadDeliveryReportRepositoryTests() : IAsyncLifetime
 
         var reportVerify = await sut.GetDeadDeliveryReportAsync(id, CancellationToken.None);
 
-        // Assert - Truncate to microseconds for PostgreSQL compatibility
+        // Assert - Truncate to milliseconds for PostgreSQL compatibility
         var normalizedDeliveryReport = deliveryReport with 
         { 
-            FirstSeen = TruncateToMicroseconds(deliveryReport.FirstSeen),
-            LastAttempt = TruncateToMicroseconds(deliveryReport.LastAttempt)
+            FirstSeen = TruncateToMilliseconds(deliveryReport.FirstSeen),
+            LastAttempt = TruncateToMilliseconds(deliveryReport.LastAttempt)
         };
         
         var normalizedReportVerify = reportVerify with 
         { 
-            FirstSeen = TruncateToMicroseconds(reportVerify.FirstSeen),
-            LastAttempt = TruncateToMicroseconds(reportVerify.LastAttempt)
+            FirstSeen = TruncateToMilliseconds(reportVerify.FirstSeen),
+            LastAttempt = TruncateToMilliseconds(reportVerify.LastAttempt)
         };
 
         Assert.Equal(normalizedDeliveryReport, normalizedReportVerify);
@@ -86,29 +86,29 @@ public class DeadDeliveryReportRepositoryTests() : IAsyncLifetime
         var azureReportVerify = await sut.GetDeadDeliveryReportAsync(azureId, CancellationToken.None);
         var linkMobilityReportVerify = await sut.GetDeadDeliveryReportAsync(linkId, CancellationToken.None);
 
-        // Assert - Truncate to microseconds for PostgreSQL compatibility
+        // Assert - Truncate to milliseconds for PostgreSQL compatibility
         var normalizedAzure = azureReport with
         {
-            FirstSeen = TruncateToMicroseconds(azureReport.FirstSeen),
-            LastAttempt = TruncateToMicroseconds(azureReport.LastAttempt)
+            FirstSeen = TruncateToMilliseconds(azureReport.FirstSeen),
+            LastAttempt = TruncateToMilliseconds(azureReport.LastAttempt)
         };
 
         var normalizedLink = linkMobilityReport with
         {
-            FirstSeen = TruncateToMicroseconds(linkMobilityReport.FirstSeen),
-            LastAttempt = TruncateToMicroseconds(linkMobilityReport.LastAttempt)
+            FirstSeen = TruncateToMilliseconds(linkMobilityReport.FirstSeen),
+            LastAttempt = TruncateToMilliseconds(linkMobilityReport.LastAttempt)
         };
 
         var normalizedAzureVerify = azureReportVerify with
         {
-            FirstSeen = TruncateToMicroseconds(azureReportVerify.FirstSeen),
-            LastAttempt = TruncateToMicroseconds(azureReportVerify.LastAttempt)
+            FirstSeen = TruncateToMilliseconds(azureReportVerify.FirstSeen),
+            LastAttempt = TruncateToMilliseconds(azureReportVerify.LastAttempt)
         };
 
         var normalizedLinkMobilityVerify = linkMobilityReportVerify with
         {
-            FirstSeen = TruncateToMicroseconds(linkMobilityReportVerify.FirstSeen),
-            LastAttempt = TruncateToMicroseconds(linkMobilityReportVerify.LastAttempt)
+            FirstSeen = TruncateToMilliseconds(linkMobilityReportVerify.FirstSeen),
+            LastAttempt = TruncateToMilliseconds(linkMobilityReportVerify.LastAttempt)
         };
 
         Assert.Equal(normalizedAzure, normalizedAzureVerify);
@@ -139,14 +139,14 @@ public class DeadDeliveryReportRepositoryTests() : IAsyncLifetime
         
         var normalizedVerify = reportVerify with 
         { 
-            FirstSeen = TruncateToMicroseconds(reportVerify.FirstSeen),
-            LastAttempt = TruncateToMicroseconds(reportVerify.LastAttempt)
+            FirstSeen = TruncateToMilliseconds(reportVerify.FirstSeen),
+            LastAttempt = TruncateToMilliseconds(reportVerify.LastAttempt)
         };
 
         var normalizedReport = report with 
         { 
-            FirstSeen = TruncateToMicroseconds(report.FirstSeen),
-            LastAttempt = TruncateToMicroseconds(report.LastAttempt)
+            FirstSeen = TruncateToMilliseconds(report.FirstSeen),
+            LastAttempt = TruncateToMilliseconds(report.LastAttempt)
         };  
 
         Assert.Equal(normalizedReport, normalizedVerify);
@@ -178,14 +178,8 @@ public class DeadDeliveryReportRepositoryTests() : IAsyncLifetime
             .First(s => s is DeadDeliveryReportRepository);
     }
 
-    private static async Task<int> GetAttemptCountById(long id)
-    {
-        string sql = $"SELECT attemptcount FROM notifications.deaddeliveryreports WHERE id = {id}";
-        return await PostgreUtil.RunSqlReturnOutput<int>(sql);
-    }
-
-    // Truncate DateTime to microseconds for PostgreSQL compatibility so records can be compared correctly
-    private static DateTime TruncateToMicroseconds(DateTime dateTime)
+    // Truncate DateTime to milliseconds for PostgreSQL compatibility so records can be compared correctly
+    private static DateTime TruncateToMilliseconds(DateTime dateTime)
     {
         long ticks = dateTime.Ticks - (dateTime.Ticks % TimeSpan.TicksPerMillisecond);
         return new DateTime(ticks, dateTime.Kind);
