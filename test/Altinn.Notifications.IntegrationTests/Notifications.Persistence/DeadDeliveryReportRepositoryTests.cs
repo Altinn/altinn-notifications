@@ -1,5 +1,9 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using System.Text.Json;
+
+using Altinn.Notifications.Core;
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
@@ -183,6 +187,43 @@ public class DeadDeliveryReportRepositoryTests() : IAsyncLifetime
     {
         long ticks = dateTime.Ticks - (dateTime.Ticks % TimeSpan.TicksPerMillisecond);
         return new DateTime(ticks, dateTime.Kind);
+    }
+
+    [Fact]
+    public async Task Insert_WithSerializedEmailSendOperationResult_ShouldStoreAndRetrieveCorrectly()
+    {
+        // Arrange
+        var sut = GetRepository();
+        var emailSendOperationResult = new EmailSendOperationResult
+        {
+            NotificationId = Guid.NewGuid(),
+            OperationId = Guid.NewGuid().ToString(),
+            SendResult = EmailNotificationResultType.Delivered
+        };
+
+        var serializedEmailSendOperationResult = emailSendOperationResult.Serialize();
+
+        var report = new DeadDeliveryReport
+        {
+            Channel = DeliveryReportChannel.AzureCommunicationServices,
+            DeliveryReport = serializedEmailSendOperationResult,
+            FirstSeen = DateTime.UtcNow,
+            LastAttempt = DateTime.UtcNow.AddMinutes(10),
+            Resolved = false,
+            AttemptCount = 1
+        };
+
+        // Act
+        var id = await sut.InsertAsync(report, CancellationToken.None);
+        _createdIds.Add(id);
+
+        var persistedReport = await sut.GetDeadDeliveryReportAsync(id, CancellationToken.None);
+        var deliveryReportDeserialized = JsonSerializer.Deserialize<EmailSendOperationResult>(persistedReport.DeliveryReport, JsonSerializerOptionsProvider.Options);
+
+        Assert.NotNull(deliveryReportDeserialized);
+        Assert.Equal(emailSendOperationResult.NotificationId, deliveryReportDeserialized.NotificationId);
+        Assert.Equal(emailSendOperationResult.OperationId, deliveryReportDeserialized.OperationId);
+        Assert.Equal(emailSendOperationResult.SendResult, deliveryReportDeserialized.SendResult);
     }
 
     public async Task DisposeAsync()
