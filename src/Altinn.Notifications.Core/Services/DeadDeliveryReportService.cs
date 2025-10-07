@@ -10,13 +10,31 @@ public class DeadDeliveryReportService(IDeadDeliveryReportRepository reportRepos
     private readonly IDeadDeliveryReportRepository _reportRepository = reportRepository;
 
     /// <inheritdoc/>
-    public Task<long> Insert(DeadDeliveryReport report, CancellationToken cancellationToken = default)
+    public Task<long> InsertAsync(DeadDeliveryReport report, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(report);
+
         if (string.IsNullOrWhiteSpace(report.DeliveryReport))
         {
-            throw new ArgumentException("report.DeliveryReport cannot be null or empty", nameof(report));
+            throw new ArgumentException(
+                "DeliveryReport cannot be null or empty",
+                nameof(report));
         }
 
-        return _reportRepository.Insert(report, cancellationToken);
+        if (report.AttemptCount <= 0)
+        {
+            throw new ArgumentException(
+                "AttemptCount must be greater than zero",
+                nameof(report));
+        }
+
+        if (report.LastAttempt < report.FirstSeen)
+        {
+            throw new ArgumentException(
+                "LastAttempt must be greater than or equal to FirstSeen",
+                nameof(report));
+        }
+
+        return _reportRepository.InsertAsync(report, cancellationToken);
     }
 }

@@ -11,9 +11,10 @@ public class DeadDeliveryReportRepository(NpgsqlDataSource npgsqlDataSource) : I
 {
     private readonly NpgsqlDataSource _dataSource = npgsqlDataSource;
     private const string _addDeadDeliveryReport = "SELECT notifications.insertdeaddeliveryreport(@channel, @attemptcount, @deliveryreport, @resolved, @firstseen, @lastattempt)";
+    private const string _getDeadDeliveryReport = "SELECT id, channel, attemptcount, deliveryreport, resolved, firstseen, lastattempt FROM notifications.deaddeliveryreports WHERE id = @id";
 
     /// <inheritdoc/>
-    public async Task<long> Insert(DeadDeliveryReport report, CancellationToken cancellationToken)
+    public async Task<long> InsertAsync(DeadDeliveryReport report, CancellationToken cancellationToken)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_addDeadDeliveryReport);
 
@@ -28,5 +29,31 @@ public class DeadDeliveryReportRepository(NpgsqlDataSource npgsqlDataSource) : I
         return result is null
             ? throw new InvalidOperationException("Database function insertdeaddeliveryreport returned null.")
             : (long)result;
+    }
+
+    /// <inheritdoc/>
+    public async Task<DeadDeliveryReport> GetDeadDeliveryReportAsync(long id, CancellationToken cancellationToken = default)
+    {
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getDeadDeliveryReport);
+        pgcom.Parameters.AddWithValue("id", NpgsqlDbType.Bigint, id);
+
+        await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken);
+
+        if (await reader.ReadAsync(cancellationToken))
+        {
+            return new DeadDeliveryReport
+            {
+                Channel = (Core.Enums.DeliveryReportChannel)reader.GetInt16(1),
+                AttemptCount = reader.GetInt32(2),
+                DeliveryReport = reader.GetString(3),
+                Resolved = reader.GetBoolean(4),
+                FirstSeen = reader.GetDateTime(5),
+                LastAttempt = reader.GetDateTime(6)
+            };
+        }
+        else
+        {
+            throw new KeyNotFoundException($"DeadDeliveryReport with ID {id} not found.");
+        }
     }
 }
