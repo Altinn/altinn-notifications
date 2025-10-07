@@ -18,21 +18,21 @@ public class DeadDeliveryReportService(IDeadDeliveryReportRepository reportRepos
         {
             throw new ArgumentException(
                 "DeliveryReport cannot be null or empty",
-                nameof(DeadDeliveryReport.DeliveryReport));
+                nameof(report));
         }
 
         if (report.AttemptCount <= 0)
         {
             throw new ArgumentException(
                 "AttemptCount must be greater than zero",
-                nameof(DeadDeliveryReport.AttemptCount));
+                nameof(report));
         }
 
         if (report.LastAttempt < report.FirstSeen)
         {
             throw new ArgumentException(
                 "LastAttempt must be greater than or equal to FirstSeen",
-                nameof(DeadDeliveryReport.LastAttempt));
+                nameof(report));
         }
 
         return _reportRepository.InsertAsync(report, cancellationToken);

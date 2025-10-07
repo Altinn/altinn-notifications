@@ -8,7 +8,7 @@ namespace Altinn.Notifications.Core.Services.Interfaces;
 public interface IDeadDeliveryReportService
 {
     /// <summary>
-    /// Adds a dead delivery report to the repository    
+    /// Inserts a dead delivery report to the repository    
     /// </summary>
     /// <param name="report">The dead delivery report to insert</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the operation</param>
