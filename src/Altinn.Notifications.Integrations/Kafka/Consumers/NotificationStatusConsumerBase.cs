@@ -93,11 +93,11 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
                 FirstSeen = DateTime.UtcNow,
                 Attempts = 1,
                 NotificationId = e.IdentifierType == SendStatusIdentifierType.NotificationId ? Guid.Parse(e.Identifier) : null,
-                OperationId = e.IdentifierType == SendStatusIdentifierType.OperationId ? Guid.Parse(e.Identifier) : null,
+                ExternalReferenceId = e.IdentifierType is SendStatusIdentifierType.OperationId or SendStatusIdentifierType.GatewayReference ? Guid.Parse(e.Identifier) : null,
                 SendResult = message
             };
 
-            await RetryStatus(message);
+            await RetryStatus(retryMessage.Serialize());
         }
         catch (Exception e) when (LogProcessingError(e, message))
         {
