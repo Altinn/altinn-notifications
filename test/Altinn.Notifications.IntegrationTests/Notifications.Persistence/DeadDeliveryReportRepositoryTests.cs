@@ -105,7 +105,7 @@ public class DeadDeliveryReportRepositoryTests() : IAsyncLifetime
             LastAttempt = TruncateToMicroseconds(azureReportVerify.LastAttempt)
         };
 
-        var normalizedLinkMobilityVerify = linkMobilityReport with
+        var normalizedLinkMobilityVerify = linkMobilityReportVerify with
         {
             FirstSeen = TruncateToMicroseconds(linkMobilityReportVerify.FirstSeen),
             LastAttempt = TruncateToMicroseconds(linkMobilityReportVerify.LastAttempt)
