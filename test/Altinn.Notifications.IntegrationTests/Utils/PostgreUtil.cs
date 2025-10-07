@@ -350,7 +350,27 @@ public static class PostgreUtil
 
         await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync();
         await reader.ReadAsync();
-        
+
+        if (!reader.HasRows)
+        {
+            return null;
+        }
+
+        var id = reader.GetValue<long>(0);
+        return id;
+    }
+
+    public static async Task<long?> GetDeadDeliveryReportIdFromGatewayReference(string gatewayReference)
+    {
+        var query = $@"SELECT id FROM notifications.deaddeliveryreports WHERE deliveryreport ->> 'gatewayReference' = '{gatewayReference}'";
+
+        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
+
+        await using NpgsqlCommand pgcom = dataSource.CreateCommand(query);
+
+        await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync();
+        await reader.ReadAsync();
+
         if (!reader.HasRows)
         {
             return null;
