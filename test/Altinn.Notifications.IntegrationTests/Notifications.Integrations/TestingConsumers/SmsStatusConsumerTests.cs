@@ -3,10 +3,9 @@ using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.IntegrationTests.Utils;
-using Microsoft.Extensions.Hosting;
 
+using Microsoft.Extensions.Hosting;
 using Xunit;
-using Xunit.Sdk;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.TestingConsumers;
 
@@ -47,7 +46,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
 
         // Wait for SMS notification status to become Accepted
         string? observedSmsStatus = null;
-        await EventuallyAsync(
+        await KafkaUtilityFunctions.EventuallyAsync(
             async () =>
             {
                 observedSmsStatus = await SelectSmsNotificationStatus(notification.Id);
@@ -58,7 +57,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
 
         // Then wait for order processing status to reach Processed
         long processedOrderCount = -1;
-        await EventuallyAsync(
+        await KafkaUtilityFunctions.EventuallyAsync(
             async () =>
             {
                 processedOrderCount = await SelectProcessedOrderCount(notification.Id);
@@ -100,7 +99,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
         // Wait until order is processed, capture status once when it happens
         long processedOrderCount = -1;
         string? observedSmsStatus = null;
-        await EventuallyAsync(
+        await KafkaUtilityFunctions.EventuallyAsync(
             async () =>
             {
                 processedOrderCount = await SelectProcessedOrderCount(notification.Id);
@@ -152,7 +151,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
 
         int statusFeedCount = -1;
-        await EventuallyAsync(
+        await KafkaUtilityFunctions.EventuallyAsync(
             async () =>
             {
                 statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
@@ -196,7 +195,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
 
         int statusFeedCount = -1;
-        await EventuallyAsync(
+        await KafkaUtilityFunctions.EventuallyAsync(
             async () =>
             {
                 statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
@@ -242,30 +241,5 @@ public class SmsStatusConsumerTests : IAsyncLifetime
     {
         string sql = $"select result from notifications.smsnotifications where alternateid = '{notificationId}'";
         return await PostgreUtil.RunSqlReturnOutput<string>(sql);
-    }
-
-    /// <summary>
-    /// Repeatedly evaluates a condition until it becomes <c>true</c> or a timeout is reached.
-    /// </summary>
-    /// <param name="predicate">An async function that evaluates the condition to be met. Returns <c>true</c> if the condition is satisfied, otherwise <c>false</c>.</param>
-    /// <param name="maximumWaitTime">The maximum amount of time to wait for the condition to be met.</param>
-    /// <param name="checkInterval">The interval between condition evaluations. Defaults to 100 milliseconds if not specified.</param>
-    /// <exception cref="XunitException">Thrown if the condition is not met within the specified timeout.</exception>
-    private static async Task EventuallyAsync(Func<Task<bool>> predicate, TimeSpan maximumWaitTime, TimeSpan? checkInterval = null)
-    {
-        var deadline = DateTime.UtcNow.Add(maximumWaitTime);
-        var pollingInterval = checkInterval ?? TimeSpan.FromMilliseconds(100);
-
-        while (DateTime.UtcNow < deadline)
-        {
-            if (await predicate())
-            {
-                return;
-            }
-
-            await Task.Delay(pollingInterval);
-        }
-
-        throw new XunitException($"Condition not met within timeout ({maximumWaitTime}).");
     }
 }
