@@ -61,6 +61,11 @@ public class KafkaSettings
     public string SmsStatusUpdatedTopicName { get; set; } = string.Empty;
 
     /// <summary>
+    /// The name of the sms status updated retry topic
+    /// </summary>
+    public string SmsStatusUpdatedRetryTopicName { get; set; } = string.Empty;
+
+    /// <summary>
     /// The name of the platform service update topic 
     /// </summary>
     public string AltinnServiceUpdateTopicName { get; set; } = string.Empty;
