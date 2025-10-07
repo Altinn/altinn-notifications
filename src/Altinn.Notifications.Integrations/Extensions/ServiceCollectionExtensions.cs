@@ -40,6 +40,7 @@ public static class ServiceCollectionExtensions
         services
         .AddSingleton<IKafkaProducer, KafkaProducer>()
         .AddHostedService<SmsStatusConsumer>()
+        .AddHostedService<SmsStatusRetryConsumer>()
         .AddHostedService<EmailStatusConsumer>()
         .AddHostedService<EmailStatusRetryConsumer>()
         .AddHostedService<PastDueOrdersConsumer>()
