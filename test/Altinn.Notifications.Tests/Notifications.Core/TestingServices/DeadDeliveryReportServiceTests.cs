@@ -119,7 +119,7 @@ public class DeadDeliveryReportServiceTests
         var exception = await Assert.ThrowsAsync<ArgumentException>(
             () => _sut.InsertAsync(deadDeliveryReport, CancellationToken.None));
 
-        Assert.Equal("LastAttempt must be greater than or equal to FirstSeen (Parameter 'report')", exception.Message);
+        Assert.Equal("LastAttempt must be greater than FirstSeen (Parameter 'report')", exception.Message);
         Assert.Equal("report", exception.ParamName);
 
         // Verify repository was never called
