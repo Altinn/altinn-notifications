@@ -1,13 +1,15 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 using System.Data;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Helpers;
 using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Persistence.Mappers;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using Npgsql;
 using NpgsqlTypes;
@@ -35,12 +37,12 @@ public abstract class NotificationRepositoryBase
 
     private readonly NpgsqlDataSource _dataSource;
     private readonly ILogger _logger;
+    private readonly NotificationConfig _config;
 
     private const string _insertStatusFeedEntrySql = @"SELECT notifications.insertstatusfeed(o._id, o.creatorname, @orderstatus)
                                                        FROM notifications.orders o
                                                        WHERE o.alternateid = @alternateid;";
 
-    private const int _numberOfRowsTerminatedPerFunctionCall = 100;
     private const string _referenceColumnName = "reference";
     private const string _typeColumnName = "type";
     private const string _statusColumnName = "status";
@@ -50,10 +52,12 @@ public abstract class NotificationRepositoryBase
     /// </summary>
     /// <param name="dataSource">The datasource used to integrate with the database</param>
     /// <param name="logger">The logger associated with the above implementation</param>
-    protected NotificationRepositoryBase(NpgsqlDataSource dataSource, ILogger logger)
+    /// <param name="config">The notification configuration</param>
+    protected NotificationRepositoryBase(NpgsqlDataSource dataSource, ILogger logger, IOptions<NotificationConfig> config)
     {
         _dataSource = dataSource;
         _logger = logger;
+        _config = config.Value;
     }
 
     /// <summary>
@@ -99,8 +103,8 @@ public abstract class NotificationRepositoryBase
 
     /// <summary>
     /// Terminates hanging email/sms notifications by updating their status and attempting to complete associated orders.
-    /// Updates rows in a batch of 100 per function call. All subsequent processing happens in the same transaction.
-    /// All 100 or nothing is committed to the database.
+    /// Updates rows in a configurable batch size per function call. All subsequent processing happens in the same transaction.
+    /// All rows in the batch or nothing is committed to the database.
     /// </summary>
     /// <returns>A <see cref="Task"/> that represents the asynchronous operation.</returns>
     /// <exception cref="InvalidOperationException">Thrown if the alternate ID returned from the database cannot be parsed as a valid <see cref="Guid"/>.</exception>
@@ -113,7 +117,7 @@ public abstract class NotificationRepositoryBase
         {
             await using NpgsqlCommand pgcom = new(_updateExpiredNotifications, connection, transaction);
             pgcom.Parameters.AddWithValue("source", NpgsqlDbType.Text, SourceIdentifier); // Source identifier for the notifications
-            pgcom.Parameters.AddWithValue("limit", NpgsqlDbType.Integer, _numberOfRowsTerminatedPerFunctionCall);
+            pgcom.Parameters.AddWithValue("limit", NpgsqlDbType.Integer, _config.TerminationBatchSize);
 
             await using var reader = await pgcom.ExecuteReaderAsync();
 
