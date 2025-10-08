@@ -14,8 +14,6 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers;
 public sealed class EmailStatusRetryConsumer(IKafkaProducer producer, IDeadDeliveryReportService deadDeliveryReportService, IOptions<Configuration.KafkaSettings> settings, ILogger<EmailStatusRetryConsumer> logger)
     : StatusRetryConsumerBase(producer, deadDeliveryReportService, settings, settings.Value.EmailStatusUpdatedRetryTopicName, logger)
 {
-    private readonly IOptions<KafkaSettings> _settings = settings;
-
     /// <summary>
     /// Gets the delivery report channel for Azure Communication Services email notifications.
     /// </summary>

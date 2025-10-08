@@ -74,7 +74,6 @@ public class KafkaSettings
     /// The name of the health check topic
     /// </summary>
     public string HealthCheckTopic { get; set; } = string.Empty;
-    
 }
 
 /// <summary>

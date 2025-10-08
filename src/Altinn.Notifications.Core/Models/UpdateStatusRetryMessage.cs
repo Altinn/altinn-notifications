@@ -13,12 +13,12 @@ public record UpdateStatusRetryMessage
     public Guid? ExternalReferenceId { get; init; }
 
     /// <summary>
-    /// Gets or sets the number of retry attempts made. Defaults to 1.
+    /// Gets or sets the number of retry attempts made.
     /// </summary>
     public required int Attempts { get; init; } 
 
     /// <summary>
-    /// Gets or sets the timestamp when the retry message was first created. Defaults to current UTC time.
+    /// Gets or sets the timestamp when the retry message was first created.
     /// </summary>
     public required DateTime FirstSeen { get; init; }
 
