@@ -9,7 +9,6 @@ using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
-using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Models.ShortMessageService;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;

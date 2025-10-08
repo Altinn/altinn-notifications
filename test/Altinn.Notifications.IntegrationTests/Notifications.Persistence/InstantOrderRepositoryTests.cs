@@ -1,5 +1,3 @@
-using System;
-using System.Threading.Tasks;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;

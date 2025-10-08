@@ -2,8 +2,6 @@
 using System.Text.Json.Serialization;
 using Altinn.Notifications.Models.Email;
 
-using Altinn.Notifications.Models.Recipient;
-
 namespace Altinn.Notifications.Models.Orders;
 
 /// <summary>
