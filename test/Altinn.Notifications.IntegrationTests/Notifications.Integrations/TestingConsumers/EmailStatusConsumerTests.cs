@@ -55,7 +55,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
 
         int statusFeedCount = -1;
-        await  IntegrationTestUtil.EventuallyAsync(
+        await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
                 statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);

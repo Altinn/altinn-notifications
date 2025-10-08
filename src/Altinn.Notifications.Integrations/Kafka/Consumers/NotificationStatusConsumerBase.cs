@@ -20,7 +20,6 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
 {
     private readonly string _retryTopicName;
     private readonly string _sendStatusUpdateRetryTopicName;
-    private readonly string _topicName;
     private readonly IKafkaProducer _producer;
     private readonly ILogger<TConsumer> _logger;
 
@@ -44,7 +43,6 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
     {
         _logger = logger;
         _producer = producer;
-        _topicName = topicName;
         _retryTopicName = retryTopicName;
         _sendStatusUpdateRetryTopicName = sendStatusUpdateRetryTopicName;
     }
@@ -148,15 +146,5 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
             kafkaMessage);
 
         return false;
-    }
-
-    /// <summary>
-    /// Logs send status update failures.
-    /// </summary>
-    /// <param name="exception">The domain exception.</param>
-    /// <param name="kafkaMessage">The original Kafka message.</param>
-    private void LogSendStatusUpdateException(SendStatusUpdateException exception, string kafkaMessage)
-    {
-        _logger.LogInformation("Exception Message={ExceptionMessage}. Kafka Message={KafkaMessage}", exception.Message, kafkaMessage);
     }
 }
