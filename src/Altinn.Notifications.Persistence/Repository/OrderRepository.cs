@@ -505,7 +505,7 @@ public class OrderRepository : IOrderRepository
 
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, order.Id);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, order.Creator.ShortName);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, order.SendersReference ?? (object)DBNull.Value);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(order.SendersReference) ? (object)DBNull.Value : order.SendersReference);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, order.Created);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, order.RequestedSendTime);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Jsonb, order);
@@ -645,10 +645,10 @@ public class OrderRepository : IOrderRepository
 
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notification.OrderId);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notification.Id);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.OrganizationNumber ?? (object)DBNull.Value);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.NationalIdentityNumber ?? (object)DBNull.Value);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(notification.Recipient.OrganizationNumber) ? (object)DBNull.Value : notification.Recipient.OrganizationNumber);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(notification.Recipient.NationalIdentityNumber) ? (object)DBNull.Value : notification.Recipient.NationalIdentityNumber);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.MobileNumber);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.CustomizedBody ?? (object)DBNull.Value);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(notification.Recipient.CustomizedBody) ? (object)DBNull.Value : notification.Recipient.CustomizedBody);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.SendResult.Result.ToString());
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Integer, smsMessageCount);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, notification.SendResult.ResultTime);
@@ -783,11 +783,11 @@ public class OrderRepository : IOrderRepository
 
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notification.OrderId);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, notification.Id);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.OrganizationNumber ?? (object)DBNull.Value);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.NationalIdentityNumber ?? (object)DBNull.Value);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(notification.Recipient.OrganizationNumber) ? (object)DBNull.Value : notification.Recipient.OrganizationNumber);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(notification.Recipient.NationalIdentityNumber) ? (object)DBNull.Value : notification.Recipient.NationalIdentityNumber);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.ToAddress);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.CustomizedBody ?? (object)DBNull.Value);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.Recipient.CustomizedSubject ?? (object)DBNull.Value);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(notification.Recipient.CustomizedBody) ? (object)DBNull.Value : notification.Recipient.CustomizedBody);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(notification.Recipient.CustomizedSubject) ? (object)DBNull.Value : notification.Recipient.CustomizedSubject);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, notification.SendResult.Result.ToString());
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, notification.SendResult.ResultTime);
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, emailExpiryDateTime);
