@@ -205,7 +205,7 @@ public class InstantSmsOrderRequestServiceTests
                 It.IsAny<CancellationToken>()),
             Times.Once);
 
-        // Since repository creation failed, SMS client should still be called
+        // Since repository creation failed, SMS client should not be called
         shortMessageServiceClient.Verify(e => e.SendAsync(It.IsAny<ShortMessage>()), Times.Never);
     }
 
