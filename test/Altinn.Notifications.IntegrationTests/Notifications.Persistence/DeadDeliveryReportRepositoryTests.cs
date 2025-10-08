@@ -37,7 +37,7 @@ public class DeadDeliveryReportRepositoryTests() : IAsyncLifetime
         var id = await sut.InsertAsync(deliveryReport, CancellationToken.None);
         _createdIds.Add(id);
 
-        var reportVerify = await sut.GetDeadDeliveryReportAsync(id, CancellationToken.None);
+        var reportVerify = await sut.GetAsync(id, CancellationToken.None);
 
         // Assert - Truncate to milliseconds for PostgreSQL compatibility
         var normalizedDeliveryReport = deliveryReport with 
@@ -87,8 +87,8 @@ public class DeadDeliveryReportRepositoryTests() : IAsyncLifetime
         _createdIds.AddRange([azureId, linkId]);
 
         // Assert
-        var azureReportVerify = await sut.GetDeadDeliveryReportAsync(azureId, CancellationToken.None);
-        var linkMobilityReportVerify = await sut.GetDeadDeliveryReportAsync(linkId, CancellationToken.None);
+        var azureReportVerify = await sut.GetAsync(azureId, CancellationToken.None);
+        var linkMobilityReportVerify = await sut.GetAsync(linkId, CancellationToken.None);
 
         // Assert - Truncate to milliseconds for PostgreSQL compatibility
         var normalizedAzure = azureReport with
@@ -139,7 +139,7 @@ public class DeadDeliveryReportRepositoryTests() : IAsyncLifetime
         _createdIds.Add(id);
 
         // Assert
-        var reportVerify = await sut.GetDeadDeliveryReportAsync(id, CancellationToken.None);
+        var reportVerify = await sut.GetAsync(id, CancellationToken.None);
         
         var normalizedVerify = reportVerify with 
         { 
@@ -217,7 +217,7 @@ public class DeadDeliveryReportRepositoryTests() : IAsyncLifetime
         var id = await sut.InsertAsync(report, CancellationToken.None);
         _createdIds.Add(id);
 
-        var persistedReport = await sut.GetDeadDeliveryReportAsync(id, CancellationToken.None);
+        var persistedReport = await sut.GetAsync(id, CancellationToken.None);
         var deliveryReportDeserialized = JsonSerializer.Deserialize<EmailSendOperationResult>(persistedReport.DeliveryReport, JsonSerializerOptionsProvider.Options);
 
         Assert.NotNull(deliveryReportDeserialized);

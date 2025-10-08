@@ -1,4 +1,6 @@
-﻿using Altinn.Notifications.Core.Models;
+using System.Data;
+
+using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Persistence;
 
 using Npgsql;
@@ -14,7 +16,7 @@ public class DeadDeliveryReportRepository(NpgsqlDataSource npgsqlDataSource) : I
     private const string _getDeadDeliveryReport = "SELECT id, channel, attemptcount, deliveryreport, resolved, firstseen, lastattempt FROM notifications.deaddeliveryreports WHERE id = @id";
 
     /// <inheritdoc/>
-    public async Task<long> InsertAsync(DeadDeliveryReport report, CancellationToken cancellationToken)
+    public async Task<long> InsertAsync(DeadDeliveryReport report, CancellationToken cancellationToken = default)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_addDeadDeliveryReport);
 
@@ -32,7 +34,7 @@ public class DeadDeliveryReportRepository(NpgsqlDataSource npgsqlDataSource) : I
     }
 
     /// <inheritdoc/>
-    public async Task<DeadDeliveryReport> GetDeadDeliveryReportAsync(long id, CancellationToken cancellationToken = default)
+    public async Task<DeadDeliveryReport> GetAsync(long id, CancellationToken cancellationToken = default)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getDeadDeliveryReport);
         pgcom.Parameters.AddWithValue("id", NpgsqlDbType.Bigint, id);
@@ -43,12 +45,12 @@ public class DeadDeliveryReportRepository(NpgsqlDataSource npgsqlDataSource) : I
         {
             return new DeadDeliveryReport
             {
-                Channel = (Core.Enums.DeliveryReportChannel)reader.GetInt16(1),
-                AttemptCount = reader.GetInt32(2),
-                DeliveryReport = reader.GetString(3),
-                Resolved = reader.GetBoolean(4),
-                FirstSeen = reader.GetDateTime(5),
-                LastAttempt = reader.GetDateTime(6)
+                Channel = (Core.Enums.DeliveryReportChannel)await reader.GetFieldValueAsync<short>("channel", cancellationToken),
+                AttemptCount = await reader.GetFieldValueAsync<int>("attemptcount", cancellationToken),
+                DeliveryReport = await reader.GetFieldValueAsync<string>("deliveryreport", cancellationToken),
+                Resolved = await reader.GetFieldValueAsync<bool>("resolved", cancellationToken),
+                FirstSeen = await reader.GetFieldValueAsync<DateTime>("firstseen", cancellationToken),
+                LastAttempt = await reader.GetFieldValueAsync<DateTime>("lastattempt", cancellationToken)
             };
         }
         else
