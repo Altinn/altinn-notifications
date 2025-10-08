@@ -1,6 +1,7 @@
 ﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Integrations.Configuration;
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -11,8 +12,15 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers;
 /// Kafka consumer for processing email status retry messages
 /// </summary>
 public sealed class EmailStatusRetryConsumer(IKafkaProducer producer, IDeadDeliveryReportService deadDeliveryReportService, IOptions<Configuration.KafkaSettings> settings, ILogger<EmailStatusRetryConsumer> logger)
-    : StatusRetryConsumerBase(producer, deadDeliveryReportService, settings, logger, DeliveryReportChannel.AzureCommunicationServices)
+    : StatusRetryConsumerBase(producer, deadDeliveryReportService, settings, settings.Value.EmailStatusUpdatedRetryTopicName, logger)
 {
+    private readonly IOptions<KafkaSettings> _settings = settings;
+
+    /// <summary>
+    /// Gets the delivery report channel for Azure Communication Services email notifications.
+    /// </summary>
+    protected override DeliveryReportChannel Channel => DeliveryReportChannel.AzureCommunicationServices;
+
     /// <summary>
     /// Executes the email status retry consumer to process messages from the Kafka topic
     /// </summary>

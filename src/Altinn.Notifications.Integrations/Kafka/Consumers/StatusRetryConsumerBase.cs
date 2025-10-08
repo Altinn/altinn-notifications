@@ -17,14 +17,23 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers;
 /// <remarks>This abstract class provides a foundation for creating specialized consumers that process
 /// status updates and incorporate retry mechanisms. Derived classes must implement the specific behavior for
 /// handling status updates and managing retries.</remarks>
-public abstract class StatusRetryConsumerBase(IKafkaProducer producer, IDeadDeliveryReportService deadDeliveryReportService, IOptions<KafkaSettings> settings, ILogger<StatusRetryConsumerBase> logger, DeliveryReportChannel channel) : KafkaConsumerBase<StatusRetryConsumerBase>(settings, logger, settings.Value.EmailStatusUpdatedTopicName)
+public abstract class StatusRetryConsumerBase(
+        IKafkaProducer producer, 
+        IDeadDeliveryReportService deadDeliveryReportService,  
+        IOptions<KafkaSettings> settings,
+        string topicName,
+        ILogger<StatusRetryConsumerBase> logger) : KafkaConsumerBase<StatusRetryConsumerBase>(settings, logger, topicName)
 {
     private readonly IKafkaProducer _producer = producer;
     private readonly IDeadDeliveryReportService _deadDeliveryReportService = deadDeliveryReportService;
-    private readonly ILogger _logger = logger;
-    private readonly DeliveryReportChannel _channel = channel;
+    private readonly string _topicName = topicName;
     private readonly int _statusUpdateRetrySeconds = settings.Value.StatusUpdatedRetryThresholdSeconds;
-    private readonly string _retryTopicName = settings.Value.EmailStatusUpdatedRetryTopicName;
+    private readonly ILogger _logger = logger;
+
+    /// <summary>
+    /// Gets the delivery report channel for this consumer.
+    /// </summary>
+    protected abstract DeliveryReportChannel Channel { get; }
 
     /// <summary>
     /// Processes a status update message, determining whether to retry or log a dead delivery report based on elapsed time.
@@ -45,7 +54,7 @@ public abstract class StatusRetryConsumerBase(IKafkaProducer producer, IDeadDeli
             var deadDeliveryReport = new DeadDeliveryReport
             {
                 AttemptCount = retryMessage.Attempts,
-                Channel = _channel,
+                Channel = Channel,
                 FirstSeen = retryMessage.FirstSeen,
                 LastAttempt = DateTime.UtcNow,
                 Resolved = false,
@@ -64,7 +73,7 @@ public abstract class StatusRetryConsumerBase(IKafkaProducer producer, IDeadDeli
                 elapsedSeconds,
                 _statusUpdateRetrySeconds);
 
-            await _producer.ProduceAsync(_retryTopicName, incrementedRetryMessage.Serialize());
+            await _producer.ProduceAsync(_topicName, incrementedRetryMessage.Serialize());
         }
     }
 
@@ -75,6 +84,6 @@ public abstract class StatusRetryConsumerBase(IKafkaProducer producer, IDeadDeli
     /// <returns>A task representing the asynchronous operation.</returns>
     protected async Task RetryStatus(string message)
     {
-        await _producer.ProduceAsync(_retryTopicName, message);
+        await _producer.ProduceAsync(_topicName, message);
     }
 }
