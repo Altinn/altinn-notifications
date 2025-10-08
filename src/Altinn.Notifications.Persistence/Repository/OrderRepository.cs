@@ -659,7 +659,24 @@ public class OrderRepository : IOrderRepository
 
     /// <summary>
     /// Common pattern for creating instant notification orders with database transaction handling.
+    /// This method abstracts the common workflow for all instant order types (SMS, Email, generic) while
+    /// allowing each caller to provide their specific insertion logic through function parameters.
     /// </summary>
+    /// <param name="notificationOrder">The notification order to insert</param>
+    /// <param name="getOrderChainId">Function to retrieve the order chain ID for tracking</param>
+    /// <param name="insertInstantOrderAction">Function to insert the specific instant order type (SMS/Email/generic)</param>
+    /// <param name="insertTemplateAction">Function to insert the template text (SMS or Email template)</param>
+    /// <param name="insertNotificationAction">Function to insert the notification record with send results</param>
+    /// <param name="cancellationToken">Cancellation token for async operations</param>
+    /// <returns>Tracking information for the created instant order</returns>
+    /// <remarks>
+    /// This method follows a consistent 4-step process for all instant orders:
+    /// 1. Insert the instant order record (type-specific)
+    /// 2. Insert the main notification order
+    /// 3. Insert the template text (SMS or Email)
+    /// 4. Insert the notification with send results
+    /// All operations are wrapped in a transaction for atomicity.
+    /// </remarks>
     private async Task<InstantNotificationOrderTracking> CreateInstantOrderWithTransactionAsync(
         NotificationOrder notificationOrder,
         Func<Guid> getOrderChainId,
