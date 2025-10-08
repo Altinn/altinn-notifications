@@ -57,7 +57,7 @@ public abstract class NotificationRepositoryBase
     {
         _dataSource = dataSource;
         _logger = logger;
-        _terminationBatchSize = config.Value.TerminationBatchSize;
+        _terminationBatchSize = config.Value.TerminationBatchSize > 0 ? config.Value.TerminationBatchSize : 100;
     }
 
     /// <summary>
