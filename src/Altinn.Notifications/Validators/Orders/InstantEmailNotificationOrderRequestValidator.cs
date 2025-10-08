@@ -17,11 +17,11 @@ internal sealed class InstantEmailNotificationOrderRequestValidator : AbstractVa
     {
         RuleFor(request => request.IdempotencyId)
             .NotEmpty()
-            .WithMessage("IdempotencyId is required");
+            .WithMessage("IdempotencyId cannot be null or empty.");
 
         RuleFor(request => request.InstantEmailDetails)
             .NotNull()
-            .WithMessage("Email details are required")
+            .WithMessage("Email details cannot be null.")
             .SetValidator(new InstantEmailDetailsValidator());
     }
 }

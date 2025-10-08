@@ -17,7 +17,7 @@ internal sealed class InstantEmailDetailsValidator : AbstractValidator<InstantEm
     {
         RuleFor(details => details.EmailAddress)
             .Must(RecipientRules.IsValidEmail)
-            .WithMessage("The recipient email address is not a valid email address.");
+            .WithMessage("Invalid email address format.");
 
         RuleFor(details => details.EmailSettings)
             .NotNull()
@@ -29,16 +29,16 @@ internal sealed class InstantEmailDetailsValidator : AbstractValidator<InstantEm
             {
                 RuleFor(details => details.EmailSettings!.SenderEmailAddress)
                     .Must(RecipientRules.IsValidEmail!)
-                    .WithMessage("The sender email address is not a valid email address.");
+                    .WithMessage("Invalid email address format.");
             });
 
             RuleFor(details => details.EmailSettings!.Subject)
                 .NotEmpty()
-                .WithMessage("The email subject must not be empty.");
+                .WithMessage("The email subject cannot be empty.");
 
             RuleFor(details => details.EmailSettings!.Body)
                 .NotEmpty()
-                .WithMessage("The email body must not be empty.");
+                .WithMessage("The email body cannot be empty.");
 
             RuleFor(details => details.EmailSettings!.ContentType)
                 .IsInEnum()

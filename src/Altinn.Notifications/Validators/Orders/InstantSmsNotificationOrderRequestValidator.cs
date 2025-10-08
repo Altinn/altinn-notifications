@@ -17,11 +17,11 @@ internal sealed class InstantSmsNotificationOrderRequestValidator : AbstractVali
     {
         RuleFor(request => request.IdempotencyId)
             .NotEmpty()
-            .WithMessage("IdempotencyId is required");
+            .WithMessage("IdempotencyId cannot be null or empty.");
 
         RuleFor(request => request.RecipientSms)
             .NotNull()
-            .WithMessage("RecipientSms is required")
+            .WithMessage("SMS details cannot be null.")
             .SetValidator(new ShortMessageDeliveryDetailsValidator());
     }
 }
