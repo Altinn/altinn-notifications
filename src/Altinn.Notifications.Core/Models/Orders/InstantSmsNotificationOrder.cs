@@ -15,7 +15,7 @@ public record InstantSmsNotificationOrder
     /// <summary>
     /// The date and time for when the instant SMS notification order was created.
     /// </summary>
-    public DateTime Created { get; init; }
+    public required DateTime Created { get; init; }
 
     /// <summary>
     /// The unique identifier that is used to ensure the same notification order is not processed multiple times.
