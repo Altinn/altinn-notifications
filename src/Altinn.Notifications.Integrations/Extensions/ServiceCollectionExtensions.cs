@@ -10,6 +10,7 @@ using Altinn.Notifications.Integrations.Authorization;
 using Altinn.Notifications.Integrations.Clients;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Health;
+using Altinn.Notifications.Integrations.InstantEmailService;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.Integrations.Kafka.Producers;
 using Altinn.Notifications.Integrations.Register;
@@ -63,6 +64,7 @@ public static class ServiceCollectionExtensions
         services.AddHttpClient<IProfileClient, ProfileClient>();
         services.AddHttpClient<IRegisterClient, RegisterClient>();
         services.AddHttpClient<IShortMessageServiceClient, ShortMessageServiceClient>();
+        services.AddHttpClient<IInstantEmailServiceClient, InstantEmailServiceClient>();
     }
 
     /// <summary>

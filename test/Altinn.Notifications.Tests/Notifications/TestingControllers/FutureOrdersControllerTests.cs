@@ -42,7 +42,7 @@ public class FutureOrdersControllerTests
         };
 
         // overriding initialization of extension class with test settings
-        ResourceLinkExtensions.Initialize("http://localhost:5050");
+        ResourceLinkExtensions.Initialize("http://localhost:5090");
     }
 
     [Fact]
