@@ -381,13 +381,21 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
             { "NotificationConfig__TerminationBatchSize", invalidBatchSize }
         };
 
-        // Act - Create repository with invalid configuration (exercises validation path)
-        var services = ServiceUtil.GetServices(new List<Type>() { typeof(IEmailNotificationRepository) }, vars);
-        var repository = (EmailNotificationRepository)services.First(i => i.GetType() == typeof(EmailNotificationRepository));
+        try
+        {
+            // Act - Create repository with invalid configuration (exercises validation path)
+            var services = ServiceUtil.GetServices(new List<Type>() { typeof(IEmailNotificationRepository) }, vars);
+            var repository = (EmailNotificationRepository)services.First(i => i.GetType() == typeof(EmailNotificationRepository));
 
-        // Assert - Repository should initialize successfully despite invalid config
-        // This proves the validation code executed and fell back to default value
-        Assert.NotNull(repository);
+            // Assert - Repository should initialize successfully despite invalid config
+            // This proves the validation code executed and fell back to default value
+            Assert.NotNull(repository);
+        }
+        finally
+        {
+            // Clean up environment variable to prevent test pollution
+            Environment.SetEnvironmentVariable("NotificationConfig__TerminationBatchSize", null);
+        }
     }
 
     private static async Task<string> SelectEmailNotificationStatus(Guid notificationId)
