@@ -68,7 +68,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          dotnet-sonarscanner begin /k:"Altinn_altinn-notifications" /o:"altinn" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" /d:sonar.exclusions="src/Altinn.Notifications.Persistence/Migration/**/*"
+          dotnet-sonarscanner begin /k:"Altinn_altinn-notifications" /o:"altinn" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" /d:sonar.exclusions="src/Altinn.Notifications.Persistence/Migration/**/*" /d:sonar.issue.ignore.multicriteria="obsolete1" /d:sonar.issue.ignore.multicriteria.obsolete1.ruleKey="csharpsquid:S1133" /d:sonar.issue.ignore.multicriteria.obsolete1.resourceKey="**/*Controller.cs"
 
           dotnet build Altinn.Notifications.sln -v q
 
