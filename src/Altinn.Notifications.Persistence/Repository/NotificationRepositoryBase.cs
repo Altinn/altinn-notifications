@@ -57,7 +57,16 @@ public abstract class NotificationRepositoryBase
     {
         _dataSource = dataSource;
         _logger = logger;
-        _terminationBatchSize = config.Value.TerminationBatchSize > 0 ? config.Value.TerminationBatchSize : 100;
+
+        if (config.Value.TerminationBatchSize > 0)
+        {
+            _terminationBatchSize = config.Value.TerminationBatchSize;
+        }
+        else
+        {
+            _logger.LogWarning("Invalid TerminationBatchSize configuration value {ConfiguredValue}. Using default value of 100.", config.Value.TerminationBatchSize);
+            _terminationBatchSize = 100;
+        }
     }
 
     /// <summary>
