@@ -29,7 +29,7 @@ COMMENT ON FUNCTION notifications.insertdeaddeliveryreport(smallint, integer, js
     IS 'This function inserts a new delivery report record into the notifications.deaddeliveryreports table.
 
 Arguments:
-- _channel (integer): The unique identifier for the channel, meaning what type of delivery report to expect.
+- _channel (smallint): The unique identifier for the channel, meaning what type of delivery report to expect.
 - _attemptcount (integer): Tracks how many times the API has attempted to consume the message.
 - _deliveryreport (jsonb): A JSONB object containing the details of the delivery report.
 - _resolved (boolean): A flag indicating whether the delivery issue has been resolved.

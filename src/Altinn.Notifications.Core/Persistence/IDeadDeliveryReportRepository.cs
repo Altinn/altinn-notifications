@@ -22,5 +22,5 @@ public interface IDeadDeliveryReportRepository
     /// <param name="report">The dead delivery report to save.</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
     /// <returns>A task that represents the asynchronous operation containing the ID of the inserted row.</returns>
-    Task<long> InsertAsync(DeadDeliveryReport report, CancellationToken cancellationToken);
+    Task<long> InsertAsync(DeadDeliveryReport report, CancellationToken cancellationToken = default);
 }

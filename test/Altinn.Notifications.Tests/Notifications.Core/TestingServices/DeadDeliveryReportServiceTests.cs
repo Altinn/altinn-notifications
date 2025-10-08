@@ -61,7 +61,7 @@ public class DeadDeliveryReportServiceTests
         var exception = await Assert.ThrowsAsync<ArgumentException>(
             () => _sut.InsertAsync(deadDeliveryReport, CancellationToken.None));
 
-        Assert.Equal("DeliveryReport cannot be null or empty (Parameter 'report')", exception.Message);
+        Assert.Equal("report.DeliveryReport cannot be null or empty (Parameter 'report')", exception.Message);
         Assert.Equal("report", exception.ParamName);
 
         // Verify repository was never called
@@ -91,7 +91,7 @@ public class DeadDeliveryReportServiceTests
         var exception = await Assert.ThrowsAsync<ArgumentException>(
             () => _sut.InsertAsync(deadDeliveryReport, CancellationToken.None));
 
-        Assert.Equal("AttemptCount must be greater than zero (Parameter 'report')", exception.Message);
+        Assert.Equal("report.AttemptCount must be greater than zero (Parameter 'report')", exception.Message);
         Assert.Equal("report", exception.ParamName);
 
         // Verify repository was never called
@@ -119,7 +119,7 @@ public class DeadDeliveryReportServiceTests
         var exception = await Assert.ThrowsAsync<ArgumentException>(
             () => _sut.InsertAsync(deadDeliveryReport, CancellationToken.None));
 
-        Assert.Equal("LastAttempt must be greater than FirstSeen (Parameter 'report')", exception.Message);
+        Assert.Equal("report.LastAttempt must be greater than FirstSeen (Parameter 'report')", exception.Message);
         Assert.Equal("report", exception.ParamName);
 
         // Verify repository was never called

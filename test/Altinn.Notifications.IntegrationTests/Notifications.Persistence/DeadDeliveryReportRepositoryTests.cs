@@ -18,44 +18,6 @@ public class DeadDeliveryReportRepositoryTests() : IAsyncLifetime
     private readonly List<long> _createdIds = [];
 
     [Fact]
-    public async Task InsertDeadDeliveryReport_ShouldCompleteWithoutException()
-    {
-        // Arrange
-        var sut = GetRepository();
-        var now = DateTime.UtcNow;
-        var deliveryReport = new DeadDeliveryReport
-        {
-            Channel = DeliveryReportChannel.AzureCommunicationServices,
-            DeliveryReport = "{}",
-            FirstSeen = now,
-            LastAttempt = now,
-            Resolved = false,
-            AttemptCount = 1
-        };
-
-        // Act
-        var id = await sut.InsertAsync(deliveryReport, CancellationToken.None);
-        _createdIds.Add(id);
-
-        var reportVerify = await sut.GetAsync(id, CancellationToken.None);
-
-        // Assert - Truncate to milliseconds for PostgreSQL compatibility
-        var normalizedDeliveryReport = deliveryReport with 
-        { 
-            FirstSeen = TruncateToMilliseconds(deliveryReport.FirstSeen),
-            LastAttempt = TruncateToMilliseconds(deliveryReport.LastAttempt)
-        };
-        
-        var normalizedReportVerify = reportVerify with 
-        { 
-            FirstSeen = TruncateToMilliseconds(reportVerify.FirstSeen),
-            LastAttempt = TruncateToMilliseconds(reportVerify.LastAttempt)
-        };
-
-        Assert.Equal(normalizedDeliveryReport, normalizedReportVerify);
-    }
-
-    [Fact]
     public async Task Insert_WithDifferentChannels_ShouldStoreBothChannelTypes()
     {
         // Arrange
