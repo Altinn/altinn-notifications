@@ -1,7 +1,9 @@
 ﻿using Altinn.Notifications.Core.Integrations;
+using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Kafka.Producers;
 
 using Confluent.Kafka;
+using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.IntegrationTests.Utils;
 

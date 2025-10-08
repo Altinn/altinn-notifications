@@ -1,15 +1,22 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using System.Text.Json;
+
+using Altinn.Notifications.Core;
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Exceptions;
+using Altinn.Notifications.Core.Integrations;
+using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.IntegrationTests.Utils;
 
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
-using Xunit.Sdk;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.TestingConsumers;
 
@@ -240,27 +247,19 @@ public class EmailStatusConsumerTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ProcessStatus_ServiceThrowsException_ShouldPublishToRetryTopic()
+    public async Task ProcessStatus_ServiceThrowsSendStatusUpdateException_ShouldPublishToRetryTopic()
     {
         // Arrange
         string retryTopicName = Guid.NewGuid().ToString();
-        
-        Dictionary<string, string> vars = new()
-        {
-            { "KafkaSettings__EmailStatusUpdatedTopicName", _statusUpdatedTopicName },
-            { "KafkaSettings__EmailStatusUpdatedRetryTopicName", retryTopicName },
-            { "KafkaSettings__Admin__TopicList", $"[\"{_statusUpdatedTopicName}\", \"{retryTopicName}\"]" }
-        };
+        var producer = new Mock<IKafkaProducer>(MockBehavior.Loose);
+        var kafkaSettings = BuildKafkaSettings(_statusUpdatedTopicName, retryTopicName);
 
         var mockEmailService = new Mock<IEmailNotificationService>();
         mockEmailService
             .Setup(x => x.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()))
             .ThrowsAsync(new SendStatusUpdateException(NotificationChannel.Email, Guid.NewGuid().ToString(), SendStatusIdentifierType.OperationId));
-        
-        using EmailStatusConsumer emailStatusConsumer = ServiceUtil
-                   .GetServices([typeof(IHostedService)], vars)
-                   .OfType<EmailStatusConsumer>()
-                   .First();
+
+        using EmailStatusConsumer emailStatusConsumer = new(producer.Object, kafkaSettings, NullLogger<EmailStatusConsumer>.Instance, mockEmailService.Object);
 
         EmailSendOperationResult sendOperationResult = new()
         {
@@ -276,21 +275,13 @@ public class EmailStatusConsumerTests : IAsyncLifetime
 
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, serializedSendOperationResult);
 
-        // Wait for message to appear on retry topic
-        string? retryMessage = null;
-        
-        //await EventuallyAsync(
-        //    async () =>
-        //    {
-        //    },
-        //    TimeSpan.FromSeconds(10),
-        //    TimeSpan.FromMilliseconds(1000));
-
+        await IntegrationTestUtil.EventuallyAsync(
+           () => producer.Invocations.Any(i => i.Method.Name == nameof(IKafkaProducer.ProduceAsync) &&
+                                               i.Arguments[0] is string topic && topic == kafkaSettings.Value.EmailStatusUpdatedRetryTopicName &&
+                                               i.Arguments[1] is string message && !string.IsNullOrWhiteSpace(message) && JsonSerializer.Deserialize<UpdateStatusRetryMessage>(message, JsonSerializerOptionsProvider.Options)?.SendResult == serializedSendOperationResult),
+           TimeSpan.FromSeconds(15), 
+           TimeSpan.FromMilliseconds(1000));
         await emailStatusConsumer.StopAsync(CancellationToken.None);
-
-        // Assert
-        Assert.NotNull(retryMessage);
-        Assert.Equal(serializedSendOperationResult, retryMessage);
     }
 
     public Task InitializeAsync()
@@ -309,6 +300,28 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         await PostgreUtil.DeleteNotificationsFromDb(_sendersRef);
         await PostgreUtil.DeleteOrderFromDb(_sendersRef);
         await KafkaUtil.DeleteTopicAsync(_statusUpdatedTopicName);
+    }
+
+    /// <summary>
+    /// Creates Kafka settings.
+    /// </summary>
+    /// <returns>
+    /// An <see cref="IOptions{KafkaSettings}"/> instance with minimal configuration needed for running the notification consumer tests.
+    /// </returns>
+    /// <remarks>
+    /// Provides a standard configuration with localhost broker address and unit-tests group ID.
+    /// </remarks>
+    public static IOptions<KafkaSettings> BuildKafkaSettings(string statusUpdatedTopicName, string retryTopicName)
+    {
+        return Options.Create(new KafkaSettings
+        {
+            Admin = new AdminSettings { TopicList = [statusUpdatedTopicName, retryTopicName] },
+            BrokerAddress = "localhost:9092",
+            EmailStatusUpdatedTopicName = statusUpdatedTopicName,
+            EmailStatusUpdatedRetryTopicName = retryTopicName,
+            Producer = new ProducerSettings(),
+            Consumer = new ConsumerSettings { GroupId = $"altinn-notifications-{Guid.NewGuid():N}" }
+        });
     }
 
     private static async Task<string> SelectEmailNotificationStatus(Guid notificationId)
