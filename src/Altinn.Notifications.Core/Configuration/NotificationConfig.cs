@@ -1,4 +1,4 @@
-﻿namespace Altinn.Notifications.Core.Configuration;
+namespace Altinn.Notifications.Core.Configuration;
 
 /// <summary>
 /// Configuration class for notification orders
@@ -34,4 +34,9 @@ public class NotificationConfig
     /// The maximum number of SMS notifications claimed and published in one batch.
     /// </summary>
     public int SmsPublishBatchSize { get; set; } = 500;
+
+    /// <summary>
+    /// The number of expired notifications to terminate per batch.
+    /// </summary>
+    public int TerminationBatchSize { get; set; } = 100;
 }

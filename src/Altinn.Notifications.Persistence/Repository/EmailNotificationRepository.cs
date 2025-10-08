@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Configuration;
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
@@ -7,6 +8,7 @@ using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Extensions;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using Npgsql;
 
@@ -35,8 +37,9 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     /// </summary>
     /// <param name="dataSource">The npgsql data source.</param>
     /// <param name="logger">The logger associated with this implementation of the IEmailNotificationRepository</param>
-    public EmailNotificationRepository(NpgsqlDataSource dataSource, ILogger<EmailNotificationRepository> logger)
-    : base(dataSource, logger) // Pass required parameters to the base class constructor
+    /// <param name="config">The notification configuration</param>
+    public EmailNotificationRepository(NpgsqlDataSource dataSource, ILogger<EmailNotificationRepository> logger, IOptions<NotificationConfig> config)
+    : base(dataSource, logger, config) // Pass required parameters to the base class constructor
     {
         _dataSource = dataSource;
     }
