@@ -63,8 +63,8 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
         var messageBody = "Test SMS message for flattened structure";
         var senderNumber = "TestSender";
         var creatorShortName = "ttd";
-        var sendersReference = "test-ref-123";
-        var idempotencyId = "idempotency-123";
+        var sendersReference = $"test-ref-{Guid.NewGuid():N}";
+        var idempotencyId = $"idempotency-{Guid.NewGuid():N}";
         var timeToLiveSeconds = 3600;
         var smsMessageCount = 1;
 
@@ -147,8 +147,8 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
         var body = "Test email body for flattened structure";
         var fromAddress = "sender@altinn.no";
         var creatorShortName = "ttd";
-        var sendersReference = "test-email-ref-123";
-        var idempotencyId = "email-idempotency-123";
+        var sendersReference = $"test-email-ref-{Guid.NewGuid():N}";
+        var idempotencyId = $"email-idempotency-{Guid.NewGuid():N}";
 
         _orderIdsToDelete.Add(orderId);
         _ordersChainIdsToDelete.Add(orderChainId);
@@ -529,7 +529,7 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
             .GetServices(new List<Type>() { typeof(IOrderRepository) })
             .First(i => i.GetType() == typeof(OrderRepository));
 
-        var creatorName = "test-creator";
+        var creatorName = $"test-creator-{Guid.NewGuid():N}";
         var idempotencyId = Guid.NewGuid().ToString();
 
         // First create an order
@@ -537,7 +537,7 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
         var orderChainId = Guid.NewGuid();
         var smsNotificationId = Guid.NewGuid();
         var creationDateTime = DateTime.UtcNow;
-        var sendersReference = "tracking-test-ref";
+        var sendersReference = $"tracking-test-ref-{Guid.NewGuid():N}";
 
         _orderIdsToDelete.Add(orderId);
         _ordersChainIdsToDelete.Add(orderChainId);
