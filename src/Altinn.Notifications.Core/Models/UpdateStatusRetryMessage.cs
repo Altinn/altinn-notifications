@@ -15,12 +15,12 @@ public record UpdateStatusRetryMessage
     /// <summary>
     /// Gets or sets the number of retry attempts made. Defaults to 1.
     /// </summary>
-    public required int Attempts { get; init; } = 1;
+    public required int Attempts { get; init; } 
 
     /// <summary>
     /// Gets or sets the timestamp when the retry message was first created. Defaults to current UTC time.
     /// </summary>
-    public required DateTime FirstSeen { get; init; } = DateTime.UtcNow;
+    public required DateTime FirstSeen { get; init; }
 
     /// <summary>
     /// Gets or sets the unique identifier for the notification that failed to send.

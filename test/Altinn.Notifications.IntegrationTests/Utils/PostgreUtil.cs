@@ -342,11 +342,12 @@ public static class PostgreUtil
 
     public static async Task<long?> GetDeadDeliveryReportIdFromOperationId(string operationId)
     {
-        var query = $@"SELECT id FROM notifications.deaddeliveryreports WHERE deliveryreport ->> 'operationId' = '{operationId}'";
+        var query = @"SELECT id FROM notifications.deaddeliveryreports WHERE deliveryreport ->> 'operationId' = @operationId";
 
         NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
 
         await using NpgsqlCommand pgcom = dataSource.CreateCommand(query);
+        pgcom.Parameters.AddWithValue("@operationId", operationId);
 
         await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync();
         await reader.ReadAsync();
