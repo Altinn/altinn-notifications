@@ -41,6 +41,7 @@ namespace Altinn.Notifications.Controllers
         /// </remarks>
         /// <param name="id">The unique identifier of the notification order for which notifications are to be retrieved.</param>
         /// <returns>The SMS notifications were successfully retrieved.</returns>
+        [Obsolete("Legacy endpoint. Still supported, but going forward please use '/future/' endpoints instead.")]
         [HttpGet]
         [Produces("application/json")]
         [SwaggerResponse(200, "The SMS notifications were successfully retrieved.", typeof(SmsNotificationSummaryExt))]

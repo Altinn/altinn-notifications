@@ -44,6 +44,7 @@ public class SmsNotificationOrdersController : ControllerBase
     /// Endpoint for sending SMS notifications to one or more recipients.
     /// </remarks>
     /// <returns>The notification order request response</returns>
+    [Obsolete("Legacy endpoint. Still supported, but going forward please use '/future/' endpoints instead.")]
     [HttpPost]
     [Consumes("application/json")]
     [Produces("application/json")]
