@@ -6,6 +6,7 @@ using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
+using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
 using Xunit;
@@ -228,7 +229,7 @@ public class InstantOrderRepositoryTests : IAsyncLifetime
         var senderNumber = "TestSender";
         var creatorShortName = "ttd";
         var timeToLiveSeconds = 3600;
-        var expectedSmsMessageCount = 4; // Expected count for 500 character message
+        var expectedSmsMessageCount = InstantOrderRequestService.CalculateNumberOfMessages(longMessageBody);
 
         _orderIdsToDelete.Add(orderId);
         _ordersChainIdsToDelete.Add(orderChainId);

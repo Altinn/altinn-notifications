@@ -152,7 +152,7 @@ public class InstantOrderRequestService : IInstantOrderRequestService
     /// - The total number of segments is capped at 16, per gateway limitations.
     /// The calculation uses the URL-encoded length of the message to account for special characters.
     /// </summary>
-    private static int CalculateNumberOfMessages(string message)
+    internal static int CalculateNumberOfMessages(string message)
     {
         const int maxCharactersPerMessage = 160;
         const int maxMessagesPerConcatenation = 16;
