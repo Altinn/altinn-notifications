@@ -32,7 +32,7 @@ public class DeadDeliveryReportRepository(NpgsqlDataSource npgsqlDataSource) : I
     }
 
     /// <inheritdoc/>
-    public async Task<DeadDeliveryReport> GetDeadDeliveryReportAsync(long id, CancellationToken cancellationToken = default)
+    public async Task<DeadDeliveryReport> GetAsync(long id, CancellationToken cancellationToken = default)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getDeadDeliveryReport);
         pgcom.Parameters.AddWithValue("id", NpgsqlDbType.Bigint, id);

@@ -1,11 +1,13 @@
 ﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.IntegrationTests.Utils;
 
 using Microsoft.Extensions.Hosting;
-
+using Moq;
 using Xunit;
 using Xunit.Sdk;
 
@@ -46,7 +48,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
 
         int statusFeedCount = -1;
-        await EventuallyAsync(
+        await  IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
                 statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
@@ -93,7 +95,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
 
         // Wait for notification status to become Succeeded
         string? observedEmailStatus = null;
-        await EventuallyAsync(
+        await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
                 observedEmailStatus = await SelectEmailNotificationStatus(notification.Id);
@@ -104,7 +106,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
 
         // Then wait for order processing status to reach Processed
         long processedOrderCount = -1;
-        await EventuallyAsync(
+        await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
                 processedOrderCount = await SelectProcessingStatusOrderCount(notification.Id, OrderProcessingStatus.Processed);
@@ -153,7 +155,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
 
         // Wait until UpdateStatusAsync has executed by observing its side-effect once.
         int statusFeedCount = -1;
-        await EventuallyAsync(
+        await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
                 statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
@@ -210,7 +212,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
 
         // Wait for email notification status to be updated
         string? observedEmailStatus = null;
-        await EventuallyAsync(
+        await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
                 observedEmailStatus = await SelectEmailNotificationStatus(notification.Id);
@@ -221,7 +223,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
 
         // Then wait for order processing status to reach Completed
         long completedCount = -1;
-        await EventuallyAsync(
+        await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
                 completedCount = await SelectProcessingStatusOrderCount(notification.Id, OrderProcessingStatus.Completed);
@@ -235,6 +237,60 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         // Assert using captured values (no extra queries here)
         Assert.Equal(resultType.ToString(), observedEmailStatus);
         Assert.Equal(1, completedCount);
+    }
+
+    [Fact]
+    public async Task ProcessStatus_ServiceThrowsException_ShouldPublishToRetryTopic()
+    {
+        // Arrange
+        string retryTopicName = Guid.NewGuid().ToString();
+        
+        Dictionary<string, string> vars = new()
+        {
+            { "KafkaSettings__EmailStatusUpdatedTopicName", _statusUpdatedTopicName },
+            { "KafkaSettings__EmailStatusUpdatedRetryTopicName", retryTopicName },
+            { "KafkaSettings__Admin__TopicList", $"[\"{_statusUpdatedTopicName}\", \"{retryTopicName}\"]" }
+        };
+
+        var mockEmailService = new Mock<IEmailNotificationService>();
+        mockEmailService
+            .Setup(x => x.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()))
+            .ThrowsAsync(new SendStatusUpdateException(NotificationChannel.Email, Guid.NewGuid().ToString(), SendStatusIdentifierType.OperationId));
+        
+        using EmailStatusConsumer emailStatusConsumer = ServiceUtil
+                   .GetServices([typeof(IHostedService)], vars)
+                   .OfType<EmailStatusConsumer>()
+                   .First();
+
+        EmailSendOperationResult sendOperationResult = new()
+        {
+            OperationId = Guid.NewGuid().ToString(),
+            SendResult = EmailNotificationResultType.Succeeded
+        };
+
+        string serializedSendOperationResult = sendOperationResult.Serialize();
+
+        // Act
+        await emailStatusConsumer.StartAsync(CancellationToken.None);
+        await Task.Delay(250);
+
+        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, serializedSendOperationResult);
+
+        // Wait for message to appear on retry topic
+        string? retryMessage = null;
+        
+        //await EventuallyAsync(
+        //    async () =>
+        //    {
+        //    },
+        //    TimeSpan.FromSeconds(10),
+        //    TimeSpan.FromMilliseconds(1000));
+
+        await emailStatusConsumer.StopAsync(CancellationToken.None);
+
+        // Assert
+        Assert.NotNull(retryMessage);
+        Assert.Equal(serializedSendOperationResult, retryMessage);
     }
 
     public Task InitializeAsync()
@@ -253,31 +309,6 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         await PostgreUtil.DeleteNotificationsFromDb(_sendersRef);
         await PostgreUtil.DeleteOrderFromDb(_sendersRef);
         await KafkaUtil.DeleteTopicAsync(_statusUpdatedTopicName);
-    }
-
-    /// <summary>
-    /// Repeatedly evaluates a condition until it becomes <c>true</c> or a timeout is reached.
-    /// </summary>
-    /// <param name="predicate">An async function that evaluates the condition to be met. Returns <c>true</c> if the condition is satisfied, otherwise <c>false</c>.</param>
-    /// <param name="maximumWaitTime">The maximum amount of time to wait for the condition to be met.</param>
-    /// <param name="checkInterval">The interval between condition evaluations. Defaults to 100 milliseconds if not specified.</param>
-    /// <exception cref="XunitException">Thrown if the condition is not met within the specified timeout.</exception>
-    private static async Task EventuallyAsync(Func<Task<bool>> predicate, TimeSpan maximumWaitTime, TimeSpan? checkInterval = null)
-    {
-        var deadline = DateTime.UtcNow.Add(maximumWaitTime);
-        var pollingInterval = checkInterval ?? TimeSpan.FromMilliseconds(100);
-
-        while (DateTime.UtcNow < deadline)
-        {
-            if (await predicate())
-            {
-                return;
-            }
-
-            await Task.Delay(pollingInterval);
-        }
-
-        throw new XunitException($"Condition not met within timeout ({maximumWaitTime}).");
     }
 
     private static async Task<string> SelectEmailNotificationStatus(Guid notificationId)

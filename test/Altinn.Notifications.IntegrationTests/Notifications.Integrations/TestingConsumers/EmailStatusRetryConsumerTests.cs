@@ -55,7 +55,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
             await emailStatusRetryConsumer.StartAsync(CancellationToken.None);
             await Task.Delay(250);
 
-            await KafkaUtilityFunctions.EventuallyAsync(
+            await IntegrationTestUtil.EventuallyAsync(
                 async () =>
                 {
                     id = await PostgreUtil.GetDeadDeliveryReportIdFromOperationId(emailSendOperationResult.OperationId);
