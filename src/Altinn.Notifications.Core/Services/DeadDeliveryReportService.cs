@@ -17,21 +17,21 @@ public class DeadDeliveryReportService(IDeadDeliveryReportRepository reportRepos
         if (string.IsNullOrWhiteSpace(report.DeliveryReport))
         {
             throw new ArgumentException(
-                "DeliveryReport cannot be null or empty",
+                "report.DeliveryReport cannot be null or empty",
                 nameof(report));
         }
 
         if (report.AttemptCount <= 0)
         {
             throw new ArgumentException(
-                "AttemptCount must be greater than zero",
+                "report.AttemptCount must be greater than zero",
                 nameof(report));
         }
 
         if (report.LastAttempt <= report.FirstSeen)
         {
             throw new ArgumentException(
-                "LastAttempt must be greater than FirstSeen",
+                "report.LastAttempt must be greater than FirstSeen",
                 nameof(report));
         }
 
