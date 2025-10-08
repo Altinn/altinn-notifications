@@ -46,7 +46,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
 
         // Wait for SMS notification status to become Accepted
         string? observedSmsStatus = null;
-        await KafkaUtilityFunctions.EventuallyAsync(
+        await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
                 observedSmsStatus = await SelectSmsNotificationStatus(notification.Id);
@@ -57,7 +57,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
 
         // Then wait for order processing status to reach Processed
         long processedOrderCount = -1;
-        await KafkaUtilityFunctions.EventuallyAsync(
+        await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
                 processedOrderCount = await SelectProcessedOrderCount(notification.Id);
@@ -99,7 +99,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
         // Wait until order is processed, capture status once when it happens
         long processedOrderCount = -1;
         string? observedSmsStatus = null;
-        await KafkaUtilityFunctions.EventuallyAsync(
+        await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
                 processedOrderCount = await SelectProcessedOrderCount(notification.Id);
@@ -151,7 +151,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
 
         int statusFeedCount = -1;
-        await KafkaUtilityFunctions.EventuallyAsync(
+        await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
                 statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
@@ -195,7 +195,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
 
         int statusFeedCount = -1;
-        await KafkaUtilityFunctions.EventuallyAsync(
+        await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
                 statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
