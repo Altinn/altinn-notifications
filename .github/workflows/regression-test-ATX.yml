@@ -47,9 +47,11 @@ jobs:
           flags: -e runFullTestSet=true -e env=${{ vars.ENV }} -e tokenGeneratorUserName=${{ secrets.TOKENGENERATOR_USERNAME }} -e tokenGeneratorUserPwd=${{ secrets.TOKENGENERATOR_USERPASSWORD }} -e smsRecipient=${{ secrets.AUTOMATEDTEST_SMSRECIPIENT }}
 
       - name: Build failure report
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
         if: failure()
         run: |
-          report=":warning: Notifications regression test failure in ${{ inputs.environment }} :warning: \n"
+          report=":warning: Notifications regression test failure in $ENVIRONMENT :warning: \n"
           report+="\n Workflow available here: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           echo "stepreport="$report >> $GITHUB_ENV
       - name: Report failure to Slack
