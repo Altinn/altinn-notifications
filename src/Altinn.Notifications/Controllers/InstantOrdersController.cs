@@ -58,7 +58,7 @@ public class InstantOrdersController : ControllerBase
     /// A response containing tracking information for the created notification order or an error response if the operation fails.
     /// </returns>
     #pragma warning disable CS1133
-    [Obsolete("Legacy endpoint. Still supported, but going forward please use '/future/' endpoints instead.")]
+    [Obsolete("This endpoint is deprecated. Use the /instant/sms endpoint for SMS notifications instead.")]
     #pragma warning restore CS1133
     [HttpPost]
     [Consumes("application/json")]
