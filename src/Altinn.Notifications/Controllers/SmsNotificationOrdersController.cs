@@ -44,9 +44,9 @@ public class SmsNotificationOrdersController : ControllerBase
     /// Endpoint for sending SMS notifications to one or more recipients.
     /// </remarks>
     /// <returns>The notification order request response</returns>
-    #pragma warning disable CS1133
+    #pragma warning disable S1133
     [Obsolete("Legacy endpoint. Still supported, but going forward please use '/future/' endpoints instead.")]
-    #pragma warning restore CS1133
+    #pragma warning restore S1133
     [HttpPost]
     [Consumes("application/json")]
     [Produces("application/json")]
