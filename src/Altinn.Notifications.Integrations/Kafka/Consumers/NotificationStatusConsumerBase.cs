@@ -109,8 +109,8 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
             {
                 FirstSeen = DateTime.UtcNow,
                 Attempts = 1,
-                NotificationId = e.IdentifierType == SendStatusIdentifierType.NotificationId ? Guid.Parse(e.Identifier) : null,
-                ExternalReferenceId = e.IdentifierType == SendStatusIdentifierType.OperationId ? Guid.Parse(e.Identifier) : null,
+                NotificationId = notificationId,
+                ExternalReferenceId = externalReferenceId,
                 SendResult = message
             };
 

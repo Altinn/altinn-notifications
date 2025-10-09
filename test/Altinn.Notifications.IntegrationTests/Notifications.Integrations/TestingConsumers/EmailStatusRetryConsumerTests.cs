@@ -38,7 +38,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                 kafkaSettings,
                 NullLogger<EmailStatusRetryConsumer>.Instance);
 
-            // use this to verify that the message was persisted
+            // use this to verify that the message was not persisted
             var emailSendOperationResult = new EmailSendOperationResult
             {
                 NotificationId = Guid.NewGuid(),
