@@ -50,7 +50,9 @@ public class OrdersController : ControllerBase
     /// </remarks>
     /// <param name="id">The unique identifier of the notification order for which details are to be retrieved.</param>
     /// <returns>The details of the notification order were successfully retrieved.</returns>
+    #pragma warning disable CS1133
     [Obsolete("Legacy endpoint. Still supported, but going forward please use '/future/' endpoints instead.")]
+    #pragma warning restore CS1133
     [HttpGet]
     [Route("{id}")]
     [Produces("application/json")]
@@ -82,7 +84,9 @@ public class OrdersController : ControllerBase
     /// </summary>
     /// <param name="sendersReference">The senders reference</param>
     /// <returns>The order that correspons to the provided senders reference</returns>
+    #pragma warning disable CS1133
     [Obsolete("Legacy endpoint. Still supported, but going forward please use '/future/' endpoints instead.")]
+    #pragma warning restore CS1133
     [HttpGet]
     [Produces("application/json")]
     [SwaggerResponse(200, "The list of notification orders matching the provided senders ref was retrieved successfully", typeof(NotificationOrderListExt))]
@@ -112,7 +116,9 @@ public class OrdersController : ControllerBase
     /// </remarks>
     /// <param name="id">The unique identifier of the notification order for which status are to be retrieved.</param>
     /// <returns>The status of the notification order was successfully retrieved.</returns>
+    #pragma warning disable CS1133
     [Obsolete("Legacy endpoint. Still supported, but going forward please use '/future/' endpoints instead.")]
+    #pragma warning restore CS1133
     [HttpGet]
     [Route("{id}/status")]
     [Produces("application/json")]
@@ -145,7 +151,9 @@ public class OrdersController : ControllerBase
     /// Endpoint for sending a notification via a selected notification channel to one or more recipient.
     /// </remarks>
     /// <returns>The notification order request response</returns>
+    #pragma warning disable CS1133
     [Obsolete("Legacy endpoint. Still supported, but going forward please use '/future/' endpoints instead.")]
+    #pragma warning restore CS1133
     [HttpPost]
     [Consumes("application/json")]
     [Produces("application/json")]
@@ -184,7 +192,9 @@ public class OrdersController : ControllerBase
     /// </remarks>
     /// <param name="id">The unique identifier of the notification order for which notifications are to be cancelled.</param>
     /// <returns>The cancelled notification order</returns>
+    #pragma warning disable CS1133
     [Obsolete("Legacy endpoint. Still supported, but going forward please use '/future/' endpoints instead.")]
+    #pragma warning restore CS1133
     [HttpPut]
     [Route("{id}/cancel")]
     [Produces("application/json")]

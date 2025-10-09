@@ -5,6 +5,7 @@ using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Email;
 using Altinn.Notifications.Validators.Extensions;
+
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -43,7 +44,9 @@ public class EmailNotificationOrdersController : ControllerBase
     /// Endpoint for sending an email notification to one or more recipient.
     /// </remarks>
     /// <returns>The notification order request response</returns>
+    #pragma warning disable CS1133
     [Obsolete("Legacy endpoint. Still supported, but going forward please use '/future/' endpoints instead.")]
+    #pragma warning restore CS1133
     [HttpPost]
     [Consumes("application/json")]
     [Produces("application/json")]

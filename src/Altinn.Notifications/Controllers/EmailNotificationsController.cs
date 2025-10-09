@@ -41,7 +41,9 @@ namespace Altinn.Notifications.Controllers
         /// </remarks>
         /// <param name="id">The unique identifier of the notification order for which notifications are to be retrieved.</param>
         /// <returns>The email notifications were successfully retrieved.</returns>
+        #pragma warning disable CS1133
         [Obsolete("Legacy endpoint. Still supported, but going forward please use '/future/' endpoints instead.")]
+        #pragma warning restore CS1133
         [HttpGet]
         [Produces("application/json")]
         [SwaggerResponse(200, "The email notifications were successfully retrieved.", typeof(EmailNotificationSummaryExt))]
