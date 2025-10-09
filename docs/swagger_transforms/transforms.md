@@ -26,14 +26,11 @@ The starting point for both transformations is the `swagger.json` file generated
 - **Server URL**: Removes the local development server URL and updates the production URL to include the correct base path (`/notifications/api/v1`).
 
 ### Key changes for APIM (`transform-apim.jq`):
-- **OpenAPI Version**: Sets the version to `3.0.1`.
+- **OpenAPI Version**: Sets the version to `3.0.1` (APIM requirement - versions 3.0.3+ are not supported).
 - **Server Info**: Removes all `servers` definitions, as APIM manages the base URLs.
 - **Security**: Removes all security-related definitions (`security` and `securitySchemes`).
 - **Path Prefix**: Removes the `/notifications/api/v1` base prefix from all API paths.
-- **Tag Consolidation**:
-  - Merges the `FutureOrders` and `Shipment` tags into `Orders`
-  - Converts `InstantOrders` to `Instant Orders` for better readability
-- **Simplified Organization**: Unlike the docs transform, this does not create additional tag descriptions or categorize deprecated endpoints, keeping the structure simple.
+- **Simplified Structure**: Unlike the docs transform, this does not create tag descriptions, endpoint categorization, or organize deprecated endpoints. APIM only needs the basic API structure without documentation-specific groupings.
 
 
 ## How to apply the transformation:
