@@ -57,6 +57,9 @@ public class InstantOrdersController : ControllerBase
     /// <returns>
     /// A response containing tracking information for the created notification order or an error response if the operation fails.
     /// </returns>
+    #pragma warning disable S1133
+    [Obsolete("This endpoint is deprecated. Use the /instant/sms endpoint for SMS notifications instead.")]
+    #pragma warning restore S1133
     [HttpPost]
     [Consumes("application/json")]
     [Produces("application/json")]
@@ -65,7 +68,6 @@ public class InstantOrdersController : ControllerBase
     [SwaggerResponse(400, "The notification order is invalid", typeof(ValidationProblemDetails))]
     [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request before the server could complete processing")]
     [SwaggerResponse(500, "An internal server error occurred while processing the notification order")]
-    [Obsolete("This endpoint is deprecated. Use the /instant/sms endpoint for SMS notifications instead.")]
     public async Task<IActionResult> Post([FromBody] InstantNotificationOrderRequestExt request, CancellationToken cancellationToken = default)
     {
         return await ProcessInstantOrderAsync(

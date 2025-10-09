@@ -14,15 +14,23 @@ The starting point for both transformations is the `swagger.json` file generated
 - **OpenAPI Version**: Sets the version to `3.0.3`.
 - **Security**: Removes all security-related definitions (`security` and `securitySchemes`), as authentication is handled externally.
 - **Path Prefix**: Removes the base `/notifications/api/v1` prefix from all API paths to simplify them.
-- **Tag Consolidation**: Merges the `FutureOrders` and `Shipment` tags into a single `Orders` tag for better organization.
+- **Tag Consolidation**:
+  - Merges the `FutureOrders` and `Shipment` tags into a single `Orders` tag
+  - Converts `InstantOrders` to `Instant Orders` for better readability
+- **Tag Organization**: Creates organized sections with descriptions:
+  - `Deprecated`: Legacy endpoints (still supported, use `/future/*` endpoints instead)
+  - `Order`: Create notifications (queued processing)
+  - `Status`: Get status/updates for notifications already ordered
+  - `Instant Orders`: Create and send instant notifications to single recipients
+- **Endpoint Categorization**: Assigns appropriate tags to all deprecated and future endpoints
 - **Server URL**: Removes the local development server URL and updates the production URL to include the correct base path (`/notifications/api/v1`).
 
 ### Key changes for APIM (`transform-apim.jq`):
-- **OpenAPI Version**: Sets the version to `3.0.1`.
+- **OpenAPI Version**: Sets the version to `3.0.1` (APIM requirement - versions 3.0.3+ are not supported).
 - **Server Info**: Removes all `servers` definitions, as APIM manages the base URLs.
-- **Security**: Removes all security-related definitions.
-- **Path Prefix**: Removes the `/notifications/api/v1` base prefix.
-- **Tag Consolidation**: Merges the `FutureOrders` and `Shipment` tags into `Orders`.
+- **Security**: Removes all security-related definitions (`security` and `securitySchemes`).
+- **Path Prefix**: Removes the `/notifications/api/v1` base prefix from all API paths.
+- **Simplified Structure**: Unlike the docs transform, this does not create tag descriptions, endpoint categorization, or organize deprecated endpoints. APIM only needs the basic API structure without documentation-specific groupings.
 
 
 ## How to apply the transformation:
