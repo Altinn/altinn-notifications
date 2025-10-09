@@ -1,5 +1,4 @@
 ﻿using Altinn.Notifications.Core.Enums;
-using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Persistence;
@@ -89,7 +88,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         // Assert
         await IntegrationTestUtil.EventuallyAsync(
             () => producer.Invocations.Any(i => i.Method.Name == nameof(IKafkaProducer.ProduceAsync) &&
-                                                i.Arguments[0] is string topic && topic == kafkaSettings.Value.EmailStatusUpdatedRetryTopicName &&
+                                                i.Arguments[0] is string topic && topic == kafkaSettings.Value.EmailStatusUpdatedTopicName &&
                                                 i.Arguments[1] is string message && message == deliveryReportMessage),
             TimeSpan.FromSeconds(15));
 

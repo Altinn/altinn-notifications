@@ -92,6 +92,19 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
         }
         catch (SendStatusUpdateException e)
         {
+            Guid? notificationId = null;
+            Guid? externalReferenceId = null;
+
+            if (e.IdentifierType == SendStatusIdentifierType.NotificationId && Guid.TryParse(e.Identifier, out var parsedNoticiationId))
+            {
+                notificationId = parsedNoticiationId;
+            }
+
+            if (e.IdentifierType == SendStatusIdentifierType.OperationId && Guid.TryParse(e.Identifier, out var parsedExternalReferenceId))
+            {
+                externalReferenceId = parsedExternalReferenceId;
+            }
+
             var retryMessage = new UpdateStatusRetryMessage
             {
                 FirstSeen = DateTime.UtcNow,
