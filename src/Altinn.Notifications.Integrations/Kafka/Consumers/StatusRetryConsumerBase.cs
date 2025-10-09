@@ -68,7 +68,7 @@ public abstract class StatusRetryConsumerBase(
             // increment retries before putting it back on the retry topic
             var incrementedRetryMessage = retryMessage with { Attempts = retryMessage.Attempts + 1 };
 
-            _logger.LogDebug(
+            _logger.LogInformation(
                 "Message not ready for retry. Elapsed: {ElapsedSeconds}s, Threshold: {ThresholdSeconds}s",
                 elapsedSeconds,
                 _statusUpdateRetrySeconds);

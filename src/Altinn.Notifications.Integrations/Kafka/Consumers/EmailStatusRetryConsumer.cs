@@ -1,7 +1,6 @@
 ﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Services.Interfaces;
-using Altinn.Notifications.Integrations.Configuration;
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;

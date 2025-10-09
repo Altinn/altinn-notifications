@@ -311,11 +311,10 @@ public class EmailStatusConsumerTests : IAsyncLifetime
     /// <remarks>
     /// Provides a standard configuration with localhost broker address and unit-tests group ID.
     /// </remarks>
-    public static IOptions<KafkaSettings> BuildKafkaSettings(string statusUpdatedTopicName, string retryTopicName)
+    private static IOptions<KafkaSettings> BuildKafkaSettings(string statusUpdatedTopicName, string retryTopicName)
     {
         return Options.Create(new KafkaSettings
         {
-            Admin = new AdminSettings { TopicList = [statusUpdatedTopicName, retryTopicName] },
             BrokerAddress = "localhost:9092",
             EmailStatusUpdatedTopicName = statusUpdatedTopicName,
             EmailStatusUpdatedRetryTopicName = retryTopicName,
