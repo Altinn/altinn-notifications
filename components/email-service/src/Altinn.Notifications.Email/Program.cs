@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text.Json.Serialization;
 
 using Altinn.Notifications.Email.Configuration;
 using Altinn.Notifications.Email.Core.Configuration;
@@ -149,7 +150,11 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
         AddAzureMonitorTelemetryExporters(services, applicationInsightsConnectionString);
     }
 
-    services.AddControllers();
+    services.AddControllers()
+        .AddJsonOptions(options =>
+        {
+            options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+        });
     services.AddHealthChecks().AddCheck<HealthCheck>("notifications_emails_health_check");
 
     services.AddCoreServices(configuration);

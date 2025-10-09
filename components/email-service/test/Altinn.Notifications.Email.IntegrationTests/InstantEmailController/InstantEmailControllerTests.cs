@@ -245,6 +245,38 @@ public class InstantEmailControllerTests : IClassFixture<IntegrationTestWebAppli
         sendingServiceMock.Verify(e => e.SendAsync(It.IsAny<Core.Sending.Email>()), Times.Once);
     }
 
+    [Fact]
+    public async Task Send_WithStringEnumContentType_ReturnsAccepted()
+    {
+        // Arrange
+        var notificationId = Guid.NewGuid();
+
+        var sendingServiceMock = new Mock<ISendingService>();
+        sendingServiceMock.Setup(e => e.SendAsync(It.IsAny<Core.Sending.Email>())).Returns(Task.CompletedTask);
+
+        var httpClient = GetTestClient(sendingServiceMock.Object);
+
+        var jsonRequest = $$"""
+        {
+           "sender": "noreply@test.altinn.no",
+           "recipient": "test@example.com",
+           "subject": "String Enum Test",
+           "body": "Testing string enum contentType",
+           "contentType": "Html",
+           "notificationId": "{{notificationId}}"
+        }
+        """;
+
+        var content = new StringContent(jsonRequest, Encoding.UTF8, "application/json");
+
+        // Act
+        var response = await httpClient.PostAsync("/notifications/email/api/v1/instantemail", content);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        sendingServiceMock.Verify(e => e.SendAsync(It.IsAny<Core.Sending.Email>()), Times.Once);
+    }
+
     private HttpClient GetTestClient(ISendingService sendingService)
     {
         return _factory.WithWebHostBuilder(builder =>
