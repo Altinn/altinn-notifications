@@ -10,8 +10,17 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers;
 /// <summary>
 /// Kafka consumer for processing email status retry messages
 /// </summary>
-public sealed class EmailStatusRetryConsumer(IKafkaProducer producer, IDeadDeliveryReportService deadDeliveryReportService, IOptions<Configuration.KafkaSettings> settings, ILogger<EmailStatusRetryConsumer> logger)
-    : StatusRetryConsumerBase(producer, deadDeliveryReportService, settings, settings.Value.EmailStatusUpdatedRetryTopicName, logger)
+public sealed class EmailStatusRetryConsumer(
+    IKafkaProducer producer, 
+    IDeadDeliveryReportService deadDeliveryReportService, 
+    IOptions<Configuration.KafkaSettings> settings, 
+    ILogger<EmailStatusRetryConsumer> logger)
+    : StatusRetryConsumerBase(
+        producer, 
+        deadDeliveryReportService, 
+        settings, 
+        settings.Value.EmailStatusUpdatedRetryTopicName, 
+        logger)
 {
     /// <summary>
     /// Gets the delivery report channel for Azure Communication Services email notifications.

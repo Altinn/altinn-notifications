@@ -3,7 +3,7 @@
 namespace Altinn.Notifications.Core.Models;
 
 /// <summary>
-/// Represents a message that needs to be retried due to a failed operation.
+/// Represents a message that needs to be retried due to a failed status update operation.
 /// </summary>
 public record UpdateStatusRetryMessage
 {
@@ -28,7 +28,7 @@ public record UpdateStatusRetryMessage
     public Guid? NotificationId { get; init; }
 
     /// <summary>
-    /// Gets or sets the delivery report result object to be put on the retry topic.
+    /// Gets or sets the delivery report result object to be put on the status update retry topic.
     /// </summary>
     public required string SendResult { get; init; }
 
