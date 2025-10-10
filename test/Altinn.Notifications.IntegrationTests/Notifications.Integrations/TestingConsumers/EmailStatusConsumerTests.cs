@@ -325,13 +325,13 @@ public class EmailStatusConsumerTests : IAsyncLifetime
     /// <remarks>
     /// Provides a standard configuration with localhost broker address and unit-tests group ID.
     /// </remarks>
-    private static IOptions<KafkaSettings> BuildKafkaSettings(string statusUpdatedTopicName, string retryTopicName)
+    private static IOptions<KafkaSettings> BuildKafkaSettings(string statusUpdatedTopicName, string statusUpdatedRetryTopicName)
     {
         return Options.Create(new KafkaSettings
         {
             BrokerAddress = "localhost:9092",
             EmailStatusUpdatedTopicName = statusUpdatedTopicName,
-            EmailStatusUpdatedRetryTopicName = retryTopicName,
+            EmailStatusUpdatedRetryTopicName = statusUpdatedRetryTopicName,
             Producer = new ProducerSettings(),
             Consumer = new ConsumerSettings { GroupId = $"altinn-notifications-{Guid.NewGuid():N}" }
         });
