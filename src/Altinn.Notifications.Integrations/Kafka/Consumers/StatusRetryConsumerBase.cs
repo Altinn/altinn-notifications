@@ -69,7 +69,7 @@ public abstract class StatusRetryConsumerBase(
                 FirstSeen = retryMessage.FirstSeen,
                 LastAttempt = DateTime.UtcNow,
                 Resolved = false,
-                DeliveryReport = retryMessage.SendResult
+                DeliveryReport = retryMessage.SendResult ?? string.Empty
             };
 
             await _deadDeliveryReportService.InsertAsync(deadDeliveryReport);
