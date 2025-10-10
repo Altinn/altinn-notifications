@@ -54,13 +54,14 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         var emailSendOperationResult = new EmailSendOperationResult
         {
             OperationId = Guid.NewGuid().ToString(),
+            NotificationId = Guid.NewGuid(),
             SendResult = EmailNotificationResultType.Delivered
         };
 
         var deliveryReportMessage = emailSendOperationResult.Serialize();
 
         emailNotificationRepository
-            .Setup(e => e.UpdateSendStatus(null, EmailNotificationResultType.Delivered, emailSendOperationResult.OperationId))
+            .Setup(e => e.UpdateSendStatus(emailSendOperationResult.NotificationId, EmailNotificationResultType.Delivered, emailSendOperationResult.OperationId))
             .ThrowsAsync(new InvalidOperationException());
 
         producer
