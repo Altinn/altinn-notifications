@@ -50,8 +50,8 @@ public abstract class StatusRetryConsumerBase(
         {
             _logger.LogError("Deserialization of message failed. {Message}", message);
 
-            // putting this message back on the topic would not cause an infinite loop since it will fail deserialization every time
-            // we log the errir abd retyrb
+            // putting this message back on the topic would cause an infinite loop since it will fail deserialization every time
+            // we log the error abd return
             return;
         }
         
@@ -69,7 +69,7 @@ public abstract class StatusRetryConsumerBase(
                 FirstSeen = retryMessage.FirstSeen,
                 LastAttempt = DateTime.UtcNow,
                 Resolved = false,
-                DeliveryReport = retryMessage.SendResult
+                DeliveryReport = retryMessage.SendResult ?? string.Empty
             };
 
             await _deadDeliveryReportService.InsertAsync(deadDeliveryReport);
