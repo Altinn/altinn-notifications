@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 
+using Altinn.Notifications.Core;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
@@ -43,8 +44,17 @@ public abstract class StatusRetryConsumerBase(
     /// <returns></returns>
     protected async Task ProcessStatus(string message)
     {
-        var retryMessage = JsonSerializer.Deserialize<UpdateStatusRetryMessage>(message) ?? throw new InvalidOperationException("Could not deserialize message");
+        var retryMessage = JsonSerializer.Deserialize<UpdateStatusRetryMessage>(message, JsonSerializerOptionsProvider.Options);
 
+        if (retryMessage == null)
+        {
+            _logger.LogError("Deserialization of message failed. {Message}", message);
+
+            // putting this message back on the topic would not cause an infinite loop since it will fail deserialization every time
+            // we log the errir abd retyrb
+            return;
+        }
+        
         var elapsedSeconds = (DateTime.UtcNow - retryMessage.FirstSeen).TotalSeconds;
 
         if (elapsedSeconds >= _statusUpdateRetrySeconds)

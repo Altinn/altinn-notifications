@@ -1,12 +1,12 @@
 ﻿using System.Text.Json;
 
+using Altinn.Notifications.Core;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
-using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.IntegrationTests.Utils;
@@ -51,7 +51,7 @@ public class StatusRetryConsumerBaseTests : IAsyncLifetime
             .ThrowsAsync(new InvalidOperationException());
 
         producer
-            .Setup(e => e.ProduceAsync(kafkaSettings.Value.EmailStatusUpdatedRetryTopicName, It.Is<string>(m => m.Equals(emailSendOperationResultSerialized))))
+            .Setup(e => e.ProduceAsync(kafkaSettings.Value.EmailStatusUpdatedRetryTopicName, It.Is<string>(m => m.Equals(retryMessage.Serialize()))))
             .ReturnsAsync(true);
 
         var deadDeliveryReportService = new DeadDeliveryReportService(deadDeliveryReportRepositoryMock.Object);
@@ -68,38 +68,7 @@ public class StatusRetryConsumerBaseTests : IAsyncLifetime
         await IntegrationTestUtil.EventuallyAsync(
             () => producer.Invocations.Any(i => i.Method.Name == nameof(IKafkaProducer.ProduceAsync) &&
                                                 i.Arguments[0] is string topic && topic == kafkaSettings.Value.EmailStatusUpdatedRetryTopicName &&
-                                                i.Arguments[1] is string message && !string.IsNullOrWhiteSpace(message) && JsonSerializer.Deserialize<UpdateStatusRetryMessage>(message)?.ExternalReferenceId == retryMessage.ExternalReferenceId),
-            TimeSpan.FromSeconds(10));
-
-        await emailStatusConsumer.StopAsync(CancellationToken.None);
-    }
-
-    [Fact]
-    public async Task ProcessStatus_WhenDeserializationFails_ThrowsInvalidOperationException()
-    {
-        // Arrange
-        var kafkaSettings = BuildKafkaSettings();
-        var producer = new Mock<IKafkaProducer>(MockBehavior.Loose);
-        var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
-
-        var invalidMessage = "{ invalid json }";
-
-        using var emailStatusConsumer = new EmailStatusRetryConsumer(
-            producer.Object,
-            deadDeliveryReportService.Object,
-            kafkaSettings,
-            NullLogger<EmailStatusRetryConsumer>.Instance);
-
-        // Act
-        await emailStatusConsumer.StartAsync(CancellationToken.None);
-        await Task.Delay(250);
-
-        await KafkaUtil.PublishMessageOnTopic(kafkaSettings.Value.EmailStatusUpdatedRetryTopicName, invalidMessage);
-
-        // Assert
-        await IntegrationTestUtil.EventuallyAsync(
-            () => deadDeliveryReportService.Invocations.Count == 0 &&
-                  producer.Invocations.Any(i => i.Method.Name == nameof(IKafkaProducer.ProduceAsync) && i.Arguments.Any(a => a?.ToString() == invalidMessage)),
+                                                i.Arguments[1] is string message && !string.IsNullOrWhiteSpace(message) && JsonSerializer.Deserialize<UpdateStatusRetryMessage>(message, JsonSerializerOptionsProvider.Options)?.ExternalReferenceId == retryMessage.ExternalReferenceId),
             TimeSpan.FromSeconds(10));
 
         await emailStatusConsumer.StopAsync(CancellationToken.None);

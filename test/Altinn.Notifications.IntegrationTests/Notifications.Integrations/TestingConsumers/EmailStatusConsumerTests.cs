@@ -246,28 +246,42 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         Assert.Equal(1, completedCount);
     }
 
-    [Fact]
-    public async Task ProcessStatus_ServiceThrowsSendStatusUpdateException_ShouldPublishToRetryTopic()
+    [Theory]
+    [InlineData(SendStatusIdentifierType.OperationId)]
+    [InlineData(SendStatusIdentifierType.NotificationId)]
+    public async Task ProcessStatus_ServiceThrowsSendStatusUpdateException_ShouldPublishToRetryTopic(SendStatusIdentifierType type)
     {
         // Arrange
         string retryTopicName = Guid.NewGuid().ToString();
         var producer = new Mock<IKafkaProducer>(MockBehavior.Loose);
         var kafkaSettings = BuildKafkaSettings(_statusUpdatedTopicName, retryTopicName);
+        EmailSendOperationResult? emailSendOperationResult = null;
 
         var mockEmailService = new Mock<IEmailNotificationService>();
         mockEmailService
             .Setup(x => x.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()))
-            .ThrowsAsync(new SendStatusUpdateException(NotificationChannel.Email, Guid.NewGuid().ToString(), SendStatusIdentifierType.OperationId));
+            .ThrowsAsync(new SendStatusUpdateException(NotificationChannel.Email, Guid.NewGuid().ToString(), type));
 
         using EmailStatusConsumer emailStatusConsumer = new(producer.Object, kafkaSettings, NullLogger<EmailStatusConsumer>.Instance, mockEmailService.Object);
 
-        EmailSendOperationResult sendOperationResult = new()
+        if (type is SendStatusIdentifierType.OperationId)
         {
-            OperationId = Guid.NewGuid().ToString(),
-            SendResult = EmailNotificationResultType.Succeeded
-        };
+            emailSendOperationResult = new EmailSendOperationResult
+            {
+                OperationId = Guid.NewGuid().ToString(),
+                SendResult = EmailNotificationResultType.Delivered
+            };
+        }
+        else
+        {
+            emailSendOperationResult = new EmailSendOperationResult
+            {
+                NotificationId = Guid.NewGuid(),
+                SendResult = EmailNotificationResultType.Delivered
+            };
+        }
 
-        string serializedSendOperationResult = sendOperationResult.Serialize();
+        string serializedSendOperationResult = emailSendOperationResult.Serialize();
 
         // Act
         await emailStatusConsumer.StartAsync(CancellationToken.None);
