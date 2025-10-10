@@ -1,13 +1,22 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using System.Text.Json;
+
+using Altinn.Notifications.Core;
+using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Exceptions;
+using Altinn.Notifications.Core.Integrations;
+using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.IntegrationTests.Utils;
 
 using Microsoft.Extensions.Hosting;
-
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+using Moq;
 using Xunit;
-using Xunit.Sdk;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.TestingConsumers;
 
@@ -46,7 +55,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
 
         int statusFeedCount = -1;
-        await EventuallyAsync(
+        await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
                 statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
@@ -93,7 +102,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
 
         // Wait for notification status to become Succeeded
         string? observedEmailStatus = null;
-        await EventuallyAsync(
+        await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
                 observedEmailStatus = await SelectEmailNotificationStatus(notification.Id);
@@ -104,7 +113,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
 
         // Then wait for order processing status to reach Processed
         long processedOrderCount = -1;
-        await EventuallyAsync(
+        await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
                 processedOrderCount = await SelectProcessingStatusOrderCount(notification.Id, OrderProcessingStatus.Processed);
@@ -153,7 +162,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
 
         // Wait until UpdateStatusAsync has executed by observing its side-effect once.
         int statusFeedCount = -1;
-        await EventuallyAsync(
+        await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
                 statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
@@ -210,7 +219,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
 
         // Wait for email notification status to be updated
         string? observedEmailStatus = null;
-        await EventuallyAsync(
+        await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
                 observedEmailStatus = await SelectEmailNotificationStatus(notification.Id);
@@ -221,7 +230,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
 
         // Then wait for order processing status to reach Completed
         long completedCount = -1;
-        await EventuallyAsync(
+        await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
                 completedCount = await SelectProcessingStatusOrderCount(notification.Id, OrderProcessingStatus.Completed);
@@ -235,6 +244,58 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         // Assert using captured values (no extra queries here)
         Assert.Equal(resultType.ToString(), observedEmailStatus);
         Assert.Equal(1, completedCount);
+    }
+
+    [Theory]
+    [InlineData(SendStatusIdentifierType.OperationId)]
+    [InlineData(SendStatusIdentifierType.NotificationId)]
+    public async Task ProcessStatus_ServiceThrowsSendStatusUpdateException_ShouldPublishToRetryTopic(SendStatusIdentifierType type)
+    {
+        // Arrange
+        string retryTopicName = Guid.NewGuid().ToString();
+        var producer = new Mock<IKafkaProducer>(MockBehavior.Loose);
+        var kafkaSettings = BuildKafkaSettings(_statusUpdatedTopicName, retryTopicName);
+        EmailSendOperationResult? emailSendOperationResult = null;
+
+        var mockEmailService = new Mock<IEmailNotificationService>();
+        mockEmailService
+            .Setup(x => x.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()))
+            .ThrowsAsync(new SendStatusUpdateException(NotificationChannel.Email, Guid.NewGuid().ToString(), type));
+
+        using EmailStatusConsumer emailStatusConsumer = new(producer.Object, kafkaSettings, NullLogger<EmailStatusConsumer>.Instance, mockEmailService.Object);
+
+        if (type is SendStatusIdentifierType.OperationId)
+        {
+            emailSendOperationResult = new EmailSendOperationResult
+            {
+                OperationId = Guid.NewGuid().ToString(),
+                SendResult = EmailNotificationResultType.Delivered
+            };
+        }
+        else
+        {
+            emailSendOperationResult = new EmailSendOperationResult
+            {
+                NotificationId = Guid.NewGuid(),
+                SendResult = EmailNotificationResultType.Delivered
+            };
+        }
+
+        string serializedSendOperationResult = emailSendOperationResult.Serialize();
+
+        // Act
+        await emailStatusConsumer.StartAsync(CancellationToken.None);
+        await Task.Delay(250);
+
+        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, serializedSendOperationResult);
+
+        await IntegrationTestUtil.EventuallyAsync(
+           () => producer.Invocations.Any(i => i.Method.Name == nameof(IKafkaProducer.ProduceAsync) &&
+                                               i.Arguments[0] is string topic && topic == kafkaSettings.Value.EmailStatusUpdatedRetryTopicName &&
+                                               i.Arguments[1] is string message && !string.IsNullOrWhiteSpace(message) && JsonSerializer.Deserialize<UpdateStatusRetryMessage>(message, JsonSerializerOptionsProvider.Options)?.SendResult == serializedSendOperationResult),
+           TimeSpan.FromSeconds(15), 
+           TimeSpan.FromMilliseconds(1000));
+        await emailStatusConsumer.StopAsync(CancellationToken.None);
     }
 
     public Task InitializeAsync()
@@ -256,28 +317,24 @@ public class EmailStatusConsumerTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// Repeatedly evaluates a condition until it becomes <c>true</c> or a timeout is reached.
+    /// Creates Kafka settings.
     /// </summary>
-    /// <param name="predicate">An async function that evaluates the condition to be met. Returns <c>true</c> if the condition is satisfied, otherwise <c>false</c>.</param>
-    /// <param name="maximumWaitTime">The maximum amount of time to wait for the condition to be met.</param>
-    /// <param name="checkInterval">The interval between condition evaluations. Defaults to 100 milliseconds if not specified.</param>
-    /// <exception cref="XunitException">Thrown if the condition is not met within the specified timeout.</exception>
-    private static async Task EventuallyAsync(Func<Task<bool>> predicate, TimeSpan maximumWaitTime, TimeSpan? checkInterval = null)
+    /// <returns>
+    /// An <see cref="IOptions{KafkaSettings}"/> instance with minimal configuration needed for running the notification consumer tests.
+    /// </returns>
+    /// <remarks>
+    /// Provides a standard configuration with localhost broker address and unit-tests group ID.
+    /// </remarks>
+    private static IOptions<KafkaSettings> BuildKafkaSettings(string statusUpdatedTopicName, string statusUpdatedRetryTopicName)
     {
-        var deadline = DateTime.UtcNow.Add(maximumWaitTime);
-        var pollingInterval = checkInterval ?? TimeSpan.FromMilliseconds(100);
-
-        while (DateTime.UtcNow < deadline)
+        return Options.Create(new KafkaSettings
         {
-            if (await predicate())
-            {
-                return;
-            }
-
-            await Task.Delay(pollingInterval);
-        }
-
-        throw new XunitException($"Condition not met within timeout ({maximumWaitTime}).");
+            BrokerAddress = "localhost:9092",
+            EmailStatusUpdatedTopicName = statusUpdatedTopicName,
+            EmailStatusUpdatedRetryTopicName = statusUpdatedRetryTopicName,
+            Producer = new ProducerSettings(),
+            Consumer = new ConsumerSettings { GroupId = $"altinn-notifications-{Guid.NewGuid():N}" }
+        });
     }
 
     private static async Task<string> SelectEmailNotificationStatus(Guid notificationId)
