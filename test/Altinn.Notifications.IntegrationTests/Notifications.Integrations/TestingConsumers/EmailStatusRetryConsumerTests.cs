@@ -1,10 +1,19 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using System.Text.Json;
+
+using Altinn.Notifications.Core;
+using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
+using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.IntegrationTests.Utils;
 
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+using Moq;
 using Npgsql;
 using Xunit;
 
@@ -14,6 +23,53 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
     {
         private readonly string _statusUpdatedRetryTopicName = Guid.NewGuid().ToString();
         private readonly List<long> _deadDeliveryReportdIds = [];
+
+        [Fact]
+        public async Task MessageOnRetryTopic_AttemptsIsIncrementedAndRetried_WhenThresholdTimeHasNotElapsed()
+        {
+            // Arrange
+            var producer = new Mock<IKafkaProducer>(MockBehavior.Loose);
+            var kafkaSettings = BuildKafkaSettings(_statusUpdatedRetryTopicName);
+
+            var deadDeliveryReportServiceMock = new Mock<IDeadDeliveryReportService>();
+            using EmailStatusRetryConsumer emailStatusRetryConsumer = new(
+                producer.Object,
+                deadDeliveryReportServiceMock.Object,
+                kafkaSettings,
+                NullLogger<EmailStatusRetryConsumer>.Instance);
+
+            // use this to verify that the message was not persisted
+            var emailSendOperationResult = new EmailSendOperationResult
+            {
+                NotificationId = Guid.NewGuid(),
+                OperationId = Guid.NewGuid().ToString(),
+                SendResult = EmailNotificationResultType.Delivered
+            };
+
+            var retryMessage = new UpdateStatusRetryMessage
+            {
+                Attempts = 1,
+                FirstSeen = DateTime.UtcNow, // should NOT hit threshold
+                NotificationId = Guid.NewGuid(),
+                ExternalReferenceId = Guid.NewGuid(),
+                SendResult = emailSendOperationResult.Serialize()
+            };
+
+            // Act
+            await KafkaUtil.PublishMessageOnTopic(_statusUpdatedRetryTopicName, retryMessage.Serialize());
+
+            await emailStatusRetryConsumer.StartAsync(CancellationToken.None);
+            await Task.Delay(250);
+
+            await IntegrationTestUtil.EventuallyAsync(
+          () => producer.Invocations.Any(i => i.Method.Name == nameof(IKafkaProducer.ProduceAsync) &&
+                                              i.Arguments[0] is string topic && topic == kafkaSettings.Value.EmailStatusUpdatedRetryTopicName &&
+                                              i.Arguments[1] is string message && !string.IsNullOrWhiteSpace(message) && JsonSerializer.Deserialize<UpdateStatusRetryMessage>(message, JsonSerializerOptionsProvider.Options)?.Attempts == retryMessage.Attempts + 1),
+          TimeSpan.FromSeconds(10),
+          TimeSpan.FromMilliseconds(1000));
+
+            await emailStatusRetryConsumer.StopAsync(CancellationToken.None);
+        }
 
         [Fact]
         public async Task MessageOnRetryTopic_IsPersisted_WhenThresholdTimeHasElapsed()
@@ -51,7 +107,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
 
             // Act
             await KafkaUtil.PublishMessageOnTopic(_statusUpdatedRetryTopicName, retryMessage.Serialize());
-            
+
             await emailStatusRetryConsumer.StartAsync(CancellationToken.None);
             await Task.Delay(250);
 
@@ -104,6 +160,26 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
 
                 await PostgreUtil.RunSql(deleteSql, parameters);
             }
+        }
+
+        /// <summary>
+        /// Creates Kafka settings.
+        /// </summary>
+        /// <returns>
+        /// An <see cref="IOptions{KafkaSettings}"/> instance with minimal configuration needed for running the notification consumer tests.
+        /// </returns>
+        /// <remarks>
+        /// Provides a standard configuration with localhost broker address and unit-tests group ID.
+        /// </remarks>
+        private static IOptions<KafkaSettings> BuildKafkaSettings(string statusUpdatedRetryTopicName)
+        {
+            return Options.Create(new KafkaSettings
+            {
+                BrokerAddress = "localhost:9092",
+                EmailStatusUpdatedRetryTopicName = statusUpdatedRetryTopicName,
+                Producer = new ProducerSettings(),
+                Consumer = new ConsumerSettings { GroupId = $"altinn-notifications-{Guid.NewGuid():N}" }
+            });
         }
     }
 }

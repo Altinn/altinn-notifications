@@ -3,7 +3,7 @@
 namespace Altinn.Notifications.Core.Models;
 
 /// <summary>
-/// Represents a message that needs to be retried due to a failed operation.
+/// Represents a message that needs to be retried due to a failed status update operation.
 /// </summary>
 public record UpdateStatusRetryMessage
 {
@@ -13,14 +13,14 @@ public record UpdateStatusRetryMessage
     public Guid? ExternalReferenceId { get; init; }
 
     /// <summary>
-    /// Gets or sets the number of retry attempts made. Defaults to 1.
+    /// Gets or sets the number of retry attempts made.
     /// </summary>
-    public required int Attempts { get; init; } = 1;
+    public required int Attempts { get; init; } 
 
     /// <summary>
-    /// Gets or sets the timestamp when the retry message was first created. Defaults to current UTC time.
+    /// Gets or sets the timestamp when the retry message was first created.
     /// </summary>
-    public required DateTime FirstSeen { get; init; } = DateTime.UtcNow;
+    public required DateTime FirstSeen { get; init; }
 
     /// <summary>
     /// Gets or sets the unique identifier for the notification that failed to send.
@@ -28,7 +28,7 @@ public record UpdateStatusRetryMessage
     public Guid? NotificationId { get; init; }
 
     /// <summary>
-    /// Gets or sets the delivery report result object to be put on the retry topic.
+    /// Gets or sets the delivery report result object to be put on the status update retry topic.
     /// </summary>
     public required string SendResult { get; init; }
 

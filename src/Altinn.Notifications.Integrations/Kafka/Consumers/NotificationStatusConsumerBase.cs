@@ -19,6 +19,7 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
     where TConsumer : class
 {
     private readonly string _retryTopicName;
+    private readonly string _sendStatusUpdateRetryTopicName;
     private readonly IKafkaProducer _producer;
     private readonly ILogger<TConsumer> _logger;
 
@@ -27,12 +28,14 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
     /// </summary>
     /// <param name="topicName">The name of the Kafka topic to consume from.</param>
     /// <param name="retryTopicName">The name of the Kafka topic to publish retry messages to.</param>
+    /// <param name="sendStatusUpdateRetryTopicName">The name of the Kafka topic to publish sendStatusUpdate retries</param>
     /// <param name="producer">The Kafka producer used for publishing retry messages.</param>
     /// <param name="settings">Kafka configuration settings.</param>
     /// <param name="logger">Logger for the consumer.</param>
     protected NotificationStatusConsumerBase(
         string topicName,
         string retryTopicName,
+        string sendStatusUpdateRetryTopicName,
         IKafkaProducer producer,
         IOptions<KafkaSettings> settings,
         ILogger<TConsumer> logger)
@@ -41,6 +44,7 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
         _logger = logger;
         _producer = producer;
         _retryTopicName = retryTopicName;
+        _sendStatusUpdateRetryTopicName = sendStatusUpdateRetryTopicName;
     }
 
     /// <summary>
@@ -88,16 +92,31 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
         }
         catch (SendStatusUpdateException e)
         {
+            Guid? notificationId = null;
+            Guid? externalReferenceId = null;
+
+            if (e.IdentifierType == SendStatusIdentifierType.NotificationId && Guid.TryParse(e.Identifier, out var parsedNoticiationId))
+            {
+                notificationId = parsedNoticiationId;
+            }
+
+            if (e.IdentifierType == SendStatusIdentifierType.OperationId && Guid.TryParse(e.Identifier, out var parsedExternalReferenceId))
+            {
+                externalReferenceId = parsedExternalReferenceId;
+            }
+
             var retryMessage = new UpdateStatusRetryMessage
             {
                 FirstSeen = DateTime.UtcNow,
                 Attempts = 1,
-                NotificationId = e.IdentifierType == SendStatusIdentifierType.NotificationId ? Guid.Parse(e.Identifier) : null,
-                ExternalReferenceId = e.IdentifierType is SendStatusIdentifierType.OperationId or SendStatusIdentifierType.GatewayReference ? Guid.Parse(e.Identifier) : null,
+                NotificationId = notificationId,
+                ExternalReferenceId = externalReferenceId,
                 SendResult = message
             };
 
-            await RetryStatus(retryMessage.Serialize());
+            var serializedRetryMessage = retryMessage.Serialize();
+
+            await RetrySendStatusUpdateException(serializedRetryMessage);
         }
         catch (Exception e) when (LogProcessingError(e, message))
         {
@@ -116,6 +135,16 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
     }
 
     /// <summary>
+    /// Sends a message to a specified sendStatusUpdateRetry topic for multiple retries within a time interval.
+    /// </summary>
+    /// <param name="message">The message to retry</param>
+    /// <returns></returns>
+    private async Task RetrySendStatusUpdateException(string message)
+    {
+        await _producer.ProduceAsync(_sendStatusUpdateRetryTopicName, message);
+    }
+
+    /// <summary>
     /// Logs an error when an exception occurs while processing a Kafka message.
     /// </summary>
     /// <param name="exception">The exception that occurred during processing.</param>
@@ -130,15 +159,5 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
             kafkaMessage);
 
         return false;
-    }
-
-    /// <summary>
-    /// Logs send status update failures.
-    /// </summary>
-    /// <param name="exception">The domain exception.</param>
-    /// <param name="kafkaMessage">The original Kafka message.</param>
-    private void LogSendStatusUpdateException(SendStatusUpdateException exception, string kafkaMessage)
-    {
-        _logger.LogInformation("Exception Message={ExceptionMessage}. Kafka Message={KafkaMessage}", exception.Message, kafkaMessage);
     }
 }

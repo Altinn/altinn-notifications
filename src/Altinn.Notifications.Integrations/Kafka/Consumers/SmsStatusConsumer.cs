@@ -30,7 +30,13 @@ public sealed class SmsStatusConsumer : NotificationStatusConsumerBase<SmsStatus
         IOptions<KafkaSettings> settings,
         ILogger<SmsStatusConsumer> logger,
         ISmsNotificationService smsNotificationsService)
-        : base(settings.Value.SmsStatusUpdatedTopicName, settings.Value.SmsStatusUpdatedTopicName, producer, settings, logger)
+        : base(
+            settings.Value.SmsStatusUpdatedTopicName, 
+            settings.Value.SmsStatusUpdatedTopicName, 
+            settings.Value.SmsStatusUpdatedRetryTopicName, 
+            producer, 
+            settings, 
+            logger)
     {
         _smsNotificationsService = smsNotificationsService;
     }
