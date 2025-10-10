@@ -11,22 +11,9 @@ public static class IntegrationTestUtil
     /// <param name="maximumWaitTime">The maximum amount of time to wait for the condition to be met.</param>
     /// <param name="checkInterval">The interval between condition evaluations. Defaults to 100 milliseconds if not specified.</param>
     /// <exception cref="XunitException">Thrown if the condition is not met within the specified timeout.</exception>
-    public static async Task EventuallyAsync(Func<Task<bool>> predicate, TimeSpan maximumWaitTime, TimeSpan? checkInterval = null)
+    public static Task EventuallyAsync(Func<Task<bool>> predicate, TimeSpan maximumWaitTime, TimeSpan? checkInterval = null)
     {
-        var deadline = DateTime.UtcNow.Add(maximumWaitTime);
-        var pollingInterval = checkInterval ?? TimeSpan.FromMilliseconds(100);
-
-        while (DateTime.UtcNow < deadline)
-        {
-            if (await predicate())
-            {
-                return;
-            }
-
-            await Task.Delay(pollingInterval);
-        }
-
-        throw new XunitException($"Condition not met within timeout ({maximumWaitTime}).");
+        return EventuallyAsync<bool>(async () => await predicate(), maximumWaitTime, checkInterval ?? TimeSpan.FromMilliseconds(200));
     }
 
     /// <summary>
@@ -37,22 +24,9 @@ public static class IntegrationTestUtil
     /// <param name="checkInterval">The interval between condition evaluations. Defaults to 100 milliseconds if not specified.</param>
     /// <returns>A task that completes when the condition is met or the timeout is reached.</returns>
     /// <exception cref="XunitException">Thrown if the condition is not met within the specified timeout.</exception>
-    public static async Task EventuallyAsync(Func<bool> predicate, TimeSpan maximumWaitTime, TimeSpan? checkInterval = null)
+    public static Task EventuallyAsync(Func<bool> predicate, TimeSpan maximumWaitTime, TimeSpan? checkInterval = null)
     {
-        var deadline = DateTime.UtcNow.Add(maximumWaitTime);
-        var pollingInterval = checkInterval ?? TimeSpan.FromMilliseconds(100);
-
-        while (DateTime.UtcNow < deadline)
-        {
-            if (predicate())
-            {
-                return;
-            }
-
-            await Task.Delay(pollingInterval);
-        }
-
-        throw new XunitException($"Condition not met within timeout ({maximumWaitTime}).");
+        return EventuallyAsync<bool>(() => Task.FromResult(predicate()), maximumWaitTime, checkInterval ?? TimeSpan.FromMilliseconds(200));
     }
 
     /// <summary>
@@ -74,7 +48,7 @@ public static class IntegrationTestUtil
         while (DateTime.UtcNow < endTime)
         {
             var result = await predicate();
-            if (result != null && !EqualityComparer<T>.Default.Equals(result, default(T)))
+            if (result != null && !EqualityComparer<T>.Default.Equals(result, default))
             {
                 return result;
             }
