@@ -22,7 +22,6 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
     private const string _emailTopic = "altinn.notifications.email.queue";
     private const string _smsStatusTopic = "altinn.notifications.sms.status.updated";
     private const string _emailStatusTopic = "altinn.notifications.email.status.updated";
-    private const string _emailStatusRetryTopic = "altinn.notifications.email.status.updated.retry";
 
     /// <summary>
     /// Called immediately after the class has been created, before it is used.
@@ -41,8 +40,10 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         await Dispose(true);
     }
 
-    [Fact]
-    public async Task ProcessEmailDeliveryReport_WhenUnexpectedException_RetryDirectedToRetryTopic()
+    [Theory]
+    [InlineData(SendStatusIdentifierType.OperationId)]
+    [InlineData(SendStatusIdentifierType.NotificationId)]
+    public async Task ProcessEmailDeliveryReport_WhenUnexpectedException_RetryDirectedToRetryTopic(SendStatusIdentifierType type)
     {
         // Arrange
         var kafkaSettings = BuildKafkaSettings();
@@ -50,13 +51,24 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         var dateTimeService = new Mock<IDateTimeService>();
         var producer = new Mock<IKafkaProducer>(MockBehavior.Loose);
         var emailNotificationRepository = new Mock<IEmailNotificationRepository>();
+        EmailSendOperationResult? emailSendOperationResult = null;
 
-        var emailSendOperationResult = new EmailSendOperationResult
+        if (type is SendStatusIdentifierType.OperationId)
         {
-            OperationId = Guid.NewGuid().ToString(),
-            NotificationId = Guid.NewGuid(),
-            SendResult = EmailNotificationResultType.Delivered
-        };
+            emailSendOperationResult = new EmailSendOperationResult
+            {
+                OperationId = Guid.NewGuid().ToString(),
+                SendResult = EmailNotificationResultType.Delivered
+            };
+        }
+        else 
+        {
+            emailSendOperationResult = new EmailSendOperationResult
+            {
+                NotificationId = Guid.NewGuid(),
+                SendResult = EmailNotificationResultType.Delivered
+            };
+        }
 
         var deliveryReportMessage = emailSendOperationResult.Serialize();
 
@@ -105,7 +117,6 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         await KafkaUtil.DeleteTopicAsync(_emailTopic);
         await KafkaUtil.DeleteTopicAsync(_smsStatusTopic);
         await KafkaUtil.DeleteTopicAsync(_emailStatusTopic);
-        await KafkaUtil.DeleteTopicAsync(_emailStatusRetryTopic);
     }
 
     /// <summary>
