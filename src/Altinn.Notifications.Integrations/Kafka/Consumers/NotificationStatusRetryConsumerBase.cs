@@ -19,12 +19,12 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers;
 /// It manages retry timing, dead delivery report persistence, and message requeuing. Derived classes
 /// must implement the <see cref="Channel"/> property to specify the delivery channel and override
 /// the ExecuteAsync method to consume messages from their respective Kafka topics.</remarks>
-public abstract class StatusRetryConsumerBase(
+public abstract class NotificationStatusRetryConsumerBase(
         IKafkaProducer producer,
         IDeadDeliveryReportService deadDeliveryReportService,
         IOptions<KafkaSettings> settings,
         string topicName,
-        ILogger<StatusRetryConsumerBase> logger) : KafkaConsumerBase<StatusRetryConsumerBase>(settings, logger, topicName)
+        ILogger<NotificationStatusRetryConsumerBase> logger) : KafkaConsumerBase<NotificationStatusRetryConsumerBase>(settings, logger, topicName)
 {
     private readonly IKafkaProducer _producer = producer;
     private readonly IDeadDeliveryReportService _deadDeliveryReportService = deadDeliveryReportService;
