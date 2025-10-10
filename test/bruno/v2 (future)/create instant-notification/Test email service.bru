@@ -1,0 +1,34 @@
+meta {
+  name: Test email service
+  type: http
+  seq: 3
+}
+
+post {
+  url: http://localhost:5091/notifications/email/api/v1/instantemail
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "sender": "Test",
+    "recipient": "{{process.env.TESTDATA_MY_EMAIL}}",
+    "subject": "Test request body",
+    "body": "Hallo",
+    "contentType": "Plain",
+    "notificationId": "{{random_idempotency_id}}"
+  }
+  
+}
+
+docs {
+  Creates and sends an instant SMS notification to a single recipient.
+  The request is processed immediately and the SMS is sent without delay.
+  
+  Required environment variables:
+  - TESTDATA_MY_PHONE: Your phone number for testing
+  
+  The idempotencyId ensures the same notification is not sent multiple times
+  if the request is repeated.
+}
