@@ -51,7 +51,7 @@ public abstract class NotificationStatusRetryConsumerBase(
             _logger.LogError("Deserialization of message failed. {Message}", message);
 
             // putting this message back on the topic would cause an infinite loop since it will fail deserialization every time
-            // we log the error abd return
+            // we log the error and return
             return;
         }
         

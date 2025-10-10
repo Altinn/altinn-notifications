@@ -18,7 +18,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.TestingConsumers;
 
-public class StatusRetryConsumerBaseTests : IAsyncLifetime
+public class NotificationStatusRetryConsumerBaseTests : IAsyncLifetime
 {
     private readonly string _emailStatusUpdatedRetryTopicName = Guid.NewGuid().ToString();
 
