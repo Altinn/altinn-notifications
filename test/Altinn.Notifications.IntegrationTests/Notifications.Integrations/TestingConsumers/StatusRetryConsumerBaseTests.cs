@@ -1,12 +1,12 @@
 ﻿using System.Text.Json;
 
+using Altinn.Notifications.Core;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
-using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.IntegrationTests.Utils;
@@ -68,7 +68,7 @@ public class StatusRetryConsumerBaseTests : IAsyncLifetime
         await IntegrationTestUtil.EventuallyAsync(
             () => producer.Invocations.Any(i => i.Method.Name == nameof(IKafkaProducer.ProduceAsync) &&
                                                 i.Arguments[0] is string topic && topic == kafkaSettings.Value.EmailStatusUpdatedRetryTopicName &&
-                                                i.Arguments[1] is string message && !string.IsNullOrWhiteSpace(message) && JsonSerializer.Deserialize<UpdateStatusRetryMessage>(message)?.ExternalReferenceId == retryMessage.ExternalReferenceId),
+                                                i.Arguments[1] is string message && !string.IsNullOrWhiteSpace(message) && JsonSerializer.Deserialize<UpdateStatusRetryMessage>(message, JsonSerializerOptionsProvider.Options)?.ExternalReferenceId == retryMessage.ExternalReferenceId),
             TimeSpan.FromSeconds(10));
 
         await emailStatusConsumer.StopAsync(CancellationToken.None);
