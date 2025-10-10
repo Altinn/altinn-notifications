@@ -1,9 +1,11 @@
 using System.Text.Json;
 
+using Altinn.Notifications.Core;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Integrations.Configuration;
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -11,65 +13,48 @@ using Microsoft.Extensions.Options;
 namespace Altinn.Notifications.Integrations.Kafka.Consumers;
 
 /// <summary>
-/// Base class for notification status retry consumers that handle time-based retry logic and dead delivery reports
+/// Serves as a base class for implementing consumers that handle status updates with retry logic.
 /// </summary>
-/// <typeparam name="TConsumer">The type of the derived consumer</typeparam>
-public abstract class NotificationStatusRetryConsumerBase<TConsumer> : KafkaConsumerBase<TConsumer>
-    where TConsumer : class
+/// <remarks>This abstract class provides the core retry mechanism for processing status updates.
+/// It manages retry timing, dead delivery report persistence, and message requeuing. Derived classes
+/// must implement the <see cref="Channel"/> property to specify the delivery channel and override
+/// the ExecuteAsync method to consume messages from their respective Kafka topics.</remarks>
+public abstract class NotificationStatusRetryConsumerBase(
+        IKafkaProducer producer,
+        IDeadDeliveryReportService deadDeliveryReportService,
+        IOptions<KafkaSettings> settings,
+        string topicName,
+        ILogger<NotificationStatusRetryConsumerBase> logger) : KafkaConsumerBase<NotificationStatusRetryConsumerBase>(settings, logger, topicName)
 {
-    private readonly IKafkaProducer _producer;
-    private readonly IDeadDeliveryReportService _deadDeliveryReportService;
-    private readonly ILogger<TConsumer> _logger;
-    private readonly string _retryTopicName;
-    private readonly int _statusUpdateRetrySeconds;
+    private readonly IKafkaProducer _producer = producer;
+    private readonly IDeadDeliveryReportService _deadDeliveryReportService = deadDeliveryReportService;
+    private readonly string _topicName = topicName;
+    private readonly int _statusUpdateRetrySeconds = settings.Value.StatusUpdatedRetryThresholdSeconds;
+    private readonly ILogger _logger = logger;
 
     /// <summary>
-    /// Gets the delivery report channel for this consumer type
+    /// Gets the delivery report channel for this consumer.
     /// </summary>
     protected abstract DeliveryReportChannel Channel { get; }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="NotificationStatusRetryConsumerBase{TConsumer}"/> class.
+    /// Processes a status update message, determining whether to retry a dead delivery report based on elapsed time.
     /// </summary>
-    /// <param name="producer">The Kafka producer used for publishing retry messages.</param>
-    /// <param name="deadDeliveryReportService">Service for handling dead delivery reports.</param>
-    /// <param name="settings">Kafka configuration settings.</param>
-    /// <param name="logger">Logger for the consumer.</param>
-    /// <param name="retryTopicName">The name of the retry topic to consume from and publish to.</param>
-    protected NotificationStatusRetryConsumerBase(
-        IKafkaProducer producer,
-        IDeadDeliveryReportService deadDeliveryReportService,
-        IOptions<Configuration.KafkaSettings> settings,
-        ILogger<TConsumer> logger,
-        string retryTopicName)
-        : base(settings, logger, retryTopicName)
+    /// <param name="message">The message containing the retry message data, including the delivery report from the provider</param>
+    /// <returns></returns>
+    protected async Task ProcessStatus(string message)
     {
-        _producer = producer;
-        _deadDeliveryReportService = deadDeliveryReportService;
-        _logger = logger;
-        _retryTopicName = retryTopicName;
-        _statusUpdateRetrySeconds = settings.Value.StatusUpdatedRetryThresholdSeconds;
-    }
+        var retryMessage = JsonSerializer.Deserialize<UpdateStatusRetryMessage>(message, JsonSerializerOptionsProvider.Options);
 
-    /// <summary>
-    /// Executes the retry consumer to process messages from the Kafka topic
-    /// </summary>
-    /// <param name="stoppingToken">Cancellation token to stop the consumer</param>
-    /// <returns>A task representing the asynchronous operation</returns>
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        return Task.Run(() => ConsumeMessage(ProcessStatus, RetryStatus, stoppingToken), stoppingToken);
-    }
+        if (retryMessage == null)
+        {
+            _logger.LogError("Deserialization of message failed. {Message}", message);
 
-    /// <summary>
-    /// Processes a status retry message, either creating a dead delivery report or re-queuing for retry
-    /// </summary>
-    /// <param name="message">The raw message containing the UpdateStatusRetryMessage</param>
-    /// <returns>A task representing the asynchronous operation</returns>
-    private async Task ProcessStatus(string message)
-    {
-        var retryMessage = JsonSerializer.Deserialize<UpdateStatusRetryMessage>(message) ?? throw new InvalidOperationException("Could not deserialize message");
-
+            // putting this message back on the topic would cause an infinite loop since it will fail deserialization every time
+            // we log the error abd return
+            return;
+        }
+        
         var elapsedSeconds = (DateTime.UtcNow - retryMessage.FirstSeen).TotalSeconds;
 
         if (elapsedSeconds >= _statusUpdateRetrySeconds)
@@ -94,12 +79,12 @@ public abstract class NotificationStatusRetryConsumerBase<TConsumer> : KafkaCons
             // increment retries before putting it back on the retry topic
             var incrementedRetryMessage = retryMessage with { Attempts = retryMessage.Attempts + 1 };
 
-            _logger.LogDebug(
+            _logger.LogInformation(
                 "Message not ready for retry. Elapsed: {ElapsedSeconds}s, Threshold: {ThresholdSeconds}s",
                 elapsedSeconds,
                 _statusUpdateRetrySeconds);
 
-            await _producer.ProduceAsync(_retryTopicName, incrementedRetryMessage.Serialize());
+            await _producer.ProduceAsync(_topicName, incrementedRetryMessage.Serialize());
         }
     }
 
@@ -108,8 +93,8 @@ public abstract class NotificationStatusRetryConsumerBase<TConsumer> : KafkaCons
     /// </summary>
     /// <param name="message">The message to retry.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    private async Task RetryStatus(string message)
+    protected async Task RetryStatus(string message)
     {
-        await _producer.ProduceAsync(_retryTopicName, message);
+        await _producer.ProduceAsync(_topicName, message);
     }
 }

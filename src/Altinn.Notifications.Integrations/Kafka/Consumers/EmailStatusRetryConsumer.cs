@@ -15,7 +15,7 @@ public sealed class EmailStatusRetryConsumer(
     IDeadDeliveryReportService deadDeliveryReportService, 
     IOptions<Configuration.KafkaSettings> settings, 
     ILogger<EmailStatusRetryConsumer> logger)
-    : StatusRetryConsumerBase(
+    : NotificationStatusRetryConsumerBase(
         producer, 
         deadDeliveryReportService, 
         settings, 
