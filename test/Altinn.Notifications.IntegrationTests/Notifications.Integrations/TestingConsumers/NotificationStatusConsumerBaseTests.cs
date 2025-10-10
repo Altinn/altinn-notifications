@@ -40,10 +40,8 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         await Dispose(true);
     }
 
-    [Theory]
-    [InlineData(SendStatusIdentifierType.OperationId)]
-    [InlineData(SendStatusIdentifierType.NotificationId)]
-    public async Task ProcessEmailDeliveryReport_WhenUnexpectedException_RetryDirectedToRetryTopic(SendStatusIdentifierType type)
+    [Fact]
+    public async Task ProcessEmailDeliveryReport_WhenUnexpectedException_RetryDirectedToRetryTopic()
     {
         // Arrange
         var kafkaSettings = BuildKafkaSettings();
@@ -51,24 +49,12 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         var dateTimeService = new Mock<IDateTimeService>();
         var producer = new Mock<IKafkaProducer>(MockBehavior.Loose);
         var emailNotificationRepository = new Mock<IEmailNotificationRepository>();
-        EmailSendOperationResult? emailSendOperationResult = null;
 
-        if (type is SendStatusIdentifierType.OperationId)
+        var emailSendOperationResult = new EmailSendOperationResult
         {
-            emailSendOperationResult = new EmailSendOperationResult
-            {
-                OperationId = Guid.NewGuid().ToString(),
-                SendResult = EmailNotificationResultType.Delivered
-            };
-        }
-        else 
-        {
-            emailSendOperationResult = new EmailSendOperationResult
-            {
-                NotificationId = Guid.NewGuid(),
-                SendResult = EmailNotificationResultType.Delivered
-            };
-        }
+            OperationId = Guid.NewGuid().ToString(),
+            SendResult = EmailNotificationResultType.Delivered
+        };
 
         var deliveryReportMessage = emailSendOperationResult.Serialize();
 

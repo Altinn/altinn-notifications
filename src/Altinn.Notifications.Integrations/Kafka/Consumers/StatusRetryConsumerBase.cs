@@ -43,7 +43,7 @@ public abstract class StatusRetryConsumerBase(
     /// <returns></returns>
     protected async Task ProcessStatus(string message)
     {
-        var retryMessage = JsonSerializer.Deserialize<UpdateStatusRetryMessage>(message) ?? throw new InvalidOperationException("Could not deserialize message");
+        var retryMessage = JsonSerializer.Deserialize<UpdateStatusRetryMessage>(message);
 
         var elapsedSeconds = (DateTime.UtcNow - retryMessage.FirstSeen).TotalSeconds;
 
