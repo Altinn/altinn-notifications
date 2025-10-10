@@ -48,11 +48,15 @@ public class AltinnServiceUpdateConsumerTests : IAsyncLifetime
 
         // Act
         await consumerService.StartAsync(CancellationToken.None);
-        await Task.Delay(10000);
-        await consumerService.StopAsync(CancellationToken.None);
 
         // Assert
-        DateTime? actualTimeout = await SelectEmailResourceLimitFromDb();
+        DateTime? actualTimeout = await IntegrationTestUtil.EventuallyAsync(
+            async () => await SelectEmailResourceLimitFromDb(),
+            maximumWaitTime: TimeSpan.FromSeconds(10),
+            checkInterval: TimeSpan.FromMilliseconds(500));
+
+        await consumerService.StopAsync(CancellationToken.None);
+
         Assert.NotNull(actualTimeout);
         Assert.True(actualTimeout > DateTime.MinValue);
     }

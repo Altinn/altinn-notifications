@@ -40,15 +40,25 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
 
         // Act
         await consumerRetryService.StartAsync(CancellationToken.None);
-        await Task.Delay(10000);
-        await consumerRetryService.StopAsync(CancellationToken.None);
 
         // Assert
-        long processedOrderCount = await SelectProcessedOrderCount(persistedOrder.Id);
-        long emailNotificationCount = await SelectEmailNotificationCount(persistedOrder.Id);
+        await IntegrationTestUtil.EventuallyAsync(
+            async () =>
+            {
+                long count = await SelectProcessedOrderCount(persistedOrder.Id);
+                return count == 1;
+            },
+            TimeSpan.FromSeconds(15));
 
-        Assert.Equal(1, processedOrderCount);
-        Assert.Equal(1, emailNotificationCount);
+        await IntegrationTestUtil.EventuallyAsync(
+            async () =>
+            {
+                long count = await SelectEmailNotificationCount(persistedOrder.Id);
+                return count == 1;
+            },
+            TimeSpan.FromSeconds(15));
+
+        await consumerRetryService.StopAsync(CancellationToken.None);
     }
 
     /// <summary>
@@ -77,13 +87,17 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
 
         // Act
         await consumerRetryService.StartAsync(CancellationToken.None);
-        await Task.Delay(10000);
-        await consumerRetryService.StopAsync(CancellationToken.None);
 
         // Assert
-        string processedstatus = await SelectProcessStatus(persistedOrder.Id);
+        await IntegrationTestUtil.EventuallyAsync(
+            async () =>
+            {
+                string processedstatus = await SelectProcessStatus(persistedOrder.Id);
+                return processedstatus == "Processed";
+            },
+            TimeSpan.FromSeconds(15));
 
-        Assert.Equal("Processed", processedstatus);
+        await consumerRetryService.StopAsync(CancellationToken.None);
     }
 
     public async void Dispose()

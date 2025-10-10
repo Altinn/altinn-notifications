@@ -89,7 +89,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 
         await KafkaUtil.PublishMessageOnTopic(kafkaSettings.Value.EmailStatusUpdatedTopicName, deliveryReportMessage);
 
-        await EventuallyAsync(
+        await IntegrationTestUtil.EventuallyAsync(
             () => producer.Invocations.Any(i => i.Method.Name == nameof(IKafkaProducer.ProduceAsync) &&
                                                 i.Arguments[0] is string topic && topic == kafkaSettings.Value.EmailStatusUpdatedTopicName &&
                                                 i.Arguments[1] is string message && message == deliveryReportMessage),
@@ -162,7 +162,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 
         await KafkaUtil.PublishMessageOnTopic(kafkaSettings.Value.SmsStatusUpdatedTopicName, deliveryReportMessage);
 
-        await EventuallyAsync(
+        await IntegrationTestUtil.EventuallyAsync(
             () => smsNotificationRepository.Invocations.Any(i =>
                 i.Method.Name == nameof(ISmsNotificationRepository.UpdateSendStatus) &&
                 i.Arguments.Count == 3 &&
@@ -237,7 +237,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 
         await KafkaUtil.PublishMessageOnTopic(kafkaSettings.Value.EmailStatusUpdatedTopicName, deliveryReportMessage);
 
-        await EventuallyAsync(() => emailNotificationRepository.Invocations.Any(e => e.Method.Name == nameof(IEmailNotificationRepository.UpdateSendStatus)), TimeSpan.FromSeconds(15));
+        await IntegrationTestUtil.EventuallyAsync(() => emailNotificationRepository.Invocations.Any(e => e.Method.Name == nameof(IEmailNotificationRepository.UpdateSendStatus)), TimeSpan.FromSeconds(15));
 
         await emailStatusConsumer.StopAsync(CancellationToken.None);
 
@@ -290,31 +290,5 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             EmailStatusUpdatedTopicName = _emailStatusTopic,
             Consumer = new ConsumerSettings { GroupId = $"altinn-notifications-{Guid.NewGuid():N}" }
         });
-    }
-
-    /// <summary>
-    /// Repeatedly evaluates a condition until it becomes <c>true</c> or a timeout is reached.
-    /// </summary>
-    /// <param name="predicate">A function that evaluates the condition to be met. Returns <c>true</c> if the condition is satisfied, otherwise <c>false</c>.</param>
-    /// <param name="maximumWaitTime">The maximum amount of time to wait for the condition to be met.</param>
-    /// <param name="checkInterval">The interval between condition evaluations. Defaults to 100 milliseconds if not specified.</param>
-    /// <returns>A task that completes when the condition is met or the timeout is reached.</returns>
-    /// <exception cref="XunitException">Thrown if the condition is not met within the specified timeout.</exception>
-    private static async Task EventuallyAsync(Func<bool> predicate, TimeSpan maximumWaitTime, TimeSpan? checkInterval = null)
-    {
-        var deadline = DateTime.UtcNow.Add(maximumWaitTime);
-        var pollingInterval = checkInterval ?? TimeSpan.FromMilliseconds(100);
-
-        while (DateTime.UtcNow < deadline)
-        {
-            if (predicate())
-            {
-                return;
-            }
-
-            await Task.Delay(pollingInterval);
-        }
-
-        throw new XunitException($"Condition not met within timeout ({maximumWaitTime}).");
     }
 }
