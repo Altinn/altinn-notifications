@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using Altinn.Notifications.Core.Configuration;
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
@@ -7,6 +8,7 @@ using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Extensions;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using Npgsql;
 using NpgsqlTypes;
@@ -46,7 +48,10 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsNotificationRepository"/> class.
     /// </summary>
-    public SmsNotificationRepository(NpgsqlDataSource dataSource, ILogger<SmsNotificationRepository> logger) : base(dataSource, logger)
+    /// <param name="dataSource">The npgsql data source.</param>
+    /// <param name="logger">The logger associated with this implementation of the ISmsNotificationRepository</param>
+    /// <param name="config">The notification configuration</param>
+    public SmsNotificationRepository(NpgsqlDataSource dataSource, ILogger<SmsNotificationRepository> logger, IOptions<NotificationConfig> config) : base(dataSource, logger, config)
     {
         _dataSource = dataSource;
     }
