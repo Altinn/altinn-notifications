@@ -10,8 +10,6 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers;
 
 /// <summary>
 /// Kafka consumer class for handling status messages about SMS notifications.
-/// Responsible for consuming messages, updating notification status,
-/// retrying failed updates, and managing log suppression for repeated failures.
 /// </summary>
 public sealed class SmsStatusConsumer : NotificationStatusConsumerBase<SmsStatusConsumer, SmsSendOperationResult>
 {
