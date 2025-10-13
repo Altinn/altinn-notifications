@@ -66,7 +66,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
                 return string.Equals(observedEmailStatus, EmailNotificationResultType.Delivered.ToString(), StringComparison.Ordinal);
             },
             TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(500));
+            TimeSpan.FromMilliseconds(100));
 
         long completedOrderCount = -1;
         await IntegrationTestUtil.EventuallyAsync(
@@ -76,7 +76,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
                 return completedOrderCount == 1;
             },
             TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(500));
+            TimeSpan.FromMilliseconds(100));
 
         int statusFeedCount = -1;
         await IntegrationTestUtil.EventuallyAsync(
@@ -86,7 +86,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
                 return statusFeedCount == 1;
             },
             TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(500));
+            TimeSpan.FromMilliseconds(100));
 
         await emailStatusConsumer.StopAsync(CancellationToken.None);
 
@@ -134,7 +134,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
                 return string.Equals(observedEmailStatus, EmailNotificationResultType.Succeeded.ToString(), StringComparison.Ordinal);
             },
             TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(1000));
+            TimeSpan.FromMilliseconds(100));
 
         long processedOrderCount = -1;
         await IntegrationTestUtil.EventuallyAsync(
@@ -144,7 +144,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
                 return processedOrderCount == 1;
             },
             TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(1000));
+            TimeSpan.FromMilliseconds(100));
 
         int statusFeedCount = -1;
         await IntegrationTestUtil.EventuallyAsync(
@@ -154,7 +154,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
                 return statusFeedCount == 0;
             },
             TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(500));
+            TimeSpan.FromMilliseconds(100));
 
         await emailStatusConsumer.StopAsync(CancellationToken.None);
 
@@ -202,11 +202,11 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         await IntegrationTestUtil.EventuallyAsync(
             () => producerMock.Invocations.Any(inv =>
                 inv.Method.Name == nameof(IKafkaProducer.ProduceAsync) &&
-                inv.Arguments[0] is string t && t == _statusUpdatedRetryTopicName &&
-                inv.Arguments[1] is string msg &&
-                JsonSerializer.Deserialize<UpdateStatusRetryMessage>(msg, JsonSerializerOptionsProvider.Options)?.SendOperationResult == serializedDeliveryReport),
+                inv.Arguments[0] is string topic && topic == _statusUpdatedRetryTopicName &&
+                inv.Arguments[1] is string updateStatusRetryMessage &&
+                JsonSerializer.Deserialize<UpdateStatusRetryMessage>(updateStatusRetryMessage, JsonSerializerOptionsProvider.Options)?.SendOperationResult == serializedDeliveryReport),
             TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(500));
+            TimeSpan.FromMilliseconds(100));
 
         await consumer.StopAsync(CancellationToken.None);
 
@@ -263,7 +263,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
                 return string.Equals(observedEmailStatus, resultType.ToString(), StringComparison.Ordinal);
             },
             TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(1000));
+            TimeSpan.FromMilliseconds(100));
 
         long completedCount = -1;
         await IntegrationTestUtil.EventuallyAsync(
@@ -273,7 +273,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
                 return completedCount == 1;
             },
             TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(1000));
+            TimeSpan.FromMilliseconds(100));
 
         await emailStatusConsumer.StopAsync(CancellationToken.None);
 
