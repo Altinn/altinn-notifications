@@ -2,6 +2,7 @@
 
 using Altinn.Notifications.Core;
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
@@ -25,20 +26,12 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
         private readonly List<long> _deadDeliveryReportdIds = [];
 
         [Fact]
-        public async Task MessageOnRetryTopic_AttemptsIsIncrementedAndRetried_WhenThresholdTimeHasNotElapsed()
+        public async Task ProcessMessage_IncrementsAttemptsAndRetriesMessage_WhenUpdateFailsAndThresholdNotElapsed()
         {
             // Arrange
             var producer = new Mock<IKafkaProducer>(MockBehavior.Loose);
             var kafkaSettings = BuildKafkaSettings(_statusUpdatedRetryTopicName);
             var emailNotificationServiceMock = new Mock<IEmailNotificationService>();
-
-            var deadDeliveryReportServiceMock = new Mock<IDeadDeliveryReportService>();
-            using EmailStatusRetryConsumer emailStatusRetryConsumer = new(
-                producer.Object,
-                emailNotificationServiceMock.Object,
-                deadDeliveryReportServiceMock.Object,
-                kafkaSettings,
-                NullLogger<EmailStatusRetryConsumer>.Instance);
 
             // use this to verify that the message was not persisted
             var emailSendOperationResult = new EmailSendOperationResult
@@ -47,6 +40,17 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                 OperationId = Guid.NewGuid().ToString(),
                 SendResult = EmailNotificationResultType.Delivered
             };
+
+            emailNotificationServiceMock.Setup(e => e.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()))
+                .ThrowsAsync(new SendStatusUpdateException(NotificationChannel.Email, emailSendOperationResult.OperationId, SendStatusIdentifierType.OperationId));
+
+            var deadDeliveryReportServiceMock = new Mock<IDeadDeliveryReportService>();
+            using EmailStatusRetryConsumer emailStatusRetryConsumer = new(
+                producer.Object,
+                emailNotificationServiceMock.Object,
+                deadDeliveryReportServiceMock.Object,
+                kafkaSettings,
+                NullLogger<EmailStatusRetryConsumer>.Instance);
 
             var retryMessage = new UpdateStatusRetryMessage
             {
