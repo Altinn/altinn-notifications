@@ -44,11 +44,20 @@ public abstract class NotificationStatusRetryConsumerBase(
     /// <returns></returns>
     protected async Task ProcessStatus(string message)
     {
-        var retryMessage = JsonSerializer.Deserialize<UpdateStatusRetryMessage>(message, JsonSerializerOptionsProvider.Options);
+        UpdateStatusRetryMessage? retryMessage;
+        try
+        {
+            retryMessage = JsonSerializer.Deserialize<UpdateStatusRetryMessage>(message, JsonSerializerOptionsProvider.Options);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Deserialization of message failed due to malformed JSON. {Message}", message);
+            return;
+        }
 
         if (retryMessage == null)
         {
-            _logger.LogError("Deserialization of message failed. {Message}", message);
+            _logger.LogError("Deserialization of message returned null. {Message}", message);
 
             // putting this message back on the topic would cause an infinite loop since it will fail deserialization every time
             // we log the error and return
