@@ -18,29 +18,26 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
     where TResult : class
     where TConsumer : class
 {
-    private readonly string _retryTopicName;
+    private readonly string _statusUpdateTopicName;
+    private readonly string _statusRetryUpdateTopicName;
     private readonly IKafkaProducer _producer;
-    private readonly ILogger _logger;
+    private readonly ILogger<TConsumer> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationStatusConsumerBase{TConsumer, TResult}"/> class.
     /// </summary>
-    /// <param name="topicName">The name of the Kafka topic to consume from.</param>
-    /// <param name="retryTopicName">The name of the Kafka topic to publish retry messages to.</param>
-    /// <param name="producer">The Kafka producer used for publishing retry messages.</param>
-    /// <param name="settings">Kafka configuration settings.</param>
-    /// <param name="logger">Logger for the consumer.</param>
     protected NotificationStatusConsumerBase(
         string topicName,
         string retryTopicName,
         IKafkaProducer producer,
         IOptions<KafkaSettings> settings,
-        ILogger logger)
+        ILogger<TConsumer> logger)
         : base(settings, logger, topicName)
     {
         _logger = logger;
         _producer = producer;
-        _retryTopicName = retryTopicName;
+        _statusUpdateTopicName = topicName;
+        _statusRetryUpdateTopicName = retryTopicName;
     }
 
     /// <inheritdoc/>
@@ -85,15 +82,13 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
         {
             await HandleSendStatusUpdateException(message, e);
         }
-        catch (Exception e) when (e is ArgumentException or InvalidOperationException)
+        catch (ArgumentException) when (LogProcessingError(message))
         {
-            _logger.LogError(e, "// {Consumer} // ProcessStatus // Deserialization of message failed due to malformed JSON. Not retrying. {Message}", typeof(TConsumer).Name, message);
-            return;
+            throw;
         }
-        catch (Exception e)
+        catch (InvalidOperationException) when (LogProcessingError(message))
         {
-            _logger.LogError(e, "// {Consumer} // ProcessStatus // Unexpected error when updating status. Message will be retried. {Message}", typeof(TConsumer).Name, message);
-            await RetryStatus(message);
+            throw;
         }
     }
 
@@ -107,24 +102,24 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
             notificationId = parsedNoticiationId;
         }
 
-        if (e.IdentifierType == SendStatusIdentifierType.OperationId)
+        if (e.IdentifierType == SendStatusIdentifierType.OperationId || e.IdentifierType == SendStatusIdentifierType.GatewayReference)
         {
             externalReferenceId = e.Identifier;
         }
 
         var retryMessage = new UpdateStatusRetryMessage
         {
-            FirstSeen = DateTime.UtcNow,
             Attempts = 1,
+            SendResult = message,
+            FirstSeen = DateTime.UtcNow,
             LastAttempt = DateTime.UtcNow,
             NotificationId = notificationId,
-            ExternalReferenceId = externalReferenceId,
-            SendResult = message
+            ExternalReferenceId = externalReferenceId
         };
 
         var serializedRetryMessage = retryMessage.Serialize();
 
-        await RetryStatus(serializedRetryMessage);
+        await _producer.ProduceAsync(_statusRetryUpdateTopicName, serializedRetryMessage);
     }
 
     /// <summary>
@@ -134,6 +129,17 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
     /// <returns>A task representing the asynchronous operation.</returns>
     private async Task RetryStatus(string message)
     {
-        await _producer.ProduceAsync(_retryTopicName, message);
+        await _producer.ProduceAsync(_statusUpdateTopicName, message);
+    }
+
+    /// <summary>
+    /// Logs an error when an exception occurs while processing a Kafka message.
+    /// </summary>
+    /// <param name="kafkaMessage">The Kafka message that caused the error.</param>
+    /// <returns>Always returns <c>false</c> to allow the exception to propagate.</returns>
+    private bool LogProcessingError(string kafkaMessage)
+    {
+        _logger.LogError("// {Consumer} // ProcessStatus // Deserialization of message failed due to malformed JSON. Not retrying. {Message}", typeof(TConsumer).Name, kafkaMessage);
+        return true;
     }
 }
