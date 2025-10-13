@@ -120,13 +120,16 @@ public abstract class NotificationStatusRetryConsumerBase(
             // Attempt to update the status
             await UpdateStatusAsync(retryMessage);
         }
+        catch (Exception e) when (e is JsonException or InvalidOperationException)
+        {
+            _logger.LogWarning(e, "Deserialization of SendResult failed due to malformed JSON. Not retrying. {SendResult}", retryMessage.SendResult);
+        }
         catch (Exception)
         {
             // increment retries before putting it back on the retry topic
             var incrementedRetryMessage = retryMessage with { Attempts = retryMessage.Attempts + 1 };
 
             await _producer.ProduceAsync(_topicName, incrementedRetryMessage.Serialize());
-            throw;
         }
     }
 }
