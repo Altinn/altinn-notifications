@@ -20,21 +20,12 @@ public sealed class SmsStatusConsumer : NotificationStatusConsumerBase<SmsStatus
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsStatusConsumer"/> class.
     /// </summary>
-    /// <param name="producer">The Kafka producer used for publishing retry messages.</param>
-    /// <param name="settings">Kafka configuration settings.</param>
-    /// <param name="logger">Logger for the consumer.</param>
-    /// <param name="smsNotificationsService">Service for handling SMS notification operations.</param>
     public SmsStatusConsumer(
         IKafkaProducer producer,
-        IOptions<KafkaSettings> settings,
         ILogger<SmsStatusConsumer> logger,
+        IOptions<KafkaSettings> kafkaSettings,
         ISmsNotificationService smsNotificationsService)
-        : base(
-            settings.Value.SmsStatusUpdatedTopicName, 
-            settings.Value.SmsStatusUpdatedRetryTopicName, 
-            producer, 
-            settings, 
-            logger)
+        : base(producer, logger, kafkaSettings.Value.SmsStatusUpdatedTopicName, kafkaSettings.Value.SmsStatusUpdatedRetryTopicName, kafkaSettings)
     {
         _smsNotificationsService = smsNotificationsService;
     }

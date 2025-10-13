@@ -26,17 +26,17 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
     /// Initializes a new instance of the <see cref="NotificationStatusConsumerBase{TConsumer, TResult}"/> class.
     /// </summary>
     protected NotificationStatusConsumerBase(
-        string topicName,
-        string retryTopicName,
         IKafkaProducer producer,
-        IOptions<KafkaSettings> settings,
-        ILogger<TConsumer> logger)
-        : base(settings, logger, topicName)
+        ILogger<TConsumer> logger,
+        string statusUpdatedTopicName,
+        string statusUpdatedRetryTopicName,
+        IOptions<KafkaSettings> kafkaSettings)
+        : base(kafkaSettings, logger, statusUpdatedTopicName)
     {
         _logger = logger;
         _producer = producer;
-        _statusUpdatedTopicName = topicName;
-        _statusUpdatedRetryTopicName = retryTopicName;
+        _statusUpdatedTopicName = statusUpdatedTopicName;
+        _statusUpdatedRetryTopicName = statusUpdatedRetryTopicName;
     }
 
     /// <inheritdoc/>
@@ -80,10 +80,9 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
                 FirstSeen = DateTime.UtcNow,
                 LastAttempt = DateTime.UtcNow,
                 SendOperationResult = message
-            };
+            }.Serialize();
 
-            var serializedRetryMessage = updateStatusRetryMessage.Serialize();
-            await _producer.ProduceAsync(_statusUpdatedRetryTopicName, serializedRetryMessage);
+            await _producer.ProduceAsync(_statusUpdatedRetryTopicName, updateStatusRetryMessage);
         }
         catch (Exception e) when (e is ArgumentException or InvalidOperationException)
         {

@@ -13,14 +13,14 @@ using Microsoft.Extensions.Options;
 namespace Altinn.Notifications.Integrations.Kafka.Consumers;
 
 /// <summary>
-/// Kafka consumer for processing email status retry messages
+/// Kafka consumer for processing status messages about email notifications.
 /// </summary>
 public sealed class EmailStatusRetryConsumer(
     IKafkaProducer producer,
-    IEmailNotificationService emailNotificationService,
-    IDeadDeliveryReportService deadDeliveryReportService,
+    ILogger<EmailStatusRetryConsumer> logger,
     IOptions<Configuration.KafkaSettings> settings,
-    ILogger<EmailStatusRetryConsumer> logger)
+    IEmailNotificationService emailNotificationService,
+    IDeadDeliveryReportService deadDeliveryReportService)
     : NotificationStatusRetryConsumerBase(settings.Value.EmailStatusUpdatedRetryTopicName, producer, settings, deadDeliveryReportService, logger)
 {
     /// <summary>

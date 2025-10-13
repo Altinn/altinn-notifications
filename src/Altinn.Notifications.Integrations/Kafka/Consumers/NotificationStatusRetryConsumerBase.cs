@@ -45,6 +45,7 @@ public abstract class NotificationStatusRetryConsumerBase(
     protected async Task ProcessStatus(string message)
     {
         UpdateStatusRetryMessage? retryMessage;
+
         try
         {
             retryMessage = JsonSerializer.Deserialize<UpdateStatusRetryMessage>(message, JsonSerializerOptionsProvider.Options);
@@ -66,7 +67,7 @@ public abstract class NotificationStatusRetryConsumerBase(
         
         var elapsedSeconds = (DateTime.UtcNow - retryMessage.FirstSeen).TotalSeconds;
 
-        if (elapsedSeconds >= _statusUpdateRetrySeconds)
+        if (elapsedSeconds > _statusUpdateRetrySeconds)
         {
             await PersistDeadDeliveryReport(retryMessage, elapsedSeconds);
         }
