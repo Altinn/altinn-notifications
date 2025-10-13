@@ -47,10 +47,10 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
             var deadDeliveryReportServiceMock = new Mock<IDeadDeliveryReportService>();
             using EmailStatusRetryConsumer emailStatusRetryConsumer = new(
                 producer.Object,
-                emailNotificationServiceMock.Object,
-                deadDeliveryReportServiceMock.Object,
+                NullLogger<EmailStatusRetryConsumer>.Instance,
                 kafkaSettings,
-                NullLogger<EmailStatusRetryConsumer>.Instance);
+                emailNotificationServiceMock.Object,
+                deadDeliveryReportServiceMock.Object);
 
             var retryMessage = new UpdateStatusRetryMessage
             {
@@ -98,10 +98,10 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
             var deadDeliveryReportServiceMock = new Mock<IDeadDeliveryReportService>();
             using EmailStatusRetryConsumer emailStatusRetryConsumer = new(
                 producer.Object,
-                emailNotificationServiceMock.Object,
-                deadDeliveryReportServiceMock.Object,
+                NullLogger<EmailStatusRetryConsumer>.Instance,
                 kafkaSettings,
-                NullLogger<EmailStatusRetryConsumer>.Instance);
+                emailNotificationServiceMock.Object,
+                deadDeliveryReportServiceMock.Object);
 
             var retryMessage = new UpdateStatusRetryMessage
             {

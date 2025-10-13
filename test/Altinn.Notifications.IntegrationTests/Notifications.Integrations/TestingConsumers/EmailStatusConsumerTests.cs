@@ -262,7 +262,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
             .Setup(x => x.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()))
             .ThrowsAsync(new SendStatusUpdateException(NotificationChannel.Email, Guid.NewGuid().ToString(), type));
 
-        using EmailStatusConsumer emailStatusConsumer = new(producer.Object, kafkaSettings, NullLogger<EmailStatusConsumer>.Instance, mockEmailService.Object);
+        using EmailStatusConsumer emailStatusConsumer = new(producer.Object, NullLogger<EmailStatusConsumer>.Instance, kafkaSettings, mockEmailService.Object);
 
         if (type is SendStatusIdentifierType.OperationId)
         {
@@ -293,7 +293,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
            () => producer.Invocations.Any(i => i.Method.Name == nameof(IKafkaProducer.ProduceAsync) &&
                                                i.Arguments[0] is string topic && topic == kafkaSettings.Value.EmailStatusUpdatedRetryTopicName &&
                                                i.Arguments[1] is string message && !string.IsNullOrWhiteSpace(message) && JsonSerializer.Deserialize<UpdateStatusRetryMessage>(message, JsonSerializerOptionsProvider.Options)?.SendOperationResult == serializedSendOperationResult),
-           TimeSpan.FromSeconds(15), 
+           TimeSpan.FromSeconds(15),
            TimeSpan.FromMilliseconds(1000));
         await emailStatusConsumer.StopAsync(CancellationToken.None);
     }

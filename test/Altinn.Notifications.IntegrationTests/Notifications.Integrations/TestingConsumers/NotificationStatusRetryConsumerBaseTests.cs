@@ -14,7 +14,9 @@ using Altinn.Notifications.IntegrationTests.Utils;
 
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+
 using Moq;
+
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.TestingConsumers;
@@ -57,7 +59,12 @@ public class NotificationStatusRetryConsumerBaseTests : IAsyncLifetime
 
         var deadDeliveryReportService = new DeadDeliveryReportService(deadDeliveryReportRepositoryMock.Object);
 
-        using var emailStatusConsumer = new EmailStatusRetryConsumer(producer.Object, emailNotificationServiceMock.Object, deadDeliveryReportService, kafkaSettings, NullLogger<EmailStatusRetryConsumer>.Instance);
+        using var emailStatusConsumer = new EmailStatusRetryConsumer(
+            producer.Object,
+            NullLogger<EmailStatusRetryConsumer>.Instance,
+            kafkaSettings,
+            emailNotificationServiceMock.Object,
+            deadDeliveryReportService);
 
         // Act
         await emailStatusConsumer.StartAsync(CancellationToken.None);

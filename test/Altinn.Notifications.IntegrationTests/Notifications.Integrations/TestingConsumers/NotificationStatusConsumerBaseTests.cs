@@ -76,7 +76,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             }),
             emailNotificationRepository.Object);
 
-        using var emailStatusConsumer = new EmailStatusConsumer(producer.Object, kafkaSettings, NullLogger<EmailStatusConsumer>.Instance, emailNotificationService);
+        using var emailStatusConsumer = new EmailStatusConsumer(producer.Object, NullLogger<EmailStatusConsumer>.Instance, kafkaSettings, emailNotificationService);
 
         // Act
         await emailStatusConsumer.StartAsync(CancellationToken.None);
@@ -134,7 +134,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             }),
             emailNotificationRepository.Object);
 
-        using var emailStatusConsumer = new EmailStatusConsumer(producer.Object, kafkaSettings, loggerMock.Object, emailNotificationService);
+        using var emailStatusConsumer = new EmailStatusConsumer(producer.Object, loggerMock.Object, kafkaSettings, emailNotificationService);
 
         // Act
         await emailStatusConsumer.StartAsync(CancellationToken.None);
@@ -144,10 +144,10 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 
         // Assert
         await IntegrationTestUtil.EventuallyAsync(
-            () => loggerMock.Invocations.Any(i => 
+            () => loggerMock.Invocations.Any(i =>
                       i.Method.Name == "Log" &&
                       i.Arguments[0] is LogLevel level && level == LogLevel.Error) &&
-                  !producer.Invocations.Any(i => 
+                  !producer.Invocations.Any(i =>
                       i.Method.Name == nameof(IKafkaProducer.ProduceAsync) &&
                       i.Arguments[0] is string topic && topic == kafkaSettings.Value.EmailStatusUpdatedRetryTopicName),
             TimeSpan.FromSeconds(15));
