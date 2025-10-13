@@ -51,11 +51,12 @@ jobs:
           ENVIRONMENT: ${{ inputs.environment }}
         if: failure()
         run: |
+          UUID=$(uuidgen)
           {
-            echo 'stepreport<<__REPORT__'
+            echo "stepreport<<EOF$UUID"
             echo ":warning: Notifications regression test failure in $ENVIRONMENT :warning: \n \n"
             echo "Workflow available here: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-            echo '__REPORT__'
+            echo "EOF$UUID"
           } >> "$GITHUB_ENV"
       - name: Report failure to Slack
         if: failure()
