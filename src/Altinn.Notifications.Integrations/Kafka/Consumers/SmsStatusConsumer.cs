@@ -33,7 +33,6 @@ public sealed class SmsStatusConsumer : NotificationStatusConsumerBase<SmsStatus
         ISmsNotificationService smsNotificationsService)
         : base(
             settings.Value.SmsStatusUpdatedTopicName, 
-            settings.Value.SmsStatusUpdatedTopicName, 
             settings.Value.SmsStatusUpdatedRetryTopicName, 
             producer, 
             settings, 

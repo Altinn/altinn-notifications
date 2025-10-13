@@ -19,7 +19,6 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
     where TConsumer : class
 {
     private readonly string _retryTopicName;
-    private readonly string _sendStatusUpdateRetryTopicName;
     private readonly IKafkaProducer _producer;
     private readonly ILogger _logger;
 
@@ -28,14 +27,12 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
     /// </summary>
     /// <param name="topicName">The name of the Kafka topic to consume from.</param>
     /// <param name="retryTopicName">The name of the Kafka topic to publish retry messages to.</param>
-    /// <param name="sendStatusUpdateRetryTopicName">The name of the Kafka topic to publish sendStatusUpdate retries</param>
     /// <param name="producer">The Kafka producer used for publishing retry messages.</param>
     /// <param name="settings">Kafka configuration settings.</param>
     /// <param name="logger">Logger for the consumer.</param>
     protected NotificationStatusConsumerBase(
         string topicName,
         string retryTopicName,
-        string sendStatusUpdateRetryTopicName,
         IKafkaProducer producer,
         IOptions<KafkaSettings> settings,
         ILogger logger)
@@ -44,7 +41,6 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
         _logger = logger;
         _producer = producer;
         _retryTopicName = retryTopicName;
-        _sendStatusUpdateRetryTopicName = sendStatusUpdateRetryTopicName;
     }
 
     /// <summary>
@@ -117,7 +113,7 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
 
             var serializedRetryMessage = retryMessage.Serialize();
 
-            await RetrySendStatusUpdateException(serializedRetryMessage);
+            await RetryStatus(serializedRetryMessage);
         }
         catch (Exception e) when (LogProcessingError(e, message))
         {
@@ -133,16 +129,6 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
     private async Task RetryStatus(string message)
     {
         await _producer.ProduceAsync(_retryTopicName, message);
-    }
-
-    /// <summary>
-    /// Sends a message to a specified sendStatusUpdateRetry topic for multiple retries within a time interval.
-    /// </summary>
-    /// <param name="message">The message to retry</param>
-    /// <returns></returns>
-    private async Task RetrySendStatusUpdateException(string message)
-    {
-        await _producer.ProduceAsync(_sendStatusUpdateRetryTopicName, message);
     }
 
     /// <summary>
