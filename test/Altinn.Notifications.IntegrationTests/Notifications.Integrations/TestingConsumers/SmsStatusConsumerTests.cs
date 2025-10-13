@@ -265,9 +265,14 @@ public class SmsStatusConsumerTests : IAsyncLifetime
 
     [Theory]
     [InlineData(SmsNotificationResultType.Failed)]
+    [InlineData(SmsNotificationResultType.Failed_Deleted)]
+    [InlineData(SmsNotificationResultType.Failed_Expired)]
     [InlineData(SmsNotificationResultType.Failed_Rejected)]
+    [InlineData(SmsNotificationResultType.Failed_Undelivered)]
+    [InlineData(SmsNotificationResultType.Failed_BarredReceiver)]
     [InlineData(SmsNotificationResultType.Failed_InvalidRecipient)]
     [InlineData(SmsNotificationResultType.Failed_RecipientReserved)]
+    [InlineData(SmsNotificationResultType.Failed_RecipientNotIdentified)]
     public async Task ConsumeFailedStatus_ShouldMarkOrderCompleted_WithStatusFeedEntry(SmsNotificationResultType resultType)
     {
         // Arrange

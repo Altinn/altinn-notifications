@@ -43,8 +43,6 @@ public class EmailStatusConsumerTests : IAsyncLifetime
             .OfType<EmailStatusConsumer>()
             .First();
 
-        await emailStatusConsumer.StartAsync(CancellationToken.None);
-
         (NotificationOrder notificationOrder, EmailNotification emailNotification) =
             await PostgreUtil.PopulateDBWithOrderAndEmailNotification(_sendersRef, simulateCronJob: true);
 
@@ -56,6 +54,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         };
 
         // Act
+        await emailStatusConsumer.StartAsync(CancellationToken.None);
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, deliveryReport.Serialize());
 
         string? observedEmailStatus = null;
@@ -111,8 +110,6 @@ public class EmailStatusConsumerTests : IAsyncLifetime
             .OfType<EmailStatusConsumer>()
             .First();
 
-        await emailStatusConsumer.StartAsync(CancellationToken.None);
-
         (NotificationOrder notificationOrder, EmailNotification emailNotification) =
             await PostgreUtil.PopulateDBWithOrderAndEmailNotification(_sendersRef, simulateCronJob: true);
 
@@ -124,6 +121,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         };
 
         // Act
+        await emailStatusConsumer.StartAsync(CancellationToken.None);
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, deliveryReport.Serialize());
 
         string? observedEmailStatus = null;
@@ -222,6 +220,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
     [InlineData(EmailNotificationResultType.Failed_Bounced)]
     [InlineData(EmailNotificationResultType.Failed_Quarantined)]
     [InlineData(EmailNotificationResultType.Failed_FilteredSpam)]
+    [InlineData(EmailNotificationResultType.Failed_TransientError)]
     [InlineData(EmailNotificationResultType.Failed_RecipientReserved)]
     [InlineData(EmailNotificationResultType.Failed_InvalidEmailFormat)]
     [InlineData(EmailNotificationResultType.Failed_SupressedRecipient)]
@@ -240,8 +239,6 @@ public class EmailStatusConsumerTests : IAsyncLifetime
             .OfType<EmailStatusConsumer>()
             .First();
 
-        await emailStatusConsumer.StartAsync(CancellationToken.None);
-
         (_, EmailNotification notification) =
             await PostgreUtil.PopulateDBWithOrderAndEmailNotification(_sendersRef, simulateCronJob: true);
 
@@ -253,6 +250,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         };
 
         // Act
+        await emailStatusConsumer.StartAsync(CancellationToken.None);
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, deliveryReport.Serialize());
 
         string? observedEmailStatus = null;
