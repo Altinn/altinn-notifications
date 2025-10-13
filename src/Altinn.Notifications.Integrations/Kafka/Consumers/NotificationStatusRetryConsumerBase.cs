@@ -127,9 +127,9 @@ public abstract class NotificationStatusRetryConsumerBase(
         catch (Exception)
         {
             // increment retries before putting it back on the retry topic
-            var incrementedRetryMessage = retryMessage with { Attempts = retryMessage.Attempts + 1 };
+            var incrementedRetryMessage = retryMessage with { Attempts = retryMessage.Attempts + 1, LastAttempt = DateTime.UtcNow };
 
-            await _producer.ProduceAsync(_topicName, incrementedRetryMessage.Serialize());
+            await RetryStatus(incrementedRetryMessage.Serialize());
         }
     }
 }

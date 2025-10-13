@@ -79,6 +79,60 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
         }
 
         [Fact]
+        public async Task ProcessMessage_AttemptsToUpdateStatus_WhenThresholdTimeHasNotElapsed()
+        {
+            // Arrange
+            var producer = new Mock<IKafkaProducer>(MockBehavior.Loose);
+            var kafkaSettings = BuildKafkaSettings(_statusUpdatedRetryTopicName);
+            var emailNotificationServiceMock = new Mock<IEmailNotificationService>();
+
+            // use this to verify that the message was not persisted
+            var emailSendOperationResult = new EmailSendOperationResult
+            {
+                NotificationId = Guid.NewGuid(),
+                OperationId = Guid.NewGuid().ToString(),
+                SendResult = EmailNotificationResultType.Delivered
+            };
+
+            emailNotificationServiceMock.Setup(e => e.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()))
+                .Returns(Task.CompletedTask);
+
+            var deadDeliveryReportServiceMock = new Mock<IDeadDeliveryReportService>();
+            using EmailStatusRetryConsumer emailStatusRetryConsumer = new(
+                producer.Object,
+                emailNotificationServiceMock.Object,
+                deadDeliveryReportServiceMock.Object,
+                kafkaSettings,
+                NullLogger<EmailStatusRetryConsumer>.Instance);
+
+            var retryMessage = new UpdateStatusRetryMessage
+            {
+                Attempts = 1,
+                FirstSeen = DateTime.UtcNow, // should NOT hit threshold
+                LastAttempt = DateTime.UtcNow,
+                NotificationId = Guid.NewGuid(),
+                ExternalReferenceId = Guid.NewGuid(),
+                SendResult = emailSendOperationResult.Serialize()
+            };
+
+            // Act
+            await KafkaUtil.PublishMessageOnTopic(_statusUpdatedRetryTopicName, retryMessage.Serialize());
+
+            await emailStatusRetryConsumer.StartAsync(CancellationToken.None);
+            await Task.Delay(250);
+
+            await IntegrationTestUtil.EventuallyAsync(
+                () => emailNotificationServiceMock.Invocations.Any(i => i.Method.Name == nameof(IEmailNotificationService.UpdateSendStatus)) && producer.Invocations.Count == 0,
+                TimeSpan.FromSeconds(10),
+                TimeSpan.FromMilliseconds(1000));
+
+            await emailStatusRetryConsumer.StopAsync(CancellationToken.None);
+
+            // Assert
+            emailNotificationServiceMock.Verify(e => e.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()), Times.Once);
+        }
+
+        [Fact]
         public async Task MessageOnRetryTopic_IsPersisted_WhenThresholdTimeHasElapsed()
         {
             // Arrange
