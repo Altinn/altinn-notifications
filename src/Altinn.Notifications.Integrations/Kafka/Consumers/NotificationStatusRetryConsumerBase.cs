@@ -20,17 +20,17 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers;
 /// must implement the <see cref="Channel"/> property to specify the delivery channel and override
 /// the ExecuteAsync method to consume messages from their respective Kafka topics.</remarks>
 public abstract class NotificationStatusRetryConsumerBase(
-        IKafkaProducer producer,
-        IDeadDeliveryReportService deadDeliveryReportService,
-        IOptions<KafkaSettings> settings,
         string topicName,
+        IKafkaProducer producer,
+        IOptions<KafkaSettings> settings,
+        IDeadDeliveryReportService deadDeliveryReportService,
         ILogger<NotificationStatusRetryConsumerBase> logger) : KafkaConsumerBase<NotificationStatusRetryConsumerBase>(settings, logger, topicName)
 {
+    private readonly ILogger _logger = logger;
+    private readonly string _topicName = topicName;
     private readonly IKafkaProducer _producer = producer;
     private readonly IDeadDeliveryReportService _deadDeliveryReportService = deadDeliveryReportService;
-    private readonly string _topicName = topicName;
     private readonly int _statusUpdateRetrySeconds = settings.Value.StatusUpdatedRetryThresholdSeconds;
-    private readonly ILogger _logger = logger;
 
     /// <summary>
     /// Gets the delivery report channel for this consumer.
@@ -99,15 +99,14 @@ public abstract class NotificationStatusRetryConsumerBase(
     {
         _logger.LogInformation("Processing retry message after {ElapsedSeconds} seconds", elapsedSeconds);
 
-        // Persist the dead delivery report after hitting the retry threshold
         var deadDeliveryReport = new DeadDeliveryReport
         {
-            AttemptCount = retryMessage.Attempts,
+            Resolved = false,
             Channel = Channel,
             FirstSeen = retryMessage.FirstSeen,
+            AttemptCount = retryMessage.Attempts,
             LastAttempt = retryMessage.LastAttempt,
-            Resolved = false,
-            DeliveryReport = retryMessage.SendResult ?? string.Empty
+            DeliveryReport = retryMessage.SendOperationResult ?? string.Empty
         };
 
         await _deadDeliveryReportService.InsertAsync(deadDeliveryReport);
@@ -122,7 +121,7 @@ public abstract class NotificationStatusRetryConsumerBase(
         }
         catch (Exception e) when (e is JsonException or InvalidOperationException)
         {
-            _logger.LogWarning(e, "Deserialization of SendResult failed due to malformed JSON. Not retrying. {SendResult}", retryMessage.SendResult);
+            _logger.LogWarning(e, "Deserialization of SendResult failed due to malformed JSON. Not retrying. {SendResult}", retryMessage.SendOperationResult);
         }
         catch (Exception)
         {

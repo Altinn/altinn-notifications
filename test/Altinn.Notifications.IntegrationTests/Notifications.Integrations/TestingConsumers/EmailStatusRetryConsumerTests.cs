@@ -57,9 +57,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                 Attempts = 1,
                 FirstSeen = DateTime.UtcNow, // should NOT hit threshold
                 LastAttempt = DateTime.UtcNow,
-                NotificationId = Guid.NewGuid(),
-                ExternalReferenceId = Guid.NewGuid().ToString(),
-                SendResult = emailSendOperationResult.Serialize()
+                SendOperationResult = emailSendOperationResult.Serialize()
             };
 
             // Act
@@ -110,9 +108,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                 Attempts = 1,
                 FirstSeen = DateTime.UtcNow, // should NOT hit threshold
                 LastAttempt = DateTime.UtcNow,
-                NotificationId = Guid.NewGuid(),
-                ExternalReferenceId = Guid.NewGuid().ToString(),
-                SendResult = emailSendOperationResult.Serialize()
+                SendOperationResult = emailSendOperationResult.Serialize()
             };
 
             // Act
@@ -162,9 +158,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                 Attempts = 1,
                 FirstSeen = DateTime.UtcNow.AddMinutes(-10), // should hit threshold
                 LastAttempt = DateTime.UtcNow,
-                NotificationId = Guid.NewGuid(),
-                ExternalReferenceId = Guid.NewGuid().ToString(),
-                SendResult = emailSendOperationResult.Serialize()
+                SendOperationResult = emailSendOperationResult.Serialize()
             };
 
             // Act

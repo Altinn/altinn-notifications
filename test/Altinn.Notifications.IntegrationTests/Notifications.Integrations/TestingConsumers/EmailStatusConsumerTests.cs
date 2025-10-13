@@ -292,7 +292,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         await IntegrationTestUtil.EventuallyAsync(
            () => producer.Invocations.Any(i => i.Method.Name == nameof(IKafkaProducer.ProduceAsync) &&
                                                i.Arguments[0] is string topic && topic == kafkaSettings.Value.EmailStatusUpdatedRetryTopicName &&
-                                               i.Arguments[1] is string message && !string.IsNullOrWhiteSpace(message) && JsonSerializer.Deserialize<UpdateStatusRetryMessage>(message, JsonSerializerOptionsProvider.Options)?.SendResult == serializedSendOperationResult),
+                                               i.Arguments[1] is string message && !string.IsNullOrWhiteSpace(message) && JsonSerializer.Deserialize<UpdateStatusRetryMessage>(message, JsonSerializerOptionsProvider.Options)?.SendOperationResult == serializedSendOperationResult),
            TimeSpan.FromSeconds(15), 
            TimeSpan.FromMilliseconds(1000));
         await emailStatusConsumer.StopAsync(CancellationToken.None);

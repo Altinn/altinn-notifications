@@ -16,17 +16,12 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers;
 /// Kafka consumer for processing email status retry messages
 /// </summary>
 public sealed class EmailStatusRetryConsumer(
-    IKafkaProducer producer, 
+    IKafkaProducer producer,
     IEmailNotificationService emailNotificationService,
-    IDeadDeliveryReportService deadDeliveryReportService, 
-    IOptions<Configuration.KafkaSettings> settings, 
+    IDeadDeliveryReportService deadDeliveryReportService,
+    IOptions<Configuration.KafkaSettings> settings,
     ILogger<EmailStatusRetryConsumer> logger)
-    : NotificationStatusRetryConsumerBase(
-        producer, 
-        deadDeliveryReportService, 
-        settings, 
-        settings.Value.EmailStatusUpdatedRetryTopicName, 
-        logger)
+    : NotificationStatusRetryConsumerBase(settings.Value.EmailStatusUpdatedRetryTopicName, producer, settings, deadDeliveryReportService, logger)
 {
     /// <summary>
     /// Gets the delivery report channel for Azure Communication Services email notifications.
@@ -51,7 +46,7 @@ public sealed class EmailStatusRetryConsumer(
     /// <exception cref="InvalidOperationException">Throws an InvalidOperationException when the payload could not be parsed</exception>
     protected override async Task UpdateStatusAsync(UpdateStatusRetryMessage retryMessage)
     {
-        var emailSendOperationResult = JsonSerializer.Deserialize<EmailSendOperationResult>(retryMessage.SendResult, JsonSerializerOptionsProvider.Options) ?? throw new InvalidOperationException("Deserialization of EmailSendOperationResult failed.");
+        var emailSendOperationResult = JsonSerializer.Deserialize<EmailSendOperationResult>(retryMessage.SendOperationResult, JsonSerializerOptionsProvider.Options) ?? throw new InvalidOperationException("Deserialization of EmailSendOperationResult failed.");
 
         await emailNotificationService.UpdateSendStatus(emailSendOperationResult);
     }

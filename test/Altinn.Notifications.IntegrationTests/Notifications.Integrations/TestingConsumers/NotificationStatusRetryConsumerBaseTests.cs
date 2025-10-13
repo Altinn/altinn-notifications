@@ -44,9 +44,7 @@ public class NotificationStatusRetryConsumerBaseTests : IAsyncLifetime
             Attempts = 1,
             FirstSeen = DateTime.UtcNow.AddMinutes(-10), // should hit threshold
             LastAttempt = DateTime.UtcNow,
-            NotificationId = Guid.NewGuid(),
-            ExternalReferenceId = Guid.NewGuid().ToString(),
-            SendResult = emailSendOperationResultSerialized
+            SendOperationResult = emailSendOperationResultSerialized
         };
 
         deadDeliveryReportRepositoryMock
@@ -71,7 +69,7 @@ public class NotificationStatusRetryConsumerBaseTests : IAsyncLifetime
         await IntegrationTestUtil.EventuallyAsync(
             () => producer.Invocations.Any(i => i.Method.Name == nameof(IKafkaProducer.ProduceAsync) &&
                                                 i.Arguments[0] is string topic && topic == kafkaSettings.Value.EmailStatusUpdatedRetryTopicName &&
-                                                i.Arguments[1] is string message && !string.IsNullOrWhiteSpace(message) && JsonSerializer.Deserialize<UpdateStatusRetryMessage>(message, JsonSerializerOptionsProvider.Options)?.ExternalReferenceId == retryMessage.ExternalReferenceId),
+                                                i.Arguments[1] is string message && !string.IsNullOrWhiteSpace(message) && JsonSerializer.Deserialize<UpdateStatusRetryMessage>(message, JsonSerializerOptionsProvider.Options)?.SendOperationResult == retryMessage.SendOperationResult),
             TimeSpan.FromSeconds(10));
 
         await emailStatusConsumer.StopAsync(CancellationToken.None);

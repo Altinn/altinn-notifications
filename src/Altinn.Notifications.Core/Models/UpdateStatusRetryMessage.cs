@@ -3,46 +3,32 @@
 namespace Altinn.Notifications.Core.Models;
 
 /// <summary>
-/// Represents a message that needs to be retried due to a failed status update operation.
+/// Retry envelope for a notification status update that could not be correlated.
 /// </summary>
-public record UpdateStatusRetryMessage
+public sealed record UpdateStatusRetryMessage
 {
     /// <summary>
-    /// Gets or sets the unique identifier for the delivery report operation id that failed.
+    /// Total correlation attempts including the initial failed one.
     /// </summary>
-    public string? ExternalReferenceId { get; init; }
+    public required int Attempts { get; init; }
 
     /// <summary>
-    /// Gets or sets the number of retry attempts made.
-    /// </summary>
-    public required int Attempts { get; init; } 
-
-    /// <summary>
-    /// Gets or sets the timestamp when the retry message was first created.
+    /// UTC timestamp when this retry message was first created.
     /// </summary>
     public required DateTime FirstSeen { get; init; }
 
     /// <summary>
-    /// Gets or sets the timestamp of the last retry attempt to repository.
+    /// UTC timestamp of the most recent correlation attempt.
     /// </summary>
     public required DateTime LastAttempt { get; init; }
 
     /// <summary>
-    /// Gets or sets the unique identifier for the notification that failed to send.
+    /// Raw serialized send operation result payload.
     /// </summary>
-    public Guid? NotificationId { get; init; }
+    public required string SendOperationResult { get; init; }
 
     /// <summary>
-    /// Gets or sets the delivery report result object to be put on the status update retry topic.
+    /// Serializes this instance to JSON.
     /// </summary>
-    public required string SendResult { get; init; }
-
-    /// <summary>
-    /// Serializes the current instance to a JSON string.
-    /// </summary>
-    /// <returns></returns>
-    public string Serialize()
-    {
-        return JsonSerializer.Serialize(this, JsonSerializerOptionsProvider.Options);
-    }
+    public string Serialize() => JsonSerializer.Serialize(this, JsonSerializerOptionsProvider.Options);
 }
