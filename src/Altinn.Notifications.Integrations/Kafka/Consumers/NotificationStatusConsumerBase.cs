@@ -43,11 +43,6 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
         _retryTopicName = retryTopicName;
     }
 
-    /// <summary>
-    /// Gets the name of the notification channel being processed (e.g. SMS or Email).
-    /// </summary>
-    protected abstract string ChannelName { get; }
-
     /// <inheritdoc/>
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -88,37 +83,48 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
         }
         catch (SendStatusUpdateException e)
         {
-            Guid? notificationId = null;
-            Guid? externalReferenceId = null;
-
-            if (e.IdentifierType == SendStatusIdentifierType.NotificationId && Guid.TryParse(e.Identifier, out var parsedNoticiationId))
-            {
-                notificationId = parsedNoticiationId;
-            }
-
-            if (e.IdentifierType == SendStatusIdentifierType.OperationId && Guid.TryParse(e.Identifier, out var parsedExternalReferenceId))
-            {
-                externalReferenceId = parsedExternalReferenceId;
-            }
-
-            var retryMessage = new UpdateStatusRetryMessage
-            {
-                FirstSeen = DateTime.UtcNow,
-                Attempts = 1,
-                LastAttempt = DateTime.UtcNow,
-                NotificationId = notificationId,
-                ExternalReferenceId = externalReferenceId,
-                SendResult = message
-            };
-
-            var serializedRetryMessage = retryMessage.Serialize();
-
-            await RetryStatus(serializedRetryMessage);
+            await HandleSendStatusUpdateException(message, e);
         }
-        catch (Exception e) when (LogProcessingError(e, message))
+        catch (Exception e) when (e is ArgumentException or InvalidOperationException)
         {
-            throw;
+            _logger.LogError(e, "// {Consumer} // ProcessStatus // Deserialization of message failed due to malformed JSON. Not retrying. {Message}", typeof(TConsumer).Name, message);
+            return;
         }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "// {Consumer} // ProcessStatus // Unexpected error when updating status. Message will be retried. {Message}", typeof(TConsumer).Name, message);
+            await RetryStatus(message);
+        }
+    }
+
+    private async Task HandleSendStatusUpdateException(string message, SendStatusUpdateException e)
+    {
+        Guid? notificationId = null;
+        string? externalReferenceId = null;
+
+        if (e.IdentifierType == SendStatusIdentifierType.NotificationId && Guid.TryParse(e.Identifier, out var parsedNoticiationId))
+        {
+            notificationId = parsedNoticiationId;
+        }
+
+        if (e.IdentifierType == SendStatusIdentifierType.OperationId)
+        {
+            externalReferenceId = e.Identifier;
+        }
+
+        var retryMessage = new UpdateStatusRetryMessage
+        {
+            FirstSeen = DateTime.UtcNow,
+            Attempts = 1,
+            LastAttempt = DateTime.UtcNow,
+            NotificationId = notificationId,
+            ExternalReferenceId = externalReferenceId,
+            SendResult = message
+        };
+
+        var serializedRetryMessage = retryMessage.Serialize();
+
+        await RetryStatus(serializedRetryMessage);
     }
 
     /// <summary>
@@ -129,22 +135,5 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
     private async Task RetryStatus(string message)
     {
         await _producer.ProduceAsync(_retryTopicName, message);
-    }
-
-    /// <summary>
-    /// Logs an error when an exception occurs while processing a Kafka message.
-    /// </summary>
-    /// <param name="exception">The exception that occurred during processing.</param>
-    /// <param name="kafkaMessage">The Kafka message that caused the error.</param>
-    /// <returns>Always returns <c>false</c> to allow the exception to propagate.</returns>
-    private bool LogProcessingError(Exception exception, string kafkaMessage)
-    {
-        _logger.LogError(
-            exception,
-            "Could not update {Channel} send status for message: {Message}",
-            ChannelName,
-            kafkaMessage);
-
-        return false;
     }
 }

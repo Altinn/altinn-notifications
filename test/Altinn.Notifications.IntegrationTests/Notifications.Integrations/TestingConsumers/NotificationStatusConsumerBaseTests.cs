@@ -7,7 +7,7 @@ using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.IntegrationTests.Utils;
-
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -60,7 +60,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 
         emailNotificationRepository
             .Setup(e => e.UpdateSendStatus(emailSendOperationResult.NotificationId, EmailNotificationResultType.Delivered, emailSendOperationResult.OperationId))
-            .ThrowsAsync(new InvalidOperationException());
+            .ThrowsAsync(new Exception());
 
         producer
             .Setup(e => e.ProduceAsync(kafkaSettings.Value.EmailStatusUpdatedTopicName, It.Is<string>(m => m.Equals(deliveryReportMessage))))
@@ -89,6 +89,67 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             () => producer.Invocations.Any(i => i.Method.Name == nameof(IKafkaProducer.ProduceAsync) &&
                                                 i.Arguments[0] is string topic && topic == kafkaSettings.Value.EmailStatusUpdatedRetryTopicName &&
                                                 i.Arguments[1] is string message && message == deliveryReportMessage),
+            TimeSpan.FromSeconds(15));
+
+        await emailStatusConsumer.StopAsync(CancellationToken.None);
+    }
+
+    [Theory]
+    [InlineData(typeof(InvalidOperationException))]
+    [InlineData(typeof(ArgumentException))]
+    public async Task ProcessEmailDeliveryReport_WhenInvalidOperationExceptionOrArgumentException_LogAndConsumeMessage(Type exceptionType)
+    {
+        // Arrange
+        var exception = (Exception)Activator.CreateInstance(exceptionType)!;
+        var kafkaSettings = BuildKafkaSettings();
+        var guidService = new Mock<IGuidService>();
+        var dateTimeService = new Mock<IDateTimeService>();
+        var producer = new Mock<IKafkaProducer>(MockBehavior.Loose);
+        var loggerMock = new Mock<ILogger<EmailStatusConsumer>>(MockBehavior.Loose);
+        var emailNotificationRepository = new Mock<IEmailNotificationRepository>();
+
+        var emailSendOperationResult = new EmailSendOperationResult
+        {
+            OperationId = Guid.NewGuid().ToString(),
+            SendResult = EmailNotificationResultType.Delivered
+        };
+
+        var deliveryReportMessage = emailSendOperationResult.Serialize();
+
+        emailNotificationRepository
+            .Setup(e => e.UpdateSendStatus(emailSendOperationResult.NotificationId, EmailNotificationResultType.Delivered, emailSendOperationResult.OperationId))
+            .ThrowsAsync(exception);
+
+        producer
+            .Setup(e => e.ProduceAsync(kafkaSettings.Value.EmailStatusUpdatedTopicName, It.Is<string>(m => m.Equals(deliveryReportMessage))))
+            .ReturnsAsync(true);
+
+        var emailNotificationService = new EmailNotificationService(
+            guidService.Object,
+            producer.Object,
+            dateTimeService.Object,
+            Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
+            {
+                EmailQueueTopicName = kafkaSettings.Value.EmailQueueTopicName
+            }),
+            emailNotificationRepository.Object);
+
+        using var emailStatusConsumer = new EmailStatusConsumer(producer.Object, kafkaSettings, loggerMock.Object, emailNotificationService);
+
+        // Act
+        await emailStatusConsumer.StartAsync(CancellationToken.None);
+        await Task.Delay(250);
+
+        await KafkaUtil.PublishMessageOnTopic(kafkaSettings.Value.EmailStatusUpdatedTopicName, deliveryReportMessage);
+
+        // Assert
+        await IntegrationTestUtil.EventuallyAsync(
+            () => loggerMock.Invocations.Any(i => 
+                      i.Method.Name == "Log" &&
+                      i.Arguments[0] is LogLevel level && level == LogLevel.Error) &&
+                  !producer.Invocations.Any(i => 
+                      i.Method.Name == nameof(IKafkaProducer.ProduceAsync) &&
+                      i.Arguments[0] is string topic && topic == kafkaSettings.Value.EmailStatusUpdatedRetryTopicName),
             TimeSpan.FromSeconds(15));
 
         await emailStatusConsumer.StopAsync(CancellationToken.None);

@@ -10,7 +10,7 @@ public record UpdateStatusRetryMessage
     /// <summary>
     /// Gets or sets the unique identifier for the delivery report operation id that failed.
     /// </summary>
-    public Guid? ExternalReferenceId { get; init; }
+    public string? ExternalReferenceId { get; init; }
 
     /// <summary>
     /// Gets or sets the number of retry attempts made.
@@ -43,6 +43,6 @@ public record UpdateStatusRetryMessage
     /// <returns></returns>
     public string Serialize()
     {
-        return JsonSerializer.Serialize(this);
+        return JsonSerializer.Serialize(this, JsonSerializerOptionsProvider.Options);
     }
 }

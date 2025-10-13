@@ -1,5 +1,4 @@
-﻿using Altinn.Notifications.Core.Exceptions;
-using Altinn.Notifications.Core.Integrations;
+﻿using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Integrations.Configuration;
@@ -33,12 +32,6 @@ public sealed class EmailStatusConsumer : NotificationStatusConsumerBase<EmailSt
     {
         _emailNotificationsService = emailNotificationsService;
     }
-
-    /// <summary>
-    /// Gets the name of the notification channel being processed.
-    /// </summary>
-    /// <returns>The string "email" representing the email notification channel.</returns>
-    protected override string ChannelName => "email";
 
     /// <summary>
     /// Attempts to parse a message into an <see cref="EmailSendOperationResult"/> object.

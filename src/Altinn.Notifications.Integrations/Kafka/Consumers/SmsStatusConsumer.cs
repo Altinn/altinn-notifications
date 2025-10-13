@@ -1,10 +1,8 @@
-﻿using Altinn.Notifications.Core.Exceptions;
-using Altinn.Notifications.Core.Integrations;
+﻿using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Integrations.Configuration;
 
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -40,12 +38,6 @@ public sealed class SmsStatusConsumer : NotificationStatusConsumerBase<SmsStatus
     {
         _smsNotificationsService = smsNotificationsService;
     }
-
-    /// <summary>
-    /// Gets the name of the notification channel being processed.
-    /// </summary>
-    /// <returns>The string "sms" representing the SMS notification channel.</returns>
-    protected override string ChannelName => "sms";
 
     /// <summary>
     /// Attempts to parse a message into a <see cref="SmsSendOperationResult"/> object.

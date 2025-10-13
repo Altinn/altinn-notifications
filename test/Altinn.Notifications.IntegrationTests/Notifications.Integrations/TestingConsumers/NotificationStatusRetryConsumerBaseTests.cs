@@ -45,7 +45,7 @@ public class NotificationStatusRetryConsumerBaseTests : IAsyncLifetime
             FirstSeen = DateTime.UtcNow.AddMinutes(-10), // should hit threshold
             LastAttempt = DateTime.UtcNow,
             NotificationId = Guid.NewGuid(),
-            ExternalReferenceId = Guid.NewGuid(),
+            ExternalReferenceId = Guid.NewGuid().ToString(),
             SendResult = emailSendOperationResultSerialized
         };
 
