@@ -23,6 +23,11 @@ public record UpdateStatusRetryMessage
     public required DateTime FirstSeen { get; init; }
 
     /// <summary>
+    /// Gets or sets the timestamp of the last retry attempt to repository.
+    /// </summary>
+    public required DateTime LastAttempt { get; init; }
+
+    /// <summary>
     /// Gets or sets the unique identifier for the notification that failed to send.
     /// </summary>
     public Guid? NotificationId { get; init; }

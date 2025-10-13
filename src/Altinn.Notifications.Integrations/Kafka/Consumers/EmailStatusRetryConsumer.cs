@@ -1,5 +1,10 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using System.Text.Json;
+
+using Altinn.Notifications.Core;
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
+using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Services.Interfaces;
 
 using Microsoft.Extensions.Logging;
@@ -12,6 +17,7 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers;
 /// </summary>
 public sealed class EmailStatusRetryConsumer(
     IKafkaProducer producer, 
+    IEmailNotificationService emailNotificationService,
     IDeadDeliveryReportService deadDeliveryReportService, 
     IOptions<Configuration.KafkaSettings> settings, 
     ILogger<EmailStatusRetryConsumer> logger)
@@ -35,5 +41,18 @@ public sealed class EmailStatusRetryConsumer(
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
         return Task.Run(() => ConsumeMessage(ProcessStatus, RetryStatus, stoppingToken), stoppingToken);
+    }
+
+    /// <summary>
+    /// Updates the email notification status based on the retry message payload.
+    /// </summary>
+    /// <param name="retryMessage">The message object containing both metadata and send oepration result payload</param>
+    /// <returns></returns>
+    /// <exception cref="InvalidOperationException">Throws an InvalidOperationException when the payload could not be parsed</exception>
+    protected override async Task UpdateStatusAsync(UpdateStatusRetryMessage retryMessage)
+    {
+        var emailSendOperationResult = JsonSerializer.Deserialize<EmailSendOperationResult>(retryMessage.SendResult, JsonSerializerOptionsProvider.Options) ?? throw new InvalidOperationException("Deserialization of EmailSendOperationResult failed.");
+
+        await emailNotificationService.UpdateSendStatus(emailSendOperationResult);
     }
 }

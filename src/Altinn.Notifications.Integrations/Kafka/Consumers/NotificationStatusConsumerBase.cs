@@ -21,7 +21,7 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
     private readonly string _retryTopicName;
     private readonly string _sendStatusUpdateRetryTopicName;
     private readonly IKafkaProducer _producer;
-    private readonly ILogger<TConsumer> _logger;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationStatusConsumerBase{TConsumer, TResult}"/> class.
@@ -38,7 +38,7 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
         string sendStatusUpdateRetryTopicName,
         IKafkaProducer producer,
         IOptions<KafkaSettings> settings,
-        ILogger<TConsumer> logger)
+        ILogger logger)
         : base(settings, logger, topicName)
     {
         _logger = logger;
@@ -109,6 +109,7 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
             {
                 FirstSeen = DateTime.UtcNow,
                 Attempts = 1,
+                LastAttempt = DateTime.UtcNow,
                 NotificationId = notificationId,
                 ExternalReferenceId = externalReferenceId,
                 SendResult = message

@@ -7,6 +7,7 @@ using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
+using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.IntegrationTests.Utils;
@@ -29,6 +30,7 @@ public class NotificationStatusRetryConsumerBaseTests : IAsyncLifetime
         var kafkaSettings = BuildKafkaSettings();
         var producer = new Mock<IKafkaProducer>(MockBehavior.Loose);
         var deadDeliveryReportRepositoryMock = new Mock<IDeadDeliveryReportRepository>();
+        var emailNotificationServiceMock = new Mock<IEmailNotificationService>();
 
         var emailSendOperationResultSerialized = new EmailSendOperationResult
         {
@@ -41,6 +43,7 @@ public class NotificationStatusRetryConsumerBaseTests : IAsyncLifetime
         {
             Attempts = 1,
             FirstSeen = DateTime.UtcNow.AddMinutes(-10), // should hit threshold
+            LastAttempt = DateTime.UtcNow,
             NotificationId = Guid.NewGuid(),
             ExternalReferenceId = Guid.NewGuid(),
             SendResult = emailSendOperationResultSerialized
@@ -56,7 +59,7 @@ public class NotificationStatusRetryConsumerBaseTests : IAsyncLifetime
 
         var deadDeliveryReportService = new DeadDeliveryReportService(deadDeliveryReportRepositoryMock.Object);
 
-        using var emailStatusConsumer = new EmailStatusRetryConsumer(producer.Object, deadDeliveryReportService, kafkaSettings, NullLogger<EmailStatusRetryConsumer>.Instance);
+        using var emailStatusConsumer = new EmailStatusRetryConsumer(producer.Object, emailNotificationServiceMock.Object, deadDeliveryReportService, kafkaSettings, NullLogger<EmailStatusRetryConsumer>.Instance);
 
         // Act
         await emailStatusConsumer.StartAsync(CancellationToken.None);
