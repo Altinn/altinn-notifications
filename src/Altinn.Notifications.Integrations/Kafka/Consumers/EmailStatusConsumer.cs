@@ -26,7 +26,6 @@ public sealed class EmailStatusConsumer : NotificationStatusConsumerBase<EmailSt
         IEmailNotificationService emailNotificationsService)
         : base(
             settings.Value.EmailStatusUpdatedTopicName, 
-            settings.Value.EmailStatusUpdatedTopicName, 
             settings.Value.EmailStatusUpdatedRetryTopicName, 
             producer, 
             settings, 

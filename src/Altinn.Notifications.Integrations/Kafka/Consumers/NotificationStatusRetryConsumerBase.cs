@@ -68,34 +68,22 @@ public abstract class NotificationStatusRetryConsumerBase(
 
         if (elapsedSeconds >= _statusUpdateRetrySeconds)
         {
-            _logger.LogInformation("Processing retry message after {ElapsedSeconds} seconds", elapsedSeconds);
-
-            // Persist the dead delivery report after hitting the retry threshold
-            var deadDeliveryReport = new DeadDeliveryReport
-            {
-                AttemptCount = retryMessage.Attempts,
-                Channel = Channel,
-                FirstSeen = retryMessage.FirstSeen,
-                LastAttempt = DateTime.UtcNow,
-                Resolved = false,
-                DeliveryReport = retryMessage.SendResult ?? string.Empty
-            };
-
-            await _deadDeliveryReportService.InsertAsync(deadDeliveryReport);
+            await PersistDeadDeliveryReport(retryMessage, elapsedSeconds);
         }
         else
         {
-            // increment retries before putting it back on the retry topic
-            var incrementedRetryMessage = retryMessage with { Attempts = retryMessage.Attempts + 1 };
-
-            _logger.LogInformation(
-                "Message not ready for retry. Elapsed: {ElapsedSeconds}s, Threshold: {ThresholdSeconds}s",
-                elapsedSeconds,
-                _statusUpdateRetrySeconds);
-
-            await _producer.ProduceAsync(_topicName, incrementedRetryMessage.Serialize());
+            await AttemptToUpdateSendStatus(retryMessage);
         }
     }
+
+    /// <summary>
+    /// Updates the notification based on the retryMessage
+    /// </summary>
+    /// <remarks>This method is abstract and must be implemented by a derived class. The implementation should
+    /// handle the logic for updating the status based on the provided <paramref name="retryMessage"/>.</remarks>
+    /// <param name="retryMessage">The message containing retry information and the context required to update the status.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    protected abstract Task UpdateStatusAsync(UpdateStatusRetryMessage retryMessage);
 
     /// <summary>
     /// Sends a message to the retry topic.
@@ -105,5 +93,40 @@ public abstract class NotificationStatusRetryConsumerBase(
     protected async Task RetryStatus(string message)
     {
         await _producer.ProduceAsync(_topicName, message);
+    }
+
+    private async Task PersistDeadDeliveryReport(UpdateStatusRetryMessage retryMessage, double elapsedSeconds)
+    {
+        _logger.LogInformation("Processing retry message after {ElapsedSeconds} seconds", elapsedSeconds);
+
+        // Persist the dead delivery report after hitting the retry threshold
+        var deadDeliveryReport = new DeadDeliveryReport
+        {
+            AttemptCount = retryMessage.Attempts,
+            Channel = Channel,
+            FirstSeen = retryMessage.FirstSeen,
+            LastAttempt = retryMessage.LastAttempt,
+            Resolved = false,
+            DeliveryReport = retryMessage.SendResult ?? string.Empty
+        };
+
+        await _deadDeliveryReportService.InsertAsync(deadDeliveryReport);
+    }
+
+    private async Task AttemptToUpdateSendStatus(UpdateStatusRetryMessage retryMessage)
+    {
+        try
+        {
+            // Attempt to update the status
+            await UpdateStatusAsync(retryMessage);
+        }
+        catch (Exception)
+        {
+            // increment retries before putting it back on the retry topic
+            var incrementedRetryMessage = retryMessage with { Attempts = retryMessage.Attempts + 1 };
+
+            await _producer.ProduceAsync(_topicName, incrementedRetryMessage.Serialize());
+            throw;
+        }
     }
 }

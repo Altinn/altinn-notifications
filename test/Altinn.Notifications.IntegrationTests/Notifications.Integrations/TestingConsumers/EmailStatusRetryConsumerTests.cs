@@ -30,10 +30,12 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
             // Arrange
             var producer = new Mock<IKafkaProducer>(MockBehavior.Loose);
             var kafkaSettings = BuildKafkaSettings(_statusUpdatedRetryTopicName);
+            var emailNotificationServiceMock = new Mock<IEmailNotificationService>();
 
             var deadDeliveryReportServiceMock = new Mock<IDeadDeliveryReportService>();
             using EmailStatusRetryConsumer emailStatusRetryConsumer = new(
                 producer.Object,
+                emailNotificationServiceMock.Object,
                 deadDeliveryReportServiceMock.Object,
                 kafkaSettings,
                 NullLogger<EmailStatusRetryConsumer>.Instance);
@@ -50,6 +52,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
             {
                 Attempts = 1,
                 FirstSeen = DateTime.UtcNow, // should NOT hit threshold
+                LastAttempt = DateTime.UtcNow,
                 NotificationId = Guid.NewGuid(),
                 ExternalReferenceId = Guid.NewGuid(),
                 SendResult = emailSendOperationResult.Serialize()
@@ -100,6 +103,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
             {
                 Attempts = 1,
                 FirstSeen = DateTime.UtcNow.AddMinutes(-10), // should hit threshold
+                LastAttempt = DateTime.UtcNow,
                 NotificationId = Guid.NewGuid(),
                 ExternalReferenceId = Guid.NewGuid(),
                 SendResult = emailSendOperationResult.Serialize()
