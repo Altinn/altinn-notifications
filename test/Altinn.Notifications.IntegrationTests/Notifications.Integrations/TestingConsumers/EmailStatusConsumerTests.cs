@@ -34,7 +34,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         // Arrange
         Dictionary<string, string> kafkaSettings = new()
         {
-            { "KafkaSettings__SmsStatusUpdatedTopicName", _statusUpdatedTopicName },
+            { "KafkaSettings__EmailStatusUpdatedTopicName", _statusUpdatedTopicName },
             { "KafkaSettings__Admin__TopicList", $"[\"{_statusUpdatedTopicName}\"]" }
         };
 
