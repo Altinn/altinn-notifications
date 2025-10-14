@@ -16,7 +16,7 @@ export function getOrgNoRecipient() {
 }
 
 export function getNinRecipient() {
-    if (__ENV.ninRecipient && environment === yt01Environment) {
+    if (!__ENV.ninRecipient && environment === yt01Environment) {
         return randomItem(nationalIdentityNumbers);
     } else {
         return __ENV.ninRecipient ? __ENV.ninRecipient.toLowerCase() : null;
