@@ -43,24 +43,24 @@ public class EmailStatusConsumerTests : IAsyncLifetime
             .OfType<EmailStatusConsumer>()
             .First();
 
-        (NotificationOrder notificationOrder, EmailNotification emailNotification) =
+        (_, EmailNotification emailNotification) =
             await PostgreUtil.PopulateDBWithOrderAndEmailNotification(_sendersRef, simulateCronJob: true, simulateConsumers: true);
 
         // Act
         await emailStatusConsumer.StartAsync(CancellationToken.None);
-        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, string.Empty);
+        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, "Invalid-Delivery-Report");
 
         // Wait until order is processed, capture status once when it happens
         long processedOrderCount = -1;
-        string? observedSmsStatus = null;
+        var observedEmailStatus = string.Empty;
         await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
-                processedOrderCount = await CountOrdersWithStatus(notificationOrder.Id, OrderProcessingStatus.Processed);
+                observedEmailStatus = await GetEmailNotificationStatus(emailNotification.Id);
+                processedOrderCount = await CountOrdersWithStatus(emailNotification.Id, OrderProcessingStatus.Processed);
 
-                if (processedOrderCount == 1)
+                if (processedOrderCount == 1 && !string.IsNullOrWhiteSpace(observedEmailStatus))
                 {
-                    observedSmsStatus = await GetEmailNotificationStatus(emailNotification.Id);
                     return true;
                 }
 
@@ -73,7 +73,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
 
         // Assert
         Assert.Equal(1, processedOrderCount);
-        Assert.Equal(SmsNotificationResultType.New.ToString(), observedSmsStatus);
+        Assert.Equal(EmailNotificationResultType.New.ToString(), observedEmailStatus);
     }
 
     [Fact]
