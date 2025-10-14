@@ -22,8 +22,8 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
 {
     public class EmailStatusRetryConsumerTests : IAsyncLifetime
     {
+        private readonly List<long> _deadDeliveryReportIds = [];
         private readonly string _statusUpdatedRetryTopicName = Guid.NewGuid().ToString();
-        private readonly List<long> _deadDeliveryReportdIds = [];
 
         [Fact]
         public async Task ProcessMessage_IncrementsAttemptsAndRetriesMessage_WhenUpdateFailsAndThresholdNotElapsed()
@@ -184,7 +184,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
             // Cleanup
             if (id.HasValue)
             {
-                _deadDeliveryReportdIds.Add(id.Value);
+                _deadDeliveryReportIds.Add(id.Value);
             }
         }
 
@@ -206,12 +206,12 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
 
         private async Task CleanupDeadDeliveryReportsAsync()
         {
-            if (_deadDeliveryReportdIds.Count != 0)
+            if (_deadDeliveryReportIds.Count != 0)
             {
                 string deleteSql = $@"DELETE from notifications.deaddeliveryreports where id = ANY(@ids)";
                 NpgsqlParameter[] parameters =
                 [
-                    new("ids", _deadDeliveryReportdIds.ToArray())
+                    new("ids", _deadDeliveryReportIds.ToArray())
                 ];
 
                 await PostgreUtil.RunSql(deleteSql, parameters);
