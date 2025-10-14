@@ -11,6 +11,12 @@ public interface IEmailPublishTaskQueue
     void MarkCompleted();
 
     /// <summary>
+    /// Attempts to enqueue a work item.
+    /// </summary>
+    /// <returns><c>true</c> if the task was successfully enqueued; <c>false</c> if a task is already queued or running</returns>
+    bool TryEnqueue();
+
+    /// <summary>
     /// Waits asynchronously until a work item is signaled.
     /// </summary>
     /// <param name="cancellationToken">A token that cancels the wait if triggered.</param>

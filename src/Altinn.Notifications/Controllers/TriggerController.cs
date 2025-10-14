@@ -17,6 +17,7 @@ public class TriggerController : ControllerBase
     private readonly ILogger<TriggerController> _logger;
     private readonly IStatusFeedService _statusFeedService;
     private readonly ISmsPublishTaskQueue _smsPublishTaskQueue;
+    private readonly IEmailPublishTaskQueue _emailPublishingTaskQueue;
     private readonly INotificationScheduleService _scheduleService;
     private readonly ISmsNotificationService _smsNotificationService;
     private readonly IOrderProcessingService _orderProcessingService;
@@ -29,6 +30,7 @@ public class TriggerController : ControllerBase
         ILogger<TriggerController> logger,
         IStatusFeedService statusFeedService,
         ISmsPublishTaskQueue smsPublishTaskQueue,
+        IEmailPublishTaskQueue emailPublishingTaskQueue,
         INotificationScheduleService scheduleService,
         IOrderProcessingService orderProcessingService,
         ISmsNotificationService smsNotificationService,
@@ -38,6 +40,7 @@ public class TriggerController : ControllerBase
         _scheduleService = scheduleService;
         _statusFeedService = statusFeedService;
         _smsPublishTaskQueue = smsPublishTaskQueue;
+        _emailPublishingTaskQueue = emailPublishingTaskQueue;
         _smsNotificationService = smsNotificationService;
         _orderProcessingService = orderProcessingService;
         _emailNotificationService = emailNotificationService;
@@ -56,14 +59,17 @@ public class TriggerController : ControllerBase
     }
 
     /// <summary>
-    /// Endpoint for starting the processing of emails that are ready to be sent
+    /// Signals background processing of email notifications.
     /// </summary>
+    /// <returns>
+    /// Always returns 200 OK, regardless of whether a new task was enqueued.
+    /// </returns>
     [HttpPost]
     [Route("sendemail")]
     [Consumes("application/json")]
     public async Task<ActionResult> Trigger_SendEmailNotifications()
     {
-        await _emailNotificationService.SendNotifications();
+        await _emailPublishingTaskQueue.TryEnqueue();
         return Ok();
     }
 
