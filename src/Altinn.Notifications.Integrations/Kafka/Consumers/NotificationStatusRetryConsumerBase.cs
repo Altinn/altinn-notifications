@@ -29,7 +29,6 @@ public abstract class NotificationStatusRetryConsumerBase : KafkaConsumerBase<No
     protected NotificationStatusRetryConsumerBase(
         string topicName,
         IKafkaProducer kafkaProducer,
-        int statusRetryTimeoutInSeconds,
         IOptions<KafkaSettings> kafkaSettings,
         IDeadDeliveryReportService deadDeliveryReportService,
         ILogger<NotificationStatusRetryConsumerBase> logger)
@@ -39,7 +38,7 @@ public abstract class NotificationStatusRetryConsumerBase : KafkaConsumerBase<No
         _kafkaProducer = kafkaProducer;
         _statusUpdatedRetryTopicName = topicName;
         _deadDeliveryReportService = deadDeliveryReportService;
-        _statusRetryTimeoutInSeconds = statusRetryTimeoutInSeconds;
+        _statusRetryTimeoutInSeconds = kafkaSettings.Value.StatusUpdatedRetryThresholdSeconds;
     }
 
     /// <summary>
