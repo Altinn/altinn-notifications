@@ -87,8 +87,6 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
         catch (Exception e) when (e is ArgumentException or InvalidOperationException)
         {
             LogProcessingError(message);
-
-            throw;
         }
     }
 
