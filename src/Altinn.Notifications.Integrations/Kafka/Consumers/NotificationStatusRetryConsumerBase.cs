@@ -43,7 +43,7 @@ public abstract class NotificationStatusRetryConsumerBase : KafkaConsumerBase<No
     }
 
     /// <summary>
-    /// Gets the delivery report channel for this consumer.
+    /// Gets the communication channel type used by this consumer for delivery reports.
     /// </summary>
     protected abstract DeliveryReportChannel Channel { get; }
 
@@ -54,26 +54,27 @@ public abstract class NotificationStatusRetryConsumerBase : KafkaConsumerBase<No
     }
 
     /// <summary>
-    /// Processes a status update message, determining whether to retry a dead delivery report based on elapsed time.
+    /// Processes a status update message from Kafka, handling retry logic for delivery reports.
     /// </summary>
-    /// <param name="message">The message containing the retry message data, including the delivery report from the provider</param>
+    /// <param name="message">The raw JSON string containing serialized retry message data from Kafka</param>
+    /// <returns>A task representing the asynchronous processing operation</returns>
     protected async Task ProcessStatus(string message)
     {
-        UpdateStatusRetryMessage? retryMessage = DeserializeMessage(message);
-        if (retryMessage == null)
+        UpdateStatusRetryMessage? updateStatusRetryMessage = DeserializeMessage(message);
+        if (updateStatusRetryMessage == null)
         {
             return;
         }
 
-        var elapsedSeconds = (DateTime.UtcNow - retryMessage.FirstSeen).TotalSeconds;
+        var elapsedSeconds = (DateTime.UtcNow - updateStatusRetryMessage.FirstSeen).TotalSeconds;
 
         if (elapsedSeconds > _statusRetryTimeoutInSeconds)
         {
-            await PersistDeadDeliveryReport(retryMessage);
+            await PersistDeadDeliveryReport(updateStatusRetryMessage);
         }
         else
         {
-            await AttemptToUpdateStatus(retryMessage);
+            await ProcessStatusUpdateWithRetry(updateStatusRetryMessage);
         }
     }
 
@@ -143,31 +144,15 @@ public abstract class NotificationStatusRetryConsumerBase : KafkaConsumerBase<No
     }
 
     /// <summary>
-    /// Attempts to update the notification status and handles any failures with appropriate retry logic.
+    /// Executes the notification status update operation with built-in retry capability.
     /// </summary>
     /// <param name="updateStatusRetryMessage">The message containing retry information and delivery report data.</param>
     /// <returns>A task representing the asynchronous status update operation.</returns>
-    /// <remarks>
-    /// This method attempts to update a notification status by calling the abstract <see cref="UpdateStatusAsync"/> method.
-    /// 
-    /// Error handling behavior:
-    /// - For JSON or deserialization errors: The method logs a warning but does not retry, as these errors are
-    ///   unlikely to be resolved with additional attempts.
-    /// - For all other exceptions: The method increments the retry counter, updates the last attempt timestamp,
-    ///   and requeues the message back to the retry topic.
-    ///   
-    /// Retry behavior continues until the elapsed time exceeds <see cref="_statusRetryTimeoutInSeconds"/>,
-    /// at which point the message would be handled by <see cref="PersistDeadDeliveryReport"/> instead.
-    /// </remarks>
-    private async Task AttemptToUpdateStatus(UpdateStatusRetryMessage updateStatusRetryMessage)
+    private async Task ProcessStatusUpdateWithRetry(UpdateStatusRetryMessage updateStatusRetryMessage)
     {
         try
         {
             await UpdateStatusAsync(updateStatusRetryMessage);
-        }
-        catch (Exception e) when (e is JsonException or InvalidOperationException)
-        {
-            _logger.LogWarning(e, "Deserialization of SendResult failed due to malformed JSON. Not retrying. {SendResult}", updateStatusRetryMessage.SendOperationResult);
         }
         catch (Exception)
         {
