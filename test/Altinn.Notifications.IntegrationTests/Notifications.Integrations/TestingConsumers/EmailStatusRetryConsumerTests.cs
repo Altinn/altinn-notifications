@@ -14,8 +14,11 @@ using Altinn.Notifications.IntegrationTests.Utils;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+
 using Moq;
+
 using Npgsql;
+
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.TestingConsumers
@@ -64,7 +67,6 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
             await KafkaUtil.PublishMessageOnTopic(_statusUpdatedRetryTopicName, retryMessage.Serialize());
 
             await emailStatusRetryConsumer.StartAsync(CancellationToken.None);
-            await Task.Delay(250);
 
             await IntegrationTestUtil.EventuallyAsync(
           () => producer.Invocations.Any(i => i.Method.Name == nameof(IKafkaProducer.ProduceAsync) &&
@@ -115,7 +117,6 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
             await KafkaUtil.PublishMessageOnTopic(_statusUpdatedRetryTopicName, retryMessage.Serialize());
 
             await emailStatusRetryConsumer.StartAsync(CancellationToken.None);
-            await Task.Delay(250);
 
             await IntegrationTestUtil.EventuallyAsync(
                 () => emailNotificationServiceMock.Invocations.Any(i => i.Method.Name == nameof(IEmailNotificationService.UpdateSendStatus)) && producer.Invocations.Count == 0,
@@ -165,7 +166,6 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
             await KafkaUtil.PublishMessageOnTopic(_statusUpdatedRetryTopicName, retryMessage.Serialize());
 
             await emailStatusRetryConsumer.StartAsync(CancellationToken.None);
-            await Task.Delay(250);
 
             await IntegrationTestUtil.EventuallyAsync(
                 async () =>
