@@ -1,6 +1,7 @@
 import { randomItem } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 import { yt01Environment, environment } from "./variables.js";
 import { orgNosYt01 } from "../data/orgnos.js";
+import { nationalIdentityNumbers } from "../data/national-identity-numbers.js";
 
 /**
  * Gets the recipient based on environment variables
@@ -11,6 +12,14 @@ export function getOrgNoRecipient() {
     }
     else {
         return __ENV.orgNoRecipient ? __ENV.orgNoRecipient.toLowerCase() : null;
+    }
+}
+
+export function getNinRecipient() {
+    if (__ENV.ninRecipient && environment === yt01Environment) {
+        return randomItem(nationalIdentityNumbers);
+    } else {
+        return __ENV.ninRecipient ? __ENV.ninRecipient.toLowerCase() : null;
     }
 }
 
