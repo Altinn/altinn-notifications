@@ -29,6 +29,54 @@ public class EmailStatusConsumerTests : IAsyncLifetime
     private readonly string _statusUpdatedRetryTopicName = Guid.NewGuid().ToString();
 
     [Fact]
+    public async Task ConsumeInvalidMessage_ShouldNotUpdateStatus()
+    {
+        // Arrange
+        Dictionary<string, string> kafkaSettings = new()
+        {
+            { "KafkaSettings__SmsStatusUpdatedTopicName", _statusUpdatedTopicName },
+            { "KafkaSettings__Admin__TopicList", $"[\"{_statusUpdatedTopicName}\"]" }
+        };
+
+        using EmailStatusConsumer emailStatusConsumer = ServiceUtil
+            .GetServices([typeof(IHostedService)], kafkaSettings)
+            .OfType<EmailStatusConsumer>()
+            .First();
+
+        (NotificationOrder notificationOrder, EmailNotification emailNotification) =
+            await PostgreUtil.PopulateDBWithOrderAndEmailNotification(_sendersRef, simulateCronJob: true, simulateConsumers: true);
+
+        // Act
+        await emailStatusConsumer.StartAsync(CancellationToken.None);
+        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, string.Empty);
+
+        // Wait until order is processed, capture status once when it happens
+        long processedOrderCount = -1;
+        string? observedSmsStatus = null;
+        await IntegrationTestUtil.EventuallyAsync(
+            async () =>
+            {
+                processedOrderCount = await CountOrdersWithStatus(notificationOrder.Id, OrderProcessingStatus.Processed);
+
+                if (processedOrderCount == 1)
+                {
+                    observedSmsStatus = await GetEmailNotificationStatus(emailNotification.Id);
+                    return true;
+                }
+
+                return false;
+            },
+            TimeSpan.FromSeconds(15),
+            TimeSpan.FromMilliseconds(100));
+
+        await emailStatusConsumer.StopAsync(CancellationToken.None);
+
+        // Assert
+        Assert.Equal(1, processedOrderCount);
+        Assert.Equal(SmsNotificationResultType.New.ToString(), observedSmsStatus);
+    }
+
+    [Fact]
     public async Task ConsumeDeliveredStatus_ShouldMarkOrderCompleted_WithStatusFeedEntry()
     {
         // Arrange
@@ -61,7 +109,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
-                observedEmailStatus = await SelectEmailNotificationStatus(emailNotification.Id);
+                observedEmailStatus = await GetEmailNotificationStatus(emailNotification.Id);
                 return string.Equals(observedEmailStatus, EmailNotificationResultType.Delivered.ToString(), StringComparison.Ordinal);
             },
             TimeSpan.FromSeconds(15),
@@ -71,7 +119,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
-                completedOrderCount = await SelectProcessingStatusOrderCount(emailNotification.Id, OrderProcessingStatus.Completed);
+                completedOrderCount = await CountOrdersWithStatus(emailNotification.Id, OrderProcessingStatus.Completed);
                 return completedOrderCount == 1;
             },
             TimeSpan.FromSeconds(15),
@@ -128,7 +176,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
-                observedEmailStatus = await SelectEmailNotificationStatus(emailNotification.Id);
+                observedEmailStatus = await GetEmailNotificationStatus(emailNotification.Id);
                 return string.Equals(observedEmailStatus, EmailNotificationResultType.Succeeded.ToString(), StringComparison.Ordinal);
             },
             TimeSpan.FromSeconds(15),
@@ -138,7 +186,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
-                processedOrderCount = await SelectProcessingStatusOrderCount(emailNotification.Id, OrderProcessingStatus.Processed);
+                processedOrderCount = await CountOrdersWithStatus(emailNotification.Id, OrderProcessingStatus.Processed);
                 return processedOrderCount == 1;
             },
             TimeSpan.FromSeconds(15),
@@ -257,7 +305,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
-                observedEmailStatus = await SelectEmailNotificationStatus(notification.Id);
+                observedEmailStatus = await GetEmailNotificationStatus(notification.Id);
                 return string.Equals(observedEmailStatus, resultType.ToString(), StringComparison.Ordinal);
             },
             TimeSpan.FromSeconds(15),
@@ -267,7 +315,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
-                completedCount = await SelectProcessingStatusOrderCount(notification.Id, OrderProcessingStatus.Completed);
+                completedCount = await CountOrdersWithStatus(notification.Id, OrderProcessingStatus.Completed);
                 return completedCount == 1;
             },
             TimeSpan.FromSeconds(15),
@@ -296,12 +344,6 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         await KafkaUtil.DeleteTopicAsync(_statusUpdatedTopicName);
     }
 
-    private static async Task<string> SelectEmailNotificationStatus(Guid notificationId)
-    {
-        string sql = $"select result from notifications.emailnotifications where alternateid = '{notificationId}'";
-        return await PostgreUtil.RunSqlReturnOutput<string>(sql);
-    }
-
     private static bool IsExpectedRetryMessage(string message, string expectedSendOperationResult)
     {
         if (string.IsNullOrWhiteSpace(message))
@@ -320,9 +362,15 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         }
     }
 
-    private static async Task<long> SelectProcessingStatusOrderCount(Guid notificationId, OrderProcessingStatus orderProcessingStatus)
+    private static async Task<string> GetEmailNotificationStatus(Guid emailNotificationAlternateid)
     {
-        string sql = $"SELECT count (1) FROM notifications.orders o join notifications.emailnotifications e on e._orderid = o._id where e.alternateid = '{notificationId}' and o.processedstatus = '{orderProcessingStatus}'";
+        string sql = $"select result from notifications.emailnotifications where alternateid = '{emailNotificationAlternateid}'";
+        return await PostgreUtil.RunSqlReturnOutput<string>(sql);
+    }
+
+    private static async Task<long> CountOrdersWithStatus(Guid orderAlternateid, OrderProcessingStatus orderProcessingStatus)
+    {
+        string sql = $"SELECT count (1) FROM notifications.orders o join notifications.emailnotifications e on e._orderid = o._id where e.alternateid = '{orderAlternateid}' and o.processedstatus = '{orderProcessingStatus}'";
         return await PostgreUtil.RunSqlReturnOutput<long>(sql);
     }
 }
