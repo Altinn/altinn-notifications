@@ -46,16 +46,6 @@ public class NotificationStatusRetryConsumerBaseTests : IAsyncLifetime
             LastAttempt = DateTime.UtcNow.AddSeconds(-5)
         };
 
-        var deadDeliveryReport = new DeadDeliveryReport
-        {
-            Resolved = false,
-            FirstSeen = updateStatusRetryMessage.FirstSeen,
-            AttemptCount = updateStatusRetryMessage.Attempts,
-            LastAttempt = updateStatusRetryMessage.LastAttempt,
-            Channel = DeliveryReportChannel.AzureCommunicationServices,
-            DeliveryReport = updateStatusRetryMessage.SendOperationResult
-        };
-
         deadDeliveryReportService
             .Setup(e => e.InsertAsync(It.Is<DeadDeliveryReport>(e => e.DeliveryReport == deliveryReport), It.IsAny<CancellationToken>()))
             .ReturnsAsync(100);
@@ -77,7 +67,16 @@ public class NotificationStatusRetryConsumerBaseTests : IAsyncLifetime
             {
                 try
                 {
-                    deadDeliveryReportService.Verify(e => e.InsertAsync(It.Is<DeadDeliveryReport>(e => e == deadDeliveryReport), It.IsAny<CancellationToken>()), Times.Once);
+                    deadDeliveryReportService.Verify(
+                        e => e.InsertAsync(
+                        It.Is<DeadDeliveryReport>(e =>
+                            e.DeliveryReport == deliveryReport &&
+                            e.FirstSeen == updateStatusRetryMessage.FirstSeen &&
+                            e.AttemptCount == updateStatusRetryMessage.Attempts &&
+                            e.LastAttempt == updateStatusRetryMessage.LastAttempt &&
+                            e.Channel == DeliveryReportChannel.AzureCommunicationServices),
+                        It.IsAny<CancellationToken>()),
+                        Times.Once);
 
                     kafkaProducer.Verify(e => e.ProduceAsync(It.Is<string>(e => e == _kafkaSettings.Value.EmailStatusUpdatedRetryTopicName), It.IsAny<string>()), Times.Never);
 
