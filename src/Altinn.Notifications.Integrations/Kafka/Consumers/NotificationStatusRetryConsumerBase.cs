@@ -43,7 +43,7 @@ public abstract class NotificationStatusRetryConsumerBase : KafkaConsumerBase<No
     }
 
     /// <summary>
-    /// Gets the communication channel type used by this consumer for delivery reports.
+    /// The communication channel (SMS or Email) this consumer is processing.
     /// </summary>
     protected abstract DeliveryReportChannel Channel { get; }
 
@@ -110,7 +110,7 @@ public abstract class NotificationStatusRetryConsumerBase : KafkaConsumerBase<No
 
             if (retryMessage == null)
             {
-                _logger.LogError("Deserialization of message returned null. {Message}", message);
+                _logger.LogError("Message deserialization failed. {Message}", message);
                 return null;
             }
 
@@ -118,7 +118,7 @@ public abstract class NotificationStatusRetryConsumerBase : KafkaConsumerBase<No
         }
         catch (JsonException ex)
         {
-            _logger.LogError(ex, "Deserialization of message failed due to malformed JSON. {Message}", message);
+            _logger.LogError(ex, "Message deserialization failed. {Message}", message);
             return null;
         }
     }
@@ -140,7 +140,11 @@ public abstract class NotificationStatusRetryConsumerBase : KafkaConsumerBase<No
             DeliveryReport = updateStatusRetryMessage.SendOperationResult ?? string.Empty
         };
 
-        await _deadDeliveryReportService.InsertAsync(deadDeliveryReport);
+        long persistedIdentifier = await _deadDeliveryReportService.InsertAsync(deadDeliveryReport);
+        if (persistedIdentifier <= 0)
+        {
+            _logger.LogError("Failed to insert dead delivery report. {DeadDeliveryReport}", deadDeliveryReport);
+        }
     }
 
     /// <summary>
