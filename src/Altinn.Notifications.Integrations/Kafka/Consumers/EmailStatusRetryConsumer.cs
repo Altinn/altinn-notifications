@@ -41,7 +41,7 @@ public sealed class EmailStatusRetryConsumer(
     /// <summary>
     /// Updates the email notification status based on the retry message payload.
     /// </summary>
-    /// <param name="retryMessage">The message object containing both metadata and send oepration result payload</param>
+    /// <param name="retryMessage">The message object containing both metadata and send operation result payload</param>
     /// <returns></returns>
     /// <exception cref="InvalidOperationException">Throws an InvalidOperationException when the payload could not be parsed</exception>
     protected override async Task UpdateStatusAsync(UpdateStatusRetryMessage retryMessage)
