@@ -282,21 +282,22 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             {
                 try
                 {
+                    kafkaProducer.Verify(e => e.ProduceAsync(_kafkaSettings.Value.SmsStatusUpdatedTopicName, It.IsAny<string>()), Times.Never);
+
                     kafkaProducer.Verify(e => e.ProduceAsync(_kafkaSettings.Value.SmsStatusUpdatedRetryTopicName, It.IsAny<string>()), Times.Once);
 
                     smsNotificationRepository.Verify(e => e.UpdateSendStatus(sendOperationResult.NotificationId, sendOperationResult.SendResult, sendOperationResult.GatewayReference), Times.Once);
 
-                    Assert.NotNull(republishedDeliveryReport);
+                    Assert.Empty(publishedDeliveryReport);
+
+                    Assert.False(string.IsNullOrEmpty(republishedDeliveryReport));
 
                     var retryMessage = JsonSerializer.Deserialize<UpdateStatusRetryMessage>(republishedDeliveryReport, JsonSerializerOptionsProvider.Options);
-
                     Assert.NotNull(retryMessage);
-                    Assert.Equal(1, retryMessage.Attempts);
+                    Assert.Equal(1, retryMessage!.Attempts);
                     Assert.Equal(deliveryReport, retryMessage.SendOperationResult);
                     Assert.True(DateTime.UtcNow.Subtract(retryMessage.FirstSeen).TotalMinutes < 5);
                     Assert.True(DateTime.UtcNow.Subtract(retryMessage.LastAttempt).TotalMinutes < 5);
-
-                    Assert.Equal(deliveryReport, publishedDeliveryReport);
 
                     return true;
                 }
@@ -366,21 +367,22 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             {
                 try
                 {
+                    kafkaProducer.Verify(e => e.ProduceAsync(_kafkaSettings.Value.EmailStatusUpdatedTopicName, It.IsAny<string>()), Times.Never);
+
                     kafkaProducer.Verify(e => e.ProduceAsync(_kafkaSettings.Value.EmailStatusUpdatedRetryTopicName, It.IsAny<string>()), Times.Once);
 
                     emailNotificationRepository.Verify(e => e.UpdateSendStatus(sendOperationResult.NotificationId, sendOperationResult.SendResult.Value, sendOperationResult.OperationId), Times.Once);
 
-                    Assert.NotNull(republishedDeliveryReport);
+                    Assert.Empty(publishedDeliveryReport);
+
+                    Assert.False(string.IsNullOrEmpty(republishedDeliveryReport));
 
                     var retryMessage = JsonSerializer.Deserialize<UpdateStatusRetryMessage>(republishedDeliveryReport, JsonSerializerOptionsProvider.Options);
-
                     Assert.NotNull(retryMessage);
-                    Assert.Equal(1, retryMessage.Attempts);
+                    Assert.Equal(1, retryMessage!.Attempts);
                     Assert.Equal(deliveryReport, retryMessage.SendOperationResult);
                     Assert.True(DateTime.UtcNow.Subtract(retryMessage.FirstSeen).TotalMinutes < 5);
                     Assert.True(DateTime.UtcNow.Subtract(retryMessage.LastAttempt).TotalMinutes < 5);
-
-                    Assert.Equal(deliveryReport, publishedDeliveryReport);
 
                     return true;
                 }
