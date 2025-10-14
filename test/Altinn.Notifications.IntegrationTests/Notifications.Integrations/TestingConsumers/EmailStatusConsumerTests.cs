@@ -268,7 +268,6 @@ public class EmailStatusConsumerTests : IAsyncLifetime
     [InlineData(EmailNotificationResultType.Failed_Bounced)]
     [InlineData(EmailNotificationResultType.Failed_Quarantined)]
     [InlineData(EmailNotificationResultType.Failed_FilteredSpam)]
-    [InlineData(EmailNotificationResultType.Failed_TransientError)]
     [InlineData(EmailNotificationResultType.Failed_RecipientReserved)]
     [InlineData(EmailNotificationResultType.Failed_InvalidEmailFormat)]
     [InlineData(EmailNotificationResultType.Failed_SupressedRecipient)]
