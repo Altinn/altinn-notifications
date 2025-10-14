@@ -16,10 +16,16 @@ public interface IEmailNotificationRepository : INotificationRepository
     public Task AddNotification(EmailNotification notification, DateTime expiry);
 
     /// <summary>
-    /// Retrieves all email notifications with status 'New'
+    /// Retrieves pending email notifications.
     /// </summary>
-    /// <returns>A list of emails</returns>
-    public Task<List<Email>> GetNewNotifications();
+    /// <param name="publishBatchSize">Maximum number of email notifications to retrieve in a single batch.</param>
+    /// <param name="cancellationToken">A token used for cancelling the asynchoronous operation.</param>
+    /// <returns>A task that completes when retrieval finishes (no more eligible items) or when cancellation is requested.
+    /// The task result contains a list of email notifications to be processed, limited by the specified batch size.</returns>
+    /// <exception cref="OperationCanceledException">
+    /// Thrown if cancellation is requested before or during retrieval.
+    /// </exception>"
+    public Task<List<Email>> GetNotifications(int publishBatchSize, CancellationToken cancellationToken);
 
     /// <summary>
     /// Sets result status of an email notification and update operation id
