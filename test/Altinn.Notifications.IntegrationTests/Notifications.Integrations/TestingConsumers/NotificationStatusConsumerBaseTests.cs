@@ -105,7 +105,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             smsNotificationRepository.Object,
             Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
             {
-                SmsQueueTopicName = Guid.NewGuid().ToString()
+                SmsQueueTopicName = "Not needed in this context"
             }),
             Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig() { SmsPublishBatchSize = 50 }));
 
@@ -121,7 +121,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             {
                 try
                 {
-                    kafkaProducer.Verify(e => e.ProduceAsync(_kafkaSettings.Value.SmsStatusUpdatedTopicName, deliveryReport), Times.AtLeastOnce);
+                    kafkaProducer.Verify(e => e.ProduceAsync(_kafkaSettings.Value.SmsStatusUpdatedTopicName, deliveryReport), Times.Once);
 
                     logger.Verify(
                         e => e.Log(
@@ -130,7 +130,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
                             It.Is<It.IsAnyType>((v, t) => true),
                             It.IsAny<Exception>(),
                             It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
-                        Times.AtLeastOnce);
+                        Times.Once);
 
                     smsNotificationRepository.Verify(e => e.UpdateSendStatus(sendOperationResult.NotificationId, sendOperationResult.SendResult, sendOperationResult.GatewayReference), Times.Once);
 
@@ -169,7 +169,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 
         emailNotificationRepository
             .Setup(e => e.UpdateSendStatus(sendOperationResult.NotificationId, sendOperationResult.SendResult.Value, sendOperationResult.OperationId))
-            .ThrowsAsync(new Exception());
+            .ThrowsAsync(new Exception("Simulated failure"));
 
         kafkaProducer
             .Setup(e => e.ProduceAsync(_kafkaSettings.Value.EmailStatusUpdatedTopicName, deliveryReport))
@@ -182,7 +182,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             dateTimeService.Object,
             Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
             {
-                EmailQueueTopicName = Guid.NewGuid().ToString()
+                EmailQueueTopicName = "Not needed in this context"
             }),
             emailNotificationRepository.Object);
 
@@ -198,7 +198,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             {
                 try
                 {
-                    kafkaProducer.Verify(e => e.ProduceAsync(_kafkaSettings.Value.EmailStatusUpdatedTopicName, It.Is<string>(e => e == deliveryReport)), Times.AtLeastOnce);
+                    kafkaProducer.Verify(e => e.ProduceAsync(_kafkaSettings.Value.EmailStatusUpdatedTopicName, It.Is<string>(e => e == deliveryReport)), Times.Once);
 
                     logger.Verify(
                         e => e.Log(
@@ -207,7 +207,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
                             It.Is<It.IsAnyType>((v, t) => true),
                             It.IsAny<Exception>(),
                             It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
-                        Times.AtLeastOnce);
+                        Times.Once);
 
                     emailNotificationRepository.Verify(e => e.UpdateSendStatus(sendOperationResult.NotificationId, sendOperationResult.SendResult.Value, sendOperationResult.OperationId), Times.Once);
 
@@ -256,7 +256,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 
         kafkaProducer
             .Setup(e => e.ProduceAsync(_kafkaSettings.Value.SmsStatusUpdatedRetryTopicName, It.IsAny<string>()))
-            .Callback<string, string>((topic, message) => republishedDeliveryReport = message)
+            .Callback<string, string>((statusUpdatedRetryTopicName, message) => republishedDeliveryReport = message)
             .ReturnsAsync(true);
 
         var smsNotificationService = new SmsNotificationService(
@@ -266,7 +266,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             smsNotificationRepository.Object,
             Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
             {
-                SmsQueueTopicName = Guid.NewGuid().ToString()
+                SmsQueueTopicName = "Not needed in this context"
             }),
             Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig() { SmsPublishBatchSize = 50 }));
 
@@ -282,9 +282,9 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             {
                 try
                 {
-                    kafkaProducer.Verify(
-                        e => e.ProduceAsync(_kafkaSettings.Value.SmsStatusUpdatedRetryTopicName, It.IsAny<string>()),
-                        Times.Once);
+                    kafkaProducer.Verify(e => e.ProduceAsync(_kafkaSettings.Value.SmsStatusUpdatedRetryTopicName, It.IsAny<string>()), Times.Once);
+
+                    smsNotificationRepository.Verify(e => e.UpdateSendStatus(sendOperationResult.NotificationId, sendOperationResult.SendResult, sendOperationResult.GatewayReference), Times.Once);
 
                     Assert.NotNull(republishedDeliveryReport);
 
@@ -295,8 +295,6 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
                     Assert.Equal(deliveryReport, retryMessage.SendOperationResult);
                     Assert.True(DateTime.UtcNow.Subtract(retryMessage.FirstSeen).TotalMinutes < 5);
                     Assert.True(DateTime.UtcNow.Subtract(retryMessage.LastAttempt).TotalMinutes < 5);
-
-                    smsNotificationRepository.Verify(e => e.UpdateSendStatus(sendOperationResult.NotificationId, sendOperationResult.SendResult, sendOperationResult.GatewayReference), Times.Once);
 
                     Assert.Equal(deliveryReport, publishedDeliveryReport);
 
@@ -343,7 +341,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 
         kafkaProducer
             .Setup(e => e.ProduceAsync(_kafkaSettings.Value.EmailStatusUpdatedRetryTopicName, It.IsAny<string>()))
-            .Callback<string, string>((topic, message) => republishedDeliveryReport = message)
+            .Callback<string, string>((statusUpdatedRetryTopicName, message) => republishedDeliveryReport = message)
             .ReturnsAsync(true);
 
         var emailNotificationService = new EmailNotificationService(
@@ -352,7 +350,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             dateTimeService.Object,
             Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
             {
-                EmailQueueTopicName = Guid.NewGuid().ToString()
+                EmailQueueTopicName = "Not needed in this context"
             }),
             emailNotificationRepository.Object);
 
@@ -370,6 +368,8 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
                 {
                     kafkaProducer.Verify(e => e.ProduceAsync(_kafkaSettings.Value.EmailStatusUpdatedRetryTopicName, It.IsAny<string>()), Times.Once);
 
+                    emailNotificationRepository.Verify(e => e.UpdateSendStatus(sendOperationResult.NotificationId, sendOperationResult.SendResult.Value, sendOperationResult.OperationId), Times.Once);
+
                     Assert.NotNull(republishedDeliveryReport);
 
                     var retryMessage = JsonSerializer.Deserialize<UpdateStatusRetryMessage>(republishedDeliveryReport, JsonSerializerOptionsProvider.Options);
@@ -379,8 +379,6 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
                     Assert.Equal(deliveryReport, retryMessage.SendOperationResult);
                     Assert.True(DateTime.UtcNow.Subtract(retryMessage.FirstSeen).TotalMinutes < 5);
                     Assert.True(DateTime.UtcNow.Subtract(retryMessage.LastAttempt).TotalMinutes < 5);
-
-                    emailNotificationRepository.Verify(e => e.UpdateSendStatus(sendOperationResult.NotificationId, sendOperationResult.SendResult.Value, sendOperationResult.OperationId), Times.Once);
 
                     Assert.Equal(deliveryReport, publishedDeliveryReport);
 
@@ -397,11 +395,12 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ProcessSmsDeliveryReport_WhenArgumentExceptionThrown_LogAndDoNotRepublishDeliveryReportToSameTopic()
+    public async Task ProcessSmsDeliveryReport_WhenArgumentExceptionThrown_LogDoNotRepublishDeliveryReportToSameTopic()
     {
         // Arrange
         var publishedDeliveryReport = string.Empty;
         var guidService = new Mock<IGuidService>();
+        var republishedDeliveryReport = string.Empty;
         var dateTimeService = new Mock<IDateTimeService>();
         var logger = new Mock<ILogger<SmsStatusConsumer>>();
         var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Loose);
@@ -420,6 +419,11 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             .Callback<string, string>((statusUpdatedTopicName, message) => publishedDeliveryReport = message)
             .ReturnsAsync(true);
 
+        kafkaProducer
+            .Setup(e => e.ProduceAsync(_kafkaSettings.Value.SmsStatusUpdatedRetryTopicName, It.IsAny<string>()))
+            .Callback<string, string>((statusUpdatedRetryTopicName, message) => republishedDeliveryReport = message)
+            .ReturnsAsync(true);
+
         smsNotificationRepository
             .Setup(e => e.UpdateSendStatus(sendOperationResult.NotificationId, sendOperationResult.SendResult, sendOperationResult.GatewayReference))
             .ThrowsAsync(new ArgumentException("The provided identifier is invalid"));
@@ -431,7 +435,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             smsNotificationRepository.Object,
             Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
             {
-                SmsQueueTopicName = Guid.NewGuid().ToString()
+                SmsQueueTopicName = "Not needed in this context"
             }),
             Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig() { SmsPublishBatchSize = 50 }));
 
@@ -458,7 +462,11 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 
                     kafkaProducer.Verify(e => e.ProduceAsync(_kafkaSettings.Value.SmsStatusUpdatedTopicName, It.IsAny<string>()), Times.Never);
 
+                    kafkaProducer.Verify(e => e.ProduceAsync(_kafkaSettings.Value.SmsStatusUpdatedRetryTopicName, It.IsAny<string>()), Times.Never);
+
                     smsNotificationRepository.Verify(e => e.UpdateSendStatus(sendOperationResult.NotificationId, sendOperationResult.SendResult, sendOperationResult.GatewayReference), Times.Once);
+
+                    Assert.Empty(republishedDeliveryReport);
 
                     Assert.Equal(deliveryReport, publishedDeliveryReport);
 
@@ -480,6 +488,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         // Arrange
         var publishedDeliveryReport = string.Empty;
         var guidService = new Mock<IGuidService>();
+        var republishedDeliveryReport = string.Empty;
         var dateTimeService = new Mock<IDateTimeService>();
         var logger = new Mock<ILogger<EmailStatusConsumer>>();
         var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Loose);
@@ -498,6 +507,11 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             .Callback<string, string>((statusUpdatedTopicName, message) => publishedDeliveryReport = message)
             .ReturnsAsync(true);
 
+        kafkaProducer
+            .Setup(e => e.ProduceAsync(_kafkaSettings.Value.EmailStatusUpdatedRetryTopicName, It.IsAny<string>()))
+            .Callback<string, string>((statusUpdatedRetryTopicName, message) => republishedDeliveryReport = message)
+            .ReturnsAsync(true);
+
         emailNotificationRepository
             .Setup(e => e.UpdateSendStatus(sendOperationResult.NotificationId, sendOperationResult.SendResult.Value, sendOperationResult.OperationId))
             .ThrowsAsync(new ArgumentException("The provided identifier is invalid"));
@@ -508,7 +522,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             dateTimeService.Object,
             Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
             {
-                EmailQueueTopicName = Guid.NewGuid().ToString()
+                EmailQueueTopicName = "Not needed in this context"
             }),
             emailNotificationRepository.Object);
 
@@ -535,7 +549,11 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 
                     kafkaProducer.Verify(e => e.ProduceAsync(_kafkaSettings.Value.EmailStatusUpdatedTopicName, It.IsAny<string>()), Times.Never);
 
+                    kafkaProducer.Verify(e => e.ProduceAsync(_kafkaSettings.Value.EmailStatusUpdatedRetryTopicName, It.IsAny<string>()), Times.Never);
+
                     emailNotificationRepository.Verify(e => e.UpdateSendStatus(sendOperationResult.NotificationId, sendOperationResult.SendResult.Value, sendOperationResult.OperationId), Times.Once);
+
+                    Assert.Empty(republishedDeliveryReport);
 
                     Assert.Equal(deliveryReport, publishedDeliveryReport);
 
@@ -557,6 +575,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         // Arrange
         var publishedDeliveryReport = string.Empty;
         var guidService = new Mock<IGuidService>();
+        var republishedDeliveryReport = string.Empty;
         var dateTimeService = new Mock<IDateTimeService>();
         var logger = new Mock<ILogger<EmailStatusConsumer>>();
         var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Loose);
@@ -571,8 +590,13 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         var deliveryReport = sendOperationResult.Serialize();
 
         kafkaProducer
-            .Setup(e => e.ProduceAsync(_kafkaSettings.Value.SmsStatusUpdatedTopicName, deliveryReport))
+            .Setup(e => e.ProduceAsync(_kafkaSettings.Value.EmailStatusUpdatedTopicName, deliveryReport))
             .Callback<string, string>((statusUpdatedTopicName, message) => publishedDeliveryReport = message)
+            .ReturnsAsync(true);
+
+        kafkaProducer
+            .Setup(e => e.ProduceAsync(_kafkaSettings.Value.EmailStatusUpdatedRetryTopicName, It.IsAny<string>()))
+            .Callback<string, string>((statusUpdatedRetryTopicName, message) => republishedDeliveryReport = message)
             .ReturnsAsync(true);
 
         emailNotificationRepository
@@ -585,7 +609,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             dateTimeService.Object,
             Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
             {
-                EmailQueueTopicName = Guid.NewGuid().ToString()
+                EmailQueueTopicName = "Not needed in this context"
             }),
             emailNotificationRepository.Object);
 
@@ -612,7 +636,11 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 
                     kafkaProducer.Verify(e => e.ProduceAsync(_kafkaSettings.Value.EmailStatusUpdatedTopicName, It.IsAny<string>()), Times.Never);
 
+                    kafkaProducer.Verify(e => e.ProduceAsync(_kafkaSettings.Value.EmailStatusUpdatedRetryTopicName, It.IsAny<string>()), Times.Never);
+
                     emailNotificationRepository.Verify(e => e.UpdateSendStatus(sendOperationResult.NotificationId, sendOperationResult.SendResult.Value, sendOperationResult.OperationId), Times.Once);
+
+                    Assert.Empty(republishedDeliveryReport);
 
                     Assert.Equal(deliveryReport, publishedDeliveryReport);
 
