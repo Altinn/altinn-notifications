@@ -457,9 +457,9 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 
                     smsNotificationRepository.Verify(e => e.UpdateSendStatus(sendOperationResult.NotificationId, sendOperationResult.SendResult, sendOperationResult.GatewayReference), Times.Once);
 
-                    Assert.Empty(republishedDeliveryReport);
+                    Assert.Empty(publishedDeliveryReport);
 
-                    Assert.Equal(deliveryReport, publishedDeliveryReport);
+                    Assert.Empty(republishedDeliveryReport);
 
                     return true;
                 }
@@ -535,9 +535,9 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 
                     emailNotificationRepository.Verify(e => e.UpdateSendStatus(sendOperationResult.NotificationId, sendOperationResult.SendResult.Value, sendOperationResult.OperationId), Times.Once);
 
-                    Assert.Empty(republishedDeliveryReport);
+                    Assert.Empty(publishedDeliveryReport);
 
-                    Assert.Equal(deliveryReport, publishedDeliveryReport);
+                    Assert.Empty(republishedDeliveryReport);
 
                     return true;
                 }
@@ -613,9 +613,9 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 
                     emailNotificationRepository.Verify(e => e.UpdateSendStatus(sendOperationResult.NotificationId, sendOperationResult.SendResult.Value, sendOperationResult.OperationId), Times.Once);
 
-                    Assert.Empty(republishedDeliveryReport);
+                    Assert.Empty(publishedDeliveryReport);
 
-                    Assert.Equal(deliveryReport, publishedDeliveryReport);
+                    Assert.Empty(republishedDeliveryReport);
 
                     return true;
                 }
