@@ -12,19 +12,19 @@ public static class IntegrationTestUtil
     /// <param name="maximumWaitTime">The maximum amount of time to wait for the condition to be met.</param>
     /// <param name="checkInterval">The interval between condition evaluations. Defaults to 100 milliseconds if not specified.</param>
     /// <exception cref="XunitException">Thrown if the condition is not met within the specified timeout.</exception>
-    public static async Task EventuallyAsync(Func<Task<bool>> predicate, TimeSpan maximumWaitTime, TimeSpan? checkInterval = null)
+    public static async Task EventuallyAsync(Func<Task<bool>> predicate, TimeSpan maximumWaitTime, TimeSpan? checkInterval = null, CancellationToken cancellationToken = default)
     {
         var deadline = DateTime.UtcNow.Add(maximumWaitTime);
         var pollingInterval = checkInterval ?? TimeSpan.FromMilliseconds(100);
 
-        while (DateTime.UtcNow < deadline)
+        while (DateTime.UtcNow < deadline && !cancellationToken.IsCancellationRequested)
         {
             if (await predicate())
             {
                 return;
             }
 
-            await Task.Delay(pollingInterval);
+            await Task.Delay(pollingInterval, cancellationToken);
         }
 
         throw new XunitException($"Condition not met within timeout ({maximumWaitTime}).");
@@ -39,8 +39,8 @@ public static class IntegrationTestUtil
     /// <param name="checkInterval">The interval between condition evaluations. Defaults to 100 milliseconds if not specified.</param>
     /// <returns>A task that completes when the condition is met or the timeout is reached.</returns>
     /// <exception cref="XunitException">Thrown if the condition is not met within the specified timeout.</exception>
-    public static Task EventuallyAsync(Func<bool> predicate, TimeSpan maximumWaitTime, TimeSpan? checkInterval = null)
+    public static Task EventuallyAsync(Func<bool> predicate, TimeSpan maximumWaitTime, TimeSpan? checkInterval = null, CancellationToken cancellationToken = default)
     {
-        return EventuallyAsync(() => Task.FromResult(predicate()), maximumWaitTime, checkInterval);
+        return EventuallyAsync(() => Task.FromResult(predicate()), maximumWaitTime, checkInterval, cancellationToken);
     }
 }
