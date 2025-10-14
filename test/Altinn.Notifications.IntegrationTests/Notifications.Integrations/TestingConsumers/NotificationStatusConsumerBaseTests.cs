@@ -105,7 +105,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             smsNotificationRepository.Object,
             Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
             {
-                SmsQueueTopicName = "Not needed in this context"
+                SmsQueueTopicName = Guid.NewGuid().ToString()
             }),
             Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig() { SmsPublishBatchSize = 50 }));
 
@@ -182,7 +182,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             dateTimeService.Object,
             Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
             {
-                EmailQueueTopicName = "Not needed in this context"
+                EmailQueueTopicName = Guid.NewGuid().ToString()
             }),
             emailNotificationRepository.Object);
 
@@ -266,7 +266,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             smsNotificationRepository.Object,
             Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
             {
-                SmsQueueTopicName = "Not needed in this context"
+                SmsQueueTopicName = Guid.NewGuid().ToString()
             }),
             Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig() { SmsPublishBatchSize = 50 }));
 
@@ -350,7 +350,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             dateTimeService.Object,
             Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
             {
-                EmailQueueTopicName = "Not needed in this context"
+                EmailQueueTopicName = Guid.NewGuid().ToString()
             }),
             emailNotificationRepository.Object);
 
@@ -435,7 +435,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             smsNotificationRepository.Object,
             Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
             {
-                SmsQueueTopicName = "Not needed in this context"
+                SmsQueueTopicName = Guid.NewGuid().ToString()
             }),
             Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig() { SmsPublishBatchSize = 50 }));
 
@@ -522,7 +522,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             dateTimeService.Object,
             Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
             {
-                EmailQueueTopicName = "Not needed in this context"
+                EmailQueueTopicName = Guid.NewGuid().ToString()
             }),
             emailNotificationRepository.Object);
 
@@ -609,7 +609,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             dateTimeService.Object,
             Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
             {
-                EmailQueueTopicName = "Not needed in this context"
+                EmailQueueTopicName = Guid.NewGuid().ToString()
             }),
             emailNotificationRepository.Object);
 
@@ -664,5 +664,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
     {
         await KafkaUtil.DeleteTopicAsync(_smsStatusUpdatedTopicName);
         await KafkaUtil.DeleteTopicAsync(_emailStatusUpdatedTopicName);
+        await KafkaUtil.DeleteTopicAsync(_smsStatusUpdatedRetryTopicName);
+        await KafkaUtil.DeleteTopicAsync(_emailStatusUpdatedRetryTopicName);
     }
 }
