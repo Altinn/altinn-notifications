@@ -43,7 +43,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
             .OfType<SmsStatusConsumer>()
             .First();
 
-        (_, SmsNotification notification) =
+        (_, SmsNotification smsNotification) =
             await PostgreUtil.PopulateDBWithOrderAndSmsNotification(_sendersRef, simulateCronJob: true, simulateConsumers: true);
 
         // Act
@@ -56,11 +56,11 @@ public class SmsStatusConsumerTests : IAsyncLifetime
         await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
-                processedOrderCount = await SelectProcessedOrderCount(notification.Id);
+                processedOrderCount = await CountOrdersByStatus(smsNotification.Id, OrderProcessingStatus.Processed);
 
                 if (processedOrderCount == 1)
                 {
-                    observedSmsStatus = await SelectSmsNotificationStatus(notification.Id);
+                    observedSmsStatus = await GetSmsNotificationStatus(smsNotification.Id);
                     return true;
                 }
 
@@ -109,7 +109,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
         await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
-                observedSmsStatus = await SelectSmsNotificationStatus(notification.Id);
+                observedSmsStatus = await GetSmsNotificationStatus(notification.Id);
                 return string.Equals(observedSmsStatus, SmsNotificationResultType.Delivered.ToString(), StringComparison.Ordinal);
             },
             TimeSpan.FromSeconds(15),
@@ -119,7 +119,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
         await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
-                completedOrderCount = await SelectCompletedOrderCount(notification.Id);
+                completedOrderCount = await CountOrdersByStatus(notification.Id, OrderProcessingStatus.Completed);
                 return completedOrderCount == 1;
             },
             TimeSpan.FromSeconds(15),
@@ -176,7 +176,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
         await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
-                observedSmsStatus = await SelectSmsNotificationStatus(notification.Id);
+                observedSmsStatus = await GetSmsNotificationStatus(notification.Id);
                 return string.Equals(observedSmsStatus, SmsNotificationResultType.Accepted.ToString(), StringComparison.Ordinal);
             },
             TimeSpan.FromSeconds(15),
@@ -186,7 +186,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
         await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
-                processedOrderCount = await SelectProcessedOrderCount(notification.Id);
+                processedOrderCount = await CountOrdersByStatus(notification.Id, OrderProcessingStatus.Processed);
                 return processedOrderCount == 1;
             },
             TimeSpan.FromSeconds(15),
@@ -353,7 +353,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
         await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
-                observedSmsStatus = await SelectSmsNotificationStatus(notification.Id);
+                observedSmsStatus = await GetSmsNotificationStatus(notification.Id);
                 return string.Equals(observedSmsStatus, resultType.ToString(), StringComparison.Ordinal);
             },
             TimeSpan.FromSeconds(15),
@@ -363,7 +363,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
         await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
-                completedCount = await SelectCompletedOrderCount(notification.Id);
+                completedCount = await CountOrdersByStatus(notification.Id, OrderProcessingStatus.Completed);
                 return completedCount == 1;
             },
             TimeSpan.FromSeconds(15),
@@ -404,19 +404,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
         await KafkaUtil.DeleteTopicAsync(_statusUpdatedTopicName);
     }
 
-    private static async Task<long> SelectProcessedOrderCount(Guid notificationId)
-    {
-        string sql = $"SELECT count (1) FROM notifications.orders o join notifications.smsnotifications e on e._orderid = o._id where e.alternateid = '{notificationId}' and o.processedstatus = '{OrderProcessingStatus.Processed}'";
-        return await PostgreUtil.RunSqlReturnOutput<long>(sql);
-    }
-
-    private static async Task<long> SelectCompletedOrderCount(Guid notificationId)
-    {
-        string sql = $"SELECT count (1) FROM notifications.orders o join notifications.smsnotifications e on e._orderid = o._id where e.alternateid = '{notificationId}' and o.processedstatus = '{OrderProcessingStatus.Completed}'";
-        return await PostgreUtil.RunSqlReturnOutput<long>(sql);
-    }
-
-    private static async Task<string> SelectSmsNotificationStatus(Guid notificationId)
+    private static async Task<string> GetSmsNotificationStatus(Guid notificationId)
     {
         string sql = $"select result from notifications.smsnotifications where alternateid = '{notificationId}'";
         return await PostgreUtil.RunSqlReturnOutput<string>(sql);
@@ -438,5 +426,11 @@ public class SmsStatusConsumerTests : IAsyncLifetime
         {
             return false;
         }
+    }
+
+    private static async Task<long> CountOrdersByStatus(Guid orderAlternateid, OrderProcessingStatus processingStatus)
+    {
+        string sql = $"SELECT count (1) FROM notifications.orders o join notifications.smsnotifications e on e._orderid = o._id where e.alternateid = '{orderAlternateid}' and o.processedstatus = '{processingStatus}'";
+        return await PostgreUtil.RunSqlReturnOutput<long>(sql);
     }
 }
