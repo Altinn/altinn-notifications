@@ -48,19 +48,18 @@ public class SmsStatusConsumerTests : IAsyncLifetime
 
         // Act
         await smsStatusConsumer.StartAsync(CancellationToken.None);
-        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, string.Empty);
+        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, "Invalid-Delivery-Report");
 
-        // Wait until order is processed, capture status once when it happens
         long processedOrderCount = -1;
-        string? observedSmsStatus = null;
+        var observedSmsStatus = string.Empty;
         await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
+                observedSmsStatus = await GetSmsNotificationStatus(smsNotification.Id);
                 processedOrderCount = await CountOrdersByStatus(smsNotification.Id, OrderProcessingStatus.Processed);
 
-                if (processedOrderCount == 1)
+                if (processedOrderCount == 1 && !string.IsNullOrWhiteSpace(observedSmsStatus))
                 {
-                    observedSmsStatus = await GetSmsNotificationStatus(smsNotification.Id);
                     return true;
                 }
 

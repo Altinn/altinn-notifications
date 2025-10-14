@@ -50,7 +50,6 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         await emailStatusConsumer.StartAsync(CancellationToken.None);
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, "Invalid-Delivery-Report");
 
-        // Wait until order is processed, capture status once when it happens
         long processedOrderCount = -1;
         var observedEmailStatus = string.Empty;
         await IntegrationTestUtil.EventuallyAsync(
