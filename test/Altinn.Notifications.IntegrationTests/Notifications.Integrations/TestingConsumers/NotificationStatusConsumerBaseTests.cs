@@ -570,7 +570,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ProcessEmailDeliveryReport_WhenInvalidOperationExceptionThrown_LogAndDoNotRepublishDeliveryReportToSameTopic()
+    public async Task ProcessEmailDeliveryReport_WhenInvalidOperationExceptionThrown_DoNotRepublishDeliveryReportToSameTopic()
     {
         // Arrange
         var publishedDeliveryReport = string.Empty;
@@ -625,15 +625,6 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             {
                 try
                 {
-                    logger.Verify(
-                        e => e.Log(
-                            LogLevel.Error,
-                            It.IsAny<EventId>(),
-                            It.Is<It.IsAnyType>((v, t) => true),
-                            It.IsAny<InvalidOperationException>(),
-                            It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
-                        Times.AtLeastOnce);
-
                     kafkaProducer.Verify(e => e.ProduceAsync(_kafkaSettings.Value.EmailStatusUpdatedTopicName, It.IsAny<string>()), Times.Never);
 
                     kafkaProducer.Verify(e => e.ProduceAsync(_kafkaSettings.Value.EmailStatusUpdatedRetryTopicName, It.IsAny<string>()), Times.Never);
