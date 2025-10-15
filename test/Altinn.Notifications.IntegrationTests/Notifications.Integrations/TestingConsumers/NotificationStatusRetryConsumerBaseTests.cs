@@ -1,4 +1,7 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using System.Text.Json;
+
+using Altinn.Notifications.Core;
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
@@ -164,19 +167,19 @@ public class NotificationStatusRetryConsumerBaseTests : IAsyncLifetime
         {
             Attempts = originalAttempts,
             SendOperationResult = deliveryReport,
-            FirstSeen = DateTime.UtcNow.AddSeconds(-30),
-            LastAttempt = originalLastAttempt
+            LastAttempt = originalLastAttempt,
+            FirstSeen = DateTime.UtcNow.AddSeconds(-30)
         };
 
         emailNotificationService
             .Setup(s => s.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()))
             .ThrowsAsync(new Exception("Simulated failure"));
 
-        string? republishedPayload = null;
+        string? republishedStatusMessage = null;
 
         kafkaProducer
             .Setup(p => p.ProduceAsync(_kafkaSettings.Value.EmailStatusUpdatedRetryTopicName, It.IsAny<string>()))
-            .Callback<string, string>((_, msg) => republishedPayload = msg)
+            .Callback<string, string>((statusUpdatedRetryTopicName, message) => republishedStatusMessage = message)
             .ReturnsAsync(true);
 
         using var emailStatusConsumer = new EmailStatusRetryConsumer(
@@ -209,6 +212,15 @@ public class NotificationStatusRetryConsumerBaseTests : IAsyncLifetime
             TimeSpan.FromSeconds(15));
 
         await emailStatusConsumer.StopAsync(CancellationToken.None);
+
+        Assert.NotNull(republishedStatusMessage);
+        var republishedMessage = JsonSerializer.Deserialize<UpdateStatusRetryMessage>(republishedStatusMessage, JsonSerializerOptionsProvider.Options);
+
+        Assert.NotNull(republishedMessage);
+        Assert.Equal(originalAttempts + 1, republishedMessage.Attempts);
+        Assert.True(republishedMessage.LastAttempt > originalLastAttempt);
+        Assert.Equal(deliveryReport, republishedMessage.SendOperationResult);
+        Assert.Equal(updateStatusRetryMessage.FirstSeen, republishedMessage.FirstSeen);
 
         deadDeliveryReportService.Verify(s => s.InsertAsync(It.IsAny<DeadDeliveryReport>(), It.IsAny<CancellationToken>()), Times.Never);
     }
