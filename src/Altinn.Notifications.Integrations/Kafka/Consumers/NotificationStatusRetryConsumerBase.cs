@@ -139,11 +139,7 @@ public abstract class NotificationStatusRetryConsumerBase : KafkaConsumerBase<No
             DeliveryReport = updateStatusRetryMessage.SendOperationResult ?? string.Empty
         };
 
-        long persistedIdentifier = await _deadDeliveryReportService.InsertAsync(deadDeliveryReport);
-        if (persistedIdentifier <= 0)
-        {
-            _logger.LogError("Failed to insert dead delivery report. {DeadDeliveryReport}", deadDeliveryReport);
-        }
+        await _deadDeliveryReportService.InsertAsync(deadDeliveryReport);
     }
 
     /// <summary>

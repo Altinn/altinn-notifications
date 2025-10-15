@@ -150,7 +150,6 @@ public class NotificationStatusRetryConsumerBaseTests : IAsyncLifetime
                 try
                 {
                     emailNotificationService.Verify(s => s.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()), Times.Once);
-                    deadDeliveryReportService.Verify(s => s.InsertAsync(It.IsAny<DeadDeliveryReport>(), It.IsAny<CancellationToken>()), Times.Never);
                     kafkaProducer.Verify(p => p.ProduceAsync(_kafkaSettings.Value.EmailStatusUpdatedRetryTopicName, It.IsAny<string>()), Times.Once);
 
                     return true;
@@ -163,6 +162,8 @@ public class NotificationStatusRetryConsumerBaseTests : IAsyncLifetime
             TimeSpan.FromSeconds(15));
 
         await emailStatusConsumer.StopAsync(CancellationToken.None);
+
+        deadDeliveryReportService.Verify(s => s.InsertAsync(It.IsAny<DeadDeliveryReport>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     /// <summary>

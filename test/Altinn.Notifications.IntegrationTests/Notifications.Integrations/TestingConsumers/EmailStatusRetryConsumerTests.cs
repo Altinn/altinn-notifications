@@ -144,10 +144,10 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                 LastAttempt = DateTime.UtcNow.AddSeconds(-5)
             };
 
-            var updateStatusRetryMessageSeralized = updateStatusRetryMessage.Serialize();
+            var updateStatusRetryMessageSerialized = updateStatusRetryMessage.Serialize();
 
             // Act
-            await KafkaUtil.PublishMessageOnTopic(_statusUpdatedRetryTopicName, updateStatusRetryMessageSeralized);
+            await KafkaUtil.PublishMessageOnTopic(_statusUpdatedRetryTopicName, updateStatusRetryMessageSerialized);
             await emailStatusRetryConsumer.StartAsync(CancellationToken.None);
 
             await IntegrationTestUtil.EventuallyAsync(
@@ -225,7 +225,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
             await KafkaUtil.PublishMessageOnTopic(_statusUpdatedRetryTopicName, retryMessage.Serialize());
             await emailStatusRetryConsumer.StartAsync(CancellationToken.None);
 
-            var deliveryReportRepublished = false;
+            var statusUpdateSucceeded = false;
             await IntegrationTestUtil.EventuallyAsync(
                 () =>
                 {
@@ -233,9 +233,9 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                     {
                         emailNotificationServiceMock.Verify(e => e.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()), Times.Once);
 
-                        deliveryReportRepublished = true;
+                        statusUpdateSucceeded = true;
 
-                        return deliveryReportRepublished;
+                        return statusUpdateSucceeded;
                     }
                     catch (Exception)
                     {
@@ -248,7 +248,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
             await emailStatusRetryConsumer.StopAsync(CancellationToken.None);
 
             // Assert
-            Assert.True(deliveryReportRepublished);
+            Assert.True(statusUpdateSucceeded);
 
             logger.Verify(
                 e => e.Log(
