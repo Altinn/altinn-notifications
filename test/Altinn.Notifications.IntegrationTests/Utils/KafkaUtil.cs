@@ -22,7 +22,7 @@ public static class KafkaUtil
 
         try
         {
-            using var producer = new ProducerBuilder<Null, string>(new ProducerConfig { BootstrapServers = _brokerAddress }).Build();
+            using var producer = new ProducerBuilder<Null, string>(new ProducerConfig { BootstrapServers = _brokerAddress, Acks = Acks.All }).Build();
 
             var result = await producer.ProduceAsync(topic, new Message<Null, string> { Value = message });
 
