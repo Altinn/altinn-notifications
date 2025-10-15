@@ -251,6 +251,7 @@ public class NotificationStatusRetryConsumerBaseTests : IAsyncLifetime
             },
             BrokerAddress = "localhost:9092",
             Producer = new ProducerSettings(),
+            StatusUpdatedRetryThresholdSeconds = 50,
             EmailStatusUpdatedRetryTopicName = _emailStatusUpdatedRetryTopicName,
             Consumer = new ConsumerSettings { GroupId = $"altinn-notifications-{Guid.NewGuid():N}" }
         });
