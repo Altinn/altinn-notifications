@@ -29,16 +29,6 @@ public sealed class EmailStatusRetryConsumer(
     protected override DeliveryReportChannel Channel => DeliveryReportChannel.AzureCommunicationServices;
 
     /// <summary>
-    /// Executes the email status retry consumer to process messages from the Kafka topic
-    /// </summary>
-    /// <param name="stoppingToken">Cancellation token to stop the consumer</param>
-    /// <returns>A task representing the asynchronous operation</returns>
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        return Task.Run(() => ConsumeMessage(ProcessStatus, RetryStatus, stoppingToken), stoppingToken);
-    }
-
-    /// <summary>
     /// Updates the email notification status based on the retry message payload.
     /// </summary>
     /// <param name="retryMessage">The message object containing both metadata and send operation result payload</param>
