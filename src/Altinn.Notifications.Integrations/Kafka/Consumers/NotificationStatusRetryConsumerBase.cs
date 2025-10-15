@@ -157,8 +157,10 @@ public abstract class NotificationStatusRetryConsumerBase : KafkaConsumerBase<No
         {
             await UpdateStatusAsync(updateStatusRetryMessage);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            _logger.LogWarning(ex, "// {Class} // ProcessStatusUpdateWithRetry // Update failed. Attempts={Attempts}", GetType().Name, updateStatusRetryMessage.Attempts);
+
             var incrementedRetryMessage = updateStatusRetryMessage with { Attempts = updateStatusRetryMessage.Attempts + 1, LastAttempt = DateTime.UtcNow };
             await RetryStatus(incrementedRetryMessage.Serialize());
         }
