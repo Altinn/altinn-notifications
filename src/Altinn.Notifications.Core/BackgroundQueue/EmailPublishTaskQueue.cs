@@ -1,17 +1,42 @@
-﻿namespace Altinn.Notifications.Core.BackgroundQueue;
+﻿using System.Threading.Channels;
+
+namespace Altinn.Notifications.Core.BackgroundQueue;
 
 /// <inheritdoc/>
 public class EmailPublishTaskQueue : IEmailPublishTaskQueue
 {
+    private bool _inflightOrQueued = false;
+    private readonly Channel<bool> _channel = Channel.CreateUnbounded<bool>(new UnboundedChannelOptions
+    {
+        SingleReader = true,
+        SingleWriter = false,
+        AllowSynchronousContinuations = false
+    });
+
     /// <inheritdoc/>
     public void MarkCompleted()
     {
-        throw new NotImplementedException();
+        _inflightOrQueued = false;
     }
 
     /// <inheritdoc/>
-    public Task WaitAsync(CancellationToken cancellationToken)
+    public bool TryEnqueue()
     {
-        throw new NotImplementedException();
+        if (_inflightOrQueued)
+        {
+            return false;
+        }
+        else
+        {
+            _inflightOrQueued = true;
+            _channel.Writer.TryWrite(true);
+            return true;
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task WaitAsync(CancellationToken cancellationToken)
+    {
+        _ = await _channel.Reader.ReadAsync(cancellationToken);
     }
 }

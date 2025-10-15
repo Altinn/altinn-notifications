@@ -22,6 +22,7 @@ public class EmailNotificationService : IEmailNotificationService
     private readonly string _emailQueueTopicName;
     private readonly IEmailNotificationRepository _repository;
     private readonly IKafkaProducer _producer;
+    private readonly int _emailPublishBatchSize;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotificationService"/> class.
@@ -31,12 +32,14 @@ public class EmailNotificationService : IEmailNotificationService
         IKafkaProducer producer,
         IDateTimeService dateTime,
         IOptions<KafkaSettings> kafkaSettings,
+        IOptions<NotificationConfig> notificationConfig,
         IEmailNotificationRepository repository)
     {
         _guid = guid;
         _dateTime = dateTime;
         _producer = producer;
         _repository = repository;
+        _emailPublishBatchSize = notificationConfig.Value.EmailPublishBatchSize;
         _emailQueueTopicName = kafkaSettings.Value.EmailQueueTopicName;
     }
 
@@ -72,9 +75,9 @@ public class EmailNotificationService : IEmailNotificationService
     }
 
     /// <inheritdoc/>
-    public async Task SendNotifications()
+    public async Task SendNotifications(CancellationToken cancellationToken)
     {
-        List<Email> emails = await _repository.GetNewNotifications();
+        List<Email> emails = await _repository.GetNewNotificationsAsync(_emailPublishBatchSize, cancellationToken);
 
         foreach (Email email in emails)
         {

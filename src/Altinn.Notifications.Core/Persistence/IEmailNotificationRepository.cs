@@ -25,7 +25,7 @@ public interface IEmailNotificationRepository : INotificationRepository
     /// <exception cref="OperationCanceledException">
     /// Thrown if cancellation is requested before or during retrieval.
     /// </exception>"
-    public Task<List<Email>> GetNotifications(int publishBatchSize, CancellationToken cancellationToken);
+    public Task<List<Email>> GetNewNotificationsAsync(int publishBatchSize, CancellationToken cancellationToken);
 
     /// <summary>
     /// Sets result status of an email notification and update operation id

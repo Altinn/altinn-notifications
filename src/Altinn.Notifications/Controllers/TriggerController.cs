@@ -67,9 +67,9 @@ public class TriggerController : ControllerBase
     [HttpPost]
     [Route("sendemail")]
     [Consumes("application/json")]
-    public async Task<ActionResult> Trigger_SendEmailNotifications()
+    public ActionResult Trigger_SendEmailNotifications()
     {
-        await _emailPublishingTaskQueue.TryEnqueue();
+        _emailPublishingTaskQueue.TryEnqueue();
         return Ok();
     }
 

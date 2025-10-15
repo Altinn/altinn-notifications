@@ -79,6 +79,10 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             {
                 EmailQueueTopicName = kafkaSettings.Value.EmailQueueTopicName
             }),
+            Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig
+            {
+                EmailPublishBatchSize = 500
+            }),
             emailNotificationRepository.Object);
 
         using var emailStatusConsumer = new EmailStatusConsumer(producer.Object, memoryCache, kafkaSettings, logger.Object, emailNotificationService);
@@ -226,6 +230,10 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
             {
                 EmailQueueTopicName = kafkaSettings.Value.EmailQueueTopicName
+            }),
+            Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig
+            {
+                EmailPublishBatchSize = 500
             }),
             emailNotificationRepository.Object);
 

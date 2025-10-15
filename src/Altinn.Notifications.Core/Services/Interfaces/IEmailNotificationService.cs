@@ -24,7 +24,7 @@ public interface IEmailNotificationService : INotificationService
     /// Initiates the process of sending all ready email notifications.
     /// </summary>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    Task SendNotifications();
+    Task SendNotifications(CancellationToken cancellationToken);
 
     /// <summary>
     /// Updates the send status of a notification.

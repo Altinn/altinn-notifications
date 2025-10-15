@@ -60,7 +60,7 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
         // Arrange
         Mock<IEmailNotificationService> serviceMock = new();
         serviceMock
-            .Setup(e => e.SendNotifications())
+            .Setup(e => e.SendNotifications(CancellationToken.None))
             .Returns(Task.CompletedTask)
             .Verifiable();
 
@@ -78,7 +78,7 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        serviceMock.Verify(e => e.SendNotifications(), Times.Once);
+        serviceMock.Verify(e => e.SendNotifications(CancellationToken.None), Times.Once);
     }
 
     [Fact]
