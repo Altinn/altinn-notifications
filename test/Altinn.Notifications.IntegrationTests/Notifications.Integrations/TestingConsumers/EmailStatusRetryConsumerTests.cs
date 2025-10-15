@@ -108,30 +108,14 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
             await KafkaUtil.PublishMessageOnTopic(_statusUpdatedRetryTopicName, invalidPayload);
             await emailStatusRetryConsumer.StartAsync(CancellationToken.None);
 
-            // Assert
-            await IntegrationTestUtil.EventuallyAsync(
-                () =>
-                {
-                    try
-                    {
-                        kafkaProducer.Verify(e => e.ProduceAsync(_statusUpdatedRetryTopicName, It.Is<string>(e => e == invalidPayload)), Times.Once);
-
-                        return true;
-                    }
-                    catch
-                    {
-                        return false;
-                    }
-                },
-                TimeSpan.FromSeconds(15),
-                TimeSpan.FromMilliseconds(100));
+            await Task.Delay(500);
 
             await emailStatusRetryConsumer.StopAsync(CancellationToken.None);
 
             // Assert
-            kafkaProducer.Verify(p => p.ProduceAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
-            emailService.Verify(s => s.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()), Times.Never);
-            deadDeliveryReportService.Verify(d => d.InsertAsync(It.IsAny<DeadDeliveryReport>(), It.IsAny<CancellationToken>()), Times.Never);
+            kafkaProducer.Verify(e => e.ProduceAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            emailService.Verify(e => e.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()), Times.Never);
+            deadDeliveryReportService.Verify(e => e.InsertAsync(It.IsAny<DeadDeliveryReport>(), It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]
@@ -390,6 +374,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
             {
                 BrokerAddress = "localhost:9092",
                 Producer = new ProducerSettings(),
+                StatusUpdatedRetryThresholdSeconds = 50,
                 EmailStatusUpdatedRetryTopicName = statusUpdatedRetryTopicName,
                 Consumer = new ConsumerSettings { GroupId = $"altinn-notifications-{Guid.NewGuid():N}" }
             });
