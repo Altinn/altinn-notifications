@@ -1,0 +1,39 @@
+meta {
+  name: Idempotency Email - 2nd Request (Duplicate)
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders/instant/email
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "demo-email-idempotency-12345",
+    "sendersReference": "my-business-ref-email-002",
+    "recipientEmail": {
+      "emailAddress": "{{process.env.TESTDATA_MY_EMAIL}}",
+      "emailSettings": {
+        "subject": "(DEMO) Idempotency Test Email - Second Request (Should be ignored)",
+        "body": "(DEMO) Second email request with the same idempotencyId. (Env.: {{Environment}})"
+      }
+    }
+  }
+}
+
+docs {
+  This is the SECOND request in the idempotency demo for email.
+  
+  Expected result: 200 OK (not 201 Created)
+  
+  The idempotencyId is the same as the first request: "demo-email-idempotency-12345"
+  
+  Even though the email content is different in this request, it will be ignored
+  due to idempotency protection. The response will contain the original notification
+  details from the first request.
+  
+  Run the "1st Request" first, then run this one to see idempotency in action.
+}
