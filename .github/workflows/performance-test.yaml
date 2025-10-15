@@ -85,16 +85,20 @@ jobs:
         uses: grafana/setup-k6-action@ffe7d7290dfa715e48c2ccc924d068444c94bde2 # v1.1.0
       - name: Run K6 tests (${{ inputs.testSuitePath }})
         run: |
-          echo "Running k6 test suite ${{ inputs.testSuitePath }} with ${{ inputs.vus }} VUs for ${{ inputs.duration }} on ${{ inputs.parallelism }} parallelism"
-          k6configName=$(basename "${{ inputs.testSuitePath }}" .js)
+          echo "Running k6 test suite $TESTSUITE_PATH with $VIRTUAL_USERS VUs for $DURATION on $PARALLELISM parallelism"
+          k6configName=$(basename "$TESTSUITE_PATH" .js)
           k6configName="k6-${k6configName}"
           ./test/k6/src/tests/run-test-in-k8s.sh \
-            -f "${{ inputs.testSuitePath }}" \
+            -f "$TESTSUITE_PATH" \
             -c "$k6configName" \
             -n "$k6configName" \
-            -v "${{ inputs.vus }}" \
-            -d "${{ inputs.duration }}" \
-            -p "${{ inputs.parallelism }}"
+            -v "$VIRTUAL_USERS" \
+            -d "$DURATION" \
+            -p "$PARALLELISM"
         env:
           API_ENVIRONMENT: ${{ inputs.environment }}
           API_VERSION: ${{ inputs.apiVersion }}
+          TESTSUITE_PATH: ${{ inputs.testSuitePath }}
+          VIRTUAL_USERS: ${{ inputs.vus }}
+          DURATION: ${{ inputs.duration }}
+          PARALLELISM: ${{ inputs.parallelism }}
