@@ -193,14 +193,15 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
             await Dispose(true);
         }
 
-        public Task InitializeAsync()
+        public async Task InitializeAsync()
         {
-            return Task.CompletedTask;
+            await KafkaUtil.CreateTopicAsync(_statusUpdatedRetryTopicName);
         }
 
         protected virtual async Task Dispose(bool disposing)
         {
             await KafkaUtil.DeleteTopicAsync(_statusUpdatedRetryTopicName);
+
             await CleanupDeadDeliveryReportsAsync();
         }
 
@@ -209,6 +210,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
             if (_deadDeliveryReportIds.Count != 0)
             {
                 string deleteSql = $@"DELETE from notifications.deaddeliveryreports where id = ANY(@ids)";
+
                 NpgsqlParameter[] parameters =
                 [
                     new("ids", _deadDeliveryReportIds.ToArray())
@@ -232,8 +234,8 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
             return Options.Create(new KafkaSettings
             {
                 BrokerAddress = "localhost:9092",
-                EmailStatusUpdatedRetryTopicName = statusUpdatedRetryTopicName,
                 Producer = new ProducerSettings(),
+                EmailStatusUpdatedRetryTopicName = statusUpdatedRetryTopicName,
                 Consumer = new ConsumerSettings { GroupId = $"altinn-notifications-{Guid.NewGuid():N}" }
             });
         }
