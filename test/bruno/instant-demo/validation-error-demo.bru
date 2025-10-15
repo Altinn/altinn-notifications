@@ -1,0 +1,39 @@
+meta {
+  name: Validation Error Demo - Missing Phone Number
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders/instant/sms
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "demo-validation-{{senders_reference_guid}}",
+    "recipientSms": {
+      "timeToLiveInSeconds": 300,
+      "smsSettings": {
+        "sender": "Altinn",
+        "body": "(DEMO) Missing the required phoneNumber field - should fail validation."
+      }
+    }
+  }
+}
+
+docs {
+  This request demonstrates validation error handling.
+  
+  Expected result: 400 Bad Request
+  
+  The phoneNumber field is intentionally missing from recipientSms,
+  which should trigger a validation error response showing:
+  - HTTP 400 status code
+  - Validation problem details
+  - Error message indicating the missing required field
+  
+  This shows how the API handles malformed requests gracefully.
+}
