@@ -108,7 +108,28 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
             await KafkaUtil.PublishMessageOnTopic(_statusUpdatedRetryTopicName, invalidPayload);
             await emailStatusRetryConsumer.StartAsync(CancellationToken.None);
 
-            await Task.Delay(500);
+            await IntegrationTestUtil.EventuallyAsync(
+            () =>
+                {
+                    try
+                    {
+                        logger.Verify(
+                            e => e.Log(
+                            LogLevel.Error,
+                            It.IsAny<EventId>(),
+                            It.IsAny<It.IsAnyType>(),
+                            It.IsAny<Exception?>(),
+                            It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                            Times.Once);
+                        return true;
+                    }
+                    catch
+                    {
+                        return false;
+                    }
+                },
+            TimeSpan.FromSeconds(10),
+            TimeSpan.FromMilliseconds(100));
 
             await emailStatusRetryConsumer.StopAsync(CancellationToken.None);
 
