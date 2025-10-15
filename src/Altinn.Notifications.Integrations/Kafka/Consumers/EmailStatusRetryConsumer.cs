@@ -33,10 +33,14 @@ public sealed class EmailStatusRetryConsumer(
     /// </summary>
     /// <param name="retryMessage">The message object containing both metadata and send operation result payload</param>
     /// <returns></returns>
-    /// <exception cref="InvalidOperationException">Throws an InvalidOperationException when the payload could not be parsed</exception>
     protected override async Task UpdateStatusAsync(UpdateStatusRetryMessage retryMessage)
     {
-        var emailSendOperationResult = JsonSerializer.Deserialize<EmailSendOperationResult>(retryMessage.SendOperationResult, JsonSerializerOptionsProvider.Options) ?? throw new InvalidOperationException("Deserialization of EmailSendOperationResult failed.");
+        var emailSendOperationResult = JsonSerializer.Deserialize<EmailSendOperationResult>(retryMessage.SendOperationResult, JsonSerializerOptionsProvider.Options);
+        if (emailSendOperationResult == null)
+        {
+            logger.LogError("Message deserialization failed. {Message}", Convert.ToString(retryMessage));
+            return;
+        }
 
         await emailNotificationService.UpdateSendStatus(emailSendOperationResult);
     }
