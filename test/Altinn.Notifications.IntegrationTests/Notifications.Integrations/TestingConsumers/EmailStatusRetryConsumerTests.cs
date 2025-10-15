@@ -135,6 +135,73 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
         }
 
         [Fact]
+        public async Task ProcessMessage_EmptySendOperationResult_LogsErrorAndIgnoresMessage()
+        {
+            // Arrange
+            var errorIsLogged = false;
+            var logger = new Mock<ILogger<EmailStatusRetryConsumer>>();
+            var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Loose);
+            var kafkaSettings = BuildKafkaSettings(_statusUpdatedRetryTopicName);
+            var emailNotificationService = new Mock<IEmailNotificationService>();
+            var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
+
+            using EmailStatusRetryConsumer emailStatusRetryConsumer = new(
+                kafkaProducer.Object,
+                logger.Object,
+                kafkaSettings,
+                emailNotificationService.Object,
+                deadDeliveryReportService.Object);
+
+            var updateStatusRetryMessage = new UpdateStatusRetryMessage
+            {
+                Attempts = 1,
+                SendOperationResult = string.Empty,
+                FirstSeen = DateTime.UtcNow.AddSeconds(-10),
+                LastAttempt = DateTime.UtcNow.AddSeconds(-5)
+            };
+
+            var updateStatusRetryMessageSeralized = updateStatusRetryMessage.Serialize();
+
+            // Act
+            await KafkaUtil.PublishMessageOnTopic(_statusUpdatedRetryTopicName, updateStatusRetryMessageSeralized);
+            await emailStatusRetryConsumer.StartAsync(CancellationToken.None);
+
+            await IntegrationTestUtil.EventuallyAsync(
+                () =>
+                {
+                    try
+                    {
+                        logger.Verify(
+                        e => e.Log(
+                            LogLevel.Error,
+                            It.IsAny<EventId>(),
+                            It.IsAny<It.IsAnyType>(),
+                            It.IsAny<Exception?>(),
+                            It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                        Times.Once);
+
+                        errorIsLogged = true;
+
+                        return errorIsLogged;
+                    }
+                    catch
+                    {
+                        return false;
+                    }
+                },
+                TimeSpan.FromSeconds(15),
+                TimeSpan.FromMilliseconds(100));
+
+            await emailStatusRetryConsumer.StopAsync(CancellationToken.None);
+
+            // Assert
+            Assert.True(errorIsLogged);
+            kafkaProducer.Verify(e => e.ProduceAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            emailNotificationService.Verify(e => e.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()), Times.Never);
+            deadDeliveryReportService.Verify(e => e.InsertAsync(It.IsAny<DeadDeliveryReport>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
+
+        [Fact]
         public async Task ProcessMessage_AttemptsToUpdateStatus_WhenThresholdTimeHasNotElapsed()
         {
             // Arrange

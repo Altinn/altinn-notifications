@@ -39,10 +39,9 @@ public sealed class EmailStatusRetryConsumer(
     /// </param>
     protected override async Task UpdateStatusAsync(UpdateStatusRetryMessage retryMessage)
     {
-        if (string.IsNullOrEmpty(retryMessage.SendOperationResult))
+        if (string.IsNullOrWhiteSpace(retryMessage.SendOperationResult))
         {
             logger.LogError("SendOperationResult is null or empty. RetryMessage: {RetryMessage}", Convert.ToString(retryMessage));
-
             return;
         }
 
