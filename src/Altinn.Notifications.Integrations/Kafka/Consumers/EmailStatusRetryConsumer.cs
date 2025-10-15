@@ -13,7 +13,7 @@ using Microsoft.Extensions.Options;
 namespace Altinn.Notifications.Integrations.Kafka.Consumers;
 
 /// <summary>
-/// Kafka consumer for processing status messages about email notifications.
+/// Kafka consumer for processing retry attempts of email notification status updates from the dedicated retry topic.
 /// </summary>
 public sealed class EmailStatusRetryConsumer(
     IKafkaProducer producer,
@@ -39,10 +39,17 @@ public sealed class EmailStatusRetryConsumer(
     /// </param>
     protected override async Task UpdateStatusAsync(UpdateStatusRetryMessage retryMessage)
     {
+        if (string.IsNullOrEmpty(retryMessage.SendOperationResult))
+        {
+            logger.LogError("SendOperationResult is null or empty. RetryMessage: {RetryMessage}", Convert.ToString(retryMessage));
+
+            return;
+        }
+
         var emailSendOperationResult = JsonSerializer.Deserialize<EmailSendOperationResult>(retryMessage.SendOperationResult, JsonSerializerOptionsProvider.Options);
         if (emailSendOperationResult == null)
         {
-            logger.LogError("Message deserialization failed. {Message}", Convert.ToString(retryMessage));
+            logger.LogError("EmailSendOperationResult deserialization returned null. SendOperationResult: {SendOperationResult}", retryMessage.SendOperationResult);
             return;
         }
 
