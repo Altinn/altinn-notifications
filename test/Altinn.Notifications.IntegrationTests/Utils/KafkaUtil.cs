@@ -14,11 +14,11 @@ public static class KafkaUtil
     /// <param name="topic">The name of the topic to publish to.</param>
     /// <param name="message">The message content to publish.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when topic or message is null or empty.</exception>
+    /// <exception cref="ArgumentException">Thrown when topic is null or empty, or message is null.</exception>
     public static async Task PublishMessageOnTopic(string topic, string message)
     {
         ArgumentException.ThrowIfNullOrEmpty(topic);
-        ArgumentException.ThrowIfNullOrEmpty(message);
+        ArgumentNullException.ThrowIfNull(message);
 
         try
         {

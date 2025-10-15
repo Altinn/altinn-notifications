@@ -91,7 +91,7 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
     }
 
     /// <summary>
-    /// Sends a message to the retry topic.
+    /// Republishes the message to the same status-updated topic.
     /// </summary>
     private async Task RetryStatus(string message)
     {
