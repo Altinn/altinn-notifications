@@ -191,7 +191,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
                     processedOrderCount = await CountOrdersWithStatus(emailNotification.Id, OrderProcessingStatus.Processed);
                 }
 
-                return observedEmailStatus != EmailNotificationResultType.Succeeded.ToString() && statusFeedCount == 0 && processedOrderCount == 1;
+                return observedEmailStatus == EmailNotificationResultType.Succeeded.ToString() && statusFeedCount == 0 && processedOrderCount == 1;
             },
             TimeSpan.FromSeconds(15),
             TimeSpan.FromMilliseconds(100));
@@ -343,6 +343,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         await PostgreUtil.DeleteStatusFeedFromDb(_sendersRef);
         await PostgreUtil.DeleteOrderFromDb(_sendersRef);
         await KafkaUtil.DeleteTopicAsync(_statusUpdatedTopicName);
+        await KafkaUtil.DeleteTopicAsync(_statusUpdatedRetryTopicName);
     }
 
     private static bool IsExpectedRetryMessage(string message, string expectedSendOperationResult)
