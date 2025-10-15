@@ -51,19 +51,22 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, "Invalid-Delivery-Report");
 
         long processedOrderCount = -1;
-        var observedEmailStatus = string.Empty;
+        string observedEmailStatus = string.Empty;
+
         await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
-                observedEmailStatus = await GetEmailNotificationStatus(emailNotification.Id);
-                processedOrderCount = await CountOrdersWithStatus(emailNotification.Id, OrderProcessingStatus.Processed);
-
-                if (processedOrderCount == 1 && !string.IsNullOrWhiteSpace(observedEmailStatus))
+                if (string.IsNullOrEmpty(observedEmailStatus))
                 {
-                    return true;
+                    observedEmailStatus = await GetEmailNotificationStatus(emailNotification.Id);
                 }
 
-                return false;
+                if (processedOrderCount == -1)
+                {
+                    processedOrderCount = await CountOrdersWithStatus(emailNotification.Id, OrderProcessingStatus.Processed);
+                }
+
+                return processedOrderCount != 1 && !string.IsNullOrWhiteSpace(observedEmailStatus);
             },
             TimeSpan.FromSeconds(15),
             TimeSpan.FromMilliseconds(100));
@@ -104,32 +107,28 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         await emailStatusConsumer.StartAsync(CancellationToken.None);
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, deliveryReport.Serialize());
 
-        string? observedEmailStatus = null;
-        await IntegrationTestUtil.EventuallyAsync(
-            async () =>
-            {
-                observedEmailStatus = await GetEmailNotificationStatus(emailNotification.Id);
-                return string.Equals(observedEmailStatus, EmailNotificationResultType.Delivered.ToString(), StringComparison.Ordinal);
-            },
-            TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(100));
-
-        long completedOrderCount = -1;
-        await IntegrationTestUtil.EventuallyAsync(
-            async () =>
-            {
-                completedOrderCount = await CountOrdersWithStatus(emailNotification.Id, OrderProcessingStatus.Completed);
-                return completedOrderCount == 1;
-            },
-            TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(100));
-
         int statusFeedCount = -1;
+        long completedOrderCount = -1;
+        string observedEmailStatus = string.Empty;
         await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
-                statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(notificationOrder.Id);
-                return statusFeedCount == 1;
+                if (string.IsNullOrEmpty(observedEmailStatus))
+                {
+                    observedEmailStatus = await GetEmailNotificationStatus(emailNotification.Id);
+                }
+
+                if (statusFeedCount == -1)
+                {
+                    statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(notificationOrder.Id);
+                }
+
+                if (completedOrderCount == -1)
+                {
+                    completedOrderCount = await CountOrdersWithStatus(emailNotification.Id, OrderProcessingStatus.Completed);
+                }
+
+                return statusFeedCount != -1 && completedOrderCount != -1 && !string.IsNullOrEmpty(observedEmailStatus);
             },
             TimeSpan.FromSeconds(15),
             TimeSpan.FromMilliseconds(100));
@@ -171,32 +170,28 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         await emailStatusConsumer.StartAsync(CancellationToken.None);
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, deliveryReport.Serialize());
 
-        string? observedEmailStatus = null;
-        await IntegrationTestUtil.EventuallyAsync(
-            async () =>
-            {
-                observedEmailStatus = await GetEmailNotificationStatus(emailNotification.Id);
-                return string.Equals(observedEmailStatus, EmailNotificationResultType.Succeeded.ToString(), StringComparison.Ordinal);
-            },
-            TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(100));
-
-        long processedOrderCount = -1;
-        await IntegrationTestUtil.EventuallyAsync(
-            async () =>
-            {
-                processedOrderCount = await CountOrdersWithStatus(emailNotification.Id, OrderProcessingStatus.Processed);
-                return processedOrderCount == 1;
-            },
-            TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(100));
-
         int statusFeedCount = -1;
+        long processedOrderCount = -1;
+        string observedEmailStatus = string.Empty;
         await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
-                statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(notificationOrder.Id);
-                return statusFeedCount == 0;
+                if (string.IsNullOrEmpty(observedEmailStatus))
+                {
+                    observedEmailStatus = await GetEmailNotificationStatus(emailNotification.Id);
+                }
+
+                if (statusFeedCount == -1)
+                {
+                    statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(notificationOrder.Id);
+                }
+
+                if (processedOrderCount == -1)
+                {
+                    processedOrderCount = await CountOrdersWithStatus(emailNotification.Id, OrderProcessingStatus.Processed);
+                }
+
+                return statusFeedCount != -1 && processedOrderCount != -1 && !string.IsNullOrEmpty(observedEmailStatus);
             },
             TimeSpan.FromSeconds(15),
             TimeSpan.FromMilliseconds(100));
@@ -236,30 +231,37 @@ public class EmailStatusConsumerTests : IAsyncLifetime
 
         string serializedDeliveryReport = deliveryReport.Serialize();
 
-        using EmailStatusConsumer consumer =
+        using EmailStatusConsumer emailStatusConsumer =
             new(producerMock.Object, NullLogger<EmailStatusConsumer>.Instance, kafkaOptions, emailServiceMock.Object);
 
         // Act
-        await consumer.StartAsync(CancellationToken.None);
-
+        await emailStatusConsumer.StartAsync(CancellationToken.None);
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, serializedDeliveryReport);
 
+        bool messagePublishedToRetryTopic = false;
         await IntegrationTestUtil.EventuallyAsync(
-            () => producerMock.Invocations.Any(inv =>
-                inv.Method.Name == nameof(IKafkaProducer.ProduceAsync) &&
-                inv.Arguments[0] is string topic && topic == _statusUpdatedRetryTopicName &&
-                inv.Arguments[1] is string updateStatusRetryMessage &&
-                JsonSerializer.Deserialize<UpdateStatusRetryMessage>(updateStatusRetryMessage, JsonSerializerOptionsProvider.Options)?.SendOperationResult == serializedDeliveryReport),
+            () =>
+            {
+                try
+                {
+                    producerMock.Verify(e => e.ProduceAsync(_statusUpdatedRetryTopicName, It.Is<string>(e => IsExpectedRetryMessage(e, serializedDeliveryReport))), Times.Once);
+
+                    messagePublishedToRetryTopic = true;
+
+                    return messagePublishedToRetryTopic;
+                }
+                catch (Exception)
+                {
+                    return false;
+                }
+            },
             TimeSpan.FromSeconds(15),
             TimeSpan.FromMilliseconds(100));
 
-        await consumer.StopAsync(CancellationToken.None);
+        await emailStatusConsumer.StopAsync(CancellationToken.None);
 
         // Assert
-        producerMock.Verify(
-          e => e.ProduceAsync(_statusUpdatedRetryTopicName, It.Is<string>(e => IsExpectedRetryMessage(e, serializedDeliveryReport))),
-          Times.Once,
-          $"Expected exactly one retry message on topic '{_statusUpdatedRetryTopicName}' containing the original serialized SendOperationResult.");
+        Assert.True(messagePublishedToRetryTopic);
     }
 
     [Theory]
@@ -299,29 +301,30 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         await emailStatusConsumer.StartAsync(CancellationToken.None);
         await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, deliveryReport.Serialize());
 
-        string? observedEmailStatus = null;
+        long completedOrdersCount = -1;
+        string observedEmailStatus = string.Empty;
         await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
-                observedEmailStatus = await GetEmailNotificationStatus(notification.Id);
-                return string.Equals(observedEmailStatus, resultType.ToString(), StringComparison.Ordinal);
-            },
-            TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(100));
+                if (string.IsNullOrEmpty(observedEmailStatus))
+                {
+                    observedEmailStatus = await GetEmailNotificationStatus(notification.Id);
+                }
 
-        long completedCount = -1;
-        await IntegrationTestUtil.EventuallyAsync(
-            async () =>
-            {
-                completedCount = await CountOrdersWithStatus(notification.Id, OrderProcessingStatus.Completed);
-                return completedCount == 1;
+                if (completedOrdersCount == -1)
+                {
+                    completedOrdersCount = await CountOrdersWithStatus(notification.Id, OrderProcessingStatus.Completed);
+                }
+
+                return !string.IsNullOrEmpty(observedEmailStatus) && completedOrdersCount == 1;
             },
             TimeSpan.FromSeconds(15),
             TimeSpan.FromMilliseconds(100));
 
         await emailStatusConsumer.StopAsync(CancellationToken.None);
 
-        Assert.Equal(1, completedCount);
+        // Assert
+        Assert.Equal(1, completedOrdersCount);
         Assert.Equal(resultType.ToString(), observedEmailStatus);
     }
 
