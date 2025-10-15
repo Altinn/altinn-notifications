@@ -58,7 +58,7 @@ public class NotificationStatusRetryConsumerBaseTests : IAsyncLifetime
                 return deserializationErrorLogged;
             },
             TimeSpan.FromSeconds(15),
-            TimeSpan.FromMicroseconds(100));
+            TimeSpan.FromMilliseconds(100));
 
         // Assert
         emailNotificationService.Verify(e => e.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()), Times.Never);
