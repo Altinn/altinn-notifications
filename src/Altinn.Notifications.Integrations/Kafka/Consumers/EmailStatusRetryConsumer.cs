@@ -29,10 +29,14 @@ public sealed class EmailStatusRetryConsumer(
     protected override DeliveryReportChannel Channel => DeliveryReportChannel.AzureCommunicationServices;
 
     /// <summary>
-    /// Updates the email notification status based on the retry message payload.
+    /// Attempts to update the persisted send status for an email notification based on the
+    /// serialized <see cref="EmailSendOperationResult"/> contained in the supplied retry envelope.
     /// </summary>
-    /// <param name="retryMessage">The message object containing both metadata and send operation result payload</param>
-    /// <returns></returns>
+    /// <param name="retryMessage">
+    /// The retry envelope holding correlation metadata (attempt count and timestamps) and the raw JSON
+    /// payload in <see cref="UpdateStatusRetryMessage.SendOperationResult"/> representing an
+    /// <see cref="EmailSendOperationResult"/> returned from the underlying email provider.
+    /// </param>
     protected override async Task UpdateStatusAsync(UpdateStatusRetryMessage retryMessage)
     {
         var emailSendOperationResult = JsonSerializer.Deserialize<EmailSendOperationResult>(retryMessage.SendOperationResult, JsonSerializerOptionsProvider.Options);
