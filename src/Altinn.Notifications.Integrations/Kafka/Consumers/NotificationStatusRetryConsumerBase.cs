@@ -123,7 +123,7 @@ public abstract class NotificationStatusRetryConsumerBase : KafkaConsumerBase<No
     }
 
     /// <summary>
-    /// Persists a failed delivery report as a dead when the retry timeout has been exceeded.
+    /// Persists a failed delivery report as dead-delivery-report when the retry timeout has been exceeded.
     /// </summary>
     /// <param name="updateStatusRetryMessage">The retry message containing information about the failed delivery attempts.</param>
     /// <returns>A task representing the asynchronous operation of storing the dead delivery report.</returns>

@@ -31,9 +31,9 @@ public static class KafkaUtil
                 throw new ProduceException<Null, string>(new Error(ErrorCode.Local_Transport, $"Message not persisted to topic '{topic}'. Status: {result.Status}"), result);
             }
         }
-        catch (Exception ex) when (ex is not ArgumentException)
+        catch (Exception e) when (e is not ArgumentException and not ProduceException<Null, string>)
         {
-            throw new ProduceException<Null, string>(new Error(ErrorCode.Local_Transport, $"Failed to publish message to topic '{topic}'"), null, ex);
+            throw new ProduceException<Null, string>(new Error(ErrorCode.Local_Transport, $"Failed to publish message to topic '{topic}'"), null, e);
         }
     }
 
