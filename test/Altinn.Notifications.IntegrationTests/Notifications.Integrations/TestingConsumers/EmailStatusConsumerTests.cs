@@ -56,17 +56,17 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
-                if (string.IsNullOrEmpty(observedEmailStatus))
+                if (observedEmailStatus != EmailNotificationResultType.New.ToString())
                 {
                     observedEmailStatus = await GetEmailNotificationStatus(emailNotification.Id);
                 }
 
-                if (processedOrderCount == -1)
+                if (processedOrderCount != 1)
                 {
                     processedOrderCount = await CountOrdersWithStatus(emailNotification.Id, OrderProcessingStatus.Processed);
                 }
 
-                return processedOrderCount != 1 && !string.IsNullOrWhiteSpace(observedEmailStatus);
+                return observedEmailStatus == EmailNotificationResultType.New.ToString() && processedOrderCount == 1;
             },
             TimeSpan.FromSeconds(15),
             TimeSpan.FromMilliseconds(100));
@@ -113,22 +113,22 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
-                if (string.IsNullOrEmpty(observedEmailStatus))
+                if (observedEmailStatus != EmailNotificationResultType.Delivered.ToString())
                 {
                     observedEmailStatus = await GetEmailNotificationStatus(emailNotification.Id);
                 }
 
-                if (statusFeedCount == -1)
+                if (statusFeedCount != 1)
                 {
                     statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(notificationOrder.Id);
                 }
 
-                if (completedOrderCount == -1)
+                if (completedOrderCount != 1)
                 {
                     completedOrderCount = await CountOrdersWithStatus(emailNotification.Id, OrderProcessingStatus.Completed);
                 }
 
-                return statusFeedCount != -1 && completedOrderCount != -1 && !string.IsNullOrEmpty(observedEmailStatus);
+                return observedEmailStatus == EmailNotificationResultType.Delivered.ToString() && statusFeedCount == 1 && completedOrderCount == 1;
             },
             TimeSpan.FromSeconds(15),
             TimeSpan.FromMilliseconds(100));
@@ -176,22 +176,22 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
-                if (string.IsNullOrEmpty(observedEmailStatus))
+                if (observedEmailStatus != EmailNotificationResultType.Succeeded.ToString())
                 {
                     observedEmailStatus = await GetEmailNotificationStatus(emailNotification.Id);
                 }
 
-                if (statusFeedCount == -1)
+                if (statusFeedCount != 0)
                 {
                     statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(notificationOrder.Id);
                 }
 
-                if (processedOrderCount == -1)
+                if (processedOrderCount != 1)
                 {
                     processedOrderCount = await CountOrdersWithStatus(emailNotification.Id, OrderProcessingStatus.Processed);
                 }
 
-                return statusFeedCount != -1 && processedOrderCount != -1 && !string.IsNullOrEmpty(observedEmailStatus);
+                return observedEmailStatus != EmailNotificationResultType.Succeeded.ToString() && statusFeedCount == 0 && processedOrderCount == 1;
             },
             TimeSpan.FromSeconds(15),
             TimeSpan.FromMilliseconds(100));
@@ -306,17 +306,17 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
-                if (string.IsNullOrEmpty(observedEmailStatus))
+                if (observedEmailStatus != resultType.ToString())
                 {
                     observedEmailStatus = await GetEmailNotificationStatus(notification.Id);
                 }
 
-                if (completedOrdersCount == -1)
+                if (completedOrdersCount != 1)
                 {
                     completedOrdersCount = await CountOrdersWithStatus(notification.Id, OrderProcessingStatus.Completed);
                 }
 
-                return !string.IsNullOrEmpty(observedEmailStatus) && completedOrdersCount == 1;
+                return observedEmailStatus == resultType.ToString() && completedOrdersCount == 1;
             },
             TimeSpan.FromSeconds(15),
             TimeSpan.FromMilliseconds(100));
