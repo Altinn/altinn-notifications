@@ -67,7 +67,7 @@ public abstract class NotificationStatusRetryConsumerBase : KafkaConsumerBase<No
 
         var elapsedSeconds = (DateTime.UtcNow - updateStatusRetryMessage.FirstSeen).TotalSeconds;
 
-        if (elapsedSeconds > _statusRetryTimeoutInSeconds)
+        if (elapsedSeconds >= _statusRetryTimeoutInSeconds)
         {
             await PersistDeadDeliveryReport(updateStatusRetryMessage);
         }

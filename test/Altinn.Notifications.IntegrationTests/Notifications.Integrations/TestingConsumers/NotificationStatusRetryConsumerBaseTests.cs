@@ -117,11 +117,10 @@ public class NotificationStatusRetryConsumerBaseTests : IAsyncLifetime
         {
             Attempts = originalAttempts,
             SendOperationResult = deliveryReport,
-            FirstSeen = DateTime.UtcNow.AddSeconds(-30), // Within threshold (300s)
+            FirstSeen = DateTime.UtcNow.AddSeconds(-30),
             LastAttempt = originalLastAttempt
         };
 
-        // Force the UpdateStatusAsync path to throw -> triggers retry logic
         emailNotificationService
             .Setup(s => s.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()))
             .ThrowsAsync(new Exception("Simulated failure"));
@@ -150,13 +149,8 @@ public class NotificationStatusRetryConsumerBaseTests : IAsyncLifetime
             {
                 try
                 {
-                    // Update attempted once
                     emailNotificationService.Verify(s => s.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()), Times.Once);
-
-                    // Dead report NOT inserted
                     deadDeliveryReportService.Verify(s => s.InsertAsync(It.IsAny<DeadDeliveryReport>(), It.IsAny<CancellationToken>()), Times.Never);
-
-                    // Message re-published
                     kafkaProducer.Verify(p => p.ProduceAsync(_kafkaSettings.Value.EmailStatusUpdatedRetryTopicName, It.IsAny<string>()), Times.Once);
 
                     return true;
