@@ -316,14 +316,14 @@ public static class PostgreUtil
         await pgcom.ExecuteNonQueryAsync();
     }
 
-    public static async Task<long?> GetDeadDeliveryReportIdFromOperationId(string operationId)
+    private static async Task<long?> GetDeadDeliveryReportIdByJsonField(string fieldName, string fieldValue)
     {
-        var query = @"SELECT id FROM notifications.deaddeliveryreports WHERE deliveryreport ->> 'operationId' = @operationId";
+        var query = $@"SELECT id FROM notifications.deaddeliveryreports WHERE deliveryreport ->> '{fieldName}' = @fieldValue";
 
         NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
 
         await using NpgsqlCommand pgcom = dataSource.CreateCommand(query);
-        pgcom.Parameters.AddWithValue("@operationId", operationId);
+        pgcom.Parameters.AddWithValue("@fieldValue", fieldValue);
 
         await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync();
         if (!await reader.ReadAsync())
@@ -334,21 +334,9 @@ public static class PostgreUtil
         return await reader.GetFieldValueAsync<long>(0);
     }
 
-    public static async Task<long?> GetDeadDeliveryReportIdFromGatewayReference(string gatewayReference)
-    {
-        var query = @"SELECT id FROM notifications.deaddeliveryreports WHERE deliveryreport ->> 'gatewayReference' = @gatewayReference";
+    public static Task<long?> GetDeadDeliveryReportIdFromOperationId(string operationId)
+        => GetDeadDeliveryReportIdByJsonField("operationId", operationId);
 
-        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
-
-        await using NpgsqlCommand pgcom = dataSource.CreateCommand(query);
-        pgcom.Parameters.AddWithValue("@gatewayReference", gatewayReference);
-
-        await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync();
-        if (!await reader.ReadAsync())
-        {
-            return null;
-        }
-
-        return await reader.GetFieldValueAsync<long>(0);
-    }
+    public static Task<long?> GetDeadDeliveryReportIdFromGatewayReference(string gatewayReference)
+        => GetDeadDeliveryReportIdByJsonField("gatewayReference", gatewayReference);
 }
