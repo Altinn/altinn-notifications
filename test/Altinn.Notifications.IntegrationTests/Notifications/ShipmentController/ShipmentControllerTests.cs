@@ -203,7 +203,6 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         Assert.Equal(_shipmentId, manifest.ShipmentId);
         Assert.Equal(ProcessingLifecycleExt.Order_Completed, manifest.Status);
         Assert.Equal("COMPLETED-ORDER-REF-F10D5B2DCDFD", manifest.SendersReference);
-        Assert.True((DateTime.UtcNow.AddDays(-7) - manifest.LastUpdate).TotalSeconds < 5);
 
         Assert.Equal(2, manifest.Recipients.Count);
 

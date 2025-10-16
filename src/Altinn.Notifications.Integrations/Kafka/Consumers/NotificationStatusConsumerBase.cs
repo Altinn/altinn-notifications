@@ -18,35 +18,27 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
     where TResult : class
     where TConsumer : class
 {
-    private readonly string _retryTopicName;
     private readonly IKafkaProducer _producer;
-    private readonly ILogger _logger;
+    private readonly ILogger<TConsumer> _logger;
+    private readonly string _statusUpdatedTopicName;
+    private readonly string _statusUpdatedRetryTopicName;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationStatusConsumerBase{TConsumer, TResult}"/> class.
     /// </summary>
-    /// <param name="topicName">The name of the Kafka topic to consume from.</param>
-    /// <param name="retryTopicName">The name of the Kafka topic to publish retry messages to.</param>
-    /// <param name="producer">The Kafka producer used for publishing retry messages.</param>
-    /// <param name="settings">Kafka configuration settings.</param>
-    /// <param name="logger">Logger for the consumer.</param>
     protected NotificationStatusConsumerBase(
-        string topicName,
-        string retryTopicName,
         IKafkaProducer producer,
-        IOptions<KafkaSettings> settings,
-        ILogger logger)
-        : base(settings, logger, topicName)
+        ILogger<TConsumer> logger,
+        string statusUpdatedTopicName,
+        string statusUpdatedRetryTopicName,
+        IOptions<KafkaSettings> kafkaSettings)
+        : base(kafkaSettings, logger, statusUpdatedTopicName)
     {
         _logger = logger;
         _producer = producer;
-        _retryTopicName = retryTopicName;
+        _statusUpdatedTopicName = statusUpdatedTopicName;
+        _statusUpdatedRetryTopicName = statusUpdatedRetryTopicName;
     }
-
-    /// <summary>
-    /// Gets the name of the notification channel being processed (e.g. SMS or Email).
-    /// </summary>
-    protected abstract string ChannelName { get; }
 
     /// <inheritdoc/>
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
@@ -58,27 +50,22 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
     /// Updates the notification status based on the parsed result.
     /// </summary>
     /// <param name="result">The parsed result containing status update information.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
     protected abstract Task UpdateStatusAsync(TResult result);
 
     /// <summary>
     /// Attempts to parse a message into the result type.
     /// </summary>
-    /// <param name="message">The message to parse.</param>
-    /// <param name="result">The parsed result if successful; otherwise, null.</param>
-    /// <returns><c>true</c> if parsing was successful; otherwise, <c>false</c>.</returns>
     protected abstract bool TryParse(string message, out TResult result);
 
     /// <summary>
     /// Processes a delivery report message received from Kafka.
     /// </summary>
     /// <param name="message">The raw message to process.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
     private async Task ProcessStatus(string message)
     {
         if (!TryParse(message, out TResult result))
         {
-            _logger.LogError("// {Consumer} // ProcessStatus // Deserialization of message failed. {Message}", typeof(TConsumer).Name, message);
+            _logger.LogError("// {Consumer} // ProcessStatus // Deserialization of message failed. Skipping. {Message}", typeof(TConsumer).Name, message);
             return;
         }
 
@@ -86,65 +73,37 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
         {
             await UpdateStatusAsync(result);
         }
-        catch (SendStatusUpdateException e)
+        catch (SendStatusUpdateException)
         {
-            Guid? notificationId = null;
-            Guid? externalReferenceId = null;
-
-            if (e.IdentifierType == SendStatusIdentifierType.NotificationId && Guid.TryParse(e.Identifier, out var parsedNoticiationId))
+            var updateStatusRetryMessage = new UpdateStatusRetryMessage
             {
-                notificationId = parsedNoticiationId;
-            }
-
-            if (e.IdentifierType == SendStatusIdentifierType.OperationId && Guid.TryParse(e.Identifier, out var parsedExternalReferenceId))
-            {
-                externalReferenceId = parsedExternalReferenceId;
-            }
-
-            var retryMessage = new UpdateStatusRetryMessage
-            {
-                FirstSeen = DateTime.UtcNow,
                 Attempts = 1,
+                FirstSeen = DateTime.UtcNow,
                 LastAttempt = DateTime.UtcNow,
-                NotificationId = notificationId,
-                ExternalReferenceId = externalReferenceId,
-                SendResult = message
-            };
+                SendOperationResult = message
+            }.Serialize();
 
-            var serializedRetryMessage = retryMessage.Serialize();
-
-            await RetryStatus(serializedRetryMessage);
+            await _producer.ProduceAsync(_statusUpdatedRetryTopicName, updateStatusRetryMessage);
         }
-        catch (Exception e) when (LogProcessingError(e, message))
+        catch (Exception e) when (e is ArgumentException or InvalidOperationException)
         {
-            throw;
+            LogProcessingError(message);
         }
     }
 
     /// <summary>
-    /// Sends a message to the retry topic.
+    /// Republishes the message to the same status-updated topic.
     /// </summary>
-    /// <param name="message">The message to retry.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
     private async Task RetryStatus(string message)
     {
-        await _producer.ProduceAsync(_retryTopicName, message);
+        await _producer.ProduceAsync(_statusUpdatedTopicName, message);
     }
 
     /// <summary>
-    /// Logs an error when an exception occurs while processing a Kafka message.
+    /// Logs an error when an exception occurs while processing (after successful deserialization).
     /// </summary>
-    /// <param name="exception">The exception that occurred during processing.</param>
-    /// <param name="kafkaMessage">The Kafka message that caused the error.</param>
-    /// <returns>Always returns <c>false</c> to allow the exception to propagate.</returns>
-    private bool LogProcessingError(Exception exception, string kafkaMessage)
+    private void LogProcessingError(string message)
     {
-        _logger.LogError(
-            exception,
-            "Could not update {Channel} send status for message: {Message}",
-            ChannelName,
-            kafkaMessage);
-
-        return false;
+        _logger.LogError("// {Consumer} // ProcessStatus // Failed while applying status update. Not retrying. {Message}", typeof(TConsumer).Name, message);
     }
 }

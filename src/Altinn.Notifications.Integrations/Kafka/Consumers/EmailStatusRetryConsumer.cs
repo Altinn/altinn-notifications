@@ -13,20 +13,15 @@ using Microsoft.Extensions.Options;
 namespace Altinn.Notifications.Integrations.Kafka.Consumers;
 
 /// <summary>
-/// Kafka consumer for processing email status retry messages
+/// Kafka consumer for processing retry attempts of email notification status updates from the dedicated retry topic.
 /// </summary>
 public sealed class EmailStatusRetryConsumer(
-    IKafkaProducer producer, 
+    IKafkaProducer producer,
+    ILogger<EmailStatusRetryConsumer> logger,
+    IOptions<Configuration.KafkaSettings> settings,
     IEmailNotificationService emailNotificationService,
-    IDeadDeliveryReportService deadDeliveryReportService, 
-    IOptions<Configuration.KafkaSettings> settings, 
-    ILogger<EmailStatusRetryConsumer> logger)
-    : NotificationStatusRetryConsumerBase(
-        producer, 
-        deadDeliveryReportService, 
-        settings, 
-        settings.Value.EmailStatusUpdatedRetryTopicName, 
-        logger)
+    IDeadDeliveryReportService deadDeliveryReportService)
+    : NotificationStatusRetryConsumerBase(settings.Value.EmailStatusUpdatedRetryTopicName, producer, settings, deadDeliveryReportService, logger)
 {
     /// <summary>
     /// Gets the delivery report channel for Azure Communication Services email notifications.
@@ -34,24 +29,28 @@ public sealed class EmailStatusRetryConsumer(
     protected override DeliveryReportChannel Channel => DeliveryReportChannel.AzureCommunicationServices;
 
     /// <summary>
-    /// Executes the email status retry consumer to process messages from the Kafka topic
+    /// Attempts to update the persisted send status for an email notification based on the
+    /// serialized <see cref="EmailSendOperationResult"/> contained in the supplied retry envelope.
     /// </summary>
-    /// <param name="stoppingToken">Cancellation token to stop the consumer</param>
-    /// <returns>A task representing the asynchronous operation</returns>
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        return Task.Run(() => ConsumeMessage(ProcessStatus, RetryStatus, stoppingToken), stoppingToken);
-    }
-
-    /// <summary>
-    /// Updates the email notification status based on the retry message payload.
-    /// </summary>
-    /// <param name="retryMessage">The message object containing both metadata and send oepration result payload</param>
-    /// <returns></returns>
-    /// <exception cref="InvalidOperationException">Throws an InvalidOperationException when the payload could not be parsed</exception>
+    /// <param name="retryMessage">
+    /// The retry envelope holding correlation metadata (attempt count and timestamps) and the raw JSON
+    /// payload in <see cref="UpdateStatusRetryMessage.SendOperationResult"/> representing an
+    /// <see cref="EmailSendOperationResult"/> returned from the underlying email provider.
+    /// </param>
     protected override async Task UpdateStatusAsync(UpdateStatusRetryMessage retryMessage)
     {
-        var emailSendOperationResult = JsonSerializer.Deserialize<EmailSendOperationResult>(retryMessage.SendResult, JsonSerializerOptionsProvider.Options) ?? throw new InvalidOperationException("Deserialization of EmailSendOperationResult failed.");
+        if (string.IsNullOrWhiteSpace(retryMessage.SendOperationResult))
+        {
+            logger.LogError("SendOperationResult is null or empty. RetryMessage: {RetryMessage}", Convert.ToString(retryMessage));
+            return;
+        }
+
+        var emailSendOperationResult = JsonSerializer.Deserialize<EmailSendOperationResult>(retryMessage.SendOperationResult, JsonSerializerOptionsProvider.Options);
+        if (emailSendOperationResult == null)
+        {
+            logger.LogError("EmailSendOperationResult deserialization returned null. SendOperationResult: {SendOperationResult}", retryMessage.SendOperationResult);
+            return;
+        }
 
         await emailNotificationService.UpdateSendStatus(emailSendOperationResult);
     }
