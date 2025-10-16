@@ -281,30 +281,6 @@ public static class PostgreUtil
         await pgcom.ExecuteNonQueryAsync();
     }
 
-    public static async Task DeleteNotificationsFromDb(string sendersRef)
-    {         
-        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
-        string sql = @"
-                        BEGIN;
-
-                        -- First, delete from SMS notifications
-                        DELETE FROM notifications.smsnotifications s
-                        USING notifications.orders o
-                        WHERE s._orderid = o._id
-                          AND o.sendersreference = @sendersRef;
-
-                        -- Second, delete from Email notifications
-                        DELETE FROM notifications.emailnotifications e
-                        USING notifications.orders o
-                        WHERE e._orderid = o._id
-                          AND o.sendersreference = @sendersRef;
-
-                        COMMIT;";
-        await using NpgsqlCommand pgcom = dataSource.CreateCommand(sql);
-        pgcom.Parameters.AddWithValue("sendersRef", sendersRef);
-        await pgcom.ExecuteNonQueryAsync();
-    }
-
     public static async Task<T> RunSqlReturnOutput<T>(string query)
     {
         NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
@@ -338,5 +314,26 @@ public static class PostgreUtil
         }
         
         await pgcom.ExecuteNonQueryAsync();
+    }
+
+    public static async Task<long?> GetDeadDeliveryReportIdFromOperationId(string operationId)
+    {
+        var query = @"SELECT id FROM notifications.deaddeliveryreports WHERE deliveryreport ->> 'operationId' = @operationId";
+
+        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
+
+        await using NpgsqlCommand pgcom = dataSource.CreateCommand(query);
+        pgcom.Parameters.AddWithValue("@operationId", operationId);
+
+        await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync();
+        await reader.ReadAsync();
+        
+        if (!reader.HasRows)
+        {
+            return null;
+        }
+
+        var id = reader.GetValue<long>(0);
+        return id;
     }
 }
