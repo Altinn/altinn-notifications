@@ -1,13 +1,24 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using System.Text.Json;
+
+using Altinn.Notifications.Core;
+using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Exceptions;
+using Altinn.Notifications.Core.Integrations;
+using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Services.Interfaces;
+using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.IntegrationTests.Utils;
 
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+
+using Moq;
 
 using Xunit;
-using Xunit.Sdk;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.TestingConsumers;
 
@@ -15,160 +26,242 @@ public class EmailStatusConsumerTests : IAsyncLifetime
 {
     private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
     private readonly string _statusUpdatedTopicName = Guid.NewGuid().ToString();
+    private readonly string _statusUpdatedRetryTopicName = Guid.NewGuid().ToString();
 
     [Fact]
-    public async Task InsertStatusFeed_OrderCompleted()
+    public async Task ConsumeInvalidMessage_ShouldNotUpdateStatus()
     {
         // Arrange
-        Dictionary<string, string> vars = new()
+        Dictionary<string, string> kafkaSettings = new()
         {
             { "KafkaSettings__EmailStatusUpdatedTopicName", _statusUpdatedTopicName },
             { "KafkaSettings__Admin__TopicList", $"[\"{_statusUpdatedTopicName}\"]" }
         };
 
         using EmailStatusConsumer emailStatusConsumer = ServiceUtil
-            .GetServices([typeof(IHostedService)], vars)
+            .GetServices([typeof(IHostedService)], kafkaSettings)
             .OfType<EmailStatusConsumer>()
             .First();
 
-        (NotificationOrder order, EmailNotification notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(_sendersRef, simulateCronJob: true);
-        EmailSendOperationResult sendOperationResult = new()
+        (_, EmailNotification emailNotification) =
+            await PostgreUtil.PopulateDBWithOrderAndEmailNotification(_sendersRef, simulateCronJob: true, simulateConsumers: true);
+
+        // Act
+        await emailStatusConsumer.StartAsync(CancellationToken.None);
+        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, "Invalid-Delivery-Report");
+
+        long processedOrderCount = -1;
+        string observedEmailStatus = string.Empty;
+
+        await IntegrationTestUtil.EventuallyAsync(
+            async () =>
+            {
+                if (observedEmailStatus != EmailNotificationResultType.New.ToString())
+                {
+                    observedEmailStatus = await GetEmailNotificationStatus(emailNotification.Id);
+                }
+
+                if (processedOrderCount != 1)
+                {
+                    processedOrderCount = await CountOrdersWithStatus(emailNotification.Id, OrderProcessingStatus.Processed);
+                }
+
+                return observedEmailStatus == EmailNotificationResultType.New.ToString() && processedOrderCount == 1;
+            },
+            TimeSpan.FromSeconds(15),
+            TimeSpan.FromMilliseconds(100));
+
+        await emailStatusConsumer.StopAsync(CancellationToken.None);
+
+        // Assert
+        Assert.Equal(1, processedOrderCount);
+        Assert.Equal(EmailNotificationResultType.New.ToString(), observedEmailStatus);
+    }
+
+    [Fact]
+    public async Task ConsumeDeliveredStatus_ShouldMarkOrderCompleted_WithStatusFeedEntry()
+    {
+        // Arrange
+        Dictionary<string, string> kafkaSettings = new()
         {
-            NotificationId = notification.Id,
+            { "KafkaSettings__EmailStatusUpdatedTopicName", _statusUpdatedTopicName },
+            { "KafkaSettings__Admin__TopicList", $"[\"{_statusUpdatedTopicName}\"]" }
+        };
+
+        using EmailStatusConsumer emailStatusConsumer = ServiceUtil
+            .GetServices([typeof(IHostedService)], kafkaSettings)
+            .OfType<EmailStatusConsumer>()
+            .First();
+
+        (NotificationOrder notificationOrder, EmailNotification emailNotification) =
+            await PostgreUtil.PopulateDBWithOrderAndEmailNotification(_sendersRef, simulateCronJob: true);
+
+        EmailSendOperationResult deliveryReport = new()
+        {
+            NotificationId = emailNotification.Id,
             OperationId = Guid.NewGuid().ToString(),
             SendResult = EmailNotificationResultType.Delivered
         };
 
         // Act
         await emailStatusConsumer.StartAsync(CancellationToken.None);
-        await Task.Delay(250);
-
-        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
+        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, deliveryReport.Serialize());
 
         int statusFeedCount = -1;
-        await EventuallyAsync(
+        long completedOrderCount = -1;
+        string observedEmailStatus = string.Empty;
+        await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
-                statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
-                return statusFeedCount == 1;
+                if (observedEmailStatus != EmailNotificationResultType.Delivered.ToString())
+                {
+                    observedEmailStatus = await GetEmailNotificationStatus(emailNotification.Id);
+                }
+
+                if (statusFeedCount != 1)
+                {
+                    statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(notificationOrder.Id);
+                }
+
+                if (completedOrderCount != 1)
+                {
+                    completedOrderCount = await CountOrdersWithStatus(emailNotification.Id, OrderProcessingStatus.Completed);
+                }
+
+                return observedEmailStatus == EmailNotificationResultType.Delivered.ToString() && statusFeedCount == 1 && completedOrderCount == 1;
             },
             TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(1000));
+            TimeSpan.FromMilliseconds(100));
 
         await emailStatusConsumer.StopAsync(CancellationToken.None);
 
         // Assert
         Assert.Equal(1, statusFeedCount);
+        Assert.Equal(1, completedOrderCount);
+        Assert.Equal(EmailNotificationResultType.Delivered.ToString(), observedEmailStatus);
     }
 
     [Fact]
-    public async Task RunTask_ConfirmExpectedSideEffects()
+    public async Task ConsumeSucceededStatus_ShouldMarkOrderProcessed_WithoutStatusFeedEntry()
     {
         // Arrange
-        Dictionary<string, string> vars = new()
+        Dictionary<string, string> kafkaSettings = new()
         {
             { "KafkaSettings__EmailStatusUpdatedTopicName", _statusUpdatedTopicName },
             { "KafkaSettings__Admin__TopicList", $"[\"{_statusUpdatedTopicName}\"]" }
         };
 
         using EmailStatusConsumer emailStatusConsumer = ServiceUtil
-            .GetServices([typeof(IHostedService)], vars)
+            .GetServices([typeof(IHostedService)], kafkaSettings)
             .OfType<EmailStatusConsumer>()
             .First();
 
-        (_, EmailNotification notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(_sendersRef, simulateCronJob: true);
+        (NotificationOrder notificationOrder, EmailNotification emailNotification) =
+            await PostgreUtil.PopulateDBWithOrderAndEmailNotification(_sendersRef, simulateCronJob: true);
 
-        EmailSendOperationResult sendOperationResult = new()
+        EmailSendOperationResult deliveryReport = new()
         {
-            NotificationId = notification.Id,
+            NotificationId = emailNotification.Id,
             OperationId = Guid.NewGuid().ToString(),
             SendResult = EmailNotificationResultType.Succeeded
         };
 
         // Act
         await emailStatusConsumer.StartAsync(CancellationToken.None);
-        await Task.Delay(250);
+        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, deliveryReport.Serialize());
 
-        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
-
-        // Wait for notification status to become Succeeded
-        string? observedEmailStatus = null;
-        await EventuallyAsync(
-            async () =>
-            {
-                observedEmailStatus = await SelectEmailNotificationStatus(notification.Id);
-                return string.Equals(observedEmailStatus, EmailNotificationResultType.Succeeded.ToString(), StringComparison.Ordinal);
-            },
-            TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(1000));
-
-        // Then wait for order processing status to reach Processed
+        int statusFeedCount = -1;
         long processedOrderCount = -1;
-        await EventuallyAsync(
+        string observedEmailStatus = string.Empty;
+        await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
-                processedOrderCount = await SelectProcessingStatusOrderCount(notification.Id, OrderProcessingStatus.Processed);
-                return processedOrderCount == 1;
+                if (observedEmailStatus != EmailNotificationResultType.Succeeded.ToString())
+                {
+                    observedEmailStatus = await GetEmailNotificationStatus(emailNotification.Id);
+                }
+
+                if (statusFeedCount != 0)
+                {
+                    statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(notificationOrder.Id);
+                }
+
+                if (processedOrderCount != 1)
+                {
+                    processedOrderCount = await CountOrdersWithStatus(emailNotification.Id, OrderProcessingStatus.Processed);
+                }
+
+                return observedEmailStatus == EmailNotificationResultType.Succeeded.ToString() && statusFeedCount == 0 && processedOrderCount == 1;
             },
             TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(1000));
+            TimeSpan.FromMilliseconds(100));
 
         await emailStatusConsumer.StopAsync(CancellationToken.None);
 
         // Assert using captured values
+        Assert.Equal(0, statusFeedCount);
         Assert.Equal(1, processedOrderCount);
         Assert.Equal(EmailNotificationResultType.Succeeded.ToString(), observedEmailStatus);
     }
 
-    [Fact]
-    public async Task InsertStatusFeed_SendersReferenceIsNull_OrderCompleted()
+    [Theory]
+    [InlineData(SendStatusIdentifierType.OperationId)]
+    [InlineData(SendStatusIdentifierType.NotificationId)]
+    public async Task ConsumeDeliveredStatus_ServiceThrows_ShouldPublishRetryMessage(SendStatusIdentifierType identifierType)
     {
         // Arrange
-        Dictionary<string, string> vars = new()
+        var kafkaOptions = Options.Create(new KafkaSettings
         {
-            { "KafkaSettings__EmailStatusUpdatedTopicName", _statusUpdatedTopicName },
-            { "KafkaSettings__Admin__TopicList", $"[\"{_statusUpdatedTopicName}\"]" }
-        };
+            BrokerAddress = "localhost:9092",
+            Producer = new ProducerSettings(),
+            EmailStatusUpdatedTopicName = _statusUpdatedTopicName,
+            EmailStatusUpdatedRetryTopicName = _statusUpdatedRetryTopicName,
+            Consumer = new ConsumerSettings { GroupId = $"altinn-notifications-{Guid.NewGuid():N}" }
+        });
 
-        using EmailStatusConsumer emailStatusConsumer = ServiceUtil
-            .GetServices([typeof(IHostedService)], vars)
-            .OfType<EmailStatusConsumer>()
-            .First();
+        var producerMock = new Mock<IKafkaProducer>(MockBehavior.Loose);
+        var emailServiceMock = new Mock<IEmailNotificationService>();
+        emailServiceMock
+            .Setup(e => e.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()))
+            .ThrowsAsync(new SendStatusUpdateException(NotificationChannel.Email, Guid.NewGuid().ToString(), identifierType));
 
-        (NotificationOrder order, EmailNotification notification) =
-            await PostgreUtil.PopulateDBWithOrderAndEmailNotification(forceSendersReferenceToBeNull: true, simulateCronJob: true);
+        EmailSendOperationResult deliveryReport = identifierType == SendStatusIdentifierType.NotificationId
+            ? new EmailSendOperationResult { NotificationId = Guid.NewGuid(), SendResult = EmailNotificationResultType.Delivered }
+            : new EmailSendOperationResult { OperationId = Guid.NewGuid().ToString(), SendResult = EmailNotificationResultType.Delivered };
 
-        EmailSendOperationResult sendOperationResult = new()
-        {
-            NotificationId = notification.Id,
-            OperationId = Guid.NewGuid().ToString(),
-            SendResult = EmailNotificationResultType.Delivered
-        };
+        string serializedDeliveryReport = deliveryReport.Serialize();
+
+        using EmailStatusConsumer emailStatusConsumer =
+            new(producerMock.Object, NullLogger<EmailStatusConsumer>.Instance, kafkaOptions, emailServiceMock.Object);
 
         // Act
         await emailStatusConsumer.StartAsync(CancellationToken.None);
-        await Task.Delay(250);
+        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, serializedDeliveryReport);
 
-        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
-
-        // Wait until UpdateStatusAsync has executed by observing its side-effect once.
-        int statusFeedCount = -1;
-        await EventuallyAsync(
-            async () =>
+        bool messagePublishedToRetryTopic = false;
+        await IntegrationTestUtil.EventuallyAsync(
+            () =>
             {
-                statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
-                return statusFeedCount == 1;
+                try
+                {
+                    producerMock.Verify(e => e.ProduceAsync(_statusUpdatedRetryTopicName, It.Is<string>(e => IsExpectedRetryMessage(e, serializedDeliveryReport))), Times.Once);
+
+                    messagePublishedToRetryTopic = true;
+
+                    return messagePublishedToRetryTopic;
+                }
+                catch (Exception)
+                {
+                    return false;
+                }
             },
             TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(1000));
+            TimeSpan.FromMilliseconds(100));
 
         await emailStatusConsumer.StopAsync(CancellationToken.None);
 
         // Assert
-        Assert.Equal(1, statusFeedCount);
-
-        // Cleanup
-        await PostgreUtil.DeleteOrderFromDb(order.Id);
+        Assert.True(messagePublishedToRetryTopic);
     }
 
     [Theory]
@@ -180,61 +273,59 @@ public class EmailStatusConsumerTests : IAsyncLifetime
     [InlineData(EmailNotificationResultType.Failed_InvalidEmailFormat)]
     [InlineData(EmailNotificationResultType.Failed_SupressedRecipient)]
     [InlineData(EmailNotificationResultType.Failed_RecipientNotIdentified)]
-    public async Task ParseEmailSendOperationResult_StatusFailed_ShouldUpdateOrderStatusToCompleted(EmailNotificationResultType resultType)
+    public async Task ConsumeFailedStatus_ShouldMarkOrderCompleted_WithStatusFeedEntry(EmailNotificationResultType resultType)
     {
         // Arrange
-        Dictionary<string, string> vars = new()
+        Dictionary<string, string> kafkaSettings = new()
         {
             { "KafkaSettings__EmailStatusUpdatedTopicName", _statusUpdatedTopicName },
             { "KafkaSettings__Admin__TopicList", $"[\"{_statusUpdatedTopicName}\"]" }
         };
 
         using EmailStatusConsumer emailStatusConsumer = ServiceUtil
-            .GetServices([typeof(IHostedService)], vars)
+            .GetServices([typeof(IHostedService)], kafkaSettings)
             .OfType<EmailStatusConsumer>()
             .First();
 
-        (_, EmailNotification notification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(_sendersRef, simulateCronJob: true);
-        EmailSendOperationResult sendOperationResult = new()
+        (_, EmailNotification notification) =
+            await PostgreUtil.PopulateDBWithOrderAndEmailNotification(_sendersRef, simulateCronJob: true);
+
+        EmailSendOperationResult deliveryReport = new()
         {
+            SendResult = resultType,
             NotificationId = notification.Id,
-            OperationId = Guid.NewGuid().ToString(),
-            SendResult = resultType
+            OperationId = Guid.NewGuid().ToString()
         };
 
         // Act
         await emailStatusConsumer.StartAsync(CancellationToken.None);
-        await Task.Delay(250);
+        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, deliveryReport.Serialize());
 
-        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
-
-        // Wait for email notification status to be updated
-        string? observedEmailStatus = null;
-        await EventuallyAsync(
+        long completedOrdersCount = -1;
+        string observedEmailStatus = string.Empty;
+        await IntegrationTestUtil.EventuallyAsync(
             async () =>
             {
-                observedEmailStatus = await SelectEmailNotificationStatus(notification.Id);
-                return string.Equals(observedEmailStatus, resultType.ToString(), StringComparison.Ordinal);
-            },
-            TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(1000));
+                if (observedEmailStatus != resultType.ToString())
+                {
+                    observedEmailStatus = await GetEmailNotificationStatus(notification.Id);
+                }
 
-        // Then wait for order processing status to reach Completed
-        long completedCount = -1;
-        await EventuallyAsync(
-            async () =>
-            {
-                completedCount = await SelectProcessingStatusOrderCount(notification.Id, OrderProcessingStatus.Completed);
-                return completedCount == 1;
+                if (completedOrdersCount != 1)
+                {
+                    completedOrdersCount = await CountOrdersWithStatus(notification.Id, OrderProcessingStatus.Completed);
+                }
+
+                return observedEmailStatus == resultType.ToString() && completedOrdersCount == 1;
             },
             TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(1000));
+            TimeSpan.FromMilliseconds(100));
 
         await emailStatusConsumer.StopAsync(CancellationToken.None);
 
-        // Assert using captured values (no extra queries here)
+        // Assert
+        Assert.Equal(1, completedOrdersCount);
         Assert.Equal(resultType.ToString(), observedEmailStatus);
-        Assert.Equal(1, completedCount);
     }
 
     public Task InitializeAsync()
@@ -250,45 +341,38 @@ public class EmailStatusConsumerTests : IAsyncLifetime
     protected virtual async Task Dispose(bool disposing)
     {
         await PostgreUtil.DeleteStatusFeedFromDb(_sendersRef);
-        await PostgreUtil.DeleteNotificationsFromDb(_sendersRef);
         await PostgreUtil.DeleteOrderFromDb(_sendersRef);
         await KafkaUtil.DeleteTopicAsync(_statusUpdatedTopicName);
+        await KafkaUtil.DeleteTopicAsync(_statusUpdatedRetryTopicName);
     }
 
-    /// <summary>
-    /// Repeatedly evaluates a condition until it becomes <c>true</c> or a timeout is reached.
-    /// </summary>
-    /// <param name="predicate">An async function that evaluates the condition to be met. Returns <c>true</c> if the condition is satisfied, otherwise <c>false</c>.</param>
-    /// <param name="maximumWaitTime">The maximum amount of time to wait for the condition to be met.</param>
-    /// <param name="checkInterval">The interval between condition evaluations. Defaults to 100 milliseconds if not specified.</param>
-    /// <exception cref="XunitException">Thrown if the condition is not met within the specified timeout.</exception>
-    private static async Task EventuallyAsync(Func<Task<bool>> predicate, TimeSpan maximumWaitTime, TimeSpan? checkInterval = null)
+    private static bool IsExpectedRetryMessage(string message, string expectedSendOperationResult)
     {
-        var deadline = DateTime.UtcNow.Add(maximumWaitTime);
-        var pollingInterval = checkInterval ?? TimeSpan.FromMilliseconds(100);
-
-        while (DateTime.UtcNow < deadline)
+        if (string.IsNullOrWhiteSpace(message))
         {
-            if (await predicate())
-            {
-                return;
-            }
-
-            await Task.Delay(pollingInterval);
+            return false;
         }
 
-        throw new XunitException($"Condition not met within timeout ({maximumWaitTime}).");
+        try
+        {
+            var retry = JsonSerializer.Deserialize<UpdateStatusRetryMessage>(message, JsonSerializerOptionsProvider.Options);
+            return retry?.SendOperationResult == expectedSendOperationResult;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
-    private static async Task<string> SelectEmailNotificationStatus(Guid notificationId)
+    private static async Task<string> GetEmailNotificationStatus(Guid emailNotificationAlternateid)
     {
-        string sql = $"select result from notifications.emailnotifications where alternateid = '{notificationId}'";
+        string sql = $"select result from notifications.emailnotifications where alternateid = '{emailNotificationAlternateid}'";
         return await PostgreUtil.RunSqlReturnOutput<string>(sql);
     }
 
-    private static async Task<long> SelectProcessingStatusOrderCount(Guid notificationId, OrderProcessingStatus orderProcessingStatus)
+    private static async Task<long> CountOrdersWithStatus(Guid orderAlternateid, OrderProcessingStatus orderProcessingStatus)
     {
-        string sql = $"SELECT count (1) FROM notifications.orders o join notifications.emailnotifications e on e._orderid = o._id where e.alternateid = '{notificationId}' and o.processedstatus = '{orderProcessingStatus}'";
+        string sql = $"SELECT count (1) FROM notifications.orders o join notifications.emailnotifications e on e._orderid = o._id where e.alternateid = '{orderAlternateid}' and o.processedstatus = '{orderProcessingStatus}'";
         return await PostgreUtil.RunSqlReturnOutput<long>(sql);
     }
 }

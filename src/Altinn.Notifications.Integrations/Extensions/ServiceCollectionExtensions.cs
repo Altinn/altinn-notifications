@@ -43,6 +43,7 @@ public static class ServiceCollectionExtensions
         .AddHostedService<SmsStatusConsumer>()
         .AddHostedService<EmailStatusConsumer>()
         .AddHostedService<PastDueOrdersConsumer>()
+        .AddHostedService<EmailStatusRetryConsumer>()
         .AddHostedService<PastDueOrdersRetryConsumer>()
         .AddHostedService<AltinnServiceUpdateConsumer>()
         .AddHostedService<SmsPublishBackgroundService>()
