@@ -24,13 +24,22 @@ body:json {
   }
 }
 
+script:post-response {
+  if (res.status === 201 && res.body && res.body.notification && res.body.notification.shipmentId) {
+    bru.setVar("mostRecentShipmentId", res.body.notification.shipmentId);
+  }
+}
+
 docs {
   This is the FIRST request in the idempotency demo for email.
-  
+
   Expected result: 201 Created
-  
+
   The idempotencyId is fixed to "demo-email-idempotency-12345" to demonstrate
   that subsequent requests with the same ID will be handled as duplicates.
-  
+
   Run this request first, then run the "2nd Request" to see idempotency in action.
+
+  This request automatically captures the shipmentId from the response and stores it
+  in the 'mostRecentShipmentId' variable for use in subsequent requests.
 }
