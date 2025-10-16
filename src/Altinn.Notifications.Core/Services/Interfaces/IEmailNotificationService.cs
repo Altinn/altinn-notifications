@@ -25,7 +25,7 @@ public interface IEmailNotificationService : INotificationService
     /// </summary>
     /// <param name="cancellationToken">A token to observe for cancellation.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    /// <exception cref="OperationCanceledException">Thrown if the operation is canceled.</exception>"
+    /// <exception cref="OperationCanceledException">Thrown if the operation is canceled.</exception>
     Task SendNotifications(CancellationToken cancellationToken);
 
     /// <summary>

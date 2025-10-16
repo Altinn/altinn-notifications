@@ -24,7 +24,7 @@ public interface IEmailNotificationRepository : INotificationRepository
     /// The task result contains a list of email notifications to be processed, limited by the specified batch size.</returns>
     /// <exception cref="OperationCanceledException">
     /// Thrown if cancellation is requested before or during retrieval.
-    /// </exception>"
+    /// </exception>
     public Task<List<Email>> GetNewNotificationsAsync(int publishBatchSize, CancellationToken cancellationToken);
 
     /// <summary>
