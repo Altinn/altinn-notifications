@@ -257,7 +257,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                 {
                     try
                     {
-                        emailNotificationServiceMock.Verify(e => e.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()), Times.Once);
+                        emailNotificationServiceMock.Verify(e => e.UpdateSendStatus(It.Is<EmailSendOperationResult>(e => e == emailSendOperationResult)), Times.Once);
 
                         statusUpdateSucceeded = true;
 

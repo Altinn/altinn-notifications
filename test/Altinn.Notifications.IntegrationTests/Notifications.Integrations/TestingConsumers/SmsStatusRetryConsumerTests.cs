@@ -258,7 +258,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                 {
                     try
                     {
-                        smsNotificationServiceMock.Verify(e => e.UpdateSendStatus(It.IsAny<SmsSendOperationResult>()), Times.Once);
+                        smsNotificationServiceMock.Verify(e => e.UpdateSendStatus(It.Is<SmsSendOperationResult>(e=> e == smsSendOperationResult)), Times.Once);
 
                         statusUpdateSucceeded = true;
 
