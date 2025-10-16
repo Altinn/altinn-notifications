@@ -1,4 +1,4 @@
-using System.Data;
+﻿using System.Data;
 
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Persistence;
