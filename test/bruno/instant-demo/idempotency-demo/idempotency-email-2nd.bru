@@ -35,7 +35,7 @@ docs {
   
   Expected result: 200 OK (not 201 Created)
   
-  The idempotencyId is the same as the first request: "demo-email-idempotency-12345"
+  The idempotencyId is the same as the first request: "{{fixed_idempotency_id}}"
   
   Even though the email content is different in this request, it will be ignored
   due to idempotency protection. The response will contain the original notification

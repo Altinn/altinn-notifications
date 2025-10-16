@@ -35,7 +35,7 @@ docs {
   
   Expected result: 201 Created
   
-  The idempotencyId is fixed to "demo-email-idempotency-12345" to demonstrate
+  The idempotencyId uses the fixed variable "{{fixed_idempotency_id}}" to demonstrate
   that subsequent requests with the same ID will be handled as duplicates.
   
   Run this request first, then run the "2nd Request" to see idempotency in action.
