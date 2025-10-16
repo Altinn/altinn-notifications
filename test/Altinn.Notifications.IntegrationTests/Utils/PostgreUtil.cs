@@ -318,6 +318,13 @@ public static class PostgreUtil
 
     private static async Task<long?> GetDeadDeliveryReportIdByJsonField(string fieldName, string fieldValue)
     {
+        // Validate fieldName to prevent SQL injection
+        var allowedFields = new HashSet<string> { "operationId", "gatewayReference" };
+        if (!allowedFields.Contains(fieldName))
+        {
+            throw new ArgumentException($"Invalid field name: {fieldName}. Allowed fields: {string.Join(", ", allowedFields)}", nameof(fieldName));
+        }
+
         var query = $@"SELECT id FROM notifications.deaddeliveryreports WHERE deliveryreport ->> '{fieldName}' = @fieldValue";
 
         NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
