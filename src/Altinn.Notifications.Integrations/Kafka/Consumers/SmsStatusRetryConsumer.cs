@@ -45,8 +45,18 @@ public sealed class SmsStatusRetryConsumer(
             return;
         }
 
-        var smsSendOperationResult = JsonSerializer.Deserialize<SmsSendOperationResult>(retryMessage.SendOperationResult, JsonSerializerOptionsProvider.Options);
-        if (smsSendOperationResult == null)
+        SmsSendOperationResult? smsSendOperationResult;
+        try
+        {
+            smsSendOperationResult = JsonSerializer.Deserialize<SmsSendOperationResult>(retryMessage.SendOperationResult, JsonSerializerOptionsProvider.Options);
+        }
+        catch (JsonException ex)
+        {
+            logger.LogError(ex, "SmsSendOperationResult deserialization failed. SendOperationResult: {SendOperationResult}", retryMessage.SendOperationResult);
+            return;
+        }
+
+        if (smsSendOperationResult is null)
         {
             logger.LogError("SmsSendOperationResult deserialization returned null. SendOperationResult: {SendOperationResult}", retryMessage.SendOperationResult);
             return;
