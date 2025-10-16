@@ -326,34 +326,29 @@ public static class PostgreUtil
         pgcom.Parameters.AddWithValue("@operationId", operationId);
 
         await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync();
-        await reader.ReadAsync();
-
-        if (!reader.HasRows)
+        if (!await reader.ReadAsync())
         {
             return null;
         }
 
-        var id = reader.GetValue<long>(0);
-        return id;
+        return await reader.GetFieldValueAsync<long>(0);
     }
 
     public static async Task<long?> GetDeadDeliveryReportIdFromGatewayReference(string gatewayReference)
     {
-        var query = $@"SELECT id FROM notifications.deaddeliveryreports WHERE deliveryreport ->> 'gatewayReference' = '{gatewayReference}'";
+        var query = @"SELECT id FROM notifications.deaddeliveryreports WHERE deliveryreport ->> 'gatewayReference' = @gatewayReference";
 
         NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
 
         await using NpgsqlCommand pgcom = dataSource.CreateCommand(query);
+        pgcom.Parameters.AddWithValue("@gatewayReference", gatewayReference);
 
         await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync();
-        await reader.ReadAsync();
-
-        if (!reader.HasRows)
+        if (!await reader.ReadAsync())
         {
             return null;
         }
 
-        var id = reader.GetValue<long>(0);
-        return id;
+        return await reader.GetFieldValueAsync<long>(0);
     }
 }
