@@ -17,7 +17,7 @@ public class TriggerController : ControllerBase
     private readonly ILogger<TriggerController> _logger;
     private readonly IStatusFeedService _statusFeedService;
     private readonly ISmsPublishTaskQueue _smsPublishTaskQueue;
-    private readonly IEmailPublishTaskQueue _emailPublishingTaskQueue;
+    private readonly IEmailPublishTaskQueue _emailPublishTaskQueue;
     private readonly INotificationScheduleService _scheduleService;
     private readonly ISmsNotificationService _smsNotificationService;
     private readonly IOrderProcessingService _orderProcessingService;
@@ -40,7 +40,7 @@ public class TriggerController : ControllerBase
         _scheduleService = scheduleService;
         _statusFeedService = statusFeedService;
         _smsPublishTaskQueue = smsPublishTaskQueue;
-        _emailPublishingTaskQueue = emailPublishingTaskQueue;
+        _emailPublishTaskQueue = emailPublishingTaskQueue;
         _smsNotificationService = smsNotificationService;
         _orderProcessingService = orderProcessingService;
         _emailNotificationService = emailNotificationService;
@@ -69,7 +69,7 @@ public class TriggerController : ControllerBase
     [Consumes("application/json")]
     public ActionResult Trigger_SendEmailNotifications()
     {
-        _emailPublishingTaskQueue.TryEnqueue();
+        _emailPublishTaskQueue.TryEnqueue();
         return Ok();
     }
 

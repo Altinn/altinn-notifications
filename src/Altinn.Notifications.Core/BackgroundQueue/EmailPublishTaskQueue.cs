@@ -1,12 +1,14 @@
 ﻿using System.Threading.Channels;
+using Microsoft.Extensions.Logging;
 
 namespace Altinn.Notifications.Core.BackgroundQueue;
 
 /// <inheritdoc/>
-public class EmailPublishTaskQueue : IEmailPublishTaskQueue
+public class EmailPublishTaskQueue(ILogger<EmailPublishTaskQueue> logger) : IEmailPublishTaskQueue
 {
     private readonly Lock _sync = new();
     private bool _inflightOrQueued = false;
+    private readonly ILogger<EmailPublishTaskQueue> _logger = logger;
     private readonly Channel<bool> _channel = Channel.CreateUnbounded<bool>(new UnboundedChannelOptions
     {
         SingleReader = true,
@@ -31,9 +33,18 @@ public class EmailPublishTaskQueue : IEmailPublishTaskQueue
         }
         else
         {
-            _inflightOrQueued = true;
-            _channel.Writer.TryWrite(true);
-            return true;
+            var writeResult = _channel.Writer.TryWrite(true);
+            if (writeResult)
+            {
+                _inflightOrQueued = true;
+                return true;
+            }
+            else
+            {
+                _logger.LogError("Failed to write to the email publish task queue channel.");
+                _inflightOrQueued = false;
+                return false;
+            }
         }
     }
 

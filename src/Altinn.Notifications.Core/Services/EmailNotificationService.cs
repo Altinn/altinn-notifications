@@ -85,8 +85,10 @@ public class EmailNotificationService : IEmailNotificationService
 
             newEmailNotifications = await _repository.GetNewNotificationsAsync(_emailPublishBatchSize, cancellationToken);
 
-            foreach (Email email in newEmailNotifications)
+            foreach (var email in newEmailNotifications)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 bool success = await _producer.ProduceAsync(_emailQueueTopicName, email.Serialize());
                 if (!success)
                 {

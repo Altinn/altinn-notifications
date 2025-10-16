@@ -7,13 +7,13 @@ namespace Altinn.Notifications.Core.Services;
 
 /// <summary>
 /// Background service that runs a dedicated processing loop.
-/// Each loop waits for queued work, executes email publishing, then marks is as available.
+/// Each loop cycle waits for queued work, executes email publishing, then marks is as available.
 /// </summary>
 public class EmailPublishBackgroundService : BackgroundService
 {
     private readonly IEmailPublishTaskQueue _emailPublishTaskQueue;
     private readonly IEmailNotificationService _emailNotificationService;
-    private readonly ILogger _logger;
+    private readonly ILogger<EmailPublishBackgroundService> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailPublishBackgroundService"/> class.
