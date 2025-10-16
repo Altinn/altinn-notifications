@@ -142,11 +142,11 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     /// <inheritdoc/>
     public async Task<List<Email>> GetNewNotificationsAsync(int publishBatchSize, CancellationToken cancellationToken)
     {
-        List<Email> searchResult = new();
+        List<Email> searchResult = [];
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getEmailNotificationsBatchSql);
         pgcom.Parameters.AddWithValue("batchsize", NpgsqlDbType.Integer, publishBatchSize);
 
-        await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync())
+        await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken))
         {
             while (await reader.ReadAsync(cancellationToken))
             {
