@@ -77,16 +77,24 @@ public class EmailNotificationService : IEmailNotificationService
     /// <inheritdoc/>
     public async Task SendNotifications(CancellationToken cancellationToken)
     {
-        List<Email> emails = await _repository.GetNewNotificationsAsync(_emailPublishBatchSize, cancellationToken);
-
-        foreach (Email email in emails)
+        List<Email> newEmailNotifications;
+        
+        do
         {
-            bool success = await _producer.ProduceAsync(_emailQueueTopicName, email.Serialize());
-            if (!success)
+            cancellationToken.ThrowIfCancellationRequested();
+
+            newEmailNotifications = await _repository.GetNewNotificationsAsync(_emailPublishBatchSize, cancellationToken);
+
+            foreach (Email email in newEmailNotifications)
             {
-                await _repository.UpdateSendStatus(email.NotificationId, EmailNotificationResultType.New);
+                bool success = await _producer.ProduceAsync(_emailQueueTopicName, email.Serialize());
+                if (!success)
+                {
+                    await _repository.UpdateSendStatus(email.NotificationId, EmailNotificationResultType.New);
+                }
             }
         }
+        while (newEmailNotifications.Count > 0);
     }
 
     /// <inheritdoc/>
