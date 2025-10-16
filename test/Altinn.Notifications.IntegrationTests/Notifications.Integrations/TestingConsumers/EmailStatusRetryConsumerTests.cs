@@ -257,7 +257,10 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                 {
                     try
                     {
-                        emailNotificationServiceMock.Verify(e => e.UpdateSendStatus(It.Is<EmailSendOperationResult>(e => e == emailSendOperationResult)), Times.Once);
+                        emailNotificationServiceMock.Verify(
+                            e => e.UpdateSendStatus(
+                                It.Is<EmailSendOperationResult>(result => result.OperationId == emailSendOperationResult.OperationId && result.SendResult == emailSendOperationResult.SendResult)),
+                            Times.Once);
 
                         statusUpdateSucceeded = true;
 
@@ -278,11 +281,11 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
 
             logger.Verify(
                 e => e.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => true),
-                It.IsAny<Exception?>(),
-                It.Is<Func<It.IsAnyType, Exception?, string>>((_, __) => true)),
+                    LogLevel.Error,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((v, t) => true),
+                    It.IsAny<Exception?>(),
+                    It.Is<Func<It.IsAnyType, Exception?, string>>((_, __) => true)),
                 Times.Never);
 
             producer.Verify(e => e.ProduceAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);

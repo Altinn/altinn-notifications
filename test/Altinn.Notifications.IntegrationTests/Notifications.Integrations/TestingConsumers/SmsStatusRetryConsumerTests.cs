@@ -258,7 +258,10 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                 {
                     try
                     {
-                        smsNotificationServiceMock.Verify(e => e.UpdateSendStatus(It.Is<SmsSendOperationResult>(e => e == smsSendOperationResult)), Times.Once);
+                        smsNotificationServiceMock.Verify(
+                            e => e.UpdateSendStatus(
+                                It.Is<SmsSendOperationResult>(result => result.GatewayReference == smsSendOperationResult.GatewayReference && result.SendResult == smsSendOperationResult.SendResult)),
+                            Times.Once);
 
                         statusUpdateSucceeded = true;
 
@@ -279,11 +282,11 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
 
             logger.Verify(
                 e => e.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => true),
-                It.IsAny<Exception?>(),
-                It.Is<Func<It.IsAnyType, Exception?, string>>((_, __) => true)),
+                    LogLevel.Error,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((v, t) => true),
+                    It.IsAny<Exception?>(),
+                    It.Is<Func<It.IsAnyType, Exception?, string>>((_, __) => true)),
                 Times.Never);
 
             producer.Verify(e => e.ProduceAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
