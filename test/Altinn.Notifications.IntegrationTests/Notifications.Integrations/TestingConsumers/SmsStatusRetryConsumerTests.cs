@@ -258,7 +258,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                 {
                     try
                     {
-                        smsNotificationServiceMock.Verify(e => e.UpdateSendStatus(It.Is<SmsSendOperationResult>(e=> e == smsSendOperationResult)), Times.Once);
+                        smsNotificationServiceMock.Verify(e => e.UpdateSendStatus(It.Is<SmsSendOperationResult>(e => e == smsSendOperationResult)), Times.Once);
 
                         statusUpdateSucceeded = true;
 
@@ -432,6 +432,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
         public async Task ProcessMessage_MalformedJson_LogsErrorAndDoesNotRetry()
         {
             // Arrange
+            var logVerified = false;
             var logger = new Mock<ILogger<SmsStatusRetryConsumer>>();
             var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Loose);
             var kafkaSettings = BuildKafkaSettings(_statusUpdatedRetryTopicName);
@@ -457,7 +458,6 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
             await KafkaUtil.PublishMessageOnTopic(_statusUpdatedRetryTopicName, retryMessage.Serialize());
             await smsStatusRetryConsumer.StartAsync(CancellationToken.None);
 
-            var logVerified = false;
             await IntegrationTestUtil.EventuallyAsync(
                 () =>
                 {

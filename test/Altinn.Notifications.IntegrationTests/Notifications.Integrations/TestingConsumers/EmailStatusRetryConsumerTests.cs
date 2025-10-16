@@ -431,6 +431,8 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
         public async Task ProcessMessage_MalformedJson_LogsErrorAndDoesNotRetry()
         {
             // Arrange
+            var logVerified = false;
+            var logVerified = false;
             var logger = new Mock<ILogger<EmailStatusRetryConsumer>>();
             var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Loose);
             var kafkaSettings = BuildKafkaSettings(_statusUpdatedRetryTopicName);
@@ -456,7 +458,6 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
             await KafkaUtil.PublishMessageOnTopic(_statusUpdatedRetryTopicName, retryMessage.Serialize());
             await emailStatusRetryConsumer.StartAsync(CancellationToken.None);
 
-            var logVerified = false;
             await IntegrationTestUtil.EventuallyAsync(
                 () =>
                 {
