@@ -12,7 +12,7 @@ post {
 
 body:json {
   {
-    "idempotencyId": "demo-email-idempotency-12345",
+    "idempotencyId": "{{fixed_idempotency_id}}",
     "sendersReference": "my-business-ref-email-001",
     "recipientEmail": {
       "emailAddress": "{{process.env.TESTDATA_MY_EMAIL}}",
@@ -32,14 +32,14 @@ script:post-response {
 
 docs {
   This is the FIRST request in the idempotency demo for email.
-
+  
   Expected result: 201 Created
-
+  
   The idempotencyId is fixed to "demo-email-idempotency-12345" to demonstrate
   that subsequent requests with the same ID will be handled as duplicates.
-
+  
   Run this request first, then run the "2nd Request" to see idempotency in action.
-
+  
   This request automatically captures the shipmentId from the response and stores it
   in the 'mostRecentShipmentId' variable for use in subsequent requests.
 }
