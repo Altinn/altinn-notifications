@@ -422,6 +422,71 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
             deadDeliveryReportService.Verify(d => d.InsertAsync(It.IsAny<DeadDeliveryReport>(), It.IsAny<CancellationToken>()), Times.Never);
         }
 
+        [Fact]
+        public async Task ProcessMessage_MalformedJson_LogsErrorAndDoesNotRetry()
+        {
+            // Arrange
+            var logger = new Mock<ILogger<EmailStatusRetryConsumer>>();
+            var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Loose);
+            var kafkaSettings = BuildKafkaSettings(_statusUpdatedRetryTopicName);
+            var emailNotificationService = new Mock<IEmailNotificationService>();
+            var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
+
+            var retryMessage = new UpdateStatusRetryMessage
+            {
+                Attempts = 1,
+                FirstSeen = DateTime.UtcNow.AddSeconds(-5),
+                LastAttempt = DateTime.UtcNow.AddSeconds(-2),
+                SendOperationResult = "{\"invalid\": json syntax}"
+            };
+
+            using EmailStatusRetryConsumer emailStatusRetryConsumer = new(
+                kafkaProducer.Object,
+                logger.Object,
+                kafkaSettings,
+                emailNotificationService.Object,
+                deadDeliveryReportService.Object);
+
+            // Act
+            await KafkaUtil.PublishMessageOnTopic(_statusUpdatedRetryTopicName, retryMessage.Serialize());
+            await emailStatusRetryConsumer.StartAsync(CancellationToken.None);
+
+            var logVerified = false;
+            await IntegrationTestUtil.EventuallyAsync(
+                () =>
+                {
+                    try
+                    {
+                        logger.Verify(
+                            e => e.Log(
+                                LogLevel.Error,
+                                It.IsAny<EventId>(),
+                                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("EmailSendOperationResult deserialization failed")),
+                                It.IsAny<JsonException>(),
+                                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                            Times.Once);
+
+                        logVerified = true;
+
+                        return logVerified;
+                    }
+                    catch
+                    {
+                        return false;
+                    }
+                },
+                TimeSpan.FromSeconds(10),
+                TimeSpan.FromMilliseconds(100));
+
+            await emailStatusRetryConsumer.StopAsync(CancellationToken.None);
+
+            // Assert
+            Assert.True(logVerified);
+            emailNotificationService.Verify(s => s.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()), Times.Never);
+            kafkaProducer.Verify(p => p.ProduceAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            deadDeliveryReportService.Verify(d => d.InsertAsync(It.IsAny<DeadDeliveryReport>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
+
         public async Task DisposeAsync()
         {
             await Dispose(true);
