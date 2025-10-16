@@ -90,6 +90,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
         public async Task ProcessMessage_InvalidJson_IgnoresMessage_NoRetry_NoPersistence()
         {
             // Arrange
+            var errorIsLogged = false;
             var smsService = new Mock<ISmsNotificationService>();
             var logger = new Mock<ILogger<SmsStatusRetryConsumer>>();
             var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Loose);
@@ -122,7 +123,10 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                         It.IsAny<Exception?>(),
                         It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
                         Times.Once);
-                    return true;
+
+                    errorIsLogged = true;
+
+                    return errorIsLogged;
                 }
                 catch
                 {
@@ -135,8 +139,9 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
             await smsStatusRetryConsumer.StopAsync(CancellationToken.None);
 
             // Assert
-            kafkaProducer.Verify(e => e.ProduceAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            Assert.True(errorIsLogged);
             smsService.Verify(e => e.UpdateSendStatus(It.IsAny<SmsSendOperationResult>()), Times.Never);
+            kafkaProducer.Verify(e => e.ProduceAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
             deadDeliveryReportService.Verify(e => e.InsertAsync(It.IsAny<DeadDeliveryReport>(), It.IsAny<CancellationToken>()), Times.Never);
         }
 
@@ -178,13 +183,13 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                     try
                     {
                         logger.Verify(
-                        e => e.Log(
-                            LogLevel.Error,
-                            It.IsAny<EventId>(),
-                            It.IsAny<It.IsAnyType>(),
-                            It.IsAny<Exception?>(),
-                            It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-                        Times.Once);
+                            e => e.Log(
+                                LogLevel.Error,
+                                It.IsAny<EventId>(),
+                                It.IsAny<It.IsAnyType>(),
+                                It.IsAny<Exception?>(),
+                                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                            Times.Once);
 
                         errorIsLogged = true;
 

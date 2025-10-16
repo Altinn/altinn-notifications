@@ -89,6 +89,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
         public async Task ProcessMessage_InvalidJson_IgnoresMessage_NoRetry_NoPersistence()
         {
             // Arrange
+            var errorIsLogged = false;
             var emailService = new Mock<IEmailNotificationService>();
             var logger = new Mock<ILogger<EmailStatusRetryConsumer>>();
             var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Loose);
@@ -115,13 +116,16 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                 {
                     logger.Verify(
                         e => e.Log(
-                        LogLevel.Error,
-                        It.IsAny<EventId>(),
-                        It.IsAny<It.IsAnyType>(),
-                        It.IsAny<Exception?>(),
-                        It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                            LogLevel.Error,
+                            It.IsAny<EventId>(),
+                            It.IsAny<It.IsAnyType>(),
+                            It.IsAny<Exception?>(),
+                            It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
                         Times.Once);
-                    return true;
+
+                    errorIsLogged = true;
+
+                    return errorIsLogged;
                 }
                 catch
                 {
@@ -134,6 +138,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
             await emailStatusRetryConsumer.StopAsync(CancellationToken.None);
 
             // Assert
+            Assert.True(errorIsLogged);
             kafkaProducer.Verify(e => e.ProduceAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
             emailService.Verify(e => e.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()), Times.Never);
             deadDeliveryReportService.Verify(e => e.InsertAsync(It.IsAny<DeadDeliveryReport>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -177,13 +182,13 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                     try
                     {
                         logger.Verify(
-                        e => e.Log(
-                            LogLevel.Error,
-                            It.IsAny<EventId>(),
-                            It.IsAny<It.IsAnyType>(),
-                            It.IsAny<Exception?>(),
-                            It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-                        Times.Once);
+                            e => e.Log(
+                                LogLevel.Error,
+                                It.IsAny<EventId>(),
+                                It.IsAny<It.IsAnyType>(),
+                                It.IsAny<Exception?>(),
+                                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                            Times.Once);
 
                         errorIsLogged = true;
 
