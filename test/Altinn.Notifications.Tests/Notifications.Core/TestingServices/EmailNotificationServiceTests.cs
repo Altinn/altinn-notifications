@@ -33,8 +33,12 @@ public class EmailNotificationServiceTests
     {
         // Arrange 
         var repoMock = new Mock<IEmailNotificationRepository>();
-        repoMock.Setup(r => r.GetNewNotificationsAsync(_publishBatchSize, CancellationToken.None))
-            .ReturnsAsync(new List<Email>() { _email, _email, _email });
+        var firstCallEmails = new List<Email>() { _email, _email, _email };
+        var secondCallEmails = new List<Email>();
+
+        repoMock.SetupSequence(r => r.GetNewNotificationsAsync(_publishBatchSize, CancellationToken.None))
+            .ReturnsAsync(firstCallEmails)
+            .ReturnsAsync(secondCallEmails);
 
         var producerMock = new Mock<IKafkaProducer>();
         producerMock.Setup(p => p.ProduceAsync(It.Is<string>(s => s.Equals(_emailQueueTopicName)), It.IsAny<string>()))
@@ -55,8 +59,12 @@ public class EmailNotificationServiceTests
     {
         // Arrange 
         var repoMock = new Mock<IEmailNotificationRepository>();
-        repoMock.Setup(r => r.GetNewNotificationsAsync(_publishBatchSize, CancellationToken.None))
-            .ReturnsAsync(new List<Email>() { _email });
+        var firstCallEmails = new List<Email>() { _email };
+        var secondCallEmails = new List<Email>();
+
+        repoMock.SetupSequence(r => r.GetNewNotificationsAsync(_publishBatchSize, CancellationToken.None))
+            .ReturnsAsync(firstCallEmails)
+            .ReturnsAsync(secondCallEmails);
 
         repoMock
             .Setup(r => r.UpdateSendStatus(It.IsAny<Guid>(), It.Is<EmailNotificationResultType>(t => t == EmailNotificationResultType.New), It.IsAny<string?>()));
