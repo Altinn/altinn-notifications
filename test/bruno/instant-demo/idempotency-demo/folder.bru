@@ -1,0 +1,24 @@
+meta {
+  name: idempotency-demo
+}
+
+vars:pre-request {
+  fixed_idempotency_id: fixed-id-12345
+}
+
+docs {
+  Idempotency Demo
+  
+  This folder demonstrates how idempotency works with instant notifications.
+  
+  The idempotencyId ensures that if the same request is sent multiple times,
+  only the first one will be processed, and subsequent requests will return
+  the original response with a 200 status code instead of 201.
+  
+  Usage:
+  1. Run the "1st" request first - should return 201 Created
+  2. Run the "2nd" request (same idempotencyId) - should return 200 OK with same response
+  
+  Note: The idempotencyId is fixed in these requests for demonstration purposes,
+  unlike the main requests which use random UUIDs.
+}
