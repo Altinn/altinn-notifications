@@ -45,8 +45,18 @@ public sealed class EmailStatusRetryConsumer(
             return;
         }
 
-        var emailSendOperationResult = JsonSerializer.Deserialize<EmailSendOperationResult>(retryMessage.SendOperationResult, JsonSerializerOptionsProvider.Options);
-        if (emailSendOperationResult == null)
+        EmailSendOperationResult? emailSendOperationResult;
+        try
+        {
+            emailSendOperationResult = JsonSerializer.Deserialize<EmailSendOperationResult>(retryMessage.SendOperationResult, JsonSerializerOptionsProvider.Options);
+        }
+        catch (JsonException ex)
+        {
+            logger.LogError(ex, "EmailSendOperationResult deserialization failed. SendOperationResult: {SendOperationResult}", retryMessage.SendOperationResult);
+            return;
+        }
+
+        if (emailSendOperationResult is null)
         {
             logger.LogError("EmailSendOperationResult deserialization returned null. SendOperationResult: {SendOperationResult}", retryMessage.SendOperationResult);
             return;

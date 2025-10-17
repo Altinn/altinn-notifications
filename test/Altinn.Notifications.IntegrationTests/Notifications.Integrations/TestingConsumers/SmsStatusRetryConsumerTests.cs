@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 
 using Altinn.Notifications.Core;
 using Altinn.Notifications.Core.Enums;
@@ -22,7 +22,7 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.TestingConsumers
 {
-    public class EmailStatusRetryConsumerTests : IAsyncLifetime
+    public class SmsStatusRetryConsumerTests : IAsyncLifetime
     {
         private readonly List<long> _deadDeliveryReportIds = [];
         private readonly string _statusUpdatedRetryTopicName = Guid.NewGuid().ToString();
@@ -35,19 +35,20 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
 
             Dictionary<string, string> kafkaSettings = new()
             {
-                { "KafkaSettings__EmailStatusUpdatedRetryTopicName", _statusUpdatedRetryTopicName },
+                { "KafkaSettings__SmsStatusUpdatedRetryTopicName", _statusUpdatedRetryTopicName },
                 { "KafkaSettings__Admin__TopicList", $"[\"{_statusUpdatedRetryTopicName}\"]" }
             };
 
-            using EmailStatusRetryConsumer emailStatusRetryConsumer = ServiceUtil
+            using SmsStatusRetryConsumer smsStatusRetryConsumer = ServiceUtil
                 .GetServices([typeof(IHostedService)], kafkaSettings)
-                .OfType<EmailStatusRetryConsumer>()
+                .OfType<SmsStatusRetryConsumer>()
                 .First();
 
-            var emailSendOperationResult = new EmailSendOperationResult
+            var smsSendOperationResult = new SmsSendOperationResult
             {
-                OperationId = Guid.NewGuid().ToString(),
-                SendResult = EmailNotificationResultType.Delivered
+                NotificationId = Guid.NewGuid(),
+                GatewayReference = Guid.NewGuid().ToString(),
+                SendResult = SmsNotificationResultType.Delivered
             };
 
             var retryMessage = new UpdateStatusRetryMessage
@@ -55,24 +56,24 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                 Attempts = 15,
                 FirstSeen = DateTime.UtcNow.AddSeconds(-600),
                 LastAttempt = DateTime.UtcNow.AddSeconds(-15),
-                SendOperationResult = emailSendOperationResult.Serialize()
+                SendOperationResult = smsSendOperationResult.Serialize()
             };
 
             // Act
             await KafkaUtil.PublishMessageOnTopic(_statusUpdatedRetryTopicName, retryMessage.Serialize());
-            await emailStatusRetryConsumer.StartAsync(CancellationToken.None);
+            await smsStatusRetryConsumer.StartAsync(CancellationToken.None);
 
             await IntegrationTestUtil.EventuallyAsync(
                 async () =>
                 {
-                    deadDeliveryReportIdentifier = await PostgreUtil.GetDeadDeliveryReportIdFromOperationId(emailSendOperationResult.OperationId);
+                    deadDeliveryReportIdentifier = await PostgreUtil.GetDeadDeliveryReportIdFromGatewayReference(smsSendOperationResult.GatewayReference);
 
                     return deadDeliveryReportIdentifier != null;
                 },
                 TimeSpan.FromSeconds(10),
                 TimeSpan.FromMilliseconds(100));
 
-            await emailStatusRetryConsumer.StopAsync(CancellationToken.None);
+            await smsStatusRetryConsumer.StopAsync(CancellationToken.None);
 
             // Assert
             Assert.NotNull(deadDeliveryReportIdentifier);
@@ -90,24 +91,24 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
         {
             // Arrange
             var errorIsLogged = false;
-            var emailService = new Mock<IEmailNotificationService>();
-            var logger = new Mock<ILogger<EmailStatusRetryConsumer>>();
+            var smsService = new Mock<ISmsNotificationService>();
+            var logger = new Mock<ILogger<SmsStatusRetryConsumer>>();
             var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Loose);
             var kafkaSettings = BuildKafkaSettings(_statusUpdatedRetryTopicName);
             var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
 
-            using EmailStatusRetryConsumer emailStatusRetryConsumer = new(
+            using SmsStatusRetryConsumer smsStatusRetryConsumer = new(
                 kafkaProducer.Object,
                 logger.Object,
                 kafkaSettings,
-                emailService.Object,
+                smsService.Object,
                 deadDeliveryReportService.Object);
 
             string invalidPayload = "not-a-json";
 
             // Act
             await KafkaUtil.PublishMessageOnTopic(_statusUpdatedRetryTopicName, invalidPayload);
-            await emailStatusRetryConsumer.StartAsync(CancellationToken.None);
+            await smsStatusRetryConsumer.StartAsync(CancellationToken.None);
 
             await IntegrationTestUtil.EventuallyAsync(
             () =>
@@ -116,11 +117,11 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                 {
                     logger.Verify(
                         e => e.Log(
-                            LogLevel.Error,
-                            It.IsAny<EventId>(),
-                            It.IsAny<It.IsAnyType>(),
-                            It.IsAny<Exception?>(),
-                            It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                        LogLevel.Error,
+                        It.IsAny<EventId>(),
+                        It.IsAny<It.IsAnyType>(),
+                        It.IsAny<Exception?>(),
+                        It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
                         Times.Once);
 
                     errorIsLogged = true;
@@ -135,12 +136,12 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
             TimeSpan.FromSeconds(10),
             TimeSpan.FromMilliseconds(100));
 
-            await emailStatusRetryConsumer.StopAsync(CancellationToken.None);
+            await smsStatusRetryConsumer.StopAsync(CancellationToken.None);
 
             // Assert
             Assert.True(errorIsLogged);
+            smsService.Verify(e => e.UpdateSendStatus(It.IsAny<SmsSendOperationResult>()), Times.Never);
             kafkaProducer.Verify(e => e.ProduceAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
-            emailService.Verify(e => e.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()), Times.Never);
             deadDeliveryReportService.Verify(e => e.InsertAsync(It.IsAny<DeadDeliveryReport>(), It.IsAny<CancellationToken>()), Times.Never);
         }
 
@@ -149,17 +150,17 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
         {
             // Arrange
             var errorIsLogged = false;
-            var logger = new Mock<ILogger<EmailStatusRetryConsumer>>();
+            var logger = new Mock<ILogger<SmsStatusRetryConsumer>>();
             var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Loose);
             var kafkaSettings = BuildKafkaSettings(_statusUpdatedRetryTopicName);
-            var emailNotificationService = new Mock<IEmailNotificationService>();
+            var smsNotificationService = new Mock<ISmsNotificationService>();
             var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
 
-            using EmailStatusRetryConsumer emailStatusRetryConsumer = new(
+            using SmsStatusRetryConsumer smsStatusRetryConsumer = new(
                 kafkaProducer.Object,
                 logger.Object,
                 kafkaSettings,
-                emailNotificationService.Object,
+                smsNotificationService.Object,
                 deadDeliveryReportService.Object);
 
             var updateStatusRetryMessage = new UpdateStatusRetryMessage
@@ -174,7 +175,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
 
             // Act
             await KafkaUtil.PublishMessageOnTopic(_statusUpdatedRetryTopicName, updateStatusRetryMessageSerialized);
-            await emailStatusRetryConsumer.StartAsync(CancellationToken.None);
+            await smsStatusRetryConsumer.StartAsync(CancellationToken.None);
 
             await IntegrationTestUtil.EventuallyAsync(
                 () =>
@@ -202,12 +203,12 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                 TimeSpan.FromSeconds(15),
                 TimeSpan.FromMilliseconds(100));
 
-            await emailStatusRetryConsumer.StopAsync(CancellationToken.None);
+            await smsStatusRetryConsumer.StopAsync(CancellationToken.None);
 
             // Assert
             Assert.True(errorIsLogged);
             kafkaProducer.Verify(e => e.ProduceAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
-            emailNotificationService.Verify(e => e.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()), Times.Never);
+            smsNotificationService.Verify(e => e.UpdateSendStatus(It.IsAny<SmsSendOperationResult>()), Times.Never);
             deadDeliveryReportService.Verify(e => e.InsertAsync(It.IsAny<DeadDeliveryReport>(), It.IsAny<CancellationToken>()), Times.Never);
         }
 
@@ -215,28 +216,28 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
         public async Task ProcessMessage_AttemptsToUpdateStatus_WhenThresholdTimeHasNotElapsed()
         {
             // Arrange
-            var logger = new Mock<ILogger<EmailStatusRetryConsumer>>();
+            var logger = new Mock<ILogger<SmsStatusRetryConsumer>>();
             var producer = new Mock<IKafkaProducer>(MockBehavior.Loose);
             var kafkaSettings = BuildKafkaSettings(_statusUpdatedRetryTopicName);
-            var emailNotificationServiceMock = new Mock<IEmailNotificationService>();
+            var smsNotificationServiceMock = new Mock<ISmsNotificationService>();
 
-            var emailSendOperationResult = new EmailSendOperationResult
+            var smsSendOperationResult = new SmsSendOperationResult
             {
                 NotificationId = Guid.NewGuid(),
-                OperationId = Guid.NewGuid().ToString(),
-                SendResult = EmailNotificationResultType.Delivered
+                GatewayReference = Guid.NewGuid().ToString(),
+                SendResult = SmsNotificationResultType.Delivered
             };
 
-            emailNotificationServiceMock
-                .Setup(e => e.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()))
+            smsNotificationServiceMock
+                .Setup(e => e.UpdateSendStatus(It.IsAny<SmsSendOperationResult>()))
                 .Returns(Task.CompletedTask);
 
             var deadDeliveryReportServiceMock = new Mock<IDeadDeliveryReportService>();
-            using EmailStatusRetryConsumer emailStatusRetryConsumer = new(
+            using SmsStatusRetryConsumer smsStatusRetryConsumer = new(
                 producer.Object,
                 logger.Object,
                 kafkaSettings,
-                emailNotificationServiceMock.Object,
+                smsNotificationServiceMock.Object,
                 deadDeliveryReportServiceMock.Object);
 
             var retryMessage = new UpdateStatusRetryMessage
@@ -244,12 +245,12 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                 Attempts = 1,
                 LastAttempt = DateTime.UtcNow,
                 FirstSeen = DateTime.UtcNow.AddSeconds(-30),
-                SendOperationResult = emailSendOperationResult.Serialize()
+                SendOperationResult = smsSendOperationResult.Serialize()
             };
 
             // Act
             await KafkaUtil.PublishMessageOnTopic(_statusUpdatedRetryTopicName, retryMessage.Serialize());
-            await emailStatusRetryConsumer.StartAsync(CancellationToken.None);
+            await smsStatusRetryConsumer.StartAsync(CancellationToken.None);
 
             var statusUpdateSucceeded = false;
             await IntegrationTestUtil.EventuallyAsync(
@@ -257,9 +258,9 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                 {
                     try
                     {
-                        emailNotificationServiceMock.Verify(
+                        smsNotificationServiceMock.Verify(
                             e => e.UpdateSendStatus(
-                                It.Is<EmailSendOperationResult>(result => result.OperationId == emailSendOperationResult.OperationId && result.SendResult == emailSendOperationResult.SendResult)),
+                                It.Is<SmsSendOperationResult>(result => result.GatewayReference == smsSendOperationResult.GatewayReference && result.SendResult == smsSendOperationResult.SendResult)),
                             Times.Once);
 
                         statusUpdateSucceeded = true;
@@ -274,7 +275,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                 TimeSpan.FromSeconds(10),
                 TimeSpan.FromMilliseconds(1000));
 
-            await emailStatusRetryConsumer.StopAsync(CancellationToken.None);
+            await smsStatusRetryConsumer.StopAsync(CancellationToken.None);
 
             // Assert
             Assert.True(statusUpdateSucceeded);
@@ -296,18 +297,18 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
         public async Task ProcessMessage_IncrementsAttemptsAndPublishesRetry_WhenUpdateFailsBeforeThreshold()
         {
             // Arrange
-            var logger = new Mock<ILogger<EmailStatusRetryConsumer>>();
+            var logger = new Mock<ILogger<SmsStatusRetryConsumer>>();
             var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Loose);
             var kafkaSettings = BuildKafkaSettings(_statusUpdatedRetryTopicName);
-            var emailNotificationService = new Mock<IEmailNotificationService>();
+            var smsNotificationService = new Mock<ISmsNotificationService>();
             UpdateStatusRetryMessage? republishedUpdateStatusRetryMessage = null;
             var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
 
-            var emailSendOperationResult = new EmailSendOperationResult
+            var smsSendOperationResult = new SmsSendOperationResult
             {
                 NotificationId = Guid.NewGuid(),
-                OperationId = Guid.NewGuid().ToString(),
-                SendResult = EmailNotificationResultType.Delivered
+                GatewayReference = Guid.NewGuid().ToString(),
+                SendResult = SmsNotificationResultType.Delivered
             };
 
             var originalUpdateStatusRetryMessage = new UpdateStatusRetryMessage
@@ -315,31 +316,31 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                 Attempts = 3,
                 FirstSeen = DateTime.UtcNow.AddSeconds(-25),
                 LastAttempt = DateTime.UtcNow.AddSeconds(-5),
-                SendOperationResult = emailSendOperationResult.Serialize()
+                SendOperationResult = smsSendOperationResult.Serialize()
             };
 
-            emailNotificationService
-                .Setup(s => s.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()))
+            smsNotificationService
+                .Setup(s => s.UpdateSendStatus(It.IsAny<SmsSendOperationResult>()))
                 .ThrowsAsync(new Exception());
 
             kafkaProducer
-                .Setup(e => e.ProduceAsync(kafkaSettings.Value.EmailStatusUpdatedRetryTopicName, It.IsAny<string>()))
+                .Setup(e => e.ProduceAsync(kafkaSettings.Value.SmsStatusUpdatedRetryTopicName, It.IsAny<string>()))
                 .Callback<string, string>((statusUpdatedRetryTopicName, payload) =>
                 {
                     republishedUpdateStatusRetryMessage = JsonSerializer.Deserialize<UpdateStatusRetryMessage>(payload, JsonSerializerOptionsProvider.Options);
                 })
                 .ReturnsAsync(true);
 
-            using EmailStatusRetryConsumer emailStatusRetryConsumer = new(
+            using SmsStatusRetryConsumer smsStatusRetryConsumer = new(
                 kafkaProducer.Object,
                 logger.Object,
                 kafkaSettings,
-                emailNotificationService.Object,
+                smsNotificationService.Object,
                 deadDeliveryReportService.Object);
 
             // Act
             await KafkaUtil.PublishMessageOnTopic(_statusUpdatedRetryTopicName, originalUpdateStatusRetryMessage.Serialize());
-            await emailStatusRetryConsumer.StartAsync(CancellationToken.None);
+            await smsStatusRetryConsumer.StartAsync(CancellationToken.None);
 
             await IntegrationTestUtil.EventuallyAsync(
                 () =>
@@ -349,7 +350,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                 TimeSpan.FromSeconds(8),
                 TimeSpan.FromMilliseconds(150));
 
-            await emailStatusRetryConsumer.StopAsync(CancellationToken.None);
+            await smsStatusRetryConsumer.StopAsync(CancellationToken.None);
 
             // Assert
             Assert.NotNull(republishedUpdateStatusRetryMessage);
@@ -358,21 +359,21 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
             Assert.True(republishedUpdateStatusRetryMessage.LastAttempt > originalUpdateStatusRetryMessage.LastAttempt);
             Assert.Equal(originalUpdateStatusRetryMessage.SendOperationResult, republishedUpdateStatusRetryMessage.SendOperationResult);
 
-            emailNotificationService.Verify(e => e.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()), Times.Once);
+            smsNotificationService.Verify(e => e.UpdateSendStatus(It.IsAny<SmsSendOperationResult>()), Times.Once);
 
-            kafkaProducer.Verify(e => e.ProduceAsync(kafkaSettings.Value.EmailStatusUpdatedRetryTopicName, It.IsAny<string>()), Times.Once);
+            kafkaProducer.Verify(e => e.ProduceAsync(kafkaSettings.Value.SmsStatusUpdatedRetryTopicName, It.IsAny<string>()), Times.Once);
 
             deadDeliveryReportService.Verify(e => e.InsertAsync(It.IsAny<DeadDeliveryReport>(), It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]
-        public async Task ProcessMessage_NullDeserializedEmailSendOperationResult_LogsErrorAndIgnoresMessage()
+        public async Task ProcessMessage_NullDeserializedSmsSendOperationResult_LogsErrorAndIgnoresMessage()
         {
             // Arrange
-            var logger = new Mock<ILogger<EmailStatusRetryConsumer>>();
+            var logger = new Mock<ILogger<SmsStatusRetryConsumer>>();
             var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Loose);
             var kafkaSettings = BuildKafkaSettings(_statusUpdatedRetryTopicName);
-            var emailNotificationService = new Mock<IEmailNotificationService>();
+            var smsNotificationService = new Mock<ISmsNotificationService>();
             var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
 
             var retryMessage = new UpdateStatusRetryMessage
@@ -383,16 +384,16 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                 SendOperationResult = "null"
             };
 
-            using EmailStatusRetryConsumer emailStatusRetryConsumer = new(
+            using SmsStatusRetryConsumer smsStatusRetryConsumer = new(
                 kafkaProducer.Object,
                 logger.Object,
                 kafkaSettings,
-                emailNotificationService.Object,
+                smsNotificationService.Object,
                 deadDeliveryReportService.Object);
 
             // Act
             await KafkaUtil.PublishMessageOnTopic(_statusUpdatedRetryTopicName, retryMessage.Serialize());
-            await emailStatusRetryConsumer.StartAsync(CancellationToken.None);
+            await smsStatusRetryConsumer.StartAsync(CancellationToken.None);
 
             var logVerified = false;
             await IntegrationTestUtil.EventuallyAsync(
@@ -404,7 +405,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                             e => e.Log(
                                 LogLevel.Error,
                                 It.IsAny<EventId>(),
-                                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("EmailSendOperationResult deserialization returned null")),
+                                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("SmsSendOperationResult deserialization returned null")),
                                 It.IsAny<Exception?>(),
                                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
                             Times.Once);
@@ -421,11 +422,11 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                 TimeSpan.FromSeconds(10),
                 TimeSpan.FromMilliseconds(100));
 
-            await emailStatusRetryConsumer.StopAsync(CancellationToken.None);
+            await smsStatusRetryConsumer.StopAsync(CancellationToken.None);
 
             // Assert
             Assert.True(logVerified);
-            emailNotificationService.Verify(s => s.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()), Times.Never);
+            smsNotificationService.Verify(s => s.UpdateSendStatus(It.IsAny<SmsSendOperationResult>()), Times.Never);
             kafkaProducer.Verify(p => p.ProduceAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
             deadDeliveryReportService.Verify(d => d.InsertAsync(It.IsAny<DeadDeliveryReport>(), It.IsAny<CancellationToken>()), Times.Never);
         }
@@ -435,10 +436,10 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
         {
             // Arrange
             var logVerified = false;
-            var logger = new Mock<ILogger<EmailStatusRetryConsumer>>();
+            var logger = new Mock<ILogger<SmsStatusRetryConsumer>>();
             var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Loose);
             var kafkaSettings = BuildKafkaSettings(_statusUpdatedRetryTopicName);
-            var emailNotificationService = new Mock<IEmailNotificationService>();
+            var smsNotificationService = new Mock<ISmsNotificationService>();
             var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
 
             var retryMessage = new UpdateStatusRetryMessage
@@ -449,16 +450,16 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                 SendOperationResult = "{\"invalid\": json syntax}"
             };
 
-            using EmailStatusRetryConsumer emailStatusRetryConsumer = new(
+            using SmsStatusRetryConsumer smsStatusRetryConsumer = new(
                 kafkaProducer.Object,
                 logger.Object,
                 kafkaSettings,
-                emailNotificationService.Object,
+                smsNotificationService.Object,
                 deadDeliveryReportService.Object);
 
             // Act
             await KafkaUtil.PublishMessageOnTopic(_statusUpdatedRetryTopicName, retryMessage.Serialize());
-            await emailStatusRetryConsumer.StartAsync(CancellationToken.None);
+            await smsStatusRetryConsumer.StartAsync(CancellationToken.None);
 
             await IntegrationTestUtil.EventuallyAsync(
                 () =>
@@ -469,7 +470,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                             e => e.Log(
                                 LogLevel.Error,
                                 It.IsAny<EventId>(),
-                                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("EmailSendOperationResult deserialization failed")),
+                                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("SmsSendOperationResult deserialization failed")),
                                 It.IsAny<JsonException>(),
                                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
                             Times.Once);
@@ -486,11 +487,11 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                 TimeSpan.FromSeconds(10),
                 TimeSpan.FromMilliseconds(100));
 
-            await emailStatusRetryConsumer.StopAsync(CancellationToken.None);
+            await smsStatusRetryConsumer.StopAsync(CancellationToken.None);
 
             // Assert
             Assert.True(logVerified);
-            emailNotificationService.Verify(s => s.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()), Times.Never);
+            smsNotificationService.Verify(s => s.UpdateSendStatus(It.IsAny<SmsSendOperationResult>()), Times.Never);
             kafkaProducer.Verify(p => p.ProduceAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
             deadDeliveryReportService.Verify(d => d.InsertAsync(It.IsAny<DeadDeliveryReport>(), It.IsAny<CancellationToken>()), Times.Never);
         }
@@ -534,7 +535,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
                 BrokerAddress = "localhost:9092",
                 Producer = new ProducerSettings(),
                 StatusUpdatedRetryThresholdSeconds = 50,
-                EmailStatusUpdatedRetryTopicName = statusUpdatedRetryTopicName,
+                SmsStatusUpdatedRetryTopicName = statusUpdatedRetryTopicName,
                 Consumer = new ConsumerSettings { GroupId = $"altinn-notifications-{Guid.NewGuid():N}" }
             });
         }
