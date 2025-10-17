@@ -7,7 +7,6 @@ on:
       - 'src/**'
       - '.github/workflows/**'
   pull_request:
-    # The branches below must be a subset of the branches above
     branches: [main]
     paths:
       - 'src/**'
@@ -54,4 +53,4 @@ jobs:
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@755f44910c12a3d7ca0d8c6e42c048b3362f7cec # v3.30.8
         with:
-          category: "/language:${{matrix.language}}"
+          category: '/language:${{matrix.language}}'
