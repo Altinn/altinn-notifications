@@ -11,7 +11,6 @@ script:pre-request {
   bru.setVar("random_idempotency_id", uuidv4());
   bru.setVar("dialog_guid", uuidv4());
   bru.setVar("senders_reference_guid", uuidv4());
-  bru.setVar("fixed_idempotency_id", "demo-email-idempotency-123");
 
   //Don't put script to auto-refresh the auth token here, it will create a recursion!
 }
