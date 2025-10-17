@@ -19,7 +19,8 @@ body:json {
       "emailSettings": {
         "subject": "(DEMO) Instant Email Demo Test",
         "body": "(DEMO) Instant email test (Env.: {{Environment}} - Ref: {{random_idempotency_id}})",
-        "contentType": "Plain"
+        "contentType": "Plain",
+        "senderEmailAddress": "noreply@altinn.no"
       }
     }
   }
@@ -34,15 +35,15 @@ script:post-response {
 docs {
   Creates and sends an instant email notification to a single recipient for demo purposes.
   The request is processed immediately and the email is sent without delay.
-
+  
   Required environment variables:
   - TESTDATA_MY_EMAIL: Your email address for testing
-
+  
   The idempotencyId ensures the same notification is not sent multiple times
   if the request is repeated.
-
+  
   Available contentType values: "Plain" or "Html"
-
+  
   This request automatically captures the shipmentId from the response and stores it
   in the 'mostRecentShipmentId' variable for use in subsequent requests.
 }

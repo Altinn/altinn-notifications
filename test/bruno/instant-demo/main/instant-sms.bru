@@ -18,7 +18,7 @@ body:json {
       "phoneNumber": "{{process.env.TESTDATA_MY_PHONE}}",
       "timeToLiveInSeconds": 300,
       "smsSettings": {
-        "sender": "Altinn",
+        "sender": "InstantDemo",
         "body": "(DEMO) Instant SMS test (Env.: {{Environment}} - Ref: {{random_idempotency_id}})"
       }
     }
@@ -34,15 +34,15 @@ script:post-response {
 docs {
   Creates and sends an instant SMS notification to a single recipient for demo purposes.
   The request is processed immediately and the SMS is sent without delay.
-
+  
   Required environment variables:
   - TESTDATA_MY_PHONE: Your phone number for testing
-
+  
   The idempotencyId ensures the same notification is not sent multiple times
   if the request is repeated.
-
+  
   timeToLiveInSeconds: How long the SMS should remain valid for delivery (300 = 5 minutes)
-
+  
   This request automatically captures the shipmentId from the response and stores it
   in the 'mostRecentShipmentId' variable for use in subsequent requests.
 }
