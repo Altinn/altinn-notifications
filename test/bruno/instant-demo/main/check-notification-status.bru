@@ -16,12 +16,11 @@ params:path {
 
 docs {
   Retrieves the status of a notification using the shipment ID returned from the instant notification requests.
-  
+
   To use this request:
-  1. First send an instant email or SMS notification
-  2. Copy the shipment ID from the response
-  3. Set the notificationId parameter to that shipment ID
-  4. Run this request to check the status
-  
+  1. First send an instant email or SMS notification (including idempotency demo requests)
+  2. The shipment ID is automatically captured and stored in the 'mostRecentShipmentId' variable
+  3. Run this request to check the status - it will automatically use the most recent shipment ID
+
   The response will include delivery status, timestamps, and any error information.
 }
