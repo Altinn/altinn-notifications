@@ -8,7 +8,32 @@ CREATE OR REPLACE FUNCTION notifications.claim_email_batch(
 AS $BODY$
 DECLARE
     v_batchsize integer := GREATEST(1, COALESCE(_batchsize, 500));
+    latest_email_timeout timestamp;
 BEGIN
+ SELECT emaillimittimeout 
+    INTO latest_email_timeout 
+    FROM notifications.resourcelimitlog 
+    WHERE id = (SELECT MAX(id) FROM notifications.resourcelimitlog);
+
+    -- Check if the latest email timeout is set and valid
+    IF latest_email_timeout IS NOT NULL THEN
+        IF latest_email_timeout >= NOW() THEN
+            RETURN QUERY 
+            SELECT NULL::uuid AS alternateid, 
+                   NULL::text AS subject, 
+                   NULL::text AS body, 
+                   NULL::text AS fromaddress, 
+                   NULL::text AS toaddress, 
+                   NULL::text AS contenttype 
+            WHERE FALSE;
+            RETURN;
+        ELSE 
+            UPDATE notifications.resourcelimitlog 
+            SET emaillimittimeout = NULL 
+            WHERE id = (SELECT MAX(id) FROM notifications.resourcelimitlog);
+        END IF;
+    END IF;
+
     RETURN QUERY
     WITH claimed_new_rows AS (
         SELECT 
@@ -36,10 +61,10 @@ BEGIN
         WHERE email._id = claimed._id
         RETURNING
             claimed.alternateid,
-            claimed.toaddress,
             claimed.subject,
             claimed.body,
             claimed.fromaddress,
+            claimed.toaddress,
             claimed.contenttype
     )
     SELECT * FROM updated_rows;

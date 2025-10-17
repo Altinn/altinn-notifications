@@ -11,7 +11,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
         private readonly int _publishBatchSize = 500;
 
         /// <summary>
-        /// Scenario: Registered email limit timeout in db  has passed
+        /// Scenario: Registered email limit timeout in db has passed
         /// Expected side effect: Value is reset to NULL when getemails_statusnew_updatestatus is called by <see cref="EmailNotificationRepository"/>    
         /// </summary>
         [Fact]
