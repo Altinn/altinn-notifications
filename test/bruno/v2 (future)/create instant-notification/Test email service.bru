@@ -23,12 +23,9 @@ body:json {
 }
 
 docs {
-  Creates and sends an instant SMS notification to a single recipient.
-  The request is processed immediately and the SMS is sent without delay.
+  Creates and sends an instant email notification to a single recipient using the service directly.
+  The request is processed immediately and the email is sent without delay.
   
   Required environment variables:
-  - TESTDATA_MY_PHONE: Your phone number for testing
-  
-  The idempotencyId ensures the same notification is not sent multiple times
-  if the request is repeated.
+  - TESTDATA_MY_EMAIL: Your email address for testing
 }
