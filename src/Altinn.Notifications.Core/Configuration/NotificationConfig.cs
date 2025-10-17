@@ -36,6 +36,11 @@ public class NotificationConfig
     public int SmsPublishBatchSize { get; set; } = 500;
 
     /// <summary>
+    /// The maximum number of email notifications claimed and published in one batch.
+    /// </summary>
+    public int EmailPublishBatchSize { get; set; } = 500;
+
+    /// <summary>
     /// The number of expired notifications to terminate per batch.
     /// </summary>
     public int TerminationBatchSize { get; set; } = 100;

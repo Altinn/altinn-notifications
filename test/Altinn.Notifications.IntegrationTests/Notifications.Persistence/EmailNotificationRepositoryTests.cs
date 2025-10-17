@@ -15,6 +15,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 public class EmailNotificationRepositoryTests : IAsyncLifetime
 {
     private readonly List<Guid> _orderIdsToDelete;
+    private readonly int _publishBatchSize = 500;
 
     public EmailNotificationRepositoryTests()
     {
@@ -86,7 +87,7 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
           .First(i => i.GetType() == typeof(EmailNotificationRepository));
 
         // Act
-        List<Email> emailToBeSent = await repo.GetNewNotifications();
+        List<Email> emailToBeSent = await repo.GetNewNotificationsAsync(_publishBatchSize, CancellationToken.None);
 
         // Assert
         Assert.Contains(emailToBeSent, s => s.NotificationId == emailNotification.Id);

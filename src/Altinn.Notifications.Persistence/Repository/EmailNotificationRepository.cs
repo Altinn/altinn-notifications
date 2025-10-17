@@ -1,3 +1,5 @@
+using System.Data;
+
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Exceptions;
@@ -9,9 +11,7 @@ using Altinn.Notifications.Persistence.Extensions;
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-
 using Npgsql;
-
 using NpgsqlTypes;
 
 namespace Altinn.Notifications.Persistence.Repository;
@@ -25,7 +25,7 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     private readonly NpgsqlDataSource _dataSource;
 
     private const string _insertEmailNotificationSql = "call notifications.insertemailnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _toaddress, _customizedbody, _customizedsubject, _result, _resulttime, _expirytime)
-    private const string _getEmailNotificationsSql = "select * from notifications.getemails_statusnew_updatestatus()";
+    private const string _getEmailNotificationsBatchSql = "SELECT * FROM notifications.claim_email_batch(@batchsize)";
     private const string _getEmailRecipients = "select * from notifications.getemailrecipients_v2($1)"; // (_orderid)
     private const string _updateEmailNotificationSql = "SELECT notifications.updateemailnotification($1, $2, $3)"; // (_result, _operationid, _alternateid)
 
@@ -61,33 +61,6 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
         pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, expiry);
 
         await pgcom.ExecuteNonQueryAsync();
-    }
-
-    /// <inheritdoc/>
-    public async Task<List<Email>> GetNewNotifications()
-    {
-        List<Email> searchResult = new();
-        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getEmailNotificationsSql);
-
-        await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync())
-        {
-            while (await reader.ReadAsync())
-            {
-                EmailContentType emailContentType = Enum.Parse<EmailContentType>(reader.GetValue<string>("contenttype"));
-
-                var email = new Email(
-                    reader.GetValue<Guid>("alternateid"),
-                    reader.GetValue<string>("subject"),
-                    reader.GetValue<string>("body"),
-                    reader.GetValue<string>("fromaddress"),
-                    reader.GetValue<string>("toaddress"),
-                    emailContentType);
-
-                searchResult.Add(email);
-            }
-        }
-
-        return searchResult;
     }
 
     /// <inheritdoc/>
@@ -160,6 +133,34 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
                     OrganizationNumber = reader.GetValue<string?>("recipientorgno"),
                     NationalIdentityNumber = reader.GetValue<string?>("recipientnin"),
                 });
+            }
+        }
+
+        return searchResult;
+    }
+
+    /// <inheritdoc/>
+    public async Task<List<Email>> GetNewNotificationsAsync(int publishBatchSize, CancellationToken cancellationToken)
+    {
+        List<Email> searchResult = [];
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getEmailNotificationsBatchSql);
+        pgcom.Parameters.AddWithValue("batchsize", NpgsqlDbType.Integer, publishBatchSize);
+
+        await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken))
+        {
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                EmailContentType emailContentType = Enum.Parse<EmailContentType>(reader.GetValue<string>("contenttype"));
+
+                var email = new Email(
+                    await reader.GetFieldValueAsync<Guid>("alternateid", cancellationToken),
+                    await reader.GetFieldValueAsync<string>("subject", cancellationToken),
+                    await reader.GetFieldValueAsync<string>("body", cancellationToken),
+                    await reader.GetFieldValueAsync<string>("fromaddress", cancellationToken),
+                    await reader.GetFieldValueAsync<string>("toaddress", cancellationToken),
+                    emailContentType);
+
+                searchResult.Add(email);
             }
         }
 
