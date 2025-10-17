@@ -316,24 +316,34 @@ public static class PostgreUtil
         await pgcom.ExecuteNonQueryAsync();
     }
 
-    public static async Task<long?> GetDeadDeliveryReportIdFromOperationId(string operationId)
+    private static async Task<long?> GetDeadDeliveryReportIdByJsonField(string fieldName, string fieldValue)
     {
-        var query = @"SELECT id FROM notifications.deaddeliveryreports WHERE deliveryreport ->> 'operationId' = @operationId";
+        // Validate fieldName to prevent SQL injection
+        var allowedFields = new HashSet<string> { "operationId", "gatewayReference" };
+        if (!allowedFields.Contains(fieldName))
+        {
+            throw new ArgumentException($"Invalid field name: {fieldName}. Allowed fields: {string.Join(", ", allowedFields)}", nameof(fieldName));
+        }
+
+        var query = $@"SELECT id FROM notifications.deaddeliveryreports WHERE deliveryreport ->> '{fieldName}' = @fieldValue";
 
         NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
 
         await using NpgsqlCommand pgcom = dataSource.CreateCommand(query);
-        pgcom.Parameters.AddWithValue("@operationId", operationId);
+        pgcom.Parameters.AddWithValue("@fieldValue", fieldValue);
 
         await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync();
-        await reader.ReadAsync();
-        
-        if (!reader.HasRows)
+        if (!await reader.ReadAsync())
         {
             return null;
         }
 
-        var id = reader.GetValue<long>(0);
-        return id;
+        return await reader.GetFieldValueAsync<long>(0);
     }
+
+    public static Task<long?> GetDeadDeliveryReportIdFromOperationId(string operationId)
+        => GetDeadDeliveryReportIdByJsonField("operationId", operationId);
+
+    public static Task<long?> GetDeadDeliveryReportIdFromGatewayReference(string gatewayReference)
+        => GetDeadDeliveryReportIdByJsonField("gatewayReference", gatewayReference);
 }
