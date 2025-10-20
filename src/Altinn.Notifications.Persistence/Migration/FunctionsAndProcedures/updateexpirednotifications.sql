@@ -1,6 +1,7 @@
 ﻿CREATE OR REPLACE FUNCTION notifications.updateexpirednotifications(
     _source TEXT,
-    _limit INT
+    _limit INT,
+    _expiry_offset_seconds INT DEFAULT 260
 )
 RETURNS SETOF UUID
 LANGUAGE plpgsql
@@ -17,7 +18,7 @@ BEGIN
             WHERE _id IN (
                 SELECT _id
                 FROM notifications.emailnotifications
-                WHERE result = 'Succeeded' AND expirytime < now()
+                WHERE result = 'Succeeded' AND expirytime < (now() - make_interval(secs => _expiry_offset_seconds))
                 ORDER BY _id DESC
                 LIMIT GREATEST(_limit, 1) -- Use the input parameter for the limit
             )
@@ -37,7 +38,7 @@ BEGIN
             WHERE _id IN (
                 SELECT _id
                 FROM notifications.smsnotifications
-                WHERE result = 'Accepted' AND expirytime < now()
+                WHERE result = 'Accepted' AND expirytime < (now() - make_interval(secs => _expiryoffsetseconds))
                 ORDER BY _id DESC
                 LIMIT GREATEST(_limit, 1) -- Use the input parameter for the limit
             )
@@ -56,7 +57,10 @@ END;
 $$;
 
 -- Add a comment to the function for documentation purposes
-COMMENT ON FUNCTION notifications.updateexpirednotifications(TEXT, INT) IS 
+COMMENT ON FUNCTION notifications.updateexpirednotifications(TEXT, INT, INT) IS 
 'Updates the result of expired email or sms notifications to ''Failed_TTL''. 
-Parameters: notification_type (TEXT: ''email'' or ''sms''), update_limit (INT).
+Parameters: 
+- _source (TEXT): notification type (''email'' or ''sms'')
+- _limit (INT): maximum number of records to update
+- _expiry_offset_seconds (INT): grace period in seconds before marking as expired (default: 260)
 Returns a set of unique alternateid for the updated records.';
