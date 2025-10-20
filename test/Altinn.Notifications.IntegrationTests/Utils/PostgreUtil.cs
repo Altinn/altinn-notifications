@@ -284,6 +284,12 @@ public static class PostgreUtil
     public static async Task UpdateResultAndExpiryTimeNotification<T>(T notification, string timeInterval)
         where T : class
     {
+        // Validate timeInterval format to prevent SQL injection
+        if (!System.Text.RegularExpressions.Regex.IsMatch(timeInterval, @"^\d+\s+(seconds?|minutes?|hours?|days?)$", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+        {
+            throw new ArgumentException($"Invalid time interval format: {timeInterval}. Expected format: '<number> <unit>' (e.g., '10 seconds')");
+        }
+
         string sql = string.Empty;
         Guid notificationId;
 
