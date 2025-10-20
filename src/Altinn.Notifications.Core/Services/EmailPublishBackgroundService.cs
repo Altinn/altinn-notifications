@@ -1,5 +1,6 @@
 ﻿using Altinn.Notifications.Core.BackgroundQueue;
 using Altinn.Notifications.Core.Services.Interfaces;
+
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
