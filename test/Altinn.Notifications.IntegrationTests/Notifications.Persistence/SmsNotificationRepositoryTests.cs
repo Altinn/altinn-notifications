@@ -165,7 +165,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
     public async Task TerminateExpiredNotifications_WithGracePeriod_UpdatesStatusBasedOnExpiryTime(string timeInterval, bool markedAsTTL)
     {
         // Arrange
-        (NotificationOrder order, SmsNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(simulateConsumers: true, simulateCronJob: true);
+        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(simulateConsumers: true, simulateCronJob: true);
         _orderIdsToCleanup.Add(order.Id);
 
         SmsNotificationRepository sut = (SmsNotificationRepository)ServiceUtil
@@ -173,13 +173,13 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
             .First(i => i.GetType() == typeof(SmsNotificationRepository));
 
         // modify the notification to simulate an expired notification
-        await PostgreUtil.UpdateResultAndExpiryTimeNotification(emailNotification, timeInterval);
+        await PostgreUtil.UpdateResultAndExpiryTimeNotification(smsNotification, timeInterval);
 
         // Act
         await sut.TerminateExpiredNotifications();
 
         // Assert
-        var result = await SelectSmsNotificationStatus(emailNotification.Id);
+        var result = await SelectSmsNotificationStatus(smsNotification.Id);
 
         Assert.NotNull(result);
 
