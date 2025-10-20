@@ -159,6 +159,40 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
         Assert.Contains(smsToBeSent, s => s.NotificationId == smsNotification.Id);
     }
 
+    [Theory]
+    [InlineData("10 seconds", false)]
+    [InlineData("275 seconds", true)]
+    public async Task TerminateExpiredNotifications_WithGracePeriod_UpdatesStatusBasedOnExpiryTime(string timeInterval, bool markedAsTTL)
+    {
+        // Arrange
+        (NotificationOrder order, SmsNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(simulateConsumers: true, simulateCronJob: true);
+        _orderIdsToCleanup.Add(order.Id);
+
+        SmsNotificationRepository sut = (SmsNotificationRepository)ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .First(i => i.GetType() == typeof(SmsNotificationRepository));
+
+        // modify the notification to simulate an expired notification
+        await PostgreUtil.UpdateResultAndExpiryTimeNotification(emailNotification, timeInterval);
+
+        // Act
+        await sut.TerminateExpiredNotifications();
+
+        // Assert
+        var result = await SelectSmsNotificationStatus(emailNotification.Id);
+
+        Assert.NotNull(result);
+
+        if (markedAsTTL)
+        {
+            Assert.Equal(SmsNotificationResultType.Failed_TTL.ToString(), result);
+        }
+        else
+        {
+            Assert.Equal(SmsNotificationResultType.Accepted.ToString(), result);
+        }
+    }
+
     [Fact]
     public async Task GetNewNotifications_ShouldTransitionStatusFromNewToSending()
     {

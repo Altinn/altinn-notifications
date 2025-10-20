@@ -344,6 +344,40 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
         Assert.Equal(OrderProcessingStatus.Completed.ToString(), orderStatus);
     }
 
+    [Theory]
+    [InlineData("10 seconds", false)]
+    [InlineData("275 seconds", true)]
+    public async Task TerminateExpiredNotifications_WithGracePeriod_UpdatesStatusBasedOnExpiryTime(string timeInterval, bool markedAsTTL)
+    {
+        // Arrange
+        (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(simulateConsumers: true, simulateCronJob: true);
+        _orderIdsToDelete.Add(order.Id);
+
+        EmailNotificationRepository sut = (EmailNotificationRepository)ServiceUtil
+            .GetServices([typeof(IEmailNotificationRepository)])
+            .First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        // modify the notification to simulate an expired notification
+        await PostgreUtil.UpdateResultAndExpiryTimeNotification(emailNotification, timeInterval);
+
+        // Act
+        await sut.TerminateExpiredNotifications();
+
+        // Assert
+        var result = await SelectEmailNotificationStatus(emailNotification.Id);
+
+        Assert.NotNull(result);
+        
+        if (markedAsTTL)
+        {
+            Assert.Equal(EmailNotificationResultType.Failed_TTL.ToString(), result);
+        }
+        else
+        {
+            Assert.Equal(EmailNotificationResultType.Succeeded.ToString(), result);
+        }
+    }
+
     [Fact]
     public async Task SetEmailResult_AllEnumValuesExistInDb()
     {
