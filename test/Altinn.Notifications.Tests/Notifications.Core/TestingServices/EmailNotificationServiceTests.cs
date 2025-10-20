@@ -304,10 +304,25 @@ public class EmailNotificationServiceTests
         repoMock.Verify();
     }
 
-    private static EmailNotificationService GetTestService(IEmailNotificationRepository? repo = null, IKafkaProducer? producer = null, Guid? guidOutput = null, DateTime? dateTimeOutput = null)
+    [Fact]
+    public async Task SendNotifications_CancellationRequested_StopsProcessing()
     {
-        var publishBatchSize = 500;  
+        // Arrange
+        using var cts = new CancellationTokenSource();
+        var repoMock = new Mock<IEmailNotificationRepository>();
+        repoMock.Setup(r => r.GetNewNotificationsAsync(_publishBatchSize, It.IsAny<CancellationToken>()))
+            .Callback(() => cts.Cancel())
+            .ReturnsAsync([_email]);
 
+        var service = GetTestService(repo: repoMock.Object);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<OperationCanceledException>(
+            async () => await service.SendNotifications(cts.Token));
+    }
+
+    private EmailNotificationService GetTestService(IEmailNotificationRepository? repo = null, IKafkaProducer? producer = null, Guid? guidOutput = null, DateTime? dateTimeOutput = null)
+    {
         var guidService = new Mock<IGuidService>();
         guidService
             .Setup(g => g.NewGuid())
@@ -334,7 +349,7 @@ public class EmailNotificationServiceTests
             producer, 
             dateTimeService.Object, 
             Options.Create(new KafkaSettings { EmailQueueTopicName = _emailQueueTopicName }),
-            Options.Create(new NotificationConfig { EmailPublishBatchSize = publishBatchSize }),
+            Options.Create(new NotificationConfig { EmailPublishBatchSize = _publishBatchSize }),
             repo);
     }
 }
