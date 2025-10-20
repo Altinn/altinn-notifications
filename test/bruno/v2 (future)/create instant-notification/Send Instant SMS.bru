@@ -1,0 +1,48 @@
+meta {
+  name: Send Instant SMS
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders/instant/sms
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "{{senders_reference_guid}}",
+    "recipientSms": {
+      "phoneNumber": "{{process.env.TESTDATA_MY_PHONE}}",
+      "timeToLiveInSeconds": 300,
+      "smsSettings": {
+        "sender": "(TEST) Instant SMS Test",
+        "body": "(TEST) Dette er en instant email test til meg selv (Env.: {{Environment}} - Ref: {{random_idempotency_id}})"
+      }
+    }
+  }
+}
+
+script:post-response {
+  if (res.status === 201 && res.body && res.body.notification && res.body.notification.shipmentId) {
+    bru.setVar("mostRecentShipmentId", res.body.notification.shipmentId);
+  }
+}
+
+docs {
+  Creates and sends an instant SMS notification to a single recipient for demo purposes.
+  The request is processed immediately and the SMS is sent without delay.
+  
+  Required environment variables:
+  - TESTDATA_MY_PHONE: Your phone number for testing
+  
+  The idempotencyId ensures the same notification is not sent multiple times
+  if the request is repeated.
+  
+  timeToLiveInSeconds: How long the SMS should remain valid for delivery (300 = 5 minutes)
+  
+  This request automatically captures the shipmentId from the response and stores it
+  in the 'mostRecentShipmentId' variable for use in subsequent requests.
+}

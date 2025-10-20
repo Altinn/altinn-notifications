@@ -1,7 +1,7 @@
 meta {
   name: Send instant email
   type: http
-  seq: 2
+  seq: 3
 }
 
 post {
@@ -13,7 +13,7 @@ post {
 body:json {
   {
     "idempotencyId": "{{random_idempotency_id}}",
-    "sendersReference": "{{random_idempotency_id}}",
+    "sendersReference": "{{senders_reference_guid}}",
     "recipientEmail": {
       "emailAddress": "{{process.env.TESTDATA_MY_EMAIL}}",
       "emailSettings": {
@@ -29,12 +29,12 @@ body:json {
 docs {
   Creates and sends an instant email notification to a single recipient.
   The request is processed immediately and the email is sent without delay.
-
+  
   Required environment variables:
   - TESTDATA_MY_EMAIL: Your email address for testing
-
+  
   The idempotencyId ensures the same notification is not sent multiple times
   if the request is repeated.
-
+  
   Available contentType values: "Plain" or "Html"
 }
