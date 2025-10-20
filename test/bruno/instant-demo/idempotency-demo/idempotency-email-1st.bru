@@ -1,0 +1,45 @@
+meta {
+  name: Idempotency Email - 1st Request
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders/instant/email
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{fixed_idempotency_id}}",
+    "sendersReference": "my-business-ref-email-001",
+    "recipientEmail": {
+      "emailAddress": "{{process.env.TESTDATA_MY_EMAIL}}",
+      "emailSettings": {
+        "subject": "(DEMO) Idempotency Test Email - First Request",
+        "body": "(DEMO) First email request. (Env.: {{Environment}})"
+      }
+    }
+  }
+}
+
+script:post-response {
+  if (res.status === 201 && res.body && res.body.notification && res.body.notification.shipmentId) {
+    bru.setVar("mostRecentShipmentId", res.body.notification.shipmentId);
+  }
+}
+
+docs {
+  This is the FIRST request in the idempotency demo for email.
+  
+  Expected result: 201 Created
+  
+  The idempotencyId uses the fixed variable "{{fixed_idempotency_id}}" to demonstrate
+  that subsequent requests with the same ID will be handled as duplicates.
+  
+  Run this request first, then run the "2nd Request" to see idempotency in action.
+  
+  This request automatically captures the shipmentId from the response and stores it
+  in the 'mostRecentShipmentId' variable for use in subsequent requests.
+}
