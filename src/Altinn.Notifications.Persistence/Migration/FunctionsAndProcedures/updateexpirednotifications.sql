@@ -38,7 +38,7 @@ BEGIN
             WHERE _id IN (
                 SELECT _id
                 FROM notifications.smsnotifications
-                WHERE result = 'Accepted' AND expirytime < (now() - make_interval(secs => _expiryoffsetseconds))
+                WHERE result = 'Accepted' AND expirytime < (now() - make_interval(secs => _expiry_offset_seconds))
                 ORDER BY _id DESC
                 LIMIT GREATEST(_limit, 1) -- Use the input parameter for the limit
             )
