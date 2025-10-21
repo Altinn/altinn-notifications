@@ -16,7 +16,7 @@ public class PastDueOrdersConsumerTests : IDisposable
 
     /// <summary>
     /// When a new order is picked up by the consumer, we expect there to be an email notification created for the recipient states in the order.
-    /// We measure the sucess of this test by confirming that a new email notificaiton has been create with a reference to our order id
+    /// We measure the success of this test by confirming that a new email notificaiton has been create with a reference to our order id
     /// as well as confirming that the order now has the status 'Processed' set at its processing status
     /// </summary>
     [Fact]
@@ -49,21 +49,14 @@ public class PastDueOrdersConsumerTests : IDisposable
           async () =>
           {
               selectProcessedOrderCount = await SelectProcessedOrderCount(persistedOrder.Id);
-              return selectProcessedOrderCount == 1;
+              selectEmailNotificationCount = await SelectEmailNotificationCount(persistedOrder.Id);
+              return selectProcessedOrderCount == 1 && selectEmailNotificationCount == 1;
           },
           TimeSpan.FromSeconds(15));
 
-        await IntegrationTestUtil.EventuallyAsync(
-            async () =>
-            {
-                selectEmailNotificationCount = await SelectEmailNotificationCount(persistedOrder.Id);
-                return selectEmailNotificationCount == 1;
-            },
-            TimeSpan.FromSeconds(15));
-
+        await consumerService.StopAsync(CancellationToken.None);
         Assert.Equal(1L, selectProcessedOrderCount);
         Assert.Equal(1L, selectEmailNotificationCount);
-        await consumerService.StopAsync(CancellationToken.None);
     }
 
     public async void Dispose()

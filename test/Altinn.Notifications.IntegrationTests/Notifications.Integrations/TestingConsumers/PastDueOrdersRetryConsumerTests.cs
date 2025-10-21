@@ -41,8 +41,6 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
         // Act
         await consumerRetryService.StartAsync(CancellationToken.None);
         
-        await consumerRetryService.StopAsync(CancellationToken.None);
-
         // Assert
         var processedOrderCount = 0L;
         var emailNotificationCount = 0L;
@@ -51,18 +49,12 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
          async () =>
          {
              processedOrderCount = await SelectProcessedOrderCount(persistedOrder.Id);
-             return processedOrderCount == 1;
+             emailNotificationCount = await SelectEmailNotificationCount(persistedOrder.Id);
+             return processedOrderCount == 1 && emailNotificationCount == 1;
          },
          TimeSpan.FromSeconds(15));
-
-        await IntegrationTestUtil.EventuallyAsync(
-            async () =>
-            {
-                emailNotificationCount = await SelectEmailNotificationCount(persistedOrder.Id);
-                return emailNotificationCount == 1;
-            },
-            TimeSpan.FromSeconds(15));
-
+        
+        await consumerRetryService.StopAsync(CancellationToken.None);
         Assert.Equal(1, processedOrderCount);
         Assert.Equal(1, emailNotificationCount);
     }
@@ -104,8 +96,8 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
          },
          TimeSpan.FromSeconds(15));
 
-        Assert.Equal("Processed", processedstatus);
         await consumerRetryService.StopAsync(CancellationToken.None);
+        Assert.Equal("Processed", processedstatus);
     }
 
     public async void Dispose()
