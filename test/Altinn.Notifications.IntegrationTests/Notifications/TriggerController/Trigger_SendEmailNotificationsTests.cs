@@ -57,12 +57,8 @@ public class Trigger_SendEmailNotificationsTests : IClassFixture<IntegrationTest
         // Act
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
 
-        await Task.Delay(20); // give some time for the background service to process the notification. Todo: find better way to await processing
-
         // Assert
-        string sql = $"select count(1) from notifications.emailnotifications where result = 'Sending' and alternateid='{notification.Id}'";
-        long actual = await PostgreUtil.RunSqlReturnOutput<long>(sql);
-
+        var actual = await IntegrationTestUtil.PollSendingNotificationStatus(notification);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(1, actual);
     }

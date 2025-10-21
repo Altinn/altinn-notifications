@@ -6,7 +6,6 @@ using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
-
 using AltinnCore.Authentication.JwtCookie;
 
 using Microsoft.AspNetCore.TestHost;
@@ -92,12 +91,9 @@ public class Trigger_SendSmsNotificationsTests : IClassFixture<IntegrationTestWe
 
         // Act
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
-        await Task.Delay(20); // give some time for the background service to process the notification. Todo: find better way to await processing
 
         // Assert
-        string sql = $"select count(1) from notifications.smsnotifications where result = 'Sending' and alternateid='{notification.Id}'";
-        long actual = await PostgreUtil.RunSqlReturnOutput<long>(sql);
-
+        long actual = await IntegrationTestUtil.PollSendingNotificationStatus(notification);
         Assert.Equal(1L, actual);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
