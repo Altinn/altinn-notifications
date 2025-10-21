@@ -41,15 +41,29 @@ public class PastDueOrdersConsumerTests : IDisposable
 
         // Act
         await consumerService.StartAsync(CancellationToken.None);
-        await Task.Delay(10000);
-        await consumerService.StopAsync(CancellationToken.None);
 
         // Assert
-        long processedOrderCount = await SelectProcessedOrderCount(persistedOrder.Id);
-        long emailNotificationCount = await SelectEmailNotificationCount(persistedOrder.Id);
+        var selectProcessedOrderCount = 0L;
+        var selectEmailNotificationCount = 0L;
+        await IntegrationTestUtil.EventuallyAsync(
+          async () =>
+          {
+              selectProcessedOrderCount = await SelectProcessedOrderCount(persistedOrder.Id);
+              return selectProcessedOrderCount == 1;
+          },
+          TimeSpan.FromSeconds(15));
 
-        Assert.Equal(1, processedOrderCount);
-        Assert.Equal(1, emailNotificationCount);
+        await IntegrationTestUtil.EventuallyAsync(
+            async () =>
+            {
+                selectEmailNotificationCount = await SelectEmailNotificationCount(persistedOrder.Id);
+                return selectEmailNotificationCount == 1;
+            },
+            TimeSpan.FromSeconds(15));
+
+        Assert.Equal(1L, selectProcessedOrderCount);
+        Assert.Equal(1L, selectEmailNotificationCount);
+        await consumerService.StopAsync(CancellationToken.None);
     }
 
     public async void Dispose()

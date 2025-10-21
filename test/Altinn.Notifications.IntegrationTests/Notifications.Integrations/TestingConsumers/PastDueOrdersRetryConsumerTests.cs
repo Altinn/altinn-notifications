@@ -40,12 +40,28 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
 
         // Act
         await consumerRetryService.StartAsync(CancellationToken.None);
-        await Task.Delay(10000);
+        
         await consumerRetryService.StopAsync(CancellationToken.None);
 
         // Assert
-        long processedOrderCount = await SelectProcessedOrderCount(persistedOrder.Id);
-        long emailNotificationCount = await SelectEmailNotificationCount(persistedOrder.Id);
+        var processedOrderCount = 0L;
+        var emailNotificationCount = 0L;
+
+        await IntegrationTestUtil.EventuallyAsync(
+         async () =>
+         {
+             processedOrderCount = await SelectProcessedOrderCount(persistedOrder.Id);
+             return processedOrderCount == 1;
+         },
+         TimeSpan.FromSeconds(15));
+
+        await IntegrationTestUtil.EventuallyAsync(
+            async () =>
+            {
+                emailNotificationCount = await SelectEmailNotificationCount(persistedOrder.Id);
+                return emailNotificationCount == 1;
+            },
+            TimeSpan.FromSeconds(15));
 
         Assert.Equal(1, processedOrderCount);
         Assert.Equal(1, emailNotificationCount);
@@ -77,13 +93,19 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
 
         // Act
         await consumerRetryService.StartAsync(CancellationToken.None);
-        await Task.Delay(10000);
-        await consumerRetryService.StopAsync(CancellationToken.None);
 
         // Assert
-        string processedstatus = await SelectProcessStatus(persistedOrder.Id);
+        var processedstatus = string.Empty;
+        await IntegrationTestUtil.EventuallyAsync(
+         async () =>
+         {
+             processedstatus = await SelectProcessStatus(persistedOrder.Id);
+             return processedstatus == "Processed";
+         },
+         TimeSpan.FromSeconds(15));
 
         Assert.Equal("Processed", processedstatus);
+        await consumerRetryService.StopAsync(CancellationToken.None);
     }
 
     public async void Dispose()
