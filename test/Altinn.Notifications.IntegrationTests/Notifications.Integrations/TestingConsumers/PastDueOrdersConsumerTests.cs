@@ -35,12 +35,12 @@ public class PastDueOrdersConsumerTests : IDisposable
 
         NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithEmailOrder(sendersReference: _sendersRef);
 
+        // Act
+        await consumerService.StartAsync(CancellationToken.None);
+
         await KafkaUtil.PublishMessageOnTopic(_pastDueOrdersTopicName, persistedOrder.Serialize());
 
         await UpdateProcessingStatus(persistedOrder.Id, OrderProcessingStatus.Processing);
-
-        // Act
-        await consumerService.StartAsync(CancellationToken.None);
 
         // Assert
         var selectProcessedOrderCount = 0L;
