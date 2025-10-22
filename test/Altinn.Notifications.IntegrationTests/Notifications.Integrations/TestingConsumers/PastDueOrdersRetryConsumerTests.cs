@@ -34,18 +34,28 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
                                                     .First(s => s.GetType() == typeof(PastDueOrdersRetryConsumer))!;
 
         NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithEmailOrder(sendersReference: _sendersRef);
-        await KafkaUtil.PublishMessageOnTopic(_retryTopicName, persistedOrder.Serialize());
-
-        await UpdateProcessingStatus(persistedOrder.Id, OrderProcessingStatus.Processing);
 
         // Act
         await consumerRetryService.StartAsync(CancellationToken.None);
-        await Task.Delay(10000);
-        await consumerRetryService.StopAsync(CancellationToken.None);
+
+        await UpdateProcessingStatus(persistedOrder.Id, OrderProcessingStatus.Processing);
+
+        await KafkaUtil.PublishMessageOnTopic(_retryTopicName, persistedOrder.Serialize());
 
         // Assert
-        long processedOrderCount = await SelectProcessedOrderCount(persistedOrder.Id);
-        long emailNotificationCount = await SelectEmailNotificationCount(persistedOrder.Id);
+        var processedOrderCount = 0L;
+        var emailNotificationCount = 0L;
+
+        await IntegrationTestUtil.EventuallyAsync(
+         async () =>
+         {
+             processedOrderCount = await SelectProcessedOrderCount(persistedOrder.Id);
+             emailNotificationCount = await SelectEmailNotificationCount(persistedOrder.Id);
+             return processedOrderCount == 1 && emailNotificationCount == 1;
+         },
+         TimeSpan.FromSeconds(15));
+        
+        await consumerRetryService.StopAsync(CancellationToken.None);
 
         Assert.Equal(1, processedOrderCount);
         Assert.Equal(1, emailNotificationCount);
@@ -71,17 +81,24 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
 
         NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithOrderAndEmailNotificationReturnOrder(sendersReference: _sendersRef);
 
-        await KafkaUtil.PublishMessageOnTopic(_retryTopicName, persistedOrder.Serialize());
+        // Act
+        await consumerRetryService.StartAsync(CancellationToken.None);
 
         await UpdateProcessingStatus(persistedOrder.Id, OrderProcessingStatus.Processing);
 
-        // Act
-        await consumerRetryService.StartAsync(CancellationToken.None);
-        await Task.Delay(10000);
-        await consumerRetryService.StopAsync(CancellationToken.None);
+        await KafkaUtil.PublishMessageOnTopic(_retryTopicName, persistedOrder.Serialize());
 
         // Assert
-        string processedstatus = await SelectProcessStatus(persistedOrder.Id);
+        var processedstatus = string.Empty;
+        await IntegrationTestUtil.EventuallyAsync(
+         async () =>
+         {
+             processedstatus = await SelectProcessStatus(persistedOrder.Id);
+             return processedstatus == "Processed";
+         },
+         TimeSpan.FromSeconds(15));
+
+        await consumerRetryService.StopAsync(CancellationToken.None);
 
         Assert.Equal("Processed", processedstatus);
     }
