@@ -44,10 +44,10 @@ public class AltinnServiceUpdateConsumerTests : IAsyncLifetime
             Data = data.Serialize()
         };
 
-        await KafkaUtil.PublishMessageOnTopic(_serviceUpdateTopicName, serviceUpdate.Serialize());
-
         // Act
         await consumerService.StartAsync(CancellationToken.None);
+
+        await KafkaUtil.PublishMessageOnTopic(_serviceUpdateTopicName, serviceUpdate.Serialize());
 
         DateTime? actualTimeout = null;
         await IntegrationTestUtil.EventuallyAsync(

@@ -38,9 +38,9 @@ public class PastDueOrdersConsumerTests : IDisposable
         // Act
         await consumerService.StartAsync(CancellationToken.None);
 
-        await KafkaUtil.PublishMessageOnTopic(_pastDueOrdersTopicName, persistedOrder.Serialize());
-
         await UpdateProcessingStatus(persistedOrder.Id, OrderProcessingStatus.Processing);
+
+        await KafkaUtil.PublishMessageOnTopic(_pastDueOrdersTopicName, persistedOrder.Serialize());
 
         // Assert
         var selectProcessedOrderCount = 0L;

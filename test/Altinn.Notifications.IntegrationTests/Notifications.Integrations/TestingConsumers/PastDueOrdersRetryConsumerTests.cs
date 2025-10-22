@@ -34,13 +34,14 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
                                                     .First(s => s.GetType() == typeof(PastDueOrdersRetryConsumer))!;
 
         NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithEmailOrder(sendersReference: _sendersRef);
-        await KafkaUtil.PublishMessageOnTopic(_retryTopicName, persistedOrder.Serialize());
-
-        await UpdateProcessingStatus(persistedOrder.Id, OrderProcessingStatus.Processing);
 
         // Act
         await consumerRetryService.StartAsync(CancellationToken.None);
-        
+
+        await UpdateProcessingStatus(persistedOrder.Id, OrderProcessingStatus.Processing);
+
+        await KafkaUtil.PublishMessageOnTopic(_retryTopicName, persistedOrder.Serialize());
+
         // Assert
         var processedOrderCount = 0L;
         var emailNotificationCount = 0L;
@@ -55,6 +56,7 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
          TimeSpan.FromSeconds(15));
         
         await consumerRetryService.StopAsync(CancellationToken.None);
+
         Assert.Equal(1, processedOrderCount);
         Assert.Equal(1, emailNotificationCount);
     }
@@ -79,12 +81,12 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
 
         NotificationOrder persistedOrder = await PostgreUtil.PopulateDBWithOrderAndEmailNotificationReturnOrder(sendersReference: _sendersRef);
 
-        await KafkaUtil.PublishMessageOnTopic(_retryTopicName, persistedOrder.Serialize());
+        // Act
+        await consumerRetryService.StartAsync(CancellationToken.None);
 
         await UpdateProcessingStatus(persistedOrder.Id, OrderProcessingStatus.Processing);
 
-        // Act
-        await consumerRetryService.StartAsync(CancellationToken.None);
+        await KafkaUtil.PublishMessageOnTopic(_retryTopicName, persistedOrder.Serialize());
 
         // Assert
         var processedstatus = string.Empty;
@@ -97,6 +99,7 @@ public class PastDueOrdersRetryConsumerTests : IDisposable
          TimeSpan.FromSeconds(15));
 
         await consumerRetryService.StopAsync(CancellationToken.None);
+
         Assert.Equal("Processed", processedstatus);
     }
 
