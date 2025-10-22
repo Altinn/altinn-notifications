@@ -1,0 +1,37 @@
+meta {
+  name: Check Notification Status
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{host}}/notifications/api/v1/future/shipment/:notificationId
+  body: none
+  auth: inherit
+}
+
+params:path {
+  notificationId: {{mostRecentShipmentId}}
+}
+
+docs {
+  Checks the delivery status of a notification using the shipment ID.
+  
+  ## Usage
+  
+  1. First run one of the test case requests (Test Case 1-4)
+  2. The shipment ID is automatically captured in 'mostRecentShipmentId'
+  3. Run this request to check the current status
+  
+  ## Expected Results (after contact info deletion)
+  
+  After following the test strategy and deleting contact info before send time:
+  - Status should be "Failed_RecipientNotIdentified"
+  - No actual notifications should have been sent
+  
+  ## Response Fields
+  
+  - recipientLookupStatus: Should show failure reason
+  - sendStatus: Overall send status
+  - notifications: Array of individual notification attempts (should be empty or failed)
+}

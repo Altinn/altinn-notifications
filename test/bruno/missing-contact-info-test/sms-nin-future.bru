@@ -1,0 +1,56 @@
+meta {
+  name: Test Case 3 - Person SMS (phone only)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{host}}/notifications/api/v1/future/orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "idempotencyId": "{{random_idempotency_id}}",
+    "sendersReference": "{{senders_reference_guid}}",
+    "requestedSendTime": "{{futureTime}}",
+    "recipient": {
+      "recipientPerson": {
+        "nationalIdentityNumber": "{{testcase3_person_phone}}",
+        "channelSchema": "Sms",
+        "smsSettings": {
+          "sendingTimePolicy": "Anytime",
+          "body": "(TEST) SMS notification for person - Missing contact info test (Env: {{Environment}} - Ref: {{random_idempotency_id}})"
+        }
+      }
+    }
+  }
+}
+
+script:pre-request {
+  // Set send time to 3 minutes from now
+  const futureDate = new Date(Date.now() + 2 * 60 * 1000);
+  bru.setVar("futureTime", futureDate.toISOString());
+}
+
+script:post-response {
+  if (res.status === 201 && res.body) {
+    bru.setVar("mostRecentOrderChainId", res.body.notificationOrderId);
+    bru.setVar("mostRecentShipmentId", res.body?.notification?.shipmentId);
+    console.log("Order created with ID: " + res.body.notificationOrderId);
+    console.log("Shipment ID: " + res.body?.notification?.shipmentId);
+    console.log("Scheduled for: " + bru.getVar("futureTime"));
+  }
+}
+
+docs {
+  Test Case 3: Person with phone only
+  
+  Creates a future SMS notification to a national identity number scheduled 3 minutes from now.
+  Tests the scenario where only phone contact info exists (will be deleted before send time).
+  
+  Uses folder variable: testcase3_person_phone
+  
+  Expected outcome: Failed_RecipientNotIdentified (no notification sent)
+}

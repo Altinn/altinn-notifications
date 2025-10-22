@@ -1,0 +1,42 @@
+meta {
+  name: missing-contact-info-test
+}
+
+vars:pre-request {
+  testcase1_org_phone: 313935914
+  testcase2_org_email: 312705931
+  testcase3_person_phone: 09854096734
+  testcase4_person_email: 31884298868
+}
+
+docs {
+  # Missing Contact Info Test Plan
+  
+  Tests notification delivery when contact information is deleted before scheduled send time.
+  
+  ## Test Strategy
+  
+  Use entries from the Profile database with "nullstillt@default.digdir.no" as the email
+  or "+4799999999" as the phone number.
+  
+  1. Set personal phone number/email in the Profile database for the given target
+  2. Order notification a few minutes in the future with the Notifications API
+  3. Delete contact info for the targeted organization/person in the Profile database
+  4. Monitor the notification delivery status with the Notifications API
+  5. Verify no notifications were sent to personal contact info
+  
+  ## Test Cases
+  
+  | ID | Type   | Channel | Variable Used            |
+  |----|--------|---------|--------------------------|
+  | 1  | Org    | SMS     | testcase1_org_phone      |
+  | 2  | Org    | Email   | testcase2_org_email      |
+  | 3  | Person | SMS     | testcase3_person_phone   |
+  | 4  | Person | Email   | testcase4_person_email   |
+  
+  ## Expected Outcomes
+  
+  For all test cases:
+  - Delivery status: "Failed_RecipientNotIdentified"
+  - No notifications sent out
+}
