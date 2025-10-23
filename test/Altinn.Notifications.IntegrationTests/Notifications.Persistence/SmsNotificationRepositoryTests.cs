@@ -161,7 +161,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
 
     [Theory]
     [InlineData("10 seconds", false)]
-    [InlineData("275 seconds", true)]
+    [InlineData("315 seconds", true)]
     public async Task TerminateExpiredNotifications_WithGracePeriod_UpdatesStatusBasedOnExpiryTime(string timeInterval, bool markedAsTTL)
     {
         // Arrange
