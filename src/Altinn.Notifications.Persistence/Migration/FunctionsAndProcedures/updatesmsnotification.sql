@@ -1,6 +1,6 @@
-CREATE OR REPLACE FUNCTION notifications.updateemailnotification(
+CREATE OR REPLACE FUNCTION notifications.updatesmsnotification(
     _result text,
-    _operationid text,
+    _gatewayreference text,
     _alternateid uuid
 )
 RETURNS TABLE (
@@ -23,17 +23,17 @@ BEGIN
     IF _alternateid IS NOT NULL THEN
         -- Lock the row and fetch expiry time
         SELECT n.alternateid, n.expirytime INTO v_alternateid, v_expirytime
-        FROM notifications.emailnotifications n
+        FROM notifications.smsnotifications n
         WHERE n.alternateid = _alternateid
         FOR UPDATE;
 
         v_found := FOUND;
 
-    ELSIF _operationid IS NOT NULL THEN
-        -- Lock the row and fetch expiry time by operation ID
+    ELSIF _gatewayreference IS NOT NULL THEN
+        -- Lock the row and fetch expiry time by gateway reference
         SELECT n.alternateid, n.expirytime INTO v_alternateid, v_expirytime
-        FROM notifications.emailnotifications n
-        WHERE n.operationid = _operationid
+        FROM notifications.smsnotifications n
+        WHERE n.gatewayreference = _gatewayreference
         FOR UPDATE;
 
         v_found := FOUND;
@@ -59,19 +59,19 @@ BEGIN
 
     -- Not expired - proceed with update
     IF _alternateid IS NOT NULL THEN
-        UPDATE notifications.emailnotifications
-        SET result = _result::emailnotificationresulttype,
+        UPDATE notifications.smsnotifications
+        SET result = _result::smsnotificationresulttype,
             resulttime = now(),
-            operationid = COALESCE(_operationid, operationid)
-        WHERE emailnotifications.alternateid = _alternateid;
+            gatewayreference = COALESCE(_gatewayreference, gatewayreference)
+        WHERE smsnotifications.alternateid = _alternateid;
 
         was_updated := true;
 
-    ELSIF _operationid IS NOT NULL THEN
-        UPDATE notifications.emailnotifications
-        SET result = _result::emailnotificationresulttype,
+    ELSIF _gatewayreference IS NOT NULL THEN
+        UPDATE notifications.smsnotifications
+        SET result = _result::smsnotificationresulttype,
             resulttime = now()
-        WHERE emailnotifications.operationid = _operationid;
+        WHERE smsnotifications.gatewayreference = _gatewayreference;
 
         was_updated := true;
     END IF;
@@ -80,10 +80,10 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION notifications.updateemailnotification IS
-'Updates an email notification''s result and resulttime by alternateid or by operationid, with expiry time validation.
+COMMENT ON FUNCTION notifications.updatesmsnotification IS
+'Updates an SMS notification''s result and resulttime by alternateid or by gatewayreference, with expiry time validation.
 
-Precedence: If both _alternateid and _operationid are non-null, only alternateid is used for lookup; _operationid may still populate the row via COALESCE.
+Precedence: If both _alternateid and _gatewayreference are non-null, only alternateid is used for lookup; _gatewayreference may still populate the row via COALESCE.
 
 Return values:
 - alternateid: The UUID of the notification (NULL if not found)
@@ -97,5 +97,5 @@ Behavior:
 - If not found: returns (NULL, false, false)
 - If found and not expired: performs update and returns (alternateid, true, false)
 
-Uniqueness assumptions: alternateid is unique (primary key); operationid uniquely identifies at most one row when non-null.
-Overwrite policy: result and resulttime are always overwritten when not expired; operationid is only set when a non-null _operationid is supplied (existing value preserved when _operationid is null).';
+Uniqueness assumptions: alternateid is unique (primary key); gatewayreference uniquely identifies at most one row when non-null.
+Overwrite policy: result and resulttime are always overwritten when not expired; gatewayreference is only set when a non-null _gatewayreference is supplied (existing value preserved when _gatewayreference is null).';
