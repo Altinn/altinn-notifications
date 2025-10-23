@@ -63,6 +63,29 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
         await pgcom.ExecuteNonQueryAsync();
     }
 
+     /// <inheritdoc/>
+    public async Task<List<EmailRecipient>> GetRecipients(Guid orderId)
+    {
+        List<EmailRecipient> searchResult = [];
+
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getEmailRecipients);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, orderId);
+        await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync())
+        {
+            while (await reader.ReadAsync())
+            {
+                searchResult.Add(new EmailRecipient()
+                {
+                    ToAddress = reader.GetValue<string>("toaddress"),
+                    OrganizationNumber = reader.GetValue<string?>("recipientorgno"),
+                    NationalIdentityNumber = reader.GetValue<string?>("recipientnin"),
+                });
+            }
+        }
+
+        return searchResult;
+    }
+
     /// <inheritdoc/>
     public async Task<List<Email>> GetNewNotifications()
     {
@@ -110,28 +133,33 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(operationId) ? DBNull.Value : operationId);
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, (notificationId == null || notificationId == Guid.Empty) ? DBNull.Value : notificationId);
 
-            var alternateId = await pgcom.ExecuteScalarAsync();
+            // Execute and read the result table
+            Guid? resultAlternateId = null;
+            bool wasUpdated = false;
+            bool isExpired = false;
 
-            if (alternateId is null or DBNull)
+            await using (var reader = await pgcom.ExecuteReaderAsync())
             {
-                if (hasOperationId)
+                if (await reader.ReadAsync())
                 {
-                    throw new SendStatusUpdateException(NotificationChannel.Email, operationId!, SendStatusIdentifierType.OperationId);
+                    resultAlternateId = await reader.IsDBNullAsync(0) ? null : reader.GetGuid(0);
+                    wasUpdated = reader.GetBoolean(1);
+                    isExpired = reader.GetBoolean(2);
                 }
-
-                throw new SendStatusUpdateException(NotificationChannel.Email, notificationId!.Value.ToString(), SendStatusIdentifierType.NotificationId);
             }
 
-            if (alternateId is not Guid emailNotificationAlternateId)
-            {
-                throw new InvalidOperationException("Guid could not be parsed");
-            }
+            // Handle not found or expired cases
+            HandleUpdateResult(resultAlternateId, isExpired, hasOperationId, operationId, notificationId, NotificationChannel.Email);
 
-            var orderIsSetAsCompleted = await TryCompleteOrderBasedOnNotificationsState(emailNotificationAlternateId, connection, transaction);
-
-            if (orderIsSetAsCompleted)
+            // Proceed with order completion logic if update was successful
+            if (wasUpdated && resultAlternateId.HasValue)
             {
-                await InsertOrderStatusCompletedOrder(connection, transaction, emailNotificationAlternateId);
+                var orderIsSetAsCompleted = await TryCompleteOrderBasedOnNotificationsState(resultAlternateId.Value, connection, transaction);
+
+                if (orderIsSetAsCompleted)
+                {
+                    await InsertOrderStatusCompletedOrder(connection, transaction, resultAlternateId.Value);
+                }
             }
 
             await transaction.CommitAsync();
@@ -143,26 +171,31 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
         }
     }
 
-    /// <inheritdoc/>
-    public async Task<List<EmailRecipient>> GetRecipients(Guid orderId)
+    /// <summary>
+    /// Validates the result of an update operation and throws appropriate exceptions if the update failed.
+    /// </summary>
+    private static void HandleUpdateResult(
+        Guid? resultAlternateId,
+        bool isExpired,
+        bool hasOperationId,
+        string? operationId,
+        Guid? notificationId,
+        NotificationChannel channel)
     {
-        List<EmailRecipient> searchResult = [];
-
-        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getEmailRecipients);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, orderId);
-        await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync())
+        // Notification not found in database
+        if (resultAlternateId == null)
         {
-            while (await reader.ReadAsync())
-            {
-                searchResult.Add(new EmailRecipient()
-                {
-                    ToAddress = reader.GetValue<string>("toaddress"),
-                    OrganizationNumber = reader.GetValue<string?>("recipientorgno"),
-                    NationalIdentityNumber = reader.GetValue<string?>("recipientnin"),
-                });
-            }
+            var identifier = hasOperationId ? operationId! : notificationId!.Value.ToString();
+            var identifierType = hasOperationId ? SendStatusIdentifierType.OperationId : SendStatusIdentifierType.NotificationId;
+            throw new NotificationNotFoundException(channel, identifier, identifierType);
         }
 
-        return searchResult;
+        // Notification has passed its expiry time (TTL) - update was blocked
+        if (isExpired)
+        {
+            var identifier = hasOperationId ? operationId! : notificationId!.Value.ToString();
+            var identifierType = hasOperationId ? SendStatusIdentifierType.OperationId : SendStatusIdentifierType.NotificationId;
+            throw new NotificationExpiredException(channel, identifier, identifierType);
+        }
     }
 }

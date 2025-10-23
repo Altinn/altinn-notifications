@@ -28,19 +28,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     private const string _claimDaytimeSmsBatchSql = "select * from notifications.claim_daytime_sms_batch(_batchsize := @batchsize)";
     private const string _insertNewSmsNotificationSql = "call notifications.insertsmsnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _customizedbody, _result, _smscount, _resulttime, _expirytime)
 
-    private const string _updateSmsNotificationBasedOnIdentifierSql =
-        @"UPDATE notifications.smsnotifications 
-            SET result = $1::smsnotificationresulttype, 
-                resulttime = now(), 
-                gatewayreference = $2 
-            WHERE alternateid = $3"; // (_result, _gatewayreference, _alternateid)
-
-    private const string _updateSmsNotificationBasedOnGatewayReferenceSql =
-        @"UPDATE notifications.smsnotifications 
-            SET result = $1::smsnotificationresulttype, 
-                resulttime = now() 
-            WHERE gatewayreference = $2
-            RETURNING alternateid"; // (_result, _gatewayreference)
+    private const string _updateSmsNotificationSql = "SELECT * FROM notifications.updatesmsnotification($1, $2, $3)"; // (_result, _gatewayreference, _alternateid)
 
     /// <inheritdoc/>
     protected override string SourceIdentifier => _smsSourceIdentifier;
@@ -138,32 +126,9 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     /// <exception cref="ArgumentException">Throws if the provided SMS identifier is invalid.</exception>
     public async Task UpdateSendStatus(Guid? notificationId, SmsNotificationResultType result, string? gatewayReference = null)
     {
-        if ((!notificationId.HasValue || notificationId.Value == Guid.Empty) && string.IsNullOrWhiteSpace(gatewayReference))
-        {
-            throw new ArgumentException("The provided SMS identifier is invalid.");
-        }
-
-        if (notificationId.HasValue && notificationId.Value != Guid.Empty)
-        {
-            await UpdateSendStatusById(notificationId.Value, result, gatewayReference);
-        }
-        else if (!string.IsNullOrWhiteSpace(gatewayReference))
-        {
-            await UpdateSendStatusByGatewayReference(gatewayReference, result);
-        }
-    }
-
-    /// <summary>
-    /// Updates the send status of an SMS notification based on its identifier and sets the gateway reference.
-    /// </summary>
-    /// <param name="smsNotificationAlternateId">The unique identifier of the SMS notification.</param>
-    /// <param name="result">The result status of sending the SMS notification.</param>
-    /// <param name="gatewayReference">The gateway reference (optional). If provided, it will be updated in the database.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when the provided SMS identifier is invalid.</exception>
-    private async Task UpdateSendStatusById(Guid smsNotificationAlternateId, SmsNotificationResultType result, string? gatewayReference = null)
-    {
-        if (smsNotificationAlternateId == Guid.Empty)
+        var hasGatewayReference = !string.IsNullOrWhiteSpace(gatewayReference);
+        var hasNotificationId = notificationId is Guid id && id != Guid.Empty;
+        if (!hasGatewayReference && !hasNotificationId)
         {
             throw new ArgumentException("The provided SMS identifier is invalid.");
         }
@@ -173,18 +138,38 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
 
         try
         {
-            await using NpgsqlCommand pgcom = new(_updateSmsNotificationBasedOnIdentifierSql, connection, transaction);
+            await using NpgsqlCommand pgcom = new(_updateSmsNotificationSql, connection, transaction);
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, result.ToString());
             pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(gatewayReference) ? DBNull.Value : gatewayReference);
-            pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, smsNotificationAlternateId);
+            pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, (notificationId == null || notificationId == Guid.Empty) ? DBNull.Value : notificationId);
 
-            await pgcom.ExecuteNonQueryAsync();
+            // Execute and read the result table
+            Guid? resultAlternateId = null;
+            bool wasUpdated = false;
+            bool isExpired = false;
 
-            var orderIsSetAsCompleted = await TryCompleteOrderBasedOnNotificationsState(smsNotificationAlternateId, connection, transaction);
-
-            if (orderIsSetAsCompleted)
+            await using (var reader = await pgcom.ExecuteReaderAsync())
             {
-                await InsertOrderStatusCompletedOrder(connection, transaction, smsNotificationAlternateId);
+                if (await reader.ReadAsync())
+                {
+                    resultAlternateId = await reader.IsDBNullAsync(0) ? null : reader.GetGuid(0);
+                    wasUpdated = reader.GetBoolean(1);
+                    isExpired = reader.GetBoolean(2);
+                }
+            }
+
+            // Handle not found or expired cases
+            HandleUpdateResult(resultAlternateId, isExpired, hasGatewayReference, gatewayReference, notificationId, NotificationChannel.Sms);
+
+            // Proceed with order completion logic if update was successful
+            if (wasUpdated && resultAlternateId.HasValue)
+            {
+                var orderIsSetAsCompleted = await TryCompleteOrderBasedOnNotificationsState(resultAlternateId.Value, connection, transaction);
+
+                if (orderIsSetAsCompleted)
+                {
+                    await InsertOrderStatusCompletedOrder(connection, transaction, resultAlternateId.Value);
+                }
             }
 
             await transaction.CommitAsync();
@@ -197,52 +182,30 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     }
 
     /// <summary>
-    /// Updates the send status of an SMS notification based on its gateway reference.
+    /// Validates the result of an update operation and throws appropriate exceptions if the update failed.
     /// </summary>
-    /// <param name="gatewayReference">The gateway reference of the SMS notification.</param>
-    /// <param name="result">The result status of sending the SMS notification.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
-    /// <exception cref="SendStatusUpdateException">Thrown when the notification cannot be found or the update operation fails.</exception>
-    private async Task UpdateSendStatusByGatewayReference(string gatewayReference, SmsNotificationResultType result)
+    private static void HandleUpdateResult(
+        Guid? resultAlternateId,
+        bool isExpired,
+        bool hasGatewayReference,
+        string? gatewayReference,
+        Guid? notificationId,
+        NotificationChannel channel)
     {
-        if (string.IsNullOrWhiteSpace(gatewayReference))
+        // Notification not found in database
+        if (resultAlternateId == null)
         {
-            throw new ArgumentException("The provided gateway reference is invalid.");
+            var identifier = hasGatewayReference ? gatewayReference! : notificationId!.Value.ToString();
+            var identifierType = hasGatewayReference ? SendStatusIdentifierType.GatewayReference : SendStatusIdentifierType.NotificationId;
+            throw new NotificationNotFoundException(channel, identifier, identifierType);
         }
 
-        await using var connection = await _dataSource.OpenConnectionAsync();
-        await using var transaction = await connection.BeginTransactionAsync();
-
-        try
+        // Notification has passed its expiry time (TTL) - update was blocked
+        if (isExpired)
         {
-            await using var command = new NpgsqlCommand(_updateSmsNotificationBasedOnGatewayReferenceSql, connection, transaction);
-            command.Parameters.AddWithValue(NpgsqlDbType.Text, result.ToString());
-            command.Parameters.AddWithValue(NpgsqlDbType.Text, gatewayReference);
-
-            // Get the alternate ID from the database
-            var alternateId = await command.ExecuteScalarAsync();
-            if (alternateId == null)
-            {
-                throw new SendStatusUpdateException(NotificationChannel.Sms, gatewayReference, SendStatusIdentifierType.GatewayReference);
-            }
-
-            if (!Guid.TryParse(alternateId.ToString(), out Guid alternateIdGuid))
-            {
-                throw new SendStatusUpdateException(NotificationChannel.Sms, gatewayReference, SendStatusIdentifierType.GatewayReference);
-            }
-
-            bool orderIsCompleted = await TryCompleteOrderBasedOnNotificationsState(alternateIdGuid, connection, transaction);
-            if (orderIsCompleted)
-            {
-                await InsertOrderStatusCompletedOrder(connection, transaction, alternateIdGuid);
-            }
-
-            await transaction.CommitAsync();
-        }
-        catch (Exception)
-        {
-            await transaction.RollbackAsync();
-            throw;
+            var identifier = hasGatewayReference ? gatewayReference! : notificationId!.Value.ToString();
+            var identifierType = hasGatewayReference ? SendStatusIdentifierType.GatewayReference : SendStatusIdentifierType.NotificationId;
+            throw new NotificationExpiredException(channel, identifier, identifierType);
         }
     }
 }
