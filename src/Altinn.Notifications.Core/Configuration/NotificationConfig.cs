@@ -43,5 +43,5 @@ public class NotificationConfig
     /// <summary>
     /// Grace period in seconds added to expiry time of notifications, before setting a notification to failed time to live.
     /// </summary>
-    public int ExpiryOffsetSeconds { get; set; } = 260;
+    public int ExpiryOffsetSeconds { get; set; } = 300;
 }
