@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Integrations;
+﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Integrations.Configuration;
@@ -16,14 +17,20 @@ public sealed class SmsStatusConsumer : NotificationStatusConsumerBase<SmsStatus
     private readonly ISmsNotificationService _smsNotificationsService;
 
     /// <summary>
+    /// Gets the delivery report channel for Link Mobility SMS notifications.
+    /// </summary>
+    protected override DeliveryReportChannel Channel => DeliveryReportChannel.LinkMobility;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="SmsStatusConsumer"/> class.
     /// </summary>
     public SmsStatusConsumer(
         IKafkaProducer producer,
         ILogger<SmsStatusConsumer> logger,
         IOptions<KafkaSettings> kafkaSettings,
-        ISmsNotificationService smsNotificationsService)
-        : base(producer, logger, kafkaSettings.Value.SmsStatusUpdatedTopicName, kafkaSettings.Value.SmsStatusUpdatedRetryTopicName, kafkaSettings)
+        ISmsNotificationService smsNotificationsService,
+        IDeadDeliveryReportService deadDeliveryReportService)
+        : base(producer, logger, kafkaSettings.Value.SmsStatusUpdatedTopicName, kafkaSettings.Value.SmsStatusUpdatedRetryTopicName, kafkaSettings, deadDeliveryReportService)
     {
         _smsNotificationsService = smsNotificationsService;
     }

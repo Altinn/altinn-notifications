@@ -80,6 +80,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         var logger = new Mock<ILogger<SmsStatusConsumer>>();
         var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Loose);
         var smsNotificationRepository = new Mock<ISmsNotificationRepository>();
+        var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
 
         var sendOperationResult = new SmsSendOperationResult
         {
@@ -109,7 +110,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             }),
             Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig() { SmsPublishBatchSize = 50 }));
 
-        using var smsStatusConsumer = new SmsStatusConsumer(kafkaProducer.Object, logger.Object, _kafkaSettings, smsNotificationService);
+        using var smsStatusConsumer = new SmsStatusConsumer(kafkaProducer.Object, logger.Object, _kafkaSettings, smsNotificationService, deadDeliveryReportService.Object);
 
         // Act
         await smsStatusConsumer.StartAsync(CancellationToken.None);
@@ -158,6 +159,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         var logger = new Mock<ILogger<EmailStatusConsumer>>();
         var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Loose);
         var emailNotificationRepository = new Mock<IEmailNotificationRepository>();
+        var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
 
         var sendOperationResult = new EmailSendOperationResult
         {
@@ -186,7 +188,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             }),
             emailNotificationRepository.Object);
 
-        using var emailStatusConsumer = new EmailStatusConsumer(kafkaProducer.Object, logger.Object, _kafkaSettings, emailNotificationService);
+        using var emailStatusConsumer = new EmailStatusConsumer(kafkaProducer.Object, logger.Object, _kafkaSettings, emailNotificationService, deadDeliveryReportService.Object);
 
         // Act
         await emailStatusConsumer.StartAsync(CancellationToken.None);
@@ -226,7 +228,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ProcessSmsDeliveryReport_WhenSendStatusUpdateExceptionThrown_PublishMessageToRetryTopic()
+    public async Task ProcessSmsDeliveryReport_WhenNotificationNotFoundExceptionThrown_PublishMessageToRetryTopic()
     {
         // Arrange
         var publishedDeliveryReport = string.Empty;
@@ -236,6 +238,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         var logger = new Mock<ILogger<SmsStatusConsumer>>();
         var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Strict);
         var smsNotificationRepository = new Mock<ISmsNotificationRepository>();
+        var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
 
         var sendOperationResult = new SmsSendOperationResult
         {
@@ -247,7 +250,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 
         smsNotificationRepository
             .Setup(e => e.UpdateSendStatus(sendOperationResult.NotificationId, sendOperationResult.SendResult, sendOperationResult.GatewayReference))
-            .ThrowsAsync(new SendStatusUpdateException(NotificationChannel.Sms, sendOperationResult.GatewayReference, SendStatusIdentifierType.GatewayReference));
+            .ThrowsAsync(new NotificationNotFoundException(NotificationChannel.Sms, sendOperationResult.GatewayReference, SendStatusIdentifierType.GatewayReference));
 
         kafkaProducer
             .Setup(e => e.ProduceAsync(_kafkaSettings.Value.SmsStatusUpdatedTopicName, deliveryReport))
@@ -270,7 +273,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             }),
             Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig() { SmsPublishBatchSize = 50 }));
 
-        using var smsStatusConsumer = new SmsStatusConsumer(kafkaProducer.Object, logger.Object, _kafkaSettings, smsNotificationService);
+        using var smsStatusConsumer = new SmsStatusConsumer(kafkaProducer.Object, logger.Object, _kafkaSettings, smsNotificationService, deadDeliveryReportService.Object);
 
         // Act
         await smsStatusConsumer.StartAsync(CancellationToken.None);
@@ -312,7 +315,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ProcessEmailDeliveryReport_WhenSendStatusUpdateExceptionThrown_PublishMessageToRetryTopic()
+    public async Task ProcessEmailDeliveryReport_WhenNotificationNotFoundExceptionThrown_PublishMessageToRetryTopic()
     {
         // Arrange
         var publishedDeliveryReport = string.Empty;
@@ -322,6 +325,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         var logger = new Mock<ILogger<EmailStatusConsumer>>();
         var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Strict);
         var emailNotificationRepository = new Mock<IEmailNotificationRepository>();
+        var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
 
         var sendOperationResult = new EmailSendOperationResult
         {
@@ -333,7 +337,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 
         emailNotificationRepository
             .Setup(e => e.UpdateSendStatus(sendOperationResult.NotificationId, sendOperationResult.SendResult.Value, sendOperationResult.OperationId))
-            .ThrowsAsync(new SendStatusUpdateException(NotificationChannel.Email, sendOperationResult.OperationId, SendStatusIdentifierType.NotificationId));
+            .ThrowsAsync(new NotificationNotFoundException(NotificationChannel.Email, sendOperationResult.OperationId, SendStatusIdentifierType.NotificationId));
 
         kafkaProducer
             .Setup(e => e.ProduceAsync(_kafkaSettings.Value.EmailStatusUpdatedTopicName, deliveryReport))
@@ -355,7 +359,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             }),
             emailNotificationRepository.Object);
 
-        using var emailStatusConsumer = new EmailStatusConsumer(kafkaProducer.Object, logger.Object, _kafkaSettings, emailNotificationService);
+        using var emailStatusConsumer = new EmailStatusConsumer(kafkaProducer.Object, logger.Object, _kafkaSettings, emailNotificationService, deadDeliveryReportService.Object);
 
         // Act
         await emailStatusConsumer.StartAsync(CancellationToken.None);
@@ -407,6 +411,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         var logger = new Mock<ILogger<SmsStatusConsumer>>();
         var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Loose);
         var smsNotificationRepository = new Mock<ISmsNotificationRepository>();
+        var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
 
         var sendOperationResult = new SmsSendOperationResult
         {
@@ -441,7 +446,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             }),
             Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig() { SmsPublishBatchSize = 50 }));
 
-        using var smsStatusConsumer = new SmsStatusConsumer(kafkaProducer.Object, logger.Object, _kafkaSettings, smsNotificationService);
+        using var smsStatusConsumer = new SmsStatusConsumer(kafkaProducer.Object, logger.Object, _kafkaSettings, smsNotificationService, deadDeliveryReportService.Object);
 
         // Act
         await smsStatusConsumer.StartAsync(CancellationToken.None);
@@ -486,6 +491,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         var logger = new Mock<ILogger<EmailStatusConsumer>>();
         var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Loose);
         var emailNotificationRepository = new Mock<IEmailNotificationRepository>();
+        var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
 
         var sendOperationResult = new EmailSendOperationResult
         {
@@ -519,7 +525,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             }),
             emailNotificationRepository.Object);
 
-        using var emailStatusConsumer = new EmailStatusConsumer(kafkaProducer.Object, logger.Object, _kafkaSettings, emailNotificationService);
+        using var emailStatusConsumer = new EmailStatusConsumer(kafkaProducer.Object, logger.Object, _kafkaSettings, emailNotificationService, deadDeliveryReportService.Object);
 
         // Act
         await emailStatusConsumer.StartAsync(CancellationToken.None);
@@ -564,6 +570,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
         var logger = new Mock<ILogger<EmailStatusConsumer>>();
         var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Loose);
         var emailNotificationRepository = new Mock<IEmailNotificationRepository>();
+        var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
 
         var sendOperationResult = new EmailSendOperationResult
         {
@@ -597,7 +604,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             }),
             emailNotificationRepository.Object);
 
-        using var emailStatusConsumer = new EmailStatusConsumer(kafkaProducer.Object, logger.Object, _kafkaSettings, emailNotificationService);
+        using var emailStatusConsumer = new EmailStatusConsumer(kafkaProducer.Object, logger.Object, _kafkaSettings, emailNotificationService, deadDeliveryReportService.Object);
 
         // Act
         await emailStatusConsumer.StartAsync(CancellationToken.None);
