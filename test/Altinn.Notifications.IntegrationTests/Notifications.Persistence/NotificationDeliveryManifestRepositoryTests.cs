@@ -197,7 +197,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
 
         EmailNotificationRepository emailRepository = (EmailNotificationRepository)ServiceUtil.GetServices([typeof(IEmailNotificationRepository)])
             .First(i => i.GetType() == typeof(EmailNotificationRepository));
-        await emailRepository.AddNotification(emailNotification, DateTime.UtcNow);
+        await emailRepository.AddNotification(emailNotification, DateTime.UtcNow.AddMinutes(45));
         await emailRepository.UpdateSendStatus(emailNotificationId, EmailNotificationResultType.Failed_RecipientReserved);
 
         // Act
