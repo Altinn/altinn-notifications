@@ -241,7 +241,7 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UpdateSendStatus_GivenNonExistentNotificationId_ThrowsSendStatusUpdateException()
+    public async Task UpdateSendStatus_GivenNonExistentNotificationId_ThrowsNotificationNotFoundException()
     {
         // Arrange
         EmailNotificationRepository emailNotificationRepository = (EmailNotificationRepository)ServiceUtil
@@ -250,7 +250,7 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
         Guid nonExistentNotificationId = Guid.NewGuid();
 
         // Act
-        var ex = await Assert.ThrowsAsync<SendStatusUpdateException>(() => emailNotificationRepository.UpdateSendStatus(nonExistentNotificationId, EmailNotificationResultType.Succeeded));
+        var ex = await Assert.ThrowsAsync<NotificationNotFoundException>(() => emailNotificationRepository.UpdateSendStatus(nonExistentNotificationId, EmailNotificationResultType.Succeeded));
 
         // Assert:
         Assert.Equal(NotificationChannel.Email, ex.Channel);
@@ -268,7 +268,7 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UpdateSendStatus_GivenNonExistentOperationId_ThrowsSendStatusUpdateException()
+    public async Task UpdateSendStatus_GivenNonExistentOperationId_ThrowsNotificationNotFoundException()
     {
         // Arrange
         EmailNotificationRepository emailNotificationRepository = (EmailNotificationRepository)ServiceUtil
@@ -278,7 +278,7 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
         string operationId = Guid.NewGuid().ToString();
 
         // Act
-        var ex = await Assert.ThrowsAsync<SendStatusUpdateException>(() => emailNotificationRepository.UpdateSendStatus(notificationId: null, status: EmailNotificationResultType.Succeeded, operationId: operationId));
+        var ex = await Assert.ThrowsAsync<NotificationNotFoundException>(() => emailNotificationRepository.UpdateSendStatus(notificationId: null, status: EmailNotificationResultType.Succeeded, operationId: operationId));
 
         // Assert: exception details
         Assert.Equal(NotificationChannel.Email, ex.Channel);

@@ -540,7 +540,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UpdateSendStatus_UsingNonExistingGatewayRef_ThrowsSendStatusUpdateException()
+    public async Task UpdateSendStatus_UsingNonExistingGatewayRef_ThrowsNotificationNotFoundException()
     {
         // Arrange
         (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(simulateConsumers: true, simulateCronJob: true);
@@ -560,7 +560,7 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
         await PostgreUtil.RunSql(setGateqwaySql);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<SendStatusUpdateException>(async () =>
+        var exception = await Assert.ThrowsAsync<NotificationNotFoundException>(async () =>
         {
             await repo.UpdateSendStatus(
                 notificationId: null,
