@@ -24,8 +24,9 @@
     -e orderTypes={types of orders to test, e.g., valid, invalid or duplicate} \
 */
 
+import { orderTypes } from "../shared/variables.js";
 import { stopIterationOnFail } from "../errorhandler.js";
-import { ninRecipient, orderTypes } from "../shared/variables.js";
+import { getNinRecipient } from "../shared/functions.js";
 import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 import {
     buildOptions,
@@ -95,6 +96,7 @@ function updateRecipientWithBirthNumber(recipient, nationalIdentityNumber) {
  * @returns {Object} Modified payload
  */
 function createUniqueOrderChainPayload(baseOrderChainPayload) {
+    const ninRecipient = getNinRecipient();
     return {
         ...baseOrderChainPayload,
         idempotencyId: uuidv4(),

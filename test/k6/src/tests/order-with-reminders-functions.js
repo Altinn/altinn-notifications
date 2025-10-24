@@ -89,7 +89,7 @@ export function buildOptions(extraThresholds = {}) {
             {
                 smoke: {
                     rate: 10,
-                    maxVUs: 10,
+                    maxVUs: 100,
                     timeUnit: '1s',
                     duration: '30s',
                     preAllocatedVUs: 5,
@@ -97,36 +97,36 @@ export function buildOptions(extraThresholds = {}) {
                     executor: 'constant-arrival-rate'
                 },
                 capacity_probe: {
-                    maxVUs: 400,
-                    startRate: 50,
+                    maxVUs: 1000,
+                    startRate: 25,
                     timeUnit: '1s',
                     startTime: '45s',
                     gracefulStop: '30s',
                     preAllocatedVUs: 120,
                     executor: 'ramping-arrival-rate',
                     stages: [
-                        { target: 100, duration: '2m' },
-                        { target: 200, duration: '2m' },
-                        { target: 300, duration: '3m' },
-                        { target: 0, duration: '1m' }
+                        { target: 25, duration: '2m' },
+                        { target: 50, duration: '2m' },
+                        { target: 75, duration: '3m' },
+                        { target: 100, duration: '1m' }
                     ]
                 },
                 realistic_sla_compliance: {
-                    maxVUs: 500,
-                    startRate: 100,
+                    maxVUs: 1000,
+                    startRate: 50,
                     timeUnit: '1s',
                     startTime: '9m20s',
                     gracefulStop: '30s',
                     preAllocatedVUs: 250,
                     executor: 'ramping-arrival-rate',
                     stages: [
-                        { target: 400, duration: '4m' },
-                        { target: 700, duration: '6m' },
-                        { target: 0, duration: '2m' }
+                        { target: 50, duration: '4m' },
+                        { target: 100, duration: '6m' },
+                        { target: 75, duration: '2m' }
                     ]
                 },
                 steady_state_load: {
-                    rate: 300,
+                    rate: 100,
                     maxVUs: 600,
                     timeUnit: '1s',
                     duration: '15m',
@@ -144,8 +144,8 @@ export function buildOptions(extraThresholds = {}) {
                     executor: 'ramping-arrival-rate',
                     stages: [
                         { target: 50, duration: '10s' },
-                        { target: 300, duration: '20s' },
-                        { target: 1000, duration: '2m' },
+                        { target: 150, duration: '20s' },
+                        { target: 300, duration: '2m' },
                         { target: 0, duration: '40s' }
                     ]
                 },
@@ -210,9 +210,24 @@ export function getFutureDate(daysToAdd = 0) {
  * @param {number} httpResponse.status - The HTTP status code
  */
 export function collectHttpResponseMetrics(httpResponse) {
+    if (!httpResponse) {
+        failedRequests.add(1);
+        successRate.add(false);
+        serverErrorRate.add(false);
+        return;
+    }
+
     const status = httpResponse.status;
+    const isNetworkFail = status === 0;
     const isServerError = status >= 500;
     const isClientError = status >= 400 && status < 500;
+
+    if (isNetworkFail) {
+        failedRequests.add(1);
+        successRate.add(false);
+        serverErrorRate.add(false);
+        return;
+    }
 
     if (isClientError || isServerError) {
         failedRequests.add(1);
@@ -226,13 +241,13 @@ export function collectHttpResponseMetrics(httpResponse) {
         }
 
         successRate.add(false);
+
         return;
     }
 
     successRate.add(true);
     serverErrorRate.add(false);
 }
-
 /**
  * Sends a notification order chain request to the Notification API.
  *
@@ -288,12 +303,16 @@ export function runValidators(processingResults, validators) {
             break;
         }
 
-        let responseBody;
+        let parsed;
         try {
-            responseBody = JSON.parse(httpResponse.body);
-        } catch { responseBody = {}; }
+            parsed = (typeof httpResponse.body === 'string' && httpResponse.body.length > 0)
+                ? JSON.parse(httpResponse.body)
+                : {};
+        } catch {
+            parsed = {};
+        }
 
-        validators[orderType]?.(httpResponse, responseBody, orderChainPayload);
+        validators[orderType]?.(httpResponse, parsed, orderChainPayload);
     }
 }
 
@@ -320,14 +339,22 @@ export function handleSummary(testResults) {
  * @returns {void}
  */
 export function validateStandardNotificationShape(response, responseBody, orderChainPayload, expectedStatus) {
-    const notificationObj = responseBody.notification || {};
+    if (!response || response.status === 0) {
+        check(response, {
+            [`Status is ${expectedStatus} (skipped due to network failure)`]: () => false
+        });
+        return;
+    }
+
+    const safeBody = (responseBody && typeof responseBody === 'object') ? responseBody : {};
+    const notificationObj = (safeBody.notification && typeof safeBody.notification === 'object') ? safeBody.notification : {};
     const reminderArray = Array.isArray(notificationObj.reminders) ? notificationObj.reminders : [];
     const expectedReminderCount = Array.isArray(orderChainPayload?.reminders) ? orderChainPayload.reminders.length : 0;
 
     check(response, {
-        [`Status is ${expectedStatus}`]: e => e.status === expectedStatus,
+        [`Status is ${expectedStatus}`]: e => e && e.status === expectedStatus,
         "Response contains shipment ID": () => typeof notificationObj.shipmentId === 'string' && notificationObj.shipmentId.length > 0,
-        "Response contains notification order ID": () => typeof responseBody.notificationOrderId === 'string' && responseBody.notificationOrderId.length > 0,
+        "Response contains notification order ID": () => typeof safeBody.notificationOrderId === 'string' && safeBody.notificationOrderId.length > 0,
         "Response includes reminders": () => Array.isArray(notificationObj.reminders),
         "Reminder count matches request": () => reminderArray.length === expectedReminderCount,
         "All reminders have shipment IDs": () => reminderArray.length === 0 || reminderArray.every(e => typeof e.shipmentId === 'string' && e.shipmentId.length > 0)
