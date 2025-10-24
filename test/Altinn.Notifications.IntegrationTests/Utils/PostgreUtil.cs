@@ -281,6 +281,42 @@ public static class PostgreUtil
         await pgcom.ExecuteNonQueryAsync();
     }
 
+    public static async Task UpdateResultAndExpiryTimeNotification<T>(T notification, string timeInterval)
+        where T : class
+    {
+        string sql = string.Empty;
+        Guid notificationId;
+
+        if (typeof(T) == typeof(EmailNotification))
+        {
+            var emailNotification = notification as EmailNotification;
+            notificationId = emailNotification!.Id;
+            sql = $@"
+                UPDATE notifications.emailnotifications 
+                SET result = 'Succeeded', 
+                    expirytime = NOW() - INTERVAL '{timeInterval}' 
+                WHERE alternateid = @id;";
+        }
+        else if (typeof(T) == typeof(SmsNotification))
+        {
+            var smsNotification = notification as SmsNotification;
+            notificationId = smsNotification!.Id;
+            sql = $@"
+                UPDATE notifications.smsnotifications 
+                SET result = 'Accepted', 
+                    expirytime = NOW() - INTERVAL '{timeInterval}' 
+                WHERE alternateid = @id;";
+        }
+        else
+        {
+            throw new ArgumentException("Type T must be either EmailNotification or SmsNotification");
+        }
+
+        await RunSql(
+            sql,
+            new NpgsqlParameter("@id", notificationId));
+    }
+
     public static async Task<T> RunSqlReturnOutput<T>(string query)
     {
         NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;

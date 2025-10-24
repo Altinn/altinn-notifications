@@ -39,4 +39,9 @@ public class NotificationConfig
     /// The number of expired notifications to terminate per batch.
     /// </summary>
     public int TerminationBatchSize { get; set; } = 100;
+
+    /// <summary>
+    /// Grace period in seconds added to expiry time of notifications, before setting a notification to failed time to live.
+    /// </summary>
+    public int ExpiryOffsetSeconds { get; set; } = 300;
 }
