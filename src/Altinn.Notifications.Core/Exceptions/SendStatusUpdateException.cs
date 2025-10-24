@@ -5,41 +5,42 @@ using Altinn.Notifications.Core.Enums;
 namespace Altinn.Notifications.Core.Exceptions;
 
 /// <summary>
-/// Represents failures when updating the send status of Email or SMS notifications.
+/// Base class for exceptions that occur when updating the send status of Email or SMS notifications.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance that carries domain-specific failure context for send-status updates.
-/// </remarks>
-/// <param name="channel">The notification channel the update concerned (Email or Sms).</param>
-/// <param name="identifier">The value of the identifier that was not matched.</param>
-/// <param name="identifierType">The type of the identifier that was not matched.</param>
 [ExcludeFromCodeCoverage]
-public sealed class SendStatusUpdateException(NotificationChannel channel, string identifier, SendStatusIdentifierType identifierType) : Exception(BuildMessage(channel, identifier, identifierType))
+public abstract class SendStatusUpdateException : Exception
 {
     /// <summary>
     /// The notification channel the update concerned (Email or Sms).
     /// </summary>
-    public NotificationChannel Channel { get; } = channel;
+    public NotificationChannel Channel { get; }
 
     /// <summary>
     /// The value of the identifier that was not matched.
     /// </summary>
-    public string Identifier { get; } = identifier;
+    public string Identifier { get; }
 
     /// <summary>
     /// The type of the identifier that was not matched.
     /// </summary>
-    public SendStatusIdentifierType IdentifierType { get; } = identifierType;
+    public SendStatusIdentifierType IdentifierType { get; }
 
     /// <summary>
-    /// Builds an error message for notification status update failures.
+    /// Initializes a new instance of the <see cref="SendStatusUpdateException"/> class.
     /// </summary>
-    /// <param name="channel">The notification channel (Email, SMS, etc.).</param>
-    /// <param name="identifier">The identifier value that wasn't found.</param>
-    /// <param name="identifierType">The type of identifier used in the search.</param>
-    /// <returns>A formatted error message.</returns>
-    private static string BuildMessage(NotificationChannel channel, string identifier, SendStatusIdentifierType identifierType)
+    /// <param name="channel">The notification channel the update concerned (Email or Sms).</param>
+    /// <param name="identifier">The value of the identifier.</param>
+    /// <param name="identifierType">The type of the identifier.</param>
+    /// <param name="message">The exception message.</param>
+    protected SendStatusUpdateException(
+        NotificationChannel channel,
+        string identifier,
+        SendStatusIdentifierType identifierType,
+        string message)
+        : base(message)
     {
-        return $"{channel} status update failed: {identifierType}='{identifier}' not found";
+        Channel = channel;
+        Identifier = identifier;
+        IdentifierType = identifierType;
     }
 }

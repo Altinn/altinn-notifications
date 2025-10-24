@@ -221,9 +221,10 @@ public class EmailStatusConsumerTests : IAsyncLifetime
 
         var producerMock = new Mock<IKafkaProducer>(MockBehavior.Loose);
         var emailServiceMock = new Mock<IEmailNotificationService>();
+        var deadDeliveryReportServiceMock = new Mock<IDeadDeliveryReportService>();
         emailServiceMock
             .Setup(e => e.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()))
-            .ThrowsAsync(new SendStatusUpdateException(NotificationChannel.Email, Guid.NewGuid().ToString(), identifierType));
+            .ThrowsAsync(new NotificationNotFoundException(NotificationChannel.Email, Guid.NewGuid().ToString(), identifierType));
 
         EmailSendOperationResult deliveryReport = identifierType == SendStatusIdentifierType.NotificationId
             ? new EmailSendOperationResult { NotificationId = Guid.NewGuid(), SendResult = EmailNotificationResultType.Delivered }
@@ -232,7 +233,7 @@ public class EmailStatusConsumerTests : IAsyncLifetime
         string serializedDeliveryReport = deliveryReport.Serialize();
 
         using EmailStatusConsumer emailStatusConsumer =
-            new(producerMock.Object, NullLogger<EmailStatusConsumer>.Instance, kafkaOptions, emailServiceMock.Object);
+            new(producerMock.Object, NullLogger<EmailStatusConsumer>.Instance, kafkaOptions, emailServiceMock.Object, deadDeliveryReportServiceMock.Object);
 
         // Act
         await emailStatusConsumer.StartAsync(CancellationToken.None);
