@@ -123,51 +123,17 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
             throw new ArgumentException("The provided Email identifier is invalid.");
         }
 
-        await using var connection = await _dataSource.OpenConnectionAsync();
-        await using var transaction = await connection.BeginTransactionAsync();
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_updateEmailNotificationSql);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(operationId) ? DBNull.Value : operationId);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, (notificationId == null || notificationId == Guid.Empty) ? DBNull.Value : notificationId);
 
-        try
-        {
-            await using NpgsqlCommand pgcom = new(_updateEmailNotificationSql, connection, transaction);
-            pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
-            pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(operationId) ? DBNull.Value : operationId);
-            pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, (notificationId == null || notificationId == Guid.Empty) ? DBNull.Value : notificationId);
-
-            // Execute and read the result table
-            Guid? resultAlternateId = null;
-            bool wasUpdated = false;
-            bool isExpired = false;
-
-            await using (var reader = await pgcom.ExecuteReaderAsync())
-            {
-                if (await reader.ReadAsync())
-                {
-                    resultAlternateId = await reader.IsDBNullAsync(0) ? null : reader.GetGuid(0);
-                    wasUpdated = reader.GetBoolean(1);
-                    isExpired = reader.GetBoolean(2);
-                }
-            }
-
-            // Handle not found or expired cases
-            HandleUpdateResult(resultAlternateId, isExpired, hasOperationId, operationId, notificationId, NotificationChannel.Email, SendStatusIdentifierType.OperationId);
-
-            // Proceed with order completion logic if update was successful
-            if (wasUpdated && resultAlternateId.HasValue)
-            {
-                var orderIsSetAsCompleted = await TryCompleteOrderBasedOnNotificationsState(resultAlternateId.Value, connection, transaction);
-
-                if (orderIsSetAsCompleted)
-                {
-                    await InsertOrderStatusCompletedOrder(connection, transaction, resultAlternateId.Value);
-                }
-            }
-
-            await transaction.CommitAsync();
-        }
-        catch (Exception)
-        {
-            await transaction.RollbackAsync();
-            throw;
-        }
+        await ExecuteUpdateWithTransactionAsync(
+            pgcom,
+            hasOperationId,
+            operationId,
+            notificationId,
+            NotificationChannel.Email,
+            SendStatusIdentifierType.OperationId);
     }
 }

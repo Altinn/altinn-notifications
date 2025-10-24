@@ -290,4 +290,85 @@ public abstract class NotificationRepositoryBase
             throw new Core.Exceptions.NotificationExpiredException(channel, id, idType);
         }
     }
+
+    /// <summary>
+    /// Executes a notification status update within a transaction, handling result validation and order completion.
+    /// This method provides a common template for updating notification status across different notification types.
+    /// </summary>
+    /// <remarks>
+    /// The SQL function called by <paramref name="updateCommand"/> MUST return a table with exactly three columns in this order:
+    /// <list type="number">
+    /// <item><description>Column 0: alternateid (uuid) - The notification's alternate ID, or NULL if not found</description></item>
+    /// <item><description>Column 1: was_updated (boolean) - True if the update was performed, false otherwise</description></item>
+    /// <item><description>Column 2: is_expired (boolean) - True if the notification has passed its expiry time</description></item>
+    /// </list>
+    /// The command's Connection and Transaction properties will be set by this method, so they should be left null when passed in.
+    /// All parameters for the SQL function must be added to the command before calling this method.
+    /// </remarks>
+    /// <param name="updateCommand">
+    /// The NpgsqlCommand configured with the SQL function call and all required parameters.
+    /// The SQL function must return a table with columns: (alternateid uuid, was_updated boolean, is_expired boolean).
+    /// Connection and Transaction will be set by this method.
+    /// </param>
+    /// <param name="hasIdentifier">Indicates whether an identifier (operationId or gatewayReference) was provided.</param>
+    /// <param name="identifier">The identifier value (operationId or gatewayReference).</param>
+    /// <param name="notificationId">The notification ID.</param>
+    /// <param name="channel">The notification channel (Email or SMS).</param>
+    /// <param name="identifierType">The type of identifier when hasIdentifier is true (OperationId or GatewayReference).</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <exception cref="Core.Exceptions.NotificationNotFoundException">Thrown when the notification is not found in the database (alternateid is NULL).</exception>
+    /// <exception cref="Core.Exceptions.NotificationExpiredException">Thrown when the notification has passed its expiry time (is_expired is true).</exception>
+    protected async Task ExecuteUpdateWithTransactionAsync(
+        NpgsqlCommand updateCommand,
+        bool hasIdentifier,
+        string? identifier,
+        Guid? notificationId,
+        Core.Enums.NotificationChannel channel,
+        Core.Enums.SendStatusIdentifierType identifierType)
+    {
+        await using var connection = await _dataSource.OpenConnectionAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+
+        try
+        {
+            updateCommand.Connection = connection;
+            updateCommand.Transaction = transaction;
+
+            // Execute and read the result table
+            Guid? resultAlternateId = null;
+            bool wasUpdated = false;
+            bool isExpired = false;
+
+            await using (var reader = await updateCommand.ExecuteReaderAsync())
+            {
+                if (await reader.ReadAsync())
+                {
+                    resultAlternateId = await reader.IsDBNullAsync(0) ? null : reader.GetGuid(0);
+                    wasUpdated = reader.GetBoolean(1);
+                    isExpired = reader.GetBoolean(2);
+                }
+            }
+
+            // Handle not found or expired cases
+            HandleUpdateResult(resultAlternateId, isExpired, hasIdentifier, identifier, notificationId, channel, identifierType);
+
+            // Proceed with order completion logic if update was successful
+            if (wasUpdated && resultAlternateId.HasValue)
+            {
+                var orderIsSetAsCompleted = await TryCompleteOrderBasedOnNotificationsState(resultAlternateId.Value, connection, transaction);
+
+                if (orderIsSetAsCompleted)
+                {
+                    await InsertOrderStatusCompletedOrder(connection, transaction, resultAlternateId.Value);
+                }
+            }
+
+            await transaction.CommitAsync();
+        }
+        catch (Exception)
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
 }

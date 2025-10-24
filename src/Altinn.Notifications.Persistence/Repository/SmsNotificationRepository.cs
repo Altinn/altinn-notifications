@@ -133,51 +133,17 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
             throw new ArgumentException("The provided SMS identifier is invalid.");
         }
 
-        await using var connection = await _dataSource.OpenConnectionAsync();
-        await using var transaction = await connection.BeginTransactionAsync();
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_updateSmsNotificationSql);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, result.ToString());
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(gatewayReference) ? DBNull.Value : gatewayReference);
+        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, (notificationId == null || notificationId == Guid.Empty) ? DBNull.Value : notificationId);
 
-        try
-        {
-            await using NpgsqlCommand pgcom = new(_updateSmsNotificationSql, connection, transaction);
-            pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, result.ToString());
-            pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(gatewayReference) ? DBNull.Value : gatewayReference);
-            pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, (notificationId == null || notificationId == Guid.Empty) ? DBNull.Value : notificationId);
-
-            // Execute and read the result table
-            Guid? resultAlternateId = null;
-            bool wasUpdated = false;
-            bool isExpired = false;
-
-            await using (var reader = await pgcom.ExecuteReaderAsync())
-            {
-                if (await reader.ReadAsync())
-                {
-                    resultAlternateId = await reader.IsDBNullAsync(0) ? null : reader.GetGuid(0);
-                    wasUpdated = reader.GetBoolean(1);
-                    isExpired = reader.GetBoolean(2);
-                }
-            }
-
-            // Handle not found or expired cases
-            HandleUpdateResult(resultAlternateId, isExpired, hasGatewayReference, gatewayReference, notificationId, NotificationChannel.Sms, SendStatusIdentifierType.GatewayReference);
-
-            // Proceed with order completion logic if update was successful
-            if (wasUpdated && resultAlternateId.HasValue)
-            {
-                var orderIsSetAsCompleted = await TryCompleteOrderBasedOnNotificationsState(resultAlternateId.Value, connection, transaction);
-
-                if (orderIsSetAsCompleted)
-                {
-                    await InsertOrderStatusCompletedOrder(connection, transaction, resultAlternateId.Value);
-                }
-            }
-
-            await transaction.CommitAsync();
-        }
-        catch (Exception)
-        {
-            await transaction.RollbackAsync();
-            throw;
-        }
+        await ExecuteUpdateWithTransactionAsync(
+            pgcom,
+            hasGatewayReference,
+            gatewayReference,
+            notificationId,
+            NotificationChannel.Sms,
+            SendStatusIdentifierType.GatewayReference);
     }
 }
