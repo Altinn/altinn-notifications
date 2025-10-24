@@ -296,6 +296,48 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task UpdateSendStatus_GivenExpiredNotification_ThrowsNotificationExpiredException()
+    {
+        // Arrange
+        Guid orderId = await PostgreUtil.PopulateDBWithEmailOrderAndReturnId();
+        _orderIdsToDelete.Add(orderId);
+
+        EmailNotificationRepository repo = (EmailNotificationRepository)ServiceUtil
+            .GetServices([typeof(IEmailNotificationRepository)])
+            .First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        Guid notificationId = Guid.NewGuid();
+        EmailNotification notification = new()
+        {
+            OrderId = orderId,
+            Id = notificationId,
+            RequestedSendTime = DateTime.UtcNow,
+            Recipient = new() { ToAddress = "test@example.com" }
+        };
+
+        // Add notification with expiry time in the past (expired 10 minutes ago)
+        await repo.AddNotification(notification, DateTime.UtcNow.AddMinutes(-10));
+
+        // Act
+        var ex = await Assert.ThrowsAsync<NotificationExpiredException>(() =>
+            repo.UpdateSendStatus(notificationId, EmailNotificationResultType.Delivered));
+
+        // Assert: exception details
+        Assert.Equal(NotificationChannel.Email, ex.Channel);
+        Assert.Equal(SendStatusIdentifierType.NotificationId, ex.IdentifierType);
+        Assert.Equal(notificationId.ToString(), ex.Identifier);
+
+        // Assert: notification status was not updated (remains New)
+        string sql = $@"
+        SELECT result
+        FROM notifications.emailnotifications
+        WHERE alternateid = '{notificationId}'";
+
+        string result = await PostgreUtil.RunSqlReturnOutput<string>(sql);
+        Assert.Equal(EmailNotificationResultType.New.ToString(), result);
+    }
+
+    [Fact]
     public async Task UpdateSendStatus_WithInvalidNotificationAndOperationIdentifiers_ThrowsArgumentException()
     {
         // Arrange

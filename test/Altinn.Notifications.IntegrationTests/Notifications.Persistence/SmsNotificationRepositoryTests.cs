@@ -571,6 +571,42 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
         Assert.Equal($"Sms status update failed: GatewayReference='{nonExistingGatewayReference}' not found", exception.Message);
     }
 
+    [Fact]
+    public async Task UpdateSendStatus_GivenExpiredNotification_ThrowsNotificationExpiredException()
+    {
+        // Arrange
+        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(simulateConsumers: true, simulateCronJob: true);
+        _orderIdsToCleanup.Add(order.Id);
+
+        SmsNotificationRepository repo = (SmsNotificationRepository)ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .First(i => i.GetType() == typeof(SmsNotificationRepository));
+
+        // Update the expiry time to be in the past (expired 10 minutes ago)
+        string setExpirySql = $@"UPDATE notifications.smsnotifications
+                SET expirytime = '{DateTime.UtcNow.AddMinutes(-10):yyyy-MM-dd HH:mm:ss}'
+                WHERE alternateid = '{smsNotification.Id}'";
+        await PostgreUtil.RunSql(setExpirySql);
+
+        // Act
+        var ex = await Assert.ThrowsAsync<NotificationExpiredException>(() =>
+            repo.UpdateSendStatus(smsNotification.Id, SmsNotificationResultType.Delivered, gatewayReference: null));
+
+        // Assert: exception details
+        Assert.Equal(NotificationChannel.Sms, ex.Channel);
+        Assert.Equal(SendStatusIdentifierType.NotificationId, ex.IdentifierType);
+        Assert.Equal(smsNotification.Id.ToString(), ex.Identifier);
+
+        // Assert: notification status was not updated (remains New)
+        string sql = $@"
+        SELECT result
+        FROM notifications.smsnotifications
+        WHERE alternateid = '{smsNotification.Id}'";
+
+        string result = await PostgreUtil.RunSqlReturnOutput<string>(sql);
+        Assert.Equal(SmsNotificationResultType.New.ToString(), result);
+    }
+
     private static async Task<int> SelectOrdersCompletedCount(NotificationOrder order)
     {
         string sql = $@"SELECT count(1) 
