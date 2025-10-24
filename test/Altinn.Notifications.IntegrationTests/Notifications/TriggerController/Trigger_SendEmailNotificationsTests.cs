@@ -58,9 +58,7 @@ public class Trigger_SendEmailNotificationsTests : IClassFixture<IntegrationTest
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
 
         // Assert
-        string sql = $"select count(1) from notifications.emailnotifications where result = 'Sending' and alternateid='{notification.Id}'";
-        long actual = await PostgreUtil.RunSqlReturnOutput<long>(sql);
-
+        var actual = await IntegrationTestUtil.PollSendingNotificationStatus(notification);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(1, actual);
     }
