@@ -27,7 +27,7 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     private const string _insertEmailNotificationSql = "call notifications.insertemailnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _toaddress, _customizedbody, _customizedsubject, _result, _resulttime, _expirytime)
     private const string _getEmailNotificationsSql = "select * from notifications.getemails_statusnew_updatestatus()";
     private const string _getEmailRecipients = "select * from notifications.getemailrecipients_v2($1)"; // (_orderid)
-    private const string _updateEmailNotificationSql = "SELECT notifications.updateemailnotification($1, $2, $3)"; // (_result, _operationid, _alternateid)
+    private const string _updateEmailNotificationSql = "select * from notifications.updateemailnotification($1, $2, $3)"; // (_result, _operationid, _alternateid)
 
     /// <inheritdoc/>
     protected override string SourceIdentifier => _emailSourceIdentifier;
