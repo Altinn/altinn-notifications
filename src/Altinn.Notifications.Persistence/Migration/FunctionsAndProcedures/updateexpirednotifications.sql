@@ -15,7 +15,7 @@ BEGIN
             SELECT _id, alternateid
             FROM notifications.emailnotifications
             WHERE result = 'Succeeded' AND expirytime < (now() - make_interval(secs => _expiry_offset_seconds))
-            ORDER BY _id DESC
+            ORDER BY expirytime ASC, _id
             FOR UPDATE SKIP LOCKED
             LIMIT GREATEST(_limit, 1) -- Use the input parameter for the limit
         ),
@@ -37,7 +37,7 @@ BEGIN
             SELECT _id, alternateid
             FROM notifications.smsnotifications
             WHERE result = 'Accepted' AND expirytime < (now() - make_interval(secs => _expiry_offset_seconds))
-            ORDER BY _id DESC
+            ORDER BY expirytime ASC, _id
             FOR UPDATE SKIP LOCKED
             LIMIT GREATEST(_limit, 1) -- Use the input parameter for the limit
         ),
