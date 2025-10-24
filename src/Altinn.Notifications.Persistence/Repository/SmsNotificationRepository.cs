@@ -133,13 +133,14 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
             throw new ArgumentException("The provided SMS identifier is invalid.");
         }
 
-        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_updateSmsNotificationSql);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, result.ToString());
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(gatewayReference) ? DBNull.Value : gatewayReference);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, (notificationId == null || notificationId == Guid.Empty) ? DBNull.Value : notificationId);
-
         await ExecuteUpdateWithTransactionAsync(
-            pgcom,
+            _updateSmsNotificationSql,
+            pgcom =>
+            {
+                pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, result.ToString());
+                pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(gatewayReference) ? DBNull.Value : gatewayReference);
+                pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, (notificationId == null || notificationId == Guid.Empty) ? DBNull.Value : notificationId);
+            },
             hasGatewayReference,
             gatewayReference,
             notificationId,

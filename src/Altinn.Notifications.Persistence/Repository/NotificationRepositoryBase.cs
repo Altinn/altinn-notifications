@@ -296,20 +296,15 @@ public abstract class NotificationRepositoryBase
     /// This method provides a common template for updating notification status across different notification types.
     /// </summary>
     /// <remarks>
-    /// The SQL function called by <paramref name="updateCommand"/> MUST return a table with exactly three columns in this order:
+    /// The SQL function called via <paramref name="sqlCommand"/> MUST return a table with exactly three columns in this order:
     /// <list type="number">
     /// <item><description>Column 0: alternateid (uuid) - The notification's alternate ID, or NULL if not found</description></item>
     /// <item><description>Column 1: was_updated (boolean) - True if the update was performed, false otherwise</description></item>
     /// <item><description>Column 2: is_expired (boolean) - True if the notification has passed its expiry time</description></item>
     /// </list>
-    /// The command's Connection and Transaction properties will be set by this method, so they should be left null when passed in.
-    /// All parameters for the SQL function must be added to the command before calling this method.
     /// </remarks>
-    /// <param name="updateCommand">
-    /// The NpgsqlCommand configured with the SQL function call and all required parameters.
-    /// The SQL function must return a table with columns: (alternateid uuid, was_updated boolean, is_expired boolean).
-    /// Connection and Transaction will be set by this method.
-    /// </param>
+    /// <param name="sqlCommand">The SQL command text to execute (e.g., "select * from notifications.updateemailnotification($1, $2, $3)").</param>
+    /// <param name="parameters">Action to configure the command parameters before execution.</param>
     /// <param name="hasIdentifier">Indicates whether an identifier (operationId or gatewayReference) was provided.</param>
     /// <param name="identifier">The identifier value (operationId or gatewayReference).</param>
     /// <param name="notificationId">The notification ID.</param>
@@ -319,7 +314,8 @@ public abstract class NotificationRepositoryBase
     /// <exception cref="Core.Exceptions.NotificationNotFoundException">Thrown when the notification is not found in the database (alternateid is NULL).</exception>
     /// <exception cref="Core.Exceptions.NotificationExpiredException">Thrown when the notification has passed its expiry time (is_expired is true).</exception>
     protected async Task ExecuteUpdateWithTransactionAsync(
-        NpgsqlCommand updateCommand,
+        string sqlCommand,
+        Action<NpgsqlCommand> parameters,
         bool hasIdentifier,
         string? identifier,
         Guid? notificationId,
@@ -331,15 +327,15 @@ public abstract class NotificationRepositoryBase
 
         try
         {
-            updateCommand.Connection = connection;
-            updateCommand.Transaction = transaction;
+            await using NpgsqlCommand pgcom = new(sqlCommand, connection, transaction);
+            parameters(pgcom);
 
             // Execute and read the result table
             Guid? resultAlternateId = null;
             bool wasUpdated = false;
             bool isExpired = false;
 
-            await using (var reader = await updateCommand.ExecuteReaderAsync())
+            await using (var reader = await pgcom.ExecuteReaderAsync())
             {
                 if (await reader.ReadAsync())
                 {

@@ -123,13 +123,14 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
             throw new ArgumentException("The provided Email identifier is invalid.");
         }
 
-        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_updateEmailNotificationSql);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(operationId) ? DBNull.Value : operationId);
-        pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, (notificationId == null || notificationId == Guid.Empty) ? DBNull.Value : notificationId);
-
         await ExecuteUpdateWithTransactionAsync(
-            pgcom,
+            _updateEmailNotificationSql,
+            pgcom =>
+            {
+                pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
+                pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(operationId) ? DBNull.Value : operationId);
+                pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, (notificationId == null || notificationId == Guid.Empty) ? DBNull.Value : notificationId);
+            },
             hasOperationId,
             operationId,
             notificationId,
