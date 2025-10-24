@@ -159,7 +159,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
             }
 
             // Handle not found or expired cases
-            HandleUpdateResult(resultAlternateId, isExpired, hasGatewayReference, gatewayReference, notificationId, NotificationChannel.Sms);
+            HandleUpdateResult(resultAlternateId, isExpired, hasGatewayReference, gatewayReference, notificationId, NotificationChannel.Sms, SendStatusIdentifierType.GatewayReference);
 
             // Proceed with order completion logic if update was successful
             if (wasUpdated && resultAlternateId.HasValue)
@@ -178,34 +178,6 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
         {
             await transaction.RollbackAsync();
             throw;
-        }
-    }
-
-    /// <summary>
-    /// Validates the result of an update operation and throws appropriate exceptions if the update failed.
-    /// </summary>
-    private static void HandleUpdateResult(
-        Guid? resultAlternateId,
-        bool isExpired,
-        bool hasGatewayReference,
-        string? gatewayReference,
-        Guid? notificationId,
-        NotificationChannel channel)
-    {
-        // Notification not found in database
-        if (resultAlternateId == null)
-        {
-            var identifier = hasGatewayReference ? gatewayReference! : notificationId!.Value.ToString();
-            var identifierType = hasGatewayReference ? SendStatusIdentifierType.GatewayReference : SendStatusIdentifierType.NotificationId;
-            throw new NotificationNotFoundException(channel, identifier, identifierType);
-        }
-
-        // Notification has passed its expiry time (TTL) - update was blocked
-        if (isExpired)
-        {
-            var identifier = hasGatewayReference ? gatewayReference! : notificationId!.Value.ToString();
-            var identifierType = hasGatewayReference ? SendStatusIdentifierType.GatewayReference : SendStatusIdentifierType.NotificationId;
-            throw new NotificationExpiredException(channel, identifier, identifierType);
         }
     }
 }

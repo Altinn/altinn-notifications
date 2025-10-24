@@ -252,4 +252,42 @@ public abstract class NotificationRepositoryBase
         pgcom.Parameters.AddWithValue("orderstatus", NpgsqlDbType.Jsonb, JsonSerializer.Serialize(orderStatus, _serializerOptions));
         await pgcom.ExecuteNonQueryAsync();
     }
+
+    /// <summary>
+    /// Validates the result of an update operation and throws appropriate exceptions if the update failed.
+    /// </summary>
+    /// <param name="resultAlternateId">The alternate ID returned from the update operation, or null if not found.</param>
+    /// <param name="isExpired">Indicates whether the notification has expired.</param>
+    /// <param name="hasIdentifier">Indicates whether an identifier (operationId or gatewayReference) was provided.</param>
+    /// <param name="identifier">The identifier value (operationId or gatewayReference).</param>
+    /// <param name="notificationId">The notification ID.</param>
+    /// <param name="channel">The notification channel (Email or SMS).</param>
+    /// <param name="identifierType">The type of identifier when hasIdentifier is true (OperationId or GatewayReference).</param>
+    /// <exception cref="Core.Exceptions.NotificationNotFoundException">Thrown when the notification is not found in the database.</exception>
+    /// <exception cref="Core.Exceptions.NotificationExpiredException">Thrown when the notification has passed its expiry time (TTL).</exception>
+    protected static void HandleUpdateResult(
+        Guid? resultAlternateId,
+        bool isExpired,
+        bool hasIdentifier,
+        string? identifier,
+        Guid? notificationId,
+        Core.Enums.NotificationChannel channel,
+        Core.Enums.SendStatusIdentifierType identifierType)
+    {
+        // Notification not found in database
+        if (resultAlternateId == null)
+        {
+            var id = hasIdentifier ? identifier! : notificationId!.Value.ToString();
+            var idType = hasIdentifier ? identifierType : Core.Enums.SendStatusIdentifierType.NotificationId;
+            throw new Core.Exceptions.NotificationNotFoundException(channel, id, idType);
+        }
+
+        // Notification has passed its expiry time (TTL) - update was blocked
+        if (isExpired)
+        {
+            var id = hasIdentifier ? identifier! : notificationId!.Value.ToString();
+            var idType = hasIdentifier ? identifierType : Core.Enums.SendStatusIdentifierType.NotificationId;
+            throw new Core.Exceptions.NotificationExpiredException(channel, id, idType);
+        }
+    }
 }
