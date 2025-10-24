@@ -22,408 +22,492 @@ using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.TestingConsumers;
 
-public class SmsStatusConsumerTests : IAsyncLifetime
+public class SmsStatusConsumerTests
 {
-    private readonly string _sendersRef = $"ref-{Guid.NewGuid()}";
-    private readonly string _statusUpdatedTopicName = Guid.NewGuid().ToString();
-    private readonly string _statusUpdatedRetryTopicName = Guid.NewGuid().ToString();
-
-    [Fact]
-    public async Task ConsumeInvalidMessage_ShouldNotUpdateStatus()
+    [Collection("SmsStatusConsumer-Test1")]
+    public class ConsumeInvalidMessage_Tests
     {
-        // Arrange
-        Dictionary<string, string> kafkaSettings = new()
+        [Fact]
+        public async Task ConsumeInvalidMessage_ShouldNotUpdateStatus()
         {
-            { "KafkaSettings__SmsStatusUpdatedTopicName", _statusUpdatedTopicName },
-            { "KafkaSettings__Admin__TopicList", $"[\"{_statusUpdatedTopicName}\"]" }
-        };
+            // Arrange
+            string sendersRef = $"ref-{Guid.NewGuid()}";
+            string statusUpdatedTopicName = Guid.NewGuid().ToString();
 
-        using SmsStatusConsumer smsStatusConsumer = ServiceUtil
-            .GetServices([typeof(IHostedService)], kafkaSettings)
-            .OfType<SmsStatusConsumer>()
-            .First();
-
-        (_, SmsNotification smsNotification) =
-            await PostgreUtil.PopulateDBWithOrderAndSmsNotification(_sendersRef, simulateCronJob: true, simulateConsumers: true);
-
-        // Act
-        await smsStatusConsumer.StartAsync(CancellationToken.None);
-        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, "Invalid-Delivery-Report");
-
-        long processedOrderCount = -1;
-        string observedSmsStatus = string.Empty;
-        await IntegrationTestUtil.EventuallyAsync(
-            async () =>
+            try
             {
-                if (observedSmsStatus != SmsNotificationResultType.New.ToString())
+                await KafkaUtil.CreateTopicAsync(statusUpdatedTopicName);
+
+                Dictionary<string, string> kafkaSettings = new()
                 {
-                    observedSmsStatus = await GetSmsNotificationStatus(smsNotification.Id);
-                }
+                    { "KafkaSettings__SmsStatusUpdatedTopicName", statusUpdatedTopicName },
+                    { "KafkaSettings__Admin__TopicList", $"[\"{statusUpdatedTopicName}\"]" }
+                };
 
-                if (processedOrderCount != 1)
-                {
-                    processedOrderCount = await CountOrdersByStatus(smsNotification.Id, OrderProcessingStatus.Processed);
-                }
+                using SmsStatusConsumer smsStatusConsumer = ServiceUtil
+                    .GetServices([typeof(IHostedService)], kafkaSettings)
+                    .OfType<SmsStatusConsumer>()
+                    .First();
 
-                return observedSmsStatus == SmsNotificationResultType.New.ToString() && processedOrderCount == 1;
-            },
-            TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(100));
+                (_, SmsNotification smsNotification) =
+                    await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendersRef, simulateCronJob: true, simulateConsumers: true);
 
-        await smsStatusConsumer.StopAsync(CancellationToken.None);
+                // Act
+                await smsStatusConsumer.StartAsync(CancellationToken.None);
+                await KafkaUtil.PublishMessageOnTopic(statusUpdatedTopicName, "Invalid-Delivery-Report");
 
-        // Assert
-        Assert.Equal(1, processedOrderCount);
-        Assert.Equal(SmsNotificationResultType.New.ToString(), observedSmsStatus);
-    }
+                long processedOrderCount = -1;
+                string observedSmsStatus = string.Empty;
+                await IntegrationTestUtil.EventuallyAsync(
+                    async () =>
+                    {
+                        if (observedSmsStatus != SmsNotificationResultType.New.ToString())
+                        {
+                            observedSmsStatus = await GetSmsNotificationStatus(smsNotification.Id);
+                        }
 
-    [Fact]
-    public async Task ConsumeDeliveredStatus_ShouldMarkOrderCompleted_WithStatusFeedEntry()
-    {
-        // Arrange
-        Dictionary<string, string> kafkaSettings = new()
-        {
-            { "KafkaSettings__SmsStatusUpdatedTopicName", _statusUpdatedTopicName },
-            { "KafkaSettings__Admin__TopicList", $"[\"{_statusUpdatedTopicName}\"]" }
-        };
+                        if (processedOrderCount != 1)
+                        {
+                            processedOrderCount = await CountOrdersByStatus(smsNotification.Id, OrderProcessingStatus.Processed);
+                        }
 
-        using SmsStatusConsumer smsStatusConsumer = ServiceUtil
-            .GetServices([typeof(IHostedService)], kafkaSettings)
-            .OfType<SmsStatusConsumer>()
-            .First();
+                        return observedSmsStatus == SmsNotificationResultType.New.ToString() && processedOrderCount == 1;
+                    },
+                    TimeSpan.FromSeconds(15),
+                    TimeSpan.FromMilliseconds(100));
 
-        (NotificationOrder order, SmsNotification notification) =
-            await PostgreUtil.PopulateDBWithOrderAndSmsNotification(_sendersRef, simulateCronJob: true);
+                await smsStatusConsumer.StopAsync(CancellationToken.None);
 
-        SmsSendOperationResult sendOperationResult = new()
-        {
-            NotificationId = notification.Id,
-            GatewayReference = Guid.NewGuid().ToString(),
-            SendResult = SmsNotificationResultType.Delivered
-        };
-
-        // Act
-        await smsStatusConsumer.StartAsync(CancellationToken.None);
-        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
-
-        int statusFeedCount = -1;
-        long completedOrderCount = -1;
-        string observedSmsStatus = string.Empty;
-        await IntegrationTestUtil.EventuallyAsync(
-            async () =>
+                // Assert
+                Assert.Equal(1, processedOrderCount);
+                Assert.Equal(SmsNotificationResultType.New.ToString(), observedSmsStatus);
+            }
+            finally
             {
-                if (observedSmsStatus != SmsNotificationResultType.Delivered.ToString())
-                {
-                    observedSmsStatus = await GetSmsNotificationStatus(notification.Id);
-                }
-
-                if (completedOrderCount != 1)
-                {
-                    completedOrderCount = await CountOrdersByStatus(notification.Id, OrderProcessingStatus.Completed);
-                }
-
-                if (statusFeedCount != 1)
-                {
-                    statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
-                }
-
-                return observedSmsStatus == SmsNotificationResultType.Delivered.ToString() && completedOrderCount == 1 && statusFeedCount == 1;
-            },
-            TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(100));
-
-        await smsStatusConsumer.StopAsync(CancellationToken.None);
-
-        // Assert
-        Assert.Equal(1, statusFeedCount);
-        Assert.Equal(1, completedOrderCount);
-        Assert.Equal(SmsNotificationResultType.Delivered.ToString(), observedSmsStatus);
+                await PostgreUtil.DeleteStatusFeedFromDb(sendersRef);
+                await PostgreUtil.DeleteOrderFromDb(sendersRef);
+                await KafkaUtil.DeleteTopicAsync(statusUpdatedTopicName);
+            }
+        }
     }
 
-    [Fact]
-    public async Task ConsumeAcceptedStatus_ShouldMarkOrderProcessed_WithoutStatusFeedEntry()
+    [Collection("SmsStatusConsumer-Test2")]
+    public class ConsumeDeliveredStatus_Tests
     {
-        // Arrange
-        Dictionary<string, string> kafkaSettings = new()
+        [Fact]
+        public async Task ConsumeDeliveredStatus_ShouldMarkOrderCompleted_WithStatusFeedEntry()
         {
-            { "KafkaSettings__SmsStatusUpdatedTopicName", _statusUpdatedTopicName },
-            { "KafkaSettings__Admin__TopicList", $"[\"{_statusUpdatedTopicName}\"]" }
-        };
+            // Arrange
+            string sendersRef = $"ref-{Guid.NewGuid()}";
+            string statusUpdatedTopicName = Guid.NewGuid().ToString();
 
-        using SmsStatusConsumer smsStatusConsumer = ServiceUtil
-            .GetServices([typeof(IHostedService)], kafkaSettings)
-            .OfType<SmsStatusConsumer>()
-            .First();
-
-        (NotificationOrder notificationOrder, SmsNotification notification) =
-            await PostgreUtil.PopulateDBWithOrderAndSmsNotification(_sendersRef, simulateCronJob: true);
-
-        SmsSendOperationResult sendOperationResult = new()
-        {
-            NotificationId = notification.Id,
-            GatewayReference = Guid.NewGuid().ToString(),
-            SendResult = SmsNotificationResultType.Accepted
-        };
-
-        // Act
-        await smsStatusConsumer.StartAsync(CancellationToken.None);
-        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
-
-        int statusFeedCount = -1;
-        long processedOrderCount = -1;
-        string observedSmsStatus = string.Empty;
-        await IntegrationTestUtil.EventuallyAsync(
-            async () =>
+            try
             {
-                if (observedSmsStatus != SmsNotificationResultType.Accepted.ToString())
+                await KafkaUtil.CreateTopicAsync(statusUpdatedTopicName);
+
+                Dictionary<string, string> kafkaSettings = new()
                 {
-                    observedSmsStatus = await GetSmsNotificationStatus(notification.Id);
-                }
+                    { "KafkaSettings__SmsStatusUpdatedTopicName", statusUpdatedTopicName },
+                    { "KafkaSettings__Admin__TopicList", $"[\"{statusUpdatedTopicName}\"]" }
+                };
 
-                if (processedOrderCount != 1)
+                using SmsStatusConsumer smsStatusConsumer = ServiceUtil
+                    .GetServices([typeof(IHostedService)], kafkaSettings)
+                    .OfType<SmsStatusConsumer>()
+                    .First();
+
+                (NotificationOrder order, SmsNotification notification) =
+                    await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendersRef, simulateCronJob: true);
+
+                SmsSendOperationResult sendOperationResult = new()
                 {
-                    processedOrderCount = await CountOrdersByStatus(notification.Id, OrderProcessingStatus.Processed);
-                }
+                    NotificationId = notification.Id,
+                    GatewayReference = Guid.NewGuid().ToString(),
+                    SendResult = SmsNotificationResultType.Delivered
+                };
 
-                if (statusFeedCount != 0)
-                {
-                    statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(notificationOrder.Id);
-                }
+                // Act
+                await smsStatusConsumer.StartAsync(CancellationToken.None);
+                await KafkaUtil.PublishMessageOnTopic(statusUpdatedTopicName, sendOperationResult.Serialize());
 
-                return observedSmsStatus == SmsNotificationResultType.Accepted.ToString() && processedOrderCount == 1 && statusFeedCount == 0;
-            },
-            TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(100));
+                int statusFeedCount = -1;
+                long completedOrderCount = -1;
+                string observedSmsStatus = string.Empty;
+                await IntegrationTestUtil.EventuallyAsync(
+                    async () =>
+                    {
+                        if (observedSmsStatus != SmsNotificationResultType.Delivered.ToString())
+                        {
+                            observedSmsStatus = await GetSmsNotificationStatus(notification.Id);
+                        }
 
-        await smsStatusConsumer.StopAsync(CancellationToken.None);
+                        if (completedOrderCount != 1)
+                        {
+                            completedOrderCount = await CountOrdersByStatus(notification.Id, OrderProcessingStatus.Completed);
+                        }
 
-        // Assert
-        Assert.Equal(0, statusFeedCount);
-        Assert.Equal(1, processedOrderCount);
-        Assert.Equal(SmsNotificationResultType.Accepted.ToString(), observedSmsStatus);
-    }
+                        if (statusFeedCount != 1)
+                        {
+                            statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+                        }
 
-    [Fact]
-    public async Task ConsumeDeliveredStatus_WithNullSendersReference_ShouldCreateStatusFeedEntry()
-    {
-        // Arrange
-        Dictionary<string, string> kafkaSettings = new()
-        {
-            { "KafkaSettings__SmsStatusUpdatedTopicName", _statusUpdatedTopicName },
-            { "KafkaSettings__Admin__TopicList", $"[\"{_statusUpdatedTopicName}\"]" }
-        };
+                        return observedSmsStatus == SmsNotificationResultType.Delivered.ToString() && completedOrderCount == 1 && statusFeedCount == 1;
+                    },
+                    TimeSpan.FromSeconds(15),
+                    TimeSpan.FromMilliseconds(100));
 
-        using SmsStatusConsumer smsStatusConsumer = ServiceUtil
-            .GetServices([typeof(IHostedService)], kafkaSettings)
-            .OfType<SmsStatusConsumer>()
-            .First();
+                await smsStatusConsumer.StopAsync(CancellationToken.None);
 
-        (NotificationOrder order, SmsNotification notification) =
-            await PostgreUtil.PopulateDBWithOrderAndSmsNotification(forceSendersReferenceToBeNull: true, simulateCronJob: true);
-
-        SmsSendOperationResult sendOperationResult = new()
-        {
-            NotificationId = notification.Id,
-            GatewayReference = Guid.NewGuid().ToString(),
-            SendResult = SmsNotificationResultType.Delivered
-        };
-
-        // Act
-        await smsStatusConsumer.StartAsync(CancellationToken.None);
-        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
-
-        int statusFeedCount = -1;
-        await IntegrationTestUtil.EventuallyAsync(
-            async () =>
+                // Assert
+                Assert.Equal(1, statusFeedCount);
+                Assert.Equal(1, completedOrderCount);
+                Assert.Equal(SmsNotificationResultType.Delivered.ToString(), observedSmsStatus);
+            }
+            finally
             {
-                if (statusFeedCount != 1)
-                {
-                    statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
-                }
-
-                return statusFeedCount == 1;
-            },
-            TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(100));
-
-        await smsStatusConsumer.StopAsync(CancellationToken.None);
-
-        // Assert
-        Assert.Equal(1, statusFeedCount);
+                await PostgreUtil.DeleteStatusFeedFromDb(sendersRef);
+                await PostgreUtil.DeleteOrderFromDb(sendersRef);
+                await KafkaUtil.DeleteTopicAsync(statusUpdatedTopicName);
+            }
+        }
     }
 
-    [Theory]
-    [InlineData(SendStatusIdentifierType.NotificationId)]
-    [InlineData(SendStatusIdentifierType.GatewayReference)]
-    public async Task ConsumeDeliveredStatus_ServiceThrows_ShouldPublishRetryMessage(SendStatusIdentifierType identifierType)
+    [Collection("SmsStatusConsumer-Test3")]
+    public class ConsumeAcceptedStatus_Tests
     {
-        // Arrange
-        var kafkaOptions = Options.Create(new KafkaSettings
+        [Fact]
+        public async Task ConsumeAcceptedStatus_ShouldMarkOrderProcessed_WithoutStatusFeedEntry()
         {
-            BrokerAddress = "localhost:9092",
-            Producer = new ProducerSettings(),
-            SmsStatusUpdatedTopicName = _statusUpdatedTopicName,
-            SmsStatusUpdatedRetryTopicName = _statusUpdatedRetryTopicName,
-            Consumer = new ConsumerSettings { GroupId = $"altinn-notifications-{Guid.NewGuid():N}" }
-        });
+            // Arrange
+            string sendersRef = $"ref-{Guid.NewGuid()}";
+            string statusUpdatedTopicName = Guid.NewGuid().ToString();
 
-        var producerMock = new Mock<IKafkaProducer>(MockBehavior.Loose);
-        var smsServiceMock = new Mock<ISmsNotificationService>();
-        smsServiceMock
-            .Setup(e => e.UpdateSendStatus(It.IsAny<SmsSendOperationResult>()))
-            .ThrowsAsync(new SendStatusUpdateException(NotificationChannel.Sms, Guid.NewGuid().ToString(), identifierType));
-
-        SmsSendOperationResult sendOperationResult = identifierType == SendStatusIdentifierType.NotificationId
-            ? new SmsSendOperationResult { NotificationId = Guid.NewGuid(), SendResult = SmsNotificationResultType.Delivered }
-            : new SmsSendOperationResult { GatewayReference = Guid.NewGuid().ToString(), SendResult = SmsNotificationResultType.Delivered };
-
-        string serializedDeliveryReport = sendOperationResult.Serialize();
-
-        using SmsStatusConsumer smsStatusConsumer =
-            new(producerMock.Object, NullLogger<SmsStatusConsumer>.Instance, kafkaOptions, smsServiceMock.Object);
-
-        // Act
-        await smsStatusConsumer.StartAsync(CancellationToken.None);
-        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, serializedDeliveryReport);
-
-        bool messagePublishedToRetryTopic = false;
-        await IntegrationTestUtil.EventuallyAsync(
-            () =>
+            try
             {
-                try
+                await KafkaUtil.CreateTopicAsync(statusUpdatedTopicName);
+
+                Dictionary<string, string> kafkaSettings = new()
                 {
-                    producerMock.Verify(e => e.ProduceAsync(_statusUpdatedRetryTopicName, It.Is<string>(e => IsExpectedRetryMessage(e, serializedDeliveryReport))), Times.Once);
+                    { "KafkaSettings__SmsStatusUpdatedTopicName", statusUpdatedTopicName },
+                    { "KafkaSettings__Admin__TopicList", $"[\"{statusUpdatedTopicName}\"]" }
+                };
 
-                    messagePublishedToRetryTopic = true;
+                using SmsStatusConsumer smsStatusConsumer = ServiceUtil
+                    .GetServices([typeof(IHostedService)], kafkaSettings)
+                    .OfType<SmsStatusConsumer>()
+                    .First();
 
-                    return messagePublishedToRetryTopic;
-                }
-                catch (Exception)
+                (NotificationOrder notificationOrder, SmsNotification notification) =
+                    await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendersRef, simulateCronJob: true);
+
+                SmsSendOperationResult sendOperationResult = new()
                 {
-                    return false;
-                }
-            },
-            TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(100));
+                    NotificationId = notification.Id,
+                    GatewayReference = Guid.NewGuid().ToString(),
+                    SendResult = SmsNotificationResultType.Accepted
+                };
 
-        await smsStatusConsumer.StopAsync(CancellationToken.None);
+                // Act
+                await smsStatusConsumer.StartAsync(CancellationToken.None);
+                await KafkaUtil.PublishMessageOnTopic(statusUpdatedTopicName, sendOperationResult.Serialize());
 
-        // Assert
-        Assert.True(messagePublishedToRetryTopic);
-    }
+                int statusFeedCount = -1;
+                long processedOrderCount = -1;
+                string observedSmsStatus = string.Empty;
+                await IntegrationTestUtil.EventuallyAsync(
+                    async () =>
+                    {
+                        if (observedSmsStatus != SmsNotificationResultType.Accepted.ToString())
+                        {
+                            observedSmsStatus = await GetSmsNotificationStatus(notification.Id);
+                        }
 
-    [Theory]
-    [InlineData(SmsNotificationResultType.Failed)]
-    [InlineData(SmsNotificationResultType.Failed_Deleted)]
-    [InlineData(SmsNotificationResultType.Failed_Expired)]
-    [InlineData(SmsNotificationResultType.Failed_Rejected)]
-    [InlineData(SmsNotificationResultType.Failed_Undelivered)]
-    [InlineData(SmsNotificationResultType.Failed_BarredReceiver)]
-    [InlineData(SmsNotificationResultType.Failed_InvalidRecipient)]
-    [InlineData(SmsNotificationResultType.Failed_RecipientReserved)]
-    [InlineData(SmsNotificationResultType.Failed_RecipientNotIdentified)]
-    public async Task ConsumeFailedStatus_ShouldMarkOrderCompleted_WithStatusFeedEntry(SmsNotificationResultType resultType)
-    {
-        // Arrange
-        Dictionary<string, string> kafkaSettings = new()
-        {
-            { "KafkaSettings__SmsStatusUpdatedTopicName", _statusUpdatedTopicName },
-            { "KafkaSettings__Admin__TopicList", $"[\"{_statusUpdatedTopicName}\"]" }
-        };
+                        if (processedOrderCount != 1)
+                        {
+                            processedOrderCount = await CountOrdersByStatus(notification.Id, OrderProcessingStatus.Processed);
+                        }
 
-        using SmsStatusConsumer smsStatusConsumer = ServiceUtil
-            .GetServices([typeof(IHostedService)], kafkaSettings)
-            .OfType<SmsStatusConsumer>()
-            .First();
+                        if (statusFeedCount != 0)
+                        {
+                            statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(notificationOrder.Id);
+                        }
 
-        (NotificationOrder order, SmsNotification notification) =
-            await PostgreUtil.PopulateDBWithOrderAndSmsNotification(_sendersRef, simulateCronJob: true);
+                        return observedSmsStatus == SmsNotificationResultType.Accepted.ToString() && processedOrderCount == 1 && statusFeedCount == 0;
+                    },
+                    TimeSpan.FromSeconds(15),
+                    TimeSpan.FromMilliseconds(100));
 
-        SmsSendOperationResult sendOperationResult = new()
-        {
-            NotificationId = notification.Id,
-            GatewayReference = Guid.NewGuid().ToString(),
-            SendResult = resultType
-        };
+                await smsStatusConsumer.StopAsync(CancellationToken.None);
 
-        // Act
-        await smsStatusConsumer.StartAsync(CancellationToken.None);
-        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, sendOperationResult.Serialize());
-
-        long completedCount = -1;
-        int statusFeedCount = -1;
-        string observedSmsStatus = string.Empty;
-        await IntegrationTestUtil.EventuallyAsync(
-            async () =>
+                // Assert
+                Assert.Equal(0, statusFeedCount);
+                Assert.Equal(1, processedOrderCount);
+                Assert.Equal(SmsNotificationResultType.Accepted.ToString(), observedSmsStatus);
+            }
+            finally
             {
-                if (observedSmsStatus != resultType.ToString())
-                {
-                    observedSmsStatus = await GetSmsNotificationStatus(notification.Id);
-                }
-
-                if (completedCount != 1)
-                {
-                    completedCount = await CountOrdersByStatus(notification.Id, OrderProcessingStatus.Completed);
-                }
-
-                if (statusFeedCount != 1)
-                {
-                    statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
-                }
-
-                return observedSmsStatus == resultType.ToString() && completedCount == 1 && statusFeedCount == 1;
-            },
-            TimeSpan.FromSeconds(15),
-            TimeSpan.FromMilliseconds(100));
-
-        await smsStatusConsumer.StopAsync(CancellationToken.None);
-
-        // Assert
-        Assert.Equal(1, completedCount);
-        Assert.Equal(1, statusFeedCount);
-        Assert.Equal(resultType.ToString(), observedSmsStatus);
+                await PostgreUtil.DeleteStatusFeedFromDb(sendersRef);
+                await PostgreUtil.DeleteOrderFromDb(sendersRef);
+                await KafkaUtil.DeleteTopicAsync(statusUpdatedTopicName);
+            }
+        }
     }
 
-    public Task InitializeAsync()
+    [Collection("SmsStatusConsumer-Test4")]
+    public class ConsumeDeliveredStatus_WithNullSendersReference_Tests
     {
-        return Task.CompletedTask;
+        [Fact]
+        public async Task ConsumeDeliveredStatus_WithNullSendersReference_ShouldCreateStatusFeedEntry()
+        {
+            // Arrange
+            string statusUpdatedTopicName = Guid.NewGuid().ToString();
+
+            try
+            {
+                await KafkaUtil.CreateTopicAsync(statusUpdatedTopicName);
+
+                Dictionary<string, string> kafkaSettings = new()
+                {
+                    { "KafkaSettings__SmsStatusUpdatedTopicName", statusUpdatedTopicName },
+                    { "KafkaSettings__Admin__TopicList", $"[\"{statusUpdatedTopicName}\"]" }
+                };
+
+                using SmsStatusConsumer smsStatusConsumer = ServiceUtil
+                    .GetServices([typeof(IHostedService)], kafkaSettings)
+                    .OfType<SmsStatusConsumer>()
+                    .First();
+
+                (NotificationOrder order, SmsNotification notification) =
+                    await PostgreUtil.PopulateDBWithOrderAndSmsNotification(forceSendersReferenceToBeNull: true, simulateCronJob: true);
+
+                SmsSendOperationResult sendOperationResult = new()
+                {
+                    NotificationId = notification.Id,
+                    GatewayReference = Guid.NewGuid().ToString(),
+                    SendResult = SmsNotificationResultType.Delivered
+                };
+
+                // Act
+                await smsStatusConsumer.StartAsync(CancellationToken.None);
+                await KafkaUtil.PublishMessageOnTopic(statusUpdatedTopicName, sendOperationResult.Serialize());
+
+                int statusFeedCount = -1;
+                await IntegrationTestUtil.EventuallyAsync(
+                    async () =>
+                    {
+                        if (statusFeedCount != 1)
+                        {
+                            statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+                        }
+
+                        return statusFeedCount == 1;
+                    },
+                    TimeSpan.FromSeconds(15),
+                    TimeSpan.FromMilliseconds(100));
+
+                await smsStatusConsumer.StopAsync(CancellationToken.None);
+
+                // Assert
+                Assert.Equal(1, statusFeedCount);
+            }
+            finally
+            {
+                await KafkaUtil.DeleteTopicAsync(statusUpdatedTopicName);
+            }
+        }
     }
 
-    public async Task DisposeAsync()
+    [Collection("SmsStatusConsumer-Test5")]
+    public class ConsumeDeliveredStatus_ServiceThrows_Tests
     {
-        await Dispose(true);
+        [Theory]
+        [InlineData(SendStatusIdentifierType.NotificationId)]
+        [InlineData(SendStatusIdentifierType.GatewayReference)]
+        public async Task ConsumeDeliveredStatus_ServiceThrows_ShouldPublishRetryMessage(SendStatusIdentifierType identifierType)
+        {
+            // Arrange
+            string statusUpdatedTopicName = Guid.NewGuid().ToString();
+            string statusUpdatedRetryTopicName = Guid.NewGuid().ToString();
+
+            try
+            {
+                await KafkaUtil.CreateTopicAsync(statusUpdatedTopicName);
+                await KafkaUtil.CreateTopicAsync(statusUpdatedRetryTopicName);
+
+                var kafkaOptions = Options.Create(new KafkaSettings
+                {
+                    BrokerAddress = "localhost:9092",
+                    Producer = new ProducerSettings(),
+                    SmsStatusUpdatedTopicName = statusUpdatedTopicName,
+                    SmsStatusUpdatedRetryTopicName = statusUpdatedRetryTopicName,
+                    Consumer = new ConsumerSettings { GroupId = $"altinn-notifications-{Guid.NewGuid():N}" }
+                });
+
+                var producerMock = new Mock<IKafkaProducer>(MockBehavior.Loose);
+                var smsServiceMock = new Mock<ISmsNotificationService>();
+                smsServiceMock
+                    .Setup(e => e.UpdateSendStatus(It.IsAny<SmsSendOperationResult>()))
+                    .ThrowsAsync(new SendStatusUpdateException(NotificationChannel.Sms, Guid.NewGuid().ToString(), identifierType));
+
+                SmsSendOperationResult sendOperationResult = identifierType == SendStatusIdentifierType.NotificationId
+                    ? new SmsSendOperationResult { NotificationId = Guid.NewGuid(), SendResult = SmsNotificationResultType.Delivered }
+                    : new SmsSendOperationResult { GatewayReference = Guid.NewGuid().ToString(), SendResult = SmsNotificationResultType.Delivered };
+
+                string serializedDeliveryReport = sendOperationResult.Serialize();
+
+                using SmsStatusConsumer smsStatusConsumer =
+                    new(producerMock.Object, NullLogger<SmsStatusConsumer>.Instance, kafkaOptions, smsServiceMock.Object);
+
+                // Act
+                await smsStatusConsumer.StartAsync(CancellationToken.None);
+                await KafkaUtil.PublishMessageOnTopic(statusUpdatedTopicName, serializedDeliveryReport);
+
+                bool messagePublishedToRetryTopic = false;
+                await IntegrationTestUtil.EventuallyAsync(
+                    () =>
+                    {
+                        try
+                        {
+                            producerMock.Verify(e => e.ProduceAsync(statusUpdatedRetryTopicName, It.Is<string>(e => IsExpectedRetryMessage(e, serializedDeliveryReport))), Times.Once);
+
+                            messagePublishedToRetryTopic = true;
+
+                            return messagePublishedToRetryTopic;
+                        }
+                        catch (Exception)
+                        {
+                            return false;
+                        }
+                    },
+                    TimeSpan.FromSeconds(15),
+                    TimeSpan.FromMilliseconds(100));
+
+                await smsStatusConsumer.StopAsync(CancellationToken.None);
+
+                // Assert
+                Assert.True(messagePublishedToRetryTopic);
+            }
+            finally
+            {
+                await KafkaUtil.DeleteTopicAsync(statusUpdatedTopicName);
+                await KafkaUtil.DeleteTopicAsync(statusUpdatedRetryTopicName);
+            }
+        }
+
+        private static bool IsExpectedRetryMessage(string message, string expectedSendOperationResult)
+        {
+            if (string.IsNullOrWhiteSpace(message))
+            {
+                return false;
+            }
+
+            try
+            {
+                var retry = JsonSerializer.Deserialize<UpdateStatusRetryMessage>(message, JsonSerializerOptionsProvider.Options);
+                return retry?.SendOperationResult == expectedSendOperationResult;
+            }
+            catch
+            {
+                return false;
+            }
+        }
     }
 
-    protected virtual async Task Dispose(bool disposing)
+    [Collection("SmsStatusConsumer-Test6")]
+    public class ConsumeFailedStatus_Tests
     {
-        await PostgreUtil.DeleteStatusFeedFromDb(_sendersRef);
-        await PostgreUtil.DeleteOrderFromDb(_sendersRef);
-        await KafkaUtil.DeleteTopicAsync(_statusUpdatedTopicName);
-        await KafkaUtil.DeleteTopicAsync(_statusUpdatedRetryTopicName);
+        [Theory]
+        [InlineData(SmsNotificationResultType.Failed)]
+        [InlineData(SmsNotificationResultType.Failed_Deleted)]
+        [InlineData(SmsNotificationResultType.Failed_Expired)]
+        [InlineData(SmsNotificationResultType.Failed_Rejected)]
+        [InlineData(SmsNotificationResultType.Failed_Undelivered)]
+        [InlineData(SmsNotificationResultType.Failed_BarredReceiver)]
+        [InlineData(SmsNotificationResultType.Failed_InvalidRecipient)]
+        [InlineData(SmsNotificationResultType.Failed_RecipientReserved)]
+        [InlineData(SmsNotificationResultType.Failed_RecipientNotIdentified)]
+        public async Task ConsumeFailedStatus_ShouldMarkOrderCompleted_WithStatusFeedEntry(SmsNotificationResultType resultType)
+        {
+            // Arrange
+            string sendersRef = $"ref-{Guid.NewGuid()}";
+            string statusUpdatedTopicName = Guid.NewGuid().ToString();
+
+            try
+            {
+                await KafkaUtil.CreateTopicAsync(statusUpdatedTopicName);
+
+                Dictionary<string, string> kafkaSettings = new()
+                {
+                    { "KafkaSettings__SmsStatusUpdatedTopicName", statusUpdatedTopicName },
+                    { "KafkaSettings__Admin__TopicList", $"[\"{statusUpdatedTopicName}\"]" }
+                };
+
+                using SmsStatusConsumer smsStatusConsumer = ServiceUtil
+                    .GetServices([typeof(IHostedService)], kafkaSettings)
+                    .OfType<SmsStatusConsumer>()
+                    .First();
+
+                (NotificationOrder order, SmsNotification notification) =
+                    await PostgreUtil.PopulateDBWithOrderAndSmsNotification(sendersRef, simulateCronJob: true);
+
+                SmsSendOperationResult sendOperationResult = new()
+                {
+                    NotificationId = notification.Id,
+                    GatewayReference = Guid.NewGuid().ToString(),
+                    SendResult = resultType
+                };
+
+                // Act
+                await smsStatusConsumer.StartAsync(CancellationToken.None);
+                await KafkaUtil.PublishMessageOnTopic(statusUpdatedTopicName, sendOperationResult.Serialize());
+
+                long completedCount = -1;
+                int statusFeedCount = -1;
+                string observedSmsStatus = string.Empty;
+                await IntegrationTestUtil.EventuallyAsync(
+                    async () =>
+                    {
+                        if (observedSmsStatus != resultType.ToString())
+                        {
+                            observedSmsStatus = await GetSmsNotificationStatus(notification.Id);
+                        }
+
+                        if (completedCount != 1)
+                        {
+                            completedCount = await CountOrdersByStatus(notification.Id, OrderProcessingStatus.Completed);
+                        }
+
+                        if (statusFeedCount != 1)
+                        {
+                            statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+                        }
+
+                        return observedSmsStatus == resultType.ToString() && completedCount == 1 && statusFeedCount == 1;
+                    },
+                    TimeSpan.FromSeconds(15),
+                    TimeSpan.FromMilliseconds(100));
+
+                await smsStatusConsumer.StopAsync(CancellationToken.None);
+
+                // Assert
+                Assert.Equal(1, completedCount);
+                Assert.Equal(1, statusFeedCount);
+                Assert.Equal(resultType.ToString(), observedSmsStatus);
+            }
+            finally
+            {
+                await PostgreUtil.DeleteStatusFeedFromDb(sendersRef);
+                await PostgreUtil.DeleteOrderFromDb(sendersRef);
+                await KafkaUtil.DeleteTopicAsync(statusUpdatedTopicName);
+            }
+        }
     }
 
+    // Shared helper methods
     private static async Task<string> GetSmsNotificationStatus(Guid notificationId)
     {
         string sql = $"select result from notifications.smsnotifications where alternateid = '{notificationId}'";
         return await PostgreUtil.RunSqlReturnOutput<string>(sql);
-    }
-
-    private static bool IsExpectedRetryMessage(string message, string expectedSendOperationResult)
-    {
-        if (string.IsNullOrWhiteSpace(message))
-        {
-            return false;
-        }
-
-        try
-        {
-            var retry = JsonSerializer.Deserialize<UpdateStatusRetryMessage>(message, JsonSerializerOptionsProvider.Options);
-            return retry?.SendOperationResult == expectedSendOperationResult;
-        }
-        catch
-        {
-            return false;
-        }
     }
 
     private static async Task<long> CountOrdersByStatus(Guid orderAlternateid, OrderProcessingStatus processingStatus)
