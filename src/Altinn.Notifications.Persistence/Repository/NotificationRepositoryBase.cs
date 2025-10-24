@@ -31,13 +31,14 @@ public abstract class NotificationRepositoryBase
     /// </summary>
     protected abstract string SourceIdentifier { get; }
 
-    private readonly string _updateExpiredNotifications = "SELECT * FROM notifications.updateexpirednotifications(@source, @limit)";
+    private readonly string _updateExpiredNotifications = "SELECT * FROM notifications.updateexpirednotifications(@source, @limit, @offset)";
     private const string _getShipmentForStatusFeedSql = "SELECT * FROM notifications.getshipmentforstatusfeed_v2(@alternateid)";
     private const string _tryMarkOrderAsCompletedSql = "SELECT notifications.trymarkorderascompleted(@notificationid, @sourceidentifier)";
 
     private readonly NpgsqlDataSource _dataSource;
     private readonly ILogger _logger;
     private readonly int _terminationBatchSize;
+    private readonly int _expiryOffsetSeconds;
 
     private const string _insertStatusFeedEntrySql = @"SELECT notifications.insertstatusfeed(o._id, o.creatorname, @orderstatus)
                                                        FROM notifications.orders o
@@ -57,6 +58,7 @@ public abstract class NotificationRepositoryBase
     {
         _dataSource = dataSource;
         _logger = logger;
+        _expiryOffsetSeconds = config.Value.ExpiryOffsetSeconds;
 
         if (config.Value.TerminationBatchSize > 0)
         {
@@ -127,6 +129,7 @@ public abstract class NotificationRepositoryBase
             await using NpgsqlCommand pgcom = new(_updateExpiredNotifications, connection, transaction);
             pgcom.Parameters.AddWithValue("source", NpgsqlDbType.Text, SourceIdentifier); // Source identifier for the notifications
             pgcom.Parameters.AddWithValue("limit", NpgsqlDbType.Integer, _terminationBatchSize);
+            pgcom.Parameters.AddWithValue("offset", NpgsqlDbType.Integer, _expiryOffsetSeconds);
 
             await using var reader = await pgcom.ExecuteReaderAsync();
 
