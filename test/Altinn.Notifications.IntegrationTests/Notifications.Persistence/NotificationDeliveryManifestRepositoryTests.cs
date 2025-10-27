@@ -123,7 +123,7 @@ public class NotificationDeliveryManifestRepositoryTests : IAsyncLifetime
 
         await cts.CancelAsync();
 
-        await Assert.ThrowsAsync<TaskCanceledException>(async () => await deliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, cts.Token));
+        await Assert.ThrowsAsync<OperationCanceledException>(async () => await deliveryManifestRepository.GetDeliveryManifestAsync(orderId, creator, cts.Token));
     }
 
     [Fact]

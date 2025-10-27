@@ -2234,7 +2234,7 @@ public class OrderRepositoryTests : IAsyncLifetime
         await cancellationTokenSource.CancelAsync();
 
         // Act & Assert
-        await Assert.ThrowsAsync<TaskCanceledException>(async () => await orderRepository.RetrieveInstantOrderTrackingInformation(creatorName, idempotencyId, cancellationTokenSource.Token));
+        await Assert.ThrowsAsync<OperationCanceledException>(async () => await orderRepository.RetrieveInstantOrderTrackingInformation(creatorName, idempotencyId, cancellationTokenSource.Token));
     }
 
     [Fact]
