@@ -79,16 +79,8 @@ public static class ServiceUtil
         var sharedDataSource = GetOrCreateDataSource(config);
         services.AddSingleton(sharedDataSource);
 
-        // Register repositories that will use the shared data source
-        services.AddSingleton<IOrderRepository, OrderRepository>();
-        services.AddSingleton<IMetricsRepository, MetricsRepository>();
-        services.AddSingleton<IStatusFeedRepository, StatusFeedRepository>();
-        services.AddSingleton<IResourceLimitRepository, ResourceLimitRepository>();
-        services.AddSingleton<ISmsNotificationRepository, SmsNotificationRepository>();
-        services.AddSingleton<IEmailNotificationRepository, EmailNotificationRepository>();
-        services.AddSingleton<INotificationSummaryRepository, NotificationSummaryRepository>();
-        services.AddSingleton<INotificationDeliveryManifestRepository, NotificationDeliveryManifestRepository>();
-        services.AddSingleton<IDeadDeliveryReportRepository, DeadDeliveryReportRepository>();
+        // Register all repository implementations using the shared data source
+        RegisterRepositories(services);
 
         services.AddCoreServices(config);
         services.AddKafkaServices(config);
@@ -105,5 +97,30 @@ public static class ServiceUtil
         }
 
         return outputServices;
+    }
+
+    private static void RegisterRepositories(IServiceCollection services)
+    {
+        // Get all repository interface types from Core.Persistence
+        var coreAssembly = typeof(IOrderRepository).Assembly;
+        var repositoryInterfaces = coreAssembly.GetTypes()
+            .Where(t => t.IsInterface && t.Namespace == "Altinn.Notifications.Core.Persistence");
+
+        // Get all implementation types from the Persistence assembly
+        var persistenceAssembly = typeof(OrderRepository).Assembly;
+        var implementationTypes = persistenceAssembly.GetTypes()
+            .Where(t => t.IsClass && !t.IsAbstract);
+
+        // Register each interface with its implementation
+        foreach (var interfaceType in repositoryInterfaces)
+        {
+            var implementationType = implementationTypes
+                .FirstOrDefault(t => interfaceType.IsAssignableFrom(t));
+
+            if (implementationType != null)
+            {
+                services.AddSingleton(interfaceType, implementationType);
+            }
+        }
     }
 }
