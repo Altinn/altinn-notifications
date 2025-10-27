@@ -1194,7 +1194,7 @@ public class OrderRepositoryTests : IAsyncLifetime
         OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
 
         string creatorName = "non-existent-creator";
-        string idempotencyId = "non-existent-id";
+        string idempotencyId = $"non-existent-id-{Guid.NewGuid():N}";
 
         // Act
         var result = await repo.GetOrderChainTracking(creatorName, idempotencyId);
@@ -1210,7 +1210,7 @@ public class OrderRepositoryTests : IAsyncLifetime
         OrderRepository repo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
 
         string creatorName = "test-creator";
-        string idempotencyId = "test-idempotency-id";
+        string idempotencyId = $"test-idempotency-id-{Guid.NewGuid():N}";
 
         // Create a cancellation token that's already cancelled
         using var cancellationTokenSource = new CancellationTokenSource();
@@ -1230,7 +1230,7 @@ public class OrderRepositoryTests : IAsyncLifetime
         Guid orderChainId = Guid.NewGuid();
 
         string creator = "creator-A3A0F691111";
-        string idempotencyId = "idempotency-BB8C6E067068";
+        string idempotencyId = $"idempotency-{Guid.NewGuid():N}";
 
         DateTime creationDateTime = DateTime.UtcNow;
         var requestedSendTime = DateTime.UtcNow.AddMinutes(10);
@@ -1305,7 +1305,7 @@ public class OrderRepositoryTests : IAsyncLifetime
         Guid orderChainId = Guid.NewGuid();
 
         string creator = "tracking-211BBFC9BDBB";
-        string idempotencyId = "TRACKING-E18557E17D42";
+        string idempotencyId = $"TRACKING-{Guid.NewGuid():N}";
 
         DateTime creationDateTime = DateTime.UtcNow;
         var requestedSendTime = DateTime.UtcNow.AddMinutes(10);
@@ -1436,7 +1436,7 @@ public class OrderRepositoryTests : IAsyncLifetime
         Guid secondReminderId = Guid.NewGuid();
 
         string creator = "tracking-test-reminders";
-        string idempotencyId = "TRACKING-30E3CD3997E9";
+        string idempotencyId = $"TRACKING-{Guid.NewGuid():N}";
 
         DateTime creationDateTime = DateTime.UtcNow;
         var requestedSendTime = DateTime.UtcNow.AddMinutes(10);
@@ -1614,7 +1614,7 @@ public class OrderRepositoryTests : IAsyncLifetime
         Guid orderChainId = Guid.NewGuid();
 
         string creator = "random-creator-name";
-        string idempotencyId = "random-39B0068652C6";
+        string idempotencyId = $"random-{Guid.NewGuid():N}";
 
         DateTime creationDateTime = DateTime.UtcNow;
         var requestedSendTime = DateTime.UtcNow.AddMinutes(10);
@@ -1788,7 +1788,7 @@ public class OrderRepositoryTests : IAsyncLifetime
             Creator = new("ttd"),
             Created = creationDateTime,
             OrderChainId = orderChainId,
-            IdempotencyId = "F6E76FA5-0A53-4195-A702-21ECCC77B9E8",
+            IdempotencyId = Guid.NewGuid().ToString(),
             SendersReference = "DAFA7290-27AE-4958-8CAA-A1F97B6B2307",
 
             InstantNotificationRecipient = new InstantNotificationRecipient
@@ -1874,7 +1874,7 @@ public class OrderRepositoryTests : IAsyncLifetime
         Guid firstOrderChainId = Guid.NewGuid();
         Guid secondOrderChainId = Guid.NewGuid();
 
-        string idempotencyId = "DUPLICATE-IDEMPOTENCY-30BC69F09C38";
+        string idempotencyId = $"DUPLICATE-IDEMPOTENCY-{Guid.NewGuid():N}";
 
         _orderIdsToDelete.AddRange([firstOrderId, secondOrderId]);
         _ordersChainIdsToDelete.AddRange([firstOrderChainId, secondOrderChainId]);
@@ -2048,7 +2048,7 @@ public class OrderRepositoryTests : IAsyncLifetime
             Creator = new("ttd"),
             Created = creationDateTime,
             OrderChainId = orderChainId,
-            IdempotencyId = "{4E161804-5D31-41F8-B528-62100E9C5712}",
+            IdempotencyId = Guid.NewGuid().ToString(),
             SendersReference = "3C001D49-FBF9-4784-88E7-19263E8C20A0",
             InstantNotificationRecipient = new InstantNotificationRecipient
             {
@@ -2133,7 +2133,7 @@ public class OrderRepositoryTests : IAsyncLifetime
             Creator = new("ttd"),
             Created = creationDateTime,
             OrderChainId = orderChainId,
-            IdempotencyId = "INSTANT-CANCEL-1E3CD83E99FD",
+            IdempotencyId = $"INSTANT-CANCEL-{Guid.NewGuid():N}",
             SendersReference = "INSTANT-CANCEL-4B8FE77B9455",
             InstantNotificationRecipient = new InstantNotificationRecipient
             {
@@ -2210,7 +2210,7 @@ public class OrderRepositoryTests : IAsyncLifetime
             (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
 
         string creatorName = "ttd";
-        string idempotencyId = "1091990A-D05D-4326-A1D7-60420F4E8B1E";
+        string idempotencyId = Guid.NewGuid().ToString();
 
         // Act
         var result = await orderRepository.RetrieveInstantOrderTrackingInformation(creatorName, idempotencyId);
@@ -2227,7 +2227,7 @@ public class OrderRepositoryTests : IAsyncLifetime
             (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)]).First(i => i.GetType() == typeof(OrderRepository));
 
         string creatorName = "ttd";
-        string idempotencyId = "2C2024D9-0A82-4BA5-A71F-17D33D0EFEC9";
+        string idempotencyId = Guid.NewGuid().ToString();
 
         // Create a cancellation token that's already cancelled
         using var cancellationTokenSource = new CancellationTokenSource();
@@ -2250,7 +2250,7 @@ public class OrderRepositoryTests : IAsyncLifetime
         var creationDateTime = DateTime.UtcNow;
 
         string creator = "ttd";
-        string idempotencyId = "9EFB6947-BBB1-4DF2-9466-CE44CD1A46B0";
+        string idempotencyId = Guid.NewGuid().ToString();
         string sendersReference = "BB69F687-AF95-4790-AB27-DED218B4800B";
 
         _orderIdsToDelete.Add(orderId);
@@ -2333,7 +2333,7 @@ public class OrderRepositoryTests : IAsyncLifetime
 
         string creator = "ttd";
         string invalidCreator = "not-ttd";
-        string idempotencyId = "08556351-748F-4B05-A42A-1BA91DD5C275";
+        string idempotencyId = Guid.NewGuid().ToString();
         string senderReference = "F15C804E-9C66-4968-916F-9E71C4C6FB63";
 
         _orderIdsToDelete.Add(orderId);
@@ -2412,9 +2412,9 @@ public class OrderRepositoryTests : IAsyncLifetime
         var creationDateTime = DateTime.UtcNow;
 
         string creator = "ttd";
-        string idempotencyId = "7D4DF1D4-4E55-4BDC-ACA1-0331D47AC28F";
+        string idempotencyId = Guid.NewGuid().ToString();
         string senderReference = "CB11C461-8887-4887-9A0B-3878F99D13F6";
-        string invalidIdempotencyId = "720D256D-0A2A-4C5F-BD9A-A32634271CD2";
+        string invalidIdempotencyId = Guid.NewGuid().ToString();
 
         _orderIdsToDelete.Add(orderId);
         _ordersChainIdsToDelete.Add(orderChainId);
