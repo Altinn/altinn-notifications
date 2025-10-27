@@ -30,10 +30,16 @@ BEGIN
     END IF;
     
     RETURN QUERY 
-    WITH updated AS (
+    WITH claimed_emails AS (
+        SELECT _id, alternateid, _orderid, toaddress, customizedsubject, customizedbody
+        FROM notifications.emailnotifications
+        WHERE result = 'New'
+        FOR UPDATE SKIP LOCKED
+    ),
+    updated AS (
         UPDATE notifications.emailnotifications
         SET result = 'Sending', resulttime = now()
-        WHERE result = 'New' 
+        WHERE _id IN (SELECT _id FROM claimed_emails)
         RETURNING notifications.emailnotifications.alternateid, 
                   _orderid, 
                   notifications.emailnotifications.toaddress, 
