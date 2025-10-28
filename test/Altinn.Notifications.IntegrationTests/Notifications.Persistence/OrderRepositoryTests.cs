@@ -384,7 +384,7 @@ public class OrderRepositoryTests : IAsyncLifetime
         Guid firstReminderOrderId = Guid.NewGuid();
         Guid secondReminderOrderId = Guid.NewGuid();
 
-        _ordersChainIdsToDelete.AddRange(orderChainId);
+        _ordersChainIdsToDelete.Add(orderChainId);
         _orderIdsToDelete.AddRange([mainOrderId, firstReminderOrderId, secondReminderOrderId]);
 
         var creationDateTime = DateTime.UtcNow;
@@ -538,18 +538,21 @@ public class OrderRepositoryTests : IAsyncLifetime
         string mainOrderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{mainOrderId}' and type ='Notification'";
         string firstReminderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{firstReminderOrderId}' and type ='Reminder'";
         string secondReminderSql = $@"SELECT count(*) FROM notifications.orders WHERE alternateid = '{secondReminderOrderId}' and type ='Reminder'";
-        string firstSmsTextSql = $@"SELECT count(*) FROM notifications.smstexts as st JOIN notifications.orders o ON st._orderid = o._id WHERE o.alternateid = '{mainOrderId}'";
-        string secondSmsTextSql = $@"SELECT count(*) FROM notifications.smstexts as st JOIN notifications.orders o ON st._orderid = o._id WHERE o.alternateid = '{mainOrderId}'";
+        string mainSmsTextSql = $@"SELECT count(*) FROM notifications.smstexts as st JOIN notifications.orders o ON st._orderid = o._id WHERE o.alternateid = '{mainOrderId}'";
+        string firstReminderSmsTextSql = $@"SELECT count(*) FROM notifications.smstexts as st JOIN notifications.orders o ON st._orderid = o._id WHERE o.alternateid = '{firstReminderOrderId}'";
+        string secondReminderSmsTextSql = $@"SELECT count(*) FROM notifications.smstexts as st JOIN notifications.orders o ON st._orderid = o._id WHERE o.alternateid = '{secondReminderOrderId}'";
 
         int mainOrderCount = await PostgreUtil.RunSqlReturnOutput<int>(mainOrderSql);
-        int firstSmsCount = await PostgreUtil.RunSqlReturnOutput<int>(firstSmsTextSql);
-        int secondSmsCount = await PostgreUtil.RunSqlReturnOutput<int>(secondSmsTextSql);
+        int mainSmsCount = await PostgreUtil.RunSqlReturnOutput<int>(mainSmsTextSql);
+        int firstReminderSmsCount = await PostgreUtil.RunSqlReturnOutput<int>(firstReminderSmsTextSql);
+        int secondReminderSmsCount = await PostgreUtil.RunSqlReturnOutput<int>(secondReminderSmsTextSql);
         int firstReminderCount = await PostgreUtil.RunSqlReturnOutput<int>(firstReminderSql);
         int secondReminderCount = await PostgreUtil.RunSqlReturnOutput<int>(secondReminderSql);
         int mainOrdersChainCount = await PostgreUtil.RunSqlReturnOutput<int>(mainOrdersChainSql);
 
-        Assert.Equal(1, firstSmsCount);
-        Assert.Equal(1, secondSmsCount);
+        Assert.Equal(1, mainSmsCount);
+        Assert.Equal(1, firstReminderSmsCount);
+        Assert.Equal(1, secondReminderSmsCount);
         Assert.Equal(1, mainOrderCount);
         Assert.Equal(1, firstReminderCount);
         Assert.Equal(1, secondReminderCount);
@@ -567,7 +570,7 @@ public class OrderRepositoryTests : IAsyncLifetime
         Guid firstReminderOrderId = Guid.NewGuid();
         Guid secondReminderOrderId = Guid.NewGuid();
 
-        _ordersChainIdsToDelete.AddRange(orderChainId);
+        _ordersChainIdsToDelete.Add(orderChainId);
         _orderIdsToDelete.AddRange([mainOrderId, firstReminderOrderId, secondReminderOrderId]);
 
         var creationDateTime = DateTime.UtcNow;
@@ -821,7 +824,7 @@ public class OrderRepositoryTests : IAsyncLifetime
         Guid firstReminderOrderId = Guid.NewGuid();
         Guid secondReminderOrderId = Guid.NewGuid();
 
-        _ordersChainIdsToDelete.AddRange(orderChainId);
+        _ordersChainIdsToDelete.Add(orderChainId);
         _orderIdsToDelete.AddRange([mainOrderId, firstReminderOrderId, secondReminderOrderId]);
 
         var creationDateTime = DateTime.UtcNow;
