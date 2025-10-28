@@ -4,35 +4,50 @@ CREATE OR REPLACE FUNCTION notifications.claim_email_batch(
     LANGUAGE 'plpgsql'
     COST 100
     VOLATILE PARALLEL UNSAFE
-    ROWS 1000
 AS $BODY$
 DECLARE
     v_batchsize integer := GREATEST(1, COALESCE(_batchsize, 500));
     latest_email_timeout timestamp;
+    v_limitlog_id integer;
 BEGIN
- SELECT emaillimittimeout 
-    INTO latest_email_timeout 
-    FROM notifications.resourcelimitlog 
-    WHERE id = (SELECT MAX(id) FROM notifications.resourcelimitlog);
-
-    -- Check if the latest email timeout is set and valid
-    IF latest_email_timeout IS NOT NULL THEN
-        IF latest_email_timeout >= NOW() THEN
-            RETURN QUERY 
-            SELECT NULL::uuid AS alternateid, 
-                   NULL::text AS subject, 
-                   NULL::text AS body, 
-                   NULL::text AS fromaddress, 
-                   NULL::text AS toaddress, 
-                   NULL::text AS contenttype 
-            WHERE FALSE;
-            RETURN;
-        ELSE 
-            UPDATE notifications.resourcelimitlog 
-            SET emaillimittimeout = NULL 
-            WHERE id = (SELECT MAX(id) FROM notifications.resourcelimitlog);
-        END IF;
+    SELECT id, emaillimittimeout
+    INTO v_limitlog_id, latest_email_timeout
+    FROM notifications.resourcelimitlog
+    WHERE id = (SELECT MAX(id) FROM notifications.resourcelimitlog)
+    FOR UPDATE SKIP LOCKED;
+    
+    -- Check if lock is taken
+    IF v_limitlog_id IS NULL THEN
+        RETURN QUERY 
+        SELECT NULL::uuid AS alternateid, 
+               NULL::text AS subject, 
+               NULL::text AS body, 
+               NULL::text AS fromaddress, 
+               NULL::text AS toaddress, 
+               NULL::text AS contenttype 
+        WHERE FALSE;
+        RETURN;
     END IF;
+
+    -- Check if there's an active email timeout
+    IF latest_email_timeout IS NOT NULL AND latest_email_timeout > now() THEN
+        RETURN QUERY 
+        SELECT NULL::uuid AS alternateid, 
+               NULL::text AS subject, 
+               NULL::text AS body, 
+               NULL::text AS fromaddress, 
+               NULL::text AS toaddress, 
+               NULL::text AS contenttype 
+        WHERE FALSE;
+        RETURN;
+    END IF;
+
+    -- Clear expired timeout
+    UPDATE notifications.resourcelimitlog
+    SET emaillimittimeout = NULL
+    WHERE id = v_limitlog_id
+        AND emaillimittimeout IS NOT NULL 
+        AND emaillimittimeout <= now();
 
     RETURN QUERY
     WITH claimed_new_rows AS (
@@ -40,13 +55,8 @@ BEGIN
             email._id, 
             email._orderid,
             email.alternateid,
-            email.toaddress,
-            txt.subject,
-            txt.body,
-            txt.fromaddress,
-            txt.contenttype
+            email.toaddress
         FROM notifications.emailnotifications email
-        JOIN notifications.emailtexts txt ON txt._orderid = email._orderid
         WHERE email.result = 'New'::emailnotificationresulttype
             AND email.expirytime >= now()
         ORDER BY email._id
@@ -61,13 +71,19 @@ BEGIN
         WHERE email._id = claimed._id
         RETURNING
             claimed.alternateid,
-            claimed.subject,
-            claimed.body,
-            claimed.fromaddress,
-            claimed.toaddress,
-            claimed.contenttype
+            claimed._orderid,
+            claimed.toaddress
     )
-    SELECT * FROM updated_rows;
+    -- Join with large text data AFTER releasing locks
+    SELECT 
+        updated.alternateid,
+        txt.subject,
+        txt.body,
+        txt.fromaddress,
+        updated.toaddress,
+        txt.contenttype
+    FROM updated_rows updated
+    JOIN notifications.emailtexts txt ON txt._orderid = updated._orderid;
 END;
 $BODY$;
 
