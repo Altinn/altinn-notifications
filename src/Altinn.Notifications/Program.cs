@@ -177,8 +177,6 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
             tracing.AddNpgsql();
 
             tracing.AddConfluentKafkaInstrumentation();
-
-            tracing.AddSource("Altinn.Notifications.Core.Services.OrderProcessingService");
         });
 
     AddAzureMonitorTelemetryExporters(services, config);

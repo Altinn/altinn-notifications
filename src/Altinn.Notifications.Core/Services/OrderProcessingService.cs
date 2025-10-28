@@ -18,16 +18,15 @@ namespace Altinn.Notifications.Core.Services;
 /// </summary>
 public class OrderProcessingService : IOrderProcessingService
 {
+    private readonly IOrderRepository _orderRepository;
+    private readonly IEmailOrderProcessingService _emailProcessingService;
+    private readonly ISmsOrderProcessingService _smsProcessingService;
+    private readonly IPreferredChannelProcessingService _preferredChannelProcessingService;
+    private readonly IEmailAndSmsOrderProcessingService _emailAndSmsProcessingService;
+    private readonly IConditionClient _conditionClient;
     private readonly IKafkaProducer _producer;
     private readonly string _pastDueOrdersTopic;
-    private readonly IOrderRepository _orderRepository;
-    private readonly IConditionClient _conditionClient;
     private readonly ILogger<OrderProcessingService> _logger;
-    private readonly ISmsOrderProcessingService _smsProcessingService;
-    private readonly IEmailOrderProcessingService _emailProcessingService;
-    private readonly IEmailAndSmsOrderProcessingService _emailAndSmsProcessingService;
-    private readonly IPreferredChannelProcessingService _preferredChannelProcessingService;
-    private static readonly ActivitySource _activitySource = new("Altinn.Notifications.Core.Services.OrderProcessingService");
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderProcessingService"/> class.
@@ -43,22 +42,20 @@ public class OrderProcessingService : IOrderProcessingService
         IOptions<KafkaSettings> kafkaSettings,
         ILogger<OrderProcessingService> logger)
     {
-        _logger = logger;
-        _producer = producer;
-        _conditionClient = conditionClient;
         _orderRepository = orderRepository;
-        _smsProcessingService = smsProcessingService;
         _emailProcessingService = emailProcessingService;
-        _emailAndSmsProcessingService = emailAndSmsProcessingService;
-        _pastDueOrdersTopic = kafkaSettings.Value.PastDueOrdersTopicName;
+        _smsProcessingService = smsProcessingService;
         _preferredChannelProcessingService = preferredChannelProcessingService;
+        _emailAndSmsProcessingService = emailAndSmsProcessingService;
+        _conditionClient = conditionClient;
+        _producer = producer;
+        _pastDueOrdersTopic = kafkaSettings.Value.PastDueOrdersTopicName;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
     public async Task StartProcessingPastDueOrders()
     {
-        using var parentActivity = _activitySource.StartActivity("ProcessPastDueOrdersBatch");
-
         Stopwatch sw = Stopwatch.StartNew();
         List<NotificationOrder> pastDueOrders;
         do
@@ -67,10 +64,6 @@ public class OrderProcessingService : IOrderProcessingService
 
             foreach (NotificationOrder order in pastDueOrders)
             {
-                using var activity = _activitySource.StartActivity("PublishPastDueOrder");
-                activity?.AddTag("altinn.notifications.order_id", order.Id.ToString());
-                activity?.AddTag("altinn.notifications.requested_send_time", order.RequestedSendTime.ToString("o"));
-
                 bool success = await _producer.ProduceAsync(_pastDueOrdersTopic, order.Serialize());
                 if (!success)
                 {
@@ -86,8 +79,6 @@ public class OrderProcessingService : IOrderProcessingService
     /// <inheritdoc/>
     public async Task<NotificationOrderProcessingResult> ProcessOrder(NotificationOrder order)
     {
-        Activity.Current?.AddTag("altinn.notifications.order_id", Convert.ToString(order.Id));
-
         var sendingConditionEvaluationResult = await EvaluateSendingCondition(order, false);
 
         switch (sendingConditionEvaluationResult)
@@ -97,8 +88,6 @@ public class OrderProcessingService : IOrderProcessingService
                 break;
 
             case { IsSendConditionMet: true }:
-                
-                Activity.Current?.AddEvent(new ActivityEvent("Order processing started."));
 
                 switch (order.NotificationChannel)
                 {
@@ -121,9 +110,6 @@ public class OrderProcessingService : IOrderProcessingService
                 }
 
                 await _orderRepository.TryCompleteOrderBasedOnNotificationsState(order.Id, AlternateIdentifierSource.Order);
-
-                Activity.Current?.AddEvent(new ActivityEvent("Order processing finished."));
-                
                 break;
         }
 
