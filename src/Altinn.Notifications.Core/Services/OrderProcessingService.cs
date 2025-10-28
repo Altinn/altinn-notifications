@@ -57,7 +57,7 @@ public class OrderProcessingService : IOrderProcessingService
     /// <inheritdoc/>
     public async Task StartProcessingPastDueOrders()
     {
-        using var activity = _activitySource.StartActivity("ProcessPastDueOrders");
+        using var parentActivity = _activitySource.StartActivity("ProcessPastDueOrdersBatch");
 
         Stopwatch sw = Stopwatch.StartNew();
         List<NotificationOrder> pastDueOrders;
@@ -67,8 +67,9 @@ public class OrderProcessingService : IOrderProcessingService
 
             foreach (NotificationOrder order in pastDueOrders)
             {
-                activity?.AddTag("altinn.notifications.order_id", Convert.ToString(order.Id));
-                activity?.AddTag("altinn.notifications.requested_send_time", Convert.ToString(order.RequestedSendTime));
+                using var activity = _activitySource.StartActivity("PublishPastDueOrder");
+                activity?.AddTag("altinn.notifications.order_id", order.Id.ToString());
+                activity?.AddTag("altinn.notifications.requested_send_time", order.RequestedSendTime.ToString("o"));
 
                 bool success = await _producer.ProduceAsync(_pastDueOrdersTopic, order.Serialize());
                 if (!success)
@@ -85,8 +86,6 @@ public class OrderProcessingService : IOrderProcessingService
     /// <inheritdoc/>
     public async Task<NotificationOrderProcessingResult> ProcessOrder(NotificationOrder order)
     {
-        using var activity = _activitySource.StartActivity("ProcessPastDueOrders");
-
         Activity.Current?.AddTag("altinn.notifications.order_id", Convert.ToString(order.Id));
 
         var sendingConditionEvaluationResult = await EvaluateSendingCondition(order, false);
@@ -98,6 +97,8 @@ public class OrderProcessingService : IOrderProcessingService
                 break;
 
             case { IsSendConditionMet: true }:
+                
+                Activity.Current?.AddEvent(new ActivityEvent("Order processing started."));
 
                 switch (order.NotificationChannel)
                 {
@@ -120,6 +121,9 @@ public class OrderProcessingService : IOrderProcessingService
                 }
 
                 await _orderRepository.TryCompleteOrderBasedOnNotificationsState(order.Id, AlternateIdentifierSource.Order);
+
+                Activity.Current?.AddEvent(new ActivityEvent("Order processing finished."));
+                
                 break;
         }
 
