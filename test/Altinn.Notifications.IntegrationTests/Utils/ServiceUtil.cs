@@ -118,19 +118,12 @@ public static class ServiceUtil
         // Register each interface with its implementation
         foreach (var interfaceType in repositoryInterfaces)
         {
-            var matches = implementationTypes.Where(t => interfaceType.IsAssignableFrom(t)).ToList();
+            var implementationType = implementationTypes
+                .FirstOrDefault(t => interfaceType.IsAssignableFrom(t));
 
-            if (matches.Count == 1)
+            if (implementationType != null)
             {
-                services.AddSingleton(interfaceType, matches[0]);
-            }
-            else if (matches.Count == 0)
-            {
-                throw new InvalidOperationException($"No implementation found for {interfaceType.FullName}.");
-            }
-            else
-            {
-                throw new InvalidOperationException($"Multiple implementations found for {interfaceType.FullName}: {string.Join(", ", matches.Select(m => m.FullName))}");
+                services.AddSingleton(interfaceType, implementationType);
             }
         }
     }
