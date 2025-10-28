@@ -40,7 +40,6 @@ public static class ServiceUtil
 
             // Note: Tracing configuration (ConfigureTracing) is intentionally omitted in tests
             // to reduce noise and overhead. Tests focus on functional correctness rather than observability.
-
             _sharedDataSource = dataSourceBuilder.Build();
 
             return _sharedDataSource;
