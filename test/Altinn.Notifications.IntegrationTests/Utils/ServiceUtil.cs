@@ -21,11 +21,6 @@ public static class ServiceUtil
 
     private static NpgsqlDataSource GetOrCreateDataSource(IConfiguration config)
     {
-        if (_sharedDataSource != null)
-        {
-            return _sharedDataSource;
-        }
-
         lock (_lock)
         {
             if (_sharedDataSource != null)
@@ -46,6 +41,15 @@ public static class ServiceUtil
             _sharedDataSource = dataSourceBuilder.Build();
 
             return _sharedDataSource;
+        }
+    }
+
+    public static void DisposeSharedDataSource()
+    {
+        lock (_lock)
+        {
+            _sharedDataSource?.Dispose();
+            _sharedDataSource = null;
         }
     }
 
