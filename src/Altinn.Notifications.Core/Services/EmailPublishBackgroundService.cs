@@ -69,10 +69,6 @@ public class EmailPublishBackgroundService : BackgroundService
             {
                 _logger.LogError(ex, "Error while sending email notifications.");
             }
-            finally
-            {
-                _emailPublishTaskQueue.MarkCompleted();
-            }
         }
     }
 }

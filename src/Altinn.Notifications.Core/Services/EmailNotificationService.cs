@@ -87,8 +87,6 @@ public class EmailNotificationService : IEmailNotificationService
 
             foreach (var email in newEmailNotifications)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-
                 bool success = await _producer.ProduceAsync(_emailQueueTopicName, email.Serialize());
                 if (!success)
                 {

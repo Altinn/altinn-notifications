@@ -6,11 +6,6 @@
 public interface IEmailPublishTaskQueue
 {
     /// <summary>
-    /// Marks the current work item as completed, allowing a new work item to be scheduled.
-    /// </summary>
-    void MarkCompleted();
-
-    /// <summary>
     /// Attempts to enqueue a work item.
     /// </summary>
     /// <returns><c>true</c> if a work item was signaled; <c>false</c> if one is already queued or running.</returns>

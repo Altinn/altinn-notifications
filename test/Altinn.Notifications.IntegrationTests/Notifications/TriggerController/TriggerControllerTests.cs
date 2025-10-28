@@ -187,8 +187,6 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
         emailPublishTaskQueueMock
             .Setup(e => e.WaitAsync(It.IsAny<CancellationToken>()))
             .Returns(taskCompletionSource.Task);
-        emailPublishTaskQueueMock
-            .Setup(e => e.MarkCompleted());
         return emailPublishTaskQueueMock;
     }
 
