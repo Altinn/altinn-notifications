@@ -8,7 +8,7 @@ public interface IEmailPublishTaskQueue
     /// <summary>
     /// Attempts to enqueue a work item.
     /// </summary>
-    /// <returns><c>true</c> if a work item was signaled; <c>false</c> if one is already queued or running.</returns>
+    /// <returns><c>true</c> if a work item was signaled; <c>false</c> if one is already queued.</returns>
     bool TryEnqueue();
 
     /// <summary>
