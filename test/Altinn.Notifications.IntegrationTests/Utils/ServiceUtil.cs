@@ -1,16 +1,54 @@
 ﻿using Altinn.Notifications.Core.Extensions;
+using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Integrations.Extensions;
+using Altinn.Notifications.Persistence.Configuration;
 using Altinn.Notifications.Persistence.Extensions;
+using Altinn.Notifications.Persistence.Repository;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
+using Npgsql;
+
 namespace Altinn.Notifications.IntegrationTests.Utils;
 
 public static class ServiceUtil
 {
+    private static readonly object _lock = new();
+    private static NpgsqlDataSource? _sharedDataSource;
+
+    private static NpgsqlDataSource GetOrCreateDataSource(IConfiguration config)
+    {
+        if (_sharedDataSource != null)
+        {
+            return _sharedDataSource;
+        }
+
+        lock (_lock)
+        {
+            if (_sharedDataSource != null)
+            {
+                return _sharedDataSource;
+            }
+
+            PostgreSqlSettings? settings = config.GetSection("PostgreSQLSettings")
+                .Get<PostgreSqlSettings>()
+                ?? throw new ArgumentNullException(nameof(config), "Required PostgreSQLSettings is missing from application configuration");
+
+            string connectionString = string.Format(settings.ConnectionString, settings.NotificationsDbPwd);
+
+            var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
+            dataSourceBuilder.EnableParameterLogging(settings.LogParameters);
+            dataSourceBuilder.EnableDynamicJson();
+
+            _sharedDataSource = dataSourceBuilder.Build();
+
+            return _sharedDataSource;
+        }
+    }
+
     public static List<object> GetServices(List<Type> interfaceTypes, Dictionary<string, string>? envVariables = null)
     {
         if (envVariables != null)
@@ -36,7 +74,14 @@ public static class ServiceUtil
 
         services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
         services.AddLogging();
-        services.AddPostgresRepositories(config);
+
+        // Register the shared data source as a singleton
+        var sharedDataSource = GetOrCreateDataSource(config);
+        services.AddSingleton(sharedDataSource);
+
+        // Register all repository implementations using the shared data source
+        RegisterRepositories(services);
+
         services.AddCoreServices(config);
         services.AddKafkaServices(config);
         services.AddAltinnClients(config);
@@ -52,5 +97,30 @@ public static class ServiceUtil
         }
 
         return outputServices;
+    }
+
+    private static void RegisterRepositories(IServiceCollection services)
+    {
+        // Get all repository interface types from Core.Persistence
+        var coreAssembly = typeof(IOrderRepository).Assembly;
+        var repositoryInterfaces = coreAssembly.GetTypes()
+            .Where(t => t.IsInterface && t.Namespace == "Altinn.Notifications.Core.Persistence");
+
+        // Get all implementation types from the Persistence assembly
+        var persistenceAssembly = typeof(OrderRepository).Assembly;
+        var implementationTypes = persistenceAssembly.GetTypes()
+            .Where(t => t.IsClass && !t.IsAbstract);
+
+        // Register each interface with its implementation
+        foreach (var interfaceType in repositoryInterfaces)
+        {
+            var implementationType = implementationTypes
+                .FirstOrDefault(t => interfaceType.IsAssignableFrom(t));
+
+            if (implementationType != null)
+            {
+                services.AddSingleton(interfaceType, implementationType);
+            }
+        }
     }
 }
