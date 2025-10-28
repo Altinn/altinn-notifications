@@ -64,6 +64,9 @@ public class OrderProcessingService : IOrderProcessingService
 
             foreach (NotificationOrder order in pastDueOrders)
             {
+                Activity.Current?.AddTag("Order.Identifier", order.Id);
+                Activity.Current?.AddTag("Order.RequestedSendTime", order.RequestedSendTime);
+
                 bool success = await _producer.ProduceAsync(_pastDueOrdersTopic, order.Serialize());
                 if (!success)
                 {
@@ -79,6 +82,7 @@ public class OrderProcessingService : IOrderProcessingService
     /// <inheritdoc/>
     public async Task<NotificationOrderProcessingResult> ProcessOrder(NotificationOrder order)
     {
+        Activity.Current?.AddTag("Order.Identifier", order.Id);
         var sendingConditionEvaluationResult = await EvaluateSendingCondition(order, false);
 
         switch (sendingConditionEvaluationResult)
