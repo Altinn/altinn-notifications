@@ -8,7 +8,7 @@ namespace Altinn.Notifications.Core.Services;
 
 /// <summary>
 /// Background service that runs a dedicated processing loop.
-/// Each loop cycle waits for queued work, executes email publishing, then marks is as available.
+/// Each loop cycle waits for queued work, executes email publishing, then marks is as available implicitly by calling wait, which will pop the item.
 /// </summary>
 public class EmailPublishBackgroundService : BackgroundService
 {
