@@ -1,6 +1,7 @@
 ﻿using Altinn.Notifications.Integrations.Configuration;
 
 using Confluent.Kafka;
+using Confluent.Kafka.Extensions.Diagnostics;
 
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -79,14 +80,20 @@ public abstract class KafkaConsumerBase<T> : BackgroundService
         {
             try
             {
-                consumeResult = _consumer.Consume(stoppingToken);
-                if (consumeResult != null)
-                {
-                    message = consumeResult.Message.Value;
-                    await processMessageFunc(message);
-                    _consumer.Commit(consumeResult);
-                    _consumer.StoreOffset(consumeResult);
-                }
+                await _consumer.ConsumeWithInstrumentation(
+                    async (consumeResult, token) =>
+                    {
+                        if (consumeResult == null)
+                        {
+                            return;
+                        }
+
+                        string message = consumeResult.Message.Value;
+                        await processMessageFunc(message);
+                        _consumer.Commit(consumeResult);
+                        _consumer.StoreOffset(consumeResult);
+                    },
+                    stoppingToken);
             }
             catch (OperationCanceledException)
             {

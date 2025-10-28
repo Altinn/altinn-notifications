@@ -3,6 +3,7 @@ using Altinn.Notifications.Integrations.Configuration;
 
 using Confluent.Kafka;
 using Confluent.Kafka.Admin;
+using Confluent.Kafka.Extensions.Diagnostics;
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -36,7 +37,9 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             RetryBackoffMs = 1000
         };
 
-        _producer = new ProducerBuilder<Null, string>(config).Build();
+        _producer = new ProducerBuilder<Null, string>(config)
+                   .BuildWithInstrumentation();
+
         EnsureTopicsExist();
     }
 
