@@ -2092,7 +2092,7 @@ public class OrderRepositoryTests : IAsyncLifetime
         };
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await orderRepository.Create(instantNotificationOrder, notificationOrder, smsNotification, creationDateTime.AddSeconds(3600), 1));
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => await orderRepository.Create(instantNotificationOrder, notificationOrder, smsNotification, creationDateTime.AddSeconds(3600), 1));
 
         // Verify nothing was persisted
         string orderChainSql = $@"SELECT count(*) FROM notifications.orderschain WHERE orderid = '{orderChainId}'";
