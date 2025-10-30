@@ -1535,17 +1535,6 @@ Null return: NULL when neither identifier is provided OR no matching row exists 
 Uniqueness assumptions: alternateid is unique (primary key); operationid uniquely identifies at most one row when non-null.
 Overwrite policy: result and resulttime are always overwritten (no transition guarding); operationid is only set when a non-null _operationid is supplied (existing value preserved when _operationid is null).';
 
--- updateemailstatus.sql:
-CREATE OR REPLACE PROCEDURE notifications.updateemailstatus(_alternateid UUID, _result text, _operationid text)
-LANGUAGE 'plpgsql'
-AS $BODY$
-BEGIN
-	UPDATE notifications.emailnotifications 
-	SET result = _result::emailnotificationresulttype, resulttime = now(), operationid = _operationid
-	WHERE alternateid = _alternateid;
-END;
-$BODY$;
-
 -- updateexpirednotifications.sql:
 CREATE OR REPLACE FUNCTION notifications.updateexpirednotifications(
     _source TEXT,
