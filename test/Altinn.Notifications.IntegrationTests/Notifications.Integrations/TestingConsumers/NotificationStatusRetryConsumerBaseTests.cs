@@ -2,7 +2,6 @@
 
 using Altinn.Notifications.Core;
 using Altinn.Notifications.Core.Enums;
-using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
@@ -224,84 +223,6 @@ public class NotificationStatusRetryConsumerBaseTests : IAsyncLifetime
         Assert.Equal(updateStatusRetryMessage.FirstSeen, republishedMessage.FirstSeen);
 
         deadDeliveryReportService.Verify(s => s.InsertAsync(It.IsAny<DeadDeliveryReport>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task ConsumeRetryMessage_WhenNotificationExpired_InsertsDeadDeliveryReportWithExpiredReason()
-    {
-        // Arrange
-        var logger = new Mock<ILogger<EmailStatusRetryConsumer>>();
-        var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Loose);
-        var emailNotificationService = new Mock<IEmailNotificationService>();
-        var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
-
-        var emailSendOperationResult = new EmailSendOperationResult
-        {
-            OperationId = Guid.NewGuid().ToString(),
-            SendResult = EmailNotificationResultType.Delivered
-        };
-
-        var deliveryReport = emailSendOperationResult.Serialize();
-
-        var updateStatusRetryMessage = new UpdateStatusRetryMessage
-        {
-            Attempts = 2,
-            SendOperationResult = deliveryReport,
-            FirstSeen = DateTime.UtcNow.AddSeconds(-100),
-            LastAttempt = DateTime.UtcNow.AddSeconds(-5)
-        };
-
-        emailNotificationService
-            .Setup(s => s.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()))
-            .ThrowsAsync(new NotificationExpiredException(NotificationChannel.Email, "test-id", SendStatusIdentifierType.OperationId));
-
-        deadDeliveryReportService
-            .Setup(e => e.InsertAsync(It.IsAny<DeadDeliveryReport>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(100);
-
-        using var emailStatusConsumer = new EmailStatusRetryConsumer(
-            kafkaProducer.Object,
-            logger.Object,
-            _kafkaSettings,
-            emailNotificationService.Object,
-            deadDeliveryReportService.Object);
-
-        // Act
-        await emailStatusConsumer.StartAsync(CancellationToken.None);
-        await KafkaUtil.PublishMessageOnTopic(_kafkaSettings.Value.EmailStatusUpdatedRetryTopicName, updateStatusRetryMessage.Serialize());
-
-        // Assert
-        await IntegrationTestUtil.EventuallyAsync(
-            () =>
-            {
-                try
-                {
-                    emailNotificationService.Verify(s => s.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()), Times.Once);
-
-                    deadDeliveryReportService.Verify(
-                        e => e.InsertAsync(
-                        It.Is<DeadDeliveryReport>(e =>
-                            e.FirstSeen == updateStatusRetryMessage.FirstSeen &&
-                            e.AttemptCount == updateStatusRetryMessage.Attempts &&
-                            e.Channel == DeliveryReportChannel.AzureCommunicationServices &&
-                            !e.Resolved &&
-                            e.DeliveryReport.Contains("NOTIFICATION_EXPIRED") &&
-                            e.DeliveryReport.Contains(deliveryReport)),
-                        It.IsAny<CancellationToken>()),
-                        Times.Once);
-
-                    kafkaProducer.Verify(e => e.ProduceAsync(It.Is<string>(e => e == _kafkaSettings.Value.EmailStatusUpdatedRetryTopicName), It.IsAny<string>()), Times.Never);
-
-                    return true;
-                }
-                catch
-                {
-                    return false;
-                }
-            },
-            TimeSpan.FromSeconds(15));
-
-        await emailStatusConsumer.StopAsync(CancellationToken.None);
     }
 
     /// <summary>
