@@ -1539,17 +1539,22 @@ RETURNS SETOF UUID
 LANGUAGE plpgsql
 AS $$
 BEGIN
+    -- Validate inputs
+        IF _limit <= 0 THEN
+            RAISE EXCEPTION 'Limit must be greater than 0';
+        END IF;
+
     -- Use lower() for case-insensitive comparison of the notification type
     IF lower(_source) = 'email' THEN
         -- If the type is 'email', run the update on the emailnotifications table
         RETURN QUERY
         WITH claimed_rows AS (
-            SELECT _id, alternateid
+            SELECT _id
             FROM notifications.emailnotifications
             WHERE result = 'Succeeded' AND expirytime < (now() - make_interval(secs => _expiry_offset_seconds))
             ORDER BY expirytime ASC, _id
             FOR UPDATE SKIP LOCKED
-            LIMIT GREATEST(_limit, 1) -- Use the input parameter for the limit
+            LIMIT _limit
         ),
         updated_rows AS (
             UPDATE notifications.emailnotifications
@@ -1566,12 +1571,12 @@ BEGIN
         -- If the type is 'sms', run the update on the smsnotifications table
         RETURN QUERY
         WITH claimed_rows AS (
-            SELECT _id, alternateid
+            SELECT _id
             FROM notifications.smsnotifications
             WHERE result = 'Accepted' AND expirytime < (now() - make_interval(secs => _expiry_offset_seconds))
             ORDER BY expirytime ASC, _id
             FOR UPDATE SKIP LOCKED
-            LIMIT GREATEST(_limit, 1) -- Use the input parameter for the limit
+            LIMIT _limit
         ),
         updated_rows AS (
             UPDATE notifications.smsnotifications
@@ -1585,8 +1590,8 @@ BEGIN
         FROM updated_rows;
         
     ELSE
-        -- Inform the user if an invalid type was provided. The function will return an empty set.
-        RAISE NOTICE 'Invalid notification type: %. Allowed values are ''email'' or ''sms''.', _source;
+        -- Throw an exception if an invalid type was provided
+        RAISE EXCEPTION 'Invalid notification type: %. Allowed values are ''email'' or ''sms''.', _source;
     END IF;
 
 END;
@@ -1594,7 +1599,7 @@ $$;
 
 -- Add a comment to the function for documentation purposes
 COMMENT ON FUNCTION notifications.updateexpirednotifications(TEXT, INT, INT) IS 
-'Updates the result of expired email or sms notifications to ''Failed_TTL''. 
+'Use row-level locking to support concurrent calls. Updates the result of expired email or sms notifications to ''Failed_TTL''. 
 Parameters: 
 - _source (TEXT): notification type (''email'' or ''sms'')
 - _limit (INT): maximum number of records to update
