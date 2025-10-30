@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres: # note that updating this image (might break the pipeline if the agent doesn't support the new version) AND (requires updating the version on line 55 below)
-        image: postgres:16@sha256:f554b7e953b6fc0f72fe2b34e34f935f7ecc4f5bab9d1006467b30bfc6fc7ea1
+        image: postgres:16@sha256:4eb532412200f7fbbf15d62ee0d96e020a9eae9eaed76066692474a7371c4d83
         env:
           POSTGRES_USER: platform_notifications_admin
           POSTGRES_PASSWORD: Password
@@ -52,7 +52,7 @@ jobs:
         run: |
           # Restart only the Postgres service
           docker ps \
-            --filter "ancestor=postgres:16@sha256:f554b7e953b6fc0f72fe2b34e34f935f7ecc4f5bab9d1006467b30bfc6fc7ea1" \
+            --filter "ancestor=postgres:16@sha256:4eb532412200f7fbbf15d62ee0d96e020a9eae9eaed76066692474a7371c4d83" \
             -q \
           | xargs docker restart
       - name: Set up Kafka
