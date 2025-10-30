@@ -318,7 +318,7 @@ BEGIN
     
     RETURN QUERY 
     WITH claimed_emails AS (
-        SELECT _id, alternateid, _orderid, toaddress, customizedsubject, customizedbody
+        SELECT _id
         FROM notifications.emailnotifications
         WHERE result = 'New'
         FOR UPDATE SKIP LOCKED
