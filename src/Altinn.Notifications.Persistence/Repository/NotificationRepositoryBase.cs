@@ -4,13 +4,11 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using Altinn.Notifications.Core.Configuration;
-using Altinn.Notifications.Core.Helpers;
 using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Persistence.Mappers;
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-
 using Npgsql;
 using NpgsqlTypes;
 
@@ -32,7 +30,7 @@ public abstract class NotificationRepositoryBase
     protected abstract string SourceIdentifier { get; }
 
     private readonly string _updateExpiredNotifications = "SELECT * FROM notifications.updateexpirednotifications(@source, @limit, @offset)";
-    private const string _getShipmentForStatusFeedSql = "SELECT * FROM notifications.getshipmentforstatusfeed_v2(@alternateid)";
+    private const string _getShipmentForStatusFeedSql = "SELECT * FROM notifications.getshipmentforstatusfeed_v3(@alternateid)";
     private const string _tryMarkOrderAsCompletedSql = "SELECT notifications.trymarkorderascompleted(@notificationid, @sourceidentifier)";
 
     private readonly NpgsqlDataSource _dataSource;
@@ -207,13 +205,23 @@ public abstract class NotificationRepositoryBase
         {
             var status = await reader.GetFieldValueAsync<string>("status");
             var destination = await reader.GetFieldValueAsync<string>("destination");
-            var isValidMobileNumber = MobileNumberHelper.IsValidMobileNumber(destination);
+            var notificationType = await reader.GetFieldValueAsync<string>("notification_type");
 
-            var recipient = new Recipient
+            var recipient = notificationType switch
             {
-                Destination = destination,
-                LastUpdate = await reader.GetFieldValueAsync<DateTime>("last_update"),
-                Status = isValidMobileNumber ? ProcessingLifecycleMapper.GetSmsLifecycleStage(status) : ProcessingLifecycleMapper.GetEmailLifecycleStage(status)
+                "email" => new Recipient
+                {
+                    Destination = destination,
+                    LastUpdate = await reader.GetFieldValueAsync<DateTime>("last_update"),
+                    Status = ProcessingLifecycleMapper.GetEmailLifecycleStage(status)
+                },
+                "sms" => new Recipient
+                {
+                    Destination = destination,
+                    LastUpdate = await reader.GetFieldValueAsync<DateTime>("last_update"),
+                    Status = ProcessingLifecycleMapper.GetSmsLifecycleStage(status)
+                },
+                _ => throw new InvalidOperationException($"Unknown notification type: {notificationType}")
             };
 
             recipients.Add(recipient);

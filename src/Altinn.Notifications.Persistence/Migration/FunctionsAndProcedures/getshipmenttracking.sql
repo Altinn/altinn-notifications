@@ -76,15 +76,16 @@ If no matching order exists, an empty result set is returned.';
 
 
 -- This is a new version to return the type of the notification
-CREATE OR REPLACE FUNCTION notifications.get_shipment_tracking_v2(
+CREATE OR REPLACE FUNCTION notifications.get_shipment_tracking_v3(
     _alternateid UUID,
     _creatorname TEXT)
 RETURNS TABLE (
-    reference     TEXT,
-    status        TEXT,
-    last_update   TIMESTAMPTZ,
-    destination   TEXT,
-    type          TEXT
+    reference          TEXT,
+    status             TEXT,
+    last_update        TIMESTAMPTZ,
+    destination        TEXT,
+    type               TEXT,
+    notification_type  TEXT
 ) AS $$
 DECLARE
     v_order_exists BOOLEAN;
@@ -115,7 +116,8 @@ BEGIN
             od.processedstatus::TEXT AS status,
             GREATEST(od.created, COALESCE(od.processed, od.created)) AS last_update,
             NULL::TEXT AS destination,
-            od.type::TEXT AS type
+            od.type::TEXT AS type,
+            'order' AS notification_type
         FROM order_data od
     ),
     email_tracking AS (
@@ -124,7 +126,8 @@ BEGIN
             e.result::TEXT AS status,
             e.resulttime AS last_update,
             e.toaddress AS destination,
-            od.type::TEXT AS type
+            od.type::TEXT AS type,
+            'email' AS notification_type
         FROM order_data od
         JOIN notifications.emailnotifications e ON e._orderid = od._id
     ),
@@ -134,7 +137,8 @@ BEGIN
             s.result::TEXT AS status,
             s.resulttime AS last_update,
             s.mobilenumber AS destination,
-            od.type::TEXT AS type
+            od.type::TEXT AS type,
+            'sms' AS notification_type
         FROM order_data od
         JOIN notifications.smsnotifications s ON s._orderid = od._id
     )
@@ -146,7 +150,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-COMMENT ON FUNCTION notifications.get_shipment_tracking_v2(UUID, TEXT) IS
+COMMENT ON FUNCTION notifications.get_shipment_tracking_v3(UUID, TEXT) IS
 'Returns delivery tracking information for a notification identified by the given alternate identifier and creator name.
 
 Includes:

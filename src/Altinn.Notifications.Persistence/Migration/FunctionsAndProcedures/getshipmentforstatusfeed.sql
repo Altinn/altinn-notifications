@@ -42,19 +42,20 @@ COMMENT ON FUNCTION notifications.getshipmentforstatusfeed(uuid)
     IS 'Retrieves combined order and shipment tracking data based on an email or sms notification alternateid.';
 
 
-CREATE OR REPLACE FUNCTION notifications.getshipmentforstatusfeed_v2(_alternateid uuid)
+CREATE OR REPLACE FUNCTION notifications.getshipmentforstatusfeed_v3(_alternateid uuid)
 RETURNS TABLE(
-    alternateid uuid,
-    reference text,
-    status text,
-    last_update timestamp with time zone,
-    destination text,
-    type text
+    alternateid       uuid,
+    reference         text,
+    status            text,
+    last_update       timestamp with time zone,
+    destination       text,
+    type              text,
+    notification_type text
 )
 LANGUAGE 'plpgsql'
 COST 100
-VOLATILE PARALLEL UNSAFE
-ROWS 1000
+STABLE PARALLEL SAFE
+ROWS 5
 AS $BODY$
 DECLARE
     _order_alternateid uuid;
@@ -85,15 +86,16 @@ BEGIN
             t.status,
             t.last_update,
             t.destination,
-            t.type
+            t.type,
+            t.notification_type 
         FROM
-            notifications.get_shipment_tracking_v2(_order_alternateid, _order_creatorname) AS t;
+            notifications.get_shipment_tracking_v3(_order_alternateid, _order_creatorname) AS t;
     END IF;
 END;
 $BODY$;
 
-ALTER FUNCTION notifications.getshipmentforstatusfeed_v2(uuid)
+ALTER FUNCTION notifications.getshipmentforstatusfeed_v3(uuid)
     OWNER TO platform_notifications_admin;
 
-COMMENT ON FUNCTION notifications.getshipmentforstatusfeed_v2(uuid)
+COMMENT ON FUNCTION notifications.getshipmentforstatusfeed_v3(uuid)
     IS 'Retrieves shipment tracking data using an email or sms notification alternateid.';
