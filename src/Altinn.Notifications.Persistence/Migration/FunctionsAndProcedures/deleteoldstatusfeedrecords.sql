@@ -19,11 +19,10 @@ BEGIN
         RETURN 0; -- Another cleanup is running
     END IF;
     
-    -- Even if this crashes here, lock is auto-released
     WITH deleted_rows AS (
         DELETE FROM notifications.statusfeed 
         WHERE created <= NOW() - INTERVAL '90 days'
-        RETURNING id
+        RETURNING _id
     )
     -- Count the rows that were captured in the CTE
     SELECT count(*) INTO deleted_count FROM deleted_rows;
