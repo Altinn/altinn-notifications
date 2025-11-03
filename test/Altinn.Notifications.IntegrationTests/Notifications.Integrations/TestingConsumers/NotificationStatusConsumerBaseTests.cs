@@ -338,7 +338,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 
         emailNotificationRepository
             .Setup(e => e.UpdateSendStatus(sendOperationResult.NotificationId, sendOperationResult.SendResult.Value, sendOperationResult.OperationId))
-            .ThrowsAsync(new NotificationNotFoundException(NotificationChannel.Email, sendOperationResult.OperationId, SendStatusIdentifierType.NotificationId));
+            .ThrowsAsync(new NotificationNotFoundException(NotificationChannel.Email, sendOperationResult.OperationId, SendStatusIdentifierType.OperationId));
 
         kafkaProducer
             .Setup(e => e.ProduceAsync(_kafkaSettings.Value.EmailStatusUpdatedTopicName, deliveryReport))
