@@ -781,6 +781,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             {
                 EmailQueueTopicName = Guid.NewGuid().ToString()
             }),
+            Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig()),
             emailNotificationRepository.Object);
 
         using var emailStatusConsumer = new EmailStatusConsumer(kafkaProducer.Object, logger.Object, _kafkaSettings, emailNotificationService, deadDeliveryReportService.Object);
