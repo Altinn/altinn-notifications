@@ -19,14 +19,14 @@ BEGIN
         WITH claimed_rows AS (
             SELECT _id
             FROM notifications.emailnotifications
-            WHERE result = 'Succeeded' AND expirytime < (now() - make_interval(secs => _expiry_offset_seconds))
+            WHERE result = 'Succeeded'::emailnotificationresulttype AND expirytime < (now() - make_interval(secs => _expiry_offset_seconds))
             ORDER BY expirytime ASC, _id
             FOR UPDATE SKIP LOCKED
             LIMIT _limit
         ),
         updated_rows AS (
             UPDATE notifications.emailnotifications
-            SET result = 'Failed_TTL',
+            SET result = 'Failed_TTL'::emailnotificationresulttype,
                 resulttime = now()
             WHERE _id IN (SELECT _id FROM claimed_rows)
             RETURNING alternateid -- Return all alternateids from updated rows
@@ -41,14 +41,14 @@ BEGIN
         WITH claimed_rows AS (
             SELECT _id
             FROM notifications.smsnotifications
-            WHERE result = 'Accepted' AND expirytime < (now() - make_interval(secs => _expiry_offset_seconds))
+            WHERE result = 'Accepted'::smsnotificationresulttype AND expirytime < (now() - make_interval(secs => _expiry_offset_seconds))
             ORDER BY expirytime ASC, _id
             FOR UPDATE SKIP LOCKED
             LIMIT _limit
         ),
         updated_rows AS (
             UPDATE notifications.smsnotifications
-            SET result = 'Failed_TTL',
+            SET result = 'Failed_TTL'::smsnotificationresulttype,
                 resulttime = now()
             WHERE _id IN (SELECT _id FROM claimed_rows)
             RETURNING alternateid -- Return all alternateids from updated rows

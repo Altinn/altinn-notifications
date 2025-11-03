@@ -14,7 +14,7 @@ BEGIN
         FOR UPDATE SKIP LOCKED
     )
     UPDATE notifications.orders
-    SET processedstatus = 'Processing'
+    SET processedstatus = 'Processing'::orderprocessingstate
     WHERE _id IN (SELECT _id FROM claimed_orders)
     RETURNING notificationorder AS notificationorders;
 END;
