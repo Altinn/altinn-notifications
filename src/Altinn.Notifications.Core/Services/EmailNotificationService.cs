@@ -22,6 +22,7 @@ public class EmailNotificationService : IEmailNotificationService
     private readonly string _emailQueueTopicName;
     private readonly IEmailNotificationRepository _repository;
     private readonly IKafkaProducer _producer;
+    private readonly int _emailPublishBatchSize;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotificationService"/> class.
@@ -31,12 +32,14 @@ public class EmailNotificationService : IEmailNotificationService
         IKafkaProducer producer,
         IDateTimeService dateTime,
         IOptions<KafkaSettings> kafkaSettings,
+        IOptions<NotificationConfig> notificationConfig,
         IEmailNotificationRepository repository)
     {
         _guid = guid;
         _dateTime = dateTime;
         _producer = producer;
         _repository = repository;
+        _emailPublishBatchSize = notificationConfig.Value.EmailPublishBatchSize;
         _emailQueueTopicName = kafkaSettings.Value.EmailQueueTopicName;
     }
 
@@ -72,18 +75,26 @@ public class EmailNotificationService : IEmailNotificationService
     }
 
     /// <inheritdoc/>
-    public async Task SendNotifications()
+    public async Task SendNotifications(CancellationToken cancellationToken)
     {
-        List<Email> emails = await _repository.GetNewNotifications();
-
-        foreach (Email email in emails)
+        List<Email> newEmailNotifications;
+        
+        do
         {
-            bool success = await _producer.ProduceAsync(_emailQueueTopicName, email.Serialize());
-            if (!success)
+            cancellationToken.ThrowIfCancellationRequested();
+
+            newEmailNotifications = await _repository.GetNewNotificationsAsync(_emailPublishBatchSize, cancellationToken);
+
+            foreach (var email in newEmailNotifications)
             {
-                await _repository.UpdateSendStatus(email.NotificationId, EmailNotificationResultType.New);
+                bool success = await _producer.ProduceAsync(_emailQueueTopicName, email.Serialize());
+                if (!success)
+                {
+                    await _repository.UpdateSendStatus(email.NotificationId, EmailNotificationResultType.New);
+                }
             }
         }
+        while (newEmailNotifications.Count > 0);
     }
 
     /// <inheritdoc/>
