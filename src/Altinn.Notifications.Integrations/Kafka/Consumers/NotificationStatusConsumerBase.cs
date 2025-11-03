@@ -94,7 +94,7 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
                 typeof(TConsumer).Name,
                 ex.Message);
 
-            await SaveDeadDeliveryReport(ex, message);
+            await SaveDeadDeliveryReport(message);
         }
         catch (NotificationNotFoundException)
         {
@@ -134,20 +134,14 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
     /// <summary>
     /// Saves a dead delivery report for a notification that has expired.
     /// </summary>
-    private async Task SaveDeadDeliveryReport(NotificationExpiredException ex, string originalMessage)
+    private async Task SaveDeadDeliveryReport(string originalMessage)
     {
         var deadDeliveryReportJson = JsonSerializer.Serialize(
             new
             {
                 reason = "NOTIFICATION_EXPIRED",
                 message = "Notification expiry time has passed",
-                originalDeliveryReport = originalMessage,
-                exceptionDetails = new
-                {
-                    channel = ex.Channel.ToString(),
-                    identifier = ex.Identifier,
-                    identifierType = ex.IdentifierType.ToString()
-                }
+                originalDeliveryReport = originalMessage
             },
             JsonSerializerOptionsProvider.Options);
 
