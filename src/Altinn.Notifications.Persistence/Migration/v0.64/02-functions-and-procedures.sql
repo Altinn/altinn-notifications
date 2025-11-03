@@ -663,7 +663,7 @@ BEGIN
     END IF;
 
     -- Check if notification has expired
-    IF v_expirytime < now() THEN
+    IF v_expirytime <= now() THEN
         -- Expired - don't update
         RETURN QUERY SELECT v_alternateid, false, true;
         RETURN;
@@ -1726,7 +1726,7 @@ BEGIN
     END IF;
 
     -- Check if notification has expired
-    IF v_expirytime < now() THEN
+    IF v_expirytime <= now() THEN
         -- Expired - don't update
         RETURN QUERY SELECT v_alternateid, false, true;
         RETURN;
