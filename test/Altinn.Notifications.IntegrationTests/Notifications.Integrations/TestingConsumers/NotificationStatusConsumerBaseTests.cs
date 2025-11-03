@@ -466,6 +466,10 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 
                     smsNotificationRepository.Verify(e => e.UpdateSendStatus(sendOperationResult.NotificationId, sendOperationResult.SendResult, sendOperationResult.GatewayReference), Times.Once);
 
+                    deadDeliveryReportService.Verify(
+                        e => e.InsertAsync(It.IsAny<DeadDeliveryReport>(), It.IsAny<CancellationToken>()),
+                        Times.Never);
+
                     Assert.Empty(publishedDeliveryReport);
 
                     Assert.Empty(republishedDeliveryReport);
@@ -546,6 +550,10 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
 
                     emailNotificationRepository.Verify(e => e.UpdateSendStatus(sendOperationResult.NotificationId, sendOperationResult.SendResult.Value, sendOperationResult.OperationId), Times.Once);
 
+                    deadDeliveryReportService.Verify(
+                        e => e.InsertAsync(It.IsAny<DeadDeliveryReport>(), It.IsAny<CancellationToken>()),
+                        Times.Never);
+
                     Assert.Empty(publishedDeliveryReport);
 
                     Assert.Empty(republishedDeliveryReport);
@@ -625,6 +633,10 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
                     kafkaProducer.Verify(e => e.ProduceAsync(_kafkaSettings.Value.EmailStatusUpdatedRetryTopicName, It.IsAny<string>()), Times.Never);
 
                     emailNotificationRepository.Verify(e => e.UpdateSendStatus(sendOperationResult.NotificationId, sendOperationResult.SendResult.Value, sendOperationResult.OperationId), Times.Once);
+
+                    deadDeliveryReportService.Verify(
+                        e => e.InsertAsync(It.IsAny<DeadDeliveryReport>(), It.IsAny<CancellationToken>()),
+                        Times.Never);
 
                     Assert.Empty(publishedDeliveryReport);
 
@@ -781,7 +793,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
             {
                 EmailQueueTopicName = Guid.NewGuid().ToString()
             }),
-            Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig()),
+            Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig() { EmailPublishBatchSize = 50 }),
             emailNotificationRepository.Object);
 
         using var emailStatusConsumer = new EmailStatusConsumer(kafkaProducer.Object, logger.Object, _kafkaSettings, emailNotificationService, deadDeliveryReportService.Object);
