@@ -207,6 +207,12 @@ public abstract class NotificationRepositoryBase
             var destination = await reader.GetFieldValueAsync<string>("destination");
             var notificationType = await reader.GetFieldValueAsync<string>("notification_type");
 
+            if (notificationType == "order")
+            {
+                // Skip order-level as it is already processed
+                continue;
+            }
+
             var recipient = notificationType switch
             {
                 "email" => new Recipient
