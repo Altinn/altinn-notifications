@@ -89,8 +89,8 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     /// <inheritdoc/>
     public async Task UpdateSendStatus(Guid? notificationId, EmailNotificationResultType status, string? operationId = null)
     {
-        var hasOperationId = !string.IsNullOrWhiteSpace(operationId);
         var hasNotificationId = notificationId is Guid id && id != Guid.Empty;
+        var hasOperationId = !string.IsNullOrWhiteSpace(operationId);
         if (!hasOperationId && !hasNotificationId)
         {
             throw new ArgumentException("The provided Email identifier is invalid.");
@@ -108,7 +108,7 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
             operationId,
             notificationId,
             NotificationChannel.Email,
-            SendStatusIdentifierType.OperationId);
+            hasNotificationId ? SendStatusIdentifierType.NotificationId : SendStatusIdentifierType.OperationId);
     }
 
     /// <inheritdoc/>
