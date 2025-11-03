@@ -166,7 +166,11 @@ RETURNS TABLE (
     destination        TEXT,
     type               TEXT,
     notification_type  TEXT
-) AS $$
+)
+LANGUAGE plpgsql
+STABLE PARALLEL SAFE
+ROWS 5
+AS $$
 DECLARE
     v_order_exists BOOLEAN;
 BEGIN
@@ -228,7 +232,7 @@ BEGIN
     UNION ALL
     SELECT * FROM sms_tracking;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 COMMENT ON FUNCTION notifications.get_shipment_tracking_v3(UUID, TEXT) IS
 'Returns delivery tracking information for a notification identified by the given alternate identifier and creator name.
