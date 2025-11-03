@@ -174,6 +174,104 @@ COMMENT ON FUNCTION notifications.claim_daytime_sms_batch(INTEGER) IS
 'Claims and returns batches of SMS notifications (sendingtimepolicy = 2 or NULL).
 _batchsize: requested batch size (defaults to 500 if NULL or <1).';
 
+-- claimemailbatch.sql:
+CREATE OR REPLACE FUNCTION notifications.claim_email_batch(
+    _batchsize integer DEFAULT NULL::integer)
+    RETURNS TABLE(alternateid uuid, subject text, body text, fromaddress text, toaddress text, contenttype text) 
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE PARALLEL UNSAFE
+AS $BODY$
+DECLARE
+    v_batchsize integer := GREATEST(1, COALESCE(_batchsize, 500));
+    latest_email_timeout timestamp;
+    v_limitlog_id integer;
+BEGIN
+    SELECT id, emaillimittimeout
+    INTO v_limitlog_id, latest_email_timeout
+    FROM notifications.resourcelimitlog
+    WHERE id = (SELECT MAX(id) FROM notifications.resourcelimitlog)
+    FOR UPDATE SKIP LOCKED;
+    
+    -- Check if lock is taken
+    IF v_limitlog_id IS NULL THEN
+        RETURN QUERY 
+        SELECT NULL::uuid AS alternateid, 
+               NULL::text AS subject, 
+               NULL::text AS body, 
+               NULL::text AS fromaddress, 
+               NULL::text AS toaddress, 
+               NULL::text AS contenttype 
+        WHERE FALSE;
+        RETURN;
+    END IF;
+
+    -- Check if there's an active email timeout
+    IF latest_email_timeout IS NOT NULL AND latest_email_timeout > now() THEN
+        RETURN QUERY 
+        SELECT NULL::uuid AS alternateid, 
+               NULL::text AS subject, 
+               NULL::text AS body, 
+               NULL::text AS fromaddress, 
+               NULL::text AS toaddress, 
+               NULL::text AS contenttype 
+        WHERE FALSE;
+        RETURN;
+    END IF;
+
+    -- Clear expired timeout
+    UPDATE notifications.resourcelimitlog
+    SET emaillimittimeout = NULL
+    WHERE id = v_limitlog_id
+        AND emaillimittimeout IS NOT NULL 
+        AND emaillimittimeout <= now();
+
+    RETURN QUERY
+    WITH claimed_new_rows AS (
+        SELECT 
+            email._id, 
+            email._orderid,
+            email.alternateid,
+            email.toaddress
+        FROM notifications.emailnotifications email
+        WHERE email.result = 'New'::emailnotificationresulttype
+            AND email.expirytime >= now()
+        ORDER BY email._id
+        FOR UPDATE OF email SKIP LOCKED
+        LIMIT v_batchsize
+    ),
+    updated_rows AS (
+        UPDATE notifications.emailnotifications email
+        SET resulttime = now(),
+            result = 'Sending'::emailnotificationresulttype
+        FROM claimed_new_rows claimed
+        WHERE email._id = claimed._id
+        RETURNING
+            claimed.alternateid,
+            claimed._orderid,
+            claimed.toaddress
+    )
+    -- Join with large text data AFTER releasing locks
+    SELECT 
+        updated.alternateid,
+        txt.subject,
+        txt.body,
+        txt.fromaddress,
+        updated.toaddress,
+        txt.contenttype
+    FROM updated_rows updated
+    JOIN notifications.emailtexts txt ON txt._orderid = updated._orderid;
+END;
+$BODY$;
+
+ALTER FUNCTION notifications.claim_email_batch(integer)
+    OWNER TO platform_notifications_admin;
+
+COMMENT ON FUNCTION notifications.claim_email_batch(integer)
+    IS 'Claims and returns batches of email notifications.
+_batchsize: requested batch size (defaults to 500 if NULL or <1).';
+
+
 -- deleteoldstatusfeedrecords.sql:
 -- Creates or replaces a function to delete statusfeed records older than 90 days
 CREATE OR REPLACE FUNCTION notifications.delete_old_status_feed_records()
@@ -691,7 +789,7 @@ BEGIN
         FOR UPDATE SKIP LOCKED
     )
     UPDATE notifications.orders
-    SET processedstatus = 'Processing'
+    SET processedstatus = 'Processing'::orderprocessingstate
     WHERE _id IN (SELECT _id FROM claimed_orders)
     RETURNING notificationorder AS notificationorders;
 END;
@@ -991,6 +1089,82 @@ RETURN query
 	WHERE s._orderid = __orderid;
 END;
 $BODY$;
+
+-- getsmsstatusnewupdatestatus.sql:
+-- This function is kept for backward compatibility and may be removed in future versions.
+-- Use notifications.getsms_statusnew_updatestatus(integer) instead.
+CREATE OR REPLACE FUNCTION notifications.getsms_statusnew_updatestatus()
+    RETURNS TABLE(alternateid uuid, sendernumber text, mobilenumber text, body text) 
+    LANGUAGE 'plpgsql'
+AS $BODY$
+BEGIN
+    RETURN QUERY 
+    WITH updated AS (
+        UPDATE notifications.smsnotifications
+        SET result = 'Sending', resulttime = now()
+        WHERE result = 'New' 
+        RETURNING notifications.smsnotifications.alternateid, 
+                  _orderid, 
+                  notifications.smsnotifications.mobilenumber,
+                  notifications.smsnotifications.customizedbody
+    )
+    SELECT u.alternateid, 
+           st.sendernumber, 
+           u.mobilenumber, 
+           CASE WHEN u.customizedbody IS NOT NULL AND u.customizedbody <> '' THEN u.customizedbody ELSE st.body END AS body
+    FROM updated u
+    JOIN notifications.smstexts st ON u._orderid = st._orderid;        
+END;
+$BODY$;
+
+-- FUNCTION: notifications.getsms_statusnew_updatestatus(integer)
+CREATE OR REPLACE FUNCTION NOTIFICATIONS.GETSMS_STATUSNEW_UPDATESTATUS (_SENDINGTIMEPOLICY INTEGER) 
+RETURNS TABLE (
+    ALTERNATEID UUID,
+    SENDERNUMBER TEXT,
+    MOBILENUMBER TEXT,
+    BODY TEXT
+) 
+LANGUAGE 'plpgsql' 
+COST 100 
+VOLATILE 
+PARALLEL UNSAFE 
+ROWS 1000 
+AS $BODY$
+BEGIN
+    RETURN QUERY 
+    WITH updated AS (
+        UPDATE notifications.smsnotifications s
+        SET result = 'Sending', resulttime = now()
+        FROM notifications.orders o
+        WHERE s.result = 'New' 
+          AND s._orderid = o._id
+          AND (
+              (_sendingtimepolicy = 1 AND o.sendingtimepolicy = 1)
+           OR (_sendingtimepolicy = 2 AND (o.sendingtimepolicy = 2 OR o.sendingtimepolicy IS NULL))
+          )
+        RETURNING s.alternateid, 
+                  s._orderid, 
+                  s.mobilenumber,
+                  s.customizedbody
+    )
+    SELECT u.alternateid, 
+           st.sendernumber, 
+           u.mobilenumber, 
+           CASE 
+               WHEN u.customizedbody IS NOT NULL AND u.customizedbody <> '' 
+               THEN u.customizedbody 
+               ELSE st.body 
+           END AS body
+    FROM updated u
+    JOIN notifications.smstexts st ON u._orderid = st._orderid;
+END;
+$BODY$;
+
+COMMENT ON FUNCTION NOTIFICATIONS.GETSMS_STATUSNEW_UPDATESTATUS (INTEGER) IS 'Reads all entries in smsnotifications where result status is New.
+ Result is then updated to Sending. Parameter _sendingtimepolicy is used to
+ filter the returned entries based on the policy for scheduling set on the related
+ order row. If this is null, it is treated as Daytime, which is the default setting';
 
 -- getsmssummary.sql:
 CREATE OR REPLACE FUNCTION notifications.getsmssummary_v2(
@@ -1529,6 +1703,17 @@ Null return: NULL when neither identifier is provided OR no matching row exists 
 Uniqueness assumptions: alternateid is unique (primary key); operationid uniquely identifies at most one row when non-null.
 Overwrite policy: result and resulttime are always overwritten (no transition guarding); operationid is only set when a non-null _operationid is supplied (existing value preserved when _operationid is null).';
 
+-- updateemailstatus.sql:
+CREATE OR REPLACE PROCEDURE notifications.updateemailstatus(_alternateid UUID, _result text, _operationid text)
+LANGUAGE 'plpgsql'
+AS $BODY$
+BEGIN
+	UPDATE notifications.emailnotifications 
+	SET result = _result::emailnotificationresulttype, resulttime = now(), operationid = _operationid
+	WHERE alternateid = _alternateid;
+END;
+$BODY$;
+
 -- updateexpirednotifications.sql:
 CREATE OR REPLACE FUNCTION notifications.updateexpirednotifications(
     _source TEXT,
@@ -1551,14 +1736,14 @@ BEGIN
         WITH claimed_rows AS (
             SELECT _id
             FROM notifications.emailnotifications
-            WHERE result = 'Succeeded' AND expirytime < (now() - make_interval(secs => _expiry_offset_seconds))
+            WHERE result = 'Succeeded'::emailnotificationresulttype AND expirytime < (now() - make_interval(secs => _expiry_offset_seconds))
             ORDER BY expirytime ASC, _id
             FOR UPDATE SKIP LOCKED
             LIMIT _limit
         ),
         updated_rows AS (
             UPDATE notifications.emailnotifications
-            SET result = 'Failed_TTL',
+            SET result = 'Failed_TTL'::emailnotificationresulttype,
                 resulttime = now()
             WHERE _id IN (SELECT _id FROM claimed_rows)
             RETURNING alternateid -- Return all alternateids from updated rows
@@ -1573,14 +1758,14 @@ BEGIN
         WITH claimed_rows AS (
             SELECT _id
             FROM notifications.smsnotifications
-            WHERE result = 'Accepted' AND expirytime < (now() - make_interval(secs => _expiry_offset_seconds))
+            WHERE result = 'Accepted'::smsnotificationresulttype AND expirytime < (now() - make_interval(secs => _expiry_offset_seconds))
             ORDER BY expirytime ASC, _id
             FOR UPDATE SKIP LOCKED
             LIMIT _limit
         ),
         updated_rows AS (
             UPDATE notifications.smsnotifications
-            SET result = 'Failed_TTL',
+            SET result = 'Failed_TTL'::smsnotificationresulttype,
                 resulttime = now()
             WHERE _id IN (SELECT _id FROM claimed_rows)
             RETURNING alternateid -- Return all alternateids from updated rows
