@@ -130,6 +130,15 @@ public abstract class NotificationStatusRetryConsumerBase : KafkaConsumerBase<No
     /// <returns>A task representing the asynchronous operation of storing the dead delivery report.</returns>
     private async Task PersistDeadDeliveryReport(UpdateStatusRetryMessage updateStatusRetryMessage)
     {
+        var deadDeliveryReportJson = JsonSerializer.Serialize(
+            new
+            {
+                reason = "RETRY_THRESHOLD_EXCEEDED",
+                message = "Retry timeout exceeded",
+                originalDeliveryReport = updateStatusRetryMessage.SendOperationResult
+            },
+            JsonSerializerOptionsProvider.Options);
+
         var deadDeliveryReport = new DeadDeliveryReport
         {
             Resolved = false,
@@ -137,7 +146,7 @@ public abstract class NotificationStatusRetryConsumerBase : KafkaConsumerBase<No
             FirstSeen = updateStatusRetryMessage.FirstSeen,
             AttemptCount = updateStatusRetryMessage.Attempts,
             LastAttempt = updateStatusRetryMessage.LastAttempt,
-            DeliveryReport = updateStatusRetryMessage.SendOperationResult ?? string.Empty
+            DeliveryReport = deadDeliveryReportJson
         };
 
         await _deadDeliveryReportService.InsertAsync(deadDeliveryReport);
