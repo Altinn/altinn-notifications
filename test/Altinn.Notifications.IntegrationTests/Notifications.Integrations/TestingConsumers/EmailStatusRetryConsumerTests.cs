@@ -565,9 +565,8 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
             Assert.Equal(originalUpdateStatusRetryMessage.FirstSeen, capturedDeadDeliveryReport.FirstSeen);
             Assert.Equal(originalUpdateStatusRetryMessage.Attempts, capturedDeadDeliveryReport.AttemptCount);
             Assert.False(capturedDeadDeliveryReport.Resolved);
-            Assert.Contains("NOTIFICATION_EXPIRED", capturedDeadDeliveryReport.DeliveryReport);
-            Assert.Contains("Notification expiry time has passed", capturedDeadDeliveryReport.DeliveryReport);
-            Assert.Contains("originalDeliveryReport", capturedDeadDeliveryReport.DeliveryReport);
+            Assert.Equal("NOTIFICATION_EXPIRED", capturedDeadDeliveryReport.Reason);
+            Assert.Equal("Notification expiry time has passed", capturedDeadDeliveryReport.Message);
             Assert.Contains(emailSendOperationResult.NotificationId.ToString()!, capturedDeadDeliveryReport.DeliveryReport);
             Assert.Contains(emailSendOperationResult.OperationId!, capturedDeadDeliveryReport.DeliveryReport);
 

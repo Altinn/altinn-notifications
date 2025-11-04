@@ -136,15 +136,6 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
     /// </summary>
     private async Task SaveDeadDeliveryReport(string originalMessage)
     {
-        var deadDeliveryReportJson = JsonSerializer.Serialize(
-            new
-            {
-                reason = "NOTIFICATION_EXPIRED",
-                message = "Notification expiry time has passed",
-                originalDeliveryReport = originalMessage
-            },
-            JsonSerializerOptionsProvider.Options);
-
         var deadDeliveryReport = new DeadDeliveryReport
         {
             Channel = Channel,
@@ -152,7 +143,9 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
             LastAttempt = DateTime.UtcNow,
             AttemptCount = 1,
             Resolved = false,
-            DeliveryReport = deadDeliveryReportJson
+            DeliveryReport = originalMessage,
+            Reason = "NOTIFICATION_EXPIRED",
+            Message = "Notification expiry time has passed"
         };
 
         await _deadDeliveryReportService.InsertAsync(deadDeliveryReport);

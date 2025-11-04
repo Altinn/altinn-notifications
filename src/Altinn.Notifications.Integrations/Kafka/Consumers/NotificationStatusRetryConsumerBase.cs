@@ -184,50 +184,16 @@ public abstract class NotificationStatusRetryConsumerBase : KafkaConsumerBase<No
     /// <returns>A task representing the asynchronous operation of storing the dead delivery report.</returns>
     private async Task SaveDeadDeliveryReportForExpired(UpdateStatusRetryMessage retryMessage)
     {
-        await SaveDeadDeliveryReportWithReason(
-            "NOTIFICATION_EXPIRED",
-            "Notification expiry time has passed",
-            retryMessage.SendOperationResult ?? string.Empty,
-            retryMessage.FirstSeen,
-            DateTime.UtcNow,
-            retryMessage.Attempts);
-    }
-
-    /// <summary>
-    /// Creates and saves a dead delivery report with the specified reason and metadata.
-    /// </summary>
-    /// <param name="reason">The reason code for the dead delivery report (e.g., "RETRY_THRESHOLD_EXCEEDED", "NOTIFICATION_EXPIRED").</param>
-    /// <param name="message">A human-readable message describing why the delivery failed.</param>
-    /// <param name="originalDeliveryReport">The original delivery report data as JSON string.</param>
-    /// <param name="firstSeen">The timestamp when the delivery was first attempted.</param>
-    /// <param name="lastAttempt">The timestamp of the last delivery attempt.</param>
-    /// <param name="attemptCount">The total number of delivery attempts made.</param>
-    /// <returns>A task representing the asynchronous operation of storing the dead delivery report.</returns>
-    private async Task SaveDeadDeliveryReportWithReason(
-        string reason,
-        string message,
-        string originalDeliveryReport,
-        DateTime firstSeen,
-        DateTime lastAttempt,
-        int attemptCount)
-    {
-        var deadDeliveryReportJson = JsonSerializer.Serialize(
-            new
-            {
-                reason,
-                message,
-                originalDeliveryReport
-            },
-            JsonSerializerOptionsProvider.Options);
-
         var deadDeliveryReport = new DeadDeliveryReport
         {
             Channel = Channel,
-            FirstSeen = firstSeen,
-            LastAttempt = lastAttempt,
-            AttemptCount = attemptCount,
+            FirstSeen = retryMessage.FirstSeen,
+            LastAttempt = DateTime.UtcNow,
+            AttemptCount = retryMessage.Attempts,
             Resolved = false,
-            DeliveryReport = deadDeliveryReportJson
+            DeliveryReport = retryMessage.SendOperationResult ?? string.Empty,
+            Reason = "NOTIFICATION_EXPIRED",
+            Message = "Notification expiry time has passed"
         };
 
         await _deadDeliveryReportService.InsertAsync(deadDeliveryReport);

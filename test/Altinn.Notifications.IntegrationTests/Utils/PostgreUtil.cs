@@ -361,7 +361,7 @@ public static class PostgreUtil
             throw new ArgumentException($"Invalid field name: {fieldName}. Allowed fields: {string.Join(", ", allowedFields)}", nameof(fieldName));
         }
 
-        var query = $@"SELECT id FROM notifications.deaddeliveryreports WHERE (deliveryreport ->> 'originalDeliveryReport')::jsonb ->> '{fieldName}' = @fieldValue";
+        var query = $@"SELECT id FROM notifications.deaddeliveryreports WHERE deliveryreport ->> '{fieldName}' = @fieldValue";
 
         NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
 
