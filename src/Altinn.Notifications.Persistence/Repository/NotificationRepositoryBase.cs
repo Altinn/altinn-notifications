@@ -212,14 +212,16 @@ public abstract class NotificationRepositoryBase
             }
 
             var statusOrdinal = reader.GetOrdinal("status");
-            var status = await reader.IsDBNullAsync(statusOrdinal)
-                ? string.Empty
-                : await reader.GetFieldValueAsync<string>(statusOrdinal);
-
             var destinationOrdinal = reader.GetOrdinal("destination");
-            var destination = await reader.IsDBNullAsync(destinationOrdinal)
-                ? string.Empty
-                : await reader.GetFieldValueAsync<string>(destinationOrdinal);
+
+            if (await reader.IsDBNullAsync(destinationOrdinal) || await reader.IsDBNullAsync(statusOrdinal))
+            {
+                // Skip recipient if destination or status is null
+                continue;
+            }
+
+            var status = await reader.GetFieldValueAsync<string>(statusOrdinal);
+            var destination = await reader.GetFieldValueAsync<string>(destinationOrdinal);
 
             var recipient = notificationType switch
             {
