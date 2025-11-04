@@ -4,7 +4,9 @@ CREATE OR REPLACE FUNCTION notifications.insertdeaddeliveryreport(
 	_deliveryreport jsonb,
 	_resolved boolean,
 	_firstseen timestamp with time zone,
-	_lastattempt timestamp with time zone)
+	_lastattempt timestamp with time zone,
+	_reason text DEFAULT NULL,
+	_message text DEFAULT NULL)
     RETURNS BIGINT
     LANGUAGE 'plpgsql'
     COST 100
@@ -14,18 +16,18 @@ DECLARE
 	new_id BIGINT;
 BEGIN
     -- Insert the delivery report into the dead delivery report table
-    INSERT INTO notifications.deaddeliveryreports (channel, attemptcount, deliveryreport, resolved, firstseen, lastattempt)
-    VALUES (_channel, _attemptcount, _deliveryreport, _resolved, _firstseen, _lastattempt)
+    INSERT INTO notifications.deaddeliveryreports (channel, attemptcount, deliveryreport, resolved, firstseen, lastattempt, reason, message)
+    VALUES (_channel, _attemptcount, _deliveryreport, _resolved, _firstseen, _lastattempt, _reason, _message)
 	RETURNING id INTO new_id;
 
 	RETURN new_id;
 END;
 $BODY$;
 
-ALTER FUNCTION notifications.insertdeaddeliveryreport(smallint, integer, jsonb, boolean, timestamp with time zone, timestamp with time zone)
+ALTER FUNCTION notifications.insertdeaddeliveryreport(smallint, integer, jsonb, boolean, timestamp with time zone, timestamp with time zone, text, text)
     OWNER TO platform_notifications_admin;
 
-COMMENT ON FUNCTION notifications.insertdeaddeliveryreport(smallint, integer, jsonb, boolean, timestamp with time zone, timestamp with time zone)
+COMMENT ON FUNCTION notifications.insertdeaddeliveryreport(smallint, integer, jsonb, boolean, timestamp with time zone, timestamp with time zone, text, text)
     IS 'This function inserts a new delivery report record into the notifications.deaddeliveryreports table.
 
 Arguments:
@@ -34,4 +36,6 @@ Arguments:
 - _deliveryreport (jsonb): A JSONB object containing the details of the delivery report.
 - _resolved (boolean): A flag indicating whether the delivery issue has been resolved.
 - _firstseen (TIMESTAMPTZ): The timestamp when the delivery issue was first detected.
-- _lastattempt (TIMESTAMPTZ): The timestamp of the last delivery attempt.';
+- _lastattempt (TIMESTAMPTZ): The timestamp of the last delivery attempt.
+- _reason (text): Optional reason code for why the delivery failed (e.g., "RETRY_THRESHOLD_EXCEEDED", "NOTIFICATION_EXPIRED").
+- _message (text): Optional human-readable message describing why the delivery failed.';
