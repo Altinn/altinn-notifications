@@ -26,7 +26,7 @@ public abstract class SendStatusUpdateException : Exception
     public SendStatusIdentifierType IdentifierType { get; }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="SendStatusUpdateException"/> class.
+    /// Initializes a new instance of a class derived from <see cref="SendStatusUpdateException"/>.
     /// </summary>
     /// <param name="channel">The notification channel the update concerned (Email or Sms).</param>
     /// <param name="identifier">The value of the identifier.</param>
