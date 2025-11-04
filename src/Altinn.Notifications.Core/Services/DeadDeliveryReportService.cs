@@ -28,10 +28,10 @@ public class DeadDeliveryReportService(IDeadDeliveryReportRepository reportRepos
                 nameof(report));
         }
 
-        if (report.LastAttempt <= report.FirstSeen)
+        if (report.LastAttempt < report.FirstSeen)
         {
             throw new ArgumentException(
-                "report.LastAttempt must be greater than FirstSeen",
+                "report.LastAttempt must be greater than or equal to FirstSeen",
                 nameof(report));
         }
 
