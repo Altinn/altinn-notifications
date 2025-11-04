@@ -45,6 +45,9 @@ public class DeadDeliveryReportRepository(NpgsqlDataSource npgsqlDataSource) : I
 
         if (await reader.ReadAsync(cancellationToken))
         {
+            var reasonOrdinal = reader.GetOrdinal("reason");
+            var messageOrdinal = reader.GetOrdinal("message");
+
             return new DeadDeliveryReport
             {
                 Channel = (Core.Enums.DeliveryReportChannel)await reader.GetFieldValueAsync<short>("channel", cancellationToken),
@@ -53,8 +56,8 @@ public class DeadDeliveryReportRepository(NpgsqlDataSource npgsqlDataSource) : I
                 Resolved = await reader.GetFieldValueAsync<bool>("resolved", cancellationToken),
                 FirstSeen = await reader.GetFieldValueAsync<DateTime>("firstseen", cancellationToken),
                 LastAttempt = await reader.GetFieldValueAsync<DateTime>("lastattempt", cancellationToken),
-                Reason = await reader.IsDBNullAsync(reader.GetOrdinal("reason"), cancellationToken) ? null : await reader.GetFieldValueAsync<string>("reason", cancellationToken),
-                Message = await reader.IsDBNullAsync(reader.GetOrdinal("message"), cancellationToken) ? null : await reader.GetFieldValueAsync<string>("message", cancellationToken)
+                Reason = await reader.IsDBNullAsync(reasonOrdinal, cancellationToken) ? null : await reader.GetFieldValueAsync<string>(reasonOrdinal, cancellationToken),
+                Message = await reader.IsDBNullAsync(messageOrdinal, cancellationToken) ? null : await reader.GetFieldValueAsync<string>(messageOrdinal, cancellationToken)
             };
         }
         else
