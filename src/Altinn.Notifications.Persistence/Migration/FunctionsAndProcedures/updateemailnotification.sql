@@ -88,11 +88,11 @@ Precedence: If both _alternateid and _operationid are non-null, only alternateid
 Return values:
 - alternateid: The UUID of the notification (NULL if not found)
 - was_updated: true if the update was performed, false otherwise
-- is_expired: true if the notification has passed its expiry time (expirytime < now())
+- is_expired: true if the notification has passed its expiry time (expirytime <= now())
 
 Behavior:
 - Uses SELECT ... FOR UPDATE to lock the row and prevent race conditions
-- Checks expirytime < now() to determine if notification has expired
+- Checks expirytime <= now() to determine if notification has expired
 - If expired: returns (alternateid, false, true) without updating
 - If not found: returns (NULL, false, false)
 - If found and not expired: performs update and returns (alternateid, true, false)
