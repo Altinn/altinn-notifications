@@ -82,12 +82,8 @@ BEGIN
     -- Use customized subject/body if available, otherwise fall back to template
     SELECT
         updated.alternateid,
-        CASE WHEN updated.customizedsubject IS NOT NULL AND updated.customizedsubject <> ''
-             THEN updated.customizedsubject
-             ELSE txt.subject END AS subject,
-        CASE WHEN updated.customizedbody IS NOT NULL AND updated.customizedbody <> ''
-             THEN updated.customizedbody
-             ELSE txt.body END AS body,
+        COALESCE(NULLIF(updated.customizedsubject, ''), txt.subject) AS subject,
+        COALESCE(NULLIF(updated.customizedbody, ''), txt.body) AS body,
         txt.fromaddress,
         updated.toaddress,
         txt.contenttype
