@@ -9,15 +9,6 @@ AS $$
 DECLARE
     v_alternateid uuid;
 BEGIN
-  -- Validate inputs
-    IF _alternateid IS NULL AND _operationid IS NULL THEN
-        RAISE EXCEPTION 'Either alternateid or operationid must be provided';
-    END IF;
-
-    IF _result IS NULL OR TRIM(_result) = '' THEN
-        RAISE EXCEPTION 'Result cannot be null or empty';
-    END IF;
-
     IF _alternateid IS NOT NULL THEN
         UPDATE notifications.emailnotifications
         SET result = _result::emailnotificationresulttype,
@@ -25,6 +16,7 @@ BEGIN
             operationid = COALESCE(_operationid, operationid)
         WHERE alternateid = _alternateid
         RETURNING alternateid INTO v_alternateid;
+
 
     ELSIF _operationid IS NOT NULL THEN
         UPDATE notifications.emailnotifications
