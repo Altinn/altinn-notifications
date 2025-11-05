@@ -62,7 +62,6 @@ BEGIN
         FROM notifications.smsnotifications 
         WHERE _orderid = order_id 
         AND result IN ('New'::smsnotificationresulttype, 'Sending'::smsnotificationresulttype, 'Accepted'::smsnotificationresulttype)
-        ORDER BY _id
         FOR UPDATE
 
         UNION ALL
@@ -71,7 +70,6 @@ BEGIN
         FROM notifications.emailnotifications 
         WHERE _orderid = order_id 
         AND result IN ('New'::emailnotificationresulttype, 'Sending'::emailnotificationresulttype, 'Succeeded'::emailnotificationresulttype)
-        ORDER BY _id
         FOR UPDATE
     )
     SELECT EXISTS(SELECT 1 FROM pending_notifications) INTO has_pending_notifications;
