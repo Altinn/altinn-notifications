@@ -448,26 +448,36 @@ VOLATILE
 AS $$
 DECLARE
     -- Variable to hold the count of deleted rows
-    deleted_count bigint;
+    deleted_count bigint := 0;
+    -- Variable to hold the lock acquisition status
+    lock_acquired boolean;
+    -- Generate lock ID from function name using hashtext
+    lock_id bigint := hashtext('notifications.delete_old_status_feed_records');
 BEGIN
-    -- The DELETE operation is performed within a Common Table Expression (CTE)
-    -- to capture the deleted rows using the RETURNING clause.
+    -- Acquire a advisory lock to prevent concurrent cleanup operations
+    SELECT pg_try_advisory_lock(lock_id) INTO lock_acquired;
+    
+    IF NOT lock_acquired THEN
+        RETURN 0; -- Another cleanup is running
+    END IF;
+    
     WITH deleted_rows AS (
         DELETE FROM notifications.statusfeed 
         WHERE created <= NOW() - INTERVAL '90 days'
-        RETURNING * -- Returns all columns of the deleted rows
+        RETURNING _id
     )
     -- Count the rows that were captured in the CTE
     SELECT count(*) INTO deleted_count FROM deleted_rows;
-
-    -- Return the final count
+    
+    PERFORM pg_advisory_unlock(lock_id);
+    
     RETURN deleted_count;
 END;
 $$;
 
 -- Add a comment to describe the function's purpose
 COMMENT ON FUNCTION notifications.delete_old_status_feed_records() IS
-'Deletes records from notifications.statusfeed where the "created" timestamp is 90 days or older. Returns the count of deleted records.';
+'Deletes records from notifications.statusfeed where the "created" timestamp is 90 days or older. Returns the count of deleted records. Uses an advisory lock to prevent concurrent executions.';
 
 
 -- insertorder.sql:
@@ -1359,17 +1369,36 @@ CREATE OR REPLACE FUNCTION notifications.getorders_pastsendtime_updatestatus()
     LANGUAGE 'plpgsql'
 AS $BODY$
 BEGIN
-RETURN QUERY
-	UPDATE notifications.orders
-	SET processedstatus = 'Processing'
-	WHERE _id IN (select _id
-				 from notifications.orders
-				 where processedstatus = 'Registered'
-				 and requestedsendtime <= now() + INTERVAL '1 minute'
-				 limit 50)
-	RETURNING notificationorder AS notificationorders;
+    RETURN QUERY
+    WITH claimed_orders AS (
+        SELECT _id
+        FROM notifications.orders
+        WHERE processedstatus = 'Registered'::orderprocessingstate
+          AND requestedsendtime <= now() + INTERVAL '1 minute'
+        ORDER BY requestedsendtime ASC, _id ASC
+        LIMIT 50
+        FOR UPDATE SKIP LOCKED
+    )
+    UPDATE notifications.orders
+    SET processedstatus = 'Processing'::orderprocessingstate
+    WHERE _id IN (SELECT _id FROM claimed_orders)
+    RETURNING notificationorder AS notificationorders;
 END;
 $BODY$;
+
+-- Add comment to document the function's purpose and behavior
+COMMENT ON FUNCTION notifications.getorders_pastsendtime_updatestatus() IS
+'Retrieves and updates notification orders that are ready for processing.
+Selects up to 50 orders with:
+- processedstatus = ''Registered''
+- requestedsendtime <= current time + 1 minute grace period
+
+Orders are processed in chronological order (oldest first) and status is updated to ''Processing''.
+Uses row-level locking with SKIP LOCKED to handle concurrent executions safely - multiple 
+instances can run simultaneously without conflicts, each processing different orders.
+
+Returns: JSONB notification order data for the claimed and updated orders.';
+
 
 -- getemailsstatusnewupdatestatus.sql:
 CREATE OR REPLACE FUNCTION notifications.getemails_statusnew_updatestatus()
@@ -1549,21 +1578,26 @@ RETURNS SETOF UUID
 LANGUAGE plpgsql
 AS $$
 BEGIN
+    -- Validate inputs
+        IF _limit <= 0 THEN
+            RAISE EXCEPTION 'Limit must be greater than 0';
+        END IF;
+
     -- Use lower() for case-insensitive comparison of the notification type
     IF lower(_source) = 'email' THEN
         -- If the type is 'email', run the update on the emailnotifications table
         RETURN QUERY
         WITH claimed_rows AS (
-            SELECT _id, alternateid
+            SELECT _id
             FROM notifications.emailnotifications
-            WHERE result = 'Succeeded' AND expirytime < (now() - make_interval(secs => _expiry_offset_seconds))
+            WHERE result = 'Succeeded'::emailnotificationresulttype AND expirytime < (now() - make_interval(secs => _expiry_offset_seconds))
             ORDER BY expirytime ASC, _id
             FOR UPDATE SKIP LOCKED
-            LIMIT GREATEST(_limit, 1) -- Use the input parameter for the limit
+            LIMIT _limit
         ),
         updated_rows AS (
             UPDATE notifications.emailnotifications
-            SET result = 'Failed_TTL',
+            SET result = 'Failed_TTL'::emailnotificationresulttype,
                 resulttime = now()
             WHERE _id IN (SELECT _id FROM claimed_rows)
             RETURNING alternateid -- Return all alternateids from updated rows
@@ -1576,16 +1610,16 @@ BEGIN
         -- If the type is 'sms', run the update on the smsnotifications table
         RETURN QUERY
         WITH claimed_rows AS (
-            SELECT _id, alternateid
+            SELECT _id
             FROM notifications.smsnotifications
-            WHERE result = 'Accepted' AND expirytime < (now() - make_interval(secs => _expiry_offset_seconds))
+            WHERE result = 'Accepted'::smsnotificationresulttype AND expirytime < (now() - make_interval(secs => _expiry_offset_seconds))
             ORDER BY expirytime ASC, _id
             FOR UPDATE SKIP LOCKED
-            LIMIT GREATEST(_limit, 1) -- Use the input parameter for the limit
+            LIMIT _limit
         ),
         updated_rows AS (
             UPDATE notifications.smsnotifications
-            SET result = 'Failed_TTL',
+            SET result = 'Failed_TTL'::smsnotificationresulttype,
                 resulttime = now()
             WHERE _id IN (SELECT _id FROM claimed_rows)
             RETURNING alternateid -- Return all alternateids from updated rows
@@ -1595,8 +1629,8 @@ BEGIN
         FROM updated_rows;
         
     ELSE
-        -- Inform the user if an invalid type was provided. The function will return an empty set.
-        RAISE NOTICE 'Invalid notification type: %. Allowed values are ''email'' or ''sms''.', _source;
+        -- Throw an exception if an invalid type was provided
+        RAISE EXCEPTION 'Invalid notification type: %. Allowed values are ''email'' or ''sms''.', _source;
     END IF;
 
 END;
@@ -1604,7 +1638,7 @@ $$;
 
 -- Add a comment to the function for documentation purposes
 COMMENT ON FUNCTION notifications.updateexpirednotifications(TEXT, INT, INT) IS 
-'Updates the result of expired email or sms notifications to ''Failed_TTL''. 
+'Use row-level locking to support concurrent calls. Updates the result of expired email or sms notifications to ''Failed_TTL''. 
 Parameters: 
 - _source (TEXT): notification type (''email'' or ''sms'')
 - _limit (INT): maximum number of records to update
