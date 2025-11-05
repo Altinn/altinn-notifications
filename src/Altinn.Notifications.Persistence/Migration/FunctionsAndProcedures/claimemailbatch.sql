@@ -51,11 +51,13 @@ BEGIN
 
     RETURN QUERY
     WITH claimed_new_rows AS (
-        SELECT 
-            email._id, 
+        SELECT
+            email._id,
             email._orderid,
             email.alternateid,
-            email.toaddress
+            email.toaddress,
+            email.customizedsubject,
+            email.customizedbody
         FROM notifications.emailnotifications email
         WHERE email.result = 'New'::emailnotificationresulttype
             AND email.expirytime >= now()
@@ -72,13 +74,20 @@ BEGIN
         RETURNING
             claimed.alternateid,
             claimed._orderid,
-            claimed.toaddress
+            claimed.toaddress,
+            claimed.customizedsubject,
+            claimed.customizedbody
     )
     -- Join with large text data AFTER releasing locks
-    SELECT 
+    -- Use customized subject/body if available, otherwise fall back to template
+    SELECT
         updated.alternateid,
-        txt.subject,
-        txt.body,
+        CASE WHEN updated.customizedsubject IS NOT NULL AND updated.customizedsubject <> ''
+             THEN updated.customizedsubject
+             ELSE txt.subject END AS subject,
+        CASE WHEN updated.customizedbody IS NOT NULL AND updated.customizedbody <> ''
+             THEN updated.customizedbody
+             ELSE txt.body END AS body,
         txt.fromaddress,
         updated.toaddress,
         txt.contenttype
