@@ -9,6 +9,7 @@ using Altinn.Notifications.Email.Integrations.Configuration;
 
 using Azure;
 using Azure.Communication.Email;
+using Azure.Core;
 using Microsoft.Extensions.Logging;
 
 namespace Altinn.Notifications.Email.Integrations.Clients;
@@ -30,6 +31,8 @@ public class EmailServiceClient : IEmailServiceClient
     /// <param name="logger">A logger</param>
     public EmailServiceClient(CommunicationServicesSettings communicationServicesSettings, ILogger<EmailServiceClient> logger)
     {
+        var emailClientOptions = new EmailClientOptions();
+        emailClientOptions.AddPolicy(new TooManyRequestsPolicy(), HttpPipelinePosition.PerRetry);
         _emailClient = new EmailClient(communicationServicesSettings.ConnectionString);
         _logger = logger;
     }
