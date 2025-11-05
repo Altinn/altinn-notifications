@@ -281,26 +281,36 @@ VOLATILE
 AS $$
 DECLARE
     -- Variable to hold the count of deleted rows
-    deleted_count bigint;
+    deleted_count bigint := 0;
+    -- Variable to hold the lock acquisition status
+    lock_acquired boolean;
+    -- Generate lock ID from function name using hashtext
+    lock_id bigint := hashtext('notifications.delete_old_status_feed_records');
 BEGIN
-    -- The DELETE operation is performed within a Common Table Expression (CTE)
-    -- to capture the deleted rows using the RETURNING clause.
+    -- Acquire a advisory lock to prevent concurrent cleanup operations
+    SELECT pg_try_advisory_lock(lock_id) INTO lock_acquired;
+    
+    IF NOT lock_acquired THEN
+        RETURN 0; -- Another cleanup is running
+    END IF;
+    
     WITH deleted_rows AS (
         DELETE FROM notifications.statusfeed 
         WHERE created <= NOW() - INTERVAL '90 days'
-        RETURNING * -- Returns all columns of the deleted rows
+        RETURNING _id
     )
     -- Count the rows that were captured in the CTE
     SELECT count(*) INTO deleted_count FROM deleted_rows;
-
-    -- Return the final count
+    
+    PERFORM pg_advisory_unlock(lock_id);
+    
     RETURN deleted_count;
 END;
 $$;
 
 -- Add a comment to describe the function's purpose
 COMMENT ON FUNCTION notifications.delete_old_status_feed_records() IS
-'Deletes records from notifications.statusfeed where the "created" timestamp is 90 days or older. Returns the count of deleted records.';
+'Deletes records from notifications.statusfeed where the "created" timestamp is 90 days or older. Returns the count of deleted records. Uses an advisory lock to prevent concurrent executions.';
 
 
 -- deleteoldtestdata.sql:
@@ -768,17 +778,36 @@ CREATE OR REPLACE FUNCTION notifications.getorders_pastsendtime_updatestatus()
     LANGUAGE 'plpgsql'
 AS $BODY$
 BEGIN
-RETURN QUERY
-	UPDATE notifications.orders
-	SET processedstatus = 'Processing'
-	WHERE _id IN (select _id
-				 from notifications.orders
-				 where processedstatus = 'Registered'
-				 and requestedsendtime <= now() + INTERVAL '1 minute'
-				 limit 50)
-	RETURNING notificationorder AS notificationorders;
+    RETURN QUERY
+    WITH claimed_orders AS (
+        SELECT _id
+        FROM notifications.orders
+        WHERE processedstatus = 'Registered'
+          AND requestedsendtime <= now() + INTERVAL '1 minute'
+        ORDER BY requestedsendtime ASC, _id ASC
+        LIMIT 50
+        FOR UPDATE SKIP LOCKED
+    )
+    UPDATE notifications.orders
+    SET processedstatus = 'Processing'::orderprocessingstate
+    WHERE _id IN (SELECT _id FROM claimed_orders)
+    RETURNING notificationorder AS notificationorders;
 END;
 $BODY$;
+
+-- Add comment to document the function's purpose and behavior
+COMMENT ON FUNCTION notifications.getorders_pastsendtime_updatestatus() IS
+'Retrieves and updates notification orders that are ready for processing.
+Selects up to 50 orders with:
+- processedstatus = ''Registered''
+- requestedsendtime <= current time + 1 minute grace period
+
+Orders are processed in chronological order (oldest first) and status is updated to ''Processing''.
+Uses row-level locking with SKIP LOCKED to handle concurrent executions safely - multiple 
+instances can run simultaneously without conflicts, each processing different orders.
+
+Returns: JSONB notification order data for the claimed and updated orders.';
+
 
 -- getshipmentforstatusfeed.sql:
 CREATE OR REPLACE FUNCTION notifications.getshipmentforstatusfeed(_alternateid uuid)
@@ -880,66 +909,6 @@ ALTER FUNCTION notifications.getshipmentforstatusfeed_v2(uuid)
 
 COMMENT ON FUNCTION notifications.getshipmentforstatusfeed_v2(uuid)
     IS 'Retrieves shipment tracking data using an email or sms notification alternateid.';
-
-
-CREATE OR REPLACE FUNCTION notifications.getshipmentforstatusfeed_v3(_alternateid uuid)
-RETURNS TABLE(
-    alternateid       uuid,
-    reference         text,
-    status            text,
-    last_update       timestamp with time zone,
-    destination       text,
-    type              text,
-    notification_type text
-)
-LANGUAGE 'plpgsql'
-COST 100
-STABLE PARALLEL SAFE
-ROWS 5
-AS $BODY$
-DECLARE
-    _order_alternateid uuid;
-    _order_creatorname text;
-BEGIN
-    -- First try to find order information in the email notifications table
-    SELECT o.alternateid, o.creatorname INTO _order_alternateid, _order_creatorname
-    FROM notifications.orders o
-    JOIN notifications.emailnotifications e ON e._orderid = o._id
-    WHERE e.alternateid = _alternateid
-    LIMIT 1;
-    
-    -- If not found in email notifications, try SMS notifications table
-    IF _order_alternateid IS NULL THEN
-        SELECT o.alternateid, o.creatorname INTO _order_alternateid, _order_creatorname
-        FROM notifications.orders o
-        JOIN notifications.smsnotifications s ON s._orderid = o._id
-        WHERE s.alternateid = _alternateid
-        LIMIT 1;
-    END IF;
-    
-    -- If we found an order, get its tracking information
-    IF _order_alternateid IS NOT NULL THEN
-        RETURN QUERY
-        SELECT
-            _order_alternateid,
-            t.reference,        
-            t.status,
-            t.last_update,
-            t.destination,
-            t.type,
-            t.notification_type 
-        FROM
-            notifications.get_shipment_tracking_v3(_order_alternateid, _order_creatorname) AS t;
-    END IF;
-END;
-$BODY$;
-
-ALTER FUNCTION notifications.getshipmentforstatusfeed_v3(uuid)
-    OWNER TO platform_notifications_admin;
-
-COMMENT ON FUNCTION notifications.getshipmentforstatusfeed_v3(uuid)
-    IS 'Retrieves shipment tracking data using an email or sms notification alternateid.';
-
 
 -- getshipmenttracking.sql:
 CREATE OR REPLACE FUNCTION notifications.get_shipment_tracking(
@@ -1097,98 +1066,6 @@ Includes:
  - Order-level tracking (reference and status)
  - Email notification tracking (status, result time, destination)
  - SMS notification tracking (status, result time, destination)
-
-If no matching order exists, an empty result set is returned.';
-
-CREATE OR REPLACE FUNCTION notifications.get_shipment_tracking_v3(
-    _alternateid UUID,
-    _creatorname TEXT)
-RETURNS TABLE (
-    reference          TEXT,
-    status             TEXT,
-    last_update        TIMESTAMPTZ,
-    destination        TEXT,
-    type               TEXT,
-    notification_type  TEXT
-)
-LANGUAGE plpgsql
-STABLE PARALLEL SAFE
-ROWS 5
-AS $$
-DECLARE
-    v_order_exists BOOLEAN;
-BEGIN
-    -- Check for the existence of the order
-    SELECT EXISTS (
-        SELECT 1
-        FROM notifications.orders o
-        WHERE o.alternateid = _alternateid AND o.creatorname = _creatorname
-    )
-    INTO v_order_exists;
-
-    -- Return empty set if no order is found
-    IF NOT v_order_exists THEN
-        RETURN;
-    END IF;
-
-    -- Return combined tracking info
-    RETURN QUERY
-    WITH order_data AS (
-        SELECT o._id, o.sendersreference, o.created, o.processed, o.processedstatus, o.type
-        FROM notifications.orders o
-        WHERE o.alternateid = _alternateid AND o.creatorname = _creatorname
-    ),
-    order_tracking AS (
-        SELECT
-            od.sendersreference AS reference,
-            od.processedstatus::TEXT AS status,
-            GREATEST(od.created, COALESCE(od.processed, od.created)) AS last_update,
-            NULL::TEXT AS destination,
-            od.type::TEXT AS type,
-            'order' AS notification_type
-        FROM order_data od
-    ),
-    email_tracking AS (
-        SELECT
-            od.sendersreference AS reference,
-            e.result::TEXT AS status,
-            e.resulttime AS last_update,
-            e.toaddress AS destination,
-            od.type::TEXT AS type,
-            'email' AS notification_type
-        FROM order_data od
-        JOIN notifications.emailnotifications e ON e._orderid = od._id
-    ),
-    sms_tracking AS (
-        SELECT
-            od.sendersreference AS reference,
-            s.result::TEXT AS status,
-            s.resulttime AS last_update,
-            s.mobilenumber AS destination,
-            od.type::TEXT AS type,
-            'sms' AS notification_type
-        FROM order_data od
-        JOIN notifications.smsnotifications s ON s._orderid = od._id
-    )
-    SELECT * FROM order_tracking
-    UNION ALL
-    SELECT * FROM email_tracking
-    UNION ALL
-    SELECT * FROM sms_tracking;
-END;
-$$;
-
-COMMENT ON FUNCTION notifications.get_shipment_tracking_v3(UUID, TEXT) IS
-'Returns delivery tracking information for a notification identified by the given alternate identifier and creator name.
-
-Includes:
- - Order-level tracking (reference and status)
- - Email notification tracking (status, result time, destination)
- - SMS notification tracking (status, result time, destination)
-
-Changes from v2:
- - Added notification_type field to distinguish between order, email, and sms tracking records
- - notification_type values: ''order'', ''email'', ''sms''
 
 If no matching order exists, an empty result set is returned.';
 
@@ -1847,21 +1724,26 @@ RETURNS SETOF UUID
 LANGUAGE plpgsql
 AS $$
 BEGIN
+    -- Validate inputs
+        IF _limit <= 0 THEN
+            RAISE EXCEPTION 'Limit must be greater than 0';
+        END IF;
+
     -- Use lower() for case-insensitive comparison of the notification type
     IF lower(_source) = 'email' THEN
         -- If the type is 'email', run the update on the emailnotifications table
         RETURN QUERY
         WITH claimed_rows AS (
-            SELECT _id, alternateid
+            SELECT _id
             FROM notifications.emailnotifications
-            WHERE result = 'Succeeded' AND expirytime < (now() - make_interval(secs => _expiry_offset_seconds))
+            WHERE result = 'Succeeded'::emailnotificationresulttype AND expirytime < (now() - make_interval(secs => _expiry_offset_seconds))
             ORDER BY expirytime ASC, _id
             FOR UPDATE SKIP LOCKED
-            LIMIT GREATEST(_limit, 1) -- Use the input parameter for the limit
+            LIMIT _limit
         ),
         updated_rows AS (
             UPDATE notifications.emailnotifications
-            SET result = 'Failed_TTL',
+            SET result = 'Failed_TTL'::emailnotificationresulttype,
                 resulttime = now()
             WHERE _id IN (SELECT _id FROM claimed_rows)
             RETURNING alternateid -- Return all alternateids from updated rows
@@ -1874,16 +1756,16 @@ BEGIN
         -- If the type is 'sms', run the update on the smsnotifications table
         RETURN QUERY
         WITH claimed_rows AS (
-            SELECT _id, alternateid
+            SELECT _id
             FROM notifications.smsnotifications
-            WHERE result = 'Accepted' AND expirytime < (now() - make_interval(secs => _expiry_offset_seconds))
+            WHERE result = 'Accepted'::smsnotificationresulttype AND expirytime < (now() - make_interval(secs => _expiry_offset_seconds))
             ORDER BY expirytime ASC, _id
             FOR UPDATE SKIP LOCKED
-            LIMIT GREATEST(_limit, 1) -- Use the input parameter for the limit
+            LIMIT _limit
         ),
         updated_rows AS (
             UPDATE notifications.smsnotifications
-            SET result = 'Failed_TTL',
+            SET result = 'Failed_TTL'::smsnotificationresulttype,
                 resulttime = now()
             WHERE _id IN (SELECT _id FROM claimed_rows)
             RETURNING alternateid -- Return all alternateids from updated rows
@@ -1893,8 +1775,8 @@ BEGIN
         FROM updated_rows;
         
     ELSE
-        -- Inform the user if an invalid type was provided. The function will return an empty set.
-        RAISE NOTICE 'Invalid notification type: %. Allowed values are ''email'' or ''sms''.', _source;
+        -- Throw an exception if an invalid type was provided
+        RAISE EXCEPTION 'Invalid notification type: %. Allowed values are ''email'' or ''sms''.', _source;
     END IF;
 
 END;
@@ -1902,7 +1784,7 @@ $$;
 
 -- Add a comment to the function for documentation purposes
 COMMENT ON FUNCTION notifications.updateexpirednotifications(TEXT, INT, INT) IS 
-'Updates the result of expired email or sms notifications to ''Failed_TTL''. 
+'Use row-level locking to support concurrent calls. Updates the result of expired email or sms notifications to ''Failed_TTL''. 
 Parameters: 
 - _source (TEXT): notification type (''email'' or ''sms'')
 - _limit (INT): maximum number of records to update
