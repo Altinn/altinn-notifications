@@ -7,7 +7,7 @@ BEGIN
     WITH claimed_orders AS (
         SELECT _id
         FROM notifications.orders
-        WHERE processedstatus = 'Registered'
+        WHERE processedstatus = 'Registered'::orderprocessingstate
           AND requestedsendtime <= now() + INTERVAL '1 minute'
         ORDER BY requestedsendtime ASC, _id ASC
         LIMIT 50
