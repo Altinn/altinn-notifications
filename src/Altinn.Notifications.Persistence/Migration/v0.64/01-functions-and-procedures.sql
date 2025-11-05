@@ -789,7 +789,6 @@ BEGIN
         FOR UPDATE SKIP LOCKED
     )
     UPDATE notifications.orders
-    SET processedstatus = 'Processing'
     SET processedstatus = 'Processing'::orderprocessingstate
     WHERE _id IN (SELECT _id FROM claimed_orders)
     RETURNING notificationorder AS notificationorders;
@@ -1559,7 +1558,6 @@ DECLARE
     order_id bigint;
     order_status orderprocessingstate;
     has_pending_notifications boolean := false;
-    new_status orderprocessingstate;
 BEGIN
     IF _alternateid IS NULL THEN
         RAISE EXCEPTION 'Notification ID cannot be null';
@@ -1617,8 +1615,6 @@ BEGIN
         FROM notifications.smsnotifications 
         WHERE _orderid = order_id 
         AND result IN ('New'::smsnotificationresulttype, 'Sending'::smsnotificationresulttype, 'Accepted'::smsnotificationresulttype)
-        ORDER BY _id
-        FOR UPDATE
 
         UNION ALL
 
@@ -1626,8 +1622,6 @@ BEGIN
         FROM notifications.emailnotifications 
         WHERE _orderid = order_id 
         AND result IN ('New'::emailnotificationresulttype, 'Sending'::emailnotificationresulttype, 'Succeeded'::emailnotificationresulttype)
-        ORDER BY _id
-        FOR UPDATE
     )
     SELECT EXISTS(SELECT 1 FROM pending_notifications) INTO has_pending_notifications;
 
@@ -1669,7 +1663,6 @@ Throws:
   - Exception if _alternateidsource is not one of: ''SMS'', ''EMAIL'', ''ORDER''
   - Exception if no order is found for the given notification ID and source';
 
-
 -- updateemailnotification.sql:
 CREATE OR REPLACE FUNCTION notifications.updateemailnotification(
     _result text,
@@ -1682,15 +1675,6 @@ AS $$
 DECLARE
     v_alternateid uuid;
 BEGIN
-  -- Validate inputs
-    IF _alternateid IS NULL AND _operationid IS NULL THEN
-        RAISE EXCEPTION 'Either alternateid or operationid must be provided';
-    END IF;
-
-    IF _result IS NULL OR TRIM(_result) = '' THEN
-        RAISE EXCEPTION 'Result cannot be null or empty';
-    END IF;
-
     IF _alternateid IS NOT NULL THEN
         UPDATE notifications.emailnotifications
         SET result = _result::emailnotificationresulttype,
