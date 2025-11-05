@@ -14,8 +14,17 @@ CREATE TABLE IF NOT EXISTS notifications.notificationlog (
     resource text,
     status text,
     is_reminder boolean DEFAULT false,
+    created_timestamp timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
     sent_timestamp timestamp with time zone
-);
+) PARTITION BY RANGE (created_timestamp);
+
+-- Add IF NOT EXISTS for partition tables
+CREATE TABLE IF NOT EXISTS notifications.notificationlog_2025 PARTITION OF notifications.notificationlog
+    FOR VALUES FROM ('2025-01-01 00:00:00+00') TO ('2026-01-01 00:00:00+00');
+
+-- Add IF NOT EXISTS for default partition
+CREATE TABLE IF NOT EXISTS notifications.notificationlog_default PARTITION OF notifications.notificationlog
+    DEFAULT;
 
 GRANT SELECT,INSERT,UPDATE,DELETE ON TABLE notifications.notificationlog TO platform_notifications;
 
