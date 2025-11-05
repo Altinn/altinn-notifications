@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Altinn.Notifications.Core.Configuration;
@@ -25,14 +26,19 @@ public class EmailNotificationServiceTests
 {
     private const string _emailQueueTopicName = "email.queue";
     private readonly Email _email = new(Guid.NewGuid(), "email.subject", "email.body", "from@domain.com", "to@domain.com", EmailContentType.Plain);
+    private readonly int _publishBatchSize = 500;
 
     [Fact]
     public async Task SendNotifications_ProducerCalledOnceForEachRetrievedEmail()
     {
         // Arrange 
         var repoMock = new Mock<IEmailNotificationRepository>();
-        repoMock.Setup(r => r.GetNewNotifications())
-            .ReturnsAsync(new List<Email>() { _email, _email, _email });
+        var firstCallEmails = new List<Email>() { _email, _email, _email };
+        var secondCallEmails = new List<Email>();
+
+        repoMock.SetupSequence(r => r.GetNewNotificationsAsync(_publishBatchSize, CancellationToken.None))
+            .ReturnsAsync(firstCallEmails)
+            .ReturnsAsync(secondCallEmails);
 
         var producerMock = new Mock<IKafkaProducer>();
         producerMock.Setup(p => p.ProduceAsync(It.Is<string>(s => s.Equals(_emailQueueTopicName)), It.IsAny<string>()))
@@ -41,7 +47,7 @@ public class EmailNotificationServiceTests
         var service = GetTestService(repo: repoMock.Object, producer: producerMock.Object);
 
         // Act
-        await service.SendNotifications();
+        await service.SendNotifications(CancellationToken.None);
 
         // Assert
         repoMock.Verify();
@@ -53,8 +59,12 @@ public class EmailNotificationServiceTests
     {
         // Arrange 
         var repoMock = new Mock<IEmailNotificationRepository>();
-        repoMock.Setup(r => r.GetNewNotifications())
-            .ReturnsAsync(new List<Email>() { _email });
+        var firstCallEmails = new List<Email>() { _email };
+        var secondCallEmails = new List<Email>();
+
+        repoMock.SetupSequence(r => r.GetNewNotificationsAsync(_publishBatchSize, CancellationToken.None))
+            .ReturnsAsync(firstCallEmails)
+            .ReturnsAsync(secondCallEmails);
 
         repoMock
             .Setup(r => r.UpdateSendStatus(It.IsAny<Guid>(), It.Is<EmailNotificationResultType>(t => t == EmailNotificationResultType.New), It.IsAny<string?>()));
@@ -66,7 +76,7 @@ public class EmailNotificationServiceTests
         var service = GetTestService(repo: repoMock.Object, producer: producerMock.Object);
 
         // Act
-        await service.SendNotifications();
+        await service.SendNotifications(CancellationToken.None);
 
         // Assert
         repoMock.Verify();
@@ -294,7 +304,24 @@ public class EmailNotificationServiceTests
         repoMock.Verify();
     }
 
-    private static EmailNotificationService GetTestService(IEmailNotificationRepository? repo = null, IKafkaProducer? producer = null, Guid? guidOutput = null, DateTime? dateTimeOutput = null)
+    [Fact]
+    public async Task SendNotifications_CancellationRequested_StopsProcessing()
+    {
+        // Arrange
+        using var cts = new CancellationTokenSource();
+        var repoMock = new Mock<IEmailNotificationRepository>();
+        repoMock.Setup(r => r.GetNewNotificationsAsync(_publishBatchSize, It.IsAny<CancellationToken>()))
+            .Callback(() => cts.Cancel())
+            .ReturnsAsync([_email]);
+
+        var service = GetTestService(repo: repoMock.Object);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<OperationCanceledException>(
+            async () => await service.SendNotifications(cts.Token));
+    }
+
+    private EmailNotificationService GetTestService(IEmailNotificationRepository? repo = null, IKafkaProducer? producer = null, Guid? guidOutput = null, DateTime? dateTimeOutput = null)
     {
         var guidService = new Mock<IGuidService>();
         guidService
@@ -317,6 +344,12 @@ public class EmailNotificationServiceTests
             producer = producerMock.Object;
         }
 
-        return new EmailNotificationService(guidService.Object, producer, dateTimeService.Object, Options.Create(new KafkaSettings { EmailQueueTopicName = _emailQueueTopicName }), repo);
+        return new EmailNotificationService(
+            guidService.Object, 
+            producer, 
+            dateTimeService.Object, 
+            Options.Create(new KafkaSettings { EmailQueueTopicName = _emailQueueTopicName }),
+            Options.Create(new NotificationConfig { EmailPublishBatchSize = _publishBatchSize }),
+            repo);
     }
 }

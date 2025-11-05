@@ -7,14 +7,14 @@ BEGIN
     WITH claimed_orders AS (
         SELECT _id
         FROM notifications.orders
-        WHERE processedstatus = 'Registered'
+        WHERE processedstatus = 'Registered'::orderprocessingstate
           AND requestedsendtime <= now() + INTERVAL '1 minute'
         ORDER BY requestedsendtime ASC, _id ASC
         LIMIT 50
         FOR UPDATE SKIP LOCKED
     )
     UPDATE notifications.orders
-    SET processedstatus = 'Processing'
+    SET processedstatus = 'Processing'::orderprocessingstate
     WHERE _id IN (SELECT _id FROM claimed_orders)
     RETURNING notificationorder AS notificationorders;
 END;

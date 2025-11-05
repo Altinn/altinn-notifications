@@ -8,8 +8,10 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
 {
     public class FunctionTests
     {
+        private readonly int _publishBatchSize = 500;
+
         /// <summary>
-        /// Scenario: Registered email limit timeout in db  has passed
+        /// Scenario: Registered email limit timeout in db has passed
         /// Expected side effect: Value is reset to NULL when getemails_statusnew_updatestatus is called by <see cref="EmailNotificationRepository"/>    
         /// </summary>
         [Fact]
@@ -25,7 +27,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence
             var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IEmailNotificationRepository) });
             EmailNotificationRepository repository = (EmailNotificationRepository)serviceList.First(i => i.GetType() == typeof(EmailNotificationRepository));
 
-            await repository.GetNewNotifications();
+            await repository.GetNewNotificationsAsync(_publishBatchSize, CancellationToken.None);
 
             // Assert
             sql = @"SELECT emaillimittimeout
