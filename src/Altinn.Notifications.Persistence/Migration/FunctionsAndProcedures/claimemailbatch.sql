@@ -39,10 +39,8 @@ BEGIN
     RETURN QUERY
     WITH claimed_new_rows AS (
         SELECT 
-            email._id, 
-            email._orderid,
-            email.alternateid,
-            email.toaddress
+            email._id,
+            email.alternateid
         FROM notifications.emailnotifications email
         WHERE email.result = 'New'::emailnotificationresulttype
             AND email.expirytime >= now()
