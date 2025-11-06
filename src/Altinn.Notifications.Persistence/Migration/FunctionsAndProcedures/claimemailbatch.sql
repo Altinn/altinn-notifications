@@ -57,9 +57,7 @@ BEGIN
         FROM claimed_new_rows claimed
         WHERE email._id = claimed._id
         RETURNING
-            claimed.alternateid,
-            claimed._orderid,
-            claimed.toaddress
+            claimed.alternateid
     )
     -- Join with large text data AFTER releasing locks
     SELECT 
@@ -71,10 +69,11 @@ BEGIN
              THEN email.customizedbody 
              ELSE txt.body END AS body,
         txt.fromaddress,
-        updated.toaddress,
+        email.toaddress,
         txt.contenttype
     FROM updated_rows updated
-    JOIN notifications.emailtexts txt ON txt._orderid = updated._orderid;
+    JOIN notifications.emailnotifications email ON email.alternateid = updated.alternateid 
+    JOIN notifications.emailtexts txt ON txt._orderid = email._orderid;
 END;
 $BODY$;
 
