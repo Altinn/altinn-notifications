@@ -42,6 +42,7 @@
       <_Parameter1>Altinn.Notifications.Tests</_Parameter1>
     </AssemblyAttribute>
   </ItemGroup>
+
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <PropertyGroup>
       <DbToolsExecuted>false</DbToolsExecuted>
