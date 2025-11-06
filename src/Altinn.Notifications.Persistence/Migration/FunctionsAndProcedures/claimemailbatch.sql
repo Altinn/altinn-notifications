@@ -62,12 +62,8 @@ BEGIN
     -- Join with large text data AFTER releasing locks
     SELECT 
         updated.alternateid,
-        CASE WHEN email.customizedsubject IS NOT NULL AND email.customizedsubject <> '' 
-             THEN email.customizedsubject 
-             ELSE txt.subject END AS subject,
-        CASE WHEN email.customizedbody IS NOT NULL AND email.customizedbody <> '' 
-             THEN email.customizedbody 
-             ELSE txt.body END AS body,
+        COALESCE(NULLIF(email.customizedsubject, ''), txt.subject) AS subject,  
+        COALESCE(NULLIF(email.customizedbody, ''), txt.body) AS body,
         txt.fromaddress,
         email.toaddress,
         txt.contenttype
