@@ -36,13 +36,21 @@ public static class ServiceCollectionExtensions
             throw new ArgumentNullException(nameof(config), "Required communication services settings is missing from application configuration");
         }
 
+        EmailServiceAdminSettings emailServiceAdminSettings = config!.GetSection(nameof(EmailServiceAdminSettings)).Get<EmailServiceAdminSettings>()!;
+
+        if (emailServiceAdminSettings == null)
+        {
+            throw new ArgumentNullException(nameof(config), "Required email service admin settings is missing from application configuration");
+        }
+
         services
             .AddSingleton<IEmailServiceClient, EmailServiceClient>()
             .AddSingleton<ICommonProducer, CommonProducer>()
             .AddHostedService<SendEmailQueueConsumer>()
             .AddHostedService<EmailSendingAcceptedConsumer>()
             .AddSingleton(kafkaSettings)
-            .AddSingleton(communicationServicesSettings);
+            .AddSingleton(communicationServicesSettings)
+            .AddSingleton(emailServiceAdminSettings);
         return services;
     }
 

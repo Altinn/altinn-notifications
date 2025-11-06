@@ -50,6 +50,27 @@ public class ServiceCollectionExtensionsTests
     }
 
     [Fact]
+    public void AddIntegrationServices_EmailServiceAdminSettingsMissing_ThrowsException()
+    {
+        // Arrange
+        string expectedExceptionMessage = "Required email service admin settings is missing from application configuration (Parameter 'config')";
+
+        Environment.SetEnvironmentVariable("KafkaSettings__ConsumerGroupId", "value");
+        Environment.SetEnvironmentVariable("CommunicationServicesSettings__Connectionstring", "value");
+        Environment.SetEnvironmentVariable("EmailServiceAdminSettings__IntermittentErrorDelay", null);
+
+        var config = new ConfigurationBuilder().AddEnvironmentVariables().Build();
+
+        IServiceCollection services = new ServiceCollection();
+
+        // Act
+        var exception = Assert.Throws<ArgumentNullException>(() => services.AddIntegrationServices(config));
+
+        // Assert
+        Assert.Equal(expectedExceptionMessage, exception.Message);
+    }
+
+    [Fact]
     public void AddKafkaHealthChecks_KafkaSettingsMissing_ThrowsException()
     {
         Environment.SetEnvironmentVariable("KafkaSettings", null);
