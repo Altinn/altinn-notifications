@@ -15,8 +15,8 @@ BEGIN
     FROM notifications.resourcelimitlog
     WHERE id = (SELECT MAX(id) FROM notifications.resourcelimitlog)
     FOR UPDATE;
-    
-    -- Check if there's an active email timeout
+
+    -- Check for active email timeout.
     IF latest_email_timeout IS NOT NULL AND latest_email_timeout > now() THEN
         RETURN QUERY 
         SELECT NULL::uuid AS alternateid, 
@@ -27,20 +27,21 @@ BEGIN
                NULL::text AS contenttype 
         WHERE FALSE;
         RETURN;
+    ELSE
+        UPDATE notifications.resourcelimitlog
+        SET emaillimittimeout = NULL
+        WHERE id = v_limitlog_id;
     END IF;
-
-    -- Clear expired timeout
-    UPDATE notifications.resourcelimitlog
-    SET emaillimittimeout = NULL
-    WHERE id = v_limitlog_id
-        AND emaillimittimeout IS NOT NULL 
-        AND emaillimittimeout <= now();
 
     RETURN QUERY
     WITH claimed_new_rows AS (
         SELECT 
             email._id,
-            email.alternateid
+            email.alternateid,
+            email.customizedsubject,
+            email.customizedbody,
+            email.toaddress,
+            email._orderid
         FROM notifications.emailnotifications email
         WHERE email.result = 'New'::emailnotificationresulttype
             AND email.expirytime >= now()
@@ -55,19 +56,22 @@ BEGIN
         FROM claimed_new_rows claimed
         WHERE email._id = claimed._id
         RETURNING
-            claimed.alternateid
+            claimed.alternateid,
+            claimed.customizedsubject,
+            claimed.customizedbody,
+            claimed.toaddress,
+            claimed._orderid
     )
     -- Join with large text data AFTER releasing locks
     SELECT 
         updated.alternateid,
-        COALESCE(NULLIF(email.customizedsubject, ''), txt.subject) AS subject,  
-        COALESCE(NULLIF(email.customizedbody, ''), txt.body) AS body,
+        COALESCE(NULLIF(updated.customizedsubject, ''), txt.subject) AS subject,  
+        COALESCE(NULLIF(updated.customizedbody, ''), txt.body) AS body,
         txt.fromaddress,
-        email.toaddress,
+        updated.toaddress,
         txt.contenttype
     FROM updated_rows updated
-    JOIN notifications.emailnotifications email ON email.alternateid = updated.alternateid 
-    JOIN notifications.emailtexts txt ON txt._orderid = email._orderid;
+    JOIN notifications.emailtexts txt ON txt._orderid = updated._orderid;
 END;
 $BODY$;
 
