@@ -54,6 +54,20 @@ public static class PostgreUtil
         return persistedOrder;
     }
 
+    public static async Task<(NotificationOrder Order, EmailNotification EmailNotification)> PopulateDBWithOrderAndEmailNotification(string toAddress)
+    {
+        (NotificationOrder o, EmailNotification e) = TestdataUtil.GetOrderAndEmailNotification();
+        e.Recipient.ToAddress = toAddress;
+        var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IOrderRepository), typeof(IEmailNotificationRepository) });
+        OrderRepository orderRepo = (OrderRepository)serviceList.First(i => i.GetType() == typeof(OrderRepository));
+        EmailNotificationRepository notificationRepo = (EmailNotificationRepository)serviceList.First(i => i.GetType() == typeof(EmailNotificationRepository));
+        await orderRepo.Create(o);
+        await orderRepo.SetProcessingStatus(o.Id, OrderProcessingStatus.Processing);
+        await notificationRepo.AddNotification(e, DateTime.UtcNow.AddDays(1));
+        await orderRepo.SetProcessingStatus(o.Id, OrderProcessingStatus.Processed);
+        return (o, e);
+    }
+
     public static async Task<(NotificationOrder Order, EmailNotification EmailNotification)> PopulateDBWithOrderAndEmailNotification(string? sendersReference = null, bool simulateCronJob = false, bool simulateConsumers = false, bool forceSendersReferenceToBeNull = false)
     {
         (NotificationOrder o, EmailNotification e) = TestdataUtil.GetOrderAndEmailNotification();
