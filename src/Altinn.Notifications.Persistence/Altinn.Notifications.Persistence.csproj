@@ -42,11 +42,7 @@
       <_Parameter1>Altinn.Notifications.Tests</_Parameter1>
     </AssemblyAttribute>
   </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Migration\v0.66\" />
-  </ItemGroup>
-
+	
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <PropertyGroup>
       <DbToolsExecuted>false</DbToolsExecuted>
