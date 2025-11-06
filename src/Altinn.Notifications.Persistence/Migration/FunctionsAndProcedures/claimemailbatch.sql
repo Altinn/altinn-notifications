@@ -14,21 +14,8 @@ BEGIN
     INTO v_limitlog_id, latest_email_timeout
     FROM notifications.resourcelimitlog
     WHERE id = (SELECT MAX(id) FROM notifications.resourcelimitlog)
-    FOR UPDATE SKIP LOCKED;
+    FOR UPDATE;
     
-    -- Check if lock is taken
-    IF v_limitlog_id IS NULL THEN
-        RETURN QUERY 
-        SELECT NULL::uuid AS alternateid, 
-               NULL::text AS subject, 
-               NULL::text AS body, 
-               NULL::text AS fromaddress, 
-               NULL::text AS toaddress, 
-               NULL::text AS contenttype 
-        WHERE FALSE;
-        RETURN;
-    END IF;
-
     -- Check if there's an active email timeout
     IF latest_email_timeout IS NOT NULL AND latest_email_timeout > now() THEN
         RETURN QUERY 
@@ -77,8 +64,12 @@ BEGIN
     -- Join with large text data AFTER releasing locks
     SELECT 
         updated.alternateid,
-        txt.subject,
-        txt.body,
+        CASE WHEN email.customizedsubject IS NOT NULL AND email.customizedsubject <> '' 
+             THEN email.customizedsubject 
+             ELSE txt.subject END AS subject,
+        CASE WHEN email.customizedbody IS NOT NULL AND email.customizedbody <> '' 
+             THEN email.customizedbody 
+             ELSE txt.body END AS body,
         txt.fromaddress,
         updated.toaddress,
         txt.contenttype
