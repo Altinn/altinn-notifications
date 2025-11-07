@@ -131,12 +131,14 @@ public abstract class NotificationStatusRetryConsumerBase : KafkaConsumerBase<No
     {
         var deadDeliveryReport = new DeadDeliveryReport
         {
-            Resolved = false,
             Channel = Channel,
             FirstSeen = updateStatusRetryMessage.FirstSeen,
-            AttemptCount = updateStatusRetryMessage.Attempts,
             LastAttempt = updateStatusRetryMessage.LastAttempt,
-            DeliveryReport = updateStatusRetryMessage.SendOperationResult ?? string.Empty
+            AttemptCount = updateStatusRetryMessage.Attempts,
+            Resolved = false,
+            DeliveryReport = updateStatusRetryMessage.SendOperationResult ?? string.Empty,
+            Reason = "RETRY_THRESHOLD_EXCEEDED",
+            Message = "Retry timeout exceeded"
         };
 
         await _deadDeliveryReportService.InsertAsync(deadDeliveryReport);
