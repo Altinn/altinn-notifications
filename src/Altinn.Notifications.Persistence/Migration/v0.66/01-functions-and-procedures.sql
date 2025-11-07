@@ -191,22 +191,9 @@ BEGIN
     INTO v_limitlog_id, latest_email_timeout
     FROM notifications.resourcelimitlog
     WHERE id = (SELECT MAX(id) FROM notifications.resourcelimitlog)
-    FOR UPDATE SKIP LOCKED;
-    
-    -- Check if lock is taken
-    IF v_limitlog_id IS NULL THEN
-        RETURN QUERY 
-        SELECT NULL::uuid AS alternateid, 
-               NULL::text AS subject, 
-               NULL::text AS body, 
-               NULL::text AS fromaddress, 
-               NULL::text AS toaddress, 
-               NULL::text AS contenttype 
-        WHERE FALSE;
-        RETURN;
-    END IF;
+    FOR UPDATE;
 
-    -- Check if there's an active email timeout
+    -- Check for active email timeout.
     IF latest_email_timeout IS NOT NULL AND latest_email_timeout > now() THEN
         RETURN QUERY 
         SELECT NULL::uuid AS alternateid, 
@@ -217,22 +204,21 @@ BEGIN
                NULL::text AS contenttype 
         WHERE FALSE;
         RETURN;
+    ELSE
+        UPDATE notifications.resourcelimitlog
+        SET emaillimittimeout = NULL
+        WHERE id = v_limitlog_id;
     END IF;
-
-    -- Clear expired timeout
-    UPDATE notifications.resourcelimitlog
-    SET emaillimittimeout = NULL
-    WHERE id = v_limitlog_id
-        AND emaillimittimeout IS NOT NULL 
-        AND emaillimittimeout <= now();
 
     RETURN QUERY
     WITH claimed_new_rows AS (
         SELECT 
-            email._id, 
-            email._orderid,
+            email._id,
             email.alternateid,
-            email.toaddress
+            email.customizedsubject,
+            email.customizedbody,
+            email.toaddress,
+            email._orderid
         FROM notifications.emailnotifications email
         WHERE email.result = 'New'::emailnotificationresulttype
             AND email.expirytime >= now()
@@ -248,14 +234,16 @@ BEGIN
         WHERE email._id = claimed._id
         RETURNING
             claimed.alternateid,
-            claimed._orderid,
-            claimed.toaddress
+            claimed.customizedsubject,
+            claimed.customizedbody,
+            claimed.toaddress,
+            claimed._orderid
     )
     -- Join with large text data AFTER releasing locks
     SELECT 
         updated.alternateid,
-        txt.subject,
-        txt.body,
+        COALESCE(NULLIF(updated.customizedsubject, ''), txt.subject) AS subject,  
+        COALESCE(NULLIF(updated.customizedbody, ''), txt.body) AS body,
         txt.fromaddress,
         updated.toaddress,
         txt.contenttype
@@ -910,66 +898,6 @@ ALTER FUNCTION notifications.getshipmentforstatusfeed_v2(uuid)
 COMMENT ON FUNCTION notifications.getshipmentforstatusfeed_v2(uuid)
     IS 'Retrieves shipment tracking data using an email or sms notification alternateid.';
 
-
-CREATE OR REPLACE FUNCTION notifications.getshipmentforstatusfeed_v3(_alternateid uuid)
-RETURNS TABLE(
-    alternateid       uuid,
-    reference         text,
-    status            text,
-    last_update       timestamp with time zone,
-    destination       text,
-    type              text,
-    notification_type text
-)
-LANGUAGE 'plpgsql'
-COST 100
-STABLE PARALLEL SAFE
-ROWS 5
-AS $BODY$
-DECLARE
-    _order_alternateid uuid;
-    _order_creatorname text;
-BEGIN
-    -- First try to find order information in the email notifications table
-    SELECT o.alternateid, o.creatorname INTO _order_alternateid, _order_creatorname
-    FROM notifications.orders o
-    JOIN notifications.emailnotifications e ON e._orderid = o._id
-    WHERE e.alternateid = _alternateid
-    LIMIT 1;
-    
-    -- If not found in email notifications, try SMS notifications table
-    IF _order_alternateid IS NULL THEN
-        SELECT o.alternateid, o.creatorname INTO _order_alternateid, _order_creatorname
-        FROM notifications.orders o
-        JOIN notifications.smsnotifications s ON s._orderid = o._id
-        WHERE s.alternateid = _alternateid
-        LIMIT 1;
-    END IF;
-    
-    -- If we found an order, get its tracking information
-    IF _order_alternateid IS NOT NULL THEN
-        RETURN QUERY
-        SELECT
-            _order_alternateid,
-            t.reference,        
-            t.status,
-            t.last_update,
-            t.destination,
-            t.type,
-            t.notification_type 
-        FROM
-            notifications.get_shipment_tracking_v3(_order_alternateid, _order_creatorname) AS t;
-    END IF;
-END;
-$BODY$;
-
-ALTER FUNCTION notifications.getshipmentforstatusfeed_v3(uuid)
-    OWNER TO platform_notifications_admin;
-
-COMMENT ON FUNCTION notifications.getshipmentforstatusfeed_v3(uuid)
-    IS 'Retrieves shipment tracking data using an email or sms notification alternateid.';
-
-
 -- getshipmenttracking.sql:
 CREATE OR REPLACE FUNCTION notifications.get_shipment_tracking(
     _alternateid UUID,
@@ -1126,98 +1054,6 @@ Includes:
  - Order-level tracking (reference and status)
  - Email notification tracking (status, result time, destination)
  - SMS notification tracking (status, result time, destination)
-
-If no matching order exists, an empty result set is returned.';
-
-CREATE OR REPLACE FUNCTION notifications.get_shipment_tracking_v3(
-    _alternateid UUID,
-    _creatorname TEXT)
-RETURNS TABLE (
-    reference          TEXT,
-    status             TEXT,
-    last_update        TIMESTAMPTZ,
-    destination        TEXT,
-    type               TEXT,
-    notification_type  TEXT
-)
-LANGUAGE plpgsql
-STABLE PARALLEL SAFE
-ROWS 5
-AS $$
-DECLARE
-    v_order_exists BOOLEAN;
-BEGIN
-    -- Check for the existence of the order
-    SELECT EXISTS (
-        SELECT 1
-        FROM notifications.orders o
-        WHERE o.alternateid = _alternateid AND o.creatorname = _creatorname
-    )
-    INTO v_order_exists;
-
-    -- Return empty set if no order is found
-    IF NOT v_order_exists THEN
-        RETURN;
-    END IF;
-
-    -- Return combined tracking info
-    RETURN QUERY
-    WITH order_data AS (
-        SELECT o._id, o.sendersreference, o.created, o.processed, o.processedstatus, o.type
-        FROM notifications.orders o
-        WHERE o.alternateid = _alternateid AND o.creatorname = _creatorname
-    ),
-    order_tracking AS (
-        SELECT
-            od.sendersreference AS reference,
-            od.processedstatus::TEXT AS status,
-            GREATEST(od.created, COALESCE(od.processed, od.created)) AS last_update,
-            NULL::TEXT AS destination,
-            od.type::TEXT AS type,
-            'order' AS notification_type
-        FROM order_data od
-    ),
-    email_tracking AS (
-        SELECT
-            od.sendersreference AS reference,
-            e.result::TEXT AS status,
-            e.resulttime AS last_update,
-            e.toaddress AS destination,
-            od.type::TEXT AS type,
-            'email' AS notification_type
-        FROM order_data od
-        JOIN notifications.emailnotifications e ON e._orderid = od._id
-    ),
-    sms_tracking AS (
-        SELECT
-            od.sendersreference AS reference,
-            s.result::TEXT AS status,
-            s.resulttime AS last_update,
-            s.mobilenumber AS destination,
-            od.type::TEXT AS type,
-            'sms' AS notification_type
-        FROM order_data od
-        JOIN notifications.smsnotifications s ON s._orderid = od._id
-    )
-    SELECT * FROM order_tracking
-    UNION ALL
-    SELECT * FROM email_tracking
-    UNION ALL
-    SELECT * FROM sms_tracking;
-END;
-$$;
-
-COMMENT ON FUNCTION notifications.get_shipment_tracking_v3(UUID, TEXT) IS
-'Returns delivery tracking information for a notification identified by the given alternate identifier and creator name.
-
-Includes:
- - Order-level tracking (reference and status)
- - Email notification tracking (status, result time, destination)
- - SMS notification tracking (status, result time, destination)
-
-Changes from v2:
- - Added notification_type field to distinguish between order, email, and sms tracking records
- - notification_type values: ''order'', ''email'', ''sms''
 
 If no matching order exists, an empty result set is returned.';
 
