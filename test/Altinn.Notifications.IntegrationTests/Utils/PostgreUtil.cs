@@ -4,6 +4,7 @@ using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Extensions;
 using Altinn.Notifications.Persistence.Repository;
+
 using Npgsql;
 
 namespace Altinn.Notifications.IntegrationTests.Utils;
@@ -58,9 +59,9 @@ public static class PostgreUtil
     {
         (NotificationOrder o, EmailNotification e) = TestdataUtil.GetOrderAndEmailNotification();
         e.Recipient.ToAddress = toAddress;
-        var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IOrderRepository), typeof(IEmailNotificationRepository) });
-        OrderRepository orderRepo = (OrderRepository)serviceList.First(i => i.GetType() == typeof(OrderRepository));
-        EmailNotificationRepository notificationRepo = (EmailNotificationRepository)serviceList.First(i => i.GetType() == typeof(EmailNotificationRepository));
+   
+        (var orderRepo, var notificationRepo) = GetOrderAndEmailNotificationRepositories();
+
         await orderRepo.Create(o);
         await orderRepo.SetProcessingStatus(o.Id, OrderProcessingStatus.Processing);
         await notificationRepo.AddNotification(e, DateTime.UtcNow.AddDays(1));
@@ -71,10 +72,7 @@ public static class PostgreUtil
     public static async Task<(NotificationOrder Order, EmailNotification EmailNotification)> PopulateDBWithOrderAndEmailNotification(string? sendersReference = null, bool simulateCronJob = false, bool simulateConsumers = false, bool forceSendersReferenceToBeNull = false)
     {
         (NotificationOrder o, EmailNotification e) = TestdataUtil.GetOrderAndEmailNotification();
-        var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IOrderRepository), typeof(IEmailNotificationRepository) });
-
-        OrderRepository orderRepo = (OrderRepository)serviceList.First(i => i.GetType() == typeof(OrderRepository));
-        EmailNotificationRepository notificationRepo = (EmailNotificationRepository)serviceList.First(i => i.GetType() == typeof(EmailNotificationRepository));
+        (var orderRepo, var notificationRepo) = GetOrderAndEmailNotificationRepositories();
 
         if (sendersReference != null)
         {
@@ -118,10 +116,7 @@ public static class PostgreUtil
     public static async Task<NotificationOrder> PopulateDBWithOrderAndEmailNotificationReturnOrder(string? sendersReference = null)
     {
         (NotificationOrder o, EmailNotification e) = TestdataUtil.GetOrderAndEmailNotification();
-        var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IOrderRepository), typeof(IEmailNotificationRepository) });
-
-        OrderRepository orderRepo = (OrderRepository)serviceList.First(i => i.GetType() == typeof(OrderRepository));
-        EmailNotificationRepository notificationRepo = (EmailNotificationRepository)serviceList.First(i => i.GetType() == typeof(EmailNotificationRepository));
+        (var orderRepo, var notificationRepo) = GetOrderAndEmailNotificationRepositories();
 
         if (sendersReference != null)
         {
@@ -389,6 +384,15 @@ public static class PostgreUtil
         }
 
         return await reader.GetFieldValueAsync<long>(0);
+    }
+
+    // Helper to retrieve OrderRepository and EmailNotificationRepository together
+    private static (OrderRepository OrderRepo, EmailNotificationRepository EmailNotificationRepo) GetOrderAndEmailNotificationRepositories()
+    {
+        var services = ServiceUtil.GetServices(new List<Type> { typeof(IOrderRepository), typeof(IEmailNotificationRepository) });
+        var orderRepo = (OrderRepository)services.First(s => s is OrderRepository);
+        var emailRepo = (EmailNotificationRepository)services.First(s => s is EmailNotificationRepository);
+        return (orderRepo, emailRepo);
     }
 
     public static Task<long?> GetDeadDeliveryReportIdFromOperationId(string operationId)
