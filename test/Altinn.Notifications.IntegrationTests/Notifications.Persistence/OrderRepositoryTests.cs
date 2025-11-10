@@ -239,6 +239,25 @@ public class OrderRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task InsertStatusFeedForOrder_OrderDoesNotExist_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil
+            .GetServices(new List<Type>() { typeof(IOrderRepository) })
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        Guid nonExistentOrderId = Guid.NewGuid();
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await repo.InsertStatusFeedForOrder(nonExistentOrderId));
+
+        Assert.Contains("Order with ID", exception.Message);
+        Assert.Contains("not found", exception.Message);
+        Assert.Contains(nonExistentOrderId.ToString(), exception.Message);
+    }
+
+    [Fact]
     public async Task CancelOrder_OrderDoesNotExits_ReturnsCancellationError()
     {
         // Arrange

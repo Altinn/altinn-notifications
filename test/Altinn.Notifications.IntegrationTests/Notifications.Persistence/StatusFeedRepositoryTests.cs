@@ -6,6 +6,9 @@ using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
+
+using Npgsql;
+
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
@@ -89,6 +92,91 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
         var remaining = await sut.GetStatusFeed(0, _creatorName, _maxPageSize, CancellationToken.None);
         Assert.DoesNotContain(remaining, x => x.OrderStatus.ShipmentId == oldShipmentId);
         Assert.Contains(remaining, x => x.OrderStatus.ShipmentId == recentShipmentId);
+    }
+
+    [Fact]
+    public async Task InsertStatusFeedEntry_NullOrderStatus_ThrowsArgumentNullException()
+    {
+        // Arrange
+        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices([typeof(NpgsqlDataSource)])[0]!;
+        await using var connection = await dataSource.OpenConnectionAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+            await StatusFeedRepository.InsertStatusFeedEntry(null!, connection, transaction));
+    }
+
+    [Fact]
+    public async Task InsertStatusFeedEntry_NullConnection_ThrowsArgumentNullException()
+    {
+        // Arrange
+        OrderStatus orderStatus = new()
+        {
+            Status = ProcessingLifecycle.Order_SendConditionNotMet,
+            ShipmentId = Guid.NewGuid(),
+            LastUpdated = DateTime.UtcNow,
+            ShipmentType = "Notification",
+            SendersReference = Guid.NewGuid().ToString(),
+            Recipients = new List<Recipient>().ToImmutableList()
+        };
+
+        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices([typeof(NpgsqlDataSource)])[0]!;
+        await using var connection = await dataSource.OpenConnectionAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+            await StatusFeedRepository.InsertStatusFeedEntry(orderStatus, null!, transaction));
+    }
+
+    [Fact]
+    public async Task InsertStatusFeedEntry_NullTransaction_ThrowsArgumentNullException()
+    {
+        // Arrange
+        OrderStatus orderStatus = new()
+        {
+            Status = ProcessingLifecycle.Order_SendConditionNotMet,
+            ShipmentId = Guid.NewGuid(),
+            LastUpdated = DateTime.UtcNow,
+            ShipmentType = "Notification",
+            SendersReference = Guid.NewGuid().ToString(),
+            Recipients = new List<Recipient>().ToImmutableList()
+        };
+
+        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices([typeof(NpgsqlDataSource)])[0]!;
+        await using var connection = await dataSource.OpenConnectionAsync();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+            await StatusFeedRepository.InsertStatusFeedEntry(orderStatus, connection, null!));
+    }
+
+    [Fact]
+    public async Task InsertStatusFeedEntry_OrderDoesNotExist_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        Guid nonExistentOrderId = Guid.NewGuid();
+        OrderStatus orderStatus = new()
+        {
+            Status = ProcessingLifecycle.Order_SendConditionNotMet,
+            ShipmentId = nonExistentOrderId,
+            LastUpdated = DateTime.UtcNow,
+            ShipmentType = "Notification",
+            SendersReference = Guid.NewGuid().ToString(),
+            Recipients = new List<Recipient>().ToImmutableList()
+        };
+
+        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices([typeof(NpgsqlDataSource)])[0]!;
+        await using var connection = await dataSource.OpenConnectionAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await StatusFeedRepository.InsertStatusFeedEntry(orderStatus, connection, transaction));
+
+        Assert.Contains("Failed to insert status feed entry", exception.Message);
+        Assert.Contains(nonExistentOrderId.ToString(), exception.Message);
     }
 
     private async Task InsertTestDataRowForStatusFeed(int orderId, string created, Guid shipmentId)
