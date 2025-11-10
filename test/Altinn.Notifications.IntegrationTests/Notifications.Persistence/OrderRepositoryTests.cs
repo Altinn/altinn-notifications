@@ -183,7 +183,7 @@ public class OrderRepositoryTests : IAsyncLifetime
             await repo.SetProcessingStatus(order.Id, statusType);
 
             // Assert
-            string sql = $@"SELECT count(1) 
+            string sql = $@"SELECT count(1)
                                 FROM notifications.orders
                                 WHERE alternateid = '{order.Id}'
                                 AND processedstatus = '{statusType}'";
@@ -192,6 +192,50 @@ public class OrderRepositoryTests : IAsyncLifetime
 
             Assert.Equal(1, orderCount);
         }
+    }
+
+    [Fact]
+    public async Task InsertStatusFeedForOrder_WithSendConditionNotMetOrder_InsertsStatusFeedCorrectly()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil
+            .GetServices(new List<Type>() { typeof(IOrderRepository) })
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        NotificationOrder order = new()
+        {
+            Id = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Creator = new("test"),
+            SendersReference = Guid.NewGuid().ToString(),
+            Templates = new List<INotificationTemplate>()
+            {
+                new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)
+            },
+            ConditionEndpoint = new Uri("https://vg.no/condition")
+        };
+
+        _orderIdsToDelete.Add(order.Id);
+        await repo.Create(order);
+        await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
+
+        // Act
+        await repo.InsertStatusFeedForOrder(order.Id);
+
+        // Assert
+        int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+        Assert.Equal(1, statusFeedCount);
+
+        // Additional verification: check that status feed contains SendConditionNotMet status and empty recipients
+        string jsonSql = $@"select sf.orderstatus
+                                from notifications.statusfeed sf
+                                join notifications.orders o on sf.orderid = o._id
+                                where o.alternateid = '{order.Id}'";
+
+        string orderStatusJson = await PostgreUtil.RunSqlReturnOutput<string>(jsonSql);
+        Assert.NotNull(orderStatusJson);
+        Assert.Contains("\"Recipients\": []", orderStatusJson);
+        Assert.Contains("\"Status\": \"Order_SendConditionNotMet\"", orderStatusJson);
     }
 
     [Fact]
