@@ -36,6 +36,7 @@ public class StatusFeedRepository(NpgsqlDataSource dataSource) : IStatusFeedRepo
 
     private static readonly JsonSerializerOptions _statusFeedSerializerOptions = new()
     {
+        PropertyNameCaseInsensitive = true,
         Converters = { new JsonStringEnumConverter() }
     };
 
@@ -103,6 +104,10 @@ public class StatusFeedRepository(NpgsqlDataSource dataSource) : IStatusFeedRepo
         await using NpgsqlCommand pgcom = new(_insertStatusFeedEntrySql, connection, transaction);
         pgcom.Parameters.AddWithValue("alternateid", NpgsqlDbType.Uuid, orderStatus.ShipmentId);
         pgcom.Parameters.AddWithValue("orderstatus", NpgsqlDbType.Jsonb, JsonSerializer.Serialize(orderStatus, _statusFeedSerializerOptions));
-        await pgcom.ExecuteNonQueryAsync();
+        var rowsAffected = await pgcom.ExecuteNonQueryAsync();
+        if (rowsAffected == 0)
+        {
+            throw new InvalidOperationException($"Failed to insert status feed entry. No order found with alternateid {orderStatus.ShipmentId}.");
+        }
     }
 }
