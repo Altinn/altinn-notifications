@@ -85,16 +85,7 @@ public class OrderProcessingService : IOrderProcessingService
         {
             case { IsSendConditionMet: false }:
                 await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
-                try
-                {
-                    await _orderRepository.InsertStatusFeedForOrder(order.Id);
-                }
-                catch (Exception ex)
-                {
-                    var maskedOrderId = string.Concat(order.Id.ToString().AsSpan(0, 8), "****");
-                    _logger.LogWarning(ex, "Failed to insert status feed for order {OrderId} after marking SendConditionNotMet.", maskedOrderId);
-                }
-
+                await TryInsertStatusFeedForUnmetCondition(order.Id);
                 break;
 
             case { IsSendConditionMet: true }:
@@ -138,16 +129,7 @@ public class OrderProcessingService : IOrderProcessingService
         {
             case { IsSendConditionMet: false }:
                 await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
-                try
-                {
-                    await _orderRepository.InsertStatusFeedForOrder(order.Id);
-                }
-                catch (Exception ex)
-                {
-                    var maskedOrderId = string.Concat(order.Id.ToString().AsSpan(0, 8), "****");
-                    _logger.LogWarning(ex, "Failed to insert status feed for order {OrderId} after marking SendConditionNotMet.", maskedOrderId);
-                }
-
+                await TryInsertStatusFeedForUnmetCondition(order.Id);
                 break;
 
             case { IsSendConditionMet: true }:
@@ -178,6 +160,24 @@ public class OrderProcessingService : IOrderProcessingService
     }
 
     /// <summary>
+    /// Attempts to insert a status feed entry for an order where the send condition was not met.
+    /// Logs a warning if the insertion fails but does not throw, allowing order processing to continue.
+    /// </summary>
+    /// <param name="orderId">The unique identifier of the order.</param>
+    private async Task TryInsertStatusFeedForUnmetCondition(Guid orderId)
+    {
+        try
+        {
+            await _orderRepository.InsertStatusFeedForOrder(orderId);
+        }
+        catch (Exception ex)
+        {
+            var maskedOrderId = string.Concat(orderId.ToString().AsSpan(0, 8), "****");
+            _logger.LogWarning(ex, "Failed to insert status feed for order {OrderId} after marking SendConditionNotMet.", maskedOrderId);
+        }
+    }
+
+    /// <summary>
     /// Determines if a notification order should proceed based on its configured send condition endpoint.
     /// </summary>
     /// <param name="order">The notification order containing the optional condition endpoint to evaluate.</param>
@@ -191,7 +191,7 @@ public class OrderProcessingService : IOrderProcessingService
     /// <list type="bullet">
     ///   <item>
     ///     <description>
-    ///       <see cref="SendConditionEvaluationResult.IsSendConditionMet"/>: 
+    ///       <see cref="SendConditionEvaluationResult.IsSendConditionMet"/>:
     ///       <c>true</c> if the send condition is met or no endpoint is specified;
     ///       <c>false</c> if the condition is not met;
     ///       <c>null</c> if the condition could not be evaluated due to an error (only on first attempt).
