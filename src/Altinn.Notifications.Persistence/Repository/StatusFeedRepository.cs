@@ -28,13 +28,7 @@ public class StatusFeedRepository(NpgsqlDataSource dataSource) : IStatusFeedRepo
                                                                   FROM notifications.orders o
                                                                   WHERE o.alternateid = @alternateid;";
 
-    private readonly JsonSerializerOptions _jsonSerializerOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        Converters = { new JsonStringEnumConverter() }
-    };
-
-    private static readonly JsonSerializerOptions _statusFeedSerializerOptions = new()
+    private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
     {
         PropertyNameCaseInsensitive = true,
         Converters = { new JsonStringEnumConverter() }
@@ -103,7 +97,7 @@ public class StatusFeedRepository(NpgsqlDataSource dataSource) : IStatusFeedRepo
 
         await using NpgsqlCommand pgcom = new(_insertStatusFeedEntrySql, connection, transaction);
         pgcom.Parameters.AddWithValue("alternateid", NpgsqlDbType.Uuid, orderStatus.ShipmentId);
-        pgcom.Parameters.AddWithValue("orderstatus", NpgsqlDbType.Jsonb, JsonSerializer.Serialize(orderStatus, _statusFeedSerializerOptions));
+        pgcom.Parameters.AddWithValue("orderstatus", NpgsqlDbType.Jsonb, JsonSerializer.Serialize(orderStatus, _jsonSerializerOptions));
         var result = await pgcom.ExecuteScalarAsync();
         if (result == null)
         {
