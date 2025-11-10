@@ -24,11 +24,13 @@ CREATE TABLE IF NOT EXISTS notifications.notificationlog_2025 PARTITION OF notif
 CREATE TABLE IF NOT EXISTS notifications.notificationlog_default PARTITION OF notifications.notificationlog
     DEFAULT;
 
+GRANT SELECT,INSERT,UPDATE,DELETE ON TABLE notifications.notificationlog_2025 TO platform_notifications;
+GRANT SELECT,INSERT,UPDATE,DELETE ON TABLE notifications.notificationlog_default TO platform_notifications;
+
 GRANT SELECT,INSERT,UPDATE,DELETE ON TABLE notifications.notificationlog TO platform_notifications;
 
 -- Grant access to the auto-generated sequence for the identity column
 GRANT USAGE, SELECT ON SEQUENCE notifications.notificationlog_id_seq TO platform_notifications;
-
 CREATE INDEX IF NOT EXISTS idx_notificationlog_shipmentid ON notifications.notificationlog (shipmentid);
 CREATE INDEX IF NOT EXISTS idx_notificationlog_orderchainid ON notifications.notificationlog (orderchainid);
 CREATE INDEX IF NOT EXISTS idx_notificationlog_recipient ON notifications.notificationlog (recipient);
