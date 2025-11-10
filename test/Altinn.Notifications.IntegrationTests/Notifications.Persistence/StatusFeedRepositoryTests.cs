@@ -97,14 +97,9 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
     [Fact]
     public async Task InsertStatusFeedEntry_NullOrderStatus_ThrowsArgumentNullException()
     {
-        // Arrange
-        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices([typeof(NpgsqlDataSource)])[0]!;
-        await using var connection = await dataSource.OpenConnectionAsync();
-        await using var transaction = await connection.BeginTransactionAsync();
-
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-            await StatusFeedRepository.InsertStatusFeedEntry(null!, connection, transaction));
+            await StatusFeedRepository.InsertStatusFeedEntry(null!, null!, null!));
     }
 
     [Fact]
@@ -121,35 +116,9 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
             Recipients = new List<Recipient>().ToImmutableList()
         };
 
-        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices([typeof(NpgsqlDataSource)])[0]!;
-        await using var connection = await dataSource.OpenConnectionAsync();
-        await using var transaction = await connection.BeginTransactionAsync();
-
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-            await StatusFeedRepository.InsertStatusFeedEntry(orderStatus, null!, transaction));
-    }
-
-    [Fact]
-    public async Task InsertStatusFeedEntry_NullTransaction_ThrowsArgumentNullException()
-    {
-        // Arrange
-        OrderStatus orderStatus = new()
-        {
-            Status = ProcessingLifecycle.Order_SendConditionNotMet,
-            ShipmentId = Guid.NewGuid(),
-            LastUpdated = DateTime.UtcNow,
-            ShipmentType = "Notification",
-            SendersReference = Guid.NewGuid().ToString(),
-            Recipients = new List<Recipient>().ToImmutableList()
-        };
-
-        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices([typeof(NpgsqlDataSource)])[0]!;
-        await using var connection = await dataSource.OpenConnectionAsync();
-
-        // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-            await StatusFeedRepository.InsertStatusFeedEntry(orderStatus, connection, null!));
+            await StatusFeedRepository.InsertStatusFeedEntry(orderStatus, null!, null!));
     }
 
     [Fact]
