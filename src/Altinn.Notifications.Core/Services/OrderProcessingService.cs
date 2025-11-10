@@ -85,6 +85,7 @@ public class OrderProcessingService : IOrderProcessingService
         {
             case { IsSendConditionMet: false }:
                 await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
+                await _orderRepository.InsertStatusFeedForOrder(order.Id);
                 break;
 
             case { IsSendConditionMet: true }:
@@ -128,6 +129,7 @@ public class OrderProcessingService : IOrderProcessingService
         {
             case { IsSendConditionMet: false }:
                 await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
+                await _orderRepository.InsertStatusFeedForOrder(order.Id);
                 break;
 
             case { IsSendConditionMet: true }:
