@@ -98,8 +98,11 @@ public class StatusFeedRepository(NpgsqlDataSource dataSource) : IStatusFeedRepo
         await using NpgsqlCommand pgcom = new(_insertStatusFeedEntrySql, connection, transaction);
         pgcom.Parameters.AddWithValue("alternateid", NpgsqlDbType.Uuid, orderStatus.ShipmentId);
         pgcom.Parameters.AddWithValue("orderstatus", NpgsqlDbType.Jsonb, JsonSerializer.Serialize(orderStatus, _jsonSerializerOptions));
-        var result = await pgcom.ExecuteScalarAsync();
-        if (result == null)
+
+        await using var reader = await pgcom.ExecuteReaderAsync();
+        bool hasRows = await reader.ReadAsync();
+
+        if (!hasRows)
         {
             throw new InvalidOperationException($"Failed to insert status feed entry. No order found with alternateid {orderStatus.ShipmentId}.");
         }
