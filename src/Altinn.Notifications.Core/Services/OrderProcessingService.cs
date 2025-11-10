@@ -91,7 +91,8 @@ public class OrderProcessingService : IOrderProcessingService
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Failed to insert status feed for order {OrderId} after marking SendConditionNotMet.", order.Id);
+                    var maskedOrderId = string.Concat(order.Id.ToString().AsSpan(0, 8), "****");
+                    _logger.LogWarning(ex, "Failed to insert status feed for order {OrderId} after marking SendConditionNotMet.", maskedOrderId);
                 }
 
                 break;
@@ -143,7 +144,8 @@ public class OrderProcessingService : IOrderProcessingService
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Failed to insert status feed for order {OrderId} after marking SendConditionNotMet.", order.Id);
+                    var maskedOrderId = string.Concat(order.Id.ToString().AsSpan(0, 8), "****");
+                    _logger.LogWarning(ex, "Failed to insert status feed for order {OrderId} after marking SendConditionNotMet.", maskedOrderId);
                 }
 
                 break;

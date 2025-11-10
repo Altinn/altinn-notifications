@@ -80,7 +80,8 @@ public abstract class NotificationRepositoryBase
 
         if (!hasRows)
         {
-            _logger.LogWarning("No shipment tracking information found for alternate ID {AlternateId}.", notificationAlternateId);
+            var maskedAlternateId = string.Concat(notificationAlternateId.ToString().AsSpan(0, 8), "****");
+            _logger.LogWarning("No shipment tracking information found for alternate ID {AlternateId}.", maskedAlternateId);
             return null; // Return null if no rows were found
         }
 
@@ -168,7 +169,8 @@ public abstract class NotificationRepositoryBase
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to insert status feed for completed order {AlternateId}.", alternateId);
+                var maskedAlternateId = string.Concat(alternateId.ToString().AsSpan(0, 8), "****");
+                _logger.LogWarning(ex, "Failed to insert status feed for completed order {AlternateId}.", maskedAlternateId);
             }
         }
         else
