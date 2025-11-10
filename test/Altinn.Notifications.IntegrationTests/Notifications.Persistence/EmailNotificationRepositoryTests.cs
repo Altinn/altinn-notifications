@@ -433,6 +433,86 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
         }
     }
 
+    [Fact]
+    public async Task TerminateExpiredNotifications_WithDeletedOrder_HandlesGracefully()
+    {
+        // Arrange
+        (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(simulateConsumers: true, simulateCronJob: true);
+        _orderIdsToDelete.Add(order.Id);
+
+        EmailNotificationRepository sut = (EmailNotificationRepository)ServiceUtil
+            .GetServices([typeof(IEmailNotificationRepository)])
+            .First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        // Modify the notification to simulate an expired notification
+        string updateNotificationSql = $@"
+            UPDATE notifications.emailnotifications
+            SET result = 'Succeeded',
+                expirytime = NOW() - INTERVAL '3 day'
+            WHERE alternateid = '{emailNotification.Id}';";
+
+        await PostgreUtil.RunSql(updateNotificationSql);
+
+        // Delete the order to create a scenario where GetShipmentTracking returns null
+        string deleteOrderSql = $@"DELETE FROM notifications.orders WHERE alternateid = '{order.Id}';";
+        await PostgreUtil.RunSql(deleteOrderSql);
+
+        // Act
+        await sut.TerminateExpiredNotifications();
+
+        // Assert - notification should still be updated to Failed_TTL despite missing order
+        var result = await SelectEmailNotificationStatus(emailNotification.Id);
+        Assert.Equal(EmailNotificationResultType.Failed_TTL.ToString(), result);
+
+        // Note: Order is deleted so we can't check its status, but the notification termination succeeded
+        // This verifies that the exception handling in NotificationRepositoryBase allows processing to continue
+    }
+
+    [Fact]
+    public async Task TerminateExpiredNotifications_WithCorruptedTrackingData_ContinuesProcessing()
+    {
+        // Arrange - Create two expired notifications
+        (NotificationOrder order1, EmailNotification notification1) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(simulateConsumers: true, simulateCronJob: true);
+        _orderIdsToDelete.Add(order1.Id);
+
+        (NotificationOrder order2, EmailNotification notification2) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(simulateConsumers: true, simulateCronJob: true);
+        _orderIdsToDelete.Add(order2.Id);
+
+        EmailNotificationRepository sut = (EmailNotificationRepository)ServiceUtil
+            .GetServices([typeof(IEmailNotificationRepository)])
+            .First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        // Make both notifications expired
+        string updateSql = $@"
+            UPDATE notifications.emailnotifications
+            SET result = 'Succeeded',
+                expirytime = NOW() - INTERVAL '3 day'
+            WHERE alternateid IN ('{notification1.Id}', '{notification2.Id}');";
+
+        await PostgreUtil.RunSql(updateSql);
+
+        // Delete first order to create a problematic scenario
+        string deleteOrderSql = $@"DELETE FROM notifications.orders WHERE alternateid = '{order1.Id}';";
+        await PostgreUtil.RunSql(deleteOrderSql);
+
+        // Act - Terminate expired notifications (should handle first order gracefully and process second)
+        await sut.TerminateExpiredNotifications();
+
+        // Assert - Both notifications should be marked as Failed_TTL
+        var result1 = await SelectEmailNotificationStatus(notification1.Id);
+        var result2 = await SelectEmailNotificationStatus(notification2.Id);
+
+        Assert.Equal(EmailNotificationResultType.Failed_TTL.ToString(), result1);
+        Assert.Equal(EmailNotificationResultType.Failed_TTL.ToString(), result2);
+
+        // Second order should be completed and have status feed entry
+        var order2Status = await PostgreUtil.RunSqlReturnOutput<string>($"SELECT processedstatus FROM notifications.orders WHERE alternateid = '{order2.Id}'");
+        var statusFeedCount2 = await PostgreUtil.SelectStatusFeedEntryCount(order2.Id);
+
+        Assert.Equal(OrderProcessingStatus.Completed.ToString(), order2Status);
+        Assert.Equal(1, statusFeedCount2);
+    }
+
     private static async Task<string> SelectEmailNotificationStatus(Guid notificationId)
     {
         string sql = $"select result from notifications.emailnotifications where alternateid = '{notificationId}'";
