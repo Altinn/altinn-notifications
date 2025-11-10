@@ -96,6 +96,10 @@ public class StatusFeedRepository(NpgsqlDataSource dataSource) : IStatusFeedRepo
     /// </remarks>
     public static async Task InsertStatusFeedEntry(OrderStatus orderStatus, NpgsqlConnection connection, NpgsqlTransaction transaction)
     {
+        ArgumentNullException.ThrowIfNull(orderStatus);
+        ArgumentNullException.ThrowIfNull(connection);
+        ArgumentNullException.ThrowIfNull(transaction);
+
         await using NpgsqlCommand pgcom = new(_insertStatusFeedEntrySql, connection, transaction);
         pgcom.Parameters.AddWithValue("alternateid", NpgsqlDbType.Uuid, orderStatus.ShipmentId);
         pgcom.Parameters.AddWithValue("orderstatus", NpgsqlDbType.Jsonb, JsonSerializer.Serialize(orderStatus, _statusFeedSerializerOptions));

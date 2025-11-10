@@ -85,7 +85,15 @@ public class OrderProcessingService : IOrderProcessingService
         {
             case { IsSendConditionMet: false }:
                 await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
-                await _orderRepository.InsertStatusFeedForOrder(order.Id);
+                try
+                {
+                    await _orderRepository.InsertStatusFeedForOrder(order.Id);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to insert status feed for order {OrderId} after marking SendConditionNotMet.", order.Id);
+                }
+
                 break;
 
             case { IsSendConditionMet: true }:
@@ -129,7 +137,15 @@ public class OrderProcessingService : IOrderProcessingService
         {
             case { IsSendConditionMet: false }:
                 await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
-                await _orderRepository.InsertStatusFeedForOrder(order.Id);
+                try
+                {
+                    await _orderRepository.InsertStatusFeedForOrder(order.Id);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to insert status feed for order {OrderId} after marking SendConditionNotMet.", order.Id);
+                }
+
                 break;
 
             case { IsSendConditionMet: true }:
