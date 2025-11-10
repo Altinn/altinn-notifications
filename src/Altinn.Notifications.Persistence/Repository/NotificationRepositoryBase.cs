@@ -162,7 +162,14 @@ public abstract class NotificationRepositoryBase
         var orderStatus = await GetShipmentTracking(alternateId, connection, transaction);
         if (orderStatus != null)
         {
-            await StatusFeedRepository.InsertStatusFeedEntry(orderStatus, connection, transaction);
+            try
+            {
+                await StatusFeedRepository.InsertStatusFeedEntry(orderStatus, connection, transaction);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to insert status feed for completed order {AlternateId}.", alternateId);
+            }
         }
         else
         {
