@@ -14,7 +14,7 @@ jobs:
     name: Build, test & analyze
     runs-on: ubuntu-latest
     services:
-      postgres: # note that updating this image (might break the pipeline if the agent doesn't support the new version) AND (requires updating the version on line 55 below)
+      postgres: # note that updating this image might break the pipeline if the agent doesn't support the new version
         image: postgres:16@sha256:21f6013073bc6b92830a2129570e2f5ec42a6c734b5a985a41e83aa58f54c3c1
         env:
           POSTGRES_USER: platform_notifications_admin
@@ -50,9 +50,9 @@ jobs:
           ./dbsetup.sh
       - name: Restart database to enable config changes
         run: |
-          # Restart only the Postgres service
+          # Restart only the Postgres service by filtering on the published port
           docker ps \
-            --filter "ancestor=postgres:16@sha256:21f6013073bc6b92830a2129570e2f5ec42a6c734b5a985a41e83aa58f54c3c1" \
+            --filter "publish=5432" \
             -q \
           | xargs docker restart
       - name: Set up Kafka
