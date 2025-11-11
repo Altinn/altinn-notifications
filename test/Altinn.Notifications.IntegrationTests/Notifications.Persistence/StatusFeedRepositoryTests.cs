@@ -16,7 +16,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 public class StatusFeedRepositoryTests : IAsyncLifetime
 {
     private const int _maxPageSize = 500;
-    private readonly string _creatorName = "testcase";
+    private readonly string _creatorName = "ttd";
 
     public async Task DisposeAsync()
     {
@@ -146,6 +146,47 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
 
         Assert.Contains("Failed to insert status feed entry", exception.Message);
         Assert.Contains(nonExistentOrderId.ToString(), exception.Message);
+    }
+
+    [Fact]
+    public async Task InsertStatusFeedEntry_ValidOrder_InsertsSuccessfully()
+    {
+        // Arrange
+        Guid orderAlternateId = await PostgreUtil.PopulateDBWithEmailOrderAndReturnId();
+
+        OrderStatus orderStatus = new()
+        {
+            Status = ProcessingLifecycle.Order_SendConditionNotMet,
+            ShipmentId = orderAlternateId,
+            LastUpdated = DateTime.UtcNow,
+            ShipmentType = "Notification",
+            SendersReference = Guid.NewGuid().ToString(),
+            Recipients = new List<Recipient>
+            {
+                new()
+                {
+                    LastUpdate = DateTime.UtcNow,
+                    Status = ProcessingLifecycle.Email_New,
+                    Destination = "test@example.com"
+                }
+            }.ToImmutableList()
+        };
+
+        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices([typeof(NpgsqlDataSource)])[0]!;
+        await using var connection = await dataSource.OpenConnectionAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+
+        // Act
+        await StatusFeedRepository.InsertStatusFeedEntry(orderStatus, connection, transaction);
+        await transaction.CommitAsync();
+
+        // Assert - verify status feed entry was created
+        // Note: We use SelectStatusFeedEntryCount instead of GetStatusFeed because GetStatusFeed
+        // filters out entries created within the last 2 seconds to avoid returning entries still being processed
+        int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(orderAlternateId);
+        Assert.Equal(1, statusFeedCount);
+
+        // Note: Cleanup is handled by DisposeAsync which deletes all status feed entries with creatorname = 'ttd'
     }
 
     private async Task InsertTestDataRowForStatusFeed(int orderId, string created, Guid shipmentId)
