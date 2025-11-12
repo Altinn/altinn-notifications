@@ -1608,13 +1608,11 @@ BEGIN
         FROM notifications.smsnotifications 
         WHERE _orderid = order_id 
         AND result IN ('New'::smsnotificationresulttype, 'Sending'::smsnotificationresulttype, 'Accepted'::smsnotificationresulttype)
-        FOR UPDATE
     ) OR EXISTS(
         SELECT 1
         FROM notifications.emailnotifications 
         WHERE _orderid = order_id 
         AND result IN ('New'::emailnotificationresulttype, 'Sending'::emailnotificationresulttype, 'Succeeded'::emailnotificationresulttype)
-        FOR UPDATE
     ) INTO has_pending_notifications;
 
     -- Step 6: Update order status based on notification states
