@@ -4,6 +4,7 @@ DECLARE
     order_id bigint;
     order_status orderprocessingstate;
     has_pending_notifications boolean := false;
+    new_status orderprocessingstate;
 BEGIN
     IF _alternateid IS NULL THEN
         RAISE EXCEPTION 'Notification ID cannot be null';
@@ -56,30 +57,29 @@ BEGIN
     END IF;
 
     -- Step 5: Check if any notifications are still pending
-    WITH pending_notifications AS (
-        SELECT 1 AS is_pending
+    SELECT EXISTS(
+        SELECT 1
         FROM notifications.smsnotifications 
         WHERE _orderid = order_id 
         AND result IN ('New'::smsnotificationresulttype, 'Sending'::smsnotificationresulttype, 'Accepted'::smsnotificationresulttype)
-
-        UNION ALL
-
-        SELECT 1 AS is_pending
+    ) OR EXISTS(
+        SELECT 1
         FROM notifications.emailnotifications 
         WHERE _orderid = order_id 
         AND result IN ('New'::emailnotificationresulttype, 'Sending'::emailnotificationresulttype, 'Succeeded'::emailnotificationresulttype)
-    )
-    SELECT EXISTS(SELECT 1 FROM pending_notifications) INTO has_pending_notifications;
+    ) INTO has_pending_notifications;
 
     -- Step 6: Update order status based on notification states
+    new_status := CASE 
+                      WHEN has_pending_notifications THEN 'Processed'
+                      ELSE 'Completed'
+                  END::orderprocessingstate;
+        
     UPDATE notifications.orders
-    SET processedstatus = CASE 
-                            WHEN has_pending_notifications THEN 'Processed'
-                            ELSE 'Completed'
-                          END::orderprocessingstate,
+    SET processedstatus = new_status,
         processed = CURRENT_TIMESTAMP
     WHERE _id = order_id
-    AND processedstatus IS DISTINCT FROM (CASE WHEN has_pending_notifications THEN 'Processed' ELSE 'Completed' END::orderprocessingstate);
+    AND processedstatus IS DISTINCT FROM new_status;
 
     RETURN NOT has_pending_notifications;
 END;
