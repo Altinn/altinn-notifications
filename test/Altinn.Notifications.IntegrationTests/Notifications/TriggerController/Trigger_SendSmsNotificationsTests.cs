@@ -6,7 +6,6 @@ using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Tests.Notifications.Mocks.Authentication;
-
 using AltinnCore.Authentication.JwtCookie;
 
 using Microsoft.AspNetCore.TestHost;
@@ -94,9 +93,7 @@ public class Trigger_SendSmsNotificationsTests : IClassFixture<IntegrationTestWe
         HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
 
         // Assert
-        string sql = $"select count(1) from notifications.smsnotifications where result = 'Sending' and alternateid='{notification.Id}'";
-        long actual = await PostgreUtil.RunSqlReturnOutput<long>(sql);
-
+        long actual = await IntegrationTestUtil.PollSendingNotificationStatus(notification);
         Assert.Equal(1L, actual);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
