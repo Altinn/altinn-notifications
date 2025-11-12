@@ -20,7 +20,7 @@ public abstract class KafkaConsumerBase<T> : BackgroundService
     private volatile bool _stopping;
     private readonly string _topicName;
     private readonly ILogger<T> _logger;
-    private const int _defaultMaxParallelism = 10;
+    private const int _defaultMaxParallelism = 6;
     private readonly SemaphoreSlim _globalConcurrency;
     private readonly IConsumer<string, string> _consumer;
     private readonly ConcurrentDictionary<Guid, Task> _inFlightTasks = new();
@@ -44,7 +44,8 @@ public abstract class KafkaConsumerBase<T> : BackgroundService
             EnableAutoCommit = false,
             EnableAutoOffsetStore = false,
             AutoOffsetReset = AutoOffsetReset.Earliest,
-            GroupId = $"{settings.Value.Consumer.GroupId}-{GetType().Name.ToLower()}"
+            GroupId = $"{settings.Value.Consumer.GroupId}-{GetType().Name.ToLower()}",
+            PartitionAssignmentStrategy = PartitionAssignmentStrategy.CooperativeSticky
         };
 
         _consumer = new ConsumerBuilder<string, string>(consumerConfig)
@@ -100,6 +101,33 @@ public abstract class KafkaConsumerBase<T> : BackgroundService
         await base.StopAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Safely commits the offset for a processed message.
+    /// </summary>
+    private void SafeCommit(ConsumeResult<string, string> result)
+    {
+        if (_stopping)
+        {
+            return;
+        }
+
+        try
+        {
+            _consumer.Commit(result);
+        }
+        catch (KafkaException ex)
+        {
+            if (ex.Error.Code is ErrorCode.RebalanceInProgress or ErrorCode.IllegalGeneration)
+            {
+                _logger.LogWarning("// {Class} // Commit skipped due to transient state: {Reason}", GetType().Name, ex.Error.Reason);
+            }
+            else
+            {
+                _logger.LogError(ex, "// {Class} // Commit failed unexpectedly", GetType().Name);
+            }
+        }
+    }
+
     /// <inheritdoc/>
     public override void Dispose()
     {
@@ -150,8 +178,7 @@ public abstract class KafkaConsumerBase<T> : BackgroundService
 
                             await processMessageFunc(message).ConfigureAwait(false);
 
-                            _consumer.Commit(consumeResult);
-                            _consumer.StoreOffset(consumeResult);
+                            SafeCommit(consumeResult);
                         }
                         catch (OperationCanceledException)
                         {
@@ -163,8 +190,7 @@ public abstract class KafkaConsumerBase<T> : BackgroundService
                             {
                                 await retryMessageFunc(consumeResult.Message.Value).ConfigureAwait(false);
 
-                                _consumer.Commit(consumeResult);
-                                _consumer.StoreOffset(consumeResult);
+                                SafeCommit(consumeResult);
                             }
                             catch (Exception retryEx)
                             {
@@ -179,7 +205,7 @@ public abstract class KafkaConsumerBase<T> : BackgroundService
                             _globalConcurrency.Release();
                             _inFlightTasks.TryRemove(processingTaskIdentifier, out _);
                         }
-                    }, 
+                    },
                     stoppingToken);
 
                 _inFlightTasks[processingTaskIdentifier] = processingTask;
