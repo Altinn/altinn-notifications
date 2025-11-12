@@ -45,6 +45,20 @@ public class EmailPublishBackgroundService : BackgroundService
         {
             try
             {
+                await _emailPublishTaskQueue.WaitAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error while waiting for work.");
+                continue;
+            }
+
+            try
+            {
                 await _emailNotificationService.SendNotifications(cancellationToken);
             }
             catch (OperationCanceledException)

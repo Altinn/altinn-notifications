@@ -79,33 +79,28 @@ public class EmailNotificationService : IEmailNotificationService
     {
         List<Email> newEmailNotifications;
 
-        do
+        cancellationToken.ThrowIfCancellationRequested();
+
+        newEmailNotifications = await _repository.GetNewNotificationsAsync(_emailPublishBatchSize, cancellationToken);
+        if (newEmailNotifications.Count == 0)
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            return;
+        }
 
-            newEmailNotifications = await _repository.GetNewNotificationsAsync(_emailPublishBatchSize, cancellationToken);
-            if (newEmailNotifications.Count == 0)
+        var produceTasks = newEmailNotifications
+            .Select(email =>
+                ProduceWithResultAsync(email, cancellationToken))
+            .ToArray();
+
+        var results = await Task.WhenAll(produceTasks).ConfigureAwait(false);
+
+        foreach (var r in results)
+        {
+            if (!r.Success)
             {
-                continue;
-            }
-
-            var produceTasks = newEmailNotifications
-                .Select(email =>
-                    ProduceWithResultAsync(email, cancellationToken))
-                .ToArray();
-
-            var results = await Task.WhenAll(produceTasks).ConfigureAwait(false);
-
-            foreach (var r in results)
-            {
-                if (!r.Success)
-                {
-                    // Reset to New so it will be picked up again in a future batch
-                    await _repository.UpdateSendStatus(r.Email.NotificationId, EmailNotificationResultType.New);
-                }
+                await _repository.UpdateSendStatus(r.Email.NotificationId, EmailNotificationResultType.New);
             }
         }
-        while (newEmailNotifications.Count > 0);
     }
 
     /// <summary>
