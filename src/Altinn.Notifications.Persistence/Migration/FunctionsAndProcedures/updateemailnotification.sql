@@ -53,71 +53,53 @@ LANGUAGE plpgsql
 AS $$
 DECLARE
     v_alternateid uuid;
-    v_expirytime timestamptz;
-    v_found boolean;
+    v_was_updated boolean := false;
+    v_is_expired boolean := false;
 BEGIN
-    -- Initialize flags
-    was_updated := false;
-    is_expired := false;
+    -- Early return if no identifier provided
+    IF _alternateid IS NULL AND _operationid IS NULL THEN
+        RETURN QUERY SELECT NULL::uuid, false, false;
+        RETURN;
+    END IF;
 
-    -- Determine which identifier to use
-    IF _alternateid IS NOT NULL THEN
-        -- Lock the row and fetch expiry time
-        SELECT n.alternateid, n.expirytime INTO v_alternateid, v_expirytime
-        FROM notifications.emailnotifications n
-        WHERE n.alternateid = _alternateid
-        FOR UPDATE;
+    -- Single UPDATE with conditional logic based on expiry time
+    WITH update_attempt AS (
+        UPDATE notifications.emailnotifications
+        SET
+            result = CASE
+                WHEN expirytime > now() THEN _result::emailnotificationresulttype
+                ELSE result
+            END,
+            resulttime = CASE
+                WHEN expirytime > now() THEN now()
+                ELSE resulttime
+            END,
+            operationid = CASE
+                WHEN expirytime > now() AND _alternateid IS NOT NULL
+                THEN COALESCE(_operationid, operationid)
+                ELSE operationid
+            END
+        WHERE
+            (_alternateid IS NOT NULL AND alternateid = _alternateid) OR
+            (_operationid IS NOT NULL AND operationid = _operationid)
+        RETURNING
+            emailnotifications.alternateid,
+            expirytime <= now() AS is_expired,
+            expirytime > now() AS was_updated
+    )
+    SELECT
+        ua.alternateid,
+        ua.was_updated,
+        ua.is_expired
+    INTO v_alternateid, v_was_updated, v_is_expired
+    FROM update_attempt ua;
 
-        v_found := FOUND;
-
-    ELSIF _operationid IS NOT NULL THEN
-        -- Lock the row and fetch expiry time by operation ID
-        SELECT n.alternateid, n.expirytime INTO v_alternateid, v_expirytime
-        FROM notifications.emailnotifications n
-        WHERE n.operationid = _operationid
-        FOR UPDATE;
-
-        v_found := FOUND;
+    -- Return results (handle not found case)
+    IF v_alternateid IS NULL THEN
+        RETURN QUERY SELECT NULL::uuid, false, false;
     ELSE
-        -- Neither identifier provided
-        RETURN QUERY SELECT NULL::uuid, false, false;
-        RETURN;
+        RETURN QUERY SELECT v_alternateid, v_was_updated, v_is_expired;
     END IF;
-
-    -- Check if notification was found
-    IF NOT v_found THEN
-        -- Not found
-        RETURN QUERY SELECT NULL::uuid, false, false;
-        RETURN;
-    END IF;
-
-    -- Check if notification has expired
-    IF v_expirytime <= now() THEN
-        -- Expired - don't update
-        RETURN QUERY SELECT v_alternateid, false, true;
-        RETURN;
-    END IF;
-
-    -- Not expired - proceed with update
-    IF _alternateid IS NOT NULL THEN
-        UPDATE notifications.emailnotifications
-        SET result = _result::emailnotificationresulttype,
-            resulttime = now(),
-            operationid = COALESCE(_operationid, operationid)
-        WHERE emailnotifications.alternateid = _alternateid;
-
-        was_updated := true;
-
-    ELSIF _operationid IS NOT NULL THEN
-        UPDATE notifications.emailnotifications
-        SET result = _result::emailnotificationresulttype,
-            resulttime = now()
-        WHERE emailnotifications.operationid = _operationid;
-
-        was_updated := true;
-    END IF;
-
-    RETURN QUERY SELECT v_alternateid, was_updated, is_expired;
 END;
 $$;
 
@@ -132,9 +114,9 @@ Return values:
 - is_expired: true if the notification has passed its expiry time (expirytime <= now())
 
 Behavior:
-- Uses SELECT ... FOR UPDATE to lock the row and prevent race conditions
-- Checks expirytime <= now() to determine if notification has expired
-- If expired: returns (alternateid, false, true) without updating
+- Uses a single UPDATE statement with conditional CASE logic for efficiency
+- Checks expirytime > now() to conditionally update fields only when not expired
+- If expired: returns (alternateid, false, true) without updating the notification status
 - If not found: returns (NULL, false, false)
 - If found and not expired: performs update and returns (alternateid, true, false)
 
