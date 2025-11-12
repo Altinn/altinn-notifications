@@ -28,7 +28,7 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
     private const string _claimDaytimeSmsBatchSql = "select * from notifications.claim_daytime_sms_batch(_batchsize := @batchsize)";
     private const string _insertNewSmsNotificationSql = "call notifications.insertsmsnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _customizedbody, _result, _smscount, _resulttime, _expirytime)
 
-    private const string _updateSmsNotificationSql = "select * from notifications.updatesmsnotification($1, $2, $3)"; // (_result, _gatewayreference, _alternateid)
+    private const string _updateSmsNotificationSql = "select * from notifications.updatesmsnotification_v2($1, $2, $3)"; // (_result, _gatewayreference, _alternateid)
 
     /// <inheritdoc/>
     protected override string SourceIdentifier => _smsSourceIdentifier;

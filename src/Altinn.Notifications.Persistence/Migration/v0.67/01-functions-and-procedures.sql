@@ -624,7 +624,48 @@ Arguments:
 
 
 -- updateemailnotification.sql:
+-- Keep the old function for backwards compatibility
 CREATE OR REPLACE FUNCTION notifications.updateemailnotification(
+    _result text,
+    _operationid text,
+    _alternateid uuid
+)
+RETURNS uuid
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_alternateid uuid;
+BEGIN
+    IF _alternateid IS NOT NULL THEN
+        UPDATE notifications.emailnotifications
+        SET result = _result::emailnotificationresulttype,
+            resulttime = now(),
+            operationid = COALESCE(_operationid, operationid)
+        WHERE alternateid = _alternateid
+        RETURNING alternateid INTO v_alternateid;
+
+
+    ELSIF _operationid IS NOT NULL THEN
+        UPDATE notifications.emailnotifications
+        SET result = _result::emailnotificationresulttype,
+            resulttime = now()
+        WHERE operationid = _operationid
+        RETURNING alternateid INTO v_alternateid;
+    END IF;
+
+    RETURN v_alternateid; -- null => not found
+END;
+$$;
+
+COMMENT ON FUNCTION notifications.updateemailnotification IS
+'Updates an email notification''s result and resulttime by alternateid or by operationid.
+Precedence: If both _alternateid and _operationid are non-null, only alternateid is used for lookup; _operationid may still populate the row via COALESCE.
+Null return: NULL when neither identifier is provided OR no matching row exists (no update performed).
+Uniqueness assumptions: alternateid is unique (primary key); operationid uniquely identifies at most one row when non-null.
+Overwrite policy: result and resulttime are always overwritten (no transition guarding); operationid is only set when a non-null _operationid is supplied (existing value preserved when _operationid is null).';
+
+-- New v2 function with expiry time validation
+CREATE OR REPLACE FUNCTION notifications.updateemailnotification_v2(
     _result text,
     _operationid text,
     _alternateid uuid
@@ -706,7 +747,7 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION notifications.updateemailnotification IS
+COMMENT ON FUNCTION notifications.updateemailnotification_v2 IS
 'Updates an email notification''s result and resulttime by alternateid or by operationid, with expiry time validation.
 
 Precedence: If both _alternateid and _operationid are non-null, only alternateid is used for lookup; _operationid may still populate the row via COALESCE.
@@ -744,22 +785,9 @@ BEGIN
     INTO v_limitlog_id, latest_email_timeout
     FROM notifications.resourcelimitlog
     WHERE id = (SELECT MAX(id) FROM notifications.resourcelimitlog)
-    FOR UPDATE SKIP LOCKED;
-    
-    -- Check if lock is taken
-    IF v_limitlog_id IS NULL THEN
-        RETURN QUERY 
-        SELECT NULL::uuid AS alternateid, 
-               NULL::text AS subject, 
-               NULL::text AS body, 
-               NULL::text AS fromaddress, 
-               NULL::text AS toaddress, 
-               NULL::text AS contenttype 
-        WHERE FALSE;
-        RETURN;
-    END IF;
+    FOR UPDATE;
 
-    -- Check if there's an active email timeout
+    -- Check for active email timeout.
     IF latest_email_timeout IS NOT NULL AND latest_email_timeout > now() THEN
         RETURN QUERY 
         SELECT NULL::uuid AS alternateid, 
@@ -770,22 +798,21 @@ BEGIN
                NULL::text AS contenttype 
         WHERE FALSE;
         RETURN;
+    ELSE
+        UPDATE notifications.resourcelimitlog
+        SET emaillimittimeout = NULL
+        WHERE id = v_limitlog_id;
     END IF;
-
-    -- Clear expired timeout
-    UPDATE notifications.resourcelimitlog
-    SET emaillimittimeout = NULL
-    WHERE id = v_limitlog_id
-        AND emaillimittimeout IS NOT NULL 
-        AND emaillimittimeout <= now();
 
     RETURN QUERY
     WITH claimed_new_rows AS (
         SELECT 
-            email._id, 
-            email._orderid,
+            email._id,
             email.alternateid,
-            email.toaddress
+            email.customizedsubject,
+            email.customizedbody,
+            email.toaddress,
+            email._orderid
         FROM notifications.emailnotifications email
         WHERE email.result = 'New'::emailnotificationresulttype
             AND email.expirytime >= now()
@@ -801,14 +828,16 @@ BEGIN
         WHERE email._id = claimed._id
         RETURNING
             claimed.alternateid,
-            claimed._orderid,
-            claimed.toaddress
+            claimed.customizedsubject,
+            claimed.customizedbody,
+            claimed.toaddress,
+            claimed._orderid
     )
     -- Join with large text data AFTER releasing locks
     SELECT 
         updated.alternateid,
-        txt.subject,
-        txt.body,
+        COALESCE(NULLIF(updated.customizedsubject, ''), txt.subject) AS subject,  
+        COALESCE(NULLIF(updated.customizedbody, ''), txt.body) AS body,
         txt.fromaddress,
         updated.toaddress,
         txt.contenttype
@@ -1711,7 +1740,7 @@ Returns a set of unique alternateid for the updated records.';
 
 
 -- updatesmsnotification.sql:
-CREATE OR REPLACE FUNCTION notifications.updatesmsnotification(
+CREATE OR REPLACE FUNCTION notifications.updatesmsnotification_v2(
     _result text,
     _gatewayreference text,
     _alternateid uuid
@@ -1793,7 +1822,7 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION notifications.updatesmsnotification IS
+COMMENT ON FUNCTION notifications.updatesmsnotification_v2 IS
 'Updates an SMS notification''s result and resulttime by alternateid or by gatewayreference, with expiry time validation.
 
 Precedence: If both _alternateid and _gatewayreference are non-null, only alternateid is used for lookup; _gatewayreference may still populate the row via COALESCE.

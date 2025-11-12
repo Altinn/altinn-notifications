@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION notifications.updatesmsnotification(
+CREATE OR REPLACE FUNCTION notifications.updatesmsnotification_v2(
     _result text,
     _gatewayreference text,
     _alternateid uuid
@@ -80,7 +80,7 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION notifications.updatesmsnotification IS
+COMMENT ON FUNCTION notifications.updatesmsnotification_v2 IS
 'Updates an SMS notification''s result and resulttime by alternateid or by gatewayreference, with expiry time validation.
 
 Precedence: If both _alternateid and _gatewayreference are non-null, only alternateid is used for lookup; _gatewayreference may still populate the row via COALESCE.
