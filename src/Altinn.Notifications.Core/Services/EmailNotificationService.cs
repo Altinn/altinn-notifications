@@ -78,23 +78,44 @@ public class EmailNotificationService : IEmailNotificationService
     public async Task SendNotifications(CancellationToken cancellationToken)
     {
         List<Email> newEmailNotifications;
-        
+
         do
         {
             cancellationToken.ThrowIfCancellationRequested();
 
             newEmailNotifications = await _repository.GetNewNotificationsAsync(_emailPublishBatchSize, cancellationToken);
-
-            foreach (var email in newEmailNotifications)
+            if (newEmailNotifications.Count == 0)
             {
-                bool success = await _producer.ProduceAsync(_emailQueueTopicName, email.Serialize());
-                if (!success)
+                continue;
+            }
+
+            var produceTasks = newEmailNotifications
+                .Select(email =>
+                    ProduceWithResultAsync(email, cancellationToken))
+                .ToArray();
+
+            var results = await Task.WhenAll(produceTasks).ConfigureAwait(false);
+
+            foreach (var r in results)
+            {
+                if (!r.Success)
                 {
-                    await _repository.UpdateSendStatus(email.NotificationId, EmailNotificationResultType.New);
+                    // Reset to New so it will be picked up again in a future batch
+                    await _repository.UpdateSendStatus(r.Email.NotificationId, EmailNotificationResultType.New);
                 }
             }
         }
         while (newEmailNotifications.Count > 0);
+    }
+
+    /// <summary>
+    /// Helper that produces a single email notification and returns success together with the original email.
+    /// Exceptions inside the producer are already caught and mapped to 'false' by <see cref="IKafkaProducer.ProduceAsync(string,string,System.Threading.CancellationToken)"/>.
+    /// </summary>
+    private async Task<(Email Email, bool Success)> ProduceWithResultAsync(Email email, CancellationToken ct)
+    {
+        var success = await _producer.ProduceAsync(_emailQueueTopicName, email.Serialize(), ct).ConfigureAwait(false);
+        return (email, success);
     }
 
     /// <inheritdoc/>
