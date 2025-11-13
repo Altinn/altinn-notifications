@@ -663,7 +663,7 @@ Null return: NULL when neither identifier is provided OR no matching row exists 
 Uniqueness assumptions: alternateid is unique (primary key); operationid uniquely identifies at most one row when non-null.
 Overwrite policy: result and resulttime are always overwritten (no transition guarding); operationid is only set when a non-null _operationid is supplied (existing value preserved when _operationid is null).';
 
--- New v2 function with expiry time validation
+-- v2 introduces expiry time validation and conditional updates
 CREATE OR REPLACE FUNCTION notifications.updateemailnotification_v2(
     _result text,
     _operationid text,
@@ -676,73 +676,48 @@ RETURNS TABLE (
 )
 LANGUAGE plpgsql
 AS $$
-DECLARE
-    v_alternateid uuid;
-    v_expirytime timestamptz;
-    v_found boolean;
 BEGIN
-    -- Initialize flags
-    was_updated := false;
-    is_expired := false;
-
-    -- Determine which identifier to use
-    IF _alternateid IS NOT NULL THEN
-        -- Lock the row and fetch expiry time
-        SELECT n.alternateid, n.expirytime INTO v_alternateid, v_expirytime
-        FROM notifications.emailnotifications n
-        WHERE n.alternateid = _alternateid
-        FOR UPDATE;
-
-        v_found := FOUND;
-
-    ELSIF _operationid IS NOT NULL THEN
-        -- Lock the row and fetch expiry time by operation ID
-        SELECT n.alternateid, n.expirytime INTO v_alternateid, v_expirytime
-        FROM notifications.emailnotifications n
-        WHERE n.operationid = _operationid
-        FOR UPDATE;
-
-        v_found := FOUND;
-    ELSE
-        -- Neither identifier provided
+    -- Handle case where neither identifier is provided
+    IF _alternateid IS NULL AND _operationid IS NULL THEN
         RETURN QUERY SELECT NULL::uuid, false, false;
         RETURN;
     END IF;
 
-    -- Check if notification was found
-    IF NOT v_found THEN
-        -- Not found
+    -- Single UPDATE with conditional logic based on expiry time
+    RETURN QUERY
+    UPDATE notifications.emailnotifications
+    SET
+        -- Update result only if not expired, otherwise keep existing value
+        result = CASE
+            WHEN expirytime > now() THEN _result::emailnotificationresulttype
+            ELSE result 
+        END,
+        -- Update resulttime only if not expired, otherwise keep existing value
+        resulttime = CASE
+            WHEN expirytime > now() THEN now()
+            ELSE resulttime
+        END,
+        -- Update operationid only if not expired and alternateid was provided
+        operationid = CASE
+            WHEN expirytime > now() AND _alternateid IS NOT NULL
+            THEN COALESCE(_operationid, operationid) 
+            ELSE operationid 
+        END
+    WHERE
+        -- Match by alternateid (if provided) OR by operationid (if provided)
+        (_alternateid IS NOT NULL AND emailnotifications.alternateid = _alternateid) OR
+        (_operationid IS NOT NULL AND emailnotifications.operationid = _operationid)
+    RETURNING
+        emailnotifications.alternateid,
+        -- was_updated is true only if the notification was not expired at UPDATE time
+        (expirytime > now()) AS was_updated,
+        -- is_expired is true if the notification was expired at UPDATE time
+        (expirytime <= now()) AS is_expired;
+
+    -- If RETURNING didn't return any rows, the notification was not found
+    IF NOT FOUND THEN
         RETURN QUERY SELECT NULL::uuid, false, false;
-        RETURN;
     END IF;
-
-    -- Check if notification has expired
-    IF v_expirytime <= now() THEN
-        -- Expired - don't update
-        RETURN QUERY SELECT v_alternateid, false, true;
-        RETURN;
-    END IF;
-
-    -- Not expired - proceed with update
-    IF _alternateid IS NOT NULL THEN
-        UPDATE notifications.emailnotifications
-        SET result = _result::emailnotificationresulttype,
-            resulttime = now(),
-            operationid = COALESCE(_operationid, operationid)
-        WHERE emailnotifications.alternateid = _alternateid;
-
-        was_updated := true;
-
-    ELSIF _operationid IS NOT NULL THEN
-        UPDATE notifications.emailnotifications
-        SET result = _result::emailnotificationresulttype,
-            resulttime = now()
-        WHERE emailnotifications.operationid = _operationid;
-
-        was_updated := true;
-    END IF;
-
-    RETURN QUERY SELECT v_alternateid, was_updated, is_expired;
 END;
 $$;
 
@@ -753,18 +728,18 @@ Precedence: If both _alternateid and _operationid are non-null, only alternateid
 
 Return values:
 - alternateid: The UUID of the notification (NULL if not found)
-- was_updated: true if the update was performed, false otherwise
+- was_updated: true if values were modified (notification not expired), false otherwise
 - is_expired: true if the notification has passed its expiry time (expirytime <= now())
 
 Behavior:
-- Uses SELECT ... FOR UPDATE to lock the row and prevent race conditions
-- Checks expirytime <= now() to determine if notification has expired
-- If expired: returns (alternateid, false, true) without updating
+- Single UPDATE operation with implicit row-level locking
+- CASE expressions conditionally modify fields only when expirytime > now()
+- If expired: UPDATE executes but keeps existing values, returns (alternateid, false, true)
 - If not found: returns (NULL, false, false)
-- If found and not expired: performs update and returns (alternateid, true, false)
+- If found and not expired: modifies values and returns (alternateid, true, false)
 
 Uniqueness assumptions: alternateid is unique (primary key); operationid uniquely identifies at most one row when non-null.
-Overwrite policy: result and resulttime are always overwritten when not expired; operationid is only set when a non-null _operationid is supplied (existing value preserved when _operationid is null).';
+Overwrite policy: result and resulttime are conditionally overwritten when not expired; operationid is only set when a non-null _operationid is supplied and notification is not expired.';
 
 -- claimemailbatch.sql:
 CREATE OR REPLACE FUNCTION notifications.claim_email_batch(
@@ -1300,6 +1275,109 @@ The reminders JSON array contains objects with the following structure:
 - SendersReference: The sender''s reference for the reminder notification (may be null).';
 
 
+-- updatesmsnotification_backup.sql:
+CREATE OR REPLACE FUNCTION notifications.updatesmsnotification_v2(
+    _result text,
+    _gatewayreference text,
+    _alternateid uuid
+)
+RETURNS TABLE (
+    alternateid uuid,
+    was_updated boolean,
+    is_expired boolean
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_alternateid uuid;
+    v_expirytime timestamptz;
+    v_found boolean;
+BEGIN
+    -- Initialize flags
+    was_updated := false;
+    is_expired := false;
+
+    -- Determine which identifier to use
+    IF _alternateid IS NOT NULL THEN
+        -- Lock the row and fetch expiry time
+        SELECT n.alternateid, n.expirytime INTO v_alternateid, v_expirytime
+        FROM notifications.smsnotifications n
+        WHERE n.alternateid = _alternateid
+        FOR UPDATE;
+
+        v_found := FOUND;
+
+    ELSIF _gatewayreference IS NOT NULL THEN
+        -- Lock the row and fetch expiry time by gateway reference
+        SELECT n.alternateid, n.expirytime INTO v_alternateid, v_expirytime
+        FROM notifications.smsnotifications n
+        WHERE n.gatewayreference = _gatewayreference
+        FOR UPDATE;
+
+        v_found := FOUND;
+    ELSE
+        -- Neither identifier provided
+        RETURN QUERY SELECT NULL::uuid, false, false;
+        RETURN;
+    END IF;
+
+    -- Check if notification was found
+    IF NOT v_found THEN
+        -- Not found
+        RETURN QUERY SELECT NULL::uuid, false, false;
+        RETURN;
+    END IF;
+
+    -- Check if notification has expired
+    IF v_expirytime <= now() THEN
+        -- Expired - don't update
+        RETURN QUERY SELECT v_alternateid, false, true;
+        RETURN;
+    END IF;
+
+    -- Not expired - proceed with update
+    IF _alternateid IS NOT NULL THEN
+        UPDATE notifications.smsnotifications
+        SET result = _result::smsnotificationresulttype,
+            resulttime = now(),
+            gatewayreference = COALESCE(_gatewayreference, gatewayreference)
+        WHERE smsnotifications.alternateid = _alternateid;
+
+        was_updated := true;
+
+    ELSIF _gatewayreference IS NOT NULL THEN
+        UPDATE notifications.smsnotifications
+        SET result = _result::smsnotificationresulttype,
+            resulttime = now()
+        WHERE smsnotifications.gatewayreference = _gatewayreference;
+
+        was_updated := true;
+    END IF;
+
+    RETURN QUERY SELECT v_alternateid, was_updated, is_expired;
+END;
+$$;
+
+COMMENT ON FUNCTION notifications.updatesmsnotification_v2 IS
+'Updates an SMS notification''s result and resulttime by alternateid or by gatewayreference, with expiry time validation.
+
+Precedence: If both _alternateid and _gatewayreference are non-null, only alternateid is used for lookup; _gatewayreference may still populate the row via COALESCE.
+
+Return values:
+- alternateid: The UUID of the notification (NULL if not found)
+- was_updated: true if the update was performed, false otherwise
+- is_expired: true if the notification has passed its expiry time (expirytime <= now())
+
+Behavior:
+- Uses SELECT ... FOR UPDATE to lock the row and prevent race conditions
+- Checks expirytime <= now() to determine if notification has expired
+- If expired: returns (alternateid, false, true) without updating
+- If not found: returns (NULL, false, false)
+- If found and not expired: performs update and returns (alternateid, true, false)
+
+Uniqueness assumptions: alternateid is unique (primary key); gatewayreference uniquely identifies at most one row when non-null.
+Overwrite policy: result and resulttime are always overwritten when not expired; gatewayreference is only set when a non-null _gatewayreference is supplied (existing value preserved when _gatewayreference is null).';
+
 -- getmetrics.sql:
 CREATE OR REPLACE FUNCTION notifications.getmetrics(
     month_input int,
@@ -1547,6 +1625,149 @@ END;
 $BODY$;
 
 
+-- updateemailnotification_backup.sql:
+CREATE OR REPLACE FUNCTION notifications.updateemailnotification(
+    _result text,
+    _operationid text,
+    _alternateid uuid
+)
+RETURNS uuid
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_alternateid uuid;
+BEGIN
+    IF _alternateid IS NOT NULL THEN
+        UPDATE notifications.emailnotifications
+        SET result = _result::emailnotificationresulttype,
+            resulttime = now(),
+            operationid = COALESCE(_operationid, operationid)
+        WHERE alternateid = _alternateid
+        RETURNING alternateid INTO v_alternateid;
+
+
+    ELSIF _operationid IS NOT NULL THEN
+        UPDATE notifications.emailnotifications
+        SET result = _result::emailnotificationresulttype,
+            resulttime = now()
+        WHERE operationid = _operationid
+        RETURNING alternateid INTO v_alternateid;
+    END IF;
+
+    RETURN v_alternateid; -- null => not found
+END;
+$$;
+
+COMMENT ON FUNCTION notifications.updateemailnotification IS
+'Updates an email notification''s result and resulttime by alternateid or by operationid.
+Precedence: If both _alternateid and _operationid are non-null, only alternateid is used for lookup; _operationid may still populate the row via COALESCE.
+Null return: NULL when neither identifier is provided OR no matching row exists (no update performed).
+Uniqueness assumptions: alternateid is unique (primary key); operationid uniquely identifies at most one row when non-null.
+Overwrite policy: result and resulttime are always overwritten (no transition guarding); operationid is only set when a non-null _operationid is supplied (existing value preserved when _operationid is null).';
+
+-- New v2 function with expiry time validation
+CREATE OR REPLACE FUNCTION notifications.updateemailnotification_v2(
+    _result text,
+    _operationid text,
+    _alternateid uuid
+)
+RETURNS TABLE (
+    alternateid uuid,
+    was_updated boolean,
+    is_expired boolean
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_alternateid uuid;
+    v_expirytime timestamptz;
+    v_found boolean;
+BEGIN
+    -- Initialize flags
+    was_updated := false;
+    is_expired := false;
+
+    -- Determine which identifier to use
+    IF _alternateid IS NOT NULL THEN
+        -- Lock the row and fetch expiry time
+        SELECT n.alternateid, n.expirytime INTO v_alternateid, v_expirytime
+        FROM notifications.emailnotifications n
+        WHERE n.alternateid = _alternateid
+        FOR UPDATE;
+
+        v_found := FOUND;
+
+    ELSIF _operationid IS NOT NULL THEN
+        -- Lock the row and fetch expiry time by operation ID
+        SELECT n.alternateid, n.expirytime INTO v_alternateid, v_expirytime
+        FROM notifications.emailnotifications n
+        WHERE n.operationid = _operationid
+        FOR UPDATE;
+
+        v_found := FOUND;
+    ELSE
+        -- Neither identifier provided
+        RETURN QUERY SELECT NULL::uuid, false, false;
+        RETURN;
+    END IF;
+
+    -- Check if notification was found
+    IF NOT v_found THEN
+        -- Not found
+        RETURN QUERY SELECT NULL::uuid, false, false;
+        RETURN;
+    END IF;
+
+    -- Check if notification has expired
+    IF v_expirytime <= now() THEN
+        -- Expired - don't update
+        RETURN QUERY SELECT v_alternateid, false, true;
+        RETURN;
+    END IF;
+
+    -- Not expired - proceed with update
+    IF _alternateid IS NOT NULL THEN
+        UPDATE notifications.emailnotifications
+        SET result = _result::emailnotificationresulttype,
+            resulttime = now(),
+            operationid = COALESCE(_operationid, operationid)
+        WHERE emailnotifications.alternateid = _alternateid;
+
+        was_updated := true;
+
+    ELSIF _operationid IS NOT NULL THEN
+        UPDATE notifications.emailnotifications
+        SET result = _result::emailnotificationresulttype,
+            resulttime = now()
+        WHERE emailnotifications.operationid = _operationid;
+
+        was_updated := true;
+    END IF;
+
+    RETURN QUERY SELECT v_alternateid, was_updated, is_expired;
+END;
+$$;
+
+COMMENT ON FUNCTION notifications.updateemailnotification_v2 IS
+'Updates an email notification''s result and resulttime by alternateid or by operationid, with expiry time validation.
+
+Precedence: If both _alternateid and _operationid are non-null, only alternateid is used for lookup; _operationid may still populate the row via COALESCE.
+
+Return values:
+- alternateid: The UUID of the notification (NULL if not found)
+- was_updated: true if the update was performed, false otherwise
+- is_expired: true if the notification has passed its expiry time (expirytime <= now())
+
+Behavior:
+- Uses SELECT ... FOR UPDATE to lock the row and prevent race conditions
+- Checks expirytime <= now() to determine if notification has expired
+- If expired: returns (alternateid, false, true) without updating
+- If not found: returns (NULL, false, false)
+- If found and not expired: performs update and returns (alternateid, true, false)
+
+Uniqueness assumptions: alternateid is unique (primary key); operationid uniquely identifies at most one row when non-null.
+Overwrite policy: result and resulttime are always overwritten when not expired; operationid is only set when a non-null _operationid is supplied (existing value preserved when _operationid is null).';
+
 -- getinstantordertracking.sql:
 CREATE OR REPLACE FUNCTION notifications.get_instant_order_tracking
 (
@@ -1739,6 +1960,7 @@ Returns a set of unique alternateid for the updated records.';
 
 
 -- updatesmsnotification.sql:
+-- v2 introduces expiry time validation and conditional updates
 CREATE OR REPLACE FUNCTION notifications.updatesmsnotification_v2(
     _result text,
     _gatewayreference text,
@@ -1751,73 +1973,48 @@ RETURNS TABLE (
 )
 LANGUAGE plpgsql
 AS $$
-DECLARE
-    v_alternateid uuid;
-    v_expirytime timestamptz;
-    v_found boolean;
 BEGIN
-    -- Initialize flags
-    was_updated := false;
-    is_expired := false;
-
-    -- Determine which identifier to use
-    IF _alternateid IS NOT NULL THEN
-        -- Lock the row and fetch expiry time
-        SELECT n.alternateid, n.expirytime INTO v_alternateid, v_expirytime
-        FROM notifications.smsnotifications n
-        WHERE n.alternateid = _alternateid
-        FOR UPDATE;
-
-        v_found := FOUND;
-
-    ELSIF _gatewayreference IS NOT NULL THEN
-        -- Lock the row and fetch expiry time by gateway reference
-        SELECT n.alternateid, n.expirytime INTO v_alternateid, v_expirytime
-        FROM notifications.smsnotifications n
-        WHERE n.gatewayreference = _gatewayreference
-        FOR UPDATE;
-
-        v_found := FOUND;
-    ELSE
-        -- Neither identifier provided
+    -- Handle case where neither identifier is provided
+    IF _alternateid IS NULL AND _gatewayreference IS NULL THEN
         RETURN QUERY SELECT NULL::uuid, false, false;
         RETURN;
     END IF;
 
-    -- Check if notification was found
-    IF NOT v_found THEN
-        -- Not found
+    -- Single UPDATE with conditional logic based on expiry time
+    RETURN QUERY
+    UPDATE notifications.smsnotifications
+    SET
+        -- Update result only if not expired, otherwise keep existing value
+        result = CASE
+            WHEN expirytime > now() THEN _result::smsnotificationresulttype
+            ELSE result
+        END,
+        -- Update resulttime only if not expired, otherwise keep existing value
+        resulttime = CASE
+            WHEN expirytime > now() THEN now()
+            ELSE resulttime 
+        END,
+        -- Update gatewayreference only if not expired and alternateid was provided
+        gatewayreference = CASE
+            WHEN expirytime > now() AND _alternateid IS NOT NULL
+            THEN COALESCE(_gatewayreference, gatewayreference)
+            ELSE gatewayreference 
+        END
+    WHERE
+        -- Match by alternateid (if provided) OR by gatewayreference (if provided)
+        (_alternateid IS NOT NULL AND smsnotifications.alternateid = _alternateid) OR
+        (_gatewayreference IS NOT NULL AND smsnotifications.gatewayreference = _gatewayreference)
+    RETURNING
+        smsnotifications.alternateid,
+        -- was_updated is true only if the notification was not expired at UPDATE time
+        (expirytime > now()) AS was_updated,
+        -- is_expired is true if the notification was expired at UPDATE time
+        (expirytime <= now()) AS is_expired;
+
+    -- If RETURNING didn't return any rows, the notification was not found
+    IF NOT FOUND THEN
         RETURN QUERY SELECT NULL::uuid, false, false;
-        RETURN;
     END IF;
-
-    -- Check if notification has expired
-    IF v_expirytime <= now() THEN
-        -- Expired - don't update
-        RETURN QUERY SELECT v_alternateid, false, true;
-        RETURN;
-    END IF;
-
-    -- Not expired - proceed with update
-    IF _alternateid IS NOT NULL THEN
-        UPDATE notifications.smsnotifications
-        SET result = _result::smsnotificationresulttype,
-            resulttime = now(),
-            gatewayreference = COALESCE(_gatewayreference, gatewayreference)
-        WHERE smsnotifications.alternateid = _alternateid;
-
-        was_updated := true;
-
-    ELSIF _gatewayreference IS NOT NULL THEN
-        UPDATE notifications.smsnotifications
-        SET result = _result::smsnotificationresulttype,
-            resulttime = now()
-        WHERE smsnotifications.gatewayreference = _gatewayreference;
-
-        was_updated := true;
-    END IF;
-
-    RETURN QUERY SELECT v_alternateid, was_updated, is_expired;
 END;
 $$;
 
@@ -1828,18 +2025,18 @@ Precedence: If both _alternateid and _gatewayreference are non-null, only altern
 
 Return values:
 - alternateid: The UUID of the notification (NULL if not found)
-- was_updated: true if the update was performed, false otherwise
+- was_updated: true if values were modified (notification not expired), false otherwise
 - is_expired: true if the notification has passed its expiry time (expirytime <= now())
 
 Behavior:
-- Uses SELECT ... FOR UPDATE to lock the row and prevent race conditions
-- Checks expirytime <= now() to determine if notification has expired
-- If expired: returns (alternateid, false, true) without updating
+- Single UPDATE operation with implicit row-level locking
+- CASE expressions conditionally modify fields only when expirytime > now()
+- If expired: UPDATE executes but keeps existing values, returns (alternateid, false, true)
 - If not found: returns (NULL, false, false)
-- If found and not expired: performs update and returns (alternateid, true, false)
+- If found and not expired: modifies values and returns (alternateid, true, false)
 
 Uniqueness assumptions: alternateid is unique (primary key); gatewayreference uniquely identifies at most one row when non-null.
-Overwrite policy: result and resulttime are always overwritten when not expired; gatewayreference is only set when a non-null _gatewayreference is supplied (existing value preserved when _gatewayreference is null).';
+Overwrite policy: result and resulttime are conditionally overwritten when not expired; gatewayreference is only set when a non-null _gatewayreference is supplied and notification is not expired.';
 
 -- insertsmsnotification.sql:
 CREATE OR REPLACE PROCEDURE notifications.insertsmsnotification(
