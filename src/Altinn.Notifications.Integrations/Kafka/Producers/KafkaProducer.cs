@@ -92,6 +92,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
         }
 
         var successfullMessagesCount = 0;
+        var publishStartTime = DateTime.UtcNow;
         var failedMessages = new List<string>();
         for (int i = 0; i < messagesToPublish.Count; i += _maxBatchSize)
         {
@@ -139,13 +140,17 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             }
         }
 
+        var publishEndTime = DateTime.UtcNow;
+        var publishingDurationSeconds = (publishEndTime - publishStartTime).TotalSeconds;
+
         _logger.LogInformation(
-            "// KafkaProducer // ProduceBatchAsync // Batch publishing completed for topic {Topic}. Total messages: {TotalMessages}, Successfully published: {SuccessCount}, Failed: {FailedCount}, Success rate: {SuccessRate:P2}",
+            "// KafkaProducer // ProduceBatchAsync // Batch publishing completed for topic {Topic}. Total messages: {TotalMessages}, Successfully published: {SuccessCount}, Failed: {FailedCount}, Success rate: {SuccessRate:P2}, Publishing duration: {PublishingDurationSeconds:F2} seconds",
             topic,
             messagesToPublish.Count,
             successfullMessagesCount,
             failedMessages.Count,
-            successfullMessagesCount / messagesToPublish.Count);
+            successfullMessagesCount / messagesToPublish.Count,
+            publishingDurationSeconds);
 
         return failedMessages;
     }
