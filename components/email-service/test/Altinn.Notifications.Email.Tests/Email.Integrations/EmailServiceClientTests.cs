@@ -71,6 +71,7 @@ namespace Altinn.Notifications.Email.Tests.Email.Integrations
         [InlineData(503, EmailSendResult.Failed_TransientError)] // Service Unavailable
         [InlineData(504, EmailSendResult.Failed_TransientError)] // Gateway Timeout
         [InlineData(599, EmailSendResult.Failed_TransientError)] // Edge case - highest 5xx
+        [InlineData(0, EmailSendResult.Failed_TransientError)] // Status 0 - network/no response
         [InlineData(400, EmailSendResult.Failed)] // Bad Request - not transient
         [InlineData(404, EmailSendResult.Failed)] // Not Found - not transient
         [InlineData(429, EmailSendResult.Failed)] // Too Many Requests - handled separately by error code, not status

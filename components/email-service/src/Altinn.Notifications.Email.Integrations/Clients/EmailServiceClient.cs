@@ -150,10 +150,9 @@ public class EmailServiceClient : IEmailServiceClient
         {
             emailSendResult = Core.Status.EmailSendResult.Failed_InvalidEmailFormat;
         }
-        else if (e.Status >= 500 && e.Status < 600)
+        else if ((e.Status >= 500 && e.Status < 600) || e.Status == 0)
         {
-            // Handle all 5xx errors from Azure Communication Services as transient errors
-            // These are server-side errors that should be retried (e.g., 502 Bad Gateway, 503 Service Unavailable)
+            // Handle all 5xx errors and status 0 (network/no response) as transient errors
             emailSendResult = Core.Status.EmailSendResult.Failed_TransientError;
         }
         else
