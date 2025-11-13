@@ -141,10 +141,9 @@ public class SmsNotificationRepository : NotificationRepositoryBase, ISmsNotific
                 pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(gatewayReference) ? DBNull.Value : gatewayReference);
                 pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, (notificationId == null || notificationId == Guid.Empty) ? DBNull.Value : notificationId);
             },
-            hasGatewayReference,
-            gatewayReference,
-            notificationId,
             NotificationChannel.Sms,
-            hasNotificationId ? SendStatusIdentifierType.NotificationId : SendStatusIdentifierType.GatewayReference);
+            notificationId,
+            gatewayReference,
+            SendStatusIdentifierType.GatewayReference);
     }
 }

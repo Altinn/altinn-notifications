@@ -104,11 +104,10 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
                 pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(operationId) ? DBNull.Value : operationId);
                 pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, (notificationId == null || notificationId == Guid.Empty) ? DBNull.Value : notificationId);
             },
-            hasOperationId,
-            operationId,
-            notificationId,
             NotificationChannel.Email,
-            hasNotificationId ? SendStatusIdentifierType.NotificationId : SendStatusIdentifierType.OperationId);
+            notificationId,
+            operationId,
+            SendStatusIdentifierType.OperationId);
     }
 
     /// <inheritdoc/>
