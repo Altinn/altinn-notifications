@@ -1,4 +1,6 @@
-﻿using Altinn.Notifications.Core.Configuration;
+﻿using System.Text.Json;
+
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
@@ -77,40 +79,26 @@ public class EmailNotificationService : IEmailNotificationService
     /// <inheritdoc/>
     public async Task SendNotifications(CancellationToken cancellationToken)
     {
-        List<Email> newEmailNotifications;
-
-        cancellationToken.ThrowIfCancellationRequested();
-
-        newEmailNotifications = await _repository.GetNewNotificationsAsync(_emailPublishBatchSize, cancellationToken);
-        if (newEmailNotifications.Count == 0)
+        List<Email> readyToSendEmails = await _repository.GetNewNotificationsAsync(_emailPublishBatchSize, cancellationToken);
+        if (readyToSendEmails.Count == 0)
         {
             return;
         }
 
-        var produceTasks = newEmailNotifications
-            .Select(email =>
-                ProduceWithResultAsync(email, cancellationToken))
-            .ToArray();
+        var readyToSendMessages = readyToSendEmails.Select(readyToSendEmail => readyToSendEmail.Serialize());
 
-        var results = await Task.WhenAll(produceTasks).ConfigureAwait(false);
+        var failedToSendMessages = await _producer.ProduceAsync(_emailQueueTopicName, readyToSendMessages, cancellationToken);
 
-        foreach (var r in results)
+        foreach (var failedToSendMessage in failedToSendMessages)
         {
-            if (!r.Success)
+            var failedToSendEmail = JsonSerializer.Deserialize<Email>(failedToSendMessage, JsonSerializerOptionsProvider.Options);
+            if (failedToSendEmail == null || failedToSendEmail.NotificationId == Guid.Empty)
             {
-                await _repository.UpdateSendStatus(r.Email.NotificationId, EmailNotificationResultType.New);
+                continue;
             }
-        }
-    }
 
-    /// <summary>
-    /// Helper that produces a single email notification and returns success together with the original email.
-    /// Exceptions inside the producer are already caught and mapped to 'false' by <see cref="IKafkaProducer.ProduceAsync(string,string,System.Threading.CancellationToken)"/>.
-    /// </summary>
-    private async Task<(Email Email, bool Success)> ProduceWithResultAsync(Email email, CancellationToken ct)
-    {
-        var success = await _producer.ProduceAsync(_emailQueueTopicName, email.Serialize(), ct).ConfigureAwait(false);
-        return (email, success);
+            await _repository.UpdateSendStatus(failedToSendEmail.NotificationId, EmailNotificationResultType.New);
+        }
     }
 
     /// <inheritdoc/>

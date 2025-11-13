@@ -15,6 +15,7 @@ namespace Altinn.Notifications.Integrations.Kafka.Producers;
 /// </summary>
 public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
 {
+    private readonly int _maxBatchSize = 50;
     private readonly KafkaSettings _settings;
     private readonly ILogger<KafkaProducer> _logger;
     private readonly IProducer<Null, string> _producer;
@@ -30,16 +31,18 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
 
         var config = new ProducerConfig(ProducerSettings)
         {
-            LingerMs = 5,
+            LingerMs = 100,
             Acks = Acks.All,
             MaxInFlight = 5,
             RetryBackoffMs = 1000,
-            BatchSize = 128 * 1024,
+            BatchSize = 512 * 1024,
+            BatchNumMessages = 1000,
             EnableIdempotence = true,
-            MessageSendMaxRetries = 3,
+            MessageSendMaxRetries = 5,
             EnableBackgroundPoll = true,
             SocketKeepaliveEnable = true,
             EnableDeliveryReports = true,
+            DeliveryReportFields = "status",
             CompressionType = CompressionType.Lz4
         };
 
@@ -80,101 +83,71 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     }
 
     /// <inheritdoc/>
-    public async Task<bool> ProduceAsync(string topic, string message, CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<string>> ProduceAsync(string topic, IEnumerable<string> messages, CancellationToken cancellationToken = default)
     {
-        try
+        var messagesToPublish = messages as IList<string> ?? [.. messages];
+        if (messagesToPublish.Count == 0)
         {
-            var result = await _producer.ProduceAsync(
-                topic,
-                new Message<Null, string> { Value = message },
-                cancellationToken).ConfigureAwait(false);
+            return [];
+        }
 
-            if (result.Status != PersistenceStatus.Persisted)
+        var successfullMessagesCount = 0;
+        var failedMessages = new List<string>();
+        for (int i = 0; i < messagesToPublish.Count; i += _maxBatchSize)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var messagesSegment = messagesToPublish.Skip(i).Take(_maxBatchSize).ToList();
+
+            var publishingTasks = messagesSegment.Select((message, index) => new
             {
-                _logger.LogError("// KafkaProducer // ProduceAsync // Not persisted (status: {Status}) value: '{Message}'", result.Status, message);
+                Index = index,
+                Message = message,
+                Task = _producer.ProduceAsync(topic, new Message<Null, string> { Value = message }, cancellationToken)
+            }).ToArray();
 
-                return false;
+            try
+            {
+                var publishingTasksResults = await Task.WhenAll(publishingTasks.Select(e => e.Task)).ConfigureAwait(false);
+                for (int x = 0; x < publishingTasksResults.Length; x++)
+                {
+                    var publishingResult = publishingTasksResults[x];
+                    if (publishingResult.Status != PersistenceStatus.Persisted)
+                    {
+                        failedMessages.Add(publishingTasks[x].Message);
+                    }
+                    else
+                    {
+                        successfullMessagesCount++;
+                    }
+                }
             }
+            catch (ProduceException<Null, string> ex)
+            {
+                _logger.LogError(ex, "// KafkaProducer // ProduceBatchAsync // ProduceException (code: {Code}) value: '{Value}'", ex.Error.Code, ex.DeliveryResult?.Value);
 
-            return true;
-        }
-        catch (ProduceException<Null, string> ex)
-        {
-            _logger.LogError(
-                ex,
-                "// KafkaProducer // ProduceAsync // ProduceException (code: {Code}) value: '{Value}'",
-                ex.Error.Code,
-                ex.DeliveryResult?.Value);
-            return false;
-        }
-        catch (OperationCanceledException)
-        {
-            _logger.LogWarning("// KafkaProducer // ProduceAsync // Cancelled producing to topic {Topic}", topic);
+                if (ex.DeliveryResult?.Value != null)
+                {
+                    failedMessages.Add(ex.DeliveryResult.Value);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "// KafkaProducer // ProduceBatchAsync // Unexpected exception in chunk {ChunkStart}-{ChunkEnd}", i, Math.Min(i + _maxBatchSize - 1, messagesToPublish.Count - 1));
 
-            return false;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "// KafkaProducer // ProduceAsync // Unexpected exception.");
-
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Produces a batch of messages with per-message delivery awaits.
-    /// Prefer when you already have multiple messages and want fewer async state machine transitions.
-    /// </summary>
-    /// <param name="topic">Kafka topic name.</param>
-    /// <param name="messages">Collection of message payloads.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>Number of messages successfully persisted.</returns>
-    public async Task<int> ProduceBatchAsync(string topic, IEnumerable<string> messages, CancellationToken cancellationToken = default)
-    {
-        int successCount = 0;
-
-        // Materialize to avoid multiple enumeration
-        var list = messages as IList<string> ?? messages.ToList();
-        if (list.Count == 0)
-        {
-            return 0;
+                failedMessages.AddRange(messagesSegment);
+            }
         }
 
-        // Issue all produce tasks concurrently; the producer client batches internally
-        var tasks = list.Select(m => _producer.ProduceAsync(
+        _logger.LogInformation(
+            "// KafkaProducer // ProduceBatchAsync // Batch publishing completed for topic {Topic}. Total messages: {TotalMessages}, Successfully published: {SuccessCount}, Failed: {FailedCount}, Success rate: {SuccessRate:P2}",
             topic,
-            new Message<Null, string> { Value = m },
-            cancellationToken));
+            messagesToPublish.Count,
+            successfullMessagesCount,
+            failedMessages.Count,
+            successfullMessagesCount / messagesToPublish.Count);
 
-        try
-        {
-            var results = await Task.WhenAll(tasks).ConfigureAwait(false);
-            foreach (var r in results)
-            {
-                if (r.Status == PersistenceStatus.Persisted)
-                {
-                    successCount++;
-                }
-                else
-                {
-                    _logger.LogError("// KafkaProducer // ProduceBatchAsync // Not persisted (status: {Status}) value: '{Value}'", r.Status, r.Value);
-                }
-            }
-        }
-        catch (ProduceException<Null, string> ex)
-        {
-            _logger.LogError(
-                ex,
-                "// KafkaProducer // ProduceBatchAsync // ProduceException (code: {Code}) value: '{Value}'",
-                ex.Error.Code,
-                ex.DeliveryResult?.Value);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "// KafkaProducer // ProduceBatchAsync // Unexpected exception.");
-        }
-
-        return successCount;
+        return failedMessages;
     }
 
     /// <summary>
@@ -189,7 +162,6 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     /// <summary>
     /// Protected dispose pattern implementation.
     /// </summary>
-    /// <param name="disposing">True when called from <see cref="Dispose"/>.</param>
     protected virtual void Dispose(bool disposing)
     {
         if (!disposing)
@@ -203,7 +175,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "// KafkaProducer // Dispose // Flush timeout or error.");
+            _logger.LogError(ex, "// KafkaProducer // Dispose // Flush timeout or error.");
         }
         finally
         {
@@ -226,6 +198,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
         catch (Exception ex)
         {
             _logger.LogError(ex, "// KafkaProducer // EnsureTopicsExist // Failed to fetch metadata.");
+
             throw;
         }
 
