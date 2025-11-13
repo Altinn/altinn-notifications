@@ -15,7 +15,7 @@ namespace Altinn.Notifications.Integrations.Kafka.Producers;
 /// </summary>
 public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
 {
-    private readonly int _maxBatchSize = 50;
+    private readonly int _maxBatchSize = 75;
     private readonly KafkaSettings _settings;
     private readonly ILogger<KafkaProducer> _logger;
     private readonly IProducer<Null, string> _producer;
