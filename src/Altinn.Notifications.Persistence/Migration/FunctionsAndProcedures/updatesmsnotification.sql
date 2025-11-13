@@ -39,9 +39,10 @@ BEGIN
             ELSE gatewayreference 
         END
     WHERE
-        -- Match by alternateid (if provided) OR by gatewayreference (if provided)
+        -- Match by alternateid (takes priority) OR by gatewayreference (fallback)
+        -- Strict precedence: if alternateid is provided, only use that
         (_alternateid IS NOT NULL AND smsnotifications.alternateid = _alternateid) OR
-        (_gatewayreference IS NOT NULL AND smsnotifications.gatewayreference = _gatewayreference)
+        (_alternateid IS NULL AND _gatewayreference IS NOT NULL AND smsnotifications.gatewayreference = _gatewayreference)
     RETURNING
         smsnotifications.alternateid,
         -- was_updated is true only if the notification was not expired at UPDATE time
