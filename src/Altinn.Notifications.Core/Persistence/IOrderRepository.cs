@@ -128,6 +128,19 @@ public interface IOrderRepository
     public Task SetProcessingStatus(Guid orderId, OrderProcessingStatus status);
 
     /// <summary>
+    /// Inserts a status feed entry for the specified order.
+    /// </summary>
+    /// <param name="orderId">The unique identifier of the order.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// This method retrieves the current shipment tracking information for the order
+    /// and inserts it into the status feed. This is typically used for orders that
+    /// reach terminal states without generating notifications, such as orders where
+    /// the send condition was not met.
+    /// </remarks>
+    public Task InsertStatusFeedForOrder(Guid orderId);
+
+    /// <summary>
     /// Gets an order based on the provided id within the provided creator scope
     /// </summary>
     /// <param name="id">The order id</param>

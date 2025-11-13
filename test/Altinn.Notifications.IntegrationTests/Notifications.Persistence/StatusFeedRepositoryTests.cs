@@ -6,6 +6,9 @@ using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
+
+using Npgsql;
+
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
@@ -13,7 +16,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Persistence;
 public class StatusFeedRepositoryTests : IAsyncLifetime
 {
     private const int _maxPageSize = 500;
-    private readonly string _creatorName = "testcase";
+    private readonly string _creatorName = "ttd";
 
     public async Task DisposeAsync()
     {
@@ -89,6 +92,101 @@ public class StatusFeedRepositoryTests : IAsyncLifetime
         var remaining = await sut.GetStatusFeed(0, _creatorName, _maxPageSize, CancellationToken.None);
         Assert.DoesNotContain(remaining, x => x.OrderStatus.ShipmentId == oldShipmentId);
         Assert.Contains(remaining, x => x.OrderStatus.ShipmentId == recentShipmentId);
+    }
+
+    [Fact]
+    public async Task InsertStatusFeedEntry_NullOrderStatus_ThrowsArgumentNullException()
+    {
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+            await StatusFeedRepository.InsertStatusFeedEntry(null!, null!, null!));
+    }
+
+    [Fact]
+    public async Task InsertStatusFeedEntry_NullConnection_ThrowsArgumentNullException()
+    {
+        // Arrange
+        OrderStatus orderStatus = new()
+        {
+            Status = ProcessingLifecycle.Order_SendConditionNotMet,
+            ShipmentId = Guid.NewGuid(),
+            LastUpdated = DateTime.UtcNow,
+            ShipmentType = "Notification",
+            SendersReference = Guid.NewGuid().ToString(),
+            Recipients = new List<Recipient>().ToImmutableList()
+        };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+            await StatusFeedRepository.InsertStatusFeedEntry(orderStatus, null!, null!));
+    }
+
+    [Fact]
+    public async Task InsertStatusFeedEntry_OrderDoesNotExist_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        Guid nonExistentOrderId = Guid.NewGuid();
+        OrderStatus orderStatus = new()
+        {
+            Status = ProcessingLifecycle.Order_SendConditionNotMet,
+            ShipmentId = nonExistentOrderId,
+            LastUpdated = DateTime.UtcNow,
+            ShipmentType = "Notification",
+            SendersReference = Guid.NewGuid().ToString(),
+            Recipients = new List<Recipient>().ToImmutableList()
+        };
+
+        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices([typeof(NpgsqlDataSource)])[0]!;
+        await using var connection = await dataSource.OpenConnectionAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await StatusFeedRepository.InsertStatusFeedEntry(orderStatus, connection, transaction));
+
+        Assert.Contains("Failed to insert status feed entry", exception.Message);
+        Assert.Contains(nonExistentOrderId.ToString(), exception.Message);
+    }
+
+    [Fact]
+    public async Task InsertStatusFeedEntry_ValidOrder_InsertsSuccessfully()
+    {
+        // Arrange
+        Guid orderAlternateId = await PostgreUtil.PopulateDBWithEmailOrderAndReturnId();
+
+        OrderStatus orderStatus = new()
+        {
+            Status = ProcessingLifecycle.Order_SendConditionNotMet,
+            ShipmentId = orderAlternateId,
+            LastUpdated = DateTime.UtcNow,
+            ShipmentType = "Notification",
+            SendersReference = Guid.NewGuid().ToString(),
+            Recipients = new List<Recipient>
+            {
+                new()
+                {
+                    LastUpdate = DateTime.UtcNow,
+                    Status = ProcessingLifecycle.Email_New,
+                    Destination = "test@example.com"
+                }
+            }.ToImmutableList()
+        };
+
+        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices([typeof(NpgsqlDataSource)])[0]!;
+        await using var connection = await dataSource.OpenConnectionAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+
+        // Act
+        await StatusFeedRepository.InsertStatusFeedEntry(orderStatus, connection, transaction);
+        await transaction.CommitAsync();
+
+        // Assert - verify status feed entry was created
+        // Note: We use SelectStatusFeedEntryCount instead of GetStatusFeed because GetStatusFeed
+        // filters out entries created within the last 2 seconds to avoid returning entries still being processed
+        int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(orderAlternateId);
+        Assert.Equal(1, statusFeedCount);
+
+        // Note: Cleanup is handled by DisposeAsync which deletes all status feed entries with creatorname = 'ttd'
     }
 
     private async Task InsertTestDataRowForStatusFeed(int orderId, string created, Guid shipmentId)
