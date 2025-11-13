@@ -1,4 +1,6 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using System.Reflection;
+
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
@@ -7,6 +9,8 @@ using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
+
+using Npgsql;
 
 using Xunit;
 
@@ -473,6 +477,55 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
             // Clean up environment variable to prevent test pollution
             Environment.SetEnvironmentVariable("NotificationConfig__TerminationBatchSize", null);
         }
+    }
+
+    [Fact]
+    public async Task InsertOrderStatusCompletedOrder_ValidAlternateId_InsertsStatusFeedEntrySuccessfully()
+    {
+        // Arrange
+        (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(simulateConsumers: true, simulateCronJob: true);
+        _orderIdsToDelete.Add(order.Id);
+
+        EmailNotificationRepository repo = (EmailNotificationRepository)ServiceUtil
+            .GetServices([typeof(IEmailNotificationRepository)])
+            .First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices([typeof(NpgsqlDataSource)])[0]!;
+        await using var connection = await dataSource.OpenConnectionAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+
+        // Act - should not throw and should insert status feed
+        // Note: alternateId is the notification ID, not the order ID
+        var method = typeof(NotificationRepositoryBase).GetMethod("InsertOrderStatusCompletedOrder", BindingFlags.NonPublic | BindingFlags.Instance);
+        var task = (Task)method!.Invoke(repo, [connection, transaction, emailNotification.Id])!;
+        await task;
+        await transaction.CommitAsync();
+
+        // Assert - verify status feed entry was inserted
+        int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+        Assert.Equal(1, statusFeedCount);
+    }
+
+    [Fact]
+    public async Task InsertOrderStatusCompletedOrder_OrderStatusNotFound_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        Guid nonExistentOrderId = Guid.NewGuid();
+
+        EmailNotificationRepository repo = (EmailNotificationRepository)ServiceUtil
+            .GetServices([typeof(IEmailNotificationRepository)])
+            .First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices([typeof(NpgsqlDataSource)])[0]!;
+        await using var connection = await dataSource.OpenConnectionAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+
+        // Act & Assert
+        var method = typeof(NotificationRepositoryBase).GetMethod("InsertOrderStatusCompletedOrder", BindingFlags.NonPublic | BindingFlags.Instance);
+        var task = (Task)method!.Invoke(repo, [connection, transaction, nonExistentOrderId])!;
+        
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await task);
+        Assert.Equal("Order status could not be retrieved for the specified alternate ID.", ex.Message);
     }
 
     private static async Task<string> SelectEmailNotificationStatus(Guid notificationId)
