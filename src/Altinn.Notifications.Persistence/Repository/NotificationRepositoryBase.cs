@@ -201,18 +201,20 @@ public abstract class NotificationRepositoryBase
 
     private static async Task ReadRecipients(List<Recipient> recipients, NpgsqlDataReader reader)
     {
+        var statusOrdinal = reader.GetOrdinal("status");
+        var destinationOrdinal = reader.GetOrdinal("destination");
+        var notificationTypeOrdinal = reader.GetOrdinal("notification_type");
+        var lastUpdateOrdinal = reader.GetOrdinal("last_update");
+
         while (await reader.ReadAsync())
         {
-            var notificationType = await reader.GetFieldValueAsync<string>("notification_type");
+            var notificationType = await reader.GetFieldValueAsync<string>(notificationTypeOrdinal);
 
             if (notificationType.Equals("order", StringComparison.OrdinalIgnoreCase))
             {
                 // Skip order-level as it is already processed
                 continue;
             }
-
-            var statusOrdinal = reader.GetOrdinal("status");
-            var destinationOrdinal = reader.GetOrdinal("destination");
 
             var status = await reader.GetFieldValueAsync<string>(statusOrdinal);
             var destination = await reader.IsDBNullAsync(destinationOrdinal) ? string.Empty : await reader.GetFieldValueAsync<string>(destinationOrdinal);
@@ -224,7 +226,7 @@ public abstract class NotificationRepositoryBase
                 recipient = new Recipient
                 {
                     Destination = destination,
-                    LastUpdate = await reader.GetFieldValueAsync<DateTime>("last_update"),
+                    LastUpdate = await reader.GetFieldValueAsync<DateTime>(lastUpdateOrdinal),
                     Status = ProcessingLifecycleMapper.GetEmailLifecycleStage(status)
                 };
                 recipients.Add(recipient);
@@ -234,7 +236,7 @@ public abstract class NotificationRepositoryBase
                 recipient = new Recipient
                 {
                     Destination = destination,
-                    LastUpdate = await reader.GetFieldValueAsync<DateTime>("last_update"),
+                    LastUpdate = await reader.GetFieldValueAsync<DateTime>(lastUpdateOrdinal),
                     Status = ProcessingLifecycleMapper.GetSmsLifecycleStage(status)
                 };
                 recipients.Add(recipient);
