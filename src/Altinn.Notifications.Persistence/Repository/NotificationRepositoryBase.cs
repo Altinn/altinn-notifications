@@ -214,27 +214,31 @@ public abstract class NotificationRepositoryBase
             var statusOrdinal = reader.GetOrdinal("status");
             var destinationOrdinal = reader.GetOrdinal("destination");
 
-            var status = await reader.IsDBNullAsync(statusOrdinal) ? string.Empty : await reader.GetFieldValueAsync<string>(statusOrdinal);
+            var status = await reader.GetFieldValueAsync<string>(statusOrdinal);
             var destination = await reader.IsDBNullAsync(destinationOrdinal) ? string.Empty : await reader.GetFieldValueAsync<string>(destinationOrdinal);
 
-            var recipient = notificationType switch
+            Recipient recipient;
+
+            if (notificationType.Equals("email", StringComparison.OrdinalIgnoreCase))
             {
-                "email" => new Recipient
+                recipient = new Recipient
                 {
                     Destination = destination,
                     LastUpdate = await reader.GetFieldValueAsync<DateTime>("last_update"),
                     Status = ProcessingLifecycleMapper.GetEmailLifecycleStage(status)
-                },
-                "sms" => new Recipient
+                };
+                recipients.Add(recipient);
+            }
+            else if (notificationType.Equals("sms", StringComparison.OrdinalIgnoreCase))
+            {
+                recipient = new Recipient
                 {
                     Destination = destination,
                     LastUpdate = await reader.GetFieldValueAsync<DateTime>("last_update"),
                     Status = ProcessingLifecycleMapper.GetSmsLifecycleStage(status)
-                },
-                _ => throw new InvalidOperationException($"Unknown notification type: {notificationType}")
-            };
-
-            recipients.Add(recipient);
+                };
+                recipients.Add(recipient);
+            }
         }
     }
 
