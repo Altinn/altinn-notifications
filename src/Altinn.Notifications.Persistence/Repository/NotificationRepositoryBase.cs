@@ -21,11 +21,6 @@ namespace Altinn.Notifications.Persistence.Repository;
 /// </summary>
 public abstract class NotificationRepositoryBase
 {
-    private readonly JsonSerializerOptions _serializerOptions = new()
-    {
-        Converters = { new JsonStringEnumConverter() }
-    };
-
     /// <summary>
     /// Gets the unique identifier for the source associated with the derived class e.g. sms or email.
     /// </summary>
@@ -39,10 +34,6 @@ public abstract class NotificationRepositoryBase
     private readonly ILogger _logger;
     private readonly int _terminationBatchSize;
     private readonly int _expiryOffsetSeconds;
-
-    private const string _insertStatusFeedEntrySql = @"SELECT notifications.insertstatusfeed(o._id, o.creatorname, @orderstatus)
-                                                       FROM notifications.orders o
-                                                       WHERE o.alternateid = @alternateid;";
 
     private const string _referenceColumnName = "reference";
     private const string _typeColumnName = "type";
@@ -89,7 +80,8 @@ public abstract class NotificationRepositoryBase
 
         if (!hasRows)
         {
-            _logger.LogWarning("No shipment tracking information found for alternate ID {AlternateId}.", notificationAlternateId);
+            var maskedAlternateId = string.Concat(notificationAlternateId.ToString().AsSpan(0, 8), "****");
+            _logger.LogWarning("No shipment tracking information found for alternate ID {AlternateId}.", maskedAlternateId);
             return null; // Return null if no rows were found
         }
 
@@ -171,7 +163,15 @@ public abstract class NotificationRepositoryBase
         var orderStatus = await GetShipmentTracking(alternateId, connection, transaction);
         if (orderStatus != null)
         {
-            await InsertStatusFeed(orderStatus, connection, transaction);
+            try
+            {
+                await StatusFeedRepository.InsertStatusFeedEntry(orderStatus, connection, transaction);
+            }
+            catch (Exception ex)
+            {
+                var maskedAlternateId = string.Concat(alternateId.ToString().AsSpan(0, 8), "****");
+                _logger.LogWarning(ex, "Failed to insert status feed for completed order {AlternateId}.", maskedAlternateId);
+            }
         }
         else
         {
@@ -239,20 +239,5 @@ public abstract class NotificationRepositoryBase
         };
 
         return orderStatus;
-    }
-
-    /// <summary>
-    /// Inserts a new status feed entry for an order.
-    /// </summary>
-    /// <param name="orderStatus">The status object that should be serialized as jsonb</param>
-    /// <param name="connection">The connection used with this transaction</param>
-    /// <param name="transaction">The transaction used with this transaction enclosing order status update</param>
-    /// <returns>No return value</returns>
-    protected async Task InsertStatusFeed(OrderStatus orderStatus, NpgsqlConnection connection, NpgsqlTransaction transaction)
-    {
-        await using NpgsqlCommand pgcom = new(_insertStatusFeedEntrySql, connection, transaction);
-        pgcom.Parameters.AddWithValue("alternateid", NpgsqlDbType.Uuid, orderStatus.ShipmentId);
-        pgcom.Parameters.AddWithValue("orderstatus", NpgsqlDbType.Jsonb, JsonSerializer.Serialize(orderStatus, _serializerOptions));
-        await pgcom.ExecuteNonQueryAsync();
     }
 }
