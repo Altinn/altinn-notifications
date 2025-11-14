@@ -44,8 +44,8 @@ public abstract class KafkaConsumerBase<T> : BackgroundService
             EnableAutoCommit = false,
             EnableAutoOffsetStore = false,
             AutoOffsetReset = AutoOffsetReset.Latest,
-            GroupId = $"{settings.Consumer.GroupId}-{topicName.Replace(".", "-")}"
-            PartitionAssignmentStrategy = PartitionAssignmentStrategy.CooperativeSticky
+            PartitionAssignmentStrategy = PartitionAssignmentStrategy.CooperativeSticky,
+            GroupId = $"{settings.Value.Consumer.GroupId}-{topicName.Replace(".", "-")}"
         };
 
         _consumer = new ConsumerBuilder<string, string>(consumerConfig)
