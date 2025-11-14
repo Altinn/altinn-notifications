@@ -898,66 +898,6 @@ ALTER FUNCTION notifications.getshipmentforstatusfeed_v2(uuid)
 COMMENT ON FUNCTION notifications.getshipmentforstatusfeed_v2(uuid)
     IS 'Retrieves shipment tracking data using an email or sms notification alternateid.';
 
-
-CREATE OR REPLACE FUNCTION notifications.getshipmentforstatusfeed_v3(_alternateid uuid)
-RETURNS TABLE(
-    alternateid       uuid,
-    reference         text,
-    status            text,
-    last_update       timestamp with time zone,
-    destination       text,
-    type              text,
-    notification_type text
-)
-LANGUAGE 'plpgsql'
-COST 100
-STABLE PARALLEL SAFE
-ROWS 5
-AS $BODY$
-DECLARE
-    _order_alternateid uuid;
-    _order_creatorname text;
-BEGIN
-    -- First try to find order information in the email notifications table
-    SELECT o.alternateid, o.creatorname INTO _order_alternateid, _order_creatorname
-    FROM notifications.orders o
-    JOIN notifications.emailnotifications e ON e._orderid = o._id
-    WHERE e.alternateid = _alternateid
-    LIMIT 1;
-    
-    -- If not found in email notifications, try SMS notifications table
-    IF _order_alternateid IS NULL THEN
-        SELECT o.alternateid, o.creatorname INTO _order_alternateid, _order_creatorname
-        FROM notifications.orders o
-        JOIN notifications.smsnotifications s ON s._orderid = o._id
-        WHERE s.alternateid = _alternateid
-        LIMIT 1;
-    END IF;
-    
-    -- If we found an order, get its tracking information
-    IF _order_alternateid IS NOT NULL THEN
-        RETURN QUERY
-        SELECT
-            _order_alternateid,
-            t.reference,        
-            t.status,
-            t.last_update,
-            t.destination,
-            t.type,
-            t.notification_type 
-        FROM
-            notifications.get_shipment_tracking_v3(_order_alternateid, _order_creatorname) AS t;
-    END IF;
-END;
-$BODY$;
-
-ALTER FUNCTION notifications.getshipmentforstatusfeed_v3(uuid)
-    OWNER TO platform_notifications_admin;
-
-COMMENT ON FUNCTION notifications.getshipmentforstatusfeed_v3(uuid)
-    IS 'Retrieves shipment tracking data using an email or sms notification alternateid.';
-
-
 -- getshipmenttracking.sql:
 CREATE OR REPLACE FUNCTION notifications.get_shipment_tracking(
     _alternateid UUID,
@@ -1114,98 +1054,6 @@ Includes:
  - Order-level tracking (reference and status)
  - Email notification tracking (status, result time, destination)
  - SMS notification tracking (status, result time, destination)
-
-If no matching order exists, an empty result set is returned.';
-
-CREATE OR REPLACE FUNCTION notifications.get_shipment_tracking_v3(
-    _alternateid UUID,
-    _creatorname TEXT)
-RETURNS TABLE (
-    reference          TEXT,
-    status             TEXT,
-    last_update        TIMESTAMPTZ,
-    destination        TEXT,
-    type               TEXT,
-    notification_type  TEXT
-)
-LANGUAGE plpgsql
-STABLE PARALLEL SAFE
-ROWS 5
-AS $$
-DECLARE
-    v_order_exists BOOLEAN;
-BEGIN
-    -- Check for the existence of the order
-    SELECT EXISTS (
-        SELECT 1
-        FROM notifications.orders o
-        WHERE o.alternateid = _alternateid AND o.creatorname = _creatorname
-    )
-    INTO v_order_exists;
-
-    -- Return empty set if no order is found
-    IF NOT v_order_exists THEN
-        RETURN;
-    END IF;
-
-    -- Return combined tracking info
-    RETURN QUERY
-    WITH order_data AS (
-        SELECT o._id, o.sendersreference, o.created, o.processed, o.processedstatus, o.type
-        FROM notifications.orders o
-        WHERE o.alternateid = _alternateid AND o.creatorname = _creatorname
-    ),
-    order_tracking AS (
-        SELECT
-            od.sendersreference AS reference,
-            od.processedstatus::TEXT AS status,
-            GREATEST(od.created, COALESCE(od.processed, od.created)) AS last_update,
-            NULL::TEXT AS destination,
-            od.type::TEXT AS type,
-            'order' AS notification_type
-        FROM order_data od
-    ),
-    email_tracking AS (
-        SELECT
-            od.sendersreference AS reference,
-            e.result::TEXT AS status,
-            e.resulttime AS last_update,
-            e.toaddress AS destination,
-            od.type::TEXT AS type,
-            'email' AS notification_type
-        FROM order_data od
-        JOIN notifications.emailnotifications e ON e._orderid = od._id
-    ),
-    sms_tracking AS (
-        SELECT
-            od.sendersreference AS reference,
-            s.result::TEXT AS status,
-            s.resulttime AS last_update,
-            s.mobilenumber AS destination,
-            od.type::TEXT AS type,
-            'sms' AS notification_type
-        FROM order_data od
-        JOIN notifications.smsnotifications s ON s._orderid = od._id
-    )
-    SELECT * FROM order_tracking
-    UNION ALL
-    SELECT * FROM email_tracking
-    UNION ALL
-    SELECT * FROM sms_tracking;
-END;
-$$;
-
-COMMENT ON FUNCTION notifications.get_shipment_tracking_v3(UUID, TEXT) IS
-'Returns delivery tracking information for a notification identified by the given alternate identifier and creator name.
-
-Includes:
- - Order-level tracking (reference and status)
- - Email notification tracking (status, result time, destination)
- - SMS notification tracking (status, result time, destination)
-
-Changes from v2:
- - Added notification_type field to distinguish between order, email, and sms tracking records
- - notification_type values: ''order'', ''email'', ''sms''
 
 If no matching order exists, an empty result set is returned.';
 
@@ -1702,6 +1550,7 @@ DECLARE
     order_id bigint;
     order_status orderprocessingstate;
     has_pending_notifications boolean := false;
+    new_status orderprocessingstate;
 BEGIN
     IF _alternateid IS NULL THEN
         RAISE EXCEPTION 'Notification ID cannot be null';
@@ -1754,30 +1603,29 @@ BEGIN
     END IF;
 
     -- Step 5: Check if any notifications are still pending
-    WITH pending_notifications AS (
-        SELECT 1 AS is_pending
+    SELECT EXISTS(
+        SELECT 1
         FROM notifications.smsnotifications 
         WHERE _orderid = order_id 
         AND result IN ('New'::smsnotificationresulttype, 'Sending'::smsnotificationresulttype, 'Accepted'::smsnotificationresulttype)
-
-        UNION ALL
-
-        SELECT 1 AS is_pending
+    ) OR EXISTS(
+        SELECT 1
         FROM notifications.emailnotifications 
         WHERE _orderid = order_id 
         AND result IN ('New'::emailnotificationresulttype, 'Sending'::emailnotificationresulttype, 'Succeeded'::emailnotificationresulttype)
-    )
-    SELECT EXISTS(SELECT 1 FROM pending_notifications) INTO has_pending_notifications;
+    ) INTO has_pending_notifications;
 
     -- Step 6: Update order status based on notification states
+    new_status := CASE 
+                      WHEN has_pending_notifications THEN 'Processed'
+                      ELSE 'Completed'
+                  END::orderprocessingstate;
+        
     UPDATE notifications.orders
-    SET processedstatus = CASE 
-                            WHEN has_pending_notifications THEN 'Processed'
-                            ELSE 'Completed'
-                          END::orderprocessingstate,
+    SET processedstatus = new_status,
         processed = CURRENT_TIMESTAMP
     WHERE _id = order_id
-    AND processedstatus IS DISTINCT FROM (CASE WHEN has_pending_notifications THEN 'Processed' ELSE 'Completed' END::orderprocessingstate);
+    AND processedstatus IS DISTINCT FROM new_status;
 
     RETURN NOT has_pending_notifications;
 END;
@@ -1806,6 +1654,7 @@ Throws:
   - Exception if _alternateidsource is NULL or empty
   - Exception if _alternateidsource is not one of: ''SMS'', ''EMAIL'', ''ORDER''
   - Exception if no order is found for the given notification ID and source';
+
 
 -- updateemailnotification.sql:
 CREATE OR REPLACE FUNCTION notifications.updateemailnotification(
