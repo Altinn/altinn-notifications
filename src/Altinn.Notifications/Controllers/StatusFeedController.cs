@@ -62,6 +62,8 @@ public class StatusFeedController(IStatusFeedService statusFeedService, IValidat
                 {
                     return StatusCode(error.ErrorCode, new ProblemDetails
                     {
+                        Type = error.ErrorType,
+                        Title = "Failed to retrieve status feed",
                         Status = error.ErrorCode,
                         Detail = error.ErrorMessage
                     });
@@ -69,7 +71,13 @@ public class StatusFeedController(IStatusFeedService statusFeedService, IValidat
         }
         catch (OperationCanceledException)
         {
-            return StatusCode(499, "Request terminated - The client disconnected or cancelled the request before the server could complete processing");
+            return StatusCode(499, new ProblemDetails
+            {
+                Type = "request-terminated",
+                Title = "Request terminated",
+                Detail = "The client disconnected or cancelled the request before the server could complete processing.",
+                Status = 499
+            });
         }
     }
 }

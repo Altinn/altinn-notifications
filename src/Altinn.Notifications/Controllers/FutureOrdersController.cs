@@ -94,6 +94,7 @@ public class FutureOrdersController : ControllerBase
                 {
                     var problemDetails = new ProblemDetails
                     {
+                        Type = error.ErrorType,
                         Title = "Notification order chain registration failed",
                         Detail = error.ErrorMessage,
                         Status = error.ErrorCode
@@ -115,6 +116,7 @@ public class FutureOrdersController : ControllerBase
         {
             var problemDetails = new ProblemDetails
             {
+                Type = "request-terminated",
                 Title = "Request terminated",
                 Detail = "The client disconnected or cancelled the request before the server could complete processing.",
                 Status = 499
