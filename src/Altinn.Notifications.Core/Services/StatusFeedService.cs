@@ -62,7 +62,7 @@ public class StatusFeedService : IStatusFeedService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to retrieve status feed");
-            return new ServiceError(500, $"Failed to retrieve status feed: {ex.Message}");
+            return new ServiceError(500, $"Failed to retrieve status feed: {ex.Message}", "status-feed-retrieval-failed");
         }
     }
     

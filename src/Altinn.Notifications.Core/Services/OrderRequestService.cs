@@ -151,7 +151,7 @@ public class OrderRequestService : IOrderRequestService
 
         if (lookupResult?.MissingContact?.Count > 0)
         {
-            return new ServiceError(422, $"Missing contact information for recipient(s): {string.Join(", ", lookupResult.MissingContact)}");
+            return new ServiceError(422, $"Missing contact information for recipient(s): {string.Join(", ", lookupResult.MissingContact)}", "missing-contact-information");
         }
 
         templates = SetSenderIfNotDefined(templates);
@@ -236,7 +236,7 @@ public class OrderRequestService : IOrderRequestService
 
             if (lookupResult?.MissingContact?.Count > 0)
             {
-                return new ServiceError(422, $"Missing contact information for recipient(s): {string.Join(", ", lookupResult.MissingContact)}");
+                return new ServiceError(422, $"Missing contact information for recipient(s): {string.Join(", ", lookupResult.MissingContact)}", "missing-contact-information");
             }
 
             templates = SetSenderIfNotDefined(templates);
@@ -311,7 +311,7 @@ public class OrderRequestService : IOrderRequestService
 
         if (savedOrders == null || savedOrders.Count == 0)
         {
-            return new ServiceError(500, "Failed to create the notification order chain.");
+            return new ServiceError(500, "Failed to create the notification order chain.", "order-chain-creation-failed");
         }
 
         // The first is the main shipment
