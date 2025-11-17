@@ -2,6 +2,7 @@
 
 using Altinn.Notifications.Core;
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Services.Interfaces;
@@ -155,12 +156,46 @@ public abstract class NotificationStatusRetryConsumerBase : KafkaConsumerBase<No
         {
             await UpdateStatusAsync(updateStatusRetryMessage);
         }
+        catch (NotificationExpiredException ex)
+        {
+            // Notification has expired - save to dead delivery reports immediately, don't retry
+            _logger.LogInformation(
+                ex,
+                "// {Class} // ProcessStatusUpdateWithRetry // {Message}",
+                GetType().Name,
+                ex.Message);
+
+            await SaveDeadDeliveryReportForExpired(updateStatusRetryMessage);
+        }
         catch (Exception ex)
         {
+            // Other exceptions - continue retrying
             _logger.LogWarning(ex, "// {Class} // ProcessStatusUpdateWithRetry // Update failed. Attempts={Attempts}", GetType().Name, updateStatusRetryMessage.Attempts);
 
             var incrementedRetryMessage = updateStatusRetryMessage with { Attempts = updateStatusRetryMessage.Attempts + 1, LastAttempt = DateTime.UtcNow };
             await RetryStatus(incrementedRetryMessage.Serialize());
         }
+    }
+
+    /// <summary>
+    /// Saves a dead delivery report for a notification that has expired.
+    /// </summary>
+    /// <param name="retryMessage">The retry message containing delivery report information.</param>
+    /// <returns>A task representing the asynchronous operation of storing the dead delivery report.</returns>
+    private async Task SaveDeadDeliveryReportForExpired(UpdateStatusRetryMessage retryMessage)
+    {
+        var deadDeliveryReport = new DeadDeliveryReport
+        {
+            Channel = Channel,
+            FirstSeen = retryMessage.FirstSeen,
+            LastAttempt = DateTime.UtcNow,
+            AttemptCount = retryMessage.Attempts,
+            Resolved = false,
+            DeliveryReport = retryMessage.SendOperationResult ?? string.Empty,
+            Reason = "NOTIFICATION_EXPIRED",
+            Message = "Notification expiry time has passed"
+        };
+
+        await _deadDeliveryReportService.InsertAsync(deadDeliveryReport);
     }
 }

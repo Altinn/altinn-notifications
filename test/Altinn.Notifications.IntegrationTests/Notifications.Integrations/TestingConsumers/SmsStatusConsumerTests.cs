@@ -269,9 +269,10 @@ public class SmsStatusConsumerTests : IAsyncLifetime
 
         var producerMock = new Mock<IKafkaProducer>(MockBehavior.Loose);
         var smsServiceMock = new Mock<ISmsNotificationService>();
+        var deadDeliveryReportServiceMock = new Mock<IDeadDeliveryReportService>();
         smsServiceMock
             .Setup(e => e.UpdateSendStatus(It.IsAny<SmsSendOperationResult>()))
-            .ThrowsAsync(new SendStatusUpdateException(NotificationChannel.Sms, Guid.NewGuid().ToString(), identifierType));
+            .ThrowsAsync(new NotificationNotFoundException(NotificationChannel.Sms, Guid.NewGuid().ToString(), identifierType));
 
         SmsSendOperationResult sendOperationResult = identifierType == SendStatusIdentifierType.NotificationId
             ? new SmsSendOperationResult { NotificationId = Guid.NewGuid(), SendResult = SmsNotificationResultType.Delivered }
@@ -280,7 +281,7 @@ public class SmsStatusConsumerTests : IAsyncLifetime
         string serializedDeliveryReport = sendOperationResult.Serialize();
 
         using SmsStatusConsumer smsStatusConsumer =
-            new(producerMock.Object, NullLogger<SmsStatusConsumer>.Instance, kafkaOptions, smsServiceMock.Object);
+            new(producerMock.Object, NullLogger<SmsStatusConsumer>.Instance, kafkaOptions, smsServiceMock.Object, deadDeliveryReportServiceMock.Object);
 
         // Act
         await smsStatusConsumer.StartAsync(CancellationToken.None);

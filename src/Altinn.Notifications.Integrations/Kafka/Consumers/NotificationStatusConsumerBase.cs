@@ -1,6 +1,11 @@
-﻿using Altinn.Notifications.Core.Exceptions;
+﻿using System.Text.Json;
+
+using Altinn.Notifications.Core;
+using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Integrations.Configuration;
 
 using Microsoft.Extensions.Logging;
@@ -21,6 +26,12 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
     private readonly ILogger<TConsumer> _logger;
     private readonly string _statusUpdatedTopicName;
     private readonly string _statusUpdatedRetryTopicName;
+    private readonly IDeadDeliveryReportService _deadDeliveryReportService;
+
+    /// <summary>
+    /// Gets the delivery report channel for this consumer (e.g., Email = AzureCommunicationServices, SMS = LinkMobility).
+    /// </summary>
+    protected abstract DeliveryReportChannel Channel { get; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationStatusConsumerBase{TConsumer, TResult}"/> class.
@@ -30,13 +41,15 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
         ILogger<TConsumer> logger,
         string statusUpdatedTopicName,
         string statusUpdatedRetryTopicName,
-        IOptions<KafkaSettings> kafkaSettings)
+        IOptions<KafkaSettings> kafkaSettings,
+        IDeadDeliveryReportService deadDeliveryReportService)
         : base(kafkaSettings, logger, statusUpdatedTopicName)
     {
         _logger = logger;
         _producer = producer;
         _statusUpdatedTopicName = statusUpdatedTopicName;
         _statusUpdatedRetryTopicName = statusUpdatedRetryTopicName;
+        _deadDeliveryReportService = deadDeliveryReportService;
     }
 
     /// <inheritdoc/>
@@ -72,8 +85,20 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
         {
             await UpdateStatusAsync(result);
         }
-        catch (SendStatusUpdateException)
+        catch (NotificationExpiredException ex)
         {
+            // Notification has expired - save to dead delivery reports immediately, don't retry
+            _logger.LogInformation(
+                ex,
+                "// {Consumer} // ProcessStatus // {Message}",
+                typeof(TConsumer).Name,
+                ex.Message);
+
+            await SaveDeadDeliveryReport(message);
+        }
+        catch (NotificationNotFoundException)
+        {
+            // Notification not found - send to retry topic (might arrive later)
             var updateStatusRetryMessage = new UpdateStatusRetryMessage
             {
                 Attempts = 1,
@@ -104,5 +129,25 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
     private void LogProcessingError(string message)
     {
         _logger.LogError("// {Consumer} // ProcessStatus // Failed while applying status update. Not retrying. {Message}", typeof(TConsumer).Name, message);
+    }
+
+    /// <summary>
+    /// Saves a dead delivery report for a notification that has expired.
+    /// </summary>
+    private async Task SaveDeadDeliveryReport(string originalMessage)
+    {
+        var deadDeliveryReport = new DeadDeliveryReport
+        {
+            Channel = Channel,
+            FirstSeen = DateTime.UtcNow,
+            LastAttempt = DateTime.UtcNow,
+            AttemptCount = 1,
+            Resolved = false,
+            DeliveryReport = originalMessage,
+            Reason = "NOTIFICATION_EXPIRED",
+            Message = "Notification expiry time has passed"
+        };
+
+        await _deadDeliveryReportService.InsertAsync(deadDeliveryReport);
     }
 }
