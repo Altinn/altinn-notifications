@@ -130,7 +130,8 @@ public class FutureOrdersControllerTests
 
         var serviceError = new ServiceError(
             422,
-            "No recipients found");
+            "No recipients found",
+            "test-error-type");
 
         _orderRequestService.Setup(x => x.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(serviceError);
@@ -143,6 +144,7 @@ public class FutureOrdersControllerTests
         var objectResult = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(422, objectResult.StatusCode);
         var problemDetails = Assert.IsType<ProblemDetails>(objectResult.Value);
-        Assert.Contains(serviceError.ErrorMessage!, problemDetails.Detail);
+        Assert.Equal("test-error-type", problemDetails.Type);
+        Assert.Equal("Notification order chain registration failed", problemDetails.Title);
     }
 }

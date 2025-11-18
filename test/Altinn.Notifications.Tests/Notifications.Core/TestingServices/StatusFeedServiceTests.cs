@@ -135,6 +135,7 @@ public class StatusFeedServiceTests
             error =>
             {
                 Assert.Equal(500, error.ErrorCode);
+                Assert.Equal("status-feed-retrieval-failed", error.ErrorType);
                 Assert.StartsWith("Failed to retrieve status feed", error.ErrorMessage);
                 return true;
             });
