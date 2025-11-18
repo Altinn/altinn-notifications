@@ -7,7 +7,7 @@ using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
-
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Core.Services;
@@ -21,6 +21,7 @@ public class EmailNotificationService : IEmailNotificationService
     private readonly IGuidService _guid;
     private readonly string _emailQueueTopicName;
     private readonly IEmailNotificationRepository _repository;
+    private readonly ILogger<EmailNotificationService> _logger;
     private readonly IKafkaProducer _producer;
     private readonly int _emailPublishBatchSize;
 
@@ -33,12 +34,14 @@ public class EmailNotificationService : IEmailNotificationService
         IDateTimeService dateTime,
         IOptions<KafkaSettings> kafkaSettings,
         IOptions<NotificationConfig> notificationConfig,
-        IEmailNotificationRepository repository)
+        IEmailNotificationRepository repository,
+        ILogger<EmailNotificationService> logger)
     {
         _guid = guid;
         _dateTime = dateTime;
         _producer = producer;
         _repository = repository;
+        _logger = logger;
         _emailPublishBatchSize = notificationConfig.Value.EmailPublishBatchSize;
         _emailQueueTopicName = kafkaSettings.Value.EmailQueueTopicName;
     }
@@ -100,6 +103,8 @@ public class EmailNotificationService : IEmailNotificationService
     /// <inheritdoc/>
     public async Task UpdateSendStatus(EmailSendOperationResult sendOperationResult)
     {
+        _logger.LogInformation("Updating email notification status. OperationId: {OperationId}, SendResult: {SendResult}", sendOperationResult.OperationId, sendOperationResult.SendResult);
+        
         // set to new to allow new iteration of regular processing if transient error
         if (sendOperationResult.SendResult == EmailNotificationResultType.Failed_TransientError)
         {
