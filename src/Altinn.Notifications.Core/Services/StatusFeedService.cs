@@ -45,7 +45,7 @@ public class StatusFeedService : IStatusFeedService
     {
         if (string.IsNullOrWhiteSpace(creatorName))
         {
-            return new ServiceError(400, "Creator name cannot be null or empty");
+            return new ServiceError(400, "Creator name cannot be null or empty", null);
         }
 
         try
