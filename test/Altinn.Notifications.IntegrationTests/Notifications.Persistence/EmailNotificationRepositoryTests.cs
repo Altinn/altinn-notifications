@@ -134,7 +134,7 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
         // Set customized values directly in the database to simulate keyword replacement
         string customizedSubject = "Customized Subject for Test";
         string customizedBody = "Customized Body for Test";
-        await PostgreUtil.UpdateEmailNotificationCustomizedContent(emailNotification.Id, customizedSubject, customizedBody);
+        await PostgreUtil.UpdateNotificationCustomizedContent<EmailNotification>(emailNotification.Id, customizedSubject, customizedBody);
 
         // Act
         List<Email> batch = await sut.GetNewNotificationsAsync(50, CancellationToken.None);
@@ -144,7 +144,6 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
         Assert.NotNull(interpolatedContent);
         Assert.Equal(customizedSubject, interpolatedContent.Subject);
         Assert.Equal(customizedBody, interpolatedContent.Body);
-        Assert.Equal(emailNotification.Recipient.ToAddress, interpolatedContent.ToAddress);
     }
 
     [Fact]

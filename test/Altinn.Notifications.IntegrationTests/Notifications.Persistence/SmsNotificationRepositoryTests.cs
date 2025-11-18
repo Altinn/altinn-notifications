@@ -301,6 +301,30 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
         Assert.Equal(SmsNotificationResultType.New.ToString(), status);
     }
 
+    [Fact]
+    public async Task GetNewNotifications_WhenKeywordsAreUsed_ShouldAlwaysReturnCustomizedBody()
+    {
+        // Arrange
+        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
+        SmsNotificationRepository sut = ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>()
+            .First();
+        _orderIdsToCleanup.Add(order.Id);
+
+        // Set customized value directly in the database to simulate keyword replacement
+        string customizedBody = "Customized Body for Test";
+        await PostgreUtil.UpdateNotificationCustomizedContent<SmsNotification>(smsNotification.Id, null, customizedBody);
+
+        // Act
+        List<Sms> batch = await sut.GetNewNotifications(50, CancellationToken.None, SendingTimePolicy.Daytime);
+        Sms? itemWithCustomizedBody = batch.FirstOrDefault(b => b.NotificationId == smsNotification.Id);
+        
+        // Assert
+        Assert.NotNull(itemWithCustomizedBody);
+        Assert.Equal(customizedBody, itemWithCustomizedBody!.Message);
+    }
+
     [Theory]
     [InlineData(SmsNotificationResultType.Failed)]
     [InlineData(SmsNotificationResultType.Failed_Deleted)]

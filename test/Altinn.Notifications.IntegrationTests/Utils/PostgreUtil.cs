@@ -358,19 +358,41 @@ public static class PostgreUtil
     public static Task<long?> GetDeadDeliveryReportIdFromGatewayReference(string gatewayReference)
         => GetDeadDeliveryReportIdByJsonField("gatewayReference", gatewayReference);
     
-    public static async Task UpdateEmailNotificationCustomizedContent(Guid notificationId, string customizedSubject, string customizedBody)
+    public static async Task UpdateNotificationCustomizedContent<T>(Guid notificationId, string? customizedSubject, string customizedBody)
+        where T : class
     {
-        string updateSql = @"
-            UPDATE notifications.emailnotifications 
-            SET customizedsubject = @customizedSubject, 
-                customizedbody = @customizedBody
-            WHERE alternateid = @notificationId";
+        string updateSql;
 
-        await RunSql(
-            updateSql,
-            new NpgsqlParameter("@notificationId", notificationId),
-            new NpgsqlParameter("@customizedSubject", customizedSubject),
-            new NpgsqlParameter("@customizedBody", customizedBody));
+        if (typeof(T) == typeof(EmailNotification))
+        {
+            updateSql = @"
+                    UPDATE notifications.emailnotifications 
+                    SET customizedsubject = @customizedSubject, 
+                        customizedbody = @customizedBody
+                    WHERE alternateid = @notificationId";
+
+            await RunSql(
+                updateSql,
+                new NpgsqlParameter("@notificationId", notificationId),
+                new NpgsqlParameter("@customizedSubject", customizedSubject ?? (object)DBNull.Value),
+                new NpgsqlParameter("@customizedBody", customizedBody));
+        }
+        else if (typeof(T) == typeof(SmsNotification))
+        {
+            updateSql = @"
+                    UPDATE notifications.smsnotifications 
+                    SET customizedbody = @customizedBody
+                    WHERE alternateid = @notificationId";
+
+            await RunSql(
+                updateSql,
+                new NpgsqlParameter("@notificationId", notificationId),
+                new NpgsqlParameter("@customizedBody", customizedBody));
+        }
+        else
+        {
+            throw new ArgumentException("Type T must be either EmailNotification or SmsNotification");
+        }
     }
     
     private static async Task<long?> GetDeadDeliveryReportIdByJsonField(string fieldName, string fieldValue)
