@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Integrations;
+﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Integrations.Configuration;
@@ -16,14 +17,20 @@ public sealed class EmailStatusConsumer : NotificationStatusConsumerBase<EmailSt
     private readonly IEmailNotificationService _emailNotificationsService;
 
     /// <summary>
+    /// Gets the delivery report channel for Azure Communication Services email notifications.
+    /// </summary>
+    protected override DeliveryReportChannel Channel => DeliveryReportChannel.AzureCommunicationServices;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="EmailStatusConsumer"/> class.
     /// </summary>
     public EmailStatusConsumer(
         IKafkaProducer producer,
         ILogger<EmailStatusConsumer> logger,
         IOptions<KafkaSettings> kafkaSettings,
-        IEmailNotificationService emailNotificationsService)
-        : base(producer, logger, kafkaSettings.Value.EmailStatusUpdatedTopicName, kafkaSettings.Value.EmailStatusUpdatedRetryTopicName, kafkaSettings)
+        IEmailNotificationService emailNotificationsService,
+        IDeadDeliveryReportService deadDeliveryReportService)
+        : base(producer, logger, kafkaSettings.Value.EmailStatusUpdatedTopicName, kafkaSettings.Value.EmailStatusUpdatedRetryTopicName, kafkaSettings, deadDeliveryReportService)
     {
         _emailNotificationsService = emailNotificationsService;
     }
