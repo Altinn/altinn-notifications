@@ -623,7 +623,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         orderServiceMock.Setup(s => s.RetrieveOrderChainTracking("ttd", request.IdempotencyId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((NotificationOrderChainResponse?)null);
         orderServiceMock.Setup(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ServiceError(422, "Missing recipients"));
+            .ReturnsAsync(new ServiceError(422, "Missing recipients", "missing-contact-information"));
         var httpContext = new DefaultHttpContext();
         httpContext.Items["Org"] = "ttd";
         var controller = new FutureOrdersController(orderServiceMock.Object, validatorMock.Object)
@@ -639,6 +639,8 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var problemDetails = Assert.IsType<ProblemDetails>(statusCodeResult.Value);
         Assert.NotNull(problemDetails);
         Assert.Equal(422, problemDetails.Status);
+        Assert.Equal("missing-contact-information", problemDetails.Type);
+        Assert.Equal("Notification order chain registration failed", problemDetails.Title);
         Assert.Equal("Missing recipients", problemDetails.Detail);
     }
 

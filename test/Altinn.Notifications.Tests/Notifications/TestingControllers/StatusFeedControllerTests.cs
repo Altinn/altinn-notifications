@@ -120,14 +120,16 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
             Assert.NotNull(result);
             var statusCodeResult = Assert.IsType<ObjectResult>(result.Result);
             Assert.Equal(499, statusCodeResult.StatusCode);
-            Assert.Equal("Request terminated - The client disconnected or cancelled the request before the server could complete processing", statusCodeResult.Value);
+            var problemDetails = Assert.IsType<ProblemDetails>(statusCodeResult.Value);
+            Assert.Equal("request-terminated", problemDetails.Type);
+            Assert.Equal("Request terminated", problemDetails.Title);
         }
 
         [Fact]
         public async Task Get_WhenServiceReturnsError_CorrectStatusCodeIsReturned()
         {
             // Arrange
-            var error = new ServiceError(400, "Bad request");
+            var error = new ServiceError(400, "Bad request", "test-error-type");
             _statusFeedService.Setup(x => x.GetStatusFeed(It.IsAny<long>(), It.IsAny<int?>(), It.IsAny<string>(), CancellationToken.None))
                 .ReturnsAsync(error);
 
@@ -139,7 +141,8 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
             var statusCodeResult = Assert.IsType<ObjectResult>(result.Result);
             Assert.Equal(400, statusCodeResult.StatusCode);
             var problemDetails = Assert.IsType<ProblemDetails>(statusCodeResult.Value);
-            Assert.Equal("Bad request", problemDetails.Detail);
+            Assert.Equal("test-error-type", problemDetails.Type);
+            Assert.Equal("Failed to retrieve status feed", problemDetails.Title);
         }
     }
 }

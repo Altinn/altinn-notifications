@@ -179,10 +179,12 @@ public class InstantOrdersController : ControllerBase
             if (trackingInformation == null)
             {
                 var channelName = notificationChannel.ToString().ToLowerInvariant();
+                var errorType = $"instant-{channelName}-order-failed";
                 return StatusCode(500, CreateProblemDetails(
                     500,
                     $"Instant {channelName} notification order registration failed",
-                    $"An internal server error occurred while processing the {channelName} notification order."));
+                    $"An internal server error occurred while processing the {channelName} notification order.",
+                    errorType));
             }
 
             // 5. Return tracking information and location header.
@@ -226,10 +228,11 @@ public class InstantOrdersController : ControllerBase
     /// <summary>
     /// Creates appropriate problem details for different error scenarios.
     /// </summary>
-    private static ProblemDetails CreateProblemDetails(int statusCode, string title, string detail)
+    private static ProblemDetails CreateProblemDetails(int statusCode, string title, string detail, string? type = null)
     {
         return new ProblemDetails
         {
+            Type = type,
             Status = statusCode,
             Title = title,
             Detail = detail
@@ -250,7 +253,8 @@ public class InstantOrdersController : ControllerBase
             OperationCanceledException => StatusCode(499, CreateProblemDetails(
                 499,
                 "Request terminated",
-                "The client disconnected or cancelled the request before the server could complete processing.")),
+                "The client disconnected or cancelled the request before the server could complete processing.",
+                "request-terminated")),
             _ => throw ex
         };
     }

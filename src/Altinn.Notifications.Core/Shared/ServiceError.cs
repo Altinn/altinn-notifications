@@ -17,19 +17,26 @@ public class ServiceError
     public string? ErrorMessage { get; private set; }
 
     /// <summary>
+    /// The error type for machine-readable error identification
+    /// </summary>
+    public string? ErrorType { get; private set; }
+
+    /// <summary>
     /// Create a new instance of a service error
     /// </summary>
-    public ServiceError(int errorCode, string errorMessage)
+    public ServiceError(int errorCode, string errorMessage, string? errorType = null)
     {
         ErrorCode = errorCode;
         ErrorMessage = errorMessage;
+        ErrorType = errorType;
     }
 
     /// <summary>
     /// Create a new instance of a service error
     /// </summary>
-    public ServiceError(int errorCode)
+    public ServiceError(int errorCode, string? errorType = null)
     {
         ErrorCode = errorCode;
+        ErrorType = errorType;
     }
 }

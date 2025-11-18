@@ -69,6 +69,7 @@ public class ShipmentController : ControllerBase
                 {
                     var problemDetails = new ProblemDetails
                     {
+                        Type = error.ErrorType,
                         Title = "Failed to retrieve shipment information",
                         Detail = error.ErrorMessage,
                         Status = error.ErrorCode
@@ -81,6 +82,7 @@ public class ShipmentController : ControllerBase
         {
             var problemDetails = new ProblemDetails
             {
+                Type = "request-terminated",
                 Title = "Request terminated",
                 Detail = "The client disconnected or cancelled the request before the server could complete processing.",
                 Status = 499

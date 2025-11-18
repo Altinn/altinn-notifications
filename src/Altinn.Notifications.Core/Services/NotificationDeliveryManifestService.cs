@@ -26,6 +26,6 @@ public class NotificationDeliveryManifestService : INotificationDeliveryManifest
     {
         var deliveryManifest = await _notificationDeliveryManifestRepository.GetDeliveryManifestAsync(alternateId, creatorName, cancellationToken);
 
-        return deliveryManifest is NotificationDeliveryManifest manifest ? manifest : new ServiceError(404, "Shipment not found.");
+        return deliveryManifest is NotificationDeliveryManifest manifest ? manifest : new ServiceError(404, "Shipment not found.", "shipment-not-found");
     }
 }
