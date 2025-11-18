@@ -121,26 +121,27 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
         }
 
         var incomingMessages = messages as ICollection<string> ?? [.. messages];
-        List<string> messagesToPublish = [.. incomingMessages.Where(e => !string.IsNullOrWhiteSpace(e))];
+        List<string> incomingValidMessages = [.. incomingMessages.Where(e => !string.IsNullOrWhiteSpace(e))];
 
-        if (messagesToPublish.Count == 0)
+        if (incomingValidMessages.Count == 0)
         {
             _logger.LogError("// KafkaProducer // ProduceAsync // Messages are null, empty, or whitespace");
 
             IncrementFailed(incomingMessages.Count);
-            
+
             return messages;
         }
 
-        var publishStartTime = Stopwatch.StartNew();
-        var failed = new List<string>();
-        int success = 0;
+        int successfulPublishingCount = 0;
+        var failedToPublishMessages = new List<string>();
 
-        for (int i = 0; i < messagesToPublish.Count; i += _maxBatchSize)
+        var publishingStartTime = Stopwatch.StartNew();
+
+        for (int i = 0; i < incomingValidMessages.Count; i += _maxBatchSize)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var slice = Math.Min(_maxBatchSize, messagesToPublish.Count - i);
+            var slice = Math.Min(_maxBatchSize, incomingValidMessages.Count - i);
 
             _batchSizeHistogram.Record(slice);
 
@@ -150,7 +151,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             {
                 tasks[x] = _producer.ProduceAsync(
                     topic,
-                    new Message<Null, string> { Value = messagesToPublish[i + x] },
+                    new Message<Null, string> { Value = incomingValidMessages[i + x] },
                     cancellationToken);
             }
 
@@ -162,11 +163,11 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
                 {
                     if (results[r].Status == PersistenceStatus.Persisted)
                     {
-                        success++;
+                        successfulPublishingCount++;
                     }
                     else
                     {
-                        failed.Add(messagesToPublish[i + r]);
+                        failedToPublishMessages.Add(incomingValidMessages[i + r]);
 
                         IncrementFailed();
                     }
@@ -183,7 +184,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
 
                 if (ex.DeliveryResult?.Value is string message)
                 {
-                    failed.Add(message);
+                    failedToPublishMessages.Add(message);
 
                     IncrementFailed();
                 }
@@ -196,30 +197,30 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
                     i,
                     i + slice - 1);
 
-                failed.AddRange(messagesToPublish.Skip(i).Take(slice));
+                failedToPublishMessages.AddRange(incomingValidMessages.Skip(i).Take(slice));
 
                 IncrementFailed(slice);
             }
         }
 
-        publishStartTime.Stop();
-        _batchLatencyMs.Record(publishStartTime.Elapsed.TotalMilliseconds);
+        publishingStartTime.Stop();
+        _batchLatencyMs.Record(publishingStartTime.Elapsed.TotalMilliseconds);
 
-        if (success > 0)
+        if (successfulPublishingCount > 0)
         {
-            _publishedCounter.Add(success);
+            _publishedCounter.Add(successfulPublishingCount);
         }
 
         _logger.LogInformation(
             "// KafkaProducer // ProduceBatchAsync // Topic={Topic} Total={Total} Success={Success} Failed={Failed} SuccessRate={Rate:P2} DurationMs={Duration:F0}",
             topic,
-            messagesToPublish.Count,
-            success,
-            failed.Count,
-            (double)success / messagesToPublish.Count,
-            publishStartTime.Elapsed.TotalMilliseconds);
+            incomingValidMessages.Count,
+            successfulPublishingCount,
+            failedToPublishMessages.Count,
+            (double)successfulPublishingCount / incomingValidMessages.Count,
+            publishingStartTime.Elapsed.TotalMilliseconds);
 
-        return failed;
+        return failedToPublishMessages;
     }
 
     /// <summary>
