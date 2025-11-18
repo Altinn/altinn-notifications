@@ -373,9 +373,9 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             SocketKeepaliveEnable = true,
             EnableDeliveryReports = true,
             StatisticsIntervalMs = 30000,
+            DeliveryReportFields = "status",
             CompressionType = CompressionType.Zstd,
-            DeliveryReportFields = "status,topic,partition,offset,error",
-            ClientId = $"{_settings.Consumer.GroupId}-{nameof(KafkaProducer).ToLower()}"
+            ClientId = $"{_settings.Consumer.GroupId}-{GetType().Name.ToLower()}"
         };
     }
 
