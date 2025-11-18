@@ -80,7 +80,7 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetNewNotifications()
+    public async Task GetNewNotificationsAsync_ReturnsNotificationInBatch()
     {
         // Arrange
         (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
@@ -98,7 +98,7 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetRecipients()
+    public async Task GetRecipients_ValidOrderId_ReturnsEmailRecipient()
     {
         // Arrange
         EmailNotificationRepository repo = (EmailNotificationRepository)ServiceUtil
@@ -119,6 +119,32 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
         Assert.Equal(expectedRecipient.ToAddress, actualRecipient.ToAddress);
         Assert.Equal(expectedRecipient.NationalIdentityNumber, actualRecipient.NationalIdentityNumber);
         Assert.Equal(expectedRecipient.OrganizationNumber, actualRecipient.OrganizationNumber);
+    }
+
+    [Fact]
+    public async Task GetNewRecipientsAsync_WhenKeywordsAreUsed_ShouldAlwaysReturnCustomizedValues()
+    {
+        // Arrange
+        EmailNotificationRepository sut = (EmailNotificationRepository)ServiceUtil
+           .GetServices(new List<Type>() { typeof(IEmailNotificationRepository) })
+           .First(i => i.GetType() == typeof(EmailNotificationRepository));
+        (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
+        _orderIdsToDelete.Add(order.Id);
+
+        // Set customized values directly in the database to simulate keyword replacement
+        string customizedSubject = "Customized Subject for Test";
+        string customizedBody = "Customized Body for Test";
+        await PostgreUtil.UpdateEmailNotificationCustomizedContent(emailNotification.Id, customizedSubject, customizedBody);
+
+        // Act
+        List<Email> batch = await sut.GetNewNotificationsAsync(50, CancellationToken.None);
+        Email? interpolatedContent = batch.FirstOrDefault(x => x.NotificationId == emailNotification.Id);
+
+        // Assert
+        Assert.NotNull(interpolatedContent);
+        Assert.Equal(customizedSubject, interpolatedContent.Subject);
+        Assert.Equal(customizedBody, interpolatedContent.Body);
+        Assert.Equal(emailNotification.Recipient.ToAddress, interpolatedContent.ToAddress);
     }
 
     [Fact]

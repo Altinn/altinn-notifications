@@ -352,6 +352,27 @@ public static class PostgreUtil
         await pgcom.ExecuteNonQueryAsync();
     }
 
+    public static Task<long?> GetDeadDeliveryReportIdFromOperationId(string operationId)
+        => GetDeadDeliveryReportIdByJsonField("operationId", operationId);
+
+    public static Task<long?> GetDeadDeliveryReportIdFromGatewayReference(string gatewayReference)
+        => GetDeadDeliveryReportIdByJsonField("gatewayReference", gatewayReference);
+    
+    public static async Task UpdateEmailNotificationCustomizedContent(Guid notificationId, string customizedSubject, string customizedBody)
+    {
+        string updateSql = @"
+            UPDATE notifications.emailnotifications 
+            SET customizedsubject = @customizedSubject, 
+                customizedbody = @customizedBody
+            WHERE alternateid = @notificationId";
+
+        await RunSql(
+            updateSql,
+            new NpgsqlParameter("@notificationId", notificationId),
+            new NpgsqlParameter("@customizedSubject", customizedSubject),
+            new NpgsqlParameter("@customizedBody", customizedBody));
+    }
+    
     private static async Task<long?> GetDeadDeliveryReportIdByJsonField(string fieldName, string fieldValue)
     {
         // Validate fieldName to prevent SQL injection
@@ -376,10 +397,4 @@ public static class PostgreUtil
 
         return await reader.GetFieldValueAsync<long>(0);
     }
-
-    public static Task<long?> GetDeadDeliveryReportIdFromOperationId(string operationId)
-        => GetDeadDeliveryReportIdByJsonField("operationId", operationId);
-
-    public static Task<long?> GetDeadDeliveryReportIdFromGatewayReference(string gatewayReference)
-        => GetDeadDeliveryReportIdByJsonField("gatewayReference", gatewayReference);
 }
