@@ -1,4 +1,6 @@
-﻿using Altinn.Notifications.Core.Integrations;
+﻿using System.Diagnostics;
+using System.Diagnostics.Metrics;
+using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Integrations.Configuration;
 
 using Confluent.Kafka;
@@ -11,14 +13,22 @@ using Microsoft.Extensions.Options;
 namespace Altinn.Notifications.Integrations.Kafka.Producers;
 
 /// <summary>
-/// Implementation of a Kafka producer
+/// Implementation of a Kafka producer.
 /// </summary>
 public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
 {
-    private readonly int _maxBatchSize = 75;
+    private const int _maxBatchSize = 100;
+
     private readonly KafkaSettings _settings;
     private readonly ILogger<KafkaProducer> _logger;
     private readonly IProducer<Null, string> _producer;
+
+    private static readonly Meter _meter = new("Altinn.Notifications.KafkaProducer", "1.0.0");
+    private static readonly Counter<int> _failedCounter = _meter.CreateCounter<int>("kafka.producer.failed");
+    private static readonly Counter<int> _publishedCounter = _meter.CreateCounter<int>("kafka.producer.published");
+    private static readonly Histogram<int> _batchSizeHistogram = _meter.CreateHistogram<int>("kafka.producer.batch.size");
+    private static readonly Histogram<double> _batchLatencyMs = _meter.CreateHistogram<double>("kafka.producer.batch.latency.ms");
+    private static readonly Histogram<double> _singleLatencyMs = _meter.CreateHistogram<double>("kafka.producer.single.latency.ms");
 
     /// <summary>
     /// Initializes a new instance of the <see cref="KafkaProducer"/> class.
@@ -29,134 +39,191 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
         _logger = logger;
         _settings = settings.Value;
 
-        var config = new ProducerConfig(ProducerSettings)
-        {
-            LingerMs = 100,
-            Acks = Acks.All,
-            MaxInFlight = 5,
-            RetryBackoffMs = 1000,
-            BatchSize = 512 * 1024,
-            BatchNumMessages = 1000,
-            EnableIdempotence = true,
-            MessageSendMaxRetries = 5,
-            EnableBackgroundPoll = true,
-            SocketKeepaliveEnable = true,
-            EnableDeliveryReports = true,
-            DeliveryReportFields = "status",
-            CompressionType = CompressionType.Lz4
-        };
+        var config = BuildProducerConfig();
 
-        _producer = new ProducerBuilder<Null, string>(config)
-                   .BuildWithInstrumentation();
+        _producer = BuildProducer(config);
 
-        EnsureTopicsExist();
+        _ = EnsureTopicsExist();
     }
 
     /// <inheritdoc/>
     public async Task<bool> ProduceAsync(string topic, string message)
     {
+        if (!ValidateTopic(topic))
+        {
+            return false;
+        }
+
+        if (!ValidateMessage(message))
+        {
+            return false;
+        }
+
+        var publishStartTime = Stopwatch.StartNew();
+
         try
         {
-            DeliveryResult<Null, string> result = await _producer.ProduceAsync(topic, new Message<Null, string>
-            {
-                Value = message
-            });
+            var result = await _producer.ProduceAsync(topic, new Message<Null, string> { Value = message });
 
             if (result.Status != PersistenceStatus.Persisted)
             {
-                _logger.LogError("// KafkaProducer // ProduceAsync // Message not ack'd by all brokers (value: '{Message}'). Delivery status: {Status}", message, result.Status);
+                _logger.LogError(
+                    "// KafkaProducer // ProduceAsync // Message not persisted. Status={Status} Partition={Partition}",
+                    result.Status,
+                    result.Partition);
+
+                IncrementFailed();
+
                 return false;
             }
+
+            IncrementPublished();
+
+            return true;
         }
-        catch (ProduceException<long, string> ex)
+        catch (ProduceException<Null, string> ex)
         {
-            _logger.LogError(ex, "// KafkaProducer // ProduceAsync // Permanent error: {Message} for message (value: '{DeliveryResult}')", ex.Message, ex.DeliveryResult.Value);
+            _logger.LogError(
+                ex,
+                "// KafkaProducer // ProduceAsync // ProduceException Code={Code} Reason={Reason} MessageLength={Length}",
+                ex.Error.Code,
+                ex.Error.Reason,
+                message.Length);
+
+            IncrementFailed();
+
             return false;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "// KafkaProducer // ProduceAsync // An exception occurred.");
+            _logger.LogError(ex, "// KafkaProducer // ProduceAsync // Unexpected exception.");
+
+            IncrementFailed();
+
             return false;
         }
+        finally
+        {
+            publishStartTime.Stop();
 
-        return true;
+            _singleLatencyMs.Record(publishStartTime.Elapsed.TotalMilliseconds);
+        }
     }
 
     /// <inheritdoc/>
     public async Task<IEnumerable<string>> ProduceAsync(string topic, IEnumerable<string> messages, CancellationToken cancellationToken = default)
     {
-        var messagesToPublish = messages as IList<string> ?? [.. messages];
-        if (messagesToPublish.Count == 0)
+        if (!ValidateTopic(topic))
         {
-            return [];
+            IncrementFailed(messages.Count());
+
+            return messages;
         }
 
-        var successfullMessagesCount = 0;
-        var publishStartTime = DateTime.UtcNow;
-        var failedMessages = new List<string>();
+        var incomingMessages = messages as ICollection<string> ?? [.. messages];
+        List<string> messagesToPublish = [.. incomingMessages.Where(e => !string.IsNullOrWhiteSpace(e))];
+
+        if (messagesToPublish.Count == 0)
+        {
+            _logger.LogError("// KafkaProducer // ProduceAsync // Messages are null, empty, or whitespace");
+
+            IncrementFailed(incomingMessages.Count);
+            
+            return messages;
+        }
+
+        var publishStartTime = Stopwatch.StartNew();
+        var failed = new List<string>();
+        int success = 0;
+
         for (int i = 0; i < messagesToPublish.Count; i += _maxBatchSize)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var messagesSegment = messagesToPublish.Skip(i).Take(_maxBatchSize).ToList();
+            var slice = Math.Min(_maxBatchSize, messagesToPublish.Count - i);
 
-            var publishingTasks = messagesSegment.Select((message, index) => new
+            _batchSizeHistogram.Record(slice);
+
+            var tasks = new Task<DeliveryResult<Null, string>>[slice];
+
+            for (int x = 0; x < slice; x++)
             {
-                Index = index,
-                Message = message,
-                Task = _producer.ProduceAsync(topic, new Message<Null, string> { Value = message }, cancellationToken)
-            }).ToArray();
+                tasks[x] = _producer.ProduceAsync(
+                    topic,
+                    new Message<Null, string> { Value = messagesToPublish[i + x] },
+                    cancellationToken);
+            }
 
             try
             {
-                var publishingTasksResults = await Task.WhenAll(publishingTasks.Select(e => e.Task)).ConfigureAwait(false);
-                for (int x = 0; x < publishingTasksResults.Length; x++)
+                var results = await Task.WhenAll(tasks).ConfigureAwait(false);
+
+                for (int r = 0; r < results.Length; r++)
                 {
-                    var publishingResult = publishingTasksResults[x];
-                    if (publishingResult.Status != PersistenceStatus.Persisted)
+                    if (results[r].Status == PersistenceStatus.Persisted)
                     {
-                        failedMessages.Add(publishingTasks[x].Message);
+                        success++;
                     }
                     else
                     {
-                        successfullMessagesCount++;
+                        failed.Add(messagesToPublish[i + r]);
+
+                        IncrementFailed();
                     }
                 }
             }
             catch (ProduceException<Null, string> ex)
             {
-                _logger.LogError(ex, "// KafkaProducer // ProduceBatchAsync // ProduceException (code: {Code}) value: '{Value}'", ex.Error.Code, ex.DeliveryResult?.Value);
+                _logger.LogError(
+                    ex,
+                    "// KafkaProducer // ProduceBatchAsync // ProduceException Code={Code} Reason={Reason} ValueLength={Length}",
+                    ex.Error.Code,
+                    ex.Error.Reason,
+                    ex.DeliveryResult?.Value?.Length ?? 0);
 
-                if (ex.DeliveryResult?.Value != null)
+                if (ex.DeliveryResult?.Value is string message)
                 {
-                    failedMessages.Add(ex.DeliveryResult.Value);
+                    failed.Add(message);
+
+                    IncrementFailed();
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "// KafkaProducer // ProduceBatchAsync // Unexpected exception in chunk {ChunkStart}-{ChunkEnd}", i, Math.Min(i + _maxBatchSize - 1, messagesToPublish.Count - 1));
+                _logger.LogError(
+                    ex,
+                    "// KafkaProducer // ProduceBatchAsync // Unexpected exception slice {Start}-{End}",
+                    i,
+                    i + slice - 1);
 
-                failedMessages.AddRange(messagesSegment);
+                failed.AddRange(messagesToPublish.Skip(i).Take(slice));
+
+                IncrementFailed(slice);
             }
         }
 
-        var publishEndTime = DateTime.UtcNow;
-        var publishingDurationSeconds = (publishEndTime - publishStartTime).TotalSeconds;
+        publishStartTime.Stop();
+        _batchLatencyMs.Record(publishStartTime.Elapsed.TotalMilliseconds);
+
+        if (success > 0)
+        {
+            _publishedCounter.Add(success);
+        }
 
         _logger.LogInformation(
-            "// KafkaProducer // ProduceBatchAsync // Batch publishing completed for topic {Topic}. Total messages: {TotalMessages}, Successfully published: {SuccessCount}, Failed: {FailedCount}, Success rate: {SuccessRate:P2}, Publishing duration: {PublishingDurationSeconds:F2} seconds",
+            "// KafkaProducer // ProduceBatchAsync // Topic={Topic} Total={Total} Success={Success} Failed={Failed} SuccessRate={Rate:P2} DurationMs={Duration:F0}",
             topic,
             messagesToPublish.Count,
-            successfullMessagesCount,
-            failedMessages.Count,
-            successfullMessagesCount / messagesToPublish.Count,
-            publishingDurationSeconds);
+            success,
+            failed.Count,
+            (double)success / messagesToPublish.Count,
+            publishStartTime.Elapsed.TotalMilliseconds);
 
-        return failedMessages;
+        return failed;
     }
 
     /// <summary>
-    /// Disposes the producer instance, attempting a graceful flush with timeout.
+    /// Disposes the producer instance and attempts a graceful flush.
     /// </summary>
     public void Dispose()
     {
@@ -165,7 +232,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     }
 
     /// <summary>
-    /// Protected dispose pattern implementation.
+    /// Performs cleanup of managed and unmanaged resources.
     /// </summary>
     protected virtual void Dispose(bool disposing)
     {
@@ -180,7 +247,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "// KafkaProducer // Dispose // Flush timeout or error.");
+            _logger.LogError(ex, "// KafkaProducer // Dispose // Flush failed.");
         }
         finally
         {
@@ -189,12 +256,12 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     }
 
     /// <summary>
-    /// Ensures required topics exist by creating any missing topics using the admin client.
-    /// Intended to run at startup; avoid calling on the hot path of producing.
+    /// Ensures that required topics exist by creating any missing topics through the Kafka admin client.
     /// </summary>
-    private void EnsureTopicsExist()
+    private async Task EnsureTopicsExist()
     {
         using var adminClient = new AdminClientBuilder(AdminClientSettings).Build();
+
         Metadata metadata;
         try
         {
@@ -202,23 +269,29 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "// KafkaProducer // EnsureTopicsExist // Failed to fetch metadata.");
-
+            _logger.LogError(ex, "// KafkaProducer // EnsureTopicsExist // Metadata fetch failed.");
             throw;
         }
 
-        var existingNames = new HashSet<string>(metadata.Topics.Select(t => t.Topic), StringComparer.OrdinalIgnoreCase);
+        var existingTopics = new HashSet<string>(metadata.Topics.Select(e => e.Topic), StringComparer.OrdinalIgnoreCase);
 
         foreach (string topic in _settings.Admin.TopicList)
         {
-            if (existingNames.Contains(topic))
+            if (string.IsNullOrWhiteSpace(topic))
+            {
+                _logger.LogWarning("// KafkaProducer // EnsureTopicsExist // Skipping empty topic.");
+
+                continue;
+            }
+
+            if (existingTopics.Contains(topic))
             {
                 continue;
             }
 
             try
             {
-                adminClient.CreateTopicsAsync(
+                await adminClient.CreateTopicsAsync(
                 [
                     new TopicSpecification
                     {
@@ -227,16 +300,16 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
                         NumPartitions = TopicSpecification.NumPartitions,
                         ReplicationFactor = TopicSpecification.ReplicationFactor
                     }
-                ]).GetAwaiter().GetResult();
+                ]);
 
                 _logger.LogInformation("// KafkaProducer // EnsureTopicsExist // Created topic '{Topic}'", topic);
             }
             catch (CreateTopicsException ex)
             {
-                // If topic already exists (race), treat as success.
                 if (ex.Results.Any(r => r.Error.Code == ErrorCode.TopicAlreadyExists))
                 {
-                    _logger.LogInformation("// KafkaProducer // EnsureTopicsExist // Topic '{Topic}' already exists (race).", topic);
+                    _logger.LogInformation("// KafkaProducer // EnsureTopicsExist // Topic '{Topic}' already exists.", topic);
+
                     continue;
                 }
 
@@ -245,4 +318,101 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             }
         }
     }
+
+    /// <summary>
+    /// Validates that the provided topic name is non-null and non-whitespace.
+    /// </summary>
+    private bool ValidateTopic(string topic)
+    {
+        if (!string.IsNullOrWhiteSpace(topic))
+        {
+            return true;
+        }
+
+        _logger.LogError("// KafkaProducer // Topic name is null, empty, or whitespace");
+
+        IncrementFailed();
+
+        return false;
+    }
+
+    /// <summary>
+    /// Validates that the provided message content is non-null and non-whitespace.
+    /// </summary>1
+    private bool ValidateMessage(string message)
+    {
+        if (!string.IsNullOrWhiteSpace(message))
+        {
+            return true;
+        }
+
+        _logger.LogError("// KafkaProducer // Message is null, empty, or whitespace");
+
+        IncrementFailed();
+
+        return false;
+    }
+
+    /// <summary>
+    /// Builds and configures the producer settings used by the Kafka producer instance.
+    /// </summary>
+    private ProducerConfig BuildProducerConfig()
+    {
+        return new(ProducerSettings)
+        {
+            LingerMs = 20,
+            Acks = Acks.All,
+            MaxInFlight = 5,
+            RetryBackoffMs = 1000,
+            BatchSize = 256 * 1024,
+            BatchNumMessages = 1000,
+            EnableIdempotence = true,
+            MessageSendMaxRetries = 5,
+            EnableBackgroundPoll = true,
+            SocketKeepaliveEnable = true,
+            EnableDeliveryReports = true,
+            StatisticsIntervalMs = 30000,
+            CompressionType = CompressionType.Zstd,
+            DeliveryReportFields = "status,topic,partition,offset,error",
+            ClientId = $"{_settings.Consumer.GroupId}-{nameof(KafkaProducer).ToLower()}"
+        };
+    }
+
+    /// <summary>
+    /// Creates the Kafka producer instance and attaches error and statistics handlers.
+    /// </summary>
+    private IProducer<Null, string> BuildProducer(ProducerConfig config)
+    {
+        return new ProducerBuilder<Null, string>(config)
+            .SetErrorHandler((_, e) =>
+            {
+                if (e.IsFatal)
+                {
+                    _logger.LogCritical("// KafkaProducer // Fatal error {Code}: {Reason}", e.Code, e.Reason);
+                }
+                else if (e.IsError)
+                {
+                    _logger.LogError("// KafkaProducer // Broker error {Code}: {Reason}", e.Code, e.Reason);
+                }
+                else
+                {
+                    _logger.LogWarning("// KafkaProducer // Broker notice {Code}: {Reason}", e.Code, e.Reason);
+                }
+            })
+            .SetStatisticsHandler((_, json) =>
+            {
+                _logger.LogDebug("// KafkaProducer // Stats: {StatsJson}", json);
+            })
+            .BuildWithInstrumentation();
+    }
+
+    /// <summary>
+    /// Increments the failure counter, allowing batch operations to record multiple failures.
+    /// </summary>
+    private void IncrementFailed(int count = 1) => _failedCounter.Add(count);
+
+    /// <summary>
+    /// Increments the publish counter, allowing batch operations to record multiple successes.
+    /// </summary>
+    private void IncrementPublished(int count = 1) => _publishedCounter.Add(count);
 }
