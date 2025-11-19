@@ -16,6 +16,9 @@ namespace Altinn.Notifications.Persistence.Repository
                                                 SET emaillimittimeout = $1
                                                 WHERE id = (SELECT MAX(id) FROM notifications.resourcelimitlog);";
 
+        private const string _insertEmailTimeout = @"INSERT INTO notifications.resourcelimitlog (emaillimittimeout)
+                                                  VALUES ($1);";
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ResourceLimitRepository"/> class.
         /// </summary>
@@ -29,9 +32,22 @@ namespace Altinn.Notifications.Persistence.Repository
         {
             await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_setEmailTimeout);
             pgcom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, timeout);
-            await pgcom.ExecuteNonQueryAsync();
+            var rowsAffected = await pgcom.ExecuteNonQueryAsync();
 
-            return true;
+            if (rowsAffected == 0)
+            {
+                return await InsertEmailTimeout(timeout);
+            }
+
+            return rowsAffected > 0;
+        }
+
+        private async Task<bool> InsertEmailTimeout(DateTime timeout)
+        {
+            await using NpgsqlCommand insertCom = _dataSource.CreateCommand(_insertEmailTimeout);
+            insertCom.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, timeout);
+            var affectedRows = await insertCom.ExecuteNonQueryAsync();
+            return affectedRows > 0;
         }
     }
 }

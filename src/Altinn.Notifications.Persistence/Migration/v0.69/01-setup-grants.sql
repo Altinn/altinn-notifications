@@ -1,0 +1,1 @@
+﻿GRANT USAGE, SELECT ON SEQUENCE notifications.resourcelimitlog_id_seq TO PLATFORM_NOTIFICATIONS;
