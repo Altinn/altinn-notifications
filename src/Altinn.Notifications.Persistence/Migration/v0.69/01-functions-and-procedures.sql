@@ -908,46 +908,38 @@ RETURNS TABLE(
     destination       text,
     type              text
 )
-LANGUAGE 'plpgsql'
-COST 100
-STABLE PARALLEL SAFE
+LANGUAGE sql
+STABLE
+PARALLEL SAFE
+STRICT
 ROWS 5
-AS $BODY$
-DECLARE
-    _order_alternateid uuid;
-    _order_creatorname text;
-BEGIN
-    -- First try to find order information in the email notifications table
-    SELECT o.alternateid, o.creatorname INTO _order_alternateid, _order_creatorname
-    FROM notifications.orders o
-    JOIN notifications.emailnotifications e ON e._orderid = o._id
-    WHERE e.alternateid = _alternateid
-    LIMIT 1;
-    
-    -- If not found in email notifications, try SMS notifications table
-    IF _order_alternateid IS NULL THEN
-        SELECT o.alternateid, o.creatorname INTO _order_alternateid, _order_creatorname
-        FROM notifications.orders o
-        JOIN notifications.smsnotifications s ON s._orderid = o._id
+AS $$
+WITH picked_order AS (
+    (
+        SELECT o.alternateid, o.creatorname
+        FROM notifications.emailnotifications e
+        JOIN notifications.orders o ON o._id = e._orderid
+        WHERE e.alternateid = _alternateid
+
+        UNION ALL
+
+        SELECT o.alternateid, o.creatorname
+        FROM notifications.smsnotifications s
+        JOIN notifications.orders o ON o._id = s._orderid
         WHERE s.alternateid = _alternateid
-        LIMIT 1;
-    END IF;
-    
-    -- If we found an order, get its tracking information
-    IF _order_alternateid IS NOT NULL THEN
-        RETURN QUERY
-        SELECT
-            _order_alternateid,
-            t.reference,        
-            t.status,
-            t.last_update,
-            t.destination,
-            t.type
-        FROM
-            notifications.get_shipment_tracking_v3(_order_alternateid, _order_creatorname) AS t;
-    END IF;
-END;
-$BODY$;
+    )
+    LIMIT 1
+)
+SELECT
+    p.alternateid,
+    t.reference,
+    t.status,
+    t.last_update,
+    t.destination,
+    t.type
+FROM picked_order p
+CROSS JOIN LATERAL notifications.get_shipment_tracking_v3(p.alternateid, p.creatorname) AS t;
+$$;
 
 ALTER FUNCTION notifications.getshipmentforstatusfeed_v3(uuid)
     OWNER TO platform_notifications_admin;
