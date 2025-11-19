@@ -122,7 +122,7 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetNewRecipientsAsync_WhenKeywordsAreUsed_ShouldAlwaysReturnCustomizedValues()
+    public async Task GetNewNotificationsAsync_WhenKeywordsAreUsed_ShouldAlwaysReturnCustomizedValues()
     {
         // Arrange
         EmailNotificationRepository sut = (EmailNotificationRepository)ServiceUtil
