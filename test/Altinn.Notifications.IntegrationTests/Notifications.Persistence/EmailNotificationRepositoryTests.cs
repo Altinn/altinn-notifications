@@ -146,6 +146,33 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
         Assert.Equal(customizedBody, interpolatedContent.Body);
     }
 
+    [Theory]
+    [InlineData("", "Custom Body")] // Empty subject
+    [InlineData("Custom Subject", "")] // Empty body
+    public async Task GetNewNotificationsAsync_WithEmptyCustomization_HandlesEmptyStringsCorrectly(string customSubject, string customBody)
+    {
+        // Arrange
+        string defaultSubject = "email-subject";
+        string defaultBody = "email-body";
+
+        EmailNotificationRepository sut = (EmailNotificationRepository)ServiceUtil
+           .GetServices(new List<Type>() { typeof(IEmailNotificationRepository) })
+           .First(i => i.GetType() == typeof(EmailNotificationRepository));
+        (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
+        _orderIdsToDelete.Add(order.Id);
+
+        await PostgreUtil.UpdateNotificationCustomizedContent<EmailNotification>(emailNotification.Id, customSubject, customBody);
+
+        // Act
+        List<Email> batch = await sut.GetNewNotificationsAsync(50, CancellationToken.None);
+        Email? result = batch.FirstOrDefault(x => x.NotificationId == emailNotification.Id);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(string.IsNullOrEmpty(customSubject) ? defaultSubject : customSubject, result.Subject);
+        Assert.Equal(string.IsNullOrEmpty(customBody) ? defaultBody : customBody, result.Body);
+    }
+
     [Fact]
     public async Task UpdateSendStatus_GivenValidNotificationId_ShouldUpdateStatusAndOperationId()
     {
