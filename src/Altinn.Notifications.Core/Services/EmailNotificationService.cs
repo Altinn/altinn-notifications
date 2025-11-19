@@ -94,11 +94,11 @@ public class EmailNotificationService : IEmailNotificationService
 
             var readyToSendMessages = newEmailNotifications.Select(readyToSendEmail => readyToSendEmail.Serialize());
 
-            var failedToSendMessages = await _producer.ProduceAsync(_emailQueueTopicName, readyToSendMessages, cancellationToken);
+            var unpublishedMessages = await _producer.ProduceAsync(_emailQueueTopicName, readyToSendMessages, cancellationToken);
 
-            foreach (var failedToSendMessage in failedToSendMessages)
+            foreach (var unpublishedMessage in unpublishedMessages)
             {
-                var failedToSendEmail = JsonSerializer.Deserialize<Email>(failedToSendMessage, JsonSerializerOptionsProvider.Options);
+                var failedToSendEmail = JsonSerializer.Deserialize<Email>(unpublishedMessage, JsonSerializerOptionsProvider.Options);
                 if (failedToSendEmail == null || failedToSendEmail.NotificationId == Guid.Empty)
                 {
                     continue;

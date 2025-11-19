@@ -121,7 +121,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
 
         try
         {
-            var (deliveryTasks, updatedContext) = ScheduleDeliveryTasksAsync(batchContext, cancellationToken);
+            var (deliveryTasks, updatedContext) = CreateProduceTasks(batchContext, cancellationToken);
             batchContext = updatedContext;
 
             if (deliveryTasks.Count == 0)
@@ -280,7 +280,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     {
         return new(ProducerSettings)
         {
-            LingerMs = 20,
+            LingerMs = 100,
             Acks = Acks.All,
             MaxInFlight = 5,
             RetryBackoffMs = 1000,
@@ -573,7 +573,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     /// A <see cref="Task{TResult}"/> that represents the asynchronous operation.
     /// The task result contains a list of delivery tasks for the scheduled messages.
     /// </returns>
-    private (List<Task<DeliveryResult<Null, string>>> DeliveryTasks, BatchContext UpdatedContext) ScheduleDeliveryTasksAsync(BatchContext context, CancellationToken cancellationToken)
+    private (List<Task<DeliveryResult<Null, string>>> DeliveryTasks, BatchContext UpdatedContext) CreateProduceTasks(BatchContext context, CancellationToken cancellationToken)
     {
         int scheduledCount = 0;
         var additionalUnpublishedMessages = new List<string>();
@@ -633,6 +633,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             result = result with
             {
                 DeliveryResults = await Task.WhenAll(deliveryTasks).WaitAsync(cancellationToken),
+
                 WasCancelled = false,
                 DeliveryTasks = deliveryTasks
             };
