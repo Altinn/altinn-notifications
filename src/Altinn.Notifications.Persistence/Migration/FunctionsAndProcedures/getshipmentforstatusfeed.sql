@@ -106,8 +106,7 @@ RETURNS TABLE(
     status            text,
     last_update       timestamp with time zone,
     destination       text,
-    type              text,
-    notification_type text
+    type              text
 )
 LANGUAGE 'plpgsql'
 COST 100
@@ -143,8 +142,7 @@ BEGIN
             t.status,
             t.last_update,
             t.destination,
-            t.type,
-            t.notification_type 
+            t.type
         FROM
             notifications.get_shipment_tracking_v3(_order_alternateid, _order_creatorname) AS t;
     END IF;

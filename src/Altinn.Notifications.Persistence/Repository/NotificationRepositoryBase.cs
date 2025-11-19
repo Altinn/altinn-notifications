@@ -201,18 +201,20 @@ public abstract class NotificationRepositoryBase
 
     private static async Task ReadRecipients(List<Recipient> recipients, NpgsqlDataReader reader)
     {
+        var legalRecipientTypes = new[] { "email", "sms" };
+
         var statusOrdinal = reader.GetOrdinal("status");
         var destinationOrdinal = reader.GetOrdinal("destination");
-        var notificationTypeOrdinal = reader.GetOrdinal("notification_type");
+        var typeOrdinal = reader.GetOrdinal("type");
         var lastUpdateOrdinal = reader.GetOrdinal("last_update");
 
         while (await reader.ReadAsync())
         {
-            var notificationType = await reader.GetFieldValueAsync<string>(notificationTypeOrdinal);
+            var notificationType = await reader.GetFieldValueAsync<string>(typeOrdinal);
 
-            if (notificationType.Equals("order", StringComparison.OrdinalIgnoreCase))
+            if (!legalRecipientTypes.Contains(notificationType, StringComparer.OrdinalIgnoreCase))
             {
-                // Skip order-level as it is already processed
+                // Skip non-recipient level notifications
                 continue;
             }
 

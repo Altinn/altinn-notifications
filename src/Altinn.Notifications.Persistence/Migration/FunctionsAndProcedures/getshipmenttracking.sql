@@ -164,8 +164,7 @@ RETURNS TABLE (
     status             TEXT,
     last_update        TIMESTAMPTZ,
     destination        TEXT,
-    type               TEXT,
-    notification_type  TEXT
+    type               TEXT
 )
 LANGUAGE plpgsql
 STABLE PARALLEL SAFE
@@ -200,8 +199,7 @@ BEGIN
             od.processedstatus::TEXT AS status,
             GREATEST(od.created, COALESCE(od.processed, od.created)) AS last_update,
             NULL::TEXT AS destination,
-            od.type::TEXT AS type,
-            'order' AS notification_type
+            od.type::TEXT AS type
         FROM order_data od
     ),
     email_tracking AS (
@@ -210,8 +208,7 @@ BEGIN
             e.result::TEXT AS status,
             e.resulttime AS last_update,
             e.toaddress AS destination,
-            od.type::TEXT AS type,
-            'email' AS notification_type
+            'email' AS type
         FROM order_data od
         JOIN notifications.emailnotifications e ON e._orderid = od._id
     ),
@@ -221,8 +218,7 @@ BEGIN
             s.result::TEXT AS status,
             s.resulttime AS last_update,
             s.mobilenumber AS destination,
-            od.type::TEXT AS type,
-            'sms' AS notification_type
+            'sms' AS type
         FROM order_data od
         JOIN notifications.smsnotifications s ON s._orderid = od._id
     )
@@ -237,13 +233,25 @@ $$;
 COMMENT ON FUNCTION notifications.get_shipment_tracking_v3(UUID, TEXT) IS
 'Returns delivery tracking information for a notification identified by the given alternate identifier and creator name.
 
+Returns:
+ - reference: Sender''s reference for the order
+ - status: Processing/delivery status  
+ - last_update: Timestamp of last status update
+ - destination: Email address or mobile number (NULL for order-level tracking)
+ - type: Type of tracking record
+
+Type field values:
+ - For order-level tracking: returns the order type from the database (''Notification'', ''Reminder'', or ''Instant'')
+ - For individual email notifications: returns ''email'' (literal string)
+ - For individual SMS notifications: returns ''sms'' (literal string)
+
 Includes:
  - Order-level tracking (reference and status)
  - Email notification tracking (status, result time, destination)
  - SMS notification tracking (status, result time, destination)
 
 Changes from v2:
- - Added notification_type field to distinguish between order, email, and sms tracking records
- - notification_type values: ''order'', ''email'', ''sms''
+ - Modified type field behavior to distinguish between order-level and notification-level tracking
+ - Order tracking uses database order type, notification tracking uses literal type identifiers
 
 If no matching order exists, an empty result set is returned.';
