@@ -4,13 +4,11 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using Altinn.Notifications.Core.Configuration;
-using Altinn.Notifications.Core.Helpers;
 using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Persistence.Mappers;
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-
 using Npgsql;
 using NpgsqlTypes;
 
@@ -27,7 +25,7 @@ public abstract class NotificationRepositoryBase
     protected abstract string SourceIdentifier { get; }
 
     private readonly string _updateExpiredNotifications = "SELECT * FROM notifications.updateexpirednotifications(@source, @limit, @offset)";
-    private const string _getShipmentForStatusFeedSql = "SELECT * FROM notifications.getshipmentforstatusfeed_v2(@alternateid)";
+    private const string _getShipmentForStatusFeedSql = "SELECT * FROM notifications.getshipmentforstatusfeed_v3(@alternateid)";
     private const string _tryMarkOrderAsCompletedSql = "SELECT notifications.trymarkorderascompleted(@notificationid, @sourceidentifier)";
 
     private readonly NpgsqlDataSource _dataSource;
@@ -203,20 +201,48 @@ public abstract class NotificationRepositoryBase
 
     private static async Task ReadRecipients(List<Recipient> recipients, NpgsqlDataReader reader)
     {
+        var legalRecipientTypes = new[] { "email", "sms" };
+
+        var statusOrdinal = reader.GetOrdinal("status");
+        var destinationOrdinal = reader.GetOrdinal("destination");
+        var typeOrdinal = reader.GetOrdinal("type");
+        var lastUpdateOrdinal = reader.GetOrdinal("last_update");
+
         while (await reader.ReadAsync())
         {
-            var status = await reader.GetFieldValueAsync<string>("status");
-            var destination = await reader.GetFieldValueAsync<string>("destination");
-            var isValidMobileNumber = MobileNumberHelper.IsValidMobileNumber(destination);
+            var notificationType = await reader.GetFieldValueAsync<string>(typeOrdinal);
 
-            var recipient = new Recipient
+            if (!legalRecipientTypes.Contains(notificationType, StringComparer.OrdinalIgnoreCase))
             {
-                Destination = destination,
-                LastUpdate = await reader.GetFieldValueAsync<DateTime>("last_update"),
-                Status = isValidMobileNumber ? ProcessingLifecycleMapper.GetSmsLifecycleStage(status) : ProcessingLifecycleMapper.GetEmailLifecycleStage(status)
-            };
+                // Skip non-recipient level notifications
+                continue;
+            }
 
-            recipients.Add(recipient);
+            var status = await reader.GetFieldValueAsync<string>(statusOrdinal);
+            var destination = await reader.IsDBNullAsync(destinationOrdinal) ? string.Empty : await reader.GetFieldValueAsync<string>(destinationOrdinal);
+
+            Recipient recipient;
+
+            if (notificationType.Equals("email", StringComparison.OrdinalIgnoreCase))
+            {
+                recipient = new Recipient
+                {
+                    Destination = destination,
+                    LastUpdate = await reader.GetFieldValueAsync<DateTime>(lastUpdateOrdinal),
+                    Status = ProcessingLifecycleMapper.GetEmailLifecycleStage(status)
+                };
+                recipients.Add(recipient);
+            }
+            else if (notificationType.Equals("sms", StringComparison.OrdinalIgnoreCase))
+            {
+                recipient = new Recipient
+                {
+                    Destination = destination,
+                    LastUpdate = await reader.GetFieldValueAsync<DateTime>(lastUpdateOrdinal),
+                    Status = ProcessingLifecycleMapper.GetSmsLifecycleStage(status)
+                };
+                recipients.Add(recipient);
+            }
         }
     }
 
