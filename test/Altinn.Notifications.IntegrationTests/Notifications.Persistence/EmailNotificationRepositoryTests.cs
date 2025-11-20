@@ -239,6 +239,25 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task UpdateSendStatus_GivenEmptyToAddress_ShouldSaveTheStatusFeedEntry()
+    {
+        // Arrange
+        (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(toAddress: string.Empty);
+        _orderIdsToDelete.Add(order.Id);
+
+        EmailNotificationRepository sut = (EmailNotificationRepository)ServiceUtil
+         .GetServices(new List<Type>() { typeof(IEmailNotificationRepository) })
+         .First(i => i.GetType() == typeof(EmailNotificationRepository));
+
+        // Act 
+        await sut.UpdateSendStatus(emailNotification.Id, EmailNotificationResultType.Delivered);
+
+        // Assert
+        var count = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+        Assert.Equal(1, count);
+    }
+
+    [Fact]
     public async Task UpdateSendStatus_GivenValidOperationId_ShouldFindNotificationAndUpdateStatus()
     {
         // Arrange
