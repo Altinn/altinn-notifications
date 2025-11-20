@@ -120,7 +120,11 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
     /// </summary>
     private async Task RetryStatus(string message)
     {
-        await _producer.ProduceAsync(_statusUpdatedTopicName, message);
+        var producerResult = await _producer.ProduceAsync(_statusUpdatedTopicName, message);
+        if (!producerResult)
+        {
+            throw new InvalidOperationException($"Failed to republish message to topic. Not retrying on topic: {_statusUpdatedRetryTopicName}");
+        }
     }
 
     /// <summary>
