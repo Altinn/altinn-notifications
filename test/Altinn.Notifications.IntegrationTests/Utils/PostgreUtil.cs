@@ -59,7 +59,7 @@ public static class PostgreUtil
     {
         (NotificationOrder o, EmailNotification e) = TestdataUtil.GetOrderAndEmailNotification();
         e.Recipient.ToAddress = toAddress;
-   
+
         (var orderRepo, var notificationRepo) = GetOrderAndEmailNotificationRepositories();
 
         await orderRepo.Create(o);
@@ -437,10 +437,4 @@ public static class PostgreUtil
         var emailRepo = (EmailNotificationRepository)services.First(s => s is EmailNotificationRepository);
         return (orderRepo, emailRepo);
     }
-
-    public static Task<long?> GetDeadDeliveryReportIdFromOperationId(string operationId)
-        => GetDeadDeliveryReportIdByJsonField("operationId", operationId);
-
-    public static Task<long?> GetDeadDeliveryReportIdFromGatewayReference(string gatewayReference)
-        => GetDeadDeliveryReportIdByJsonField("gatewayReference", gatewayReference);
 }
