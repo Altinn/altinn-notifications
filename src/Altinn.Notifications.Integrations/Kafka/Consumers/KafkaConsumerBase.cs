@@ -94,9 +94,19 @@ public abstract class KafkaConsumerBase<T> : BackgroundService
             }
             catch (Exception ex)
             {
-                await retryMessageFunc(message!);
+                bool retrySucceeded = false;
+                try
+                {
+                    await retryMessageFunc(message!);
+                    retrySucceeded = true;
+                }
+                catch (Exception retryEx)
+                {
+                    _logger.LogError(retryEx, "// {Class} // ConsumeMessage // An error occurred while retrying message processing", GetType().Name);
+                    throw; // prevent offset commit
+                }
 
-                if (consumeResult != null)
+                if (retrySucceeded && consumeResult != null)
                 {
                     _consumer.Commit(consumeResult);
                     _consumer.StoreOffset(consumeResult);
