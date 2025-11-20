@@ -96,6 +96,32 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
         Assert.Equal(1, actualCount);
     }
 
+    [Theory]
+    [InlineData("")] // Empty body
+    [InlineData("Custom SMS Body")]
+    public async Task GetNewNotifications_WithEmptyCustomization_HandlesEmptyStringsCorrectly(string customBody)
+    {
+        // Arrange
+        string defaultBody = "sms-body";
+
+        SmsNotificationRepository sut = ServiceUtil
+           .GetServices([typeof(ISmsNotificationRepository)])
+           .OfType<SmsNotificationRepository>()
+           .First();
+        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
+        _orderIdsToCleanup.Add(order.Id);
+
+        await PostgreUtil.UpdateNotificationCustomizedContent<SmsNotification>(smsNotification.Id, null, customBody);
+
+        // Act
+        List<Sms> batch = await sut.GetNewNotifications(50, CancellationToken.None, SendingTimePolicy.Daytime);
+        Sms? result = batch.FirstOrDefault(x => x.NotificationId == smsNotification.Id);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(string.IsNullOrEmpty(customBody) ? defaultBody : customBody, result.Message);
+    }
+
     [Fact]
     public async Task GetNewNotifications_ShouldRespectBatchSize()
     {
@@ -299,6 +325,30 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
         Assert.Empty(result);
         string status = await SelectSmsNotificationStatus(sms.Id);
         Assert.Equal(SmsNotificationResultType.New.ToString(), status);
+    }
+
+    [Fact]
+    public async Task GetNewNotifications_WhenKeywordsAreUsed_ShouldAlwaysReturnCustomizedBody()
+    {
+        // Arrange
+        (NotificationOrder order, SmsNotification smsNotification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
+        SmsNotificationRepository sut = ServiceUtil
+            .GetServices([typeof(ISmsNotificationRepository)])
+            .OfType<SmsNotificationRepository>()
+            .First();
+        _orderIdsToCleanup.Add(order.Id);
+
+        // Set customized value directly in the database to simulate keyword replacement
+        string customizedBody = "Customized Body for Test";
+        await PostgreUtil.UpdateNotificationCustomizedContent<SmsNotification>(smsNotification.Id, null, customizedBody);
+
+        // Act
+        List<Sms> batch = await sut.GetNewNotifications(50, CancellationToken.None, SendingTimePolicy.Daytime);
+        Sms? itemWithCustomizedBody = batch.FirstOrDefault(b => b.NotificationId == smsNotification.Id);
+        
+        // Assert
+        Assert.NotNull(itemWithCustomizedBody);
+        Assert.Equal(customizedBody, itemWithCustomizedBody!.Message);
     }
 
     [Theory]
