@@ -80,7 +80,7 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetNewNotifications()
+    public async Task GetNewNotificationsAsync_ReturnsNotificationInBatch()
     {
         // Arrange
         (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
@@ -98,7 +98,7 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetRecipients()
+    public async Task GetRecipients_ValidOrderId_ReturnsEmailRecipient()
     {
         // Arrange
         EmailNotificationRepository repo = (EmailNotificationRepository)ServiceUtil
@@ -119,6 +119,58 @@ public class EmailNotificationRepositoryTests : IAsyncLifetime
         Assert.Equal(expectedRecipient.ToAddress, actualRecipient.ToAddress);
         Assert.Equal(expectedRecipient.NationalIdentityNumber, actualRecipient.NationalIdentityNumber);
         Assert.Equal(expectedRecipient.OrganizationNumber, actualRecipient.OrganizationNumber);
+    }
+
+    [Fact]
+    public async Task GetNewNotificationsAsync_WhenKeywordsAreUsed_ShouldAlwaysReturnCustomizedValues()
+    {
+        // Arrange
+        EmailNotificationRepository sut = (EmailNotificationRepository)ServiceUtil
+           .GetServices(new List<Type>() { typeof(IEmailNotificationRepository) })
+           .First(i => i.GetType() == typeof(EmailNotificationRepository));
+        (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
+        _orderIdsToDelete.Add(order.Id);
+
+        // Set customized values directly in the database to simulate keyword replacement
+        string customizedSubject = "Customized Subject for Test";
+        string customizedBody = "Customized Body for Test";
+        await PostgreUtil.UpdateNotificationCustomizedContent<EmailNotification>(emailNotification.Id, customizedSubject, customizedBody);
+
+        // Act
+        List<Email> batch = await sut.GetNewNotificationsAsync(50, CancellationToken.None);
+        Email? interpolatedContent = batch.FirstOrDefault(x => x.NotificationId == emailNotification.Id);
+
+        // Assert
+        Assert.NotNull(interpolatedContent);
+        Assert.Equal(customizedSubject, interpolatedContent.Subject);
+        Assert.Equal(customizedBody, interpolatedContent.Body);
+    }
+
+    [Theory]
+    [InlineData("", "Custom Body")] // Empty subject
+    [InlineData("Custom Subject", "")] // Empty body
+    public async Task GetNewNotificationsAsync_WithEmptyCustomization_HandlesEmptyStringsCorrectly(string customSubject, string customBody)
+    {
+        // Arrange
+        string defaultSubject = "email-subject";
+        string defaultBody = "email-body";
+
+        EmailNotificationRepository sut = (EmailNotificationRepository)ServiceUtil
+           .GetServices(new List<Type>() { typeof(IEmailNotificationRepository) })
+           .First(i => i.GetType() == typeof(EmailNotificationRepository));
+        (NotificationOrder order, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification();
+        _orderIdsToDelete.Add(order.Id);
+
+        await PostgreUtil.UpdateNotificationCustomizedContent<EmailNotification>(emailNotification.Id, customSubject, customBody);
+
+        // Act
+        List<Email> batch = await sut.GetNewNotificationsAsync(50, CancellationToken.None);
+        Email? result = batch.FirstOrDefault(x => x.NotificationId == emailNotification.Id);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(string.IsNullOrEmpty(customSubject) ? defaultSubject : customSubject, result.Subject);
+        Assert.Equal(string.IsNullOrEmpty(customBody) ? defaultBody : customBody, result.Body);
     }
 
     [Fact]

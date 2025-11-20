@@ -361,6 +361,49 @@ public static class PostgreUtil
         await pgcom.ExecuteNonQueryAsync();
     }
 
+    public static Task<long?> GetDeadDeliveryReportIdFromOperationId(string operationId)
+        => GetDeadDeliveryReportIdByJsonField("operationId", operationId);
+
+    public static Task<long?> GetDeadDeliveryReportIdFromGatewayReference(string gatewayReference)
+        => GetDeadDeliveryReportIdByJsonField("gatewayReference", gatewayReference);
+    
+    public static async Task UpdateNotificationCustomizedContent<T>(Guid notificationId, string? customizedSubject, string customizedBody)
+        where T : class
+    {
+        string updateSql;
+
+        if (typeof(T) == typeof(EmailNotification))
+        {
+            updateSql = @"
+                    UPDATE notifications.emailnotifications 
+                    SET customizedsubject = @customizedSubject, 
+                        customizedbody = @customizedBody
+                    WHERE alternateid = @notificationId";
+
+            await RunSql(
+                updateSql,
+                new NpgsqlParameter("@notificationId", notificationId),
+                new NpgsqlParameter("@customizedSubject", customizedSubject ?? (object)DBNull.Value),
+                new NpgsqlParameter("@customizedBody", customizedBody));
+        }
+        else if (typeof(T) == typeof(SmsNotification))
+        {
+            updateSql = @"
+                    UPDATE notifications.smsnotifications 
+                    SET customizedbody = @customizedBody
+                    WHERE alternateid = @notificationId";
+
+            await RunSql(
+                updateSql,
+                new NpgsqlParameter("@notificationId", notificationId),
+                new NpgsqlParameter("@customizedBody", customizedBody));
+        }
+        else
+        {
+            throw new ArgumentException("Type T must be either EmailNotification or SmsNotification");
+        }
+    }
+    
     private static async Task<long?> GetDeadDeliveryReportIdByJsonField(string fieldName, string fieldValue)
     {
         // Validate fieldName to prevent SQL injection
