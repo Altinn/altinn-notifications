@@ -1,7 +1,4 @@
-﻿using System.Text.Json;
-
-using Altinn.Notifications.Core;
-using Altinn.Notifications.Core.Enums;
+﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
