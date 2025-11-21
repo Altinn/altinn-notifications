@@ -72,11 +72,14 @@ public abstract class KafkaConsumerBase<T> : BackgroundService
         Func<string, Task> retryMessageFunc,
         CancellationToken stoppingToken)
     {
-        string message = string.Empty;
-        ConsumeResult<string, string>? consumeResult = null;
+        ConsumeResult<string, string>? consumeResult;
+        string message;
 
         while (!stoppingToken.IsCancellationRequested)
         {
+            message = string.Empty;
+            consumeResult = null;
+
             try
             {
                 consumeResult = _consumer.Consume(stoppingToken);
