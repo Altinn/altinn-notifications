@@ -1,7 +1,8 @@
-﻿using Altinn.Notifications.Core.Persistence;
+﻿using System.Diagnostics.CodeAnalysis;
+
+using Altinn.Notifications.Core.Persistence;
 
 using Npgsql;
-
 using NpgsqlTypes;
 
 namespace Altinn.Notifications.Persistence.Repository
@@ -12,6 +13,7 @@ namespace Altinn.Notifications.Persistence.Repository
     /// <remarks>
     /// Initializes a new instance of the <see cref="ResourceLimitRepository"/> class.
     /// </remarks>
+    [ExcludeFromCodeCoverage]
     public class ResourceLimitRepository(NpgsqlDataSource dataSource) : IResourceLimitRepository
     {
         private readonly NpgsqlDataSource _dataSource = dataSource;
