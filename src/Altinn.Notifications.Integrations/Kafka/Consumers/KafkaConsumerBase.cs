@@ -87,8 +87,7 @@ public abstract class KafkaConsumerBase<T> : BackgroundService
                 {
                     message = consumeResult.Message.Value;
                     await processMessageFunc(message);
-                    _consumer.Commit(consumeResult);
-                    _consumer.StoreOffset(consumeResult);
+                    CommitOffset(consumeResult);
                 }
             }
             catch (OperationCanceledException)
@@ -97,29 +96,50 @@ public abstract class KafkaConsumerBase<T> : BackgroundService
             }
             catch (Exception ex)
             {
-                if (consumeResult != null)
-                {
-                    bool retrySucceeded;
-                    try
-                    {
-                        await retryMessageFunc(message!);
-                        retrySucceeded = true;
-                    }
-                    catch (Exception retryEx)
-                    {
-                        _logger.LogError(retryEx, "// {Class} // ConsumeMessage // An error occurred while retrying message processing", GetType().Name);
-                        retrySucceeded = false; // prevent offset commit
-                    }
-
-                    if (retrySucceeded && consumeResult != null)
-                    {
-                        _consumer.Commit(consumeResult);
-                        _consumer.StoreOffset(consumeResult);
-                    }
-                }
-
-                _logger.LogError(ex, "// {Class} // ConsumeMessage // An error occurred while consuming messages", GetType().Name);
+                await HandleProcessingFailure(consumeResult, message, retryMessageFunc, ex);
             }
         }
+    }
+
+    private async Task HandleProcessingFailure(
+        ConsumeResult<string, string>? consumeResult,
+        string message,
+        Func<string, Task> retryMessageFunc,
+        Exception ex)
+    {
+        if (consumeResult == null)
+        {
+            _logger.LogError(ex, "// {Class} // ConsumeMessage // An error occurred while consuming messages", GetType().Name);
+            return;
+        }
+
+        bool retrySucceeded = await TryRetryMessage(message, retryMessageFunc);
+
+        if (retrySucceeded)
+        {
+            CommitOffset(consumeResult);
+        }
+
+        _logger.LogError(ex, "// {Class} // ConsumeMessage // An error occurred while consuming messages", GetType().Name);
+    }
+
+    private async Task<bool> TryRetryMessage(string message, Func<string, Task> retryMessageFunc)
+    {
+        try
+        {
+            await retryMessageFunc(message);
+            return true;
+        }
+        catch (Exception retryEx)
+        {
+            _logger.LogError(retryEx, "// {Class} // ConsumeMessage // An error occurred while retrying message processing", GetType().Name);
+            return false;
+        }
+    }
+
+    private void CommitOffset(ConsumeResult<string, string> consumeResult)
+    {
+        _consumer.Commit(consumeResult);
+        _consumer.StoreOffset(consumeResult);
     }
 }
