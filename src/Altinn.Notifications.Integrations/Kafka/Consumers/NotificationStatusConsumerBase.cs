@@ -1,7 +1,4 @@
-﻿using System.Text.Json;
-
-using Altinn.Notifications.Core;
-using Altinn.Notifications.Core.Enums;
+﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
@@ -18,7 +15,7 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers;
 /// </summary>
 /// <typeparam name="TConsumer">The type of the consumer.</typeparam>
 /// <typeparam name="TResult">The type of the result after deserializing the message.</typeparam>
-public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : KafkaConsumerBase<TConsumer>
+public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : KafkaConsumerBase
     where TResult : class
     where TConsumer : class
 {
