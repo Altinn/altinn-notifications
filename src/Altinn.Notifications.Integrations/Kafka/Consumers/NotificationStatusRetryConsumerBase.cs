@@ -16,7 +16,7 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers;
 /// <summary>
 /// Serves as a base class for implementing consumers that handle status updates with retry logic.
 /// </summary>
-public abstract class NotificationStatusRetryConsumerBase : KafkaConsumerBase<NotificationStatusRetryConsumerBase>
+public abstract class NotificationStatusRetryConsumerBase : KafkaConsumerBase
 {
     private readonly ILogger _logger;
     private readonly IKafkaProducer _kafkaProducer;

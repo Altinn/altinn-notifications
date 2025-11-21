@@ -6,7 +6,7 @@ const replacements = {
     '"': '&quot;',
 };
 
-const escapeHTML = (str) => str.replace(/[&<>'"]/g, (char) => replacements[char]);
+const escapeHTML = (str) => str.replaceAll(/[&<>'"]/g, (char) => replacements[char]);
 
 const checksToTestcase = (checks) => {
     let failures = 0;
@@ -64,5 +64,5 @@ export const generateJUnitXML = (data, suiteName) => {
  */
 export const reportPath = (reportName) => {
     const basePath = `src/reports/${reportName}`;
-    return !(__ENV.OS || __ENV.AGENT_OS) ? `/${basePath}` : basePath;
+    return (__ENV.OS || __ENV.AGENT_OS) ? basePath : `/${basePath}`;
 };

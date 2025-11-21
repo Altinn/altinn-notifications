@@ -314,16 +314,16 @@ public class ContactPointService(
     /// </returns>
     private async Task<List<UserContactPoints>> LookupPersonContactPoints(List<Recipient> recipients)
     {
-        List<string> nationalIdentityNumbers = [.. recipients
+        IEnumerable<string> nationalIdentityNumbers = recipients
                 .Where(e => !string.IsNullOrWhiteSpace(e.NationalIdentityNumber))
-                .Select(e => e.NationalIdentityNumber)];
+                .Select(e => e.NationalIdentityNumber!);
 
-        if (nationalIdentityNumbers.Count == 0)
+        if (!nationalIdentityNumbers.Any())
         {
             return [];
         }
 
-        List<UserContactPoints> contactPoints = await _profileClient.GetUserContactPoints(nationalIdentityNumbers);
+        List<UserContactPoints> contactPoints = await _profileClient.GetUserContactPoints([.. nationalIdentityNumbers]);
 
         contactPoints.ForEach(contactPoint =>
         {
@@ -355,16 +355,18 @@ public class ContactPointService(
     /// </returns>
     private async Task<List<OrganizationContactPoints>> LookupOrganizationContactPoints(List<Recipient> recipients, string? resourceId)
     {
-        List<string> organizationNumbers = [.. recipients
+        IEnumerable<string> organizationNumbers = recipients
             .Where(e => !string.IsNullOrWhiteSpace(e.OrganizationNumber))
-            .Select(e => e.OrganizationNumber)];
+            .Select(e => e.OrganizationNumber!);
 
-        if (organizationNumbers.Count == 0)
+        if (!organizationNumbers.Any())
         {
             return [];
         }
 
-        List<OrganizationContactPoints> contactPoints = await _profileClient.GetOrganizationContactPoints(organizationNumbers);
+        List<string> organizationNumbersList = [.. organizationNumbers];
+
+        List<OrganizationContactPoints> contactPoints = await _profileClient.GetOrganizationContactPoints(organizationNumbersList);
         contactPoints.ForEach(contactPoint =>
         {
             contactPoint.MobileNumberList = [.. contactPoint.MobileNumberList.Select(MobileNumberHelper.EnsureCountryCodeIfValidNumber)];
@@ -373,7 +375,7 @@ public class ContactPointService(
         var sanitizedResourceId = GetSanitizedResourceId(resourceId);
         if (!string.IsNullOrWhiteSpace(sanitizedResourceId))
         {
-            var allUserContactPoints = await _profileClient.GetUserRegisteredContactPoints(organizationNumbers, sanitizedResourceId);
+            var allUserContactPoints = await _profileClient.GetUserRegisteredContactPoints(organizationNumbersList, sanitizedResourceId);
 
             var authorizedUserContactPoints = await _authorizationService.AuthorizeUserContactPointsForResource(allUserContactPoints, sanitizedResourceId);
 

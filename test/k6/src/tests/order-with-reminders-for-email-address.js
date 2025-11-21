@@ -36,7 +36,6 @@ import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 import {
     buildOptions,
     runValidators,
-    handleSummary,
     processVariants,
     validOrderDuration,
     invalidOrderDuration,
@@ -139,7 +138,7 @@ function stripRecipientEmailFromOrderChainPayload(orderChainPayload) {
  *
  * @param {Object} data - Test context from setup phase
  */
-export default function (data) {
+export default function runTests(data) {
     const variants = generateOrderChainPayloads(orderTypes, data.orderChainPayload, {
         uniqueFactory: createUniqueOrderChainPayload,
         invalidTransform: stripRecipientEmailFromOrderChainPayload
@@ -163,4 +162,4 @@ export default function (data) {
 }
 
 // Re-export shared summary handler
-export { handleSummary };
+export { handleSummary } from "./order-with-reminders-functions.js";
