@@ -1735,7 +1735,7 @@ Parameters:
 
 Returns:
 - TRUE if the operation was successful (either update or insert occurred)
-- FALSE if the update failed (should rarely occur)';
+- Raises an exception if the operation fails';
 
 
 -- trymarkorderascompleted.sql:
