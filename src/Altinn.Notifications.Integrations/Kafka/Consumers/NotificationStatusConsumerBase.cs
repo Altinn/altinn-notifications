@@ -23,7 +23,7 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
     where TConsumer : class
 {
     private readonly IKafkaProducer _producer;
-    private readonly ILogger<TConsumer> _logger;
+    private readonly ILogger _logger;
     private readonly string _statusUpdatedTopicName;
     private readonly string _statusUpdatedRetryTopicName;
     private readonly IDeadDeliveryReportService _deadDeliveryReportService;
@@ -38,7 +38,7 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
     /// </summary>
     protected NotificationStatusConsumerBase(
         IKafkaProducer producer,
-        ILogger<TConsumer> logger,
+        ILogger logger,
         string statusUpdatedTopicName,
         string statusUpdatedRetryTopicName,
         IOptions<KafkaSettings> kafkaSettings,
