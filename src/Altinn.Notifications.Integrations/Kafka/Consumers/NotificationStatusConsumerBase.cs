@@ -1,7 +1,4 @@
-﻿using System.Text.Json;
-
-using Altinn.Notifications.Core;
-using Altinn.Notifications.Core.Enums;
+﻿using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
@@ -120,7 +117,11 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
     /// </summary>
     private async Task RetryStatus(string message)
     {
-        await _producer.ProduceAsync(_statusUpdatedTopicName, message);
+        var producerResult = await _producer.ProduceAsync(_statusUpdatedTopicName, message);
+        if (!producerResult)
+        {
+            throw new InvalidOperationException($"Failed to republish message to topic. Not retrying on topic: {_statusUpdatedTopicName}");
+        }
     }
 
     /// <summary>

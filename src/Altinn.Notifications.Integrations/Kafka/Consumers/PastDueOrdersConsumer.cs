@@ -55,6 +55,10 @@ public class PastDueOrdersConsumer : KafkaConsumerBase<PastDueOrdersConsumer>
 
     private async Task RetryOrder(string message)
     {
-        await _producer.ProduceAsync(_retryTopic, message!);
+        var producerResult = await _producer.ProduceAsync(_retryTopic, message!);
+        if (!producerResult)
+        {
+            throw new InvalidOperationException($"Failed to republish message to topic. Not retrying on topic: {_retryTopic}");
+        }
     }
 }
