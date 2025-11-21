@@ -20,7 +20,6 @@ help() {
     echo "  -a, --abort          Flag to specify whether to abort on fail or not, only used in breakpoint tests"
     echo "  -h, --help           Show this help message"
     exit 0
-    return 0
 }
 
 print_logs() {

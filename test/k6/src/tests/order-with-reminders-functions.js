@@ -381,7 +381,7 @@ export function prepareBaseOrderChain(orderChainJsonPayload, {
     mutate
 } = {}) {
     const uniqueIdentifier = uuidv4().substring(0, 8);
-    const orderChainPayload = structuredClone(orderChainJsonPayload);
+    const orderChainPayload = JSON.parse(JSON.stringify(orderChainJsonPayload));
 
     orderChainPayload.requestedSendTime = getFutureDate(futureDays);
     orderChainPayload.sendersReference = `${orderSenderPrefix}-${uniqueIdentifier}`;
