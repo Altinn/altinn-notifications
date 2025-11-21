@@ -225,6 +225,87 @@ public class NotificationStatusRetryConsumerBaseTests : IAsyncLifetime
         deadDeliveryReportService.Verify(s => s.InsertAsync(It.IsAny<DeadDeliveryReport>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    [Fact]
+    public async Task ConsumeRetryMessage_WhenRetryStatusProducerFails_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var logger = new Mock<ILogger<EmailStatusRetryConsumer>>();
+        var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Strict);
+        var emailNotificationService = new Mock<IEmailNotificationService>();
+        var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
+
+        var emailSendOperationResult = new EmailSendOperationResult
+        {
+            OperationId = Guid.NewGuid().ToString(),
+            SendResult = EmailNotificationResultType.Delivered
+        };
+        var deliveryReport = emailSendOperationResult.Serialize();
+
+        var updateStatusRetryMessage = new UpdateStatusRetryMessage
+        {
+            Attempts = 3,
+            SendOperationResult = deliveryReport,
+            LastAttempt = DateTime.UtcNow.AddSeconds(-5),
+            FirstSeen = DateTime.UtcNow.AddSeconds(-30)
+        };
+
+        emailNotificationService
+            .Setup(s => s.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()))
+            .ThrowsAsync(new Exception("Simulated failure"));
+
+        // Setup producer to return false on retry
+        kafkaProducer
+            .Setup(p => p.ProduceAsync(_kafkaSettings.Value.EmailStatusUpdatedRetryTopicName, It.IsAny<string>()))
+            .ReturnsAsync(false);
+
+        using var emailStatusConsumer = new EmailStatusRetryConsumer(
+            kafkaProducer.Object,
+            logger.Object,
+            _kafkaSettings,
+            emailNotificationService.Object,
+            deadDeliveryReportService.Object);
+
+        // Act
+        await emailStatusConsumer.StartAsync(CancellationToken.None);
+        await KafkaUtil.PublishMessageOnTopic(_kafkaSettings.Value.EmailStatusUpdatedRetryTopicName, updateStatusRetryMessage.Serialize());
+
+        // Assert
+        await IntegrationTestUtil.EventuallyAsync(
+            () =>
+            {
+                try
+                {
+                    // Verify UpdateSendStatus was called once
+                    emailNotificationService.Verify(s => s.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()), Times.Once);
+
+                    // Verify producer was called once with incremented retry message
+                    kafkaProducer.Verify(p => p.ProduceAsync(_kafkaSettings.Value.EmailStatusUpdatedRetryTopicName, It.IsAny<string>()), Times.Once);
+
+                    // Verify error was logged for the failed retry
+                    logger.Verify(
+                        e => e.Log(
+                            LogLevel.Error,
+                            It.IsAny<EventId>(),
+                            It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Failed to republish message to topic")),
+                            It.IsAny<InvalidOperationException>(),
+                            It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+                        Times.Once);
+
+                    // Verify no dead delivery report was inserted
+                    deadDeliveryReportService.Verify(s => s.InsertAsync(It.IsAny<DeadDeliveryReport>(), It.IsAny<CancellationToken>()), Times.Never);
+
+                    return true;
+                }
+                catch
+                {
+                    return false;
+                }
+            },
+            TimeSpan.FromSeconds(10));
+
+        await emailStatusConsumer.StopAsync(CancellationToken.None);
+    }
+
     /// <summary>
     /// Called when an object is no longer needed.
     /// </summary>
