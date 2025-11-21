@@ -139,7 +139,7 @@ function stripRecipientEmailFromOrderChainPayload(orderChainPayload) {
  *
  * @param {Object} data - Test context from setup phase
  */
-export default function (data) {
+export default function runTests(data) {
     const variants = generateOrderChainPayloads(orderTypes, data.orderChainPayload, {
         uniqueFactory: createUniqueOrderChainPayload,
         invalidTransform: stripRecipientEmailFromOrderChainPayload
@@ -163,4 +163,4 @@ export default function (data) {
 }
 
 // Re-export shared summary handler
-export { handleSummary };
+export { handleSummary } from "./order-with-reminders-functions.js";

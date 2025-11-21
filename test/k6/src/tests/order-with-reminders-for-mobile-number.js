@@ -130,7 +130,7 @@ function stripRecipientSmsFromOrderChainPayload(orderChainPayload) {
  *
  * @param {Object} data - From setup
  */
-export default function (data) {
+export default function runTests(data) {
     const variants = generateOrderChainPayloads(orderTypes, data.orderChainPayload, {
         uniqueFactory: createUniqueOrderChainPayload,
         invalidTransform: stripRecipientSmsFromOrderChainPayload
@@ -153,4 +153,4 @@ export default function (data) {
     runValidators(processingResults, validators);
 }
 
-export { handleSummary };
+export { handleSummary } from "./order-with-reminders-functions.js";

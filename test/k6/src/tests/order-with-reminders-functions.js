@@ -352,12 +352,12 @@ export function validateStandardNotificationShape(response, responseBody, orderC
     const expectedReminderCount = Array.isArray(orderChainPayload?.reminders) ? orderChainPayload.reminders.length : 0;
 
     check(response, {
-        [`Status is ${expectedStatus}`]: e => e && e.status === expectedStatus,
+        [`Status is ${expectedStatus}`]: e => e?.status === expectedStatus,
         "Response contains shipment ID": () => typeof notificationObj.shipmentId === 'string' && notificationObj.shipmentId.length > 0,
         "Response contains notification order ID": () => typeof safeBody.notificationOrderId === 'string' && safeBody.notificationOrderId.length > 0,
         "Response includes reminders": () => Array.isArray(notificationObj.reminders),
         "Reminder count matches request": () => reminderArray.length === expectedReminderCount,
-        "All reminders have shipment IDs": () => reminderArray.length === 0 || reminderArray.every(e => typeof e.shipmentId === 'string' && e.shipmentId.length > 0)
+        "All reminders have shipment IDs": () => reminderArray.every(e => typeof e.shipmentId === 'string' && e.shipmentId.length > 0)
     });
 }
 
@@ -381,7 +381,7 @@ export function prepareBaseOrderChain(orderChainJsonPayload, {
     mutate
 } = {}) {
     const uniqueIdentifier = uuidv4().substring(0, 8);
-    const orderChainPayload = JSON.parse(JSON.stringify(orderChainJsonPayload));
+    const orderChainPayload = structuredClone(orderChainJsonPayload);
 
     orderChainPayload.requestedSendTime = getFutureDate(futureDays);
     orderChainPayload.sendersReference = `${orderSenderPrefix}-${uniqueIdentifier}`;
