@@ -110,7 +110,12 @@ public class OrderProcessingService : IOrderProcessingService
                         break;
                 }
 
-                await _orderRepository.TryCompleteOrderBasedOnNotificationsState(order.Id, AlternateIdentifierSource.Order);
+                var isOrderCompleted = await _orderRepository.TryCompleteOrderBasedOnNotificationsState(order.Id, AlternateIdentifierSource.Order);
+                if (isOrderCompleted)
+                {
+                    await TryInsertStatusFeedForUnmetCondition(order.Id);
+                }
+
                 break;
         }
 
@@ -154,7 +159,12 @@ public class OrderProcessingService : IOrderProcessingService
                         break;
                 }
 
-                await _orderRepository.TryCompleteOrderBasedOnNotificationsState(order.Id, AlternateIdentifierSource.Order);
+                var isOrderCompleted = await _orderRepository.TryCompleteOrderBasedOnNotificationsState(order.Id, AlternateIdentifierSource.Order);
+                if (isOrderCompleted)
+                {
+                    await TryInsertStatusFeedForUnmetCondition(order.Id);
+                }
+
                 break;
         }
     }

@@ -1,7 +1,6 @@
 ﻿using System.Collections.Immutable;
 using System.Data;
 
-using Altinn.Notifications.Core.Helpers;
 using Altinn.Notifications.Core.Models.Delivery;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Mappers;
