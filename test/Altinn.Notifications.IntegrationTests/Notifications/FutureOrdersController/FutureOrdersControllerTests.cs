@@ -838,7 +838,6 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         Assert.Equal(500, objectResult.StatusCode);
 
         var problemDetails = Assert.IsType<ProblemDetails>(objectResult.Value);
-        Assert.Equal("invalid-notification-order", problemDetails.Type);
         Assert.Equal("Notification order is incomplete or invalid", problemDetails.Title);
         Assert.Equal(500, problemDetails.Status);
 

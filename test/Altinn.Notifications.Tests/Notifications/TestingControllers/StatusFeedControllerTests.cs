@@ -120,7 +120,8 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
             Assert.NotNull(result);
             var statusCodeResult = Assert.IsType<ObjectResult>(result.Result);
             Assert.Equal(499, statusCodeResult.StatusCode);
-            Assert.Equal("Request terminated - The client disconnected or cancelled the request before the server could complete processing", statusCodeResult.Value);
+            var problemDetails = Assert.IsType<ProblemDetails>(statusCodeResult.Value);
+            Assert.Equal("Request terminated", problemDetails.Title);
         }
 
         [Fact]
