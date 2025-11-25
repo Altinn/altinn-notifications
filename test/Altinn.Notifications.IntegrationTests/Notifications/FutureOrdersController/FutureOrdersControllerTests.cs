@@ -842,7 +842,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var problemDetails = Assert.IsType<ProblemDetails>(objectResult.Value);
         Assert.Equal("Notification order is incomplete or invalid", problemDetails.Title);
         Assert.Equal(500, problemDetails.Status);
-        Assert.Equal("notification-order-invalid", problemDetails.Type);
+        Assert.Equal("invalid-notification-order", problemDetails.Type);
 
         orderServiceMock.Verify(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()), Times.Never);
     }
