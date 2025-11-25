@@ -797,7 +797,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
     }
 
     [Fact]
-    public async Task Post_BuildThrowsInvalidOperationException_ReturnsBadRequestWithProblemDetails()
+    public async Task Post_BuildThrowsInvalidOperationException_ReturnsInternalServerErrorWithProblemDetails()
     {
         // Arrange
         var request = new NotificationOrderChainRequestExt
@@ -837,12 +837,12 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
 
         // Assert
         var objectResult = Assert.IsType<ObjectResult>(result.Result);
-        Assert.Equal(400, objectResult.StatusCode);
+        Assert.Equal(500, objectResult.StatusCode);
 
         var problemDetails = Assert.IsType<ProblemDetails>(objectResult.Value);
-        Assert.Equal("Invalid notification order request", problemDetails.Title);
-        Assert.Equal(400, problemDetails.Status);
-        Assert.Contains("IdempotencyId must be set", problemDetails.Detail);
+        Assert.Equal("Notification order is incomplete or invalid", problemDetails.Title);
+        Assert.Equal(500, problemDetails.Status);
+        Assert.Equal("notification-order-invalid", problemDetails.Type);
 
         orderServiceMock.Verify(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()), Times.Never);
     }

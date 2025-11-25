@@ -94,10 +94,10 @@ public class FutureOrdersController : ControllerBase
                 {
                     var problemDetails = new ProblemDetails
                     {
-                        Type = error.ErrorType,
+                        Status = error.ErrorCode,
                         Title = "Notification order chain registration failed",
                         Detail = error.ErrorMessage,
-                        Status = error.ErrorCode
+                        Type = error.ErrorType
                     };
                     return StatusCode(error.ErrorCode, problemDetails);
                 });
@@ -106,20 +106,21 @@ public class FutureOrdersController : ControllerBase
         {
             var problemDetails = new ProblemDetails
             {
-                Status = 400,
+                Status = 500,
+                Title = "Notification order is incomplete or invalid",
                 Detail = ex.Message,
-                Title = "Invalid notification order request"
+                Type = "invalid-notification-order"
             };
-            return StatusCode(400, problemDetails);
+            return StatusCode(500, problemDetails);
         }
         catch (OperationCanceledException)
         {
             var problemDetails = new ProblemDetails
             {
-                Type = "request-terminated",
+                Status = 499,
                 Title = "Request terminated",
                 Detail = "The client disconnected or cancelled the request before the server could complete processing.",
-                Status = 499
+                Type = "request-terminated"
             };
 
             return StatusCode(499, problemDetails);

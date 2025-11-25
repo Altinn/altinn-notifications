@@ -62,10 +62,10 @@ public class StatusFeedController(IStatusFeedService statusFeedService, IValidat
                 {
                     return StatusCode(error.ErrorCode, new ProblemDetails
                     {
-                        Type = error.ErrorType,
-                        Title = "Failed to retrieve status feed",
                         Status = error.ErrorCode,
-                        Detail = error.ErrorMessage
+                        Title = "Failed to retrieve status feed",
+                        Detail = error.ErrorMessage,
+                        Type = error.ErrorType
                     });
                 });
         }
