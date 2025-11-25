@@ -380,6 +380,8 @@ public class InstantSmsOrdersControllerTests : IClassFixture<IntegrationTestWebA
 
         Assert.NotNull(problem);
         Assert.Equal(500, problem.Status);
+        Assert.Equal("Instant sms notification order registration failed", problem.Title);
+        Assert.Equal("instant-sms-order-failed", problem.Type);
 
         dateTimeServiceMock.Verify(e => e.UtcNow(), Times.Once);
         validatorMock.Verify(e => e.Validate(It.IsAny<InstantSmsNotificationOrderRequestExt>()), Times.Once);
