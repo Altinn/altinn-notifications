@@ -57,36 +57,35 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             return false;
         }
 
-        var publishStartTime = Stopwatch.StartNew();
+        var produceStartTime = Stopwatch.StartNew();
 
         try
         {
-            var result = await _producer.ProduceAsync(topic, new Message<Null, string> { Value = message });
+            var produceResult = await _producer.ProduceAsync(topic, new Message<Null, string> { Value = message });
 
-            if (result.Status != PersistenceStatus.Persisted)
+            if (produceResult.Status == PersistenceStatus.Persisted)
             {
-                _logger.LogError(
-                    "// KafkaProducer // ProduceAsync // Message not persisted. Status={Status} Partition={Partition}",
-                    result.Status,
-                    result.Partition);
+                IncrementPublished();
 
-                IncrementFailed();
-
-                return false;
+                return true;
             }
 
-            IncrementPublished();
+            _logger.LogError(
+                "// KafkaProducer // ProduceAsync // Message not persisted. Status={Status} Partition={Partition}",
+                produceResult.Status,
+                produceResult.Partition);
 
-            return true;
+            IncrementFailed();
+
+            return false;
         }
         catch (ProduceException<Null, string> ex)
         {
             _logger.LogError(
                 ex,
-                "// KafkaProducer // ProduceAsync // ProduceException Code={Code} Reason={Reason} MessageLength={Length}",
+                "// KafkaProducer // ProduceAsync // ProduceException Code={Code} Reason={Reason}",
                 ex.Error.Code,
-                ex.Error.Reason,
-                message.Length);
+                ex.Error.Reason);
 
             IncrementFailed();
 
@@ -102,9 +101,9 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
         }
         finally
         {
-            publishStartTime.Stop();
+            produceStartTime.Stop();
 
-            _singleLatencyMs.Record(publishStartTime.Elapsed.TotalMilliseconds);
+            _singleLatencyMs.Record(produceStartTime.Elapsed.TotalMilliseconds);
         }
     }
 
@@ -204,7 +203,8 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "// KafkaProducer // EnsureTopicsExist // Metadata fetch failed.");
+            LogMetadataFetchFailed(ex);
+
             throw;
         }
 
@@ -241,14 +241,13 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             }
             catch (CreateTopicsException ex)
             {
-                if (ex.Results.Any(r => r.Error.Code == ErrorCode.TopicAlreadyExists))
+                if (ex.Results.Any(e => e.Error.Code == ErrorCode.TopicAlreadyExists))
                 {
-                    _logger.LogInformation("// KafkaProducer // EnsureTopicsExist // Topic '{Topic}' already exists.", topic);
-
                     continue;
                 }
 
-                _logger.LogError(ex, "// KafkaProducer // EnsureTopicsExist // Failed to create topic '{Topic}'", topic);
+                LogTopicCreationFailed(ex, topic);
+
                 throw;
             }
         }
@@ -295,7 +294,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     {
         return new(ProducerSettings)
         {
-            LingerMs = 50,
+            LingerMs = 100,
             Acks = Acks.All,
             MaxInFlight = 5,
             RetryBackoffMs = 250,
@@ -304,14 +303,14 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             EnableBackgroundPoll = true,
             SocketKeepaliveEnable = true,
             EnableDeliveryReports = true,
-            StatisticsIntervalMs = 30000,
+            StatisticsIntervalMs = 10000,
             DeliveryReportFields = "status",
             CompressionType = CompressionType.Zstd
         };
     }
 
     /// <summary>
-    /// Creates the Kafka producer instance and attaches error and statistics handlers.
+    /// Creates a Kafka producer instance and attaches error and statistics handlers.
     /// </summary>
     private IProducer<Null, string> BuildProducer(ProducerConfig config)
     {
@@ -453,7 +452,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             PublishedCount = 0,
             IsValid = isValid,
             ScheduledCount = 0,
-            ValidMessages = [..valid],
+            ValidMessages = [.. valid],
             InvalidMessages = [.. invalid],
             UnpublishedMessages = [.. invalid]
         };
@@ -640,5 +639,24 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
         };
 
         return (taskFactories, updated);
+    }
+
+    /// <summary>
+    /// Logs the error that occurred while fetching Kafka metadata in EnsureTopicsExist.
+    /// </summary>
+    /// <param name="exceptionOccurred">The exception occurred.</param>
+    private void LogMetadataFetchFailed(Exception exceptionOccurred)
+    {
+        _logger.LogError(exceptionOccurred, "// KafkaProducer // EnsureTopicsExist // Metadata fetch failed.");
+    }
+
+    /// <summary>
+    /// Logs the error that occurred while creating missing topics in EnsureTopicsExist.
+    /// </summary>
+    /// <param name="exceptionOccurred">The exception occurred.</param>
+    /// <param name="topicName">The name of the topic.</param>
+    private void LogTopicCreationFailed(Exception exceptionOccurred, string topicName)
+    {
+        _logger.LogError(exceptionOccurred, "// KafkaProducer // EnsureTopicsExist // Failed to create topic '{Topic}'", topicName);
     }
 }
