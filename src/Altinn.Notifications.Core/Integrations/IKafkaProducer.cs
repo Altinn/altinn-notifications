@@ -1,4 +1,6 @@
-﻿namespace Altinn.Notifications.Core.Integrations
+﻿using System.Collections.Immutable;
+
+namespace Altinn.Notifications.Core.Integrations
 {
     /// <summary>
     /// Defines the contract for a Kafka producer responsible for publishing messages to Kafka topics.
@@ -26,6 +28,6 @@
         /// A <see cref="Task{TResult}"/> representing the asynchronous operation.
         /// Returns a collection of messages that were not successfully published.
         /// </returns>
-        Task<IEnumerable<string>> ProduceAsync(string topic, IEnumerable<string> messages, CancellationToken cancellationToken = default);
+        Task<IEnumerable<string>> ProduceAsync(string topic, IImmutableList<string> messages, CancellationToken cancellationToken = default);
     }
 }

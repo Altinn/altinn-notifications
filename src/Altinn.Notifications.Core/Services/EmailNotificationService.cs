@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Collections.Immutable;
+using System.Text.Json;
 
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
@@ -94,7 +95,7 @@ public class EmailNotificationService : IEmailNotificationService
 
             var readyToSendMessages = newEmailNotifications.Select(readyToSendEmail => readyToSendEmail.Serialize());
 
-            var unpublishedMessages = await _producer.ProduceAsync(_emailQueueTopicName, readyToSendMessages, cancellationToken);
+            var unpublishedMessages = await _producer.ProduceAsync(_emailQueueTopicName, readyToSendMessages.ToImmutableList(), cancellationToken);
 
             foreach (var unpublishedMessage in unpublishedMessages)
             {
