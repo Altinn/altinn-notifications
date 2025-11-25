@@ -37,9 +37,9 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
         _logger = logger;
         _settings = settings.Value;
 
-        var config = BuildProducerConfig();
+        var producerConfiguration = BuildConfiguration();
 
-        _producer = BuildProducer(config);
+        _producer = BuildProducer(producerConfiguration);
 
         _ = EnsureTopicsExist();
     }
@@ -289,27 +289,24 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     }
 
     /// <summary>
-    /// Builds and configures the producer settings used by the Kafka producer instance.
+    /// Builds producer settings used by the Kafka producer instance.
     /// </summary>
-    private ProducerConfig BuildProducerConfig()
+    private ProducerConfig BuildConfiguration()
     {
         return new(ProducerSettings)
         {
-            LingerMs = 100,
+            LingerMs = 50,
             Acks = Acks.All,
             MaxInFlight = 5,
-            RetryBackoffMs = 1000,
-            BatchSize = 256 * 1024,
-            BatchNumMessages = 1000,
+            RetryBackoffMs = 250,
+            BatchSize = 512 * 1024,
             EnableIdempotence = true,
-            MessageSendMaxRetries = 5,
             EnableBackgroundPoll = true,
             SocketKeepaliveEnable = true,
             EnableDeliveryReports = true,
             StatisticsIntervalMs = 30000,
             DeliveryReportFields = "status",
-            CompressionType = CompressionType.Zstd,
-            ClientId = $"{_settings.Consumer.GroupId}-{GetType().Name.ToLower()}"
+            CompressionType = CompressionType.Zstd
         };
     }
 
