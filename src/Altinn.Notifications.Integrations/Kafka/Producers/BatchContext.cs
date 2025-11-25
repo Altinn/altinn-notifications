@@ -10,14 +10,6 @@ namespace Altinn.Notifications.Integrations.Kafka.Producers;
 public record BatchContext
 {
     /// <summary>
-    /// Indicating whether the batch context contains valid data and can proceed with processing.
-    /// </summary>
-    /// <remarks>
-    /// This flag is set to <c>false</c> if topic validation fails or if no valid messages are available.
-    /// </remarks>
-    public bool IsValid { get; init; }
-
-    /// <summary>
     /// The number of delivery tasks that were successfully scheduled.
     /// </summary>
     /// <remarks>
@@ -33,6 +25,14 @@ public record BatchContext
     /// <see cref="PersistenceStatus.Persisted"/> status from the Kafka delivery result.
     /// </remarks>
     public int PublishedCount { get; init; }
+
+    /// <summary>
+    /// Indicating whether the batch context contains valid data and can proceed with processing.
+    /// </summary>
+    /// <remarks>
+    /// This flag is set to <c>false</c> if topic validation fails or if no valid messages are available.
+    /// </remarks>
+    public bool HasValidMessages { get; init; }
 
     /// <summary>
     /// The name of the Kafka topic for the batch operation.
