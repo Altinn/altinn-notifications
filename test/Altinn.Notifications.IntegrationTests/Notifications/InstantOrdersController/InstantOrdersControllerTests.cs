@@ -117,6 +117,8 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
 
         Assert.NotNull(problem);
         Assert.Equal(499, problem.Status);
+        Assert.Equal("Request terminated", problem.Title);
+        Assert.Equal("request-terminated", problem.Type);
 
         dateTimeServiceMock.Verify(e => e.UtcNow(), Times.Once);
         validatorMock.Verify(e => e.Validate(request), Times.Once);
@@ -463,7 +465,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
         Assert.NotNull(problem);
         Assert.Equal(500, problem.Status);
         Assert.Equal("Notification order is incomplete or invalid", problem.Title);
-        Assert.Equal("notification-order-invalid", problem.Type);
+        Assert.Equal("invalid-notification-order", problem.Type);
 
         dateTimeServiceMock.Verify(e => e.UtcNow(), Times.Once);
         validatorMock.Verify(e => e.Validate(request), Times.Once);
