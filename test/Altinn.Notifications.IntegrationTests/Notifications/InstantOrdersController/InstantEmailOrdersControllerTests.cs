@@ -384,6 +384,8 @@ public class InstantEmailOrdersControllerTests : IClassFixture<IntegrationTestWe
 
         Assert.NotNull(problem);
         Assert.Equal(500, problem.Status);
+        Assert.Equal("Instant email notification order registration failed", problem.Title);
+        Assert.Equal("instant-email-order-failed", problem.Type);
 
         dateTimeServiceMock.Verify(e => e.UtcNow(), Times.Once);
         validatorMock.Verify(e => e.Validate(request), Times.Once);
