@@ -350,13 +350,13 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     {
         var successRate = context.ValidMessages.Count == 0
             ? 0
-            : (double)context.SuccessCount / context.ValidMessages.Count;
+            : (double)context.PublishedCount / context.ValidMessages.Count;
 
         _logger.LogInformation(
             "// KafkaProducer // ProduceAsync // Topic={Topic} TotalValid={TotalValid} Success={Success} NotPublished={NotPublished} SuccessRate={Rate:P2} DurationMs={Duration:F0}",
             context.Topic,
             context.ValidMessages.Count,
-            context.SuccessCount,
+            context.PublishedCount,
             context.UnpublishedMessages.Count,
             successRate,
             batchStopwatch.Elapsed.TotalMilliseconds);
@@ -377,9 +377,9 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     /// </returns>
     private List<string> FinalizeBatch(BatchContext context, Stopwatch batchStopwatch)
     {
-        if (context.SuccessCount > 0)
+        if (context.PublishedCount > 0)
         {
-            _publishedCounter.Add(context.SuccessCount);
+            _publishedCounter.Add(context.PublishedCount);
         }
 
         batchStopwatch.Stop();
@@ -387,7 +387,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
 
         LogBatchResults(context, batchStopwatch);
 
-        return context.UnpublishedMessages;
+        return [.. context.UnpublishedMessages];
     }
 
     /// <summary>
@@ -415,7 +415,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             {
                 Topic = topic,
                 IsValid = false,
-                SuccessCount = 0,
+                PublishedCount = 0,
                 ValidMessages = [],
                 ScheduledCount = 0,
                 InvalidMessages = [],
@@ -453,11 +453,11 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
         return new BatchContext
         {
             Topic = topic,
-            SuccessCount = 0,
+            PublishedCount = 0,
             IsValid = isValid,
             ScheduledCount = 0,
-            ValidMessages = valid,
-            InvalidMessages = invalid,
+            ValidMessages = [..valid],
+            InvalidMessages = [.. invalid],
             UnpublishedMessages = [.. invalid]
         };
     }
@@ -486,7 +486,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
         batchStopwatch.Stop();
         _batchLatencyMs.Record(batchStopwatch.Elapsed.TotalMilliseconds);
 
-        return context.UnpublishedMessages;
+        return [.. context.UnpublishedMessages];
     }
 
     /// <summary>
@@ -536,7 +536,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     private static BatchContext ProcessCompletedDeliveryResults(DeliveryResult<Null, string>[] deliveryResults, BatchContext context)
     {
         int failureCount = 0;
-        int successCount = context.SuccessCount;
+        int successCount = context.PublishedCount;
         var updatedUnpublishedMessages = new List<string>(context.UnpublishedMessages);
 
         for (int i = 0; i < deliveryResults.Length; i++)
@@ -559,8 +559,8 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
 
         return context with
         {
-            SuccessCount = successCount,
-            UnpublishedMessages = updatedUnpublishedMessages
+            PublishedCount = successCount,
+            UnpublishedMessages = [.. updatedUnpublishedMessages]
         };
     }
 
@@ -572,7 +572,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     /// <returns>An updated BatchContext with the processing results.</returns>
     private static BatchContext ProcessCancelledDeliveryTasks(List<Task<DeliveryResult<Null, string>>> deliveryTasks, BatchContext context)
     {
-        int successCount = context.SuccessCount;
+        int successCount = context.PublishedCount;
         var updatedUnpublishedMessages = new List<string>(context.UnpublishedMessages);
         int failureCount = 0;
 
@@ -597,8 +597,8 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
 
         return context with
         {
-            SuccessCount = successCount,
-            UnpublishedMessages = updatedUnpublishedMessages
+            PublishedCount = successCount,
+            UnpublishedMessages = [.. updatedUnpublishedMessages]
         };
     }
 
@@ -639,7 +639,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
         var updated = context with
         {
             ScheduledCount = scheduled,
-            UnpublishedMessages = unpublished
+            UnpublishedMessages = [.. unpublished]
         };
 
         return (taskFactories, updated);
