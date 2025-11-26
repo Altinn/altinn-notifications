@@ -6,7 +6,7 @@ using System.Text.Json.Serialization;
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Persistence.Mappers;
-
+using Altinn.Notifications.Persistence.Utils;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Npgsql;
@@ -87,7 +87,7 @@ public abstract class NotificationRepositoryBase
         var orderStatus = await ReadMainNotification(reader);
 
         // Add recipients to the order status
-        await ReadRecipients(recipients, reader);
+        await NotificationUtil.ReadRecipients(recipients, reader);
 
         if (orderStatus != null)
         {
@@ -197,53 +197,6 @@ public abstract class NotificationRepositoryBase
 
         var result = await pgcom.ExecuteScalarAsync();
         return result != null && (bool)result;
-    }
-
-    private static async Task ReadRecipients(List<Recipient> recipients, NpgsqlDataReader reader)
-    {
-        var legalRecipientTypes = new[] { "email", "sms" };
-
-        var statusOrdinal = reader.GetOrdinal("status");
-        var destinationOrdinal = reader.GetOrdinal("destination");
-        var typeOrdinal = reader.GetOrdinal("type");
-        var lastUpdateOrdinal = reader.GetOrdinal("last_update");
-
-        while (await reader.ReadAsync())
-        {
-            var notificationType = await reader.GetFieldValueAsync<string>(typeOrdinal);
-
-            if (!legalRecipientTypes.Contains(notificationType, StringComparer.OrdinalIgnoreCase))
-            {
-                // Skip non-recipient level notifications
-                continue;
-            }
-
-            var status = await reader.GetFieldValueAsync<string>(statusOrdinal);
-            var destination = await reader.IsDBNullAsync(destinationOrdinal) ? string.Empty : await reader.GetFieldValueAsync<string>(destinationOrdinal);
-
-            Recipient recipient;
-
-            if (notificationType.Equals("email", StringComparison.OrdinalIgnoreCase))
-            {
-                recipient = new Recipient
-                {
-                    Destination = destination,
-                    LastUpdate = await reader.GetFieldValueAsync<DateTime>(lastUpdateOrdinal),
-                    Status = ProcessingLifecycleMapper.GetEmailLifecycleStage(status)
-                };
-                recipients.Add(recipient);
-            }
-            else if (notificationType.Equals("sms", StringComparison.OrdinalIgnoreCase))
-            {
-                recipient = new Recipient
-                {
-                    Destination = destination,
-                    LastUpdate = await reader.GetFieldValueAsync<DateTime>(lastUpdateOrdinal),
-                    Status = ProcessingLifecycleMapper.GetSmsLifecycleStage(status)
-                };
-                recipients.Add(recipient);
-            }
-        }
     }
 
     private static async Task<OrderStatus?> ReadMainNotification(NpgsqlDataReader reader)

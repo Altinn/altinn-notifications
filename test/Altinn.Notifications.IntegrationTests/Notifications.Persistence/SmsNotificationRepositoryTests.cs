@@ -666,11 +666,13 @@ public class SmsNotificationRepositoryTests : IAsyncLifetime
             .GetServices([typeof(ISmsNotificationRepository)])
             .First(i => i.GetType() == typeof(SmsNotificationRepository));
 
+        var expiryTime = DateTime.UtcNow.AddMinutes(-10);
+
         // Update the expiry time to be in the past (expired 10 minutes ago)
         string setExpirySql = $@"UPDATE notifications.smsnotifications
-                SET expirytime = '{DateTime.UtcNow.AddMinutes(-10):yyyy-MM-dd HH:mm:ss}'
+                SET expirytime = @expirytime
                 WHERE alternateid = '{smsNotification.Id}'";
-        await PostgreUtil.RunSql(setExpirySql);
+        await PostgreUtil.RunSql(setExpirySql, new Npgsql.NpgsqlParameter("@expirytime", expiryTime));
 
         // Act
         var ex = await Assert.ThrowsAsync<NotificationExpiredException>(() =>
