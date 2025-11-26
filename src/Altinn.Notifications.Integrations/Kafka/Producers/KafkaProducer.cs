@@ -131,7 +131,6 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
         }
 
         BatchProducingContext batchContext = CategorizeMessages(messages);
-
         if (batchContext.ValidMessages.Count == 0)
         {
             _logger.LogError("// KafkaProducer // ProduceAsync // All messages are invalid");
@@ -147,7 +146,12 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             return messages;
         }
 
-        bool isCancellationRequested = false;
+        if (cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning("// KafkaProducer // ProduceAsync // Cancellation requested before invoking publish tasks. Returning original messages.");
+
+            return messages;
+        }
 
         var batchProcessingStopwatch = Stopwatch.StartNew();
 
@@ -159,20 +163,15 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
 
         try
         {
-            await Task.WhenAll(publishTasks).WaitAsync(cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-            isCancellationRequested = true;
+            await Task.WhenAll(publishTasks);
         }
         catch (Exception ex)
         {
             LogOnProduceAsyncFailed(ex);
-
             throw;
         }
 
-        batchContext = CategorizeDeliveryResults(batchContext, publishTasks, includeIncompleteAsRetry: isCancellationRequested);
+        batchContext = CategorizeDeliveryResults(batchContext, publishTasks);
 
         batchProcessingStopwatch.Stop();
 
@@ -180,7 +179,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
 
         LogBatchResults(topic, batchContext, batchProcessingStopwatch);
 
-        return [.. batchContext.NotProducedMessages, .. batchContext.UnscheduledValidMessages];
+        return [.. batchContext.NotProducedMessages];
     }
 
     /// <summary>
@@ -464,7 +463,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             topicName,
             context.ValidMessages.Count,
             context.ProducedMessages.Count,
-            context.NotProducedMessages.Count + context.UnscheduledValidMessages.Count,
+            context.NotProducedMessages.Count,
             successRate,
             batchStopwatch.Elapsed.TotalMilliseconds);
     }
@@ -479,8 +478,6 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     /// An updated <see cref="BatchProducingContext"/> with the following modifications:
     /// <list type="bullet">
     /// <item><description><see cref="BatchProducingContext.DeferredProduceTaskFactories"/> populated with task factories for scheduled messages</description></item>
-    /// <item><description><see cref="BatchProducingContext.ScheduledValidMessages"/> containing messages that were successfully scheduled for production</description></item>
-    /// <item><description><see cref="BatchProducingContext.UnscheduledValidMessages"/> containing valid messages that couldn't be scheduled due to cancellation</description></item>
     /// </list>
     /// Each task factory captures the message payload to prevent closure variable issues and returns a <see cref="Task{DeliveryResult}"/> when executed.
     /// Failure metrics are automatically incremented for any unscheduled messages.
@@ -492,25 +489,24 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             return batchContext;
         }
 
-        var scheduledValidMessages = new List<string>(batchContext.ValidMessages.Count);
-        var unscheduledValidMessages = new List<string>(batchContext.ValidMessages.Count);
+        var scheduledValidMessagesCount = 0;
+        var unscheduledValidMessagesCount = batchContext.ValidMessages.Count;
         var deferredProduceTaskFactories = new List<Func<Task<DeliveryResult<Null, string>>>>(batchContext.ValidMessages.Count);
 
         foreach (var validMessage in batchContext.ValidMessages)
         {
             if (cancellationToken.IsCancellationRequested)
             {
-                unscheduledValidMessages.Add(validMessage);
-
                 continue;
             }
 
             // Capture the message in a local variable to avoid closure issues
             var messagePayload = validMessage;
 
-            deferredProduceTaskFactories.Add(() => _producer.ProduceAsync(topicName, new Message<Null, string> { Value = messagePayload }, cancellationToken));
+            deferredProduceTaskFactories.Add(() => _producer.ProduceAsync(topicName, new Message<Null, string> { Value = messagePayload }));
 
-            scheduledValidMessages.Add(validMessage);
+            scheduledValidMessagesCount++;
+            unscheduledValidMessagesCount++;
         }
 
         if (cancellationToken.IsCancellationRequested)
@@ -518,61 +514,33 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             _logger.LogWarning(
                 "// KafkaProducer // ProduceAsync // BuildProduceTasks // Cancellation Requested. Topic={Topic} Scheduled={Scheduled} Unscheduled={Unscheduled}",
                 topicName,
-                scheduledValidMessages.Count,
-                unscheduledValidMessages.Count);
+                scheduledValidMessagesCount,
+                unscheduledValidMessagesCount);
         }
 
         return batchContext with
         {
-            ScheduledValidMessages = [.. scheduledValidMessages],
-            UnscheduledValidMessages = [.. unscheduledValidMessages],
             DeferredProduceTaskFactories = [.. deferredProduceTaskFactories]
         };
     }
 
     /// <summary>
     /// Processes delivery task results from Kafka produce operations and categorizes messages into published and unpublished groups.
-    /// Handles partial cancellation by optionally treating incomplete tasks as retryable without counting failures.
     /// </summary>
     /// <param name="context">The batch processing context to update with delivery results.</param>
     /// <param name="deliveryTasks">Collection of delivery tasks returned by Kafka <c>ProduceAsync</c> operations.</param>
-    /// <param name="includeIncompleteAsRetry">If true, tasks not completed are treated as retryable and added to <see cref="BatchProducingContext.NotProducedMessages"/> without incrementing failures.</param>
     /// <returns>
     /// Updated <see cref="BatchProducingContext"/> with messages categorized based on delivery results.
     /// Successfully persisted messages are added to <see cref="BatchProducingContext.ProducedMessages"/>.
-    /// Failed, canceled, non-persisted messages, or incomplete tasks (when <paramref name="includeIncompleteAsRetry"/> is true) are added to <see cref="BatchProducingContext.NotProducedMessages"/>.
+    /// Failed or non-persisted messages are added to <see cref="BatchProducingContext.NotProducedMessages"/>.
     /// </returns>
-    private static BatchProducingContext CategorizeDeliveryResults(BatchProducingContext context, List<Task<DeliveryResult<Null, string>>> deliveryTasks, bool includeIncompleteAsRetry)
+    private static BatchProducingContext CategorizeDeliveryResults(BatchProducingContext context, List<Task<DeliveryResult<Null, string>>> deliveryTasks)
     {
         var publishedMessages = new List<string>(context.ValidMessages.Count);
         var unpublishedMessages = new List<string>(context.ValidMessages.Count);
 
-        for (int i = 0; i < deliveryTasks.Count; i++)
+        foreach (var deliveryTask in deliveryTasks)
         {
-            var deliveryTask = deliveryTasks[i];
-
-            if (!deliveryTask.IsCompleted)
-            {
-                if (includeIncompleteAsRetry && i < context.ScheduledValidMessages.Count)
-                {
-                    unpublishedMessages.Add(context.ScheduledValidMessages[i]);
-                }
-
-                continue;
-            }
-
-            if (deliveryTask.IsCanceled)
-            {
-                if (i < context.ScheduledValidMessages.Count)
-                {
-                    unpublishedMessages.Add(context.ScheduledValidMessages[i]);
-                }
-
-                IncrementFailed();
-
-                continue;
-            }
-
             if (deliveryTask.IsFaulted)
             {
                 var produceException = deliveryTask.Exception?
@@ -586,10 +554,6 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
                 if (!string.IsNullOrWhiteSpace(failedPayload))
                 {
                     unpublishedMessages.Add(failedPayload);
-                }
-                else if (i < context.ScheduledValidMessages.Count)
-                {
-                    unpublishedMessages.Add(context.ScheduledValidMessages[i]);
                 }
 
                 IncrementFailed();
