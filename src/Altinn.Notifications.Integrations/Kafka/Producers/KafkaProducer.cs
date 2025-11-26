@@ -42,7 +42,17 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
 
         _producer = BuildProducer(producerConfiguration);
 
-        EnsureTopicsExist().Wait();
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await EnsureTopicsExist().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Could not validate topics.");
+            }
+        });
     }
 
     /// <inheritdoc/>
