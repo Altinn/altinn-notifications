@@ -406,7 +406,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
     }
 
     [Fact]
-    public async Task Post_WhenOrderPersistenceThrowsInvalidOperationException_Returns400BadRequest()
+    public async Task Post_WhenOrderPersistenceThrowsInvalidOperationException_Returns500InternalServerError()
     {
         // Arrange
         var request = new InstantNotificationOrderRequestExt
@@ -458,10 +458,11 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
         var problem = JsonSerializer.Deserialize<ProblemDetails>(responseContent, _options);
 
         // Assert
-        Assert.Equal(400, (int)response.StatusCode);
+        Assert.Equal(500, (int)response.StatusCode);
 
         Assert.NotNull(problem);
-        Assert.Equal(400, problem.Status);
+        Assert.Equal(500, problem.Status);
+        Assert.Equal("Notification order is incomplete or invalid", problem.Title);
 
         dateTimeServiceMock.Verify(e => e.UtcNow(), Times.Once);
         validatorMock.Verify(e => e.Validate(request), Times.Once);
