@@ -471,8 +471,8 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     /// </returns>
     private static BatchProducingContext CategorizeDeliveryResults(BatchProducingContext context, List<Task<DeliveryResult<Null, string>>> deliveryTasks)
     {
-        var unpublishedMessages = new List<string>();
-        var publishedMessages = new List<string>(deliveryTasks.Count);
+        var publishedMessages = new List<string>(context.ValidMessages);
+        var unpublishedMessages = new List<string>(context.ValidMessages);
 
         foreach (var deliveryTask in deliveryTasks)
         {
