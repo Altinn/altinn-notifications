@@ -35,13 +35,13 @@ public sealed record BatchProducingContext
     public IImmutableList<string> ProducedMessages { get; init; } = [];
 
     /// <summary>
-    /// The messages that were not successfully produced to Kafka topic.
+    /// The messages that were not successfully produced to Kafka topic or did not complete due to cancellation.
     /// </summary>
     /// <remarks>
-    /// This set can include:
+    /// This set includes valid messages that should be retried:
     /// 1. Valid messages whose produce task failed (exception, faulted delivery, or negative acknowledgment).
     /// 2. Valid messages intentionally skipped (e.g. short–circuit on prior fatal error or cancellation).
-    /// 3. Valid messages whose produce task was never started due to an early exit condition.
+    /// 3. Valid messages whose produce task did not complete due to cancellation.
     /// Invalid messages are never added here (they appear in <see cref="InvalidMessages"/> instead).
     /// </remarks>
     public IImmutableList<string> NotProducedMessages { get; init; } = [];
@@ -54,6 +54,9 @@ public sealed record BatchProducingContext
     /// <summary>
     /// Valid messages that were not scheduled into a deferred task factory due to early cancellation during scheduling.
     /// </summary>
+    /// <remarks>
+    /// These are valid messages that should be retried.
+    /// </remarks>
     public IImmutableList<string> UnscheduledValidMessages { get; init; } = [];
 
     /// <summary>

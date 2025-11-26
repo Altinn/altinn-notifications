@@ -130,55 +130,57 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             return messages;
         }
 
+        BatchProducingContext batchContext = CategorizeMessages(messages);
+
+        if (batchContext.ValidMessages.Count == 0)
+        {
+            _logger.LogError("// KafkaProducer // ProduceAsync // All messages are invalid");
+
+            return messages;
+        }
+
+        batchContext = BuildProduceTasks(topic, batchContext, cancellationToken);
+        if (batchContext.DeferredProduceTaskFactories.Count == 0)
+        {
+            _logger.LogWarning("// KafkaProducer // ProduceAsync // No message scheduled for production");
+
+            return messages;
+        }
+
+        bool isCancellationRequested = false;
+
+        var batchProcessingStopwatch = Stopwatch.StartNew();
+
+        var publishTasks = new List<Task<DeliveryResult<Null, string>>>(batchContext.DeferredProduceTaskFactories.Count);
+        foreach (var produceTaskFactory in batchContext.DeferredProduceTaskFactories)
+        {
+            publishTasks.Add(produceTaskFactory());
+        }
+
         try
         {
-            var batchProducingContext = CategorizeMessages(messages);
-            if (batchProducingContext.ValidMessages.Count == 0)
-            {
-                _logger.LogError("// KafkaProducer // ProduceAsync // All messages are invalid");
-
-                return messages;
-            }
-
-            batchProducingContext = BuildProduceTasks(topic, batchProducingContext, cancellationToken);
-            if (batchProducingContext.DeferredProduceTaskFactories.Count == 0)
-            {
-                _logger.LogError("// KafkaProducer // ProduceAsync // No message will be produced");
-
-                return messages;
-            }
-
-            var batchProcessingStopwatch = Stopwatch.StartNew();
-
-            var publishTasks = new List<Task<DeliveryResult<Null, string>>>(batchProducingContext.DeferredProduceTaskFactories.Count);
-
-            foreach (var produceTaskFactor in batchProducingContext.DeferredProduceTaskFactories)
-            {
-                publishTasks.Add(produceTaskFactor());
-            }
-
             await Task.WhenAll(publishTasks).WaitAsync(cancellationToken);
-
-            batchProducingContext = CategorizeDeliveryResults(batchProducingContext, [.. publishTasks]);
-
-            batchProcessingStopwatch.Stop();
-
-            _batchLatencyMs.Record(batchProcessingStopwatch.Elapsed.TotalMilliseconds);
-
-            LogBatchResults(topic, batchProducingContext, batchProcessingStopwatch);
-
-            return [.. batchProducingContext.InvalidMessages, .. batchProducingContext.NotProducedMessages, .. batchProducingContext.UnscheduledValidMessages];
         }
         catch (OperationCanceledException)
         {
-            // ignore
+            isCancellationRequested = true;
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex)
         {
+            LogOnProduceAsyncFailed(ex);
+
             throw;
         }
 
-        return messages;
+        batchContext = CategorizeDeliveryResults(batchContext, publishTasks, includeIncompleteAsRetry: isCancellationRequested);
+
+        batchProcessingStopwatch.Stop();
+
+        _batchLatencyMs.Record(batchProcessingStopwatch.Elapsed.TotalMilliseconds);
+
+        LogBatchResults(topic, batchContext, batchProcessingStopwatch);
+
+        return [.. batchContext.NotProducedMessages, .. batchContext.UnscheduledValidMessages];
     }
 
     /// <summary>
@@ -324,17 +326,26 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
 
     /// <summary>
     /// Validates that the provided message content is non-null and non-whitespace.
-    /// </summary>1
+    /// </summary>
     private bool ValidateMessage(string message)
     {
-        if (!string.IsNullOrWhiteSpace(message))
+        if (string.IsNullOrWhiteSpace(message))
         {
-            return true;
+            _logger.LogError("// KafkaProducer // ProduceAsync // Message is null, empty, or whitespace");
+
+            return false;
         }
 
-        _logger.LogError("// KafkaProducer // ProduceAsync // Message is null, empty, or whitespace");
+        return true;
+    }
 
-        return false;
+    /// <summary>
+    /// Logs the error that occurred while fetching Kafka metadata in EnsureTopicsExist.
+    /// </summary>
+    /// <param name="exception">The exception occurred.</param>
+    private void LogOnProduceAsyncFailed(Exception exception)
+    {
+        _logger.LogError(exception, "// KafkaProducer // ProduceAsync // Unexpected exception while awaiting batch.");
     }
 
     /// <summary>
@@ -505,10 +516,10 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
         if (cancellationToken.IsCancellationRequested)
         {
             _logger.LogWarning(
-                    "// KafkaProducer // ProduceAsync // BuildProduceTasks // Cancellation Requested. Topic={Topic} Scheduled={Scheduled} Unscheduled={Unscheduled}",
-                    topicName,
-                    scheduledValidMessages.Count,
-                    unscheduledValidMessages.Count);
+                "// KafkaProducer // ProduceAsync // BuildProduceTasks // Cancellation Requested. Topic={Topic} Scheduled={Scheduled} Unscheduled={Unscheduled}",
+                topicName,
+                scheduledValidMessages.Count,
+                unscheduledValidMessages.Count);
         }
 
         return batchContext with
@@ -521,16 +532,17 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
 
     /// <summary>
     /// Processes delivery task results from Kafka produce operations and categorizes messages into published and unpublished groups.
+    /// Handles partial cancellation by optionally treating incomplete tasks as retryable without counting failures.
     /// </summary>
     /// <param name="context">The batch processing context to update with delivery results.</param>
-    /// <param name="deliveryTasks">Collection of completed delivery tasks returned by Kafka <c>ProduceAsync</c> operations.</param>
+    /// <param name="deliveryTasks">Collection of delivery tasks returned by Kafka <c>ProduceAsync</c> operations.</param>
+    /// <param name="includeIncompleteAsRetry">If true, tasks not completed are treated as retryable and added to <see cref="BatchProducingContext.NotProducedMessages"/> without incrementing failures.</param>
     /// <returns>
     /// Updated <see cref="BatchProducingContext"/> with messages categorized based on delivery results.
     /// Successfully persisted messages are added to <see cref="BatchProducingContext.ProducedMessages"/>.
-    /// Failed, canceled, or non-persisted messages are added to <see cref="BatchProducingContext.NotProducedMessages"/>.
-    /// Failure metrics are automatically incremented for unpublished messages.
+    /// Failed, canceled, non-persisted messages, or incomplete tasks (when <paramref name="includeIncompleteAsRetry"/> is true) are added to <see cref="BatchProducingContext.NotProducedMessages"/>.
     /// </returns>
-    private static BatchProducingContext CategorizeDeliveryResults(BatchProducingContext context, List<Task<DeliveryResult<Null, string>>> deliveryTasks)
+    private static BatchProducingContext CategorizeDeliveryResults(BatchProducingContext context, List<Task<DeliveryResult<Null, string>>> deliveryTasks, bool includeIncompleteAsRetry)
     {
         var publishedMessages = new List<string>(context.ValidMessages.Count);
         var unpublishedMessages = new List<string>(context.ValidMessages.Count);
@@ -538,6 +550,16 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
         for (int i = 0; i < deliveryTasks.Count; i++)
         {
             var deliveryTask = deliveryTasks[i];
+
+            if (!deliveryTask.IsCompleted)
+            {
+                if (includeIncompleteAsRetry && i < context.ScheduledValidMessages.Count)
+                {
+                    unpublishedMessages.Add(context.ScheduledValidMessages[i]);
+                }
+
+                continue;
+            }
 
             if (deliveryTask.IsCanceled)
             {
