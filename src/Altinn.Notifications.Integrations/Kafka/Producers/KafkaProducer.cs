@@ -19,7 +19,7 @@ namespace Altinn.Notifications.Integrations.Kafka.Producers;
 /// </summary>
 public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
 {
-    private readonly KafkaSettings _settings;
+    private readonly KafkaSettings _kafkaSettings;
     private readonly ILogger<KafkaProducer> _logger;
     private readonly IProducer<Null, string> _producer;
 
@@ -32,11 +32,11 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     /// <summary>
     /// Initializes a new instance of the <see cref="KafkaProducer"/> class.
     /// </summary>
-    public KafkaProducer(IOptions<KafkaSettings> settings, ILogger<KafkaProducer> logger)
-        : base(settings.Value)
+    public KafkaProducer(IOptions<KafkaSettings> kafkaSettings, ILogger<KafkaProducer> logger)
+        : base(kafkaSettings.Value)
     {
         _logger = logger;
-        _settings = settings.Value;
+        _kafkaSettings = kafkaSettings.Value;
 
         var producerConfiguration = BuildConfiguration();
 
@@ -124,30 +124,46 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             batchContext = CreateProduceTaskFactories(batchContext, cancellationToken);
             if (batchContext.TaskFactories.Count == 0)
             {
-                return FinalizeBatch(batchContext, batchProcessingStopwatch);
+                batchProcessingStopwatch.Stop();
+
+                LogBatchResults(batchContext, batchProcessingStopwatch);
+
+                return batchContext.UnpublishedMessages;
             }
 
-            List<Task<DeliveryResult<Null, string>>> publishTasks = [];
-
+            var publishTasks = new List<Task<DeliveryResult<Null, string>>>(batchContext.TaskFactories.Count);
             try
             {
-                publishTasks = [.. batchContext.TaskFactories.Select(factory => factory())];
+                foreach (var factory in batchContext.TaskFactories)
+                {
+                    publishTasks.Add(factory());
+                }
 
                 await Task.WhenAll(publishTasks).WaitAsync(cancellationToken);
             }
             catch (OperationCanceledException)
             {
-                // Handle cancellation
+                // ignored
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 _logger.LogWarning(ex, "// KafkaProducer // ProduceAsync // Exception during Task.WhenAll");
             }
 
-            bool wasCancelled = cancellationToken.IsCancellationRequested;
-            batchContext = ProcessDeliveryResults(publishTasks, batchContext, wasCancelled);
+            batchContext = ProcessDeliveryResults([.. publishTasks], batchContext);
 
-            return FinalizeBatch(batchContext, batchProcessingStopwatch);
+            if (batchContext.PublishedCount > 0)
+            {
+                _publishedCounter.Add(batchContext.PublishedCount);
+            }
+
+            batchProcessingStopwatch.Stop();
+
+            _batchLatencyMs.Record(batchProcessingStopwatch.Elapsed.TotalMilliseconds);
+
+            LogBatchResults(batchContext, batchProcessingStopwatch);
+
+            return batchContext.UnpublishedMessages;
         }
         catch (Exception ex)
         {
@@ -209,7 +225,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
 
         var existingTopics = new HashSet<string>(metadata.Topics.Select(e => e.Topic), StringComparer.OrdinalIgnoreCase);
 
-        foreach (string topic in _settings.Admin.TopicList)
+        foreach (string topic in _kafkaSettings.Admin.TopicList)
         {
             if (string.IsNullOrWhiteSpace(topic))
             {
@@ -257,29 +273,12 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     /// </summary>
     private bool ValidateTopic(string topic)
     {
-        if (!string.IsNullOrWhiteSpace(topic))
+        if (!string.IsNullOrWhiteSpace(topic) && _kafkaSettings.Admin.TopicList.Contains(topic))
         {
             return true;
         }
 
         _logger.LogError("// KafkaProducer // Topic name is null, empty, or whitespace");
-
-        IncrementFailed();
-
-        return false;
-    }
-
-    /// <summary>
-    /// Validates that the provided message content is non-null and non-whitespace.
-    /// </summary>1
-    private bool ValidateMessage(string message)
-    {
-        if (!string.IsNullOrWhiteSpace(message))
-        {
-            return true;
-        }
-
-        _logger.LogError("// KafkaProducer // Message is null, empty, or whitespace");
 
         IncrementFailed();
 
@@ -306,6 +305,32 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             DeliveryReportFields = "status",
             CompressionType = CompressionType.Zstd
         };
+    }
+
+    /// <summary>
+    /// Validates that the provided message content is non-null and non-whitespace.
+    /// </summary>1
+    private bool ValidateMessage(string message)
+    {
+        if (!string.IsNullOrWhiteSpace(message))
+        {
+            return true;
+        }
+
+        _logger.LogError("// KafkaProducer // Message is null, empty, or whitespace");
+
+        IncrementFailed();
+
+        return false;
+    }
+
+    /// <summary>
+    /// Logs the error that occurred while fetching Kafka metadata in EnsureTopicsExist.
+    /// </summary>
+    /// <param name="exceptionOccurred">The exception occurred.</param>
+    private void LogMetadataFetchFailed(Exception exceptionOccurred)
+    {
+        _logger.LogError(exceptionOccurred, "// KafkaProducer // EnsureTopicsExist // Metadata fetch failed.");
     }
 
     /// <summary>
@@ -348,7 +373,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             : (double)context.PublishedCount / context.ValidMessages.Count;
 
         _logger.LogInformation(
-            "// KafkaProducer // ProduceAsync // Topic={Topic} TotalValid={TotalValid} Success={Success} NotPublished={NotPublished} SuccessRate={Rate:P2} DurationMs={Duration:F0}",
+            "// KafkaProducer // ProduceAsync // Topic={Topic} TotalValid={TotalValid} Published={PublishedCount} NotPublished={UnpublishedMessages} SuccessRate={Rate:P2} DurationMs={Duration:F0}",
             context.Topic,
             context.ValidMessages.Count,
             context.PublishedCount,
@@ -358,38 +383,14 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     }
 
     /// <summary>
-    /// Increments the failure counter, allowing batch operations to record multiple failures.
+    /// Logs the error that occurred while creating missing topics in EnsureTopicsExist.
     /// </summary>
-    private static void IncrementFailed(int count = 1) => _failedCounter.Add(count);
-
-    /// <summary>
-    /// Finalizes the batch processing by updating metrics, recording timing data, and logging results.
-    /// </summary>
-    /// <param name="context">The batch context containing processing results.</param>
-    /// <param name="batchStopwatch">The stopwatch used to measure batch processing duration.</param>
-    /// <returns>
-    /// The collection of unpublished messages from the batch context.
-    /// </returns>
-    private List<string> FinalizeBatch(BatchContext context, Stopwatch batchStopwatch)
+    /// <param name="exceptionOccurred">The exception occurred.</param>
+    /// <param name="topicName">The name of the topic.</param>
+    private void LogTopicCreationFailed(Exception exceptionOccurred, string topicName)
     {
-        if (context.PublishedCount > 0)
-        {
-            _publishedCounter.Add(context.PublishedCount);
-        }
-
-        batchStopwatch.Stop();
-
-        _batchLatencyMs.Record(batchStopwatch.Elapsed.TotalMilliseconds);
-
-        LogBatchResults(context, batchStopwatch);
-
-        return [.. context.UnpublishedMessages];
+        _logger.LogError(exceptionOccurred, "// KafkaProducer // EnsureTopicsExist // Failed to create topic '{Topic}'", topicName);
     }
-
-    /// <summary>
-    /// Increments the publish counter, allowing batch operations to record multiple successes.
-    /// </summary>
-    private static void IncrementPublished(int count = 1) => _publishedCounter.Add(count);
 
     /// <summary>
     /// Validates topic and messages, then creates a batch context with categorized valid/invalid messages.
@@ -401,16 +402,9 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     /// </returns>
     private BatchContext InitializeBatchContext(string topic, IImmutableList<string> messages)
     {
-        if (messages.Count == 0)
+        if (!ValidateTopic(topic) || messages.Count == 0)
         {
-            return BuildInvalidBatchContext(topic, messages);
-        }
-
-        if (!ValidateTopic(topic))
-        {
-            IncrementFailed(messages.Count);
-
-            return BuildInvalidBatchContext(topic, messages);
+            return new BatchContext();
         }
 
         var containSingleValidMessage = false;
@@ -453,6 +447,16 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     }
 
     /// <summary>
+    /// Increments the failure counter, allowing batch operations to record multiple failures.
+    /// </summary>
+    private static void IncrementFailed(int failuresCount = 1) => _failedCounter.Add(failuresCount);
+
+    /// <summary>
+    /// Increments the publish counter, allowing batch operations to record multiple successes.
+    /// </summary>
+    private static void IncrementPublished(int successesCount = 1) => _publishedCounter.Add(successesCount);
+
+    /// <summary>
     /// Handles exceptions that occur during batch processing, ensuring proper cleanup and error reporting.
     /// </summary>
     /// <param name="ex">The exception that occurred during batch processing.</param>
@@ -468,10 +472,10 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
 
         var unprocessedMessages = context.ValidMessages
             .Take(context.ScheduledCount)
-            .Where(m => !context.UnpublishedMessages.Contains(m));
+            .Where(e => !context.UnpublishedMessages.Contains(e));
 
         context.UnpublishedMessages.AddRange(unprocessedMessages);
-        IncrementFailed(context.ScheduledCount);
+        IncrementFailed(unprocessedMessages.Count());
 
         batchStopwatch.Stop();
         _batchLatencyMs.Record(batchStopwatch.Elapsed.TotalMilliseconds);
@@ -480,165 +484,56 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     }
 
     /// <summary>
-    /// Logs the error that occurred while fetching Kafka metadata in EnsureTopicsExist.
+    /// Creates deferred execution task factories for each valid message.
     /// </summary>
-    /// <param name="exceptionOccurred">The exception occurred.</param>
-    private void LogMetadataFetchFailed(Exception exceptionOccurred)
-    {
-        _logger.LogError(exceptionOccurred, "// KafkaProducer // EnsureTopicsExist // Metadata fetch failed.");
-    }
-
-    /// <summary>
-    /// Logs the error that occurred while creating missing topics in EnsureTopicsExist.
-    /// </summary>
-    /// <param name="exceptionOccurred">The exception occurred.</param>
-    /// <param name="topicName">The name of the topic.</param>
-    private void LogTopicCreationFailed(Exception exceptionOccurred, string topicName)
-    {
-        _logger.LogError(exceptionOccurred, "// KafkaProducer // EnsureTopicsExist // Failed to create topic '{Topic}'", topicName);
-    }
-
-    /// <summary>
-    /// Builds a <see cref="BatchContext"/> representing an invalid batch (empty collection or invalid topic).
-    /// </summary>
-    /// <param name="topic">The name of the topic attempted.</param>
-    /// <param name="sourceMessages">Original message collection.</param>
-    /// <returns>A <see cref="BatchContext"/> representing the invalid batch.</returns>
-    private static BatchContext BuildInvalidBatchContext(string topic, IImmutableList<string> sourceMessages)
-    {
-        return new BatchContext
-        {
-            Topic = topic,
-            HasValidMessages = false,
-            PublishedCount = 0,
-            ValidMessages = [],
-            ScheduledCount = 0,
-            UnpublishedMessages = [],
-            InvalidMessages = [.. sourceMessages]
-        };
-    }
-
-    /// <summary>
-    /// Creates task factories for each valid message in the batch context without starting them.
-    /// </summary>
-    /// <param name="context">The batch context containing valid messages and tracking information.</param>
-    /// <param name="cancellationToken">A token that can be used to cancel the scheduling operation.</param>
+    /// <param name="context">The batch context containing valid messages.</param>
+    /// <param name="cancellationToken">A token that can be used to cancel the task factory creation process.</param>
+    /// <returns>
     /// <returns>An updated batch context with task factories and scheduling information.</returns>
     private BatchContext CreateProduceTaskFactories(BatchContext context, CancellationToken cancellationToken)
     {
-        if (!context.HasValidMessages)
+        if (!context.HasValidMessages || !context.ValidMessages.Any())
         {
             return context;
         }
 
         int scheduledMessagesCount = 0;
-        var unscheduledMessages = new List<string>();
-        var scheduledMessagesTaskFactories = new List<Func<Task<DeliveryResult<Null, string>>>>(context.ValidMessages.Count);
+        List<string>? unscheduledMessages = null;
+        var producingTaskFactories = new List<Func<Task<DeliveryResult<Null, string>>>>(context.ValidMessages.Count);
 
-        foreach (var message in context.ValidMessages)
+        foreach (var validMessage in context.ValidMessages)
         {
             if (cancellationToken.IsCancellationRequested)
             {
+                var unscheduledMessagesCount = context.ValidMessages.Count - scheduledMessagesCount;
+                unscheduledMessages = new List<string>(unscheduledMessagesCount);
                 unscheduledMessages.AddRange(context.ValidMessages.Skip(scheduledMessagesCount));
 
                 _logger.LogWarning(
-                    "// KafkaProducer // ProduceAsync // Cancellation. Scheduled={Scheduled} Remaining={Remaining} Topic={Topic}",
+                    "// KafkaProducer // ProduceAsync // CreateProduceTaskFactories // Cancellation Requested. Topic={Topic} Scheduled={Scheduled} Unscheduled={Unscheduled}",
+                    context.Topic,
                     scheduledMessagesCount,
-                    context.ValidMessages.Count - scheduledMessagesCount,
-                    context.Topic);
+                    unscheduledMessagesCount);
 
                 break;
             }
 
             // Capture the message in a local variable to avoid closure issues
-            var messagePayload = message;
+            var messagePayload = validMessage;
 
-            scheduledMessagesTaskFactories.Add(() => _producer.ProduceAsync(context.Topic, new Message<Null, string> { Value = messagePayload }, cancellationToken));
+            producingTaskFactories.Add(() => _producer.ProduceAsync(context.Topic, new Message<Null, string> { Value = messagePayload }, cancellationToken));
 
             scheduledMessagesCount++;
         }
 
-        return context with
+        var updatedBatchContext = context with
         {
             ScheduledCount = scheduledMessagesCount,
-            UnpublishedMessages = [.. unscheduledMessages],
-            TaskFactories = [.. scheduledMessagesTaskFactories]
+            TaskFactories = [.. producingTaskFactories],
+            UnpublishedMessages = unscheduledMessages?.ToImmutableList() ?? []
         };
-    }
 
-    /// <summary>
-    /// Processes completed delivery results, checking the persistence status of each result.
-    /// </summary>
-    /// <param name="deliveryResults">The array of delivery results to process.</param>
-    /// <param name="context">The batch context to update with results.</param>
-    /// <returns>An updated BatchContext with the processing results.</returns>
-    private static BatchContext ProcessCompletedDeliveryResults(DeliveryResult<Null, string>[] deliveryResults, BatchContext context)
-    {
-        int failureCount = 0;
-        int successCount = context.PublishedCount;
-        var updatedUnpublishedMessages = new List<string>(context.UnpublishedMessages);
-
-        for (int i = 0; i < deliveryResults.Length; i++)
-        {
-            if (deliveryResults[i].Status == PersistenceStatus.Persisted)
-            {
-                successCount++;
-            }
-            else
-            {
-                updatedUnpublishedMessages.Add(context.ValidMessages[i]);
-                failureCount++;
-            }
-        }
-
-        if (failureCount > 0)
-        {
-            IncrementFailed(failureCount);
-        }
-
-        return context with
-        {
-            PublishedCount = successCount,
-            UnpublishedMessages = [.. updatedUnpublishedMessages]
-        };
-    }
-
-    /// <summary>
-    /// Processes delivery tasks that were cancelled during execution, checking individual task completion status.
-    /// </summary>
-    /// <param name="deliveryTasks">The list of delivery tasks to process.</param>
-    /// <param name="context">The batch context to update with results.</param>
-    /// <returns>An updated BatchContext with the processing results.</returns>
-    private static BatchContext ProcessCancelledDeliveryTasks(List<Task<DeliveryResult<Null, string>>> deliveryTasks, BatchContext context)
-    {
-        int failureCount = 0;
-        int successCount = context.PublishedCount;
-        var updatedUnpublishedMessages = new List<string>(context.UnpublishedMessages);
-
-        for (int i = 0; i < deliveryTasks.Count; i++)
-        {
-            var task = deliveryTasks[i];
-            if (task.IsCompletedSuccessfully && task.Result.Status == PersistenceStatus.Persisted)
-            {
-                successCount++;
-            }
-            else
-            {
-                updatedUnpublishedMessages.Add(context.ValidMessages[i]);
-                failureCount++;
-            }
-        }
-
-        if (failureCount > 0)
-        {
-            IncrementFailed(failureCount);
-        }
-
-        return context with
-        {
-            PublishedCount = successCount,
-            UnpublishedMessages = [.. updatedUnpublishedMessages]
-        };
+        return updatedBatchContext;
     }
 
     /// <summary>
@@ -646,36 +541,36 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     /// </summary>
     /// <param name="deliveryTasks">The result object containing delivery results or task information.</param>
     /// <param name="context">The batch context to update with processing results.</param>
-    /// <param name="wasCancelled">A token that can be used to cancel the scheduling operation.</param>
     /// <returns>An updated BatchContext with the processing results.</returns>
-    private static BatchContext ProcessDeliveryResults(List<Task<DeliveryResult<Null, string>>> deliveryTasks, BatchContext context, bool wasCancelled)
+    private static BatchContext ProcessDeliveryResults(List<Task<DeliveryResult<Null, string>>> deliveryTasks, BatchContext context)
     {
-        if (wasCancelled)
-        {
-            return ProcessCancelledDeliveryTasks(deliveryTasks, context);
-        }
+        int failureCount = 0;
+        int successCount = 0;
+        var unpublishedMessages = new List<string>(context.UnpublishedMessages);
 
-        // All tasks awaited in ExecuteDeliveryTasksAsync before calling this
-        var results = new DeliveryResult<Null, string>[deliveryTasks.Count];
         for (int i = 0; i < deliveryTasks.Count; i++)
         {
-            // Task should be completed; if faulted or cancelled treat as failure
-            var t = deliveryTasks[i];
-            if (t.IsCompletedSuccessfully && t.Result.Status == PersistenceStatus.Persisted)
+            var deliveryTask = deliveryTasks[i];
+            if (deliveryTask.IsCompletedSuccessfully && deliveryTask.Result.Status == PersistenceStatus.Persisted)
             {
-                results[i] = t.Result;
+                successCount++;
             }
             else
             {
-                // Create a synthetic failed delivery result if needed
-                results[i] = t.IsCompletedSuccessfully ? t.Result : new DeliveryResult<Null, string>
-                {
-                    Message = new Message<Null, string> { Value = context.ValidMessages[i] },
-                    Status = PersistenceStatus.NotPersisted
-                };
+                failureCount++;
+                unpublishedMessages.Add(context.ValidMessages[i]);
             }
         }
 
-        return ProcessCompletedDeliveryResults(results, context);
+        if (failureCount > 0)
+        {
+            IncrementFailed(failureCount);
+        }
+
+        return context with
+        {
+            PublishedCount = successCount,
+            UnpublishedMessages = [.. unpublishedMessages]
+        };
     }
 }
