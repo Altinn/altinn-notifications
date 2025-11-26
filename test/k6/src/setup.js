@@ -22,7 +22,7 @@ export function getAltinnTokenForOrg(scopes, org = "ttd", orgNo = "991825827") {
 
     const queryParams = {
         env: environment,
-        scopes: scopes.replace(/ /gi, ","),
+        scopes: scopes.replaceAll(/ /gi, ","),
         org: org,
         orgNo: orgNo,
     };

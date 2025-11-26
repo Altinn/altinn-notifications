@@ -10,7 +10,7 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers;
 /// <summary>
 /// Kafka consumer class for past due orders, first retry
 /// </summary>
-public class PastDueOrdersRetryConsumer : KafkaConsumerBase<PastDueOrdersRetryConsumer>
+public class PastDueOrdersRetryConsumer : KafkaConsumerBase
 {
     private readonly IOrderProcessingService _orderProcessingService;
     private readonly IDateTimeService _dateTime;

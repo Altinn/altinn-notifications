@@ -31,7 +31,6 @@ import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 import {
     buildOptions,
     runValidators,
-    handleSummary,
     processVariants,
     validOrderDuration,
     invalidOrderDuration,
@@ -147,7 +146,7 @@ function stripRecipientPersonFromOrderChainPayload(orderChainPayload) {
  *
  * @param {Object} data - Setup context
  */
-export default function (data) {
+export default function runTests(data) {
     const variants = generateOrderChainPayloads(orderTypes, data.orderChainPayload, {
         uniqueFactory: createUniqueOrderChainPayload,
         invalidTransform: stripRecipientPersonFromOrderChainPayload
@@ -170,4 +169,4 @@ export default function (data) {
     runValidators(processingResults, validators);
 }
 
-export { handleSummary };
+export { handleSummary } from "./order-with-reminders-functions.js";

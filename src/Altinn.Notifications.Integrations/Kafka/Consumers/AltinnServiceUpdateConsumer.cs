@@ -11,7 +11,7 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers
     /// <summary>
     /// Kafka consumer class for Altinn service updates
     /// </summary>
-    public class AltinnServiceUpdateConsumer : KafkaConsumerBase<AltinnServiceUpdateConsumer>
+    public class AltinnServiceUpdateConsumer : KafkaConsumerBase
     {
         private readonly IAltinnServiceUpdateService _serviceUpdate;
         private readonly ILogger<AltinnServiceUpdateConsumer> _logger;

@@ -34,7 +34,6 @@ import { getSmsRecipient } from "../shared/functions.js";
 import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 import {
     buildOptions,
-    handleSummary,
     runValidators,
     processVariants,
     validOrderDuration,
@@ -130,7 +129,7 @@ function stripRecipientSmsFromOrderChainPayload(orderChainPayload) {
  *
  * @param {Object} data - From setup
  */
-export default function (data) {
+export default function runTests(data) {
     const variants = generateOrderChainPayloads(orderTypes, data.orderChainPayload, {
         uniqueFactory: createUniqueOrderChainPayload,
         invalidTransform: stripRecipientSmsFromOrderChainPayload
@@ -153,4 +152,4 @@ export default function (data) {
     runValidators(processingResults, validators);
 }
 
-export { handleSummary };
+export { handleSummary } from "./order-with-reminders-functions.js";

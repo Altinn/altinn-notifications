@@ -463,6 +463,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
 
         // Assert
         Assert.Equal(500, (int)response.StatusCode);
+        Assert.Equal(500, (int)response.StatusCode);
 
         Assert.NotNull(problem);
         Assert.Equal(500, problem.Status);
