@@ -46,7 +46,8 @@ public class OrderRepository : IOrderRepository
     private const string _insertSmsNotificationSql = "call notifications.insertsmsnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (_orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _customizedbody, _result, _smscount, _resulttime, _expirytime)
     private const string _insertEmailNotificationSql = "call notifications.insertemailnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (_orderid, _alternateid, _recipientorgno, _recipientnin, _toaddress, _customizedbody, _customizedsubject, _result, _resulttime, _expirytime)
     private const string _getInstantOrderTrackingInformationSql = "SELECT * FROM notifications.get_instant_order_tracking(_creatorname := @creatorName, _idempotencyid := @idempotencyId)";
-    private const string _getShipmentForStatusFeedSql = "SELECT * FROM notifications.getshipmentforstatusfeed_v3(@alternateid)";
+    private const string _getOrderCreatorNameSql = "select creatorname from notifications.orders where alternateid=$1";
+    private const string _getShipmentTrackingInfoFunction = "SELECT * FROM notifications.get_shipment_tracking_v3(@alternateid, @creatorname)"; // (_alternateid, _creatorname)
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderRepository"/> class.
@@ -251,9 +252,20 @@ public class OrderRepository : IOrderRepository
 
         try
         {
+            // Get order details to retrieve creator name
+            await using var getOrderCommand = new NpgsqlCommand(_getOrderCreatorNameSql, connection, transaction);
+            getOrderCommand.Parameters.AddWithValue(NpgsqlDbType.Uuid, orderId);
+
+            var creatorName = await getOrderCommand.ExecuteScalarAsync() as string;
+            if (string.IsNullOrEmpty(creatorName))
+            {
+                throw new InvalidOperationException($"Order with ID {orderId} not found.");
+            }
+
             // Get shipment tracking information
-            await using var getTrackingCommand = new NpgsqlCommand(_getShipmentForStatusFeedSql, connection, transaction);
-            getTrackingCommand.Parameters.AddWithValue(NpgsqlDbType.Uuid, orderId);
+            await using var getTrackingCommand = new NpgsqlCommand(_getShipmentTrackingInfoFunction, connection, transaction);
+            getTrackingCommand.Parameters.AddWithValue("alternateid", NpgsqlDbType.Uuid, orderId);
+            getTrackingCommand.Parameters.AddWithValue("creatorname", NpgsqlDbType.Text, creatorName);
 
             await using var reader = await getTrackingCommand.ExecuteReaderAsync();
             if (await reader.ReadAsync())
@@ -266,6 +278,8 @@ public class OrderRepository : IOrderRepository
                 
                 // Attempt to read recipients
                 await NotificationUtil.ReadRecipients(recipients, reader);
+
+                await reader.CloseAsync();
 
                 // Build OrderStatus object 
                 var orderStatus = new OrderStatus
