@@ -181,7 +181,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
 
         LogBatchResults(topic, batchProducingContext, batchProcessingStopwatch);
 
-        return [.. batchProducingContext.InvalidMessages, .. batchProducingContext.UnpublishedMessages, .. batchProducingContext.UnpublishedMessages];
+        return [.. batchProducingContext.InvalidMessages, .. batchProducingContext.UnpublishedMessages, .. batchProducingContext.UnscheduledValidMessages];
     }
 
     /// <summary>
@@ -463,7 +463,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             topicName,
             context.ValidMessages.Count,
             context.PublishedMessages.Count,
-            context.UnpublishedMessages.Count,
+            context.UnpublishedMessages.Count + context.UnscheduledValidMessages.Count,
             successRate,
             batchStopwatch.Elapsed.TotalMilliseconds);
     }
