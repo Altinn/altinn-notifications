@@ -143,7 +143,7 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
         var lastUpdate = reader.GetDateTime(lastUpdateOrdinal);
         var destination = reader.GetString(destinationOrdinal);
 
-        if (type.Equals("email"))
+        if (type.Equals("email", StringComparison.OrdinalIgnoreCase))
         {
             deliveryManifestEntities.Add(new EmailDeliveryManifest
             {
@@ -152,7 +152,7 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
                 Status = ProcessingLifecycleMapper.GetEmailLifecycleStage(status),
             });
         }
-        else if (type.Equals("sms"))
+        else if (type.Equals("sms", StringComparison.OrdinalIgnoreCase))
         {
             deliveryManifestEntities.Add(new SmsDeliveryManifest
             {

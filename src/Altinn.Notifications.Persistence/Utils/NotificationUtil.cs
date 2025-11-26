@@ -7,7 +7,7 @@ namespace Altinn.Notifications.Persistence.Utils;
 /// <summary>
 /// Utility class for notification-related operations shared between different repositories.
 /// </summary>
-public static class NotificationUtil
+internal static class NotificationUtil
 {
     /// <summary>
     /// Method to read recipient level notifications from the data reader and populate the recipients list.
@@ -15,7 +15,7 @@ public static class NotificationUtil
     /// <param name="recipients">The list of recipients to populate.</param>
     /// <param name="reader">The data reader to read from. Disposal should be handled by the caller</param>
     /// <returns>A asynchronous Task</returns>
-    public static async Task ReadRecipients(List<Recipient> recipients, NpgsqlDataReader reader)
+    internal static async Task ReadRecipients(List<Recipient> recipients, NpgsqlDataReader reader)
     {
         var legalRecipientTypes = new[] { "email", "sms" };
 
