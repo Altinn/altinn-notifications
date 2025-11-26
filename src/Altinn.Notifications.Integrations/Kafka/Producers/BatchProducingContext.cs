@@ -10,38 +10,6 @@ namespace Altinn.Notifications.Integrations.Kafka.Producers;
 public sealed record BatchProducingContext
 {
     /// <summary>
-    /// The number of delivery tasks that were successfully scheduled.
-    /// </summary>
-    /// <remarks>
-    /// This count may be less than the total valid messages if cancellation occurred during the scheduling phase.
-    /// </remarks>
-    public int ScheduledCount { get; init; } = 0;
-
-    /// <summary>
-    /// The number of messages that were successfully published.
-    /// </summary>
-    /// <remarks>
-    /// Success is determined by receiving a <see cref="PersistenceStatus.Persisted"/> status from the Kafka delivery result.
-    /// </remarks>
-    public int PublishedCount { get; init; } = 0;
-
-    /// <summary>
-    /// The Kafka topic name targeted by this batch operation.
-    /// </summary>
-    /// <remarks>
-    /// An empty topic indicates topic validation failed or was not provided.
-    /// </remarks>
-    public string Topic { get; init; } = string.Empty;
-
-    /// <summary>
-    /// A value indicating whether this context contains valid, publishable messages and a valid topic.
-    /// </summary>
-    /// <remarks>
-    /// This flag is <c>false</c> if topic validation fails or if no valid messages are available.
-    /// </remarks>
-    public bool HasValidMessages { get; init; } = false;
-
-    /// <summary>
     /// The collection of valid messages that can be scheduled.
     /// </summary>
     /// <remarks>
@@ -58,19 +26,32 @@ public sealed record BatchProducingContext
     public IImmutableList<string> InvalidMessages { get; init; } = [];
 
     /// <summary>
-    /// The collection of messages that were not successfully published.
+    /// The messages that were successfully produced to Kafka and acknowledged by all brokers.
     /// </summary>
     /// <remarks>
-    /// This includes both invalid messages and valid messages that failed during the publishing phase.
+    /// A message is included here only after its corresponding produce task completes without throwing
+    /// and the delivery callback returns an acknowledgment (e.g. a <see cref="DeliveryResult{TKey,TValue}"/> with a valid offset).
+    /// </remarks>
+    public IImmutableList<string> PublishedMessages { get; init; } = [];
+
+    /// <summary>
+    /// The messages that were not successfully produced to Kafka topic.
+    /// </summary>
+    /// <remarks>
+    /// This set can include:
+    /// 1. Valid messages whose produce task failed (exception, faulted delivery, or negative acknowledgment).
+    /// 2. Valid messages intentionally skipped (e.g. short–circuit on prior fatal error or cancellation).
+    /// 3. Valid messages whose produce task was never started due to an early exit condition.
+    /// Invalid messages are never added here (they appear in <see cref="InvalidMessages"/> instead).
     /// </remarks>
     public IImmutableList<string> UnpublishedMessages { get; init; } = [];
 
     /// <summary>
-    /// The deferred task factories used to produce messages to Kafka.
+    /// The deferred task factories used to produce messages to the Kafka topic.
     /// </summary>
     /// <remarks>
     /// Each factory, when invoked, returns a task that produces a single message to the configured topic.
     /// Factories capture the message payload to avoid closure issues with loop variables.
     /// </remarks>
-    public IImmutableList<Func<Task<DeliveryResult<Null, string>>>> TaskFactories { get; init; } = [];
+    public IImmutableList<Func<Task<DeliveryResult<Null, string>>>> DeferredProduceTaskFactories { get; init; } = [];
 }
