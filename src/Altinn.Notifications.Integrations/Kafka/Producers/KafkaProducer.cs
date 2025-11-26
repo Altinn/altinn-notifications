@@ -111,8 +111,8 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     /// <inheritdoc/>
     public async Task<IEnumerable<string>> ProduceAsync(string topic, IImmutableList<string> messages, CancellationToken cancellationToken = default)
     {
-        var BatchProducingContext = InitializeBatchProducingContext(topic, messages);
-        if (!BatchProducingContext.HasValidMessages)
+        var batchProducingContext = InitializeBatchProducingContext(topic, messages);
+        if (!batchProducingContext.HasValidMessages)
         {
             return messages;
         }
@@ -121,20 +121,20 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
 
         try
         {
-            BatchProducingContext = CreateProduceTaskFactories(BatchProducingContext, cancellationToken);
-            if (BatchProducingContext.TaskFactories.Count == 0)
+            batchProducingContext = CreateProduceTaskFactories(batchProducingContext, cancellationToken);
+            if (batchProducingContext.TaskFactories.Count == 0)
             {
                 batchProcessingStopwatch.Stop();
 
-                LogBatchResults(BatchProducingContext, batchProcessingStopwatch);
+                LogBatchResults(batchProducingContext, batchProcessingStopwatch);
 
                 return messages;
             }
 
-            var publishTasks = new List<Task<DeliveryResult<Null, string>>>(BatchProducingContext.TaskFactories.Count);
+            var publishTasks = new List<Task<DeliveryResult<Null, string>>>(batchProducingContext.TaskFactories.Count);
             try
             {
-                foreach (var factory in BatchProducingContext.TaskFactories)
+                foreach (var factory in batchProducingContext.TaskFactories)
                 {
                     publishTasks.Add(factory());
                 }
@@ -150,24 +150,24 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
                 _logger.LogError(ex, "// KafkaProducer // ProduceAsync // Exception during Task.WhenAll");
             }
 
-            BatchProducingContext = ProcessDeliveryResults([.. publishTasks], BatchProducingContext);
+            batchProducingContext = ProcessDeliveryResults([.. publishTasks], batchProducingContext);
 
-            if (BatchProducingContext.PublishedCount > 0)
+            if (batchProducingContext.PublishedCount > 0)
             {
-                _publishedCounter.Add(BatchProducingContext.PublishedCount);
+                _publishedCounter.Add(batchProducingContext.PublishedCount);
             }
 
             batchProcessingStopwatch.Stop();
 
             _batchLatencyMs.Record(batchProcessingStopwatch.Elapsed.TotalMilliseconds);
 
-            LogBatchResults(BatchProducingContext, batchProcessingStopwatch);
+            LogBatchResults(batchProducingContext, batchProcessingStopwatch);
 
-            return [.. BatchProducingContext.InvalidMessages, .. BatchProducingContext.UnpublishedMessages];
+            return [.. batchProducingContext.InvalidMessages, .. batchProducingContext.UnpublishedMessages];
         }
         catch (Exception ex)
         {
-            return HandleBatchException(ex, BatchProducingContext, batchProcessingStopwatch);
+            return HandleBatchException(ex, batchProducingContext, batchProcessingStopwatch);
         }
     }
 
