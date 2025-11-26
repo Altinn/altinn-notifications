@@ -26,13 +26,13 @@ public sealed record BatchProducingContext
     public IImmutableList<string> InvalidMessages { get; init; } = [];
 
     /// <summary>
-    /// The messages that were successfully produced to Kafka and acknowledged by all brokers.
+    /// The messages that were successfully produced to Kafka topic and acknowledged by all brokers.
     /// </summary>
     /// <remarks>
     /// A message is included here only after its corresponding produce task completes without throwing
     /// and the delivery callback returns an acknowledgment (e.g. a <see cref="DeliveryResult{TKey,TValue}"/> with a valid offset).
     /// </remarks>
-    public IImmutableList<string> PublishedMessages { get; init; } = [];
+    public IImmutableList<string> ProducedMessages { get; init; } = [];
 
     /// <summary>
     /// The messages that were not successfully produced to Kafka topic.
@@ -44,7 +44,7 @@ public sealed record BatchProducingContext
     /// 3. Valid messages whose produce task was never started due to an early exit condition.
     /// Invalid messages are never added here (they appear in <see cref="InvalidMessages"/> instead).
     /// </remarks>
-    public IImmutableList<string> UnpublishedMessages { get; init; } = [];
+    public IImmutableList<string> NotProducedMessages { get; init; } = [];
 
     /// <summary>
     /// Valid messages that were scheduled into deferred task factories (index-aligned to <see cref="DeferredProduceTaskFactories"/>).
