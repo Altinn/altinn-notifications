@@ -181,7 +181,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
 
         LogBatchResults(topic, batchProducingContext, batchProcessingStopwatch);
 
-        return [.. batchProducingContext.InvalidMessages, .. batchProducingContext.UnpublishedMessages];
+        return [.. batchProducingContext.InvalidMessages, .. batchProducingContext.UnpublishedMessages, .. batchProducingContext.UnpublishedMessages];
     }
 
     /// <summary>
@@ -554,7 +554,8 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
         }
 
         int scheduledMessagesCount = 0;
-        var producingTaskFactories = new List<Func<Task<DeliveryResult<Null, string>>>>(batchContext.ValidMessages.Count);
+        int unscheduledMessagesCount = batchContext.ValidMessages.Count;
+        var producingTaskFactories = new List<Func<Task<DeliveryResult<Null, string>>>>(unscheduledMessagesCount);
 
         foreach (var validMessage in batchContext.ValidMessages)
         {
@@ -564,7 +565,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
                     "// KafkaProducer // ProduceAsync // CreateProduceTaskFactories // Cancellation Requested. Topic={Topic} Scheduled={Scheduled} Unscheduled={Unscheduled}",
                     topicName,
                     scheduledMessagesCount,
-                    batchContext.ValidMessages.Count - scheduledMessagesCount);
+                    unscheduledMessagesCount);
 
                 break;
             }
@@ -575,11 +576,16 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             producingTaskFactories.Add(() => _producer.ProduceAsync(topicName, new Message<Null, string> { Value = messagePayload }, cancellationToken));
 
             scheduledMessagesCount++;
+            unscheduledMessagesCount--;
         }
+
+        IncrementFailed(unscheduledMessagesCount);
 
         return batchContext with
         {
-            DeferredProduceTaskFactories = [.. producingTaskFactories]
+            DeferredProduceTaskFactories = [.. producingTaskFactories],
+            ScheduledValidMessages = [.. batchContext.ValidMessages.Take(scheduledMessagesCount)],
+            UnscheduledValidMessages = [.. batchContext.ValidMessages.Skip(scheduledMessagesCount)]
         };
     }
 }

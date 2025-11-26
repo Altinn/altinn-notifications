@@ -47,6 +47,16 @@ public sealed record BatchProducingContext
     public IImmutableList<string> UnpublishedMessages { get; init; } = [];
 
     /// <summary>
+    /// Valid messages that were scheduled into deferred task factories (index-aligned to <see cref="DeferredProduceTaskFactories"/>).
+    /// </summary>
+    public IImmutableList<string> ScheduledValidMessages { get; init; } = [];
+
+    /// <summary>
+    /// Valid messages that were not scheduled into a deferred task factory due to early cancellation during scheduling.
+    /// </summary>
+    public IImmutableList<string> UnscheduledValidMessages { get; init; } = [];
+
+    /// <summary>
     /// The deferred task factories used to produce messages to the Kafka topic.
     /// </summary>
     /// <remarks>
