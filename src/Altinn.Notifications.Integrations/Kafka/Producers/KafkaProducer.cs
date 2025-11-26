@@ -42,7 +42,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
 
         _producer = BuildProducer(producerConfiguration);
 
-        _ = EnsureTopicsExist();
+        EnsureTopicsExist().Wait();
     }
 
     /// <inheritdoc/>
@@ -471,8 +471,8 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     /// </returns>
     private static BatchProducingContext CategorizeDeliveryResults(BatchProducingContext context, List<Task<DeliveryResult<Null, string>>> deliveryTasks)
     {
-        var publishedMessages = new List<string>(context.ValidMessages);
-        var unpublishedMessages = new List<string>(context.ValidMessages);
+        var publishedMessages = new List<string>(context.ValidMessages.Count);
+        var unpublishedMessages = new List<string>(context.ValidMessages.Count);
 
         foreach (var deliveryTask in deliveryTasks)
         {
@@ -496,9 +496,9 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
                 if (!string.IsNullOrWhiteSpace(failedPayload))
                 {
                     unpublishedMessages.Add(failedPayload);
-
-                    IncrementFailed();
                 }
+
+                IncrementFailed();
 
                 continue;
             }
