@@ -117,7 +117,7 @@ public class OrderProcessingService : IOrderProcessingService
 
         if (isOrderCompleted)
         {
-            await TryInsertStatusFeedForUnmetCondition(order.Id);
+            await TryInsertStatusFeedForCompletedOrder(order.Id);
         }
 
         return new NotificationOrderProcessingResult
@@ -167,7 +167,7 @@ public class OrderProcessingService : IOrderProcessingService
 
         if (isOrderCompleted)
         {
-            await TryInsertStatusFeedForUnmetCondition(order.Id);
+            await TryInsertStatusFeedForCompletedOrder(order.Id);
         }
     }
 
@@ -176,7 +176,7 @@ public class OrderProcessingService : IOrderProcessingService
     /// Logs a warning if the insertion fails but does not throw, allowing order processing to continue.
     /// </summary>
     /// <param name="orderId">The unique identifier of the order.</param>
-    private async Task TryInsertStatusFeedForUnmetCondition(Guid orderId)
+    private async Task TryInsertStatusFeedForCompletedOrder(Guid orderId)
     {
         try
         {
@@ -185,7 +185,7 @@ public class OrderProcessingService : IOrderProcessingService
         catch (Exception ex)
         {
             var maskedOrderId = string.Concat(orderId.ToString().AsSpan(0, 8), "****");
-            _logger.LogWarning(ex, "Failed to insert status feed for order {OrderId} after marking SendConditionNotMet.", maskedOrderId);
+            _logger.LogWarning(ex, "Failed to insert status feed for completed order {OrderId}.", maskedOrderId);
         }
     }
 

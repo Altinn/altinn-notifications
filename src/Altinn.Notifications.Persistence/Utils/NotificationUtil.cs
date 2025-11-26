@@ -1,5 +1,6 @@
 ﻿using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Persistence.Mappers;
+
 using Npgsql;
 
 namespace Altinn.Notifications.Persistence.Utils;
@@ -9,7 +10,9 @@ namespace Altinn.Notifications.Persistence.Utils;
 /// </summary>
 internal static class NotificationUtil
 {
-    /// <summary>
+    private static readonly string[] _legalRecipientTypes = ["email", "sms"];
+
+/// <summary>
     /// Method to read recipient level notifications from the data reader and populate the recipients list.
     /// </summary>
     /// <param name="recipients">The list of recipients to populate.</param>
@@ -17,8 +20,6 @@ internal static class NotificationUtil
     /// <returns>A asynchronous Task</returns>
     internal static async Task ReadRecipients(List<Recipient> recipients, NpgsqlDataReader reader)
     {
-        var legalRecipientTypes = new[] { "email", "sms" };
-
         var statusOrdinal = reader.GetOrdinal("status");
         var destinationOrdinal = reader.GetOrdinal("destination");
         var typeOrdinal = reader.GetOrdinal("type");
@@ -28,7 +29,7 @@ internal static class NotificationUtil
         {
             var notificationType = await reader.GetFieldValueAsync<string>(typeOrdinal);
 
-            if (!legalRecipientTypes.Contains(notificationType, StringComparer.OrdinalIgnoreCase))
+            if (!_legalRecipientTypes.Contains(notificationType, StringComparer.OrdinalIgnoreCase))
             {
                 // Skip non-recipient level notifications
                 continue;

@@ -128,6 +128,7 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
         var statusOrdinal = reader.GetOrdinal(_statusColumnName);
         var lastUpdateOrdinal = reader.GetOrdinal(_lastUpdateColumnName);
         var destinationOrdinal = reader.GetOrdinal(_destinationColumnName);
+        var typeOrdinal = reader.GetOrdinal(_typeColumnName);
 
         var isStatusNull = await reader.IsDBNullAsync(statusOrdinal, cancellationToken);
         var isTimestampNull = await reader.IsDBNullAsync(lastUpdateOrdinal, cancellationToken);
@@ -139,7 +140,7 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
         }
 
         var status = reader.GetString(statusOrdinal);
-        var type = reader.GetString(_typeColumnName);
+        var type = reader.GetString(typeOrdinal);
         var lastUpdate = reader.GetDateTime(lastUpdateOrdinal);
         var destination = reader.GetString(destinationOrdinal);
 
