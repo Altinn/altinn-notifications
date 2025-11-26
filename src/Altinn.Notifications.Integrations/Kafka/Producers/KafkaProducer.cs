@@ -128,7 +128,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
 
                 LogBatchResults(batchContext, batchProcessingStopwatch);
 
-                return batchContext.UnpublishedMessages;
+                return messages;
             }
 
             var publishTasks = new List<Task<DeliveryResult<Null, string>>>(batchContext.TaskFactories.Count);
@@ -147,7 +147,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                _logger.LogWarning(ex, "// KafkaProducer // ProduceAsync // Exception during Task.WhenAll");
+                _logger.LogError(ex, "// KafkaProducer // ProduceAsync // Exception during Task.WhenAll");
             }
 
             batchContext = ProcessDeliveryResults([.. publishTasks], batchContext);
@@ -163,7 +163,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
 
             LogBatchResults(batchContext, batchProcessingStopwatch);
 
-            return batchContext.UnpublishedMessages;
+            return [.. batchContext.InvalidMessages, .. batchContext.UnpublishedMessages];
         }
         catch (Exception ex)
         {
@@ -529,8 +529,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
         var updatedBatchContext = context with
         {
             ScheduledCount = scheduledMessagesCount,
-            TaskFactories = [.. producingTaskFactories],
-            UnpublishedMessages = unscheduledMessages?.ToImmutableList() ?? []
+            TaskFactories = [.. producingTaskFactories]
         };
 
         return updatedBatchContext;
@@ -546,7 +545,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     {
         int failureCount = 0;
         int successCount = 0;
-        var unpublishedMessages = new List<string>(context.UnpublishedMessages);
+        var unpublishedMessages = new List<string>();
 
         for (int i = 0; i < deliveryTasks.Count; i++)
         {
