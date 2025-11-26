@@ -119,17 +119,17 @@ function postEmailNotificationOrderRequest(data) {
     stopIterationOnFail("POST email notification order request failed", success);
 
     const selfLink = response.headers["Location"];
-    if (environment !== yt01Environment) {
+    if (environment === yt01Environment) {
         check(response, {
             "POST email notification order request. Location header provided": (r) => selfLink,
-            "POST email notification order request. Recipient lookup was successful": (r) => JSON.parse(r.body).recipientLookup.status == 'Success' 
+            "POST email notification order request. Recipient lookup was successful or no recipients found": (r) => JSON.parse(r.body).recipientLookup.status == 'Success' 
+            || (JSON.parse(r.body).recipientLookup.status == 'Failed' && JSON.parse(r.body).recipientLookup.missingContact.length > 0)
         });
     }
     else {
         check(response, {
             "POST email notification order request. Location header provided": (r) => selfLink,
-            "POST email notification order request. Recipient lookup was successful or no recipients found": (r) => JSON.parse(r.body).recipientLookup.status == 'Success' 
-            || (JSON.parse(r.body).recipientLookup.status == 'Failed' && JSON.parse(r.body).recipientLookup.missingContact.length > 0)
+            "POST email notification order request. Recipient lookup was successful": (r) => JSON.parse(r.body).recipientLookup.status == 'Success' 
         });
     }   
 
@@ -225,7 +225,7 @@ function getSmsNotificationSummary(data, orderId) {
  * The main function to run the test.
  * @param {Object} data - The data object containing runFullTestSet and other test data.
  */
-export default function (data) {
+export default function runTests(data) {
     // Get a random organization number from the list.
     // For all other envs than yt01, the list only contains one number
     const orgNoRecipient = getOrgNoRecipient();

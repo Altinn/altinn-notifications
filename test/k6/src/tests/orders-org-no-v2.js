@@ -160,7 +160,7 @@ function postSmsNotificationOrderRequest(data) {
  * The main function to run the test.
  * @param {Object} data - The data object containing test data.
  */
-export default function (data) {
+export default function runTests(data) {
     let response = postEmailNotificationOrderRequest(data);
     getShipmentStatus(data, JSON.parse(response).notification.shipmentId, get_email_shipment, "Email");
 

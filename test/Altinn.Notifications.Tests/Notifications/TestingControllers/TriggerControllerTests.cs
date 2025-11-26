@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -37,8 +38,7 @@ public class TriggerControllerTests
             _emailPublishTaskQueueMock.Object,
             _notificationScheduleMock.Object,
             _orderProcessingServiceMock.Object,
-            _smsNotificationServiceMock.Object,
-            _emailNotificationServiceMock.Object);
+            [_emailNotificationServiceMock.Object, _smsNotificationServiceMock.Object]);
     }
 
     [Fact]

@@ -19,9 +19,8 @@ public class TriggerController : ControllerBase
     private readonly ISmsPublishTaskQueue _smsPublishTaskQueue;
     private readonly IEmailPublishTaskQueue _emailPublishTaskQueue;
     private readonly INotificationScheduleService _scheduleService;
-    private readonly ISmsNotificationService _smsNotificationService;
     private readonly IOrderProcessingService _orderProcessingService;
-    private readonly IEmailNotificationService _emailNotificationService;
+    private readonly IEnumerable<INotificationService> _notificationServices;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TriggerController"/> class.
@@ -33,17 +32,15 @@ public class TriggerController : ControllerBase
         IEmailPublishTaskQueue emailPublishingTaskQueue,
         INotificationScheduleService scheduleService,
         IOrderProcessingService orderProcessingService,
-        ISmsNotificationService smsNotificationService,
-        IEmailNotificationService emailNotificationService)
+        IEnumerable<INotificationService> notificationServices)
     {
         _logger = logger;
         _scheduleService = scheduleService;
         _statusFeedService = statusFeedService;
         _smsPublishTaskQueue = smsPublishTaskQueue;
         _emailPublishTaskQueue = emailPublishingTaskQueue;
-        _smsNotificationService = smsNotificationService;
         _orderProcessingService = orderProcessingService;
-        _emailNotificationService = emailNotificationService;
+        _notificationServices = notificationServices;
     }
 
     /// <summary>
@@ -84,8 +81,12 @@ public class TriggerController : ControllerBase
     {
         try
         {
-            await _emailNotificationService.TerminateExpiredNotifications();
-            await _smsNotificationService.TerminateExpiredNotifications();
+            // This will call TerminateExpiredNotifications on all registered notification services, currently sms and email
+            foreach (var service in _notificationServices)
+            {
+                await service.TerminateExpiredNotifications();
+            }
+
             return Ok();
         }
         catch (Exception ex)

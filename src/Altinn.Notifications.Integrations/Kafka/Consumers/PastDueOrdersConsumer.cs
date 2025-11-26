@@ -11,7 +11,7 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers;
 /// <summary>
 /// Kafka consumer class for past due orders
 /// </summary>
-public class PastDueOrdersConsumer : KafkaConsumerBase<PastDueOrdersConsumer>
+public class PastDueOrdersConsumer : KafkaConsumerBase
 {
     private readonly IOrderProcessingService _orderProcessingService;
     private readonly IKafkaProducer _producer;
