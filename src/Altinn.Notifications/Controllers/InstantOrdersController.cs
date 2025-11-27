@@ -243,9 +243,9 @@ public class InstantOrdersController : ControllerBase
     {
         return ex switch
         {
-            InvalidOperationException => StatusCode(400, CreateProblemDetails(
-                400,
-                "Invalid notification order request",
+            InvalidOperationException => StatusCode(500, CreateProblemDetails(
+                500,
+                "Notification order is incomplete or invalid",
                 ex.Message)),
             OperationCanceledException => StatusCode(499, CreateProblemDetails(
                 499,

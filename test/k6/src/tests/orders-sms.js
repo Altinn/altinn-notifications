@@ -127,7 +127,7 @@ function getSmsNotificationSummary(data, orderId) {
  * The main function to run the test.
  * @param {Object} data - The data object containing runFullTestSet and other test data.
  */
-export default function (data) {
+export default function runTests(data) {
     const selfLink = postSmsNotificationOrderRequest(data);
     const id = selfLink.split("/").pop();
 

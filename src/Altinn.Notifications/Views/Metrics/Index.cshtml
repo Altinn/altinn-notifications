@@ -62,7 +62,7 @@
     </style>
 
     <h3>Select month and year to see metrics:</h3>
-    <form asp-controller="Metrics" asp-action="GetMetrics" method="post" class="metrics-form">
+    <form asp-controller="Metrics" asp-action="GetMetrics" method="post" class="metrics-form" lang="en">
         <select id="month" name="month" required style="height: 40px; padding: 5px;">
             <option value="">Month</option>
             @foreach (var monthEntry in MonthDict)
@@ -87,7 +87,7 @@
         <br />
         <br />
         <br />
-        <table class="metrics-table">
+        <table class="metrics-table" lang="en">
             <caption>
                 Metrics - @MonthDict[Model.Month] @Model.Year
             </caption>
@@ -126,7 +126,7 @@
         <br />
         <br />
         <br />
-        <h3>No notification orders with requested send time in @MonthDict[Model.Month] @Model.Year</h3>
+        <h3 lang="en">No notification orders with requested send time in @MonthDict[Model.Month] @Model.Year</h3>
     }
 
     <!-- Add the script for browser refresh -->

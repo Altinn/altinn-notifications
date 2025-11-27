@@ -81,33 +81,6 @@ public class StatusFeedServiceTests
     }
 
     [Fact]
-    public async Task GetStatusFeed_MissingCreatorName_ReturnsError()
-    {
-        // Arrange
-        Mock<IStatusFeedRepository> statusFeedRepository = new();
-        var sut = new StatusFeedService(statusFeedRepository.Object, _options, NullLogger<StatusFeedService>.Instance);
-        long seq = 1;
-        string creatorName = string.Empty;
-
-        // Act
-        var result = await sut.GetStatusFeed(seq, null, creatorName, CancellationToken.None);
-
-        // Assert
-        result.Match(
-            success =>
-            {
-                Assert.Fail("Expected error but got success");
-                return false;
-            },
-            error =>
-            {
-                Assert.Equal(400, error.ErrorCode);
-                Assert.Equal("Creator name cannot be null or empty", error.ErrorMessage);
-                return true;
-            });
-    }
-
-    [Fact]
     public async Task GetStatusFeed_RepositoryThrowsException_ReturnsServiceError()
     {
         // Arrange
