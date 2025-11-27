@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Text.Json;
 
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
@@ -57,21 +58,31 @@ public class OrderProcessingService : IOrderProcessingService
     public async Task StartProcessingPastDueOrders()
     {
         Stopwatch sw = Stopwatch.StartNew();
-        List<NotificationOrder> pastDueOrders;
+        List<NotificationOrder> registeredNotificationOrders;
         do
         {
-            pastDueOrders = await _orderRepository.GetPastDueOrdersAndSetProcessingState();
-
-            foreach (NotificationOrder order in pastDueOrders)
+            registeredNotificationOrders = await _orderRepository.GetPastDueOrdersAndSetProcessingState();
+            if (registeredNotificationOrders.Count == 0)
             {
-                bool success = await _producer.ProduceAsync(_pastDueOrdersTopic, order.Serialize());
-                if (!success)
+                break;
+            }
+
+            var readyToProcessNotificationOrders = registeredNotificationOrders.Select(e => e.Serialize());
+
+            var unpublishedNotificationOrders = await _producer.ProduceAsync(_pastDueOrdersTopic, [.. readyToProcessNotificationOrders]);
+
+            foreach (var unpublishedNotificationOrder in unpublishedNotificationOrders)
+            {
+                var failedNotificationOrder = JsonSerializer.Deserialize<NotificationOrder>(unpublishedNotificationOrder, JsonSerializerOptionsProvider.Options);
+                if (failedNotificationOrder == null || failedNotificationOrder.Id == Guid.Empty)
                 {
-                    await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.Registered);
+                    continue;
                 }
+
+                await _orderRepository.SetProcessingStatus(failedNotificationOrder.Id, OrderProcessingStatus.Registered);
             }
         }
-        while (pastDueOrders.Count >= 50 && sw.ElapsedMilliseconds < 60_000);
+        while (registeredNotificationOrders.Count >= 50 && sw.ElapsedMilliseconds < 60_000);
 
         sw.Stop();
     }
