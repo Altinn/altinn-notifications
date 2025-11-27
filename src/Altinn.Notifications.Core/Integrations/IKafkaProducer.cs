@@ -28,5 +28,5 @@ public interface IKafkaProducer
     /// A <see cref="Task{TResult}"/> representing the asynchronous operation.
     /// Returns a collection of messages that were not successfully published.
     /// </returns>
-    Task<IEnumerable<string>> ProduceAsync(string topicName, IImmutableList<string> messages, CancellationToken cancellationToken = default);
+    Task<ImmutableList<string>> ProduceAsync(string topicName, ImmutableList<string> messages, CancellationToken cancellationToken = default);
 }

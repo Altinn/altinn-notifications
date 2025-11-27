@@ -110,7 +110,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     }
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<string>> ProduceAsync(string topicName, IImmutableList<string> messages, CancellationToken cancellationToken = default)
+    public async Task<ImmutableList<string>> ProduceAsync(string topicName, ImmutableList<string> messages, CancellationToken cancellationToken = default)
     {
         if (!ValidateTopic(topicName))
         {
