@@ -287,7 +287,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             return false;
         }
 
-        if (!_kafkaSettings.Admin.TopicList.Contains(topic))
+        if (!_kafkaSettings.Admin.TopicList.Contains(topic, StringComparer.OrdinalIgnoreCase))
         {
             _logger.LogError("// KafkaProducer // ProduceAsync // Topic name is not found in the list of topics.");
 
