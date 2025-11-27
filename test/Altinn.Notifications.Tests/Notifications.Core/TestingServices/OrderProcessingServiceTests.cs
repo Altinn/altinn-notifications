@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
@@ -6,6 +7,8 @@ using System.Threading.Tasks;
 
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
+using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.SendCondition;
 using Altinn.Notifications.Core.Persistence;
@@ -24,7 +27,129 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 public class OrderProcessingServiceTests
 {
     private const string _pastDueTopicName = "orders.pastdue";
-    
+
+    [Fact]
+    public async Task StartProcessingPastDueOrders_WhenCancellationAfterFetch_RevertsStatusesAndSkipsProduce()
+    {
+        // Arrange
+        var callCount = 0;
+        using var cancellationTokenSource = new CancellationTokenSource();
+
+        var notificationOrderForSms = new NotificationOrder(
+            id: Guid.NewGuid(),
+            created: DateTime.UtcNow,
+            type: OrderType.Notification,
+            creator: new Creator("ttd"),
+            resourceId: null,
+            conditionEndpoint: null,
+            ignoreReservation: null,
+            sendersReference: "sr-sms",
+            requestedSendTime: DateTime.UtcNow.AddMinutes(-10),
+            recipients: new List<Recipient> { new Recipient() },
+            sendingTimePolicy: null,
+            templates: new List<INotificationTemplate>(),
+            notificationChannel: NotificationChannel.Sms);
+
+        var notificationOrderForEmail = new NotificationOrder(
+            id: Guid.NewGuid(),
+            type: OrderType.Notification,
+            creator: new Creator("ttd"),
+            created: DateTime.UtcNow,
+            resourceId: null,
+            conditionEndpoint: null,
+            ignoreReservation: null,
+            sendersReference: "sr-email",
+            requestedSendTime: DateTime.UtcNow.AddMinutes(-10),
+            recipients: new List<Recipient> { new Recipient() },
+            sendingTimePolicy: null,
+            templates: new List<INotificationTemplate>(),
+            notificationChannel: NotificationChannel.Email);
+
+        var notificationOrderForEmailAndSms = new NotificationOrder(
+            id: Guid.NewGuid(),
+            type: OrderType.Notification,
+            creator: new Creator("ttd"),
+            created: DateTime.UtcNow,
+            resourceId: null,
+            conditionEndpoint: null,
+            ignoreReservation: null,
+            sendersReference: "sr-both",
+            requestedSendTime: DateTime.UtcNow.AddMinutes(-10),
+            recipients: new List<Recipient> { new Recipient() },
+            sendingTimePolicy: null,
+            templates: new List<INotificationTemplate>(),
+            notificationChannel: NotificationChannel.EmailAndSms);
+
+        var notificationOrderForSmsPreferred = new NotificationOrder { Id = Guid.NewGuid(), NotificationChannel = NotificationChannel.SmsPreferred };
+        var notificationOrderForEmailPreferred = new NotificationOrder { Id = Guid.NewGuid(), NotificationChannel = NotificationChannel.EmailPreferred };
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock
+            .Setup(e => e.GetPastDueOrdersAndSetProcessingState(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() =>
+            {
+                callCount++;
+
+                if (callCount == 1)
+                {
+                    // Simulate cancellation triggered after the fetch
+                    cancellationTokenSource.Cancel();
+                    return [notificationOrderForSms, notificationOrderForEmail, notificationOrderForEmailAndSms];
+                }
+
+                // This batch must never be processed because cancellation should stop the loop
+                return [notificationOrderForSmsPreferred, notificationOrderForEmailPreferred];
+            });
+
+        var producerMock = new Mock<IKafkaProducer>();
+        producerMock
+            .Setup(e => e.ProduceAsync(
+                It.Is<string>(e => e == _pastDueTopicName),
+                It.IsAny<IImmutableList<string>>(),
+                It.IsAny<CancellationToken>()))
+            .Returns<string, IImmutableList<string>, CancellationToken>((_, msgs, cancellationToken) =>
+            {
+                // If cancelled, return all messages (nothing produced)
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return Task.FromResult<IEnumerable<string>>(msgs);
+                }
+
+                // If not cancelled, return empty (all messages produced successfully)
+                return Task.FromResult<IEnumerable<string>>([]);
+            });
+
+        var service = GetTestService(orderRepository: orderRepositoryMock.Object, producer: producerMock.Object);
+
+        // Act
+        await service.StartProcessingPastDueOrders(cancellationTokenSource.Token);
+
+        // Assert
+        producerMock.Verify(
+            p => p.ProduceAsync(
+                It.IsAny<string>(),
+                It.IsAny<IImmutableList<string>>(),
+                It.Is<CancellationToken>(ct => ct == cancellationTokenSource.Token)),
+            Times.Once);
+
+        orderRepositoryMock.Verify(
+            e => e.GetPastDueOrdersAndSetProcessingState(It.Is<CancellationToken>(ct => ct == cancellationTokenSource.Token)),
+            Times.Once);
+
+        orderRepositoryMock.Verify(e => e.SetProcessingStatus(notificationOrderForSms.Id, OrderProcessingStatus.Registered), Times.Once);
+        orderRepositoryMock.Verify(e => e.SetProcessingStatus(notificationOrderForEmail.Id, OrderProcessingStatus.Registered), Times.Once);
+        orderRepositoryMock.Verify(e => e.SetProcessingStatus(notificationOrderForEmailAndSms.Id, OrderProcessingStatus.Registered), Times.Once);
+
+        orderRepositoryMock.Verify(
+            r => r.SetProcessingStatus(
+                It.Is<Guid>(id => id == notificationOrderForSms.Id || id == notificationOrderForEmail.Id || id == notificationOrderForEmailAndSms.Id),
+                It.Is<OrderProcessingStatus>(s => s != OrderProcessingStatus.Registered)),
+            Times.Never);
+
+        orderRepositoryMock.Verify(e => e.SetProcessingStatus(notificationOrderForSmsPreferred.Id, It.IsAny<OrderProcessingStatus>()), Times.Never);
+        orderRepositoryMock.Verify(e => e.SetProcessingStatus(notificationOrderForEmailPreferred.Id, It.IsAny<OrderProcessingStatus>()), Times.Never);
+    }
+
     [Fact]
     public async Task StartProcessingPastDueOrders_PublishesSingleBatch_ProduceAsyncCalledOnce_AndNoTerminalStatusOperations()
     {

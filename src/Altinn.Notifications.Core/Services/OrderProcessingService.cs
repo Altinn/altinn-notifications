@@ -75,7 +75,7 @@ public class OrderProcessingService : IOrderProcessingService
 
             foreach (var unpublishedNotificationOrder in unpublishedPastDueOrders)
             {
-                var failedPastDueOrders = JsonSerializer.Deserialize<NotificationOrder>(unpublishedNotificationOrder);
+                var failedPastDueOrders = JsonSerializer.Deserialize<NotificationOrder>(unpublishedNotificationOrder, JsonSerializerOptionsProvider.Options);
                 if (failedPastDueOrders == null || failedPastDueOrders.Id == Guid.Empty)
                 {
                     continue;
