@@ -149,7 +149,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
 
         try
         {
-            publishDeliveryResults.AddRange(batchContext.DeferredProduceTaskFactories.Select(publish => publish()));
+            publishDeliveryResults.AddRange(batchContext.DeferredProduceTaskFactories.Keys.Select(factory => factory()));
 
             await Task.WhenAll(publishDeliveryResults);
 
@@ -526,7 +526,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
         }
 
         var scheduledMessagesCount = 0;
-        var deferredProduceTaskFactories = new List<Func<Task<DeliveryResult<Null, string>>>>(unscheduledMessagesCount);
+        var deferredProduceTaskFactoriesBuilder = ImmutableDictionary.CreateBuilder<Func<Task<DeliveryResult<Null, string>>>, string>();
 
         foreach (var validMessage in batchContext.ValidMessages)
         {
@@ -544,7 +544,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             // Capture the message in a local variable to avoid closure issues
             var messagePayload = validMessage;
 
-            deferredProduceTaskFactories.Add(() => _producer.ProduceAsync(topicName, new Message<Null, string> { Value = messagePayload }));
+            deferredProduceTaskFactoriesBuilder.Add(() => _producer.ProduceAsync(topicName, new Message<Null, string> { Value = messagePayload }), messagePayload);
 
             scheduledMessagesCount++;
             unscheduledMessagesCount--;
@@ -552,7 +552,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
 
         return batchContext with
         {
-            DeferredProduceTaskFactories = [.. deferredProduceTaskFactories]
+            DeferredProduceTaskFactories = deferredProduceTaskFactoriesBuilder.ToImmutable()
         };
     }
 
@@ -569,31 +569,22 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     /// </returns>
     private static BatchProducingContext CategorizeDeliveryResults(string topicName, BatchProducingContext batchContext, List<Task<DeliveryResult<Null, string>>> deliveryTasks)
     {
+        var scheduledPayloads = batchContext.DeferredProduceTaskFactories.Values;
+        
         var producedMessages = new List<string>(batchContext.ValidMessages.Count);
         var notProducedMessages = new List<string>(batchContext.ValidMessages.Count);
 
-        foreach (var deliveryTask in deliveryTasks)
+        for (int i = 0; i < deliveryTasks.Count; i++)
         {
-            if (deliveryTask.IsCanceled)
+            var deliveryTask = deliveryTasks[i];
+
+            if (deliveryTask.IsCanceled || deliveryTask.IsFaulted)
             {
-                IncrementFailed(topicName);
+                var canceledPayload = scheduledPayloads.ElementAtOrDefault(i);
 
-                continue;
-            }
-
-            if (deliveryTask.IsFaulted)
-            {
-                var produceException = deliveryTask.Exception?
-                    .Flatten()
-                    .InnerExceptions
-                    .OfType<ProduceException<Null, string>>()
-                    .FirstOrDefault();
-
-                var failedPayload = produceException?.DeliveryResult?.Message?.Value ?? produceException?.DeliveryResult?.Value;
-
-                if (!string.IsNullOrWhiteSpace(failedPayload))
+                if (!string.IsNullOrWhiteSpace(canceledPayload))
                 {
-                    notProducedMessages.Add(failedPayload);
+                    notProducedMessages.Add(canceledPayload);
                 }
 
                 IncrementFailed(topicName);
@@ -602,7 +593,13 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             }
 
             var deliveryTaskResult = deliveryTask.Result;
-            var payload = deliveryTaskResult.Message?.Value ?? deliveryTaskResult.Value;
+            var payload = deliveryTaskResult.Message?.Value ?? deliveryTaskResult.Value
+                          ?? scheduledPayloads.ElementAtOrDefault(i);
+
+            if (payload == null)
+            {
+                continue;
+            }
 
             if (deliveryTaskResult.Status == PersistenceStatus.Persisted)
             {

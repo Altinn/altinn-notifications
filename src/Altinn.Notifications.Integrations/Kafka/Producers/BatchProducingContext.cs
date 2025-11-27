@@ -51,5 +51,5 @@ public sealed record BatchProducingContext
     /// Each factory, when invoked, returns a task that produces a single message to the configured topic.
     /// Factories capture the message payload to avoid closure issues with loop variables.
     /// </remarks>
-    public ImmutableList<Func<Task<DeliveryResult<Null, string>>>> DeferredProduceTaskFactories { get; init; } = [];
+    public ImmutableDictionary<Func<Task<DeliveryResult<Null, string>>>, string> DeferredProduceTaskFactories { get; init; } = ImmutableDictionary.Create<Func<Task<DeliveryResult<Null, string>>>, string>();
 }
