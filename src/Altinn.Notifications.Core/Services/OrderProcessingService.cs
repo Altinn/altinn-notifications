@@ -63,13 +63,11 @@ public class OrderProcessingService : IOrderProcessingService
 
         do
         {
-            pastDueOrders = await _orderRepository.GetPastDueOrdersAndSetProcessingState();
+            pastDueOrders = await _orderRepository.GetPastDueOrdersAndSetProcessingState(cancellationToken);
             if (pastDueOrders.Count == 0)
             {
                 break;
             }
-
-            cancellationToken.ThrowIfCancellationRequested();
 
             var serializedPastDueOrders = pastDueOrders.Select(e => e.Serialize());
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -23,24 +24,48 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 public class OrderProcessingServiceTests
 {
     private const string _pastDueTopicName = "orders.pastdue";
-
+    
     [Fact]
-    public async Task StartProcessingPastDueOrders_ProducerIsCalledOnceWithAllOrdersSerializedInBatch()
+    public async Task StartProcessingPastDueOrders_PublishesSingleBatch_ProduceAsyncCalledOnce_AndNoTerminalStatusOperations()
     {
         // Arrange
-        NotificationOrder order = new();
+        var notificationOrderForSms = new NotificationOrder
+        {
+            NotificationChannel = NotificationChannel.Sms,
+            ConditionEndpoint = new Uri("https://condition.example/sms")
+        };
+
+        var notificationOrderForEmail = new NotificationOrder
+        {
+            ConditionEndpoint = null,
+            NotificationChannel = NotificationChannel.Email
+        };
+
+        var notificationOrderForEmailAndSms = new NotificationOrder
+        {
+            NotificationChannel = NotificationChannel.EmailAndSms,
+            ConditionEndpoint = new Uri("https://condition.example/emailandsms")
+        };
+
+        var notificationOrderForEmailPreferred = new NotificationOrder
+        {
+            ConditionEndpoint = null,
+            NotificationChannel = NotificationChannel.EmailPreferred
+        };
 
         var orderRepositoryMock = new Mock<IOrderRepository>();
-        orderRepositoryMock.Setup(r => r.GetPastDueOrdersAndSetProcessingState()).ReturnsAsync([order, order, order, order]);
+        orderRepositoryMock
+            .Setup(e => e.GetPastDueOrdersAndSetProcessingState(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([notificationOrderForSms, notificationOrderForEmail, notificationOrderForEmailAndSms, notificationOrderForEmailPreferred]);
 
         IImmutableList<string>? publishedBatch = null;
 
         var producerMock = new Mock<IKafkaProducer>();
         producerMock
-            .Setup(p => p.ProduceAsync(
+            .Setup(e => e.ProduceAsync(
                 It.Is<string>(s => s.Equals(_pastDueTopicName)),
                 It.IsAny<IImmutableList<string>>(),
-                It.IsAny<System.Threading.CancellationToken>()))
+                It.IsAny<CancellationToken>()))
             .Callback<string, IImmutableList<string>, CancellationToken>((_, msgs, _) => publishedBatch = msgs)
             .ReturnsAsync([]);
 
@@ -50,18 +75,21 @@ public class OrderProcessingServiceTests
         await service.StartProcessingPastDueOrders();
 
         // Assert
-        orderRepositoryMock.Verify(r => r.GetPastDueOrdersAndSetProcessingState(), Times.AtLeastOnce);
+        orderRepositoryMock.Verify(e => e.GetPastDueOrdersAndSetProcessingState(It.IsAny<CancellationToken>()), Times.Once);
         producerMock.Verify(
-            p => p.ProduceAsync(
-            It.Is<string>(s => s.Equals(_pastDueTopicName)),
-            It.IsAny<IImmutableList<string>>(),
-            It.IsAny<System.Threading.CancellationToken>()),
+            e => e.ProduceAsync(
+                It.Is<string>(s => s.Equals(_pastDueTopicName)),
+                It.IsAny<IImmutableList<string>>(),
+                It.IsAny<CancellationToken>()),
             Times.Once);
 
         Assert.NotNull(publishedBatch);
         Assert.Equal(4, publishedBatch!.Count);
 
+        Assert.Equal(publishedBatch.Count, publishedBatch.Distinct().Count());
+
         orderRepositoryMock.Verify(e => e.InsertStatusFeedForOrder(It.IsAny<Guid>()), Times.Never);
+        orderRepositoryMock.Verify(e => e.SetProcessingStatus(It.IsAny<Guid>(), It.IsAny<OrderProcessingStatus>()), Times.Never);
     }
 
     [Fact]
