@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Text.Json;
 
 using Altinn.Notifications.Core.Configuration;
@@ -55,36 +56,39 @@ public class OrderProcessingService : IOrderProcessingService
     }
 
     /// <inheritdoc/>
-    public async Task StartProcessingPastDueOrders()
+    public async Task StartProcessingPastDueOrders(CancellationToken cancellationToken = default)
     {
-        Stopwatch sw = Stopwatch.StartNew();
-        List<NotificationOrder> registeredNotificationOrders;
+        List<NotificationOrder> pastDueOrders;
+        Stopwatch stopwatch = Stopwatch.StartNew();
+
         do
         {
-            registeredNotificationOrders = await _orderRepository.GetPastDueOrdersAndSetProcessingState();
-            if (registeredNotificationOrders.Count == 0)
+            pastDueOrders = await _orderRepository.GetPastDueOrdersAndSetProcessingState();
+            if (pastDueOrders.Count == 0)
             {
                 break;
             }
 
-            var readyToProcessNotificationOrders = registeredNotificationOrders.Select(e => e.Serialize());
+            cancellationToken.ThrowIfCancellationRequested();
 
-            var unpublishedNotificationOrders = await _producer.ProduceAsync(_pastDueOrdersTopic, [.. readyToProcessNotificationOrders]);
+            var serializedPastDueOrders = pastDueOrders.Select(e => e.Serialize());
 
-            foreach (var unpublishedNotificationOrder in unpublishedNotificationOrders)
+            var unpublishedPastDueOrders = await _producer.ProduceAsync(_pastDueOrdersTopic, serializedPastDueOrders.ToImmutableList(), cancellationToken);
+
+            foreach (var unpublishedNotificationOrder in unpublishedPastDueOrders)
             {
-                var failedNotificationOrder = JsonSerializer.Deserialize<NotificationOrder>(unpublishedNotificationOrder, JsonSerializerOptionsProvider.Options);
-                if (failedNotificationOrder == null || failedNotificationOrder.Id == Guid.Empty)
+                var failedPastDueOrders = JsonSerializer.Deserialize<NotificationOrder>(unpublishedNotificationOrder);
+                if (failedPastDueOrders == null || failedPastDueOrders.Id == Guid.Empty)
                 {
                     continue;
                 }
 
-                await _orderRepository.SetProcessingStatus(failedNotificationOrder.Id, OrderProcessingStatus.Registered);
+                await _orderRepository.SetProcessingStatus(failedPastDueOrders.Id, OrderProcessingStatus.Registered);
             }
         }
-        while (registeredNotificationOrders.Count >= 50 && sw.ElapsedMilliseconds < 60_000);
+        while (pastDueOrders.Count >= 50 && stopwatch.ElapsedMilliseconds < 60_000);
 
-        sw.Stop();
+        stopwatch.Stop();
     }
 
     /// <inheritdoc/>
