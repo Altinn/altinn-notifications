@@ -119,8 +119,9 @@ public interface IOrderRepository
     /// <summary>
     /// Gets a list of notification orders where requestedSendTime has passed
     /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A list of notification orders</returns>
-    public Task<List<NotificationOrder>> GetPastDueOrdersAndSetProcessingState();
+    public Task<List<NotificationOrder>> GetPastDueOrdersAndSetProcessingState(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Sets processing status of an order
