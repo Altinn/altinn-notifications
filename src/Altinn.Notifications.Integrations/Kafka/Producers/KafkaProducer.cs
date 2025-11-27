@@ -142,37 +142,63 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
 
         var batchProcessingStopwatch = Stopwatch.StartNew();
 
+        var batchFailed = false;
+        var batchCategorized = false;
+
+        var publishDeliveryResults = new List<Task<DeliveryResult<Null, string>>>(batchContext.DeferredProduceTaskFactories.Count);
+
         try
         {
-            var publishDeliveryResults = batchContext.DeferredProduceTaskFactories.Select(factory => factory()).ToList();
+            publishDeliveryResults.AddRange(batchContext.DeferredProduceTaskFactories.Select(publish => publish()));
 
             await Task.WhenAll(publishDeliveryResults);
 
             batchContext = CategorizeDeliveryResults(topicName, batchContext, publishDeliveryResults);
+
+            batchCategorized = true;
         }
         catch (Exception ex)
         {
+            batchFailed = true;
+
             LogOnProducingFailures(ex);
 
-            _batchLatencyMs.Record(
-                batchProcessingStopwatch.Elapsed.TotalMilliseconds,
-                new KeyValuePair<string, object?>("topic", topicName),
-                new KeyValuePair<string, object?>("batch.status", "failed"));
+            // Partial categorization if some tasks completed
+            if (publishDeliveryResults.Count > 0 && !batchCategorized)
+            {
+                var completed = publishDeliveryResults.Where(t => t.IsCompleted).ToList();
+                if (completed.Count > 0)
+                {
+                    batchContext = CategorizeDeliveryResults(topicName, batchContext, completed);
+                }
+            }
 
-            throw;
+            // If still no classification, mark all valid as not produced
+            if (batchContext.ValidMessages.Count > 0 && 
+                batchContext.ProducedMessages.Count == 0 && 
+                batchContext.NotProducedMessages.Count == 0)
+            {
+                batchContext = batchContext with
+                {
+                    NotProducedMessages = [.. batchContext.ValidMessages]
+                };
+
+                IncrementFailed(topicName, batchContext.ValidMessages.Count);
+            }
         }
         finally
         {
             batchProcessingStopwatch.Stop();
-        }
 
-        _batchLatencyMs.Record(
-            batchProcessingStopwatch.Elapsed.TotalMilliseconds,
-            new KeyValuePair<string, object?>("topic", topicName),
-            new KeyValuePair<string, object?>("batch.valid.count", batchContext.ValidMessages.Count),
-            new KeyValuePair<string, object?>("batch.invalid.count", batchContext.InvalidMessages.Count),
-            new KeyValuePair<string, object?>("batch.produced.count", batchContext.ProducedMessages.Count),
-            new KeyValuePair<string, object?>("batch.notproduced.count", batchContext.NotProducedMessages.Count));
+            _batchLatencyMs.Record(
+                batchProcessingStopwatch.Elapsed.TotalMilliseconds,
+                new KeyValuePair<string, object?>("topic", topicName),
+                new KeyValuePair<string, object?>("batch.status", batchFailed ? "failed" : "succeeded"),
+                new KeyValuePair<string, object?>("batch.valid.count", batchContext.ValidMessages.Count),
+                new KeyValuePair<string, object?>("batch.invalid.count", batchContext.InvalidMessages.Count),
+                new KeyValuePair<string, object?>("batch.produced.count", batchContext.ProducedMessages.Count),
+                new KeyValuePair<string, object?>("batch.notproduced.count", batchContext.NotProducedMessages.Count));
+        }
 
         LogBatchResults(topicName, batchContext, batchProcessingStopwatch);
 
