@@ -70,7 +70,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             return false;
         }
 
-        var produceStartTime = Stopwatch.StartNew();
+        var produceStopwatch = Stopwatch.StartNew();
 
         try
         {
@@ -111,9 +111,9 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
         }
         finally
         {
-            produceStartTime.Stop();
+            produceStopwatch.Stop();
 
-            _singleLatencyMs.Record(produceStartTime.Elapsed.TotalMilliseconds);
+            _singleLatencyMs.Record(produceStopwatch.Elapsed.TotalMilliseconds, new KeyValuePair<string, object?>("topic", topicName));
         }
     }
 
@@ -165,7 +165,13 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             batchProcessingStopwatch.Stop();
         }
 
-        _batchLatencyMs.Record(batchProcessingStopwatch.Elapsed.TotalMilliseconds);
+        _batchLatencyMs.Record(
+            batchProcessingStopwatch.Elapsed.TotalMilliseconds,
+            new KeyValuePair<string, object?>("topic", topicName),
+            new KeyValuePair<string, object?>("batch.valid.count", batchContext.ValidMessages.Count),
+            new KeyValuePair<string, object?>("batch.invalid.count", batchContext.InvalidMessages.Count),
+            new KeyValuePair<string, object?>("batch.produced.count", batchContext.ProducedMessages.Count),
+            new KeyValuePair<string, object?>("batch.notproduced.count", batchContext.NotProducedMessages.Count));
 
         LogBatchResults(topicName, batchContext, batchProcessingStopwatch);
 
