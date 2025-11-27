@@ -17,30 +17,32 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - name: Set up K6
+        uses: grafana/setup-k6-action@ffe7d7290dfa715e48c2ccc924d068444c94bde2 # v1.1.0
       - name: Run API v2 tests
-        uses: grafana/k6-action@e4714b734f2b0afaabeb7b4a69142745548ab9ec # v0.3.1
+        uses: grafana/run-k6-action@a15e2072ede004e8d46141e33d7f7dad8ad08d9d # v1.3.1
         with:
-          filename: test/k6/src/tests/orders-v2.js
+          path: test/k6/src/tests/orders-v2.js
           flags: -e env=${{ vars.ENV }} -e tokenGeneratorUserName=${{ secrets.TOKENGENERATOR_USERNAME }} -e tokenGeneratorUserPwd=${{ secrets.TOKENGENERATOR_USERPASSWORD }} -e ninRecipient=${{ secrets.AUTOMATEDTEST_NINRECIPIENT}} -e smsRecipient=${{ secrets.AUTOMATEDTEST_SMSRECIPIENT}} -e subscriptionKey=${{ secrets.AUTOMATEDTEST_APIM_SUBSCRIPTION_KEY}}
       - name: Run API v2 recipientOrganization tests
-        uses: grafana/k6-action@e4714b734f2b0afaabeb7b4a69142745548ab9ec # v0.3.1
+        uses: grafana/run-k6-action@a15e2072ede004e8d46141e33d7f7dad8ad08d9d # v1.3.1
         with:
-          filename: test/k6/src/tests/orders-org-no-v2.js
+          path: test/k6/src/tests/orders-org-no-v2.js
           flags: -e env=${{ vars.ENV }} -e tokenGeneratorUserName=${{ secrets.TOKENGENERATOR_USERNAME }} -e tokenGeneratorUserPwd=${{ secrets.TOKENGENERATOR_USERPASSWORD }} -e orgNoRecipient=${{ secrets.AUTOMATEDTEST_ORG_NO_RECIPIENT}} -e resourceId=urn:altinn:resource:${{ secrets.AUTOMATEDTEST_RESOURCE_ID}}
       - name: Run email notification order use case tests
-        uses: grafana/k6-action@e4714b734f2b0afaabeb7b4a69142745548ab9ec # v0.3.1
+        uses: grafana/run-k6-action@a15e2072ede004e8d46141e33d7f7dad8ad08d9d # v1.3.1
         with:
-          filename: test/k6/src/tests/orders-email.js
+          path: test/k6/src/tests/orders-email.js
           flags: -e env=${{ vars.ENV }} -e tokenGeneratorUserName=${{ secrets.TOKENGENERATOR_USERNAME }} -e tokenGeneratorUserPwd=${{ secrets.TOKENGENERATOR_USERPASSWORD }} -e emailRecipient=${{ secrets.AUTOMATEDTEST_EMAILRECIPIENT }} -e ninRecipient=${{ secrets.AUTOMATEDTEST_NINRECIPIENT}} -e subscriptionKey=${{ secrets.AUTOMATEDTEST_APIM_SUBSCRIPTION_KEY}}
       - name: Run contact(s) lookup by organization number use case tests with generating an email notification
-        uses: grafana/k6-action@e4714b734f2b0afaabeb7b4a69142745548ab9ec # v0.3.1
+        uses: grafana/run-k6-action@a15e2072ede004e8d46141e33d7f7dad8ad08d9d # v1.3.1
         with:
-          filename: test/k6/src/tests/orders-org-no.js
+          path: test/k6/src/tests/orders-org-no.js
           flags: -e env=${{ vars.ENV }} -e tokenGeneratorUserName=${{ secrets.TOKENGENERATOR_USERNAME }} -e tokenGeneratorUserPwd=${{ secrets.TOKENGENERATOR_USERPASSWORD }} -e orgNoRecipient=${{ secrets.AUTOMATEDTEST_ORG_NO_RECIPIENT}} -e resourceId=${{ secrets.AUTOMATEDTEST_RESOURCE_ID}}
       - name: Run sms notification order use case tests
-        uses: grafana/k6-action@e4714b734f2b0afaabeb7b4a69142745548ab9ec # v0.3.1
+        uses: grafana/run-k6-action@a15e2072ede004e8d46141e33d7f7dad8ad08d9d # v1.3.1
         with:
-          filename: test/k6/src/tests/orders-sms.js
+          path: test/k6/src/tests/orders-sms.js
           flags: -e env=${{ vars.ENV }} -e tokenGeneratorUserName=${{ secrets.TOKENGENERATOR_USERNAME }} -e tokenGeneratorUserPwd=${{ secrets.TOKENGENERATOR_USERPASSWORD }} -e smsRecipient=${{ secrets.AUTOMATEDTEST_SMSRECIPIENT }}
       - name: Build failure report
         if: failure()
