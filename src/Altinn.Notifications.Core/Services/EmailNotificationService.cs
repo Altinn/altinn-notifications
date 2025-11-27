@@ -1,4 +1,7 @@
-﻿using Altinn.Notifications.Core.Configuration;
+﻿using System.Collections.Immutable;
+using System.Text.Json;
+
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
@@ -84,14 +87,26 @@ public class EmailNotificationService : IEmailNotificationService
             cancellationToken.ThrowIfCancellationRequested();
 
             newEmailNotifications = await _repository.GetNewNotificationsAsync(_emailPublishBatchSize, cancellationToken);
-
-            foreach (var email in newEmailNotifications)
+            if (newEmailNotifications.Count == 0)
             {
-                bool success = await _producer.ProduceAsync(_emailQueueTopicName, email.Serialize());
-                if (!success)
+                break;
+            }
+
+            var readyToSendMessages = newEmailNotifications.Select(readyToSendEmail => readyToSendEmail.Serialize());
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var unpublishedMessages = await _producer.ProduceAsync(_emailQueueTopicName, readyToSendMessages.ToImmutableList(), cancellationToken);
+
+            foreach (var unpublishedMessage in unpublishedMessages)
+            {
+                var failedToSendEmail = JsonSerializer.Deserialize<Email>(unpublishedMessage, JsonSerializerOptionsProvider.Options);
+                if (failedToSendEmail == null || failedToSendEmail.NotificationId == Guid.Empty)
                 {
-                    await _repository.UpdateSendStatus(email.NotificationId, EmailNotificationResultType.New);
+                    continue;
                 }
+
+                await _repository.UpdateSendStatus(failedToSendEmail.NotificationId, EmailNotificationResultType.New);
             }
         }
         while (newEmailNotifications.Count > 0);
