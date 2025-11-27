@@ -219,7 +219,7 @@ public class SmsNotificationServiceTests
         producerMock
             .Setup(p => p.ProduceAsync(
                 _smsQueueTopicName,
-                It.IsAny<IImmutableList<string>>(),
+                It.IsAny<ImmutableList<string>>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
@@ -232,21 +232,21 @@ public class SmsNotificationServiceTests
         producerMock.Verify(
             p => p.ProduceAsync(
                 _smsQueueTopicName,
-                It.Is<IImmutableList<string>>(m => m.Count == firstBatch.Count),
+                It.Is<ImmutableList<string>>(m => m.Count == firstBatch.Count),
                 It.IsAny<CancellationToken>()),
             Times.Once);
 
         producerMock.Verify(
             p => p.ProduceAsync(
                 _smsQueueTopicName,
-                It.Is<IImmutableList<string>>(m => m.Count == secondBatch.Count),
+                It.Is<ImmutableList<string>>(m => m.Count == secondBatch.Count),
                 It.IsAny<CancellationToken>()),
             Times.Once);
 
         producerMock.Verify(
             p => p.ProduceAsync(
                 _smsQueueTopicName,
-                It.Is<IImmutableList<string>>(m => m.Count == thirdBatch.Count),
+                It.Is<ImmutableList<string>>(m => m.Count == thirdBatch.Count),
                 It.IsAny<CancellationToken>()),
             Times.Once);
 
@@ -269,7 +269,7 @@ public class SmsNotificationServiceTests
         producerMock
             .Setup(p => p.ProduceAsync(
                 _smsQueueTopicName,
-                It.IsAny<IImmutableList<string>>(),
+                It.IsAny<ImmutableList<string>>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync([_sms.Serialize()]);
 
@@ -282,7 +282,7 @@ public class SmsNotificationServiceTests
         producerMock.Verify(
             p => p.ProduceAsync(
             _smsQueueTopicName,
-            It.Is<IImmutableList<string>>(m => m.Count == 1),
+            It.Is<ImmutableList<string>>(m => m.Count == 1),
             It.IsAny<CancellationToken>()),
             Times.Once);
 
@@ -307,7 +307,7 @@ public class SmsNotificationServiceTests
         producerMock
             .Setup(p => p.ProduceAsync(
                 _smsQueueTopicName,
-                It.IsAny<IImmutableList<string>>(),
+                It.IsAny<ImmutableList<string>>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
@@ -320,7 +320,7 @@ public class SmsNotificationServiceTests
         producerMock.Verify(
             p => p.ProduceAsync(
             _smsQueueTopicName,
-            It.Is<IImmutableList<string>>(m => m.Count == firstBatch.Count),
+            It.Is<ImmutableList<string>>(m => m.Count == firstBatch.Count),
             It.IsAny<CancellationToken>()),
             Times.Once);
 
@@ -363,7 +363,7 @@ public class SmsNotificationServiceTests
         producerMock
             .Setup(p => p.ProduceAsync(
                 _smsQueueTopicName,
-                It.IsAny<IImmutableList<string>>(),
+                It.IsAny<ImmutableList<string>>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
@@ -376,7 +376,7 @@ public class SmsNotificationServiceTests
         producerMock.Verify(
             p => p.ProduceAsync(
             _smsQueueTopicName,
-            It.Is<IImmutableList<string>>(m => m.Count == 2),
+            It.Is<ImmutableList<string>>(m => m.Count == 2),
             It.IsAny<CancellationToken>()),
             Times.Once);
 

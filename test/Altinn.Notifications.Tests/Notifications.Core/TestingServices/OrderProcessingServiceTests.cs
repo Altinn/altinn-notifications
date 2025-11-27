@@ -105,18 +105,18 @@ public class OrderProcessingServiceTests
         producerMock
             .Setup(e => e.ProduceAsync(
                 It.Is<string>(e => e == _pastDueTopicName),
-                It.IsAny<IImmutableList<string>>(),
+                It.IsAny<ImmutableList<string>>(),
                 It.IsAny<CancellationToken>()))
-            .Returns<string, IImmutableList<string>, CancellationToken>((_, msgs, cancellationToken) =>
+            .Returns<string, ImmutableList<string>, CancellationToken>((_, msgs, cancellationToken) =>
             {
                 // If cancelled, return all messages (nothing produced)
                 if (cancellationToken.IsCancellationRequested)
                 {
-                    return Task.FromResult<IEnumerable<string>>(msgs);
+                    return Task.FromResult<ImmutableList<string>>(msgs);
                 }
 
                 // If not cancelled, return empty (all messages produced successfully)
-                return Task.FromResult<IEnumerable<string>>([]);
+                return Task.FromResult<ImmutableList<string>>([]);
             });
 
         var service = GetTestService(orderRepository: orderRepositoryMock.Object, producer: producerMock.Object);
@@ -128,7 +128,7 @@ public class OrderProcessingServiceTests
         producerMock.Verify(
             p => p.ProduceAsync(
                 It.IsAny<string>(),
-                It.IsAny<IImmutableList<string>>(),
+                It.IsAny<ImmutableList<string>>(),
                 It.Is<CancellationToken>(ct => ct == cancellationTokenSource.Token)),
             Times.Once);
 
@@ -183,15 +183,15 @@ public class OrderProcessingServiceTests
             .Setup(e => e.GetPastDueOrdersAndSetProcessingState(It.IsAny<CancellationToken>()))
             .ReturnsAsync([notificationOrderForSms, notificationOrderForEmail, notificationOrderForEmailAndSms, notificationOrderForEmailPreferred]);
 
-        IImmutableList<string>? publishedBatch = null;
+        ImmutableList<string>? publishedBatch = null;
 
         var producerMock = new Mock<IKafkaProducer>();
         producerMock
             .Setup(e => e.ProduceAsync(
                 It.Is<string>(s => s.Equals(_pastDueTopicName)),
-                It.IsAny<IImmutableList<string>>(),
+                It.IsAny<ImmutableList<string>>(),
                 It.IsAny<CancellationToken>()))
-            .Callback<string, IImmutableList<string>, CancellationToken>((_, msgs, _) => publishedBatch = msgs)
+            .Callback<string, ImmutableList<string>, CancellationToken>((_, msgs, _) => publishedBatch = msgs)
             .ReturnsAsync([]);
 
         var service = GetTestService(orderRepository: orderRepositoryMock.Object, producer: producerMock.Object);
@@ -204,7 +204,7 @@ public class OrderProcessingServiceTests
         producerMock.Verify(
             e => e.ProduceAsync(
                 It.Is<string>(s => s.Equals(_pastDueTopicName)),
-                It.IsAny<IImmutableList<string>>(),
+                It.IsAny<ImmutableList<string>>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
 

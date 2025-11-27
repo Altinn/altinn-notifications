@@ -280,14 +280,14 @@ public class EmailNotificationServiceTests
             .ReturnsAsync(emptyEmailNotificationsBatch);
 
         var kafkaProducerMock = new Mock<IKafkaProducer>();
-        IImmutableList<string>? capturedEmailNotificationsBatch = null;
+        ImmutableList<string>? capturedEmailNotificationsBatch = null;
 
         kafkaProducerMock
             .Setup(e => e.ProduceAsync(
                 It.Is<string>(e => e.Equals(_emailQueueTopicName)),
-                It.IsAny<IImmutableList<string>>(),
+                It.IsAny<ImmutableList<string>>(),
                 It.IsAny<CancellationToken>()))
-            .Callback<string, IImmutableList<string>, CancellationToken>((_, passedMessages, _) => capturedEmailNotificationsBatch = passedMessages)
+            .Callback<string, ImmutableList<string>, CancellationToken>((_, passedMessages, _) => capturedEmailNotificationsBatch = passedMessages)
             .ReturnsAsync([]);
 
         var service = GetTestService(repo: emailNotificationRepositoryMock.Object, producer: kafkaProducerMock.Object);
@@ -301,7 +301,7 @@ public class EmailNotificationServiceTests
         kafkaProducerMock.Verify(
             e => e.ProduceAsync(
             It.Is<string>(e => e.Equals(_emailQueueTopicName)),
-            It.IsAny<IImmutableList<string>>(),
+            It.IsAny<ImmutableList<string>>(),
             It.IsAny<CancellationToken>()),
             Times.Once);
 
