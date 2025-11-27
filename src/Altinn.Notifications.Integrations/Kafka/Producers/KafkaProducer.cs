@@ -148,7 +148,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
 
         try
         {
-            var publishDeliveryResults = batchContext.DeferredProduceTaskFactories.AsParallel().Select(factory => factory()).ToList();
+            var publishDeliveryResults = batchContext.DeferredProduceTaskFactories.Select(factory => factory()).ToList();
 
             await Task.WhenAll(publishDeliveryResults);
 
