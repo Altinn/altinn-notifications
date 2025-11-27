@@ -429,7 +429,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
         {
             if (string.IsNullOrWhiteSpace(message))
             {
-                invalidMessages.Add(message);
+                invalidMessages.Add(message ?? string.Empty);
             }
             else
             {
