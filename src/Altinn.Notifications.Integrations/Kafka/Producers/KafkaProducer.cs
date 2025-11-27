@@ -60,6 +60,8 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     {
         if (!ValidateTopic(topicName))
         {
+            IncrementFailed(topicName);
+
             return false;
         }
 
@@ -122,6 +124,8 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     {
         if (!ValidateTopic(topicName))
         {
+            IncrementFailed(topicName, messages.Count);
+
             return messages;
         }
 
@@ -141,6 +145,8 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
         batchContext = BuildProduceTasks(topicName, batchContext, cancellationToken);
         if (batchContext.DeferredProduceTaskFactories.Count == 0 || cancellationToken.IsCancellationRequested)
         {
+            IncrementFailed(topicName, batchContext.ValidMessages.Count);
+
             return messages;
         }
 
@@ -157,6 +163,11 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
         catch (Exception ex)
         {
             LogOnProducingFailures(ex);
+
+            _batchLatencyMs.Record(
+                batchProcessingStopwatch.Elapsed.TotalMilliseconds,
+                new KeyValuePair<string, object?>("topic", topicName),
+                new KeyValuePair<string, object?>("batch.status", "failed"));
 
             throw;
         }
