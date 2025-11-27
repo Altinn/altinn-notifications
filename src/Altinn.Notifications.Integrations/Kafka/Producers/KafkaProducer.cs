@@ -174,8 +174,8 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             }
 
             // If still no classification, mark all valid as not produced
-            if (batchContext.ValidMessages.Count > 0 && 
-                batchContext.ProducedMessages.Count == 0 && 
+            if (batchContext.ValidMessages.Count > 0 &&
+                batchContext.ProducedMessages.Count == 0 &&
                 batchContext.NotProducedMessages.Count == 0)
             {
                 batchContext = batchContext with
