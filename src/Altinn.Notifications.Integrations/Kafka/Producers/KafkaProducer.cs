@@ -574,6 +574,13 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
 
         foreach (var deliveryTask in deliveryTasks)
         {
+            if (deliveryTask.IsCanceled)
+            {
+                IncrementFailed(topicName);
+
+                continue;
+            }
+
             if (deliveryTask.IsFaulted)
             {
                 var produceException = deliveryTask.Exception?
