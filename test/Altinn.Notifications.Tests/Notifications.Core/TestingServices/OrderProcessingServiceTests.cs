@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Immutable;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Altinn.Notifications.Core.Enums;
@@ -23,16 +25,24 @@ public class OrderProcessingServiceTests
     private const string _pastDueTopicName = "orders.pastdue";
 
     [Fact]
-    public async Task StartProcessingPastDueOrders_ProducerIsCalledOnceForEachOrder()
+    public async Task StartProcessingPastDueOrders_ProducerIsCalledOnceWithAllOrdersSerializedInBatch()
     {
-        // Arrange 
+        // Arrange
         NotificationOrder order = new();
 
         var orderRepositoryMock = new Mock<IOrderRepository>();
         orderRepositoryMock.Setup(r => r.GetPastDueOrdersAndSetProcessingState()).ReturnsAsync([order, order, order, order]);
 
+        IImmutableList<string>? publishedBatch = null;
+
         var producerMock = new Mock<IKafkaProducer>();
-        producerMock.Setup(p => p.ProduceAsync(It.Is<string>(s => s.Equals(_pastDueTopicName)), It.IsAny<string>()));
+        producerMock
+            .Setup(p => p.ProduceAsync(
+                It.Is<string>(s => s.Equals(_pastDueTopicName)),
+                It.IsAny<IImmutableList<string>>(),
+                It.IsAny<System.Threading.CancellationToken>()))
+            .Callback<string, IImmutableList<string>, CancellationToken>((_, msgs, _) => publishedBatch = msgs)
+            .ReturnsAsync([]);
 
         var service = GetTestService(orderRepository: orderRepositoryMock.Object, producer: producerMock.Object);
 
@@ -40,8 +50,16 @@ public class OrderProcessingServiceTests
         await service.StartProcessingPastDueOrders();
 
         // Assert
-        orderRepositoryMock.Verify();
-        producerMock.Verify(p => p.ProduceAsync(It.Is<string>(s => s.Equals(_pastDueTopicName)), It.IsAny<string>()), Times.Exactly(4));
+        orderRepositoryMock.Verify(r => r.GetPastDueOrdersAndSetProcessingState(), Times.AtLeastOnce);
+        producerMock.Verify(
+            p => p.ProduceAsync(
+            It.Is<string>(s => s.Equals(_pastDueTopicName)),
+            It.IsAny<IImmutableList<string>>(),
+            It.IsAny<System.Threading.CancellationToken>()),
+            Times.Once);
+
+        Assert.NotNull(publishedBatch);
+        Assert.Equal(4, publishedBatch!.Count);
 
         orderRepositoryMock.Verify(e => e.InsertStatusFeedForOrder(It.IsAny<Guid>()), Times.Never);
     }
