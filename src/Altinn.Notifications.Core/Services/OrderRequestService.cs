@@ -305,13 +305,9 @@ public class OrderRequestService : IOrderRequestService
     /// <exception cref="InvalidOperationException">
     /// Thrown when the repository fails to persist the order chain.
     /// </exception>
-    private async Task<Result<NotificationOrderChainResponse>> CreateChainResponseAsync(NotificationOrderChainRequest orderRequest, NotificationOrder? mainOrder, List<NotificationOrder>? reminderOrders, CancellationToken cancellationToken)
+    private async Task<Result<NotificationOrderChainResponse>> CreateChainResponseAsync(NotificationOrderChainRequest orderRequest, NotificationOrder mainOrder, List<NotificationOrder>? reminderOrders, CancellationToken cancellationToken)
     {
-        var savedOrders = new List<NotificationOrder>();
-        if (mainOrder != null)
-        {
-            savedOrders = await _repository.Create(orderRequest, mainOrder, reminderOrders, cancellationToken);
-        }
+        var savedOrders = await _repository.Create(orderRequest, mainOrder, reminderOrders, cancellationToken);
 
         // The first is the main shipment
         var savedMain = savedOrders[0];
