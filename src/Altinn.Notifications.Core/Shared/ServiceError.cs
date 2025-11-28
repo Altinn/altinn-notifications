@@ -1,4 +1,4 @@
-﻿namespace Altinn.Notifications.Core.Shared;
+namespace Altinn.Notifications.Core.Shared;
 
 /// <summary>
 /// A class representing a service error object used to transfere error information from service to controller.
@@ -17,26 +17,19 @@ public class ServiceError
     public string? ErrorMessage { get; private set; }
 
     /// <summary>
-    /// The error type for machine-readable error identification
-    /// </summary>
-    public string? ErrorType { get; private set; }
-
-    /// <summary>
     /// Create a new instance of a service error
     /// </summary>
-    public ServiceError(int errorCode, string errorMessage, string? errorType = null)
+    public ServiceError(int errorCode, string errorMessage)
     {
         ErrorCode = errorCode;
         ErrorMessage = errorMessage;
-        ErrorType = errorType;
     }
 
     /// <summary>
     /// Create a new instance of a service error
     /// </summary>
-    public ServiceError(int errorCode, string? errorType = null)
+    public ServiceError(int errorCode)
     {
         ErrorCode = errorCode;
-        ErrorType = errorType;
     }
 }
