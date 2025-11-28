@@ -81,32 +81,53 @@ public class EmailNotificationService : IEmailNotificationService
     public async Task SendNotifications(CancellationToken cancellationToken)
     {
         List<Email> newEmailNotifications;
-        
+
         do
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            newEmailNotifications = [];
 
-            newEmailNotifications = await _repository.GetNewNotificationsAsync(_emailPublishBatchSize, cancellationToken);
-            if (newEmailNotifications.Count == 0)
+            try
             {
-                break;
-            }
+                cancellationToken.ThrowIfCancellationRequested();
 
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var readyToSendMessages = newEmailNotifications.Select(readyToSendEmail => readyToSendEmail.Serialize());
-
-            var unpublishedMessages = await _producer.ProduceAsync(_emailQueueTopicName, readyToSendMessages.ToImmutableList(), cancellationToken);
-
-            foreach (var unpublishedMessage in unpublishedMessages)
-            {
-                var failedToSendEmail = JsonSerializer.Deserialize<Email>(unpublishedMessage, JsonSerializerOptionsProvider.Options);
-                if (failedToSendEmail == null || failedToSendEmail.NotificationId == Guid.Empty)
+                newEmailNotifications = await _repository.GetNewNotificationsAsync(_emailPublishBatchSize, cancellationToken);
+                if (newEmailNotifications.Count == 0)
                 {
-                    continue;
+                    break;
                 }
 
-                await _repository.UpdateSendStatus(failedToSendEmail.NotificationId, EmailNotificationResultType.New);
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var readyToSendMessages = newEmailNotifications
+                    .Select(readyToSendEmail => readyToSendEmail.Serialize())
+                    .ToImmutableList();
+
+                var unpublishedMessages = await _producer.ProduceAsync(_emailQueueTopicName, readyToSendMessages, cancellationToken);
+
+                foreach (var unpublishedMessage in unpublishedMessages)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    var failedToSendEmail = JsonSerializer.Deserialize<Email>(unpublishedMessage, JsonSerializerOptionsProvider.Options);
+                    if (failedToSendEmail == null || failedToSendEmail.NotificationId == Guid.Empty)
+                    {
+                        continue;
+                    }
+
+                    await _repository.UpdateSendStatus(failedToSendEmail.NotificationId, EmailNotificationResultType.New);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                if (newEmailNotifications.Count > 0)
+                {
+                    foreach (var email in newEmailNotifications)
+                    {
+                        await _repository.UpdateSendStatus(email.NotificationId, EmailNotificationResultType.New);
+                    }
+                }
+
+                throw;
             }
         }
         while (newEmailNotifications.Count > 0);
