@@ -44,23 +44,15 @@ public class OrderProcessingServiceTests
             orderRepository: orderRepositoryMock.Object,
             producer: producerMock.Object);
 
-        using var cts = new CancellationTokenSource();
+        using var cancellationTokenSource = new CancellationTokenSource();
 
         // Act
-        await orderProcessingService.StartProcessingPastDueOrders(cts.Token);
+        await orderProcessingService.StartProcessingPastDueOrders(cancellationTokenSource.Token);
 
         // Assert
-        orderRepositoryMock.Verify(
-            r => r.GetPastDueOrdersAndSetProcessingState(It.IsAny<CancellationToken>()),
-            Times.Once);
-
-        producerMock.Verify(
-            p => p.ProduceAsync(It.IsAny<string>(), It.IsAny<ImmutableList<string>>(), It.IsAny<CancellationToken>()),
-            Times.Never);
-
-        orderRepositoryMock.Verify(
-            r => r.SetProcessingStatus(It.IsAny<Guid>(), It.IsAny<OrderProcessingStatus>()),
-            Times.Never);
+        orderRepositoryMock.Verify(e => e.GetPastDueOrdersAndSetProcessingState(It.IsAny<CancellationToken>()), Times.Once);
+        orderRepositoryMock.Verify(e => e.SetProcessingStatus(It.IsAny<Guid>(), It.IsAny<OrderProcessingStatus>()), Times.Never);
+        producerMock.Verify(e => e.ProduceAsync(It.IsAny<string>(), It.IsAny<ImmutableList<string>>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
