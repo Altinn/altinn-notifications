@@ -32,6 +32,10 @@ public static class Problems
     /// <summary>
     /// Gets a <see cref="ProblemDescriptor"/> for request terminated by client.
     /// </summary>
+    /// <remarks>
+    /// Uses HTTP status code 499 (non-standard), commonly used to indicate that the client closed the connection
+    /// before the server finished processing the request. This typically occurs when the client cancels or times out.
+    /// </remarks>
     public static ProblemDescriptor RequestTerminated { get; }
         = _factory.Create(4, (HttpStatusCode)499, "The client disconnected or cancelled the request before the server could complete processing");
 
