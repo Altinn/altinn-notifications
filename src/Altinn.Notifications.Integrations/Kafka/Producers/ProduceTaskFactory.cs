@@ -13,13 +13,14 @@ public sealed record ProduceTaskFactory
     /// <param name="topicName">The Kafka topic name.</param>
     /// <param name="message">The message payload to produce.</param>
     /// <param name="producer">The Kafka producer instance.</param>
+    /// <param name="cancellationToken">A cancellation token that can interrupt the scheduling process.</param>
     /// <returns>A new <see cref="ProduceTaskFactory"/> instance.</returns>
-    public static ProduceTaskFactory Create(string topicName, string message, IProducer<Null, string> producer)
+    public static ProduceTaskFactory Create(string topicName, string message, IProducer<Null, string> producer, CancellationToken cancellationToken)
     {
         return new ProduceTaskFactory
         {
             Message = message,
-            ProduceTask = () => producer.ProduceAsync(topicName, new Message<Null, string> { Value = message })
+            ProduceTask = () => producer.ProduceAsync(topicName, new Message<Null, string> { Value = message }, cancellationToken)
         };
     }
 

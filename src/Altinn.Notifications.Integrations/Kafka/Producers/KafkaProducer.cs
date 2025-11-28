@@ -112,16 +112,16 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     /// <inheritdoc/>
     public async Task<ImmutableList<string>> ProduceAsync(string topicName, ImmutableList<string> messages, CancellationToken cancellationToken = default)
     {
-        if (!ValidateTopic(topicName))
+        if (messages.Count == 0)
         {
-            IncrementFailed(topicName, messages.Count);
+            _logger.LogError("// KafkaProducer // ProduceAsync // No messages to produce");
 
             return messages;
         }
 
-        if (messages.Count == 0)
+        if (!ValidateTopic(topicName))
         {
-            _logger.LogError("// KafkaProducer // ProduceAsync // No messages to produce");
+            IncrementFailed(topicName, messages.Count);
 
             return messages;
         }
@@ -448,7 +448,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     /// A <see cref="BatchProducingContext"/> containing messages categorized into valid and invalid categories.
     /// Valid messages are non-null, non-empty, and non-whitespace strings. Invalid messages include null, empty, or whitespace-only strings.
     /// </returns>
-    private BatchProducingContext CategorizeMessages(string topicName, IImmutableList<string> messages)
+    private BatchProducingContext CategorizeMessages(string topicName, ImmutableList<string> messages)
     {
         var validMessages = new List<string>(messages.Count);
         var invalidMessages = new List<string>(messages.Count);
@@ -520,9 +520,9 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     private BatchProducingContext BuildProduceTasks(string topicName, BatchProducingContext batchContext, CancellationToken cancellationToken)
     {
         var scheduledMessagesCount = 0;
-        List<ProduceTaskFactory> produceTaskFactories = [];
         var unscheduledMessagesCount = batchContext.ValidMessages.Count;
 
+        List<ProduceTaskFactory> produceTaskFactories = [];
         foreach (var validMessage in batchContext.ValidMessages)
         {
             if (cancellationToken.IsCancellationRequested)
@@ -539,12 +539,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             // Capture the message in a local variable to avoid closure issues
             var messagePayload = validMessage;
 
-            produceTaskFactories.Add(
-                new ProduceTaskFactory
-                {
-                    Message = messagePayload,
-                    ProduceTask = () => _producer.ProduceAsync(topicName, new Message<Null, string> { Value = messagePayload })
-                });
+            produceTaskFactories.Add(ProduceTaskFactory.Create(topicName, messagePayload, _producer, cancellationToken));
 
             scheduledMessagesCount++;
             unscheduledMessagesCount--;
