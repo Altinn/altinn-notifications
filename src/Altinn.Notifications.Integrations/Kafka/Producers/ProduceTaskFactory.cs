@@ -27,10 +27,10 @@ public sealed record ProduceTaskFactory
     /// <summary>
     /// The message this factory will produce to the Kafka topic.
     /// </summary>
-    public string Message { get; init; } = string.Empty;
+    public required string Message { get; init; } = string.Empty;
 
     /// <summary>
     /// The deferred factory that, when invoked, produces the message and returns the delivery result.
     /// </summary>
-    public Func<Task<DeliveryResult<Null, string>>> ProduceTask { get; init; } = default!;
+    public required Func<Task<DeliveryResult<Null, string>>> ProduceTask { get; init; } = default!;
 }

@@ -1609,9 +1609,7 @@ public class OrderProcessingServiceTests
                 requestedSendTime: DateTime.UtcNow.AddMinutes(-5),
                 recipients: [new Recipient([], nationalIdentityNumber: $"1234567890{i % 10}")],
                 sendingTimePolicy: SendingTimePolicy.Daytime,
-                templates: isEvenIndex
-                    ? [new SmsTemplate("TestSender", "Test SMS body")]
-                    : [new EmailTemplate("noreply@ttd.no", "Test Subject", "Test email body", EmailContentType.Plain)],
+                templates: isEvenIndex ? [new SmsTemplate("TestSender", "Test SMS body")] : [new EmailTemplate("noreply@ttd.no", "Test Subject", "Test email body", EmailContentType.Plain)],
                 notificationChannel: isEvenIndex ? NotificationChannel.Sms : NotificationChannel.Email));
         }
 
