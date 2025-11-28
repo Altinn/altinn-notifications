@@ -1,4 +1,6 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Immutable;
+using System.Diagnostics;
+using System.Text.Json;
 
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
@@ -54,26 +56,58 @@ public class OrderProcessingService : IOrderProcessingService
     }
 
     /// <inheritdoc/>
-    public async Task StartProcessingPastDueOrders()
+    public async Task StartProcessingPastDueOrders(CancellationToken cancellationToken = default)
     {
-        Stopwatch sw = Stopwatch.StartNew();
         List<NotificationOrder> pastDueOrders;
+        Stopwatch stopwatch = Stopwatch.StartNew();
+
         do
         {
-            pastDueOrders = await _orderRepository.GetPastDueOrdersAndSetProcessingState();
+            pastDueOrders = [];
 
-            foreach (NotificationOrder order in pastDueOrders)
+            try
             {
-                bool success = await _producer.ProduceAsync(_pastDueOrdersTopic, order.Serialize());
-                if (!success)
+                cancellationToken.ThrowIfCancellationRequested();
+
+                pastDueOrders = await _orderRepository.GetPastDueOrdersAndSetProcessingState(cancellationToken);
+                if (pastDueOrders.Count == 0)
                 {
-                    await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.Registered);
+                    break;
+                }
+
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var serializedPastDueOrders = pastDueOrders.Select(e => e.Serialize());
+                var unpublishedPastDueOrders = await _producer.ProduceAsync(_pastDueOrdersTopic, [.. serializedPastDueOrders], cancellationToken);
+
+                foreach (var unpublishedPastDueOrder in unpublishedPastDueOrders)
+                {
+                    var deserializePastDueOrder = JsonSerializer.Deserialize<NotificationOrder>(unpublishedPastDueOrder, JsonSerializerOptionsProvider.Options);
+                    if (deserializePastDueOrder == null || deserializePastDueOrder.Id == Guid.Empty)
+                    {
+                        continue;
+                    }
+
+                    await _orderRepository.SetProcessingStatus(deserializePastDueOrder.Id, OrderProcessingStatus.Registered);
                 }
             }
-        }
-        while (pastDueOrders.Count >= 50 && sw.ElapsedMilliseconds < 60_000);
+            catch (OperationCanceledException)
+            {
+                // If we have a fetched batch, revert all of them to Registered.
+                if (pastDueOrders.Count > 0)
+                {
+                    foreach (var order in pastDueOrders)
+                    {
+                        await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.Registered);
+                    }
+                }
 
-        sw.Stop();
+                throw;
+            }
+        }
+        while (pastDueOrders.Count >= 50 && stopwatch.ElapsedMilliseconds < 60_000);
+
+        stopwatch.Stop();
     }
 
     /// <inheritdoc/>
