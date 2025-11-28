@@ -172,10 +172,10 @@ public class OrderProcessingService : IOrderProcessingService
     }
 
     /// <summary>
-    /// Attempts to insert a status feed entry for an order where the send condition was not met.
+    /// Attempts to insert a status feed entry for a completed order.
     /// Logs a warning if the insertion fails but does not throw, allowing order processing to continue.
     /// </summary>
-    /// <param name="orderId">The unique identifier of the order.</param>
+    /// <param name="orderId">The unique identifier of the completed order.</param>
     private async Task TryInsertStatusFeedForCompletedOrder(Guid orderId)
     {
         try
