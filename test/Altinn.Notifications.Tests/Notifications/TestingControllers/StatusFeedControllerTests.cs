@@ -4,11 +4,12 @@ using System.Collections.Immutable;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Altinn.Authorization.ProblemDetails;
 using Altinn.Notifications.Controllers;
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Errors;
 using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Core.Services.Interfaces;
-using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Models.Status;
 using Altinn.Notifications.Validators;
 
@@ -120,18 +121,17 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
             Assert.NotNull(result);
             var statusCodeResult = Assert.IsType<ObjectResult>(result.Result);
             Assert.Equal(499, statusCodeResult.StatusCode);
-            var problemDetails = Assert.IsType<ProblemDetails>(statusCodeResult.Value);
-            Assert.Equal("request-terminated", problemDetails.Type);
-            Assert.Equal("Request terminated", problemDetails.Title);
+            var problemDetails = Assert.IsType<AltinnProblemDetails>(statusCodeResult.Value);
+            Assert.Equal("NOT-00004", problemDetails.ErrorCode.ToString());
+            Assert.Equal(499, problemDetails.Status);
         }
 
         [Fact]
         public async Task Get_WhenServiceReturnsError_CorrectStatusCodeIsReturned()
         {
             // Arrange
-            var error = new ServiceError(400, "Bad request", "test-error-type");
             _statusFeedService.Setup(x => x.GetStatusFeed(It.IsAny<long>(), It.IsAny<int?>(), It.IsAny<string>(), CancellationToken.None))
-                .ReturnsAsync(error);
+                .ReturnsAsync(Problems.StatusFeedRetrievalFailed);
 
             // Act
             var result = await _sut.GetStatusFeed(new GetStatusFeedRequestExt { Seq = 1 });
@@ -139,10 +139,10 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
             // Assert
             Assert.NotNull(result);
             var statusCodeResult = Assert.IsType<ObjectResult>(result.Result);
-            Assert.Equal(400, statusCodeResult.StatusCode);
-            var problemDetails = Assert.IsType<ProblemDetails>(statusCodeResult.Value);
-            Assert.Equal("test-error-type", problemDetails.Type);
-            Assert.Equal("Failed to retrieve status feed", problemDetails.Title);
+            Assert.Equal(500, statusCodeResult.StatusCode);
+            var problemDetails = Assert.IsType<AltinnProblemDetails>(statusCodeResult.Value);
+            Assert.Equal("NOT-00008", problemDetails.ErrorCode.ToString());
+            Assert.Equal(500, problemDetails.Status);
         }
     }
 }

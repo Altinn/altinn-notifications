@@ -4,11 +4,12 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
+using Altinn.Authorization.ProblemDetails;
 using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Controllers;
+using Altinn.Notifications.Core.Errors;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
-using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Email;
@@ -604,13 +605,13 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var result = await controller.Post(request);
 
         // Assert
-        // Cast the result as a ProblemDetails object and verify its contents
         var objectResult = Assert.IsType<ObjectResult>(result.Result);
-        var problemDetails = Assert.IsType<ProblemDetails>(objectResult.Value);
+        var problemDetails = Assert.IsType<AltinnProblemDetails>(objectResult.Value);
 
         Assert.NotNull(problemDetails);
-        Assert.Equal("Request terminated", problemDetails.Title);
+        Assert.Equal("NOT-00004", problemDetails.ErrorCode.ToString());
         Assert.Equal(499, problemDetails.Status);
+        Assert.Contains("client disconnected", problemDetails.Detail, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -623,7 +624,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         orderServiceMock.Setup(s => s.RetrieveOrderChainTracking("ttd", request.IdempotencyId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((NotificationOrderChainResponse?)null);
         orderServiceMock.Setup(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ServiceError(422, "Missing recipients", "missing-contact-information"));
+            .ReturnsAsync(Problems.MissingContactInformation);
         var httpContext = new DefaultHttpContext();
         httpContext.Items["Org"] = "ttd";
         var controller = new FutureOrdersController(orderServiceMock.Object, validatorMock.Object)
@@ -635,13 +636,12 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var result = await controller.Post(request);
 
         // Assert
-        var statusCodeResult = Assert.IsType<ObjectResult>(result.Result);
-        var problemDetails = Assert.IsType<ProblemDetails>(statusCodeResult.Value);
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        var problemDetails = Assert.IsType<AltinnProblemDetails>(objectResult.Value);
         Assert.NotNull(problemDetails);
+        Assert.Equal("NOT-00001", problemDetails.ErrorCode.ToString());
         Assert.Equal(422, problemDetails.Status);
-        Assert.Equal("missing-contact-information", problemDetails.Type);
-        Assert.Equal("Notification order chain registration failed", problemDetails.Title);
-        Assert.Equal("Missing recipients", problemDetails.Detail);
+        Assert.Equal("Missing contact information for recipient(s)", problemDetails.Detail);
     }
 
     [Fact]
@@ -670,13 +670,12 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var result = await controller.Post(request);
 
         // Assert
-        // Cast the result as a ProblemDetails object and verify its contents
-        var statusCodeResult = Assert.IsType<ObjectResult>(result.Result);
-        var problemDetails = Assert.IsType<ProblemDetails>(statusCodeResult.Value);
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        var problemDetails = Assert.IsType<AltinnProblemDetails>(objectResult.Value);
 
         Assert.NotNull(problemDetails);
+        Assert.Equal("NOT-00004", problemDetails.ErrorCode.ToString());
         Assert.Equal(499, problemDetails.Status);
-        Assert.Contains("Request terminated", problemDetails.Title);
     }
 
     [Fact]
@@ -837,12 +836,12 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
 
         // Assert
         var objectResult = Assert.IsType<ObjectResult>(result.Result);
-        Assert.Equal(500, objectResult.StatusCode);
+        var problemDetails = Assert.IsType<AltinnProblemDetails>(objectResult.Value);
 
-        var problemDetails = Assert.IsType<ProblemDetails>(objectResult.Value);
-        Assert.Equal("Notification order is incomplete or invalid", problemDetails.Title);
+        Assert.NotNull(problemDetails);
+        Assert.Equal("NOT-00003", problemDetails.ErrorCode.ToString());
         Assert.Equal(500, problemDetails.Status);
-        Assert.Equal("invalid-notification-order", problemDetails.Type);
+        Assert.Equal("Notification order is incomplete or invalid", problemDetails.Detail);
 
         orderServiceMock.Verify(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()), Times.Never);
     }
