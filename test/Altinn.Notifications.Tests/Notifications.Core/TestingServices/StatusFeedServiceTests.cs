@@ -65,23 +65,16 @@ public class StatusFeedServiceTests
         x => x.GetStatusFeed(seq, _creatorName, _maxPageSize, It.IsAny<CancellationToken>()),
         Times.Once);
 
-        result.Match(
-            success =>
-            {
-                Assert.NotNull(success);
-                var entry = Assert.Single(success);
-                Assert.Equal(1, entry.SequenceNumber);
-                return true;
-            },
-            error =>
-            {
-                Assert.Fail("Expected success but got error: " + error.ErrorMessage);
-                return false;
-            });
+        Assert.False(result.IsProblem);
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Value);
+
+        var entry = Assert.Single(result.Value);
+        Assert.Equal(1, entry.SequenceNumber);
     }
 
     [Fact]
-    public async Task GetStatusFeed_RepositoryThrowsException_ReturnsServiceError()
+    public async Task GetStatusFeed_RepositoryThrowsException_ReturnsProblem()
     {
         // Arrange
         Mock<IStatusFeedRepository> statusFeedRepository = new();
@@ -99,19 +92,11 @@ public class StatusFeedServiceTests
             x => x.GetStatusFeed(seq, creatorName, _maxPageSize, It.IsAny<CancellationToken>()),
             Times.Once);
 
-        result.Match(
-            success =>
-            {
-                Assert.Fail("Expected error but got success");
-                return false;
-            },
-            error =>
-            {
-                Assert.Equal(500, error.ErrorCode);
-                Assert.Equal("status-feed-retrieval-failed", error.ErrorType);
-                Assert.StartsWith("Failed to retrieve status feed", error.ErrorMessage);
-                return true;
-            });
+        Assert.True(result.IsProblem);
+        Assert.NotNull(result.Problem);
+        Assert.Equal("NOT-00008", result.Problem.ErrorCode.ToString());
+        Assert.Equal(500, (int)result.Problem.StatusCode);
+        Assert.Equal("Failed to retrieve status feed", result.Problem.Detail);
     }
 
     [Theory]
