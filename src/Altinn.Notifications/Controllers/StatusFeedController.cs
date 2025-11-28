@@ -53,9 +53,9 @@ public class StatusFeedController(IStatusFeedService statusFeedService, IValidat
                 return Forbid();
             }
 
-            var result = await statusFeedService.GetStatusFeed(statusFeedRequest.Seq, statusFeedRequest.PageSize, creatorName, HttpContext.RequestAborted);
+            var statusFeed = await statusFeedService.GetStatusFeed(statusFeedRequest.Seq, statusFeedRequest.PageSize, creatorName, HttpContext.RequestAborted);
 
-            return Ok(result.Value!.MapToStatusFeedExtList());
+            return Ok(statusFeed.MapToStatusFeedExtList());
         }
         catch (OperationCanceledException)
         {
