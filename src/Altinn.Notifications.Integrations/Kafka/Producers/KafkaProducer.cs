@@ -133,7 +133,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
         }
 
         batchContext = BuildProduceTasks(topicName, batchContext, cancellationToken);
-        if (batchContext.DeferredProduceTaskFactories.Count == 0 || cancellationToken.IsCancellationRequested)
+        if (batchContext.DeferredProduceTasks.Count == 0 || cancellationToken.IsCancellationRequested)
         {
             IncrementFailed(topicName, batchContext.ValidMessages.Count);
 
@@ -145,11 +145,11 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
         var batchFailed = false;
         var batchCategorized = false;
 
-        var publishDeliveryResults = new List<Task<DeliveryResult<Null, string>>>(batchContext.DeferredProduceTaskFactories.Count);
+        var publishDeliveryResults = new List<Task<DeliveryResult<Null, string>>>(batchContext.DeferredProduceTasks.Count);
 
         try
         {
-            publishDeliveryResults.AddRange(batchContext.DeferredProduceTaskFactories.Keys.Select(factory => factory()));
+            publishDeliveryResults.AddRange(batchContext.DeferredProduceTasks.Select(e => e.ProduceTask()));
 
             await Task.WhenAll(publishDeliveryResults);
 
@@ -166,7 +166,8 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             // Partial categorization if some tasks completed
             if (publishDeliveryResults.Count > 0 && !batchCategorized)
             {
-                var completed = publishDeliveryResults.Where(t => t.IsCompleted).ToList();
+                var completed = publishDeliveryResults.Where(e => e.IsCompleted).ToList();
+
                 if (completed.Count > 0)
                 {
                     batchContext = CategorizeDeliveryResults(topicName, batchContext, completed);
@@ -341,8 +342,8 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             SocketKeepaliveEnable = true,
             EnableDeliveryReports = true,
             StatisticsIntervalMs = 10000,
+            DeliveryReportFields = "status",
             CompressionType = CompressionType.Zstd,
-            DeliveryReportFields = "key,value,status",
             Partitioner = Partitioner.ConsistentRandom
         };
     }
@@ -368,7 +369,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     /// <param name="exception">The exception occurred.</param>
     private void LogOnProducingFailures(Exception exception)
     {
-        _logger.LogCritical(exception, "// KafkaProducer // ProduceAsync // Unexpected exception while awaiting batch.");
+        _logger.LogError(exception, "// KafkaProducer // ProduceAsync // Unexpected exception while awaiting batch.");
     }
 
     /// <summary>
@@ -470,8 +471,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
 
             IncrementFailed(topicName, messages.Count);
         }
-
-        if (invalidMessages.Count > 0)
+        else if (invalidMessages.Count > 0)
         {
             _logger.LogError("// KafkaProducer // ProduceAsync // CategorizeMessages // Cannot publish {Count} invalid messages", invalidMessages.Count);
 
@@ -519,14 +519,9 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     /// </returns>
     private BatchProducingContext BuildProduceTasks(string topicName, BatchProducingContext batchContext, CancellationToken cancellationToken)
     {
-        var unscheduledMessagesCount = batchContext.ValidMessages.Count;
-        if (unscheduledMessagesCount == 0)
-        {
-            return batchContext;
-        }
-
         var scheduledMessagesCount = 0;
-        var deferredProduceTaskFactoriesBuilder = ImmutableDictionary.CreateBuilder<Func<Task<DeliveryResult<Null, string>>>, string>();
+        List<ProduceTaskFactory> produceTaskFactories = [];
+        var unscheduledMessagesCount = batchContext.ValidMessages.Count;
 
         foreach (var validMessage in batchContext.ValidMessages)
         {
@@ -544,7 +539,12 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             // Capture the message in a local variable to avoid closure issues
             var messagePayload = validMessage;
 
-            deferredProduceTaskFactoriesBuilder.Add(() => _producer.ProduceAsync(topicName, new Message<Null, string> { Value = messagePayload }), messagePayload);
+            produceTaskFactories.Add(
+                new ProduceTaskFactory
+                {
+                    Message = messagePayload,
+                    ProduceTask = () => _producer.ProduceAsync(topicName, new Message<Null, string> { Value = messagePayload })
+                });
 
             scheduledMessagesCount++;
             unscheduledMessagesCount--;
@@ -552,7 +552,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
 
         return batchContext with
         {
-            DeferredProduceTaskFactories = deferredProduceTaskFactoriesBuilder.ToImmutable()
+            DeferredProduceTasks = [.. produceTaskFactories]
         };
     }
 
@@ -569,18 +569,20 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     /// </returns>
     private static BatchProducingContext CategorizeDeliveryResults(string topicName, BatchProducingContext batchContext, List<Task<DeliveryResult<Null, string>>> deliveryTasks)
     {
-        var scheduledPayloads = batchContext.DeferredProduceTaskFactories.Values;
-        
         var producedMessages = new List<string>(batchContext.ValidMessages.Count);
         var notProducedMessages = new List<string>(batchContext.ValidMessages.Count);
 
-        for (int i = 0; i < deliveryTasks.Count; i++)
+        var scheduledPayloads = batchContext.DeferredProduceTasks.Select(e => e.Message).ToList();
+
+        var pairedItemsCount = Math.Min(deliveryTasks.Count, scheduledPayloads.Count);
+
+        for (int i = 0; i < pairedItemsCount; i++)
         {
             var deliveryTask = deliveryTasks[i];
 
             if (deliveryTask.IsCanceled || deliveryTask.IsFaulted)
             {
-                var canceledPayload = scheduledPayloads.ElementAtOrDefault(i);
+                var canceledPayload = scheduledPayloads[i];
 
                 if (!string.IsNullOrWhiteSpace(canceledPayload))
                 {
@@ -593,23 +595,41 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             }
 
             var deliveryTaskResult = deliveryTask.Result;
-            var payload = deliveryTaskResult.Message?.Value ?? deliveryTaskResult.Value
-                          ?? scheduledPayloads.ElementAtOrDefault(i);
-
-            if (payload == null)
+            var deliveryTaskMessage = scheduledPayloads[i];
+            if (string.IsNullOrWhiteSpace(deliveryTaskMessage))
             {
+                deliveryTaskMessage = deliveryTaskResult.Message?.Value ?? deliveryTaskResult.Value;
+            }
+
+            if (string.IsNullOrWhiteSpace(deliveryTaskMessage))
+            {
+                IncrementFailed(topicName);
+
                 continue;
             }
 
             if (deliveryTaskResult.Status == PersistenceStatus.Persisted)
             {
-                producedMessages.Add(payload);
+                producedMessages.Add(deliveryTaskMessage);
 
                 IncrementPublished(topicName);
             }
             else
             {
-                notProducedMessages.Add(payload);
+                notProducedMessages.Add(deliveryTaskMessage);
+
+                IncrementFailed(topicName);
+            }
+        }
+
+        // If there were more scheduled payloads than completed tasks, mark remaining as not produced
+        if (scheduledPayloads.Count > pairedItemsCount)
+        {
+            var remainingMessages = scheduledPayloads.Skip(pairedItemsCount).Where(e => !string.IsNullOrWhiteSpace(e));
+
+            foreach (var remainingMessage in remainingMessages)
+            {
+                notProducedMessages.Add(remainingMessage);
 
                 IncrementFailed(topicName);
             }

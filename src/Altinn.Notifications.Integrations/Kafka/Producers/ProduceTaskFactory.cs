@@ -3,7 +3,7 @@
 namespace Altinn.Notifications.Integrations.Kafka.Producers;
 
 /// <summary>
-/// Encapsulates a deferred factory for producing a single Kafka message, along with the message payload it was created for.
+/// Encapsulates a deferred factory for producing a single Kafka message, along with the message payload.
 /// </summary>
 public sealed record ProduceTaskFactory
 {
