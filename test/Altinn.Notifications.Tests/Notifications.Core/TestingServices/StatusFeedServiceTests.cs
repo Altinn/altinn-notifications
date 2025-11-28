@@ -65,11 +65,9 @@ public class StatusFeedServiceTests
         x => x.GetStatusFeed(seq, _creatorName, _maxPageSize, It.IsAny<CancellationToken>()),
         Times.Once);
 
-        Assert.False(result.IsProblem);
-        Assert.True(result.IsSuccess);
-        Assert.NotNull(result.Value);
+        Assert.NotNull(result);
 
-        var entry = Assert.Single(result.Value);
+        var entry = Assert.Single(result);
         Assert.Equal(1, entry.SequenceNumber);
     }
 
@@ -101,7 +99,7 @@ public class StatusFeedServiceTests
         var result = await sut.GetStatusFeed(seq, pageSize, _creatorName, CancellationToken.None);
 
         // Assert
-        Assert.True(result.IsSuccess);
+        Assert.NotNull(result);
 
         // Verify that the repository was called with the clipped page size (maxPageSize)
         mockRepository.Verify(
@@ -155,7 +153,7 @@ public class StatusFeedServiceTests
         var result = await sut.GetStatusFeed(seq, requestedPageSize, _creatorName, CancellationToken.None);
         
         // Assert
-        Assert.True(result.IsSuccess);
+        Assert.NotNull(result);
         
         // Verify that the repository was called with the requested page size (not the max)
         mockRepository.Verify(
