@@ -425,20 +425,26 @@ public static class PostgreUtil
     {
         if (typeof(T) == typeof(SmsNotification))
         {
-            string sql = $@"
-        UPDATE notifications.smsnotifications 
-        SET result = '{result}' 
-        WHERE _orderid = (SELECT _id FROM notifications.orders WHERE alternateid = '{orderId}')";
-            await PostgreUtil.RunSql(sql);
+            string sql = @"
+                UPDATE notifications.smsnotifications 
+                SET result = @result 
+                WHERE _orderid = (SELECT _id FROM notifications.orders WHERE alternateid = @orderId)";
+            await RunSql(
+                sql,
+                new NpgsqlParameter("@result", result),
+                new NpgsqlParameter("@orderId", orderId));
         }
 
         if (typeof(T) == typeof(EmailNotification))
         {
-            string sql = $@"
-            UPDATE notifications.emailnotifications 
-            SET result = '{result}' 
-            WHERE _orderid = (SELECT _id FROM notifications.orders WHERE alternateid = '{orderId}')";
-            await PostgreUtil.RunSql(sql);
+            string sql = @"
+                UPDATE notifications.emailnotifications 
+                SET result = @result 
+                WHERE _orderid = (SELECT _id FROM notifications.orders WHERE alternateid = @orderId)";
+            await PostgreUtil.RunSql(
+                sql,
+                new NpgsqlParameter("@result", result),
+                new NpgsqlParameter("@orderId", orderId));
         }
     }
 
