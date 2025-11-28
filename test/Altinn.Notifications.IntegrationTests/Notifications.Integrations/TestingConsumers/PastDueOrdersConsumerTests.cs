@@ -133,7 +133,7 @@ public class PastDueOrdersConsumerTests : IDisposable
             new Mock<IEmailOrderProcessingService>().Object,
             new Mock<ISmsOrderProcessingService>().Object,
             new Mock<IPreferredChannelProcessingService>().Object,
-            null,
+            new Mock<IEmailAndSmsOrderProcessingService>().Object,
             new Mock<IConditionClient>().Object,
             new Mock<IKafkaProducer>().Object,
             Options.Create(new KafkaSettings { PastDueOrdersTopicName = _pastDueOrdersTopicName }),
