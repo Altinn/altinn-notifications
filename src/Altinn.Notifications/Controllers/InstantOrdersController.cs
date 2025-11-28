@@ -190,9 +190,15 @@ public class InstantOrdersController : ControllerBase
             // 5. Return tracking information and location header.
             return Created(trackingInformation.OrderChainId.GetSelfLinkFromOrderChainId(), trackingInformation.MapToInstantNotificationOrderResponse());
         }
-        catch (Exception ex)
+        catch (InvalidOperationException)
         {
-            return HandleCommonExceptions(ex);
+            var problemDetails = Problems.InvalidNotificationOrder.ToProblemDetails();
+            return StatusCode(problemDetails.Status!.Value, problemDetails);
+        }
+        catch (OperationCanceledException)
+        {
+            var problemDetails = Problems.RequestTerminated.ToProblemDetails();
+            return StatusCode(problemDetails.Status!.Value, problemDetails);
         }
     }
 
@@ -223,21 +229,5 @@ public class InstantOrdersController : ControllerBase
         }
 
         return null;
-    }
-
-    /// <summary>
-    /// Handles common exceptions and returns appropriate error responses.
-    /// </summary>
-    private ActionResult HandleCommonExceptions(Exception ex)
-    {
-        var problemDescriptor = ex switch
-        {
-            InvalidOperationException => Problems.InvalidNotificationOrder,
-            OperationCanceledException => Problems.RequestTerminated,
-            _ => throw ex
-        };
-
-        var problemDetails = problemDescriptor.ToProblemDetails();
-        return StatusCode(problemDetails.Status!.Value, problemDetails);
     }
 }
