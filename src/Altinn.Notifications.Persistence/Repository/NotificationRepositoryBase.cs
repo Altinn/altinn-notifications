@@ -87,7 +87,7 @@ public abstract class NotificationRepositoryBase
         var orderStatus = await ReadMainNotification(reader);
 
         // Add recipients to the order status
-        await NotificationUtil.ReadRecipients(recipients, reader);
+        await NotificationUtil.ReadRecipientsAsync(recipients, reader, CancellationToken.None);
 
         if (orderStatus != null)
         {

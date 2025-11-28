@@ -277,7 +277,7 @@ public class OrderRepository : IOrderRepository
                 var type = await reader.GetFieldValueAsync<string>("type");
                 
                 // Attempt to read recipients
-                await NotificationUtil.ReadRecipients(recipients, reader);
+                await NotificationUtil.ReadRecipientsAsync(recipients, reader, CancellationToken.None);
 
                 await reader.CloseAsync();
 

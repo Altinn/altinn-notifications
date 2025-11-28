@@ -419,7 +419,29 @@ public static class PostgreUtil
             throw new ArgumentException("Type T must be either EmailNotification or SmsNotification");
         }
     }
-    
+
+    public static async Task UpdateNotificationResult<T>(Guid orderId, string result)
+        where T : class
+    {
+        if (typeof(T) == typeof(SmsNotification))
+        {
+            string sql = $@"
+        UPDATE notifications.smsnotifications 
+        SET result = '{result}' 
+        WHERE _orderid = (SELECT _id FROM notifications.orders WHERE alternateid = '{orderId}')";
+            await PostgreUtil.RunSql(sql);
+        }
+
+        if (typeof(T) == typeof(EmailNotification))
+        {
+            string sql = $@"
+            UPDATE notifications.emailnotifications 
+            SET result = '{result}' 
+            WHERE _orderid = (SELECT _id FROM notifications.orders WHERE alternateid = '{orderId}')";
+            await PostgreUtil.RunSql(sql);
+        }
+    }
+
     private static async Task<long?> GetDeadDeliveryReportIdByJsonField(string fieldName, string fieldValue)
     {
         // Validate fieldName to prevent SQL injection

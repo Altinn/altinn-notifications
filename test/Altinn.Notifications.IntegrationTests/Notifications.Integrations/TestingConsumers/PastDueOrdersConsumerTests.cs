@@ -117,7 +117,7 @@ public class PastDueOrdersConsumerTests : IDisposable
             simulateCronJob: true,
             simulateConsumers: true);
 
-        await UpdateNotificationResult<SmsNotification>(o.Id, status.ToString());
+        await PostgreUtil.UpdateNotificationResult<SmsNotification>(o.Id, status.ToString());
         return (o, n);
     }
 
@@ -161,7 +161,7 @@ public class PastDueOrdersConsumerTests : IDisposable
             simulateCronJob: true,
             simulateConsumers: true);
 
-        await UpdateNotificationResult<EmailNotification>(o.Id, status.ToString());
+        await PostgreUtil.UpdateNotificationResult<EmailNotification>(o.Id, status.ToString());
         return (o, n);
     }
 
@@ -211,29 +211,7 @@ public class PastDueOrdersConsumerTests : IDisposable
         await PostgreUtil.RunSql(sql);
     }
 
-    private static async Task UpdateNotificationResult<T>(Guid orderId, string result) 
-        where T : class
-    {
-        if (typeof(T) == typeof(SmsNotification))
-        {
-            string sql = $@"
-        UPDATE notifications.smsnotifications 
-        SET result = '{result}' 
-        WHERE _orderid = (SELECT _id FROM notifications.orders WHERE alternateid = '{orderId}')";
-            await PostgreUtil.RunSql(sql);
-        }
-
-        if (typeof(T) == typeof(EmailNotification))
-        {
-            string sql = $@"
-            UPDATE notifications.emailnotifications 
-            SET result = '{result}' 
-            WHERE _orderid = (SELECT _id FROM notifications.orders WHERE alternateid = '{orderId}')";
-            await PostgreUtil.RunSql(sql);
-        }
-    }
-
-    public static async Task<OrderStatus?> GetStatusFeedOrderStatus(Guid orderId)
+    private static async Task<OrderStatus?> GetStatusFeedOrderStatus(Guid orderId)
     {
         var json = await PostgreUtil.GetStatusFeedOrderStatusJson(orderId);
 

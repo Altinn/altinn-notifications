@@ -12,22 +12,23 @@ internal static class NotificationUtil
 {
     private static readonly string[] _legalRecipientTypes = ["email", "sms"];
 
-/// <summary>
+    /// <summary>
     /// Method to read recipient level notifications from the data reader and populate the recipients list.
     /// </summary>
     /// <param name="recipients">The list of recipients to populate.</param>
     /// <param name="reader">The data reader to read from. Disposal should be handled by the caller</param>
+    /// <param name="cancellationToken">A token used to cancel the asynchronous operation</param>
     /// <returns>A asynchronous Task</returns>
-    internal static async Task ReadRecipients(List<Recipient> recipients, NpgsqlDataReader reader)
+    internal static async Task ReadRecipientsAsync(List<Recipient> recipients, NpgsqlDataReader reader, CancellationToken cancellationToken)
     {
         var statusOrdinal = reader.GetOrdinal("status");
         var destinationOrdinal = reader.GetOrdinal("destination");
         var typeOrdinal = reader.GetOrdinal("type");
         var lastUpdateOrdinal = reader.GetOrdinal("last_update");
 
-        while (await reader.ReadAsync())
+        while (await reader.ReadAsync(cancellationToken))
         {
-            var notificationType = await reader.GetFieldValueAsync<string>(typeOrdinal);
+            var notificationType = await reader.GetFieldValueAsync<string>(typeOrdinal, cancellationToken);
 
             if (!_legalRecipientTypes.Contains(notificationType, StringComparer.OrdinalIgnoreCase))
             {
@@ -35,8 +36,8 @@ internal static class NotificationUtil
                 continue;
             }
 
-            var status = await reader.GetFieldValueAsync<string>(statusOrdinal);
-            var destination = await reader.IsDBNullAsync(destinationOrdinal) ? string.Empty : await reader.GetFieldValueAsync<string>(destinationOrdinal);
+            var status = await reader.GetFieldValueAsync<string>(statusOrdinal, cancellationToken);
+            var destination = await reader.IsDBNullAsync(destinationOrdinal) ? string.Empty : await reader.GetFieldValueAsync<string>(destinationOrdinal, cancellationToken);
 
             Recipient recipient;
 
@@ -45,7 +46,7 @@ internal static class NotificationUtil
                 recipient = new Recipient
                 {
                     Destination = destination,
-                    LastUpdate = await reader.GetFieldValueAsync<DateTime>(lastUpdateOrdinal),
+                    LastUpdate = await reader.GetFieldValueAsync<DateTime>(lastUpdateOrdinal, cancellationToken),
                     Status = ProcessingLifecycleMapper.GetEmailLifecycleStage(status)
                 };
                 recipients.Add(recipient);
@@ -55,7 +56,7 @@ internal static class NotificationUtil
                 recipient = new Recipient
                 {
                     Destination = destination,
-                    LastUpdate = await reader.GetFieldValueAsync<DateTime>(lastUpdateOrdinal),
+                    LastUpdate = await reader.GetFieldValueAsync<DateTime>(lastUpdateOrdinal, cancellationToken),
                     Status = ProcessingLifecycleMapper.GetSmsLifecycleStage(status)
                 };
                 recipients.Add(recipient);
