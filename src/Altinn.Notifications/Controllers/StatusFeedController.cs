@@ -55,12 +55,6 @@ public class StatusFeedController(IStatusFeedService statusFeedService, IValidat
 
             var result = await statusFeedService.GetStatusFeed(statusFeedRequest.Seq, statusFeedRequest.PageSize, creatorName, HttpContext.RequestAborted);
 
-            if (result.IsProblem)
-            {
-                var problemDetails = result.Problem!.ToProblemDetails();
-                return StatusCode(problemDetails.Status!.Value, problemDetails);
-            }
-
             return Ok(result.Value!.MapToStatusFeedExtList());
         }
         catch (OperationCanceledException)
