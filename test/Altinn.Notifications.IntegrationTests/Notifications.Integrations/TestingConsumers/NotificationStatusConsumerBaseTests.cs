@@ -71,6 +71,85 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ProcessEmailDeliveryReport_WhenRetryStatusProducerFails_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var guidService = new Mock<IGuidService>();
+        var dateTimeService = new Mock<IDateTimeService>();
+        var logger = new Mock<ILogger<EmailStatusConsumer>>();
+        var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Strict);
+        var emailNotificationRepository = new Mock<IEmailNotificationRepository>();
+        var deadDeliveryReportService = new Mock<IDeadDeliveryReportService>();
+
+        var sendOperationResult = new EmailSendOperationResult
+        {
+            OperationId = Guid.NewGuid().ToString(),
+            SendResult = EmailNotificationResultType.Delivered
+        };
+
+        var deliveryReport = sendOperationResult.Serialize();
+
+        emailNotificationRepository
+            .Setup(e => e.UpdateSendStatus(sendOperationResult.NotificationId, sendOperationResult.SendResult.Value, sendOperationResult.OperationId))
+            .ThrowsAsync(new Exception("Simulated failure"));
+
+        // Setup producer to return false on retry
+        kafkaProducer
+            .Setup(e => e.ProduceAsync(_kafkaSettings.Value.EmailStatusUpdatedTopicName, deliveryReport))
+            .ReturnsAsync(false);
+
+        var emailNotificationService = new EmailNotificationService(
+            guidService.Object,
+            kafkaProducer.Object,
+            dateTimeService.Object,
+            Options.Create(new Altinn.Notifications.Core.Configuration.KafkaSettings
+            {
+                EmailQueueTopicName = Guid.NewGuid().ToString()
+            }),
+            Options.Create(new Altinn.Notifications.Core.Configuration.NotificationConfig() { EmailPublishBatchSize = 50 }),
+            emailNotificationRepository.Object);
+
+        using var emailStatusConsumer = new EmailStatusConsumer(kafkaProducer.Object, logger.Object, _kafkaSettings, emailNotificationService, deadDeliveryReportService.Object);
+
+        // Act
+        await emailStatusConsumer.StartAsync(CancellationToken.None);
+        await KafkaUtil.PublishMessageOnTopic(_kafkaSettings.Value.EmailStatusUpdatedTopicName, deliveryReport);
+
+        // Assert
+        await IntegrationTestUtil.EventuallyAsync(
+            () =>
+            {
+                try
+                {
+                    // Verify producer was called once with the delivery report
+                    kafkaProducer.Verify(e => e.ProduceAsync(_kafkaSettings.Value.EmailStatusUpdatedTopicName, deliveryReport), Times.Once);
+
+                    // Verify error was logged for the failed retry
+                    logger.Verify(
+                        e => e.Log(
+                            LogLevel.Error,
+                            It.IsAny<EventId>(),
+                            It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Failed to republish message to topic")),
+                            It.IsAny<InvalidOperationException>(),
+                            It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+                        Times.Once);
+
+                    // Verify UpdateSendStatus was called once
+                    emailNotificationRepository.Verify(e => e.UpdateSendStatus(sendOperationResult.NotificationId, sendOperationResult.SendResult.Value, sendOperationResult.OperationId), Times.Once);
+
+                    return true;
+                }
+                catch
+                {
+                    return false;
+                }
+            },
+            TimeSpan.FromSeconds(10));
+
+        await emailStatusConsumer.StopAsync(CancellationToken.None);
+    }
+
+    [Fact]
     public async Task ProcessSmsDeliveryReport_WhenExceptionThrown_RepublishDeliveryReportToSameTopic()
     {
         // Arrange
