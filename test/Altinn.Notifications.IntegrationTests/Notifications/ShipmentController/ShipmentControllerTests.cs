@@ -360,7 +360,7 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         
         Assert.NotNull(problemDetails);
         Assert.Equal("NOT-00004", problemDetails.ErrorCode.ToString()); // Problems.RequestTerminated
-        Assert.Equal(499, problemDetails.Status);
+        Assert.Equal((int)response.StatusCode, problemDetails.Status);
         Assert.Contains("client disconnected", problemDetails.Detail, StringComparison.OrdinalIgnoreCase);
     }
 

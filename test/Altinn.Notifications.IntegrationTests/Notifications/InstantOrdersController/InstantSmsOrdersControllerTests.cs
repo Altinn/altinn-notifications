@@ -114,7 +114,7 @@ public class InstantSmsOrdersControllerTests : IClassFixture<IntegrationTestWebA
 
         Assert.NotNull(problem);
         Assert.Equal("NOT-00004", problem.ErrorCode.ToString()); // Problems.RequestTerminated
-        Assert.Equal(499, problem.Status);
+        Assert.Equal((int)response.StatusCode, problem.Status);
 
         dateTimeServiceMock.Verify(e => e.UtcNow(), Times.Once);
         validatorMock.Verify(e => e.Validate(It.IsAny<InstantSmsNotificationOrderRequestExt>()), Times.Once);
@@ -382,7 +382,7 @@ public class InstantSmsOrdersControllerTests : IClassFixture<IntegrationTestWebA
 
         Assert.NotNull(problem);
         Assert.Equal("NOT-00005", problem.ErrorCode.ToString()); // Problems.InstantSmsOrderFailed
-        Assert.Equal(500, problem.Status);
+        Assert.Equal((int)response.StatusCode, problem.Status);
         Assert.Equal("An internal server error occurred while processing the sms notification order", problem.Detail);
 
         dateTimeServiceMock.Verify(e => e.UtcNow(), Times.Once);

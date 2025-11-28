@@ -107,13 +107,14 @@ public class InstantEmailOrdersControllerTests : IClassFixture<IntegrationTestWe
         // Act
         var response = await client.PostAsync(BasePath, requestContent);
         var responseContent = await response.Content.ReadAsStringAsync();
-        var problem = JsonSerializer.Deserialize<ProblemDetails>(responseContent, _options);
+        var problem = JsonSerializer.Deserialize<AltinnProblemDetails>(responseContent, _options);
 
         // Assert
         Assert.Equal(499, (int)response.StatusCode);
 
         Assert.NotNull(problem);
-        Assert.Equal(499, problem.Status);
+        Assert.Equal("NOT-00004", problem.ErrorCode.ToString()); // Problems.RequestTerminated
+        Assert.Equal((int)response.StatusCode, problem.Status);
 
         dateTimeServiceMock.Verify(e => e.UtcNow(), Times.Once);
         validatorMock.Verify(e => e.Validate(request), Times.Once);
@@ -385,7 +386,7 @@ public class InstantEmailOrdersControllerTests : IClassFixture<IntegrationTestWe
 
         Assert.NotNull(problem);
         Assert.Equal("NOT-00006", problem.ErrorCode.ToString()); // Problems.InstantEmailOrderFailed
-        Assert.Equal(500, problem.Status);
+        Assert.Equal((int)response.StatusCode, problem.Status);
         Assert.Equal("An internal server error occurred while processing the email notification order", problem.Detail);
 
         dateTimeServiceMock.Verify(e => e.UtcNow(), Times.Once);
