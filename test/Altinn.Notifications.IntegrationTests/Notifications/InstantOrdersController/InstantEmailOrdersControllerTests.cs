@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Altinn.Authorization.ProblemDetails;
 using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Orders;
@@ -380,12 +381,12 @@ public class InstantEmailOrdersControllerTests : IClassFixture<IntegrationTestWe
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
 
         var responseContent = await response.Content.ReadAsStringAsync();
-        var problem = JsonSerializer.Deserialize<ProblemDetails>(responseContent, _options);
+        var problem = JsonSerializer.Deserialize<AltinnProblemDetails>(responseContent, _options);
 
         Assert.NotNull(problem);
+        Assert.Equal("NOT-00006", problem.ErrorCode.ToString());
         Assert.Equal(500, problem.Status);
-        Assert.Equal("Instant email notification order registration failed", problem.Title);
-        Assert.Equal("instant-email-order-failed", problem.Type);
+        Assert.Equal("An internal server error occurred while processing the email notification order", problem.Detail);
 
         dateTimeServiceMock.Verify(e => e.UtcNow(), Times.Once);
         validatorMock.Verify(e => e.Validate(request), Times.Once);

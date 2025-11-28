@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Altinn.Authorization.ProblemDetails;
 using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
@@ -110,15 +111,15 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
         // Act
         var response = await client.PostAsync(BasePath, requestContent);
         var responseContent = await response.Content.ReadAsStringAsync();
-        var problem = JsonSerializer.Deserialize<ProblemDetails>(responseContent, _options);
+        var problem = JsonSerializer.Deserialize<AltinnProblemDetails>(responseContent, _options);
 
         // Assert
         Assert.Equal(499, (int)response.StatusCode);
 
         Assert.NotNull(problem);
+        Assert.Equal("NOT-00004", problem.ErrorCode.ToString());
         Assert.Equal(499, problem.Status);
-        Assert.Equal("Request terminated", problem.Title);
-        Assert.Equal("request-terminated", problem.Type);
+        Assert.Contains("client disconnected", problem.Detail, StringComparison.OrdinalIgnoreCase);
 
         dateTimeServiceMock.Verify(e => e.UtcNow(), Times.Once);
         validatorMock.Verify(e => e.Validate(request), Times.Once);
@@ -396,12 +397,12 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
 
         var responseContent = await response.Content.ReadAsStringAsync();
-        var problem = JsonSerializer.Deserialize<ProblemDetails>(responseContent, _options);
+        var problem = JsonSerializer.Deserialize<AltinnProblemDetails>(responseContent, _options);
 
         Assert.NotNull(problem);
+        Assert.Equal("NOT-00005", problem.ErrorCode.ToString());
         Assert.Equal(500, problem.Status);
-        Assert.Equal("Instant sms notification order registration failed", problem.Title);
-        Assert.Equal("instant-sms-order-failed", problem.Type);
+        Assert.Equal("An internal server error occurred while processing the sms notification order", problem.Detail);
 
         dateTimeServiceMock.Verify(e => e.UtcNow(), Times.Once);
         validatorMock.Verify(e => e.Validate(request), Times.Once);
@@ -459,15 +460,15 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
         // Act
         var response = await client.PostAsync(BasePath, requestContent);
         var responseContent = await response.Content.ReadAsStringAsync();
-        var problem = JsonSerializer.Deserialize<ProblemDetails>(responseContent, _options);
+        var problem = JsonSerializer.Deserialize<AltinnProblemDetails>(responseContent, _options);
 
         // Assert
         Assert.Equal(500, (int)response.StatusCode);
 
         Assert.NotNull(problem);
+        Assert.Equal("NOT-00003", problem.ErrorCode.ToString());
         Assert.Equal(500, problem.Status);
-        Assert.Equal("Notification order is incomplete or invalid", problem.Title);
-        Assert.Equal("invalid-notification-order", problem.Type);
+        Assert.Equal("Notification order is incomplete or invalid", problem.Detail);
 
         dateTimeServiceMock.Verify(e => e.UtcNow(), Times.Once);
         validatorMock.Verify(e => e.Validate(request), Times.Once);

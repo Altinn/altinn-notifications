@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Altinn.Authorization.ProblemDetails;
 using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
@@ -376,12 +377,12 @@ public class InstantSmsOrdersControllerTests : IClassFixture<IntegrationTestWebA
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
 
         var responseContent = await response.Content.ReadAsStringAsync();
-        var problem = JsonSerializer.Deserialize<ProblemDetails>(responseContent, _options);
+        var problem = JsonSerializer.Deserialize<AltinnProblemDetails>(responseContent, _options);
 
         Assert.NotNull(problem);
+        Assert.Equal("NOT-00005", problem.ErrorCode.ToString());
         Assert.Equal(500, problem.Status);
-        Assert.Equal("Instant sms notification order registration failed", problem.Title);
-        Assert.Equal("instant-sms-order-failed", problem.Type);
+        Assert.Equal("An internal server error occurred while processing the sms notification order", problem.Detail);
 
         dateTimeServiceMock.Verify(e => e.UtcNow(), Times.Once);
         validatorMock.Verify(e => e.Validate(It.IsAny<InstantSmsNotificationOrderRequestExt>()), Times.Once);
