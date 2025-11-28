@@ -5,7 +5,7 @@ using Confluent.Kafka;
 namespace Altinn.Notifications.Integrations.Kafka.Producers;
 
 /// <summary>
-/// Encapsulates the state and results of a message batch processing operation.
+/// Encapsulates the state and results of a message batch processing operation for Kafka message production.
 /// </summary>
 public sealed record BatchProducingContext
 {
@@ -39,7 +39,7 @@ public sealed record BatchProducingContext
     /// </summary>
     /// <remarks>
     /// This set includes valid messages that should be retried:
-    /// 1. Valid messages whose produce task failed (exception, faulted delivery, or negative acknowledgment).
+    /// 1. Valid messages whose produce task failed (exception, faulted delivery, canceled, or negative acknowledgment).
     /// 2. Valid messages intentionally skipped (e.g. short–circuit on prior or fatal error).
     /// </remarks>
     public ImmutableList<string> NotProducedMessages { get; init; } = [];
