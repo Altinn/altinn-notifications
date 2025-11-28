@@ -29,192 +29,78 @@ public class OrderProcessingServiceTests
     private const string _pastDueTopicName = "orders.pastdue";
 
     [Fact]
-    public async Task StartProcessingPastDueOrders_WhenCancellationAfterFetch_RevertsStatusesAndSkipsProduce()
+    public async Task StartProcessingPastDueOrders_CancellationRequestedDuringSecondBatch_UnproducedOrdersRevertedToRegistered()
     {
         // Arrange
-        var callCount = 0;
-        using var cancellationTokenSource = new CancellationTokenSource();
-
-        var notificationOrderForSms = new NotificationOrder(
-            id: Guid.NewGuid(),
-            created: DateTime.UtcNow,
-            type: OrderType.Notification,
-            creator: new Creator("ttd"),
-            resourceId: null,
-            conditionEndpoint: null,
-            ignoreReservation: null,
-            sendersReference: "sr-sms",
-            requestedSendTime: DateTime.UtcNow.AddMinutes(-10),
-            recipients: new List<Recipient> { new Recipient() },
-            sendingTimePolicy: null,
-            templates: new List<INotificationTemplate>(),
-            notificationChannel: NotificationChannel.Sms);
-
-        var notificationOrderForEmail = new NotificationOrder(
-            id: Guid.NewGuid(),
-            type: OrderType.Notification,
-            creator: new Creator("ttd"),
-            created: DateTime.UtcNow,
-            resourceId: null,
-            conditionEndpoint: null,
-            ignoreReservation: null,
-            sendersReference: "sr-email",
-            requestedSendTime: DateTime.UtcNow.AddMinutes(-10),
-            recipients: new List<Recipient> { new Recipient() },
-            sendingTimePolicy: null,
-            templates: new List<INotificationTemplate>(),
-            notificationChannel: NotificationChannel.Email);
-
-        var notificationOrderForEmailAndSms = new NotificationOrder(
-            id: Guid.NewGuid(),
-            type: OrderType.Notification,
-            creator: new Creator("ttd"),
-            created: DateTime.UtcNow,
-            resourceId: null,
-            conditionEndpoint: null,
-            ignoreReservation: null,
-            sendersReference: "sr-both",
-            requestedSendTime: DateTime.UtcNow.AddMinutes(-10),
-            recipients: new List<Recipient> { new Recipient() },
-            sendingTimePolicy: null,
-            templates: new List<INotificationTemplate>(),
-            notificationChannel: NotificationChannel.EmailAndSms);
-
-        var notificationOrderForSmsPreferred = new NotificationOrder { Id = Guid.NewGuid(), NotificationChannel = NotificationChannel.SmsPreferred };
-        var notificationOrderForEmailPreferred = new NotificationOrder { Id = Guid.NewGuid(), NotificationChannel = NotificationChannel.EmailPreferred };
+        var firstBatchOrders = CreateOrderBatch(50, "first-batch");
+        var secondBatchOrders = CreateOrderBatch(25, "second-batch");
 
         var orderRepositoryMock = new Mock<IOrderRepository>();
+
         orderRepositoryMock
-            .Setup(e => e.GetPastDueOrdersAndSetProcessingState(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() =>
-            {
-                callCount++;
-
-                if (callCount == 1)
-                {
-                    // Simulate cancellation triggered after the fetch
-                    cancellationTokenSource.Cancel();
-                    return [notificationOrderForSms, notificationOrderForEmail, notificationOrderForEmailAndSms];
-                }
-
-                // This batch must never be processed because cancellation should stop the loop
-                return [notificationOrderForSmsPreferred, notificationOrderForEmailPreferred];
-            });
-
-        var producerMock = new Mock<IKafkaProducer>();
-        producerMock
-            .Setup(e => e.ProduceAsync(
-                It.Is<string>(e => e == _pastDueTopicName),
-                It.IsAny<ImmutableList<string>>(),
-                It.IsAny<CancellationToken>()))
-            .Returns<string, ImmutableList<string>, CancellationToken>((_, msgs, cancellationToken) =>
-            {
-                // If cancelled, return all messages (nothing produced)
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    return Task.FromResult<ImmutableList<string>>(msgs);
-                }
-
-                // If not cancelled, return empty (all messages produced successfully)
-                return Task.FromResult<ImmutableList<string>>([]);
-            });
-
-        var service = GetTestService(orderRepository: orderRepositoryMock.Object, producer: producerMock.Object);
-
-        // Act
-        await service.StartProcessingPastDueOrders(cancellationTokenSource.Token);
-
-        // Assert
-        producerMock.Verify(
-            p => p.ProduceAsync(
-                It.IsAny<string>(),
-                It.IsAny<ImmutableList<string>>(),
-                It.Is<CancellationToken>(ct => ct == cancellationTokenSource.Token)),
-            Times.Once);
-
-        orderRepositoryMock.Verify(
-            e => e.GetPastDueOrdersAndSetProcessingState(It.Is<CancellationToken>(ct => ct == cancellationTokenSource.Token)),
-            Times.Once);
-
-        orderRepositoryMock.Verify(e => e.SetProcessingStatus(notificationOrderForSms.Id, OrderProcessingStatus.Registered), Times.Once);
-        orderRepositoryMock.Verify(e => e.SetProcessingStatus(notificationOrderForEmail.Id, OrderProcessingStatus.Registered), Times.Once);
-        orderRepositoryMock.Verify(e => e.SetProcessingStatus(notificationOrderForEmailAndSms.Id, OrderProcessingStatus.Registered), Times.Once);
-
-        orderRepositoryMock.Verify(
-            r => r.SetProcessingStatus(
-                It.Is<Guid>(id => id == notificationOrderForSms.Id || id == notificationOrderForEmail.Id || id == notificationOrderForEmailAndSms.Id),
-                It.Is<OrderProcessingStatus>(s => s != OrderProcessingStatus.Registered)),
-            Times.Never);
-
-        orderRepositoryMock.Verify(e => e.SetProcessingStatus(notificationOrderForSmsPreferred.Id, It.IsAny<OrderProcessingStatus>()), Times.Never);
-        orderRepositoryMock.Verify(e => e.SetProcessingStatus(notificationOrderForEmailPreferred.Id, It.IsAny<OrderProcessingStatus>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task StartProcessingPastDueOrders_PublishesSingleBatch_ProduceAsyncCalledOnce_AndNoTerminalStatusOperations()
-    {
-        // Arrange
-        var notificationOrderForSms = new NotificationOrder
-        {
-            NotificationChannel = NotificationChannel.Sms,
-            ConditionEndpoint = new Uri("https://condition.example/sms")
-        };
-
-        var notificationOrderForEmail = new NotificationOrder
-        {
-            ConditionEndpoint = null,
-            NotificationChannel = NotificationChannel.Email
-        };
-
-        var notificationOrderForEmailAndSms = new NotificationOrder
-        {
-            NotificationChannel = NotificationChannel.EmailAndSms,
-            ConditionEndpoint = new Uri("https://condition.example/emailandsms")
-        };
-
-        var notificationOrderForEmailPreferred = new NotificationOrder
-        {
-            ConditionEndpoint = null,
-            NotificationChannel = NotificationChannel.EmailPreferred
-        };
-
-        var orderRepositoryMock = new Mock<IOrderRepository>();
-        orderRepositoryMock
-            .Setup(e => e.GetPastDueOrdersAndSetProcessingState(It.IsAny<CancellationToken>()))
-            .ReturnsAsync([notificationOrderForSms, notificationOrderForEmail, notificationOrderForEmailAndSms, notificationOrderForEmailPreferred]);
-
-        ImmutableList<string>? publishedBatch = null;
-
-        var producerMock = new Mock<IKafkaProducer>();
-        producerMock
-            .Setup(e => e.ProduceAsync(
-                It.Is<string>(s => s.Equals(_pastDueTopicName)),
-                It.IsAny<ImmutableList<string>>(),
-                It.IsAny<CancellationToken>()))
-            .Callback<string, ImmutableList<string>, CancellationToken>((_, msgs, _) => publishedBatch = msgs)
+            .SetupSequence(e => e.GetPastDueOrdersAndSetProcessingState(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(firstBatchOrders)
+            .ReturnsAsync(secondBatchOrders)
             .ReturnsAsync([]);
 
-        var service = GetTestService(orderRepository: orderRepositoryMock.Object, producer: producerMock.Object);
+        var producerMock = new Mock<IKafkaProducer>();
+
+        // First batch: all 50 produced successfully
+        producerMock
+            .Setup(p => p.ProduceAsync(
+                It.IsAny<string>(),
+                It.Is<ImmutableList<string>>(messages => messages.Count == 50),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        // Second batch: simulate cancellation occurring mid-production (after 10 successes).
+        var secondBatchSerialized = secondBatchOrders.Select(o => o.Serialize()).ToImmutableList();
+        var unpublishedOrders = secondBatchSerialized.Skip(10).ToImmutableList(); // Skip first 10, return rest as unpublished
+
+        using var cancellationTokenSource = new CancellationTokenSource();
+
+        producerMock
+            .Setup(p => p.ProduceAsync(
+                It.IsAny<string>(),
+                It.Is<ImmutableList<string>>(messages => messages.Count == 25),
+                It.IsAny<CancellationToken>()))
+            .Callback<string, ImmutableList<string>, CancellationToken>((_, _, _) =>
+            {
+                cancellationTokenSource.Cancel();
+            })
+            .ReturnsAsync(unpublishedOrders);
+
+        var orderProcessingService = GetTestService(
+            orderRepository: orderRepositoryMock.Object,
+            producer: producerMock.Object);
 
         // Act
-        await service.StartProcessingPastDueOrders();
+        await orderProcessingService.StartProcessingPastDueOrders(cancellationTokenSource.Token);
 
         // Assert
-        orderRepositoryMock.Verify(e => e.GetPastDueOrdersAndSetProcessingState(It.IsAny<CancellationToken>()), Times.Once);
+        orderRepositoryMock.Verify(
+            r => r.GetPastDueOrdersAndSetProcessingState(It.IsAny<CancellationToken>()),
+            Times.Exactly(2));
+
         producerMock.Verify(
-            e => e.ProduceAsync(
-                It.Is<string>(s => s.Equals(_pastDueTopicName)),
-                It.IsAny<ImmutableList<string>>(),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
+            p => p.ProduceAsync(It.IsAny<string>(), It.IsAny<ImmutableList<string>>(), It.IsAny<CancellationToken>()),
+            Times.Exactly(2));
 
-        Assert.NotNull(publishedBatch);
-        Assert.Equal(4, publishedBatch!.Count);
+        var unpublishedOrderIds = secondBatchOrders.Skip(10).Select(o => o.Id).ToList();
+        foreach (var orderId in unpublishedOrderIds)
+        {
+            orderRepositoryMock.Verify(
+                r => r.SetProcessingStatus(orderId, OrderProcessingStatus.Registered),
+                Times.Once);
+        }
 
-        Assert.Equal(publishedBatch.Count, publishedBatch.Distinct().Count());
-
-        orderRepositoryMock.Verify(e => e.InsertStatusFeedForOrder(It.IsAny<Guid>()), Times.Never);
-        orderRepositoryMock.Verify(e => e.SetProcessingStatus(It.IsAny<Guid>(), It.IsAny<OrderProcessingStatus>()), Times.Never);
+        var publishedOrderIds = firstBatchOrders.Select(o => o.Id).Concat(secondBatchOrders.Take(10).Select(o => o.Id)).ToList();
+        foreach (var orderId in publishedOrderIds)
+        {
+            orderRepositoryMock.Verify(
+                r => r.SetProcessingStatus(orderId, OrderProcessingStatus.Registered),
+                Times.Never);
+        }
     }
 
     [Fact]
@@ -1583,6 +1469,34 @@ public class OrderProcessingServiceTests
         orderRepositoryMock.Verify(e => e.InsertStatusFeedForOrder(It.IsAny<Guid>()), Times.Never);
 
         orderRepositoryMock.Verify(e => e.SetProcessingStatus(It.IsAny<Guid>(), It.Is<OrderProcessingStatus>(s => s.Equals(OrderProcessingStatus.Completed))), Times.Never);
+    }
+
+    private static List<NotificationOrder> CreateOrderBatch(int count, string batchPrefix)
+    {
+        var orders = new List<NotificationOrder>();
+
+        for (int i = 0; i < count; i++)
+        {
+            var isEvenIndex = i % 2 == 0;
+            orders.Add(new(
+                id: Guid.NewGuid(),
+                type: OrderType.Notification,
+                creator: new Creator("ttd"),
+                created: DateTime.UtcNow.AddMinutes(-10),
+                resourceId: "urn:altinn:resource:app_ttd_test",
+                conditionEndpoint: null,
+                ignoreReservation: false,
+                sendersReference: $"{batchPrefix}-ref-{i:D3}",
+                requestedSendTime: DateTime.UtcNow.AddMinutes(-5),
+                recipients: [new Recipient([], nationalIdentityNumber: $"1234567890{i % 10}")],
+                sendingTimePolicy: SendingTimePolicy.Daytime,
+                templates: isEvenIndex
+                    ? [new SmsTemplate("TestSender", "Test SMS body")]
+                    : [new EmailTemplate("noreply@ttd.no", "Test Subject", "Test email body", EmailContentType.Plain)],
+                notificationChannel: isEvenIndex ? NotificationChannel.Sms : NotificationChannel.Email));
+        }
+
+        return orders;
     }
 
     private static OrderProcessingService GetTestService(

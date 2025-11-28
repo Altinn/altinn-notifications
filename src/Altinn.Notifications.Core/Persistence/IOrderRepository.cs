@@ -117,10 +117,15 @@ public interface IOrderRepository
     Task<InstantNotificationOrderTracking?> Create(InstantEmailNotificationOrder instantEmailNotificationOrder, NotificationOrder notificationOrder, EmailNotification emailNotification, DateTime emailExpiryDateTime, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Gets a list of notification orders where requestedSendTime has passed
+    /// Retrieves notification orders that are past their requested send time and atomically updates their processing status to <see cref="OrderProcessingStatus.Processing"/>.
     /// </summary>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>A list of notification orders</returns>
+    /// <param name="cancellationToken">
+    /// A token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task{TResult}"/> containing a list of <see cref="NotificationOrder"/> objects that were retrieved and marked for processing.
+    /// Returns an empty list if no orders are past due or available for processing.
+    /// </returns>
     public Task<List<NotificationOrder>> GetPastDueOrdersAndSetProcessingState(CancellationToken cancellationToken = default);
 
     /// <summary>

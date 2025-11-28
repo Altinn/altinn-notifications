@@ -70,18 +70,17 @@ public class OrderProcessingService : IOrderProcessingService
             }
 
             var serializedPastDueOrders = pastDueOrders.Select(e => e.Serialize());
+            var unpublishedPastDueOrders = await _producer.ProduceAsync(_pastDueOrdersTopic, [.. serializedPastDueOrders], cancellationToken);
 
-            var unpublishedPastDueOrders = await _producer.ProduceAsync(_pastDueOrdersTopic, serializedPastDueOrders.ToImmutableList(), cancellationToken);
-
-            foreach (var unpublishedNotificationOrder in unpublishedPastDueOrders)
+            foreach (var unpublishedPastDueOrder in unpublishedPastDueOrders)
             {
-                var failedPastDueOrders = JsonSerializer.Deserialize<NotificationOrder>(unpublishedNotificationOrder, JsonSerializerOptionsProvider.Options);
-                if (failedPastDueOrders == null || failedPastDueOrders.Id == Guid.Empty)
+                var deserializePastDueOrder = JsonSerializer.Deserialize<NotificationOrder>(unpublishedPastDueOrder, JsonSerializerOptionsProvider.Options);
+                if (deserializePastDueOrder == null || deserializePastDueOrder.Id == Guid.Empty)
                 {
                     continue;
                 }
 
-                await _orderRepository.SetProcessingStatus(failedPastDueOrders.Id, OrderProcessingStatus.Registered);
+                await _orderRepository.SetProcessingStatus(deserializePastDueOrder.Id, OrderProcessingStatus.Registered);
             }
         }
         while (pastDueOrders.Count >= 50 && stopwatch.ElapsedMilliseconds < 60_000);
