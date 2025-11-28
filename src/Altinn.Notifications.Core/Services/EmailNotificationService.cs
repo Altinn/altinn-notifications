@@ -92,6 +92,8 @@ public class EmailNotificationService : IEmailNotificationService
                 break;
             }
 
+            cancellationToken.ThrowIfCancellationRequested();
+
             var readyToSendMessages = newEmailNotifications.Select(readyToSendEmail => readyToSendEmail.Serialize());
 
             var unpublishedMessages = await _producer.ProduceAsync(_emailQueueTopicName, readyToSendMessages.ToImmutableList(), cancellationToken);

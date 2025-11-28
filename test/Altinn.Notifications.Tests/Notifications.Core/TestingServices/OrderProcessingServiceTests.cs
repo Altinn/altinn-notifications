@@ -26,14 +26,15 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 
 public class OrderProcessingServiceTests
 {
+    private readonly int _publishBatchSize = 50;
     private const string _pastDueTopicName = "orders.pastdue";
 
     [Fact]
     public async Task StartProcessingPastDueOrders_CancellationRequestedDuringSecondBatch_UnproducedOrdersRevertedToRegistered()
     {
         // Arrange
-        var firstBatchOrders = CreateOrderBatch(50, "first-batch");
-        var secondBatchOrders = CreateOrderBatch(25, "second-batch");
+        var firstBatchOrders = CreateOrderBatch(_publishBatchSize, "first-batch");
+        var secondBatchOrders = CreateOrderBatch(_publishBatchSize / 2, "second-batch");
 
         var orderRepositoryMock = new Mock<IOrderRepository>();
 
@@ -45,7 +46,7 @@ public class OrderProcessingServiceTests
 
         var producerMock = new Mock<IKafkaProducer>();
 
-        // First batch: all 50 produced successfully
+        // First batch: all produced successfully
         producerMock
             .Setup(p => p.ProduceAsync(
                 It.IsAny<string>(),

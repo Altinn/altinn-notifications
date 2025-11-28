@@ -25,9 +25,9 @@ namespace Altinn.Notifications.Tests.Notifications.Core.TestingServices;
 
 public class EmailNotificationServiceTests
 {
+    private readonly int _publishBatchSize = 500;
     private const string _emailQueueTopicName = "email.queue";
     private readonly Email _email = new(Guid.NewGuid(), "email.subject", "email.body", "from@domain.com", "to@domain.com", EmailContentType.Plain);
-    private readonly int _publishBatchSize = 500;
 
     [Fact]
     public async Task CreateNotification_ToAddressDefined_ResultNew()

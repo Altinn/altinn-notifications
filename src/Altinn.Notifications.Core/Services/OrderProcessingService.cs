@@ -63,11 +63,15 @@ public class OrderProcessingService : IOrderProcessingService
 
         do
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             pastDueOrders = await _orderRepository.GetPastDueOrdersAndSetProcessingState(cancellationToken);
             if (pastDueOrders.Count == 0)
             {
                 break;
             }
+
+            cancellationToken.ThrowIfCancellationRequested();
 
             var serializedPastDueOrders = pastDueOrders.Select(e => e.Serialize());
             var unpublishedPastDueOrders = await _producer.ProduceAsync(_pastDueOrdersTopic, [.. serializedPastDueOrders], cancellationToken);
