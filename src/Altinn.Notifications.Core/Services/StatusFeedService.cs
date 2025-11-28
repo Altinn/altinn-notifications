@@ -40,12 +40,11 @@ public class StatusFeedService : IStatusFeedService
     {
         var pageSizeFound = FindPageSize(pageSize);
 
-        var statusFeedEntries = await _statusFeedRepository.GetStatusFeed(
+        return await _statusFeedRepository.GetStatusFeed(
             seq: seq,
             pageSize: pageSizeFound,
             creatorName: creatorName,
             cancellationToken: cancellationToken);
-        return statusFeedEntries;
     }
     
     private int FindPageSize(int? pageSizeUserInput)
