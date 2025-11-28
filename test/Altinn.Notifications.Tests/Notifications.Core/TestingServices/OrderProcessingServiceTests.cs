@@ -64,6 +64,66 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
+    public async Task StartProcessingPastDueOrders_AllMessagesUnpublished_RevertsEntireBatchToRegistered()
+    {
+        // Arrange
+        var batchOrders = CreateOrderBatch(_publishBatchSize, "all-unpublished");
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock
+            .SetupSequence(r => r.GetPastDueOrdersAndSetProcessingState(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(batchOrders)
+            .ReturnsAsync([]);
+
+        var producerMock = new Mock<IKafkaProducer>();
+
+        // Simulate producer failing to publish all messages: returns every serialized order as unpublished
+        producerMock
+            .Setup(p => p.ProduceAsync(
+                It.IsAny<string>(),
+                It.Is<ImmutableList<string>>(msgs => msgs.Count == _publishBatchSize),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([.. batchOrders.Select(o => o.Serialize())]);
+
+        var service = GetTestService(orderRepository: orderRepositoryMock.Object, producer: producerMock.Object);
+
+        using var cancellationTokenSource = new CancellationTokenSource();
+
+        // Act
+        await service.StartProcessingPastDueOrders(cancellationTokenSource.Token);
+
+        // Assert
+        orderRepositoryMock.Verify(e => e.GetPastDueOrdersAndSetProcessingState(It.IsAny<CancellationToken>()), Times.Exactly(2));
+
+        producerMock.Verify(e => e.ProduceAsync(It.IsAny<string>(), It.IsAny<ImmutableList<string>>(), It.IsAny<CancellationToken>()), Times.Once);
+
+        foreach (var order in batchOrders)
+        {
+            orderRepositoryMock.Verify(e => e.SetProcessingStatus(order.Id, OrderProcessingStatus.Registered), Times.Once);
+        }
+    }
+
+    [Fact]
+    public async Task StartProcessingPastDueOrders_CancellationRequestedBeforeFirstFetch_Throws_AndDoesNothing()
+    {
+        // Arrange
+        var producerMock = new Mock<IKafkaProducer>();
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+
+        var service = GetTestService(orderRepository: orderRepositoryMock.Object, producer: producerMock.Object);
+
+        using var cancellationTokenSource = new CancellationTokenSource();
+        await cancellationTokenSource.CancelAsync();
+
+        // Act + Assert
+        await Assert.ThrowsAsync<OperationCanceledException>(() => service.StartProcessingPastDueOrders(cancellationTokenSource.Token));
+
+        orderRepositoryMock.Verify(e => e.GetPastDueOrdersAndSetProcessingState(It.IsAny<CancellationToken>()), Times.Never);
+        orderRepositoryMock.Verify(e => e.SetProcessingStatus(It.IsAny<Guid>(), It.IsAny<OrderProcessingStatus>()), Times.Never);
+        producerMock.Verify(e => e.ProduceAsync(It.IsAny<string>(), It.IsAny<ImmutableList<string>>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task StartProcessingPastDueOrders_CancellationRequestedDuringSecondBatch_UnproducedOrdersRevertedToRegistered()
     {
         // Arrange
@@ -135,6 +195,38 @@ public class OrderProcessingServiceTests
             orderRepositoryMock.Verify(
                 r => r.SetProcessingStatus(orderId, OrderProcessingStatus.Registered),
                 Times.Never);
+        }
+    }
+
+    [Fact]
+    public async Task StartProcessingPastDueOrders_CancellationRequestedAfterFetchAndBeforeProduce_ThrowsAndRevertsEntireBatchToRegistered()
+    {
+        // Arrange
+        var fetchedBatch = CreateOrderBatch(10, "cancel-after-fetch");
+
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock
+            .Setup(e => e.GetPastDueOrdersAndSetProcessingState(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(fetchedBatch);
+
+        var producerMock = new Mock<IKafkaProducer>();
+        var service = GetTestService(orderRepository: orderRepositoryMock.Object, producer: producerMock.Object);
+
+        using var cancellationTokenSource = new CancellationTokenSource();
+
+        orderRepositoryMock
+            .Setup(e => e.GetPastDueOrdersAndSetProcessingState(It.IsAny<CancellationToken>()))
+            .Callback(cancellationTokenSource.Cancel)
+            .ReturnsAsync(fetchedBatch);
+
+        // Act + Assert
+        await Assert.ThrowsAsync<OperationCanceledException>(() => service.StartProcessingPastDueOrders(cancellationTokenSource.Token));
+
+        producerMock.Verify(e => e.ProduceAsync(It.IsAny<string>(), It.IsAny<ImmutableList<string>>(), It.IsAny<CancellationToken>()), Times.Never);
+
+        foreach (var order in fetchedBatch)
+        {
+            orderRepositoryMock.Verify(e => e.SetProcessingStatus(order.Id, OrderProcessingStatus.Registered), Times.Once);
         }
     }
 
