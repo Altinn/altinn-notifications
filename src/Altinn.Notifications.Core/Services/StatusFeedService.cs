@@ -1,8 +1,9 @@
-﻿using Altinn.Notifications.Core.Configuration;
+﻿using Altinn.Authorization.ProblemDetails;
+using Altinn.Notifications.Core.Configuration;
+using Altinn.Notifications.Core.Errors;
 using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
-using Altinn.Notifications.Core.Shared;
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -41,7 +42,7 @@ public class StatusFeedService : IStatusFeedService
     }
 
     /// <inheritdoc />
-    public async Task<Result<List<StatusFeed>, ServiceError>> GetStatusFeed(long seq, int? pageSize, string creatorName, CancellationToken cancellationToken)
+    public async Task<Result<List<StatusFeed>>> GetStatusFeed(long seq, int? pageSize, string creatorName, CancellationToken cancellationToken)
     {
         try
         {
@@ -57,7 +58,7 @@ public class StatusFeedService : IStatusFeedService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to retrieve status feed");
-            return new ServiceError(500, "Failed to retrieve status feed.", "status-feed-retrieval-failed");
+            return Problems.StatusFeedRetrievalFailed;
         }
     }
     

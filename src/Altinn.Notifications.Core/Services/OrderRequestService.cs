@@ -1,5 +1,7 @@
-﻿using Altinn.Notifications.Core.Configuration;
+﻿using Altinn.Authorization.ProblemDetails;
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Errors;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Address;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
@@ -7,7 +9,6 @@ using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
-using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Models;
 
 using Microsoft.Extensions.Options;
@@ -85,7 +86,7 @@ public class OrderRequestService : IOrderRequestService
     }
 
     /// <inheritdoc/>
-    public async Task<Result<NotificationOrderChainResponse, ServiceError>> RegisterNotificationOrderChain(NotificationOrderChainRequest orderRequest, CancellationToken cancellationToken = default)
+    public async Task<Result<NotificationOrderChainResponse>> RegisterNotificationOrderChain(NotificationOrderChainRequest orderRequest, CancellationToken cancellationToken = default)
     {
         // 1. Get the current time
         DateTime currentTime = _dateTime.UtcNow();
@@ -95,16 +96,16 @@ public class OrderRequestService : IOrderRequestService
 
         // 3. Create the main order
         var mainOrderResult = await CreateMainNotificationOrderAsync(orderRequest, currentTime);
-        if (mainOrderResult.IsError && mainOrderResult.Error != null)
+        if (mainOrderResult.IsProblem)
         {
-            return mainOrderResult.Error;
+            return mainOrderResult.Problem!;
         }
 
         // 4. Create reminders
         var remindersResult = await CreateReminderNotificationOrdersAsync(orderRequest.Reminders, orderRequest.Creator, currentTime, cancellationToken);
-        if (remindersResult.IsError && remindersResult.Error != null)
+        if (remindersResult.IsProblem)
         {
-            return remindersResult.Error;
+            return remindersResult.Problem!;
         }
 
         // 5. Create the response
@@ -122,15 +123,15 @@ public class OrderRequestService : IOrderRequestService
     /// The UTC timestamp to set as the creation time of the notification order.
     /// </param>
     /// <returns>
-    /// A <see cref="Result{TValue,TError}"/> containing either:
+    /// A <see cref="Result{T}"/> containing either:
     /// <list type="bullet">
     /// <item>
-    /// <description>A successful result with <see cref="Result{TValue,TError}.Value"/> containing the fully configured
+    /// <description>A successful result with <see cref="Result{T}.Value"/> containing the fully configured
     /// <see cref="NotificationOrder"/> ready for persistence and processing</description>
     /// </item>
     /// <item>
-    /// <description>A failed result with <see cref="Result{TValue,TError}.Error"/> containing a
-    /// <see cref="ServiceError"/> with status code and detailed error message about the failure reason</description>
+    /// <description>A failed result with <see cref="Result{T}.Problem"/> containing a
+    /// <see cref="ProblemInstance"/> with error code and detailed error message about the failure reason</description>
     /// </item>
     /// </list>
     /// </returns>
@@ -143,7 +144,7 @@ public class OrderRequestService : IOrderRequestService
     /// <item><description>Constructs a complete notification order with all required properties</description></item>
     /// </list>
     /// </remarks>
-    private async Task<Result<NotificationOrder, ServiceError>> CreateMainNotificationOrderAsync(NotificationOrderChainRequest orderRequest, DateTime currentTime)
+    private async Task<Result<NotificationOrder>> CreateMainNotificationOrderAsync(NotificationOrderChainRequest orderRequest, DateTime currentTime)
     {
         var (recipients, templates, channel, ignoreReservation, resourceId, sendingTimePolicyForSms) = ExtractDeliveryComponents(orderRequest.Recipient);
 
@@ -151,7 +152,7 @@ public class OrderRequestService : IOrderRequestService
 
         if (lookupResult?.MissingContact?.Count > 0)
         {
-            return new ServiceError(422, $"Missing contact information for recipient(s): {string.Join(", ", lookupResult.MissingContact)}", "missing-contact-information");
+            return Problems.MissingContactInformation;
         }
 
         templates = SetSenderIfNotDefined(templates);
@@ -191,15 +192,15 @@ public class OrderRequestService : IOrderRequestService
     /// A token that can be used to request cancellation of the asynchronous operation.
     /// </param>
     /// <returns>
-    /// A <see cref="Result{TValue,TError}"/> containing either:
+    /// A <see cref="Result{T}"/> containing either:
     /// <list type="bullet">
     /// <item>
-    /// <description>A successful result with <see cref="Result{TValue,TError}.Value"/> containing a list of 
+    /// <description>A successful result with <see cref="Result{T}.Value"/> containing a list of
     /// fully configured <see cref="NotificationOrder"/> objects ready for persistence</description>
     /// </item>
     /// <item>
-    /// <description>A failed result with <see cref="Result{TValue,TError}.Error"/> containing a
-    /// <see cref="ServiceError"/> with details about what went wrong during reminder processing</description>
+    /// <description>A failed result with <see cref="Result{T}.Problem"/> containing a
+    /// <see cref="ProblemInstance"/> with details about what went wrong during reminder processing</description>
     /// </item>
     /// </list>
     /// </returns>
@@ -218,7 +219,7 @@ public class OrderRequestService : IOrderRequestService
     /// <exception cref="OperationCanceledException">
     /// Thrown when the operation is canceled through the provided <paramref name="cancellationToken"/>.
     /// </exception>
-    private async Task<Result<List<NotificationOrder>, ServiceError>> CreateReminderNotificationOrdersAsync(List<NotificationReminder>? notificationReminders, Creator creator, DateTime currentTime, CancellationToken cancellationToken)
+    private async Task<Result<List<NotificationOrder>>> CreateReminderNotificationOrdersAsync(List<NotificationReminder>? notificationReminders, Creator creator, DateTime currentTime, CancellationToken cancellationToken)
     {
         var reminders = new List<NotificationOrder>();
         if (notificationReminders is not { Count: > 0 })
@@ -236,7 +237,7 @@ public class OrderRequestService : IOrderRequestService
 
             if (lookupResult?.MissingContact?.Count > 0)
             {
-                return new ServiceError(422, $"Missing contact information for recipient(s): {string.Join(", ", lookupResult.MissingContact)}", "missing-contact-information");
+                return Problems.MissingContactInformation;
             }
 
             templates = SetSenderIfNotDefined(templates);
@@ -278,15 +279,15 @@ public class OrderRequestService : IOrderRequestService
     /// A token that can be used to request cancellation of the asynchronous database operation.
     /// </param>
     /// <returns>
-    /// A <see cref="Result{TValue,TError}"/> containing either:
+    /// A <see cref="Result{T}"/> containing either:
     /// <list type="bullet">
     /// <item>
-    /// <description>A successful result with <see cref="Result{TValue,TError}.Value"/> containing a 
+    /// <description>A successful result with <see cref="Result{T}.Value"/> containing a
     /// <see cref="NotificationOrderChainResponse"/> with the chain identifier and receipt information</description>
     /// </item>
     /// <item>
-    /// <description>A failed result with <see cref="Result{TValue,TError}.Error"/> containing a
-    /// <see cref="ServiceError"/> if persistence fails</description>
+    /// <description>A failed result with <see cref="Result{T}.Problem"/> containing a
+    /// <see cref="ProblemInstance"/> if persistence fails</description>
     /// </item>
     /// </list>
     /// </returns>
@@ -301,7 +302,7 @@ public class OrderRequestService : IOrderRequestService
     /// <exception cref="OperationCanceledException">
     /// Thrown when the operation is canceled through the provided <paramref name="cancellationToken"/>.
     /// </exception>
-    private async Task<Result<NotificationOrderChainResponse, ServiceError>> CreateChainResponseAsync(NotificationOrderChainRequest orderRequest, NotificationOrder? mainOrder, List<NotificationOrder>? reminderOrders, CancellationToken cancellationToken)
+    private async Task<Result<NotificationOrderChainResponse>> CreateChainResponseAsync(NotificationOrderChainRequest orderRequest, NotificationOrder? mainOrder, List<NotificationOrder>? reminderOrders, CancellationToken cancellationToken)
     {
         var savedOrders = new List<NotificationOrder>();
         if (mainOrder != null)
@@ -311,7 +312,7 @@ public class OrderRequestService : IOrderRequestService
 
         if (savedOrders == null || savedOrders.Count == 0)
         {
-            return new ServiceError(500, "Failed to create the notification order chain.", "order-chain-creation-failed");
+            return Problems.OrderChainCreationFailed;
         }
 
         // The first is the main shipment
