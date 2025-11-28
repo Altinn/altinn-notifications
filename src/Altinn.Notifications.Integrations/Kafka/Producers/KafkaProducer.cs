@@ -92,30 +92,20 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             .Build();
         var existingTopics = adminClient.GetMetadata(TimeSpan.FromSeconds(10)).Topics;
 
-        foreach (string topic in _settings.Admin.TopicList)
+        var topicsNotExisting = _settings.Admin.TopicList.Except(existingTopics.Select(t => t.Topic), StringComparer.OrdinalIgnoreCase);
+        foreach (string topic in topicsNotExisting)
         {
-            if (!existingTopics.Exists(t => t.Topic.Equals(topic, StringComparison.OrdinalIgnoreCase)))
-            {
-                try
+            adminClient.CreateTopicsAsync(
+            [
+                new()
                 {
-                    adminClient.CreateTopicsAsync(new TopicSpecification[]
-                    {
-                        new TopicSpecification()
-                        {
-                            Name = topic,
-                            NumPartitions = TopicSpecification.NumPartitions,
-                            ReplicationFactor = TopicSpecification.ReplicationFactor,
-                            Configs = TopicSpecification.Configs
-                        }
-                    }).Wait();
-                    _logger.LogInformation("// KafkaProducer // EnsureTopicsExists // Topic '{Topic}' created successfully.", topic);
+                    Name = topic,
+                    NumPartitions = TopicSpecification.NumPartitions,
+                    ReplicationFactor = TopicSpecification.ReplicationFactor,
+                    Configs = TopicSpecification.Configs
                 }
-                catch (CreateTopicsException ex)
-                {
-                    _logger.LogError(ex, "// KafkaProducer // EnsureTopicsExists // Failed to create topic '{Topic}'", topic);
-                    throw;
-                }
-            }
+            ]).Wait();
+            _logger.LogInformation("// KafkaProducer // EnsureTopicsExists // Topic '{Topic}' created successfully.", topic);           
         }
     }
 }

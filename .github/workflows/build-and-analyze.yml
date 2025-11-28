@@ -13,6 +13,9 @@ jobs:
   build-test-analyze:
     name: Build, test & analyze
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
     services:
       postgres: # note that updating this image might break the pipeline if the agent doesn't support the new version
         image: postgres:16@sha256:cf2a05fe40887b721e4b3dbac8fd32673c08292dcc8ba6b62b52b7f640433bd0
@@ -38,7 +41,7 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: 17
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
         with:
           fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
       - name: Install SonarCloud scanners
