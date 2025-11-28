@@ -690,6 +690,15 @@ public class OrderRequestServiceTests
         Assert.Equal("NOT-00001", result.Problem.ErrorCode.ToString()); // Problems.MissingContactInformation
         Assert.Equal(422, (int)result.Problem.StatusCode);
         Assert.Equal("Missing contact information for recipient(s)", result.Problem.Detail);
+
+        // Verify repository Create was not called when contact information is missing
+        orderRepositoryMock.Verify(
+            repo => repo.Create(
+                It.IsAny<NotificationOrderChainRequest>(),
+                It.IsAny<NotificationOrder>(),
+                It.IsAny<List<NotificationOrder>>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -777,6 +786,15 @@ public class OrderRequestServiceTests
         Assert.Equal("NOT-00001", result.Problem.ErrorCode.ToString()); // Problems.MissingContactInformation
         Assert.Equal(422, (int)result.Problem.StatusCode);
         Assert.Equal("Missing contact information for recipient(s)", result.Problem.Detail);
+
+        // Verify repository Create was not called when contact information is missing
+        orderRepositoryMock.Verify(
+            repo => repo.Create(
+                It.IsAny<NotificationOrderChainRequest>(),
+                It.IsAny<NotificationOrder>(),
+                It.IsAny<List<NotificationOrder>>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Theory]
@@ -1053,7 +1071,7 @@ public class OrderRequestServiceTests
                 It.Is<string?>(s => s == resourceId)),
             Times.Exactly(2));
 
-        // Verify contact point added the expected email address
+        // Verify contact point added the expected SMS contact
         contactPointServiceMock.Verify(
             cp => cp.AddPreferredContactPoints(
                 It.Is<NotificationChannel>(ch => ch == NotificationChannel.SmsPreferred),
@@ -1351,6 +1369,15 @@ public class OrderRequestServiceTests
                 It.Is<List<Recipient>>(r => r.Any(rec => rec.NationalIdentityNumber == "16069412345")),
                 It.Is<string?>(s => s == "urn:altinn:resource:sms-test")),
             Times.Once);
+
+        // Verify repository Create was not called when contact information is missing
+        orderRepositoryMock.Verify(
+            repo => repo.Create(
+                It.IsAny<NotificationOrderChainRequest>(),
+                It.IsAny<NotificationOrder>(),
+                It.IsAny<List<NotificationOrder>>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -1573,7 +1600,7 @@ public class OrderRequestServiceTests
     }
 
     [Fact]
-    public async Task CreateNotificationOrder_WithMissingContactInformation_ReturnsProblem()
+    public async Task RegisterNotificationOrderChain_WithMissingEmailContactInformation_ReturnsProblem()
     {
         // Arrange
         Guid orderId = Guid.NewGuid();
@@ -1604,10 +1631,11 @@ public class OrderRequestServiceTests
                 // Intentionally don't add any address info to simulate missing contact
             });
 
-        var service = GetTestService(null, contactPointMock.Object, orderId, currentTime);
+        Mock<IOrderRepository> orderRepositoryMock = new();
+        var service = GetTestService(orderRepositoryMock.Object, contactPointMock.Object, orderId, currentTime);
 
-        // Act & Assert
-        var response = await service.RegisterNotificationOrderChain(
+        // Act
+        var result = await service.RegisterNotificationOrderChain(
                 new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
                     .SetOrderId(orderId)
                     .SetRecipient(recipient)
@@ -1618,11 +1646,13 @@ public class OrderRequestServiceTests
                     .SetIdempotencyId("C0A3FABE-D65F-48A0-8745-5D4CC6EA7968")
                     .Build());
 
-        Assert.True(response.IsProblem);
-        Assert.NotNull(response.Problem);
-        Assert.Equal("NOT-00001", response.Problem.ErrorCode.ToString()); // Problems.MissingContactInformation
-        Assert.Equal(422, (int)response.Problem.StatusCode);
-        Assert.Equal("Missing contact information for recipient(s)", response.Problem.Detail);
+        // Assert
+        Assert.True(result.IsProblem);
+        Assert.NotNull(result.Problem);
+        Assert.NotNull(result.Problem);
+        Assert.Equal("NOT-00001", result.Problem.ErrorCode.ToString()); // Problems.MissingContactInformation
+        Assert.Equal(422, (int)result.Problem.StatusCode);
+        Assert.Equal("Missing contact information for recipient(s)", result.Problem.Detail);
 
         // Verify the contact point service was called
         contactPointMock.Verify(
@@ -1630,6 +1660,15 @@ public class OrderRequestServiceTests
                 It.Is<List<Recipient>>(r => r.Any(rec => rec.NationalIdentityNumber == "16069412345")),
                 It.Is<string?>(s => s == "urn:altinn:resource:test")),
             Times.Once);
+
+        // Verify repository Create was not called when contact information is missing
+        orderRepositoryMock.Verify(
+            repo => repo.Create(
+                It.IsAny<NotificationOrderChainRequest>(),
+                It.IsAny<NotificationOrder>(),
+                It.IsAny<List<NotificationOrder>>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     /// <summary>
