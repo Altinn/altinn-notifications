@@ -1,10 +1,23 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using System.Text.Json;
+
+using Altinn.Notifications.Core;
+using Altinn.Notifications.Core.Configuration;
+using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Integrations;
+using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Models.Status;
+using Altinn.Notifications.Core.Persistence;
+using Altinn.Notifications.Core.Services;
+using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.IntegrationTests.Utils;
+using Altinn.Notifications.Persistence.Repository;
 
 using Microsoft.Extensions.Hosting;
-
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+using Moq;
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.TestingConsumers;
@@ -59,6 +72,108 @@ public class PastDueOrdersConsumerTests : IDisposable
         Assert.Equal(1L, selectEmailNotificationCount);
     }
 
+    [Fact]
+    public async Task ProcessOrder_WithEmailRecipientNotIdentified_ShouldCreateStatusFeedEntry()
+    {
+        // Arrange
+        using var consumerService = CreateConsumerService();
+        (NotificationOrder order, _) = await SetupOrderWithFailedRecipient();
+
+        // Act
+        await consumerService.StartAsync(CancellationToken.None);
+        await KafkaUtil.PublishMessageOnTopic(_pastDueOrdersTopicName, order.Serialize());
+
+        // Assert
+        await AssertStatusFeedEntryCreated(order.Id, ProcessingLifecycle.Email_Failed_RecipientNotIdentified);
+        await consumerService.StopAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task ProcessOrder_WithSmsRecipientNotIdentified_ShouldCreateStatusFeedEntry()
+    {
+        // Arrange
+        using var consumerService = CreateConsumerService();
+        (NotificationOrder order, _) = await SetupOrderWithFailedSmsRecipient();
+
+        // Act
+        await consumerService.StartAsync(CancellationToken.None);
+        await KafkaUtil.PublishMessageOnTopic(_pastDueOrdersTopicName, order.Serialize());
+
+        // Assert
+        await AssertStatusFeedEntryCreated(order.Id, ProcessingLifecycle.SMS_Failed_RecipientNotIdentified);
+        await consumerService.StopAsync(CancellationToken.None);
+    }
+
+    private async Task<(NotificationOrder Order, SmsNotification Notification)> SetupOrderWithFailedSmsRecipient()
+    {
+        var (o, n) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(
+            sendersReference: _sendersRef,
+            simulateCronJob: true,
+            simulateConsumers: true);
+
+        await UpdateNotificationResult<SmsNotification>(o.Id, "Failed_RecipientNotIdentified");
+        return (o, n);
+    }
+
+    private PastDueOrdersConsumer CreateConsumerService()
+    {
+        var orderRepository = ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .OfType<OrderRepository>()
+            .First();
+
+        var orderProcessingService = new OrderProcessingService(
+            orderRepository,
+            new Mock<IEmailOrderProcessingService>().Object,
+            new Mock<ISmsOrderProcessingService>().Object,
+            new Mock<IPreferredChannelProcessingService>().Object,
+            null,
+            new Mock<IConditionClient>().Object,
+            new Mock<IKafkaProducer>().Object,
+            Options.Create(new KafkaSettings { PastDueOrdersTopicName = _pastDueOrdersTopicName }),
+            NullLogger<OrderProcessingService>.Instance);
+
+        return new PastDueOrdersConsumer(
+            new Mock<IKafkaProducer>().Object,
+            Options.Create(new Altinn.Notifications.Integrations.Configuration.KafkaSettings
+            {
+                PastDueOrdersTopicName = _pastDueOrdersTopicName,
+                BrokerAddress = "localhost:9092",
+                Admin = new Altinn.Notifications.Integrations.Configuration.AdminSettings
+                {
+                    TopicList = [_pastDueOrdersTopicName]
+                }
+            }),
+            NullLogger<PastDueOrdersConsumer>.Instance,
+            orderProcessingService);
+    }
+
+    private async Task<(NotificationOrder Order, EmailNotification Notification)> SetupOrderWithFailedRecipient()
+    {
+        var (o, n) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(
+            sendersReference: _sendersRef,
+            simulateCronJob: true,
+            simulateConsumers: true);
+
+        await UpdateNotificationResult<EmailNotification>(o.Id, "Failed_RecipientNotIdentified");
+        return (o, n);
+    }
+
+    private static async Task AssertStatusFeedEntryCreated(Guid orderId, ProcessingLifecycle expectedStatus)
+    {
+        await IntegrationTestUtil.EventuallyAsync(
+            async () =>
+            {
+                var statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(orderId);
+                return statusFeedCount == 1;
+            },
+            TimeSpan.FromSeconds(15));
+
+        var statusFeedEntry = await GetStatusFeedOrderStatus(orderId);
+        Assert.NotNull(statusFeedEntry);
+        Assert.Contains(statusFeedEntry.Recipients, x => x.Status == expectedStatus);
+    }
+
     public async void Dispose()
     {
         await Dispose(true);
@@ -88,5 +203,39 @@ public class PastDueOrdersConsumerTests : IDisposable
     {
         string sql = $"UPDATE notifications.orders SET processedstatus = '{orderProcessingStatus}' WHERE alternateid='{orderId}'";
         await PostgreUtil.RunSql(sql);
+    }
+
+    private static async Task UpdateNotificationResult<T>(Guid orderId, string result) 
+        where T : class
+    {
+        if (typeof(T) == typeof(SmsNotification))
+        {
+            string sql = $@"
+        UPDATE notifications.smsnotifications 
+        SET result = '{result}' 
+        WHERE _orderid = (SELECT _id FROM notifications.orders WHERE alternateid = '{orderId}')";
+            await PostgreUtil.RunSql(sql);
+        }
+
+        if (typeof(T) == typeof(EmailNotification))
+        {
+            string sql = $@"
+            UPDATE notifications.emailnotifications 
+            SET result = '{result}' 
+            WHERE _orderid = (SELECT _id FROM notifications.orders WHERE alternateid = '{orderId}')";
+            await PostgreUtil.RunSql(sql);
+        }
+    }
+
+    public static async Task<OrderStatus?> GetStatusFeedOrderStatus(Guid orderId)
+    {
+        var json = await PostgreUtil.GetStatusFeedOrderStatusJson(orderId);
+
+        if (string.IsNullOrEmpty(json))
+        {
+            return null;
+        }
+
+        return JsonSerializer.Deserialize<OrderStatus>(json, JsonSerializerOptionsProvider.Options);
     }
 }

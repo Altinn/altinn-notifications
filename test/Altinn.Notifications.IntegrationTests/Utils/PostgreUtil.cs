@@ -1,6 +1,8 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using Altinn.Notifications.Core;
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Extensions;
 using Altinn.Notifications.Persistence.Repository;
@@ -337,6 +339,22 @@ public static class PostgreUtil
 
         T result = reader.GetValue<T>(0);
         return result;
+    }
+
+    public static async Task<string?> GetStatusFeedOrderStatusJson(Guid orderId)
+    {
+        var sql = @"SELECT s.orderstatus::text 
+                    FROM notifications.statusfeed s
+                    INNER JOIN notifications.orders o ON o._id = s.orderid
+                    WHERE o.alternateid = @orderId
+                    LIMIT 1";
+
+        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
+        await using NpgsqlCommand pgcom = dataSource.CreateCommand(sql);
+        pgcom.Parameters.AddWithValue("orderId", orderId);
+
+        var result = await pgcom.ExecuteScalarAsync();
+        return result?.ToString();
     }
 
     public static async Task RunSql(string query)
