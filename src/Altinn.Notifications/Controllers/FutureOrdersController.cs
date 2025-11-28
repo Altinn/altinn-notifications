@@ -94,11 +94,6 @@ public class FutureOrdersController : ControllerBase
 
             return Created(result.Value!.OrderChainId.GetSelfLinkFromOrderChainId(), result.Value.MapToNotificationOrderChainResponseExt());
         }
-        catch (InvalidOperationException)
-        {
-            var problemDetails = Problems.InvalidNotificationOrder.ToProblemDetails();
-            return StatusCode(problemDetails.Status!.Value, problemDetails);
-        }
         catch (OperationCanceledException)
         {
             var problemDetails = Problems.RequestTerminated.ToProblemDetails();

@@ -59,7 +59,7 @@ public class InstantOrderRequestService : IInstantOrderRequestService
     }
 
     /// <inheritdoc/>
-    public async Task<InstantNotificationOrderTracking?> PersistInstantSmsNotificationAsync(InstantNotificationOrder instantNotificationOrder, CancellationToken cancellationToken = default)
+    public async Task<InstantNotificationOrderTracking> PersistInstantSmsNotificationAsync(InstantNotificationOrder instantNotificationOrder, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -100,7 +100,7 @@ public class InstantOrderRequestService : IInstantOrderRequestService
     }
 
     /// <inheritdoc/>
-    public async Task<InstantNotificationOrderTracking?> PersistInstantSmsNotificationAsync(InstantSmsNotificationOrder instantSmsNotificationOrder, CancellationToken cancellationToken = default)
+    public async Task<InstantNotificationOrderTracking> PersistInstantSmsNotificationAsync(InstantSmsNotificationOrder instantSmsNotificationOrder, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -239,7 +239,7 @@ public class InstantOrderRequestService : IInstantOrderRequestService
     }
 
     /// <inheritdoc/>
-    public async Task<InstantNotificationOrderTracking?> PersistInstantEmailNotificationAsync(InstantEmailNotificationOrder instantEmailNotificationOrder, CancellationToken cancellationToken = default)
+    public async Task<InstantNotificationOrderTracking> PersistInstantEmailNotificationAsync(InstantEmailNotificationOrder instantEmailNotificationOrder, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 

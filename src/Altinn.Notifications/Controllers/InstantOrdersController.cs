@@ -78,7 +78,6 @@ public class InstantOrdersController : ControllerBase
             validator: _validator,
             mapToOrder: (req, creator, timestamp) => req.MapToInstantNotificationOrder(creator, timestamp),
             persistOrder: _instantOrderRequestService.PersistInstantSmsNotificationAsync,
-            notificationChannel: NotificationChannel.Sms,
             cancellationToken: cancellationToken);
     }
 
@@ -106,7 +105,6 @@ public class InstantOrdersController : ControllerBase
             validator: _smsValidator,
             mapToOrder: (req, creator, timestamp) => req.MapToInstantSmsNotificationOrder(creator, timestamp),
             persistOrder: _instantOrderRequestService.PersistInstantSmsNotificationAsync,
-            notificationChannel: NotificationChannel.Sms,
             cancellationToken: cancellationToken);
     }
 
@@ -134,7 +132,6 @@ public class InstantOrdersController : ControllerBase
             validator: _emailValidator,
             mapToOrder: (req, creator, timestamp) => req.MapToInstantEmailNotificationOrder(creator, timestamp),
             persistOrder: _instantOrderRequestService.PersistInstantEmailNotificationAsync,
-            notificationChannel: NotificationChannel.Email,
             cancellationToken: cancellationToken);
     }
 
@@ -146,8 +143,7 @@ public class InstantOrdersController : ControllerBase
         string idempotencyId,
         IValidator<TRequest> validator,
         Func<TRequest, string, DateTime, TOrder> mapToOrder,
-        Func<TOrder, CancellationToken, Task<InstantNotificationOrderTracking?>> persistOrder,
-        NotificationChannel notificationChannel,
+        Func<TOrder, CancellationToken, Task<InstantNotificationOrderTracking>> persistOrder,
         CancellationToken cancellationToken)
         where TRequest : class
     {
@@ -178,22 +174,8 @@ public class InstantOrdersController : ControllerBase
             var instantOrder = mapToOrder(request, creator, _dateTimeService.UtcNow());
             trackingInformation = await persistOrder(instantOrder, cancellationToken);
 
-            if (trackingInformation == null)
-            {
-                var problemDescriptor = notificationChannel == NotificationChannel.Sms
-                    ? Problems.InstantSmsOrderFailed
-                    : Problems.InstantEmailOrderFailed;
-                var problemDetails = problemDescriptor.ToProblemDetails();
-                return StatusCode(problemDetails.Status!.Value, problemDetails);
-            }
-
             // 5. Return tracking information and location header.
             return Created(trackingInformation.OrderChainId.GetSelfLinkFromOrderChainId(), trackingInformation.MapToInstantNotificationOrderResponse());
-        }
-        catch (InvalidOperationException)
-        {
-            var problemDetails = Problems.InvalidNotificationOrder.ToProblemDetails();
-            return StatusCode(problemDetails.Status!.Value, problemDetails);
         }
         catch (OperationCanceledException)
         {
