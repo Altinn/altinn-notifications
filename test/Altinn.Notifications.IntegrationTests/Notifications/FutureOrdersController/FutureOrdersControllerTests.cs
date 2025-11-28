@@ -610,7 +610,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
 
         Assert.NotNull(problemDetails);
         Assert.Equal(499, objectResult.StatusCode);
-        Assert.Equal("NOT-00004", problemDetails.ErrorCode.ToString()); // Problems.RequestTerminated
+        Assert.Equal("NOT-00002", problemDetails.ErrorCode.ToString()); // Problems.RequestTerminated
         Assert.Equal(objectResult.StatusCode, problemDetails.Status);
         Assert.Contains("client disconnected", problemDetails.Detail, StringComparison.OrdinalIgnoreCase);
     }
@@ -677,7 +677,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
 
         Assert.NotNull(problemDetails);
         Assert.Equal(499, objectResult.StatusCode);
-        Assert.Equal("NOT-00004", problemDetails.ErrorCode.ToString()); // Problems.RequestTerminated
+        Assert.Equal("NOT-00002", problemDetails.ErrorCode.ToString()); // Problems.RequestTerminated
         Assert.Equal(objectResult.StatusCode, problemDetails.Status);
     }
 
@@ -796,58 +796,6 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         // Assert
         orderServiceMock.Verify(s => s.RetrieveOrderChainTracking(It.IsAny<string>(), It.IsAny<string>(), cancellationToken), Times.Once);
         orderServiceMock.Verify(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), cancellationToken), Times.Once);
-    }
-
-    [Fact]
-    public async Task Post_BuildThrowsInvalidOperationException_ReturnsInternalServerErrorWithProblemDetails()
-    {
-        // Arrange
-        var request = new NotificationOrderChainRequestExt
-        {
-            // Setting the IdempotencyId to empty string intentionally to create a scenario where the validator passes but mapping fails.
-            IdempotencyId = string.Empty,
-            Recipient = new NotificationRecipientExt
-            {
-                RecipientEmail = new RecipientEmailExt
-                {
-                    EmailAddress = "test@example.com",
-                    Settings = new EmailSendingOptionsExt
-                    {
-                        Body = "Test body",
-                        Subject = "Test subject"
-                    }
-                }
-            }
-        };
-
-        var validatorMock = new Mock<IValidator<NotificationOrderChainRequestExt>>();
-        validatorMock.Setup(v => v.Validate(It.IsAny<NotificationOrderChainRequestExt>()))
-            .Returns(new ValidationResult()); // Return valid result to bypass validation
-
-        var orderServiceMock = new Mock<IOrderRequestService>();
-
-        var httpContext = new DefaultHttpContext();
-        httpContext.Items["Org"] = "ttd";
-
-        var controller = new FutureOrdersController(orderServiceMock.Object, validatorMock.Object)
-        {
-            ControllerContext = new ControllerContext { HttpContext = httpContext }
-        };
-
-        // Act
-        var result = await controller.Post(request);
-
-        // Assert
-        var objectResult = Assert.IsType<ObjectResult>(result.Result);
-        var problemDetails = Assert.IsType<AltinnProblemDetails>(objectResult.Value);
-
-        Assert.NotNull(problemDetails);
-        Assert.Equal(500, objectResult.StatusCode);
-        Assert.Equal("NOT-00003", problemDetails.ErrorCode.ToString()); // Problems.InvalidNotificationOrder
-        Assert.Equal(objectResult.StatusCode, problemDetails.Status);
-        Assert.Equal("Notification order is incomplete or invalid", problemDetails.Detail);
-
-        orderServiceMock.Verify(s => s.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     /// <summary>

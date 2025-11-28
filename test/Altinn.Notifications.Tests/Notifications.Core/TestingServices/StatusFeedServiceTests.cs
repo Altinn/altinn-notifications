@@ -54,7 +54,7 @@ public class StatusFeedServiceTests
             }
                 ]);
 
-        var sut = new StatusFeedService(statusFeedRepository.Object, _options, NullLogger<StatusFeedService>.Instance);
+        var sut = new StatusFeedService(statusFeedRepository.Object, _options);
         long seq = 1;
 
         // Act
@@ -71,32 +71,6 @@ public class StatusFeedServiceTests
 
         var entry = Assert.Single(result.Value);
         Assert.Equal(1, entry.SequenceNumber);
-    }
-
-    [Fact]
-    public async Task GetStatusFeed_RepositoryThrowsException_ReturnsProblem()
-    {
-        // Arrange
-        Mock<IStatusFeedRepository> statusFeedRepository = new();
-        statusFeedRepository.Setup(x => x.GetStatusFeed(It.IsAny<long>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new Exception("Database error"));
-        var sut = new StatusFeedService(statusFeedRepository.Object, _options, NullLogger<StatusFeedService>.Instance);
-        long seq = 1;
-        string creatorName = "ttd";
-        
-        // Act
-        var result = await sut.GetStatusFeed(seq, null, creatorName, CancellationToken.None);
-        
-        // Assert
-        statusFeedRepository.Verify(
-            x => x.GetStatusFeed(seq, creatorName, _maxPageSize, It.IsAny<CancellationToken>()),
-            Times.Once);
-
-        Assert.True(result.IsProblem);
-        Assert.NotNull(result.Problem);
-        Assert.Equal("NOT-00008", result.Problem.ErrorCode.ToString()); // Problems.StatusFeedRetrievalFailed
-        Assert.Equal(500, (int)result.Problem.StatusCode);
-        Assert.Equal("Failed to retrieve status feed", result.Problem.Detail);
     }
 
     [Theory]
@@ -119,7 +93,7 @@ public class StatusFeedServiceTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedStatusFeedEntries);
 
-        var sut = new StatusFeedService(mockRepository.Object, _options, NullLogger<StatusFeedService>.Instance);
+        var sut = new StatusFeedService(mockRepository.Object, _options);
 
         int expected = CalculateExpectedPageSize(pageSize);
 
@@ -175,7 +149,7 @@ public class StatusFeedServiceTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedStatusFeedEntries);
         
-        var sut = new StatusFeedService(mockRepository.Object, _options, NullLogger<StatusFeedService>.Instance);
+        var sut = new StatusFeedService(mockRepository.Object, _options);
         
         // Act
         var result = await sut.GetStatusFeed(seq, requestedPageSize, _creatorName, CancellationToken.None);

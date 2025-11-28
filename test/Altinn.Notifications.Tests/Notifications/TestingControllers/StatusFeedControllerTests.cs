@@ -122,26 +122,7 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
             var statusCodeResult = Assert.IsType<ObjectResult>(result.Result);
             Assert.Equal(499, statusCodeResult.StatusCode);
             var problemDetails = Assert.IsType<AltinnProblemDetails>(statusCodeResult.Value);
-            Assert.Equal("NOT-00004", problemDetails.ErrorCode.ToString()); // Problems.RequestTerminated
-            Assert.Equal(statusCodeResult.StatusCode, problemDetails.Status);
-        }
-
-        [Fact]
-        public async Task Get_WhenServiceReturnsError_CorrectStatusCodeIsReturned()
-        {
-            // Arrange
-            _statusFeedService.Setup(x => x.GetStatusFeed(It.IsAny<long>(), It.IsAny<int?>(), It.IsAny<string>(), CancellationToken.None))
-                .ReturnsAsync(Problems.StatusFeedRetrievalFailed);
-
-            // Act
-            var result = await _sut.GetStatusFeed(new GetStatusFeedRequestExt { Seq = 1 });
-
-            // Assert
-            Assert.NotNull(result);
-            var statusCodeResult = Assert.IsType<ObjectResult>(result.Result);
-            Assert.Equal(500, statusCodeResult.StatusCode);
-            var problemDetails = Assert.IsType<AltinnProblemDetails>(statusCodeResult.Value);
-            Assert.Equal("NOT-00008", problemDetails.ErrorCode.ToString()); // Problems.StatusFeedRetrievalFailed
+            Assert.Equal("NOT-00002", problemDetails.ErrorCode.ToString()); // Problems.RequestTerminated
             Assert.Equal(statusCodeResult.StatusCode, problemDetails.Status);
         }
     }

@@ -332,7 +332,7 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         var problemDetails = JsonSerializer.Deserialize<AltinnProblemDetails>(content, _options);
         
         Assert.NotNull(problemDetails);
-        Assert.Equal("NOT-00007", problemDetails.ErrorCode.ToString()); // Problems.ShipmentNotFound
+        Assert.Equal("NOT-00003", problemDetails.ErrorCode.ToString()); // Problems.ShipmentNotFound
         Assert.Equal((int)response.StatusCode, problemDetails.Status);
         Assert.Equal("Shipment not found", problemDetails.Detail);
     }
@@ -367,7 +367,7 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         var problemDetails = JsonSerializer.Deserialize<AltinnProblemDetails>(content, _options);
         
         Assert.NotNull(problemDetails);
-        Assert.Equal("NOT-00004", problemDetails.ErrorCode.ToString()); // Problems.RequestTerminated
+        Assert.Equal("NOT-00002", problemDetails.ErrorCode.ToString()); // Problems.RequestTerminated
         Assert.Equal((int)response.StatusCode, problemDetails.Status);
         Assert.Contains("client disconnected", problemDetails.Detail, StringComparison.OrdinalIgnoreCase);
     }

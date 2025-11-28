@@ -1204,56 +1204,6 @@ public class OrderRequestServiceTests
     }
 
     [Fact]
-    public async Task RegisterNotificationOrderChain_RepositoryReturnsEmptyList_ReturnsProblem()
-    {
-        // Arrange
-        Guid orderId = Guid.NewGuid();
-        Guid orderChainId = Guid.NewGuid();
-        DateTime currentTime = DateTime.UtcNow;
-
-        var orderRequest = new NotificationOrderChainRequest.NotificationOrderChainRequestBuilder()
-            .SetOrderId(orderId)
-            .SetOrderChainId(orderChainId)
-            .SetCreator(new Creator("test"))
-            .SetType(OrderType.Notification)
-            .SetIdempotencyId("test-idempotency-id")
-            .SetRecipient(new NotificationRecipient
-            {
-                RecipientEmail = new RecipientEmail
-                {
-                    EmailAddress = "recipient@example.com",
-                    Settings = new EmailSendingOptions
-                    {
-                        Body = "Test body",
-                        Subject = "Test subject",
-                        ContentType = EmailContentType.Plain
-                    }
-                }
-            })
-            .Build();
-
-        // Setup repository to return an empty list
-        var repoMock = new Mock<IOrderRepository>();
-        repoMock
-            .Setup(r => r.Create(It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId), It.Is<NotificationOrder>(e => e.Id == orderId), It.IsAny<List<NotificationOrder>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync([]);
-
-        var service = GetTestService(repoMock.Object, null, orderId, currentTime);
-
-        // Act & Assert
-        var result = await service.RegisterNotificationOrderChain(orderRequest);
-
-        Assert.True(result.IsProblem);
-        Assert.NotNull(result.Problem);
-        Assert.Equal("NOT-00002", result.Problem.ErrorCode.ToString()); // Problems.OrderChainCreationFailed
-        Assert.Equal(500, (int)result.Problem.StatusCode);
-        Assert.Equal("Failed to create the notification order chain", result.Problem.Detail);
-
-        // Verify the repository was called
-        repoMock.Verify(r => r.Create(It.Is<NotificationOrderChainRequest>(e => e.OrderChainId == orderChainId), It.Is<NotificationOrder>(e => e.Id == orderId), It.IsAny<List<NotificationOrder>>(), It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
     public async Task RegisterNotificationOrderChain_WhenCancellationRequested_ThrowsOperationCanceledException()
     {
         // Arrange

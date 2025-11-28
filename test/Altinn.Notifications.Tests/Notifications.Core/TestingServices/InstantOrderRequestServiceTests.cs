@@ -692,60 +692,6 @@ public class InstantOrderRequestServiceTests
         instantEmailServiceClient.Verify(e => e.SendAsync(It.IsAny<InstantEmail>()), Times.Once);
     }
 
-    [Fact]
-    public async Task PersistInstantEmailNotificationAsync_WhenRepositoryCreateFails_ReturnsNull()
-    {
-        // Arrange
-        var emailOrderId = Guid.NewGuid();
-        var orderCreationDateTime = DateTime.UtcNow;
-
-        var guidServiceMock = new Mock<IGuidService>();
-        guidServiceMock.Setup(e => e.NewGuid()).Returns(emailOrderId);
-        var dateTimeServiceMock = new Mock<IDateTimeService>();
-        dateTimeServiceMock.Setup(e => e.UtcNow()).Returns(orderCreationDateTime);
-        var orderRepositoryMock = new Mock<IOrderRepository>();
-        orderRepositoryMock
-            .Setup(e => e.Create(It.IsAny<InstantEmailNotificationOrder>(), It.IsAny<NotificationOrder>(), It.IsAny<EmailNotification>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((InstantNotificationOrderTracking?)null);
-        var instantEmailServiceClient = new Mock<IInstantEmailServiceClient>();
-
-        var service = GetTestService(
-            guidService: guidServiceMock.Object,
-            dateTimeService: dateTimeServiceMock.Object,
-            orderRepository: orderRepositoryMock.Object,
-            instantEmailServiceClient: instantEmailServiceClient.Object);
-
-        var emailOrder = new InstantEmailNotificationOrder
-        {
-            Creator = new Creator("test-org"),
-            Created = orderCreationDateTime,
-            IdempotencyId = "email-idempotency-id",
-            OrderChainId = Guid.NewGuid(),
-            OrderId = emailOrderId,
-            SendersReference = "email-test-reference",
-            InstantEmailDetails = new InstantEmailDetails
-            {
-                EmailAddress = "test@example.com",
-                EmailContent = new InstantEmailContent
-                {
-                    FromAddress = "sender@example.com",
-                    Subject = "Test Subject",
-                    Body = "Test email body content",
-                    ContentType = Altinn.Notifications.Core.Enums.EmailContentType.Plain
-                }
-            }
-        };
-
-        // Act
-        var result = await service.PersistInstantEmailNotificationAsync(emailOrder, CancellationToken.None);
-
-        // Assert
-        Assert.Null(result);
-
-        // Verify email service was NOT called when repository fails
-        instantEmailServiceClient.Verify(e => e.SendAsync(It.IsAny<InstantEmail>()), Times.Never);
-    }
-
     [Theory]
     [InlineData("")]
     [InlineData(null)]

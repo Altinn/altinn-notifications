@@ -113,7 +113,7 @@ public class InstantSmsOrdersControllerTests : IClassFixture<IntegrationTestWebA
         Assert.Equal(499, (int)response.StatusCode);
 
         Assert.NotNull(problem);
-        Assert.Equal("NOT-00004", problem.ErrorCode.ToString()); // Problems.RequestTerminated
+        Assert.Equal("NOT-00002", problem.ErrorCode.ToString()); // Problems.RequestTerminated
         Assert.Equal((int)response.StatusCode, problem.Status);
 
         dateTimeServiceMock.Verify(e => e.UtcNow(), Times.Once);
@@ -224,9 +224,6 @@ public class InstantSmsOrdersControllerTests : IClassFixture<IntegrationTestWebA
         validatorMock.Setup(e => e.Validate(It.IsAny<InstantSmsNotificationOrderRequestExt>())).Returns(new ValidationResult());
 
         var orderRequestServiceMock = new Mock<IInstantOrderRequestService>();
-        orderRequestServiceMock
-            .Setup(e => e.PersistInstantSmsNotificationAsync(It.IsAny<InstantSmsNotificationOrder>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((InstantNotificationOrderTracking?)null);
 
         var client = GetTestClient(
             validator: validatorMock.Object,
@@ -288,10 +285,6 @@ public class InstantSmsOrdersControllerTests : IClassFixture<IntegrationTestWebA
             .Setup(e => e.RetrieveTrackingInformation(CreatorShortName, ValidIdempotencyId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(trackingInfo);
 
-        orderRequestServiceMock
-            .Setup(e => e.PersistInstantSmsNotificationAsync(It.IsAny<InstantSmsNotificationOrder>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((InstantNotificationOrderTracking?)null);
-
         var validatorMock = new Mock<IValidator<InstantSmsNotificationOrderRequestExt>>();
         validatorMock.Setup(e => e.Validate(It.IsAny<InstantSmsNotificationOrderRequestExt>())).Returns(new ValidationResult());
 
@@ -324,71 +317,6 @@ public class InstantSmsOrdersControllerTests : IClassFixture<IntegrationTestWebA
 
         dateTimeServiceMock.Verify(e => e.UtcNow(), Times.Never);
         orderRequestServiceMock.Verify(e => e.PersistInstantSmsNotificationAsync(It.IsAny<InstantSmsNotificationOrder>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task Post_WhenOrderRegistrationFails_ReturnsInternalServerErrorWithProblemDetails()
-    {
-        // Arrange
-        var request = new InstantSmsNotificationOrderRequestExt
-        {
-            IdempotencyId = ValidIdempotencyId,
-            SendersReference = ValidSendersReference,
-            RecipientSms = new ShortMessageDeliveryDetailsExt
-            {
-                PhoneNumber = ValidPhoneNumber,
-                TimeToLiveInSeconds = ValidTimeToLive,
-                ShortMessageContent = new ShortMessageContentExt
-                {
-                    Body = ValidMessageBody,
-                    Sender = SenderIdentifier
-                }
-            }
-        };
-
-        var dateTimeServiceMock = new Mock<IDateTimeService>();
-        dateTimeServiceMock.Setup(e => e.UtcNow()).Returns(DateTime.UtcNow);
-
-        var orderRequestServiceMock = new Mock<IInstantOrderRequestService>();
-        orderRequestServiceMock
-            .Setup(e => e.RetrieveTrackingInformation(CreatorShortName, ValidIdempotencyId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((InstantNotificationOrderTracking?)null);
-
-        orderRequestServiceMock
-            .Setup(e => e.PersistInstantSmsNotificationAsync(It.IsAny<InstantSmsNotificationOrder>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((InstantNotificationOrderTracking?)null);
-
-        var validatorMock = new Mock<IValidator<InstantSmsNotificationOrderRequestExt>>();
-        validatorMock.Setup(e => e.Validate(It.IsAny<InstantSmsNotificationOrderRequestExt>())).Returns(new ValidationResult());
-
-        var client = GetTestClient(
-            validator: validatorMock.Object,
-            dateTimeService: dateTimeServiceMock.Object,
-            instantOrderRequestService: orderRequestServiceMock.Object);
-
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PrincipalUtil.GetOrgToken(CreatorShortName, scope: NotificationCreationScope));
-
-        var requestSerialized = JsonSerializer.Serialize(request);
-        using var content = new StringContent(requestSerialized, Encoding.UTF8, "application/json");
-
-        // Act
-        var response = await client.PostAsync(BasePath, content);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
-
-        var responseContent = await response.Content.ReadAsStringAsync();
-        var problem = JsonSerializer.Deserialize<AltinnProblemDetails>(responseContent, _options);
-
-        Assert.NotNull(problem);
-        Assert.Equal("NOT-00005", problem.ErrorCode.ToString()); // Problems.InstantSmsOrderFailed
-        Assert.Equal((int)response.StatusCode, problem.Status);
-        Assert.Equal("An internal server error occurred while processing the sms notification order", problem.Detail);
-
-        dateTimeServiceMock.Verify(e => e.UtcNow(), Times.Once);
-        validatorMock.Verify(e => e.Validate(It.IsAny<InstantSmsNotificationOrderRequestExt>()), Times.Once);
-        orderRequestServiceMock.Verify(e => e.RetrieveTrackingInformation(CreatorShortName, ValidIdempotencyId, It.IsAny<CancellationToken>()), Times.Once);
-        orderRequestServiceMock.Verify(e => e.PersistInstantSmsNotificationAsync(It.IsAny<InstantSmsNotificationOrder>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Theory]
@@ -436,14 +364,6 @@ public class InstantSmsOrdersControllerTests : IClassFixture<IntegrationTestWebA
         });
 
         var orderRequestServiceMock = new Mock<IInstantOrderRequestService>();
-
-        orderRequestServiceMock
-            .Setup(s => s.RetrieveTrackingInformation(CreatorShortName, ValidIdempotencyId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((InstantNotificationOrderTracking?)null);
-
-        orderRequestServiceMock
-            .Setup(s => s.PersistInstantSmsNotificationAsync(It.IsAny<InstantSmsNotificationOrder>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((InstantNotificationOrderTracking?)null);
 
         var client = GetTestClient(
             validator: validatorMock.Object,
