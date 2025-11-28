@@ -354,8 +354,14 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
 
         // Assert
         Assert.Equal((HttpStatusCode)499, response.StatusCode); // 499 Client Closed Request
+        
         string content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("client disconnected", content, StringComparison.OrdinalIgnoreCase);
+        var problemDetails = JsonSerializer.Deserialize<AltinnProblemDetails>(content, _options);
+        
+        Assert.NotNull(problemDetails);
+        Assert.Equal("NOT-00004", problemDetails.ErrorCode.ToString()); // Problems.RequestTerminated
+        Assert.Equal(499, problemDetails.Status);
+        Assert.Contains("client disconnected", problemDetails.Detail, StringComparison.OrdinalIgnoreCase);
     }
 
     private HttpClient GetTestClient(INotificationDeliveryManifestService? service = null)

@@ -94,7 +94,7 @@ public class StatusFeedServiceTests
 
         Assert.True(result.IsProblem);
         Assert.NotNull(result.Problem);
-        Assert.Equal("NOT-00008", result.Problem.ErrorCode.ToString());
+        Assert.Equal("NOT-00008", result.Problem.ErrorCode.ToString()); // Problems.StatusFeedRetrievalFailed
         Assert.Equal(500, (int)result.Problem.StatusCode);
         Assert.Equal("Failed to retrieve status feed", result.Problem.Detail);
     }

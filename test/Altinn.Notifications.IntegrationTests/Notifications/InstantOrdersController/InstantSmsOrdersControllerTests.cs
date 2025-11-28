@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Altinn.Authorization.ProblemDetails;
 using Altinn.Common.AccessToken.Services;
+using Altinn.Notifications.Core.Errors;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Models.Orders;
@@ -106,12 +107,13 @@ public class InstantSmsOrdersControllerTests : IClassFixture<IntegrationTestWebA
         // Act
         var response = await client.PostAsync(BasePath, requestContent);
         var responseContent = await response.Content.ReadAsStringAsync();
-        var problem = JsonSerializer.Deserialize<ProblemDetails>(responseContent, _options);
+        var problem = JsonSerializer.Deserialize<AltinnProblemDetails>(responseContent, _options);
 
         // Assert
         Assert.Equal(499, (int)response.StatusCode);
 
         Assert.NotNull(problem);
+        Assert.Equal("NOT-00004", problem.ErrorCode.ToString()); // Problems.RequestTerminated
         Assert.Equal(499, problem.Status);
 
         dateTimeServiceMock.Verify(e => e.UtcNow(), Times.Once);
@@ -379,7 +381,7 @@ public class InstantSmsOrdersControllerTests : IClassFixture<IntegrationTestWebA
         var problem = JsonSerializer.Deserialize<AltinnProblemDetails>(responseContent, _options);
 
         Assert.NotNull(problem);
-        Assert.Equal("NOT-00005", problem.ErrorCode.ToString());
+        Assert.Equal("NOT-00005", problem.ErrorCode.ToString()); // Problems.InstantSmsOrderFailed
         Assert.Equal(500, problem.Status);
         Assert.Equal("An internal server error occurred while processing the sms notification order", problem.Detail);
 

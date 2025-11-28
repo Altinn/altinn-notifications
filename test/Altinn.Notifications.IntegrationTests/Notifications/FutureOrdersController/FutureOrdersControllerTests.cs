@@ -609,7 +609,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var problemDetails = Assert.IsType<AltinnProblemDetails>(objectResult.Value);
 
         Assert.NotNull(problemDetails);
-        Assert.Equal("NOT-00004", problemDetails.ErrorCode.ToString());
+        Assert.Equal("NOT-00004", problemDetails.ErrorCode.ToString()); // Problems.RequestTerminated
         Assert.Equal(499, problemDetails.Status);
         Assert.Contains("client disconnected", problemDetails.Detail, StringComparison.OrdinalIgnoreCase);
     }
@@ -639,7 +639,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var objectResult = Assert.IsType<ObjectResult>(result.Result);
         var problemDetails = Assert.IsType<AltinnProblemDetails>(objectResult.Value);
         Assert.NotNull(problemDetails);
-        Assert.Equal("NOT-00001", problemDetails.ErrorCode.ToString());
+        Assert.Equal("NOT-00001", problemDetails.ErrorCode.ToString()); // Problems.MissingContactInformation
         Assert.Equal(422, problemDetails.Status);
         Assert.Equal("Missing contact information for recipient(s)", problemDetails.Detail);
     }
@@ -674,7 +674,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var problemDetails = Assert.IsType<AltinnProblemDetails>(objectResult.Value);
 
         Assert.NotNull(problemDetails);
-        Assert.Equal("NOT-00004", problemDetails.ErrorCode.ToString());
+        Assert.Equal("NOT-00004", problemDetails.ErrorCode.ToString()); // Problems.RequestTerminated
         Assert.Equal(499, problemDetails.Status);
     }
 
@@ -839,7 +839,7 @@ public class FutureOrdersControllerTests : IClassFixture<IntegrationTestWebAppli
         var problemDetails = Assert.IsType<AltinnProblemDetails>(objectResult.Value);
 
         Assert.NotNull(problemDetails);
-        Assert.Equal("NOT-00003", problemDetails.ErrorCode.ToString());
+        Assert.Equal("NOT-00003", problemDetails.ErrorCode.ToString()); // Problems.InvalidNotificationOrder
         Assert.Equal(500, problemDetails.Status);
         Assert.Equal("Notification order is incomplete or invalid", problemDetails.Detail);
 

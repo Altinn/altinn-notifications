@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Altinn.Authorization.ProblemDetails;
 using Altinn.Common.AccessToken.Services;
+using Altinn.Notifications.Core.Errors;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Models.Orders;
@@ -116,7 +117,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
         Assert.Equal(499, (int)response.StatusCode);
 
         Assert.NotNull(problem);
-        Assert.Equal("NOT-00004", problem.ErrorCode.ToString());
+        Assert.Equal("NOT-00004", problem.ErrorCode.ToString()); // Problems.RequestTerminated
         Assert.Equal(499, problem.Status);
         Assert.Contains("client disconnected", problem.Detail, StringComparison.OrdinalIgnoreCase);
 
@@ -399,7 +400,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
         var problem = JsonSerializer.Deserialize<AltinnProblemDetails>(responseContent, _options);
 
         Assert.NotNull(problem);
-        Assert.Equal("NOT-00005", problem.ErrorCode.ToString());
+        Assert.Equal("NOT-00005", problem.ErrorCode.ToString()); // Problems.InstantSmsOrderFailed
         Assert.Equal(500, problem.Status);
         Assert.Equal("An internal server error occurred while processing the sms notification order", problem.Detail);
 
@@ -465,7 +466,7 @@ public class InstantOrdersControllerTests : IClassFixture<IntegrationTestWebAppl
         Assert.Equal(500, (int)response.StatusCode);
 
         Assert.NotNull(problem);
-        Assert.Equal("NOT-00003", problem.ErrorCode.ToString());
+        Assert.Equal("NOT-00003", problem.ErrorCode.ToString()); // Problems.InvalidNotificationOrder
         Assert.Equal(500, problem.Status);
         Assert.Equal("Notification order is incomplete or invalid", problem.Detail);
 

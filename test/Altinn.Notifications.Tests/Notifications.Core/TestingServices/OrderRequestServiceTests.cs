@@ -687,7 +687,7 @@ public class OrderRequestServiceTests
         // Assert
         Assert.True(result.IsProblem);
         Assert.NotNull(result.Problem);
-        Assert.Equal("NOT-00001", result.Problem.ErrorCode.ToString());
+        Assert.Equal("NOT-00001", result.Problem.ErrorCode.ToString()); // Problems.MissingContactInformation
         Assert.Equal(422, (int)result.Problem.StatusCode);
         Assert.Equal("Missing contact information for recipient(s)", result.Problem.Detail);
     }
@@ -774,7 +774,7 @@ public class OrderRequestServiceTests
         // Assert
         Assert.True(result.IsProblem);
         Assert.NotNull(result.Problem);
-        Assert.Equal("NOT-00001", result.Problem.ErrorCode.ToString());
+        Assert.Equal("NOT-00001", result.Problem.ErrorCode.ToString()); // Problems.MissingContactInformation
         Assert.Equal(422, (int)result.Problem.StatusCode);
         Assert.Equal("Missing contact information for recipient(s)", result.Problem.Detail);
     }
@@ -1227,7 +1227,7 @@ public class OrderRequestServiceTests
 
         Assert.True(result.IsProblem);
         Assert.NotNull(result.Problem);
-        Assert.Equal("NOT-00002", result.Problem.ErrorCode.ToString());
+        Assert.Equal("NOT-00002", result.Problem.ErrorCode.ToString()); // Problems.OrderChainCreationFailed
         Assert.Equal(500, (int)result.Problem.StatusCode);
         Assert.Equal("Failed to create the notification order chain", result.Problem.Detail);
 
@@ -1341,7 +1341,7 @@ public class OrderRequestServiceTests
         // Assert
         Assert.True(result.IsProblem);
         Assert.NotNull(result.Problem);
-        Assert.Equal("NOT-00001", result.Problem.ErrorCode.ToString());
+        Assert.Equal("NOT-00001", result.Problem.ErrorCode.ToString()); // Problems.MissingContactInformation
         Assert.Equal(422, (int)result.Problem.StatusCode);
         Assert.Equal("Missing contact information for recipient(s)", result.Problem.Detail);
 
@@ -1620,7 +1620,7 @@ public class OrderRequestServiceTests
 
         Assert.True(response.IsProblem);
         Assert.NotNull(response.Problem);
-        Assert.Equal("NOT-00001", response.Problem.ErrorCode.ToString());
+        Assert.Equal("NOT-00001", response.Problem.ErrorCode.ToString()); // Problems.MissingContactInformation
         Assert.Equal(422, (int)response.Problem.StatusCode);
         Assert.Equal("Missing contact information for recipient(s)", response.Problem.Detail);
 

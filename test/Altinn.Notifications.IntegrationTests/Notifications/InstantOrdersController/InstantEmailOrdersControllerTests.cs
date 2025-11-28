@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using Altinn.Authorization.ProblemDetails;
 using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Errors;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Models;
@@ -383,7 +384,7 @@ public class InstantEmailOrdersControllerTests : IClassFixture<IntegrationTestWe
         var problem = JsonSerializer.Deserialize<AltinnProblemDetails>(responseContent, _options);
 
         Assert.NotNull(problem);
-        Assert.Equal("NOT-00006", problem.ErrorCode.ToString());
+        Assert.Equal("NOT-00006", problem.ErrorCode.ToString()); // Problems.InstantEmailOrderFailed
         Assert.Equal(500, problem.Status);
         Assert.Equal("An internal server error occurred while processing the email notification order", problem.Detail);
 

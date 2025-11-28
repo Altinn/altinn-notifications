@@ -140,7 +140,7 @@ public class FutureOrdersControllerTests
         var objectResult = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(422, objectResult.StatusCode);
         var problemDetails = Assert.IsType<AltinnProblemDetails>(objectResult.Value);
-        Assert.Equal("NOT-00001", problemDetails.ErrorCode.ToString());
+        Assert.Equal("NOT-00001", problemDetails.ErrorCode.ToString()); // Problems.MissingContactInformation
         Assert.Equal(422, problemDetails.Status);
     }
 }
