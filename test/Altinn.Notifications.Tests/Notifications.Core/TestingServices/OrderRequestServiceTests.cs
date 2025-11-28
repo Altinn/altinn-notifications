@@ -673,7 +673,7 @@ public class OrderRequestServiceTests
         var orderRepositoryMock = new Mock<IOrderRepository>();
         var contactPointServiceMock = new Mock<IContactPointService>();
         contactPointServiceMock
-            .Setup(contactService => contactService.AddEmailAndSmsContactPointsAsync(It.IsAny<List<Recipient>>(), It.IsAny<string?>()))
+            .Setup(contactService => contactService.AddEmailContactPoints(It.IsAny<List<Recipient>>(), It.IsAny<string?>()))
             .Callback<List<Recipient>, string?>((recipients, _) =>
             {
                 // no contact information
@@ -1648,7 +1648,6 @@ public class OrderRequestServiceTests
 
         // Assert
         Assert.True(result.IsProblem);
-        Assert.NotNull(result.Problem);
         Assert.NotNull(result.Problem);
         Assert.Equal("NOT-00001", result.Problem.ErrorCode.ToString()); // Problems.MissingContactInformation
         Assert.Equal(422, (int)result.Problem.StatusCode);

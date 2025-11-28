@@ -327,6 +327,14 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        
+        string content = await response.Content.ReadAsStringAsync();
+        var problemDetails = JsonSerializer.Deserialize<AltinnProblemDetails>(content, _options);
+        
+        Assert.NotNull(problemDetails);
+        Assert.Equal("NOT-00007", problemDetails.ErrorCode.ToString()); // Problems.ShipmentNotFound
+        Assert.Equal((int)response.StatusCode, problemDetails.Status);
+        Assert.Equal("Shipment not found", problemDetails.Detail);
     }
 
     [Fact]
