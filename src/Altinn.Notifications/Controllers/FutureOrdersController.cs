@@ -57,8 +57,8 @@ public class FutureOrdersController : ControllerBase
     [SwaggerResponse(201, "The notification order was created.", typeof(NotificationOrderChainResponseExt))]
     [SwaggerResponse(200, "The notification order was created previously.", typeof(NotificationOrderChainResponseExt))]
     [SwaggerResponse(400, "The notification order is invalid", typeof(ValidationProblemDetails))]
-    [SwaggerResponse(422, "The notification order is invalid", typeof(ValidationProblemDetails))]
-    [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request before the server could complete processing")]
+    [SwaggerResponse(422, "Missing contact information for one or more recipients", typeof(AltinnProblemDetails))]
+    [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request before the server could complete processing", typeof(AltinnProblemDetails))]
     public async Task<ActionResult<NotificationOrderChainResponseExt>> Post(NotificationOrderChainRequestExt notificationOrderRequest, CancellationToken cancellationToken = default)
     {
         try

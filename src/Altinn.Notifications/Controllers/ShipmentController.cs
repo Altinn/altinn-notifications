@@ -46,9 +46,9 @@ public class ShipmentController : ControllerBase
     [HttpGet]
     [Route("{id:guid}")]
     [Produces("application/json")]
-    [SwaggerResponse(404, "No shipment with the provided identifier was found")]
+    [SwaggerResponse(404, "No shipment with the provided identifier was found", typeof(AltinnProblemDetails))]
     [SwaggerResponse(200, "The shipment matching the provided identifier was retrieved successfully", typeof(NotificationDeliveryManifestExt))]
-    [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request")]
+    [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request", typeof(AltinnProblemDetails))]
     public async Task<ActionResult<NotificationDeliveryManifestExt>> GetById([FromRoute] Guid id, CancellationToken cancellationToken = default)
     {
         try
