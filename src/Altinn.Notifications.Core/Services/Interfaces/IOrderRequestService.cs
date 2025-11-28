@@ -26,9 +26,9 @@ public interface IOrderRequestService
     /// A token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.
     /// </param>
     /// <returns>
-    /// On success, a <see cref="Task{TResult}"/> containing a <see cref="NotificationOrderChainResponse"/> with
-    /// the generated order chain identifier and receipt information for both the main notification and any associated reminders.
-    /// On failure, a <see cref="ProblemInstance"/> indicating the reason for the failure.
+    /// A <see cref="Task{TResult}"/> containing a <see cref="Result{T}"/> with a <see cref="NotificationOrderChainResponse"/>
+    /// containing the generated order chain identifier and receipt information for both the main notification and any associated reminders.
+    /// If validation fails, returns a failed <see cref="Result{T}"/> with a <see cref="ProblemInstance"/> describing the validation error.
     /// </returns>
     /// <remarks>
     /// This method processes a chain of notifications, consisting of an initial notification and

@@ -98,14 +98,14 @@ public class OrderRequestService : IOrderRequestService
         var mainOrderResult = await CreateMainNotificationOrderAsync(orderRequest, currentTime);
         if (mainOrderResult.IsProblem)
         {
-            return mainOrderResult.Problem!;
+            return mainOrderResult.Problem;
         }
 
         // 4. Create reminders
         var remindersResult = await CreateReminderNotificationOrdersAsync(orderRequest.Reminders, orderRequest.Creator, currentTime, cancellationToken);
         if (remindersResult.IsProblem)
         {
-            return remindersResult.Problem!;
+            return remindersResult.Problem;
         }
 
         // 5. Create the response
@@ -279,17 +279,8 @@ public class OrderRequestService : IOrderRequestService
     /// A token that can be used to request cancellation of the asynchronous database operation.
     /// </param>
     /// <returns>
-    /// A <see cref="Result{T}"/> containing either:
-    /// <list type="bullet">
-    /// <item>
-    /// <description>A successful result with <see cref="Result{T}.Value"/> containing a
-    /// <see cref="NotificationOrderChainResponse"/> with the chain identifier and receipt information</description>
-    /// </item>
-    /// <item>
-    /// <description>A failed result with <see cref="Result{T}.Problem"/> containing a
-    /// <see cref="ProblemInstance"/> if persistence fails</description>
-    /// </item>
-    /// </list>
+    /// A <see cref="Result{T}"/> containing a successful result with <see cref="Result{T}.Value"/> 
+    /// containing a <see cref="NotificationOrderChainResponse"/> with the chain identifier and receipt information.
     /// </returns>
     /// <remarks>
     /// This method:
