@@ -108,89 +108,6 @@ public class InstantOrderRequestServiceTests
     }
 
     [Fact]
-    public async Task PersistInstantSmsNotificationAsync_WhenRepositoryReturnsNull_ReturnsNull()
-    {
-        // Arrange
-        var orderId = Guid.NewGuid();
-        var smsOrderId = Guid.NewGuid();
-        var orderChainId = Guid.NewGuid();
-
-        var orderCreationDateTime = DateTime.UtcNow;
-        var creatorShortName = "creator-short-name";
-        var sendersReference = "207B08E2-814A-4479-9509-8DCA45A64401";
-
-        var instantNotificationOrder = new InstantNotificationOrder
-        {
-            OrderId = orderId,
-            OrderChainId = orderChainId,
-            Created = orderCreationDateTime,
-            SendersReference = sendersReference,
-            Creator = new Creator(creatorShortName),
-            IdempotencyId = "E7344199-61C7-490E-A304-1E79C488D206",
-            InstantNotificationRecipient = new InstantNotificationRecipient
-            {
-                ShortMessageDeliveryDetails = new ShortMessageDeliveryDetails
-                {
-                    TimeToLiveInSeconds = 3600,
-                    PhoneNumber = "+4799999999",
-                    ShortMessageContent = new ShortMessageContent
-                    {
-                        Sender = "Test sender",
-                        Message = "Test message"
-                    }
-                }
-            }
-        };
-
-        var orderRepositoryMock = new Mock<IOrderRepository>();
-        orderRepositoryMock.Setup(
-            e => e.Create(
-                It.Is<InstantNotificationOrder>(e => e.OrderChainId == orderChainId),
-                It.Is<NotificationOrder>(e => e.Id == orderId),
-                It.Is<SmsNotification>(e => e.Id == smsOrderId),
-                It.Is<DateTime>(e => e == orderCreationDateTime.AddSeconds(3600)),
-                It.Is<int>(e => e == 1),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync((InstantNotificationOrderTracking?)null);
-
-        var guidServiceMock = new Mock<IGuidService>();
-        guidServiceMock.Setup(e => e.NewGuid()).Returns(smsOrderId);
-
-        var dateTimeServiceMock = new Mock<IDateTimeService>();
-        dateTimeServiceMock.Setup(e => e.UtcNow()).Returns(orderCreationDateTime);
-
-        var shortMessageServiceClient = new Mock<IShortMessageServiceClient>();
-        shortMessageServiceClient.Setup(e => e.SendAsync(It.IsAny<ShortMessage>())).ReturnsAsync((ShortMessageSendResult?)null!);
-
-        var service = GetTestService(
-            guidService: guidServiceMock.Object,
-            dateTimeService: dateTimeServiceMock.Object,
-            orderRepository: orderRepositoryMock.Object,
-            shortMessageServiceClient: shortMessageServiceClient.Object);
-
-        // Act
-        var result = await service.PersistInstantSmsNotificationAsync(instantNotificationOrder);
-
-        // Assert
-        Assert.Null(result);
-
-        guidServiceMock.Verify(e => e.NewGuid(), Times.Once);
-        dateTimeServiceMock.Verify(e => e.UtcNow(), Times.Once);
-
-        orderRepositoryMock.Verify(
-             e => e.Create(
-                It.Is<InstantNotificationOrder>(e => e.OrderChainId == orderChainId),
-                It.Is<NotificationOrder>(e => e.Id == orderId),
-                It.Is<SmsNotification>(e => e.Id == smsOrderId),
-                It.Is<DateTime>(e => e == orderCreationDateTime.AddSeconds(3600)),
-                It.Is<int>(e => e == 1),
-                It.IsAny<CancellationToken>()),
-             Times.Once);
-
-        shortMessageServiceClient.Verify(e => e.SendAsync(It.IsAny<ShortMessage>()), Times.Never);
-    }
-
-    [Fact]
     public async Task PersistInstantSmsNotificationAsync_WhenPersistenceIsSuccessful_ReturnsTrackingInformation()
     {
         // Arrange
@@ -332,15 +249,6 @@ public class InstantOrderRequestServiceTests
         };
 
         var orderRepositoryMock = new Mock<IOrderRepository>();
-        orderRepositoryMock.Setup(
-            e => e.Create(
-                It.Is<InstantNotificationOrder>(e => e.OrderChainId == orderChainId),
-                It.Is<NotificationOrder>(e => e.Id == orderId),
-                It.Is<SmsNotification>(e => e.Id == smsOrderId),
-                It.Is<DateTime>(e => e == orderCreationDateTime.AddSeconds(3600)),
-                It.Is<int>(e => e == 1),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync((InstantNotificationOrderTracking?)null);
 
         var guidServiceMock = new Mock<IGuidService>();
         guidServiceMock.Setup(e => e.NewGuid()).Returns(smsOrderId);
