@@ -45,11 +45,11 @@ public sealed record BatchProducingContext
     public ImmutableList<string> NotProducedMessages { get; init; } = [];
 
     /// <summary>
-    /// The deferred task factories used to produce messages to the Kafka topic.
+    /// The deferred factories used to produce messages to the Kafka topic.
     /// </summary>
     /// <remarks>
     /// Each factory, when invoked, returns a task that produces a single message to the configured topic.
     /// Factories capture the message payload to avoid closure issues with loop variables.
     /// </remarks>
-    public ImmutableDictionary<Func<Task<DeliveryResult<Null, string>>>, string> DeferredProduceTaskFactories { get; init; } = ImmutableDictionary.Create<Func<Task<DeliveryResult<Null, string>>>, string>();
+    public ImmutableList<ProduceTaskFactory> DeferredProduceTasks { get; init; } = [];
 }
