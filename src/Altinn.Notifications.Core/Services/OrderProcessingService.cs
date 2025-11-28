@@ -63,28 +63,46 @@ public class OrderProcessingService : IOrderProcessingService
 
         do
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            pastDueOrders = [];
 
-            pastDueOrders = await _orderRepository.GetPastDueOrdersAndSetProcessingState(cancellationToken);
-            if (pastDueOrders.Count == 0)
+            try
             {
-                break;
-            }
+                cancellationToken.ThrowIfCancellationRequested();
 
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var serializedPastDueOrders = pastDueOrders.Select(e => e.Serialize());
-            var unpublishedPastDueOrders = await _producer.ProduceAsync(_pastDueOrdersTopic, [.. serializedPastDueOrders], cancellationToken);
-
-            foreach (var unpublishedPastDueOrder in unpublishedPastDueOrders)
-            {
-                var deserializePastDueOrder = JsonSerializer.Deserialize<NotificationOrder>(unpublishedPastDueOrder, JsonSerializerOptionsProvider.Options);
-                if (deserializePastDueOrder == null || deserializePastDueOrder.Id == Guid.Empty)
+                pastDueOrders = await _orderRepository.GetPastDueOrdersAndSetProcessingState(cancellationToken);
+                if (pastDueOrders.Count == 0)
                 {
-                    continue;
+                    break;
                 }
 
-                await _orderRepository.SetProcessingStatus(deserializePastDueOrder.Id, OrderProcessingStatus.Registered);
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var serializedPastDueOrders = pastDueOrders.Select(e => e.Serialize());
+                var unpublishedPastDueOrders = await _producer.ProduceAsync(_pastDueOrdersTopic, [.. serializedPastDueOrders], cancellationToken);
+
+                foreach (var unpublishedPastDueOrder in unpublishedPastDueOrders)
+                {
+                    var deserializePastDueOrder = JsonSerializer.Deserialize<NotificationOrder>(unpublishedPastDueOrder, JsonSerializerOptionsProvider.Options);
+                    if (deserializePastDueOrder == null || deserializePastDueOrder.Id == Guid.Empty)
+                    {
+                        continue;
+                    }
+
+                    await _orderRepository.SetProcessingStatus(deserializePastDueOrder.Id, OrderProcessingStatus.Registered);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // If we have a fetched batch, revert all of them to Registered.
+                if (pastDueOrders.Count > 0)
+                {
+                    foreach (var order in pastDueOrders)
+                    {
+                        await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.Registered);
+                    }
+                }
+
+                throw;
             }
         }
         while (pastDueOrders.Count >= 50 && stopwatch.ElapsedMilliseconds < 60_000);

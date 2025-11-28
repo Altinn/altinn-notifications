@@ -30,6 +30,40 @@ public class OrderProcessingServiceTests
     private const string _pastDueTopicName = "orders.pastdue";
 
     [Fact]
+    public async Task StartProcessingPastDueOrders_EmptyFirstFetch_ExitsImmediately()
+    {
+        // Arrange
+        var orderRepositoryMock = new Mock<IOrderRepository>();
+        orderRepositoryMock
+            .Setup(e => e.GetPastDueOrdersAndSetProcessingState(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        var producerMock = new Mock<IKafkaProducer>();
+
+        var orderProcessingService = GetTestService(
+            orderRepository: orderRepositoryMock.Object,
+            producer: producerMock.Object);
+
+        using var cts = new CancellationTokenSource();
+
+        // Act
+        await orderProcessingService.StartProcessingPastDueOrders(cts.Token);
+
+        // Assert
+        orderRepositoryMock.Verify(
+            r => r.GetPastDueOrdersAndSetProcessingState(It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        producerMock.Verify(
+            p => p.ProduceAsync(It.IsAny<string>(), It.IsAny<ImmutableList<string>>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        orderRepositoryMock.Verify(
+            r => r.SetProcessingStatus(It.IsAny<Guid>(), It.IsAny<OrderProcessingStatus>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task StartProcessingPastDueOrders_CancellationRequestedDuringSecondBatch_UnproducedOrdersRevertedToRegistered()
     {
         // Arrange
