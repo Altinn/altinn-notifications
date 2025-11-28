@@ -1,5 +1,5 @@
-﻿using Altinn.Notifications.Core.Models.Status;
-using Altinn.Notifications.Core.Shared;
+﻿using Altinn.Authorization.ProblemDetails;
+using Altinn.Notifications.Core.Models.Status;
 
 namespace Altinn.Notifications.Core.Services.Interfaces;
 
@@ -15,8 +15,8 @@ public interface IStatusFeedService
     /// <param name="pageSize">Number of items returned per request</param>
     /// <param name="creatorName">Name of the service owner</param>
     /// <param name="cancellationToken">A CancellationToken for cancelling an ongoing asynchronous Task</param>
-    /// <returns>Result object containing, on success: a list of order status objects following the sequence number. On failure: contains a ServiceError object</returns>
-    Task<Result<List<StatusFeed>, ServiceError>> GetStatusFeed(long seq, int? pageSize, string creatorName, CancellationToken cancellationToken);
+    /// <returns>A <see cref="Task{TResult}"/> containing a list of order status objects following the sequence number.</returns>
+    Task<List<StatusFeed>> GetStatusFeed(long seq, int? pageSize, string creatorName, CancellationToken cancellationToken);
 
     /// <summary>
     /// Deletes outdated records from the status feed table.

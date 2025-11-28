@@ -68,39 +68,29 @@ public class NotificationDeliveryManifestServiceTests
         var deliveryManifest = await _service.GetDeliveryManifestAsync(orderAlternateId, orderCreatorName, cancellationToken);
 
         // Assert
-        Assert.False(deliveryManifest.IsError);
+        Assert.False(deliveryManifest.IsProblem);
         Assert.True(deliveryManifest.IsSuccess);
+        Assert.NotNull(deliveryManifest.Value);
 
-        bool wasSuccessful = deliveryManifest.Match(
-            success =>
-            {
-                Assert.NotNull(success);
-                Assert.Equal(orderAlternateId, success.ShipmentId);
+        var success = deliveryManifest.Value;
+        Assert.NotNull(success);
+        Assert.Equal(orderAlternateId, success.ShipmentId);
 
-                Assert.Equal("Notification", success.Type);
-                Assert.Equal(ProcessingLifecycle.Order_Completed, success.Status);
-                Assert.Equal("COMPLETED-NOTIFICATION-ORDER-REF-FCEE4CF15BE1", success.SendersReference);
+        Assert.Equal("Notification", success.Type);
+        Assert.Equal(ProcessingLifecycle.Order_Completed, success.Status);
+        Assert.Equal("COMPLETED-NOTIFICATION-ORDER-REF-FCEE4CF15BE1", success.SendersReference);
 
-                Assert.Equal(2, success.Recipients.Count);
+        Assert.Equal(2, success.Recipients.Count);
 
-                var smsRecipient = success.Recipients[0] as SmsDeliveryManifest;
-                Assert.NotNull(smsRecipient);
-                Assert.Equal("+4799999999", smsRecipient.Destination);
-                Assert.Equal(ProcessingLifecycle.SMS_Delivered, smsRecipient.Status);
+        var smsRecipient = success.Recipients[0] as SmsDeliveryManifest;
+        Assert.NotNull(smsRecipient);
+        Assert.Equal("+4799999999", smsRecipient.Destination);
+        Assert.Equal(ProcessingLifecycle.SMS_Delivered, smsRecipient.Status);
 
-                var emailRecipient = success.Recipients[1] as EmailDeliveryManifest;
-                Assert.NotNull(emailRecipient);
-                Assert.Equal("recipient@example.com", emailRecipient.Destination);
-                Assert.Equal(ProcessingLifecycle.Email_Delivered, emailRecipient.Status);
-
-                return true;
-            },
-            error =>
-            {
-                return false;
-            });
-
-        Assert.True(wasSuccessful);
+        var emailRecipient = success.Recipients[1] as EmailDeliveryManifest;
+        Assert.NotNull(emailRecipient);
+        Assert.Equal("recipient@example.com", emailRecipient.Destination);
+        Assert.Equal(ProcessingLifecycle.Email_Delivered, emailRecipient.Status);
     }
 
     [Fact]
@@ -117,24 +107,12 @@ public class NotificationDeliveryManifestServiceTests
         var result = await _service.GetDeliveryManifestAsync(orderAlternateId, orderCreatorName, cancellationToken);
 
         // Assert
-        Assert.True(result.IsError);
+        Assert.True(result.IsProblem);
         Assert.False(result.IsSuccess);
-
-        bool wasFailed = result.Match(
-            success =>
-            {
-                return false;
-            },
-            actuallError =>
-            {
-                Assert.IsType<ServiceError>(actuallError);
-                Assert.Equal(404, actuallError.ErrorCode);
-                Assert.Equal("Shipment not found.", actuallError.ErrorMessage);
-
-                return true;
-            });
-
-        Assert.True(wasFailed);
+        Assert.NotNull(result.Problem);
+        Assert.Equal("NOT-00003", result.Problem.ErrorCode.ToString()); // Problems.ShipmentNotFound
+        Assert.Equal(404, (int)result.Problem.StatusCode);
+        Assert.Equal("Shipment not found", result.Problem.Detail);
     }
 
     [Fact]
@@ -207,24 +185,12 @@ public class NotificationDeliveryManifestServiceTests
             cancellationToken);
 
         // Assert
-        Assert.True(result.IsError);
+        Assert.True(result.IsProblem);
         Assert.False(result.IsSuccess);
-
-        var wasFailed = result.Match(
-             success =>
-             {
-                 return false;
-             },
-             actuallError =>
-             {
-                 Assert.IsType<ServiceError>(actuallError);
-                 Assert.Equal(404, actuallError.ErrorCode);
-                 Assert.Equal("Shipment not found.", actuallError.ErrorMessage);
-
-                 return true;
-             });
-
-        Assert.True(wasFailed);
+        Assert.NotNull(result.Problem);
+        Assert.Equal("NOT-00003", result.Problem.ErrorCode.ToString()); // Problems.ShipmentNotFound
+        Assert.Equal(404, (int)result.Problem.StatusCode);
+        Assert.Equal("Shipment not found", result.Problem.Detail);
     }
 
     [Fact]
@@ -268,23 +234,11 @@ public class NotificationDeliveryManifestServiceTests
         var result = await _service.GetDeliveryManifestAsync(orderAlternateId, creatorName, cancellationToken);
 
         // Assert
-        Assert.True(result.IsError);
+        Assert.True(result.IsProblem);
         Assert.False(result.IsSuccess);
-
-        var wasFailed = result.Match(
-              success =>
-              {
-                  return false;
-              },
-              actuallError =>
-              {
-                  Assert.IsType<ServiceError>(actuallError);
-                  Assert.Equal(404, actuallError.ErrorCode);
-                  Assert.Equal("Shipment not found.", actuallError.ErrorMessage);
-
-                  return true;
-              });
-
-        Assert.True(wasFailed);
+        Assert.NotNull(result.Problem);
+        Assert.Equal("NOT-00003", result.Problem.ErrorCode.ToString()); // Problems.ShipmentNotFound
+        Assert.Equal(404, (int)result.Problem.StatusCode);
+        Assert.Equal("Shipment not found", result.Problem.Detail);
     }
 }

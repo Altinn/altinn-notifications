@@ -4,12 +4,13 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
+using Altinn.Authorization.ProblemDetails;
 using Altinn.Common.AccessToken.Services;
 using Altinn.Notifications.Controllers;
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Errors;
 using Altinn.Notifications.Core.Models.Delivery;
 using Altinn.Notifications.Core.Services.Interfaces;
-using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.IntegrationTests;
 using Altinn.Notifications.Models.Delivery;
 using Altinn.Notifications.Models.Status;
@@ -311,7 +312,7 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
                 It.IsAny<Guid>(),
                 It.IsAny<string>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ServiceError(404, "Shipment not found"));
+            .ReturnsAsync(Problems.ShipmentNotFound);
 
         HttpClient client = GetTestClient(serviceMock.Object);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
@@ -326,6 +327,14 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        
+        string content = await response.Content.ReadAsStringAsync();
+        var problemDetails = JsonSerializer.Deserialize<AltinnProblemDetails>(content, _options);
+        
+        Assert.NotNull(problemDetails);
+        Assert.Equal("NOT-00003", problemDetails.ErrorCode.ToString()); // Problems.ShipmentNotFound
+        Assert.Equal((int)response.StatusCode, problemDetails.Status);
+        Assert.Equal("Shipment not found", problemDetails.Detail);
     }
 
     [Fact]
@@ -353,8 +362,14 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
 
         // Assert
         Assert.Equal((HttpStatusCode)499, response.StatusCode); // 499 Client Closed Request
+        
         string content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Request terminated", content);
+        var problemDetails = JsonSerializer.Deserialize<AltinnProblemDetails>(content, _options);
+        
+        Assert.NotNull(problemDetails);
+        Assert.Equal("NOT-00002", problemDetails.ErrorCode.ToString()); // Problems.RequestTerminated
+        Assert.Equal((int)response.StatusCode, problemDetails.Status);
+        Assert.Contains("client disconnected", problemDetails.Detail, StringComparison.OrdinalIgnoreCase);
     }
 
     private HttpClient GetTestClient(INotificationDeliveryManifestService? service = null)
@@ -376,7 +391,7 @@ public class ShipmentControllerTests : IClassFixture<IntegrationTestWebApplicati
         return client;
     }
 
-    private static Result<INotificationDeliveryManifest, ServiceError> CreateDeliveryManifest(Guid shipmentId)
+    private static Result<INotificationDeliveryManifest> CreateDeliveryManifest(Guid shipmentId)
     {
         var recipients = new List<IDeliveryManifest>
         {

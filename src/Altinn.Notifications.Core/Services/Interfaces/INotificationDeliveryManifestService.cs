@@ -1,5 +1,5 @@
-﻿using Altinn.Notifications.Core.Models.Delivery;
-using Altinn.Notifications.Core.Shared;
+﻿using Altinn.Authorization.ProblemDetails;
+using Altinn.Notifications.Core.Models.Delivery;
 
 namespace Altinn.Notifications.Core.Services.Interfaces;
 
@@ -15,8 +15,8 @@ public interface INotificationDeliveryManifestService
     /// <param name="creatorName">The name of the creator/owner who originated the notification order.</param>
     /// <param name="cancellationToken">A token for canceling the asynchronous operation.</param>
     /// <returns>
-    /// A task representing the asynchronous operation. When complete, the task contains a 
-    /// <see cref="Result{INotificationDeliveryManifest, ServiceError}"/> that is either:
+    /// A task representing the asynchronous operation. When complete, the task contains a
+    /// <see cref="Result{T}"/> that is either:
     /// <list type="bullet">
     ///   <item>
     ///     <description>
@@ -25,10 +25,10 @@ public interface INotificationDeliveryManifestService
     ///   </item>
     ///   <item>
     ///     <description>
-    ///       An error result with a <see cref="ServiceError"/> (such as a 404 status code) if the notification order is not found
+    ///       An error result with a <see cref="ProblemInstance"/> (such as a 404 status code) if the notification order is not found
     ///     </description>
     ///   </item>
     /// </list>
     /// </returns>
-    Task<Result<INotificationDeliveryManifest, ServiceError>> GetDeliveryManifestAsync(Guid alternateId, string creatorName, CancellationToken cancellationToken);
+    Task<Result<INotificationDeliveryManifest>> GetDeliveryManifestAsync(Guid alternateId, string creatorName, CancellationToken cancellationToken);
 }

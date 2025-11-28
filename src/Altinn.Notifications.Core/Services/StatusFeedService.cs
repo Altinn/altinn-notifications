@@ -1,10 +1,9 @@
-﻿using Altinn.Notifications.Core.Configuration;
+﻿using Altinn.Authorization.ProblemDetails;
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
-using Altinn.Notifications.Core.Shared;
 
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Core.Services;
@@ -16,22 +15,18 @@ public class StatusFeedService : IStatusFeedService
 {
     private readonly IStatusFeedRepository _statusFeedRepository;
     private readonly NotificationConfig _config;
-    private readonly ILogger<StatusFeedService> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="StatusFeedService"/> class.
     /// </summary>
     /// <param name="statusFeedRepository">The repository layer concerned with database integrations</param>
     /// <param name="config">Configuration settings for status feed</param>
-    /// <param name="logger">For logging purposes</param>
     public StatusFeedService(
         IStatusFeedRepository statusFeedRepository,
-        IOptions<NotificationConfig> config,
-        ILogger<StatusFeedService> logger)
+        IOptions<NotificationConfig> config)
     {
         _statusFeedRepository = statusFeedRepository;
         _config = config.Value;
-        _logger = logger;
     }
 
     /// <inheritdoc />
@@ -41,24 +36,15 @@ public class StatusFeedService : IStatusFeedService
     }
 
     /// <inheritdoc />
-    public async Task<Result<List<StatusFeed>, ServiceError>> GetStatusFeed(long seq, int? pageSize, string creatorName, CancellationToken cancellationToken)
+    public Task<List<StatusFeed>> GetStatusFeed(long seq, int? pageSize, string creatorName, CancellationToken cancellationToken)
     {
-        try
-        {
-            var pageSizeFound = FindPageSize(pageSize);
+        var pageSizeFound = FindPageSize(pageSize);
 
-            var statusFeedEntries = await _statusFeedRepository.GetStatusFeed(
-                seq: seq,
-                pageSize: pageSizeFound,
-                creatorName: creatorName,
-                cancellationToken: cancellationToken);
-            return statusFeedEntries;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to retrieve status feed");
-            return new ServiceError(500, $"Failed to retrieve status feed: {ex.Message}");
-        }
+        return _statusFeedRepository.GetStatusFeed(
+            seq: seq,
+            pageSize: pageSizeFound,
+            creatorName: creatorName,
+            cancellationToken: cancellationToken);
     }
     
     private int FindPageSize(int? pageSizeUserInput)
