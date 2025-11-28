@@ -434,17 +434,20 @@ public static class PostgreUtil
                 new NpgsqlParameter("@result", result),
                 new NpgsqlParameter("@orderId", orderId));
         }
-
-        if (typeof(T) == typeof(EmailNotification))
+        else if (typeof(T) == typeof(EmailNotification))
         {
             string sql = @"
                 UPDATE notifications.emailnotifications 
                 SET result = @result 
                 WHERE _orderid = (SELECT _id FROM notifications.orders WHERE alternateid = @orderId)";
-            await PostgreUtil.RunSql(
+            await RunSql(
                 sql,
                 new NpgsqlParameter("@result", result),
                 new NpgsqlParameter("@orderId", orderId));
+        }
+        else
+        {
+            throw new ArgumentException("Type T must be either EmailNotification or SmsNotification");
         }
     }
 

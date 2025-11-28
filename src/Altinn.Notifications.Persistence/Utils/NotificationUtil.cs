@@ -37,7 +37,7 @@ internal static class NotificationUtil
             }
 
             var status = await reader.GetFieldValueAsync<string>(statusOrdinal, cancellationToken);
-            var destination = await reader.IsDBNullAsync(destinationOrdinal) ? string.Empty : await reader.GetFieldValueAsync<string>(destinationOrdinal, cancellationToken);
+            var destination = await reader.IsDBNullAsync(destinationOrdinal, cancellationToken) ? string.Empty : await reader.GetFieldValueAsync<string>(destinationOrdinal, cancellationToken);
 
             Recipient recipient;
 
