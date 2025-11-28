@@ -1,5 +1,7 @@
-﻿using Altinn.Notifications.Configuration;
+﻿using Altinn.Authorization.ProblemDetails;
+using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Errors;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
@@ -178,13 +180,11 @@ public class InstantOrdersController : ControllerBase
 
             if (trackingInformation == null)
             {
-                var channelName = notificationChannel.ToString().ToLowerInvariant();
-                var errorType = $"instant-{channelName}-order-failed";
-                return StatusCode(500, CreateProblemDetails(
-                    500,
-                    $"Instant {channelName} notification order registration failed",
-                    $"An internal server error occurred while processing the {channelName} notification order.",
-                    errorType));
+                var problemDescriptor = notificationChannel == NotificationChannel.Sms
+                    ? Problems.InstantSmsOrderFailed
+                    : Problems.InstantEmailOrderFailed;
+                var problemDetails = problemDescriptor.ToProblemDetails();
+                return StatusCode(problemDetails.Status!.Value, problemDetails);
             }
 
             // 5. Return tracking information and location header.
@@ -226,37 +226,18 @@ public class InstantOrdersController : ControllerBase
     }
 
     /// <summary>
-    /// Creates appropriate problem details for different error scenarios.
-    /// </summary>
-    private static ProblemDetails CreateProblemDetails(int statusCode, string title, string detail, string? type = null)
-    {
-        return new ProblemDetails
-        {
-            Status = statusCode,
-            Title = title,
-            Detail = detail,
-            Type = type
-        };
-    }
-
-    /// <summary>
     /// Handles common exceptions and returns appropriate error responses.
     /// </summary>
-    private ObjectResult HandleCommonExceptions(Exception ex)
+    private ActionResult HandleCommonExceptions(Exception ex)
     {
-        return ex switch
+        var problemDescriptor = ex switch
         {
-            InvalidOperationException => StatusCode(500, CreateProblemDetails(
-                500,
-                "Notification order is incomplete or invalid",
-                ex.Message,
-                "invalid-notification-order")),
-            OperationCanceledException => StatusCode(499, CreateProblemDetails(
-                499,
-                "Request terminated",
-                "The client disconnected or cancelled the request before the server could complete processing.",
-                "request-terminated")),
+            InvalidOperationException => Problems.InvalidNotificationOrder,
+            OperationCanceledException => Problems.RequestTerminated,
             _ => throw ex
         };
+
+        var problemDetails = problemDescriptor.ToProblemDetails();
+        return StatusCode(problemDetails.Status!.Value, problemDetails);
     }
 }

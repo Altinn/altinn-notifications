@@ -1,4 +1,6 @@
-﻿using Altinn.Notifications.Configuration;
+﻿using Altinn.Authorization.ProblemDetails;
+using Altinn.Notifications.Configuration;
+using Altinn.Notifications.Core.Errors;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
@@ -53,31 +55,18 @@ public class StatusFeedController(IStatusFeedService statusFeedService, IValidat
 
             var result = await statusFeedService.GetStatusFeed(statusFeedRequest.Seq, statusFeedRequest.PageSize, creatorName, HttpContext.RequestAborted);
 
-            return result.Match<ActionResult>(
-                statusFeed =>
-                {
-                    return Ok(statusFeed.MapToStatusFeedExtList());
-                },
-                error =>
-                {
-                    return StatusCode(error.ErrorCode, new ProblemDetails
-                    {
-                        Status = error.ErrorCode,
-                        Title = "Failed to retrieve status feed",
-                        Detail = error.ErrorMessage,
-                        Type = error.ErrorType
-                    });
-                });
+            if (result.IsProblem)
+            {
+                var problemDetails = result.Problem!.ToProblemDetails();
+                return StatusCode(problemDetails.Status!.Value, problemDetails);
+            }
+
+            return Ok(result.Value!.MapToStatusFeedExtList());
         }
         catch (OperationCanceledException)
         {
-            return StatusCode(499, new ProblemDetails
-            {
-                Type = "request-terminated",
-                Title = "Request terminated",
-                Detail = "The client disconnected or cancelled the request before the server could complete processing.",
-                Status = 499
-            });
+            var problemDetails = Problems.RequestTerminated.ToProblemDetails();
+            return StatusCode(problemDetails.Status!.Value, problemDetails);
         }
     }
 }

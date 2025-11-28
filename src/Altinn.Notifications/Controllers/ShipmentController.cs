@@ -1,7 +1,8 @@
-﻿using Altinn.Notifications.Configuration;
+﻿using Altinn.Authorization.ProblemDetails;
+using Altinn.Notifications.Configuration;
+using Altinn.Notifications.Core.Errors;
 using Altinn.Notifications.Core.Models.Delivery;
 using Altinn.Notifications.Core.Services.Interfaces;
-using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models.Delivery;
@@ -58,37 +59,20 @@ public class ShipmentController : ControllerBase
                 return Forbid();
             }
 
-            Result<INotificationDeliveryManifest, ServiceError> result = await _notificationDeliveryManifestService.GetDeliveryManifestAsync(id, creatorName, cancellationToken);
+            Result<INotificationDeliveryManifest> result = await _notificationDeliveryManifestService.GetDeliveryManifestAsync(id, creatorName, cancellationToken);
 
-            return result.Match<ActionResult<NotificationDeliveryManifestExt>>(
-                deliveryManifest =>
-                {
-                    return Ok(deliveryManifest.MapToNotificationDeliveryManifestExt());
-                },
-                error =>
-                {
-                    var problemDetails = new ProblemDetails
-                    {
-                        Type = error.ErrorType,
-                        Title = "Failed to retrieve shipment information",
-                        Detail = error.ErrorMessage,
-                        Status = error.ErrorCode
-                    };
+            if (result.IsProblem)
+            {
+                var problemDetails = result.Problem!.ToProblemDetails();
+                return StatusCode(problemDetails.Status!.Value, problemDetails);
+            }
 
-                    return StatusCode(error.ErrorCode, problemDetails);
-                });
+            return Ok(result.Value!.MapToNotificationDeliveryManifestExt());
         }
         catch (OperationCanceledException)
         {
-            var problemDetails = new ProblemDetails
-            {
-                Type = "request-terminated",
-                Title = "Request terminated",
-                Detail = "The client disconnected or cancelled the request before the server could complete processing.",
-                Status = 499
-            };
-
-            return StatusCode(499, problemDetails);
+            var problemDetails = Problems.RequestTerminated.ToProblemDetails();
+            return StatusCode(problemDetails.Status!.Value, problemDetails);
         }
     }
 }

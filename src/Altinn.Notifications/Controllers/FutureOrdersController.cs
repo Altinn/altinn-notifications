@@ -1,7 +1,8 @@
-﻿using Altinn.Notifications.Configuration;
+﻿using Altinn.Authorization.ProblemDetails;
+using Altinn.Notifications.Configuration;
+using Altinn.Notifications.Core.Errors;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
-using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
 using Altinn.Notifications.Models;
@@ -83,47 +84,25 @@ public class FutureOrdersController : ControllerBase
 
             var notificationOrderChainRequest = notificationOrderRequest.MapToNotificationOrderChainRequest(creator);
 
-            Result<NotificationOrderChainResponse, ServiceError> result = await _orderRequestService.RegisterNotificationOrderChain(notificationOrderChainRequest, cancellationToken);
+            Result<NotificationOrderChainResponse> result = await _orderRequestService.RegisterNotificationOrderChain(notificationOrderChainRequest, cancellationToken);
 
-            return result.Match(
-                registeredNotificationOrderChain =>
-                {
-                    return Created(registeredNotificationOrderChain.OrderChainId.GetSelfLinkFromOrderChainId(), registeredNotificationOrderChain.MapToNotificationOrderChainResponseExt());
-                },
-                error =>
-                {
-                    var problemDetails = new ProblemDetails
-                    {
-                        Status = error.ErrorCode,
-                        Title = "Notification order chain registration failed",
-                        Detail = error.ErrorMessage,
-                        Type = error.ErrorType
-                    };
-                    return StatusCode(error.ErrorCode, problemDetails);
-                });
-        }
-        catch (InvalidOperationException ex)
-        {
-            var problemDetails = new ProblemDetails
+            if (result.IsProblem)
             {
-                Status = 500,
-                Title = "Notification order is incomplete or invalid",
-                Detail = ex.Message,
-                Type = "invalid-notification-order"
-            };
-            return StatusCode(500, problemDetails);
+                var problemDetails = result.Problem!.ToProblemDetails();
+                return StatusCode(problemDetails.Status!.Value, problemDetails);
+            }
+
+            return Created(result.Value!.OrderChainId.GetSelfLinkFromOrderChainId(), result.Value.MapToNotificationOrderChainResponseExt());
+        }
+        catch (InvalidOperationException)
+        {
+            var problemDetails = Problems.InvalidNotificationOrder.ToProblemDetails();
+            return StatusCode(problemDetails.Status!.Value, problemDetails);
         }
         catch (OperationCanceledException)
         {
-            var problemDetails = new ProblemDetails
-            {
-                Status = 499,
-                Title = "Request terminated",
-                Detail = "The client disconnected or cancelled the request before the server could complete processing.",
-                Type = "request-terminated"
-            };
-
-            return StatusCode(499, problemDetails);
+            var problemDetails = Problems.RequestTerminated.ToProblemDetails();
+            return StatusCode(problemDetails.Status!.Value, problemDetails);
         }
     }
 }
