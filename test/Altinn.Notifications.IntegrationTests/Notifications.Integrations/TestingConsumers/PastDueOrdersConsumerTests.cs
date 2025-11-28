@@ -12,8 +12,8 @@ using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.IntegrationTests.Utils;
+using Altinn.Notifications.Persistence.Mappers;
 using Altinn.Notifications.Persistence.Repository;
-
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -72,46 +72,52 @@ public class PastDueOrdersConsumerTests : IDisposable
         Assert.Equal(1L, selectEmailNotificationCount);
     }
 
-    [Fact]
-    public async Task ProcessOrder_WithEmailRecipientNotIdentified_ShouldCreateStatusFeedEntry()
+    [Theory]
+    [InlineData(EmailNotificationResultType.Failed_RecipientNotIdentified)]
+    [InlineData(EmailNotificationResultType.Failed_RecipientReserved)]
+    public async Task ProcessOrder_WithEmailRecipientNotIdentified_ShouldCreateStatusFeedEntry(EmailNotificationResultType status)
     {
         // Arrange
         using var consumerService = CreateConsumerService();
-        (NotificationOrder order, _) = await SetupOrderWithFailedRecipient();
+        (NotificationOrder order, _) = await SetupOrderWithFailedEmailRecipient(status);
 
         // Act
         await consumerService.StartAsync(CancellationToken.None);
         await KafkaUtil.PublishMessageOnTopic(_pastDueOrdersTopicName, order.Serialize());
 
         // Assert
-        await AssertStatusFeedEntryCreated(order.Id, ProcessingLifecycle.Email_Failed_RecipientNotIdentified);
+        var lifecycleStatus = ProcessingLifecycleMapper.GetEmailLifecycleStage(status.ToString());
+        await AssertStatusFeedEntryCreated(order.Id, lifecycleStatus);
         await consumerService.StopAsync(CancellationToken.None);
     }
 
-    [Fact]
-    public async Task ProcessOrder_WithSmsRecipientNotIdentified_ShouldCreateStatusFeedEntry()
+    [Theory]
+    [InlineData(SmsNotificationResultType.Failed_RecipientNotIdentified)]
+    [InlineData(SmsNotificationResultType.Failed_RecipientReserved)]
+    public async Task ProcessOrder_WithSmsRecipientNotIdentified_ShouldCreateStatusFeedEntry(SmsNotificationResultType status)
     {
         // Arrange
         using var consumerService = CreateConsumerService();
-        (NotificationOrder order, _) = await SetupOrderWithFailedSmsRecipient();
+        (NotificationOrder order, _) = await SetupOrderWithFailedSmsRecipient(status);
 
         // Act
         await consumerService.StartAsync(CancellationToken.None);
         await KafkaUtil.PublishMessageOnTopic(_pastDueOrdersTopicName, order.Serialize());
 
         // Assert
-        await AssertStatusFeedEntryCreated(order.Id, ProcessingLifecycle.SMS_Failed_RecipientNotIdentified);
+        var lifecycleStatus = ProcessingLifecycleMapper.GetSmsLifecycleStage(status.ToString());
+        await AssertStatusFeedEntryCreated(order.Id, lifecycleStatus);
         await consumerService.StopAsync(CancellationToken.None);
     }
 
-    private async Task<(NotificationOrder Order, SmsNotification Notification)> SetupOrderWithFailedSmsRecipient()
+    private async Task<(NotificationOrder Order, SmsNotification Notification)> SetupOrderWithFailedSmsRecipient(SmsNotificationResultType status)
     {
         var (o, n) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(
             sendersReference: _sendersRef,
             simulateCronJob: true,
             simulateConsumers: true);
 
-        await UpdateNotificationResult<SmsNotification>(o.Id, "Failed_RecipientNotIdentified");
+        await UpdateNotificationResult<SmsNotification>(o.Id, status.ToString());
         return (o, n);
     }
 
@@ -148,14 +154,14 @@ public class PastDueOrdersConsumerTests : IDisposable
             orderProcessingService);
     }
 
-    private async Task<(NotificationOrder Order, EmailNotification Notification)> SetupOrderWithFailedRecipient()
+    private async Task<(NotificationOrder Order, EmailNotification Notification)> SetupOrderWithFailedEmailRecipient(EmailNotificationResultType status)
     {
         var (o, n) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(
             sendersReference: _sendersRef,
             simulateCronJob: true,
             simulateConsumers: true);
 
-        await UpdateNotificationResult<EmailNotification>(o.Id, "Failed_RecipientNotIdentified");
+        await UpdateNotificationResult<EmailNotification>(o.Id, status.ToString());
         return (o, n);
     }
 
