@@ -270,10 +270,8 @@ public class EmailStatusConsumerTests : IAsyncLifetime
     [InlineData(EmailNotificationResultType.Failed_Bounced)]
     [InlineData(EmailNotificationResultType.Failed_Quarantined)]
     [InlineData(EmailNotificationResultType.Failed_FilteredSpam)]
-    [InlineData(EmailNotificationResultType.Failed_RecipientReserved)]
     [InlineData(EmailNotificationResultType.Failed_InvalidEmailFormat)]
     [InlineData(EmailNotificationResultType.Failed_SupressedRecipient)]
-    [InlineData(EmailNotificationResultType.Failed_RecipientNotIdentified)]
     public async Task ConsumeFailedStatus_ShouldMarkOrderCompleted_WithStatusFeedEntry(EmailNotificationResultType resultType)
     {
         // Arrange

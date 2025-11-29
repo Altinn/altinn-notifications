@@ -1,10 +1,23 @@
-﻿using Altinn.Notifications.Core.Enums;
+﻿using System.Text.Json;
+
+using Altinn.Notifications.Core;
+using Altinn.Notifications.Core.Configuration;
+using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Integrations;
+using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Models.Status;
+using Altinn.Notifications.Core.Persistence;
+using Altinn.Notifications.Core.Services;
+using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.IntegrationTests.Utils;
-
+using Altinn.Notifications.Persistence.Mappers;
+using Altinn.Notifications.Persistence.Repository;
 using Microsoft.Extensions.Hosting;
-
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+using Moq;
 using Xunit;
 
 namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.TestingConsumers;
@@ -59,6 +72,114 @@ public class PastDueOrdersConsumerTests : IDisposable
         Assert.Equal(1L, selectEmailNotificationCount);
     }
 
+    [Theory]
+    [InlineData(EmailNotificationResultType.Failed_RecipientNotIdentified)]
+    [InlineData(EmailNotificationResultType.Failed_RecipientReserved)]
+    public async Task ProcessOrder_WithEmailRecipientNotIdentified_ShouldCreateStatusFeedEntry(EmailNotificationResultType status)
+    {
+        // Arrange
+        using var consumerService = CreateConsumerService();
+        (NotificationOrder order, _) = await SetupOrderWithFailedEmailRecipient(status);
+
+        // Act
+        await consumerService.StartAsync(CancellationToken.None);
+        await KafkaUtil.PublishMessageOnTopic(_pastDueOrdersTopicName, order.Serialize());
+
+        // Assert
+        var lifecycleStatus = ProcessingLifecycleMapper.GetEmailLifecycleStage(status.ToString());
+        await AssertStatusFeedEntryCreated(order.Id, lifecycleStatus);
+        await consumerService.StopAsync(CancellationToken.None);
+    }
+
+    [Theory]
+    [InlineData(SmsNotificationResultType.Failed_RecipientNotIdentified)]
+    [InlineData(SmsNotificationResultType.Failed_RecipientReserved)]
+    public async Task ProcessOrder_WithSmsRecipientNotIdentified_ShouldCreateStatusFeedEntry(SmsNotificationResultType status)
+    {
+        // Arrange
+        using var consumerService = CreateConsumerService();
+        (NotificationOrder order, _) = await SetupOrderWithFailedSmsRecipient(status);
+
+        // Act
+        await consumerService.StartAsync(CancellationToken.None);
+        await KafkaUtil.PublishMessageOnTopic(_pastDueOrdersTopicName, order.Serialize());
+
+        // Assert
+        var lifecycleStatus = ProcessingLifecycleMapper.GetSmsLifecycleStage(status.ToString());
+        await AssertStatusFeedEntryCreated(order.Id, lifecycleStatus);
+        await consumerService.StopAsync(CancellationToken.None);
+    }
+
+    private async Task<(NotificationOrder Order, SmsNotification Notification)> SetupOrderWithFailedSmsRecipient(SmsNotificationResultType status)
+    {
+        var (o, n) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(
+            sendersReference: _sendersRef,
+            simulateCronJob: true,
+            simulateConsumers: true);
+
+        await PostgreUtil.UpdateNotificationResult<SmsNotification>(o.Id, status.ToString());
+        return (o, n);
+    }
+
+    private PastDueOrdersConsumer CreateConsumerService()
+    {
+        var orderRepository = ServiceUtil
+            .GetServices([typeof(IOrderRepository)])
+            .OfType<OrderRepository>()
+            .First();
+
+        var orderProcessingService = new OrderProcessingService(
+            orderRepository,
+            new Mock<IEmailOrderProcessingService>().Object,
+            new Mock<ISmsOrderProcessingService>().Object,
+            new Mock<IPreferredChannelProcessingService>().Object,
+            new Mock<IEmailAndSmsOrderProcessingService>().Object,
+            new Mock<IConditionClient>().Object,
+            new Mock<IKafkaProducer>().Object,
+            Options.Create(new KafkaSettings { PastDueOrdersTopicName = _pastDueOrdersTopicName }),
+            NullLogger<OrderProcessingService>.Instance);
+
+        return new PastDueOrdersConsumer(
+            new Mock<IKafkaProducer>().Object,
+            Options.Create(new Altinn.Notifications.Integrations.Configuration.KafkaSettings
+            {
+                PastDueOrdersTopicName = _pastDueOrdersTopicName,
+                BrokerAddress = "localhost:9092",
+                Admin = new Altinn.Notifications.Integrations.Configuration.AdminSettings
+                {
+                    TopicList = [_pastDueOrdersTopicName]
+                }
+            }),
+            NullLogger<PastDueOrdersConsumer>.Instance,
+            orderProcessingService);
+    }
+
+    private async Task<(NotificationOrder Order, EmailNotification Notification)> SetupOrderWithFailedEmailRecipient(EmailNotificationResultType status)
+    {
+        var (o, n) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(
+            sendersReference: _sendersRef,
+            simulateCronJob: true,
+            simulateConsumers: true);
+
+        await PostgreUtil.UpdateNotificationResult<EmailNotification>(o.Id, status.ToString());
+        return (o, n);
+    }
+
+    private static async Task AssertStatusFeedEntryCreated(Guid orderId, ProcessingLifecycle expectedStatus)
+    {
+        await IntegrationTestUtil.EventuallyAsync(
+            async () =>
+            {
+                var statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(orderId);
+                return statusFeedCount == 1;
+            },
+            TimeSpan.FromSeconds(15));
+
+        var statusFeedEntry = await GetStatusFeedOrderStatus(orderId);
+        Assert.NotNull(statusFeedEntry);
+        Assert.Contains(statusFeedEntry.Recipients, x => x.Status == expectedStatus);
+    }
+
     public async void Dispose()
     {
         await Dispose(true);
@@ -88,5 +209,17 @@ public class PastDueOrdersConsumerTests : IDisposable
     {
         string sql = $"UPDATE notifications.orders SET processedstatus = '{orderProcessingStatus}' WHERE alternateid='{orderId}'";
         await PostgreUtil.RunSql(sql);
+    }
+
+    private static async Task<OrderStatus?> GetStatusFeedOrderStatus(Guid orderId)
+    {
+        var json = await PostgreUtil.GetStatusFeedOrderStatusJson(orderId);
+
+        if (string.IsNullOrEmpty(json))
+        {
+            return null;
+        }
+
+        return JsonSerializer.Deserialize<OrderStatus>(json, JsonSerializerOptionsProvider.Options);
     }
 }
