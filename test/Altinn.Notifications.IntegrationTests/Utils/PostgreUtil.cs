@@ -427,7 +427,7 @@ public static class PostgreUtil
         {
             string sql = @"
                 UPDATE notifications.smsnotifications 
-                SET result = @result 
+                SET result = @result::smsnotificationresulttype 
                 WHERE _orderid = (SELECT _id FROM notifications.orders WHERE alternateid = @orderId)";
             await RunSql(
                 sql,
@@ -438,7 +438,7 @@ public static class PostgreUtil
         {
             string sql = @"
                 UPDATE notifications.emailnotifications 
-                SET result = @result 
+                SET result = @result::emailnotificationresulttype 
                 WHERE _orderid = (SELECT _id FROM notifications.orders WHERE alternateid = @orderId)";
             await RunSql(
                 sql,
