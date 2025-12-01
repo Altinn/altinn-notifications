@@ -101,6 +101,17 @@ public abstract class KafkaConsumerBase<T> : BackgroundService
         }
     }
 
+    /// <summary>
+    /// Handles message processing failures by attempting retry and committing offset on success.
+    /// </summary>
+    /// <param name="consumeResult">The Kafka consume result, or null if message consumption failed.</param>
+    /// <param name="message">The message that failed to process.</param>
+    /// <param name="retryMessageFunc">Function to retry the message (e.g., republish to retry topic).</param>
+    /// <param name="ex">The exception that occurred during processing.</param>
+    /// <remarks>
+    /// Only commits the offset if retry succeeds. If retry fails, the message will be reprocessed
+    /// on the next consumer restart, ensuring at-least-once delivery.
+    /// </remarks>
     private async Task HandleProcessingFailure(
         ConsumeResult<string, string>? consumeResult,
         string message,
@@ -119,10 +130,18 @@ public abstract class KafkaConsumerBase<T> : BackgroundService
         {
             CommitOffset(consumeResult);
         }
-
-        _logger.LogError(ex, "// {Class} // ConsumeMessage // An error occurred while consuming messages", GetType().Name);
+        else
+        {
+            _logger.LogError(ex, "// {Class} // ConsumeMessage // An error occurred while consuming messages", GetType().Name);
+        }
     }
 
+    /// <summary>
+    /// Attempts to retry a failed message and returns whether the retry succeeded.
+    /// </summary>
+    /// <param name="message">The message to retry.</param>
+    /// <param name="retryMessageFunc">Function to execute the retry logic.</param>
+    /// <returns>True if retry succeeded; false if it failed.</returns>
     private async Task<bool> TryRetryMessage(string message, Func<string, Task> retryMessageFunc)
     {
         try
@@ -137,6 +156,11 @@ public abstract class KafkaConsumerBase<T> : BackgroundService
         }
     }
 
+    /// <summary>
+    /// Commits the Kafka offset for a successfully processed message.
+    /// This tells Kafka the message has been handled and won't be reprocessed.
+    /// </summary>
+    /// <param name="consumeResult">The consume result containing the offset to commit.</param>
     private void CommitOffset(ConsumeResult<string, string> consumeResult)
     {
         _consumer.Commit(consumeResult);
