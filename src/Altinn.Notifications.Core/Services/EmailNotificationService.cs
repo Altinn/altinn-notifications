@@ -80,12 +80,10 @@ public class EmailNotificationService : IEmailNotificationService
     /// <inheritdoc/>
     public async Task SendNotifications(CancellationToken cancellationToken)
     {
-        List<Email> newEmailNotifications;
+        List<Email> newEmailNotifications = [];
 
         do
         {
-            newEmailNotifications = [];
-
             try
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -119,12 +117,9 @@ public class EmailNotificationService : IEmailNotificationService
             }
             catch (OperationCanceledException)
             {
-                if (newEmailNotifications.Count > 0)
+                foreach (var email in newEmailNotifications)
                 {
-                    foreach (var email in newEmailNotifications)
-                    {
-                        await _repository.UpdateSendStatus(email.NotificationId, EmailNotificationResultType.New);
-                    }
+                    await _repository.UpdateSendStatus(email.NotificationId, EmailNotificationResultType.New);
                 }
 
                 throw;
