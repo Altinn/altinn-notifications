@@ -27,14 +27,6 @@ internal sealed class FailingProducer : IProducer<Null, string>
     public int AddBrokers(string brokers) => 0;
 
     /// <summary>
-    /// Flushes outstanding messages. No‑op for the throwing stub.
-    /// </summary>
-    public static void Flush()
-    {
-        // No operation needed for the stub.
-    }
-
-    /// <summary>
     /// Polls internal events. Always returns 0 for the stub.
     /// </summary>
     public int Poll(TimeSpan timeout) => 0;
