@@ -292,6 +292,42 @@ public class EmailNotificationServiceTests
     }
 
     [Fact]
+    public async Task SendNotifications_ProducerReturnsAllUnpublished_AllEmailsResetToNew()
+    {
+        // Arrange
+        var firstEmailNotification = new Email(Guid.NewGuid(), "a", "b", "from@d.com", "to@d.com", EmailContentType.Plain);
+        var secondEmailNotification = new Email(Guid.NewGuid(), "b", "b", "from@d.com", "to@d.com", EmailContentType.Plain);
+        var thirdEmailNotification = new Email(Guid.NewGuid(), "c", "b", "from@d.com", "to@d.com", EmailContentType.Plain);
+
+        var batch = new List<Email> { firstEmailNotification, secondEmailNotification, thirdEmailNotification };
+
+        var repoMock = new Mock<IEmailNotificationRepository>();
+        repoMock
+            .SetupSequence(e => e.GetNewNotificationsAsync(_publishBatchSize, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(batch)
+            .ReturnsAsync([]);
+
+        // Producer returns all serialized emails as failed
+        var producerMock = new Mock<IKafkaProducer>();
+        producerMock
+            .Setup(p => p.ProduceAsync(
+                _emailQueueTopicName,
+                It.Is<ImmutableList<string>>(m => m.Count == batch.Count),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([firstEmailNotification.Serialize(), secondEmailNotification.Serialize(), thirdEmailNotification.Serialize()]);
+
+        var service = GetTestService(repo: repoMock.Object, producer: producerMock.Object);
+
+        // Act
+        await service.SendNotifications(CancellationToken.None);
+
+        // Assert
+        repoMock.Verify(e => e.UpdateSendStatus(firstEmailNotification.NotificationId, EmailNotificationResultType.New, It.IsAny<string?>()), Times.Once);
+        repoMock.Verify(e => e.UpdateSendStatus(secondEmailNotification.NotificationId, EmailNotificationResultType.New, It.IsAny<string?>()), Times.Once);
+        repoMock.Verify(e => e.UpdateSendStatus(thirdEmailNotification.NotificationId, EmailNotificationResultType.New, It.IsAny<string?>()), Times.Once);
+    }
+
+    [Fact]
     public async Task SendNotifications_ProducerThrowsOperationCanceled_StatusResetForBatch()
     {
         // Arrange
@@ -358,6 +394,81 @@ public class EmailNotificationServiceTests
         await Assert.ThrowsAsync<OperationCanceledException>(() => service.SendNotifications(cancellationTokenSource.Token));
 
         emailNotificationRepositoryMock.Verify(e => e.UpdateSendStatus(It.IsAny<Guid?>(), It.IsAny<EmailNotificationResultType>(), It.IsAny<string?>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SendNotifications_ProducerReturnsSubsetUnpublished_OnlyFailedEmailsResetToNew()
+    {
+        // Arrange
+        var firstEmailNotification = new Email(Guid.NewGuid(), "s1", "b", "from@d.com", "to@d.com", EmailContentType.Plain);
+        var secondEmailNotification = new Email(Guid.NewGuid(), "s2", "b", "from@d.com", "to@d.com", EmailContentType.Plain);
+        var thirdEmailNotification = new Email(Guid.NewGuid(), "s3", "b", "from@d.com", "to@d.com", EmailContentType.Plain);
+
+        var batch = new List<Email> { firstEmailNotification, secondEmailNotification, thirdEmailNotification };
+
+        var repoMock = new Mock<IEmailNotificationRepository>();
+        repoMock
+            .SetupSequence(e => e.GetNewNotificationsAsync(_publishBatchSize, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(batch)
+            .ReturnsAsync([]);
+
+        // Simulate that only secondEmailNotification failed to publish (partial failure)
+        var producerMock = new Mock<IKafkaProducer>();
+        producerMock
+            .Setup(e => e.ProduceAsync(
+                It.Is<string>(e => e == _emailQueueTopicName),
+                It.Is<ImmutableList<string>>(e => e.Count == batch.Count),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([secondEmailNotification.Serialize()]);
+
+        var service = GetTestService(repo: repoMock.Object, producer: producerMock.Object);
+
+        // Act
+        await service.SendNotifications(CancellationToken.None);
+
+        // Assert
+        producerMock.Verify(e => e.ProduceAsync(_emailQueueTopicName, It.IsAny<ImmutableList<string>>(), It.IsAny<CancellationToken>()), Times.Once);
+        repoMock.Verify(e => e.UpdateSendStatus(secondEmailNotification.NotificationId, EmailNotificationResultType.New, It.IsAny<string?>()), Times.Once);
+        repoMock.Verify(e => e.UpdateSendStatus(firstEmailNotification.NotificationId, EmailNotificationResultType.New, It.IsAny<string?>()), Times.Never);
+        repoMock.Verify(e => e.UpdateSendStatus(thirdEmailNotification.NotificationId, EmailNotificationResultType.New, It.IsAny<string?>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SendNotifications_ProducerReturnsInvalidAndValidUnpublished_OnlyValidEmailsResetToNew()
+    {
+        // Arrange
+        var firstEmailNotification = new Email(Guid.NewGuid(), "x", "b", "from@d.com", "to@d.com", EmailContentType.Plain);
+        var secondEmailNotification = new Email(Guid.NewGuid(), "y", "b", "from@d.com", "to@d.com", EmailContentType.Plain);
+        var thirdEmailNotification = new Email(Guid.NewGuid(), "z", "b", "from@d.com", "to@d.com", EmailContentType.Plain);
+
+        var batch = new List<Email> { firstEmailNotification, secondEmailNotification, thirdEmailNotification };
+
+        var repoMock = new Mock<IEmailNotificationRepository>();
+        repoMock
+            .SetupSequence(e => e.GetNewNotificationsAsync(_publishBatchSize, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(batch)
+            .ReturnsAsync([]);
+
+        var invalidEntries = new[] { "{}" };
+        var producerMock = new Mock<IKafkaProducer>();
+        producerMock
+            .Setup(e => e.ProduceAsync(
+                _emailQueueTopicName,
+                It.Is<ImmutableList<string>>(e => e.Count == batch.Count),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([firstEmailNotification.Serialize(), thirdEmailNotification.Serialize(), .. invalidEntries]);
+
+        var service = GetTestService(repo: repoMock.Object, producer: producerMock.Object);
+
+        // Act
+        await service.SendNotifications(CancellationToken.None);
+
+        // Assert
+        repoMock.Verify(e => e.UpdateSendStatus(firstEmailNotification.NotificationId, EmailNotificationResultType.New, It.IsAny<string?>()), Times.Once);
+        repoMock.Verify(e => e.UpdateSendStatus(thirdEmailNotification.NotificationId, EmailNotificationResultType.New, It.IsAny<string?>()), Times.Once);
+        repoMock.Verify(e => e.UpdateSendStatus(secondEmailNotification.NotificationId, EmailNotificationResultType.New, It.IsAny<string?>()), Times.Never);
+
+        producerMock.Verify(e => e.ProduceAsync(_emailQueueTopicName, It.IsAny<ImmutableList<string>>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
