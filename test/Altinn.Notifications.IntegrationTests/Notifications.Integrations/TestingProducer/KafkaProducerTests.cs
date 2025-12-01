@@ -128,6 +128,70 @@ public class KafkaProducerTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ProduceAsync_WithSingleMessageNotPersisted_ReturnsFalseAndFailedIncremented()
+    {
+        // Arrange
+        var msg = "new-message";
+        int failedCounterDelta = 0;
+        int latencyMeasurements = 0;
+        var loggerMock = new Mock<ILogger<KafkaProducer>>();
+
+        using var producer = CreateTestProducerWithLogger(loggerMock);
+
+        using var failedListener = InitiateFailedCounterListener(delta => Interlocked.Add(ref failedCounterDelta, delta));
+
+        using var latencyListener = new MeterListener
+        {
+            InstrumentPublished = (instrument, e) =>
+            {
+                if (instrument.Meter.Name == "Altinn.Notifications.KafkaProducer" && instrument.Name == "kafka.producer.single.latency.ms")
+                {
+                    e.EnableMeasurementEvents(instrument);
+                }
+            }
+        };
+        latencyListener.SetMeasurementEventCallback<double>((instrument, measurement, tags, state) =>
+        {
+            if (instrument.Meter.Name == "Altinn.Notifications.KafkaProducer" && instrument.Name == "kafka.producer.single.latency.ms")
+            {
+                Interlocked.Increment(ref latencyMeasurements);
+            }
+        });
+        latencyListener.Start();
+
+        var mockInnerProducer = new Mock<IProducer<Null, string>>();
+        mockInnerProducer
+            .Setup(p => p.ProduceAsync(_emptyTopic, It.Is<Message<Null, string>>(m => m.Value == msg), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DeliveryResult<Null, string>
+            {
+                Status = PersistenceStatus.NotPersisted,
+                Message = new Message<Null, string> { Value = msg }
+            });
+
+        var field = typeof(KafkaProducer).GetField("_producer", BindingFlags.Instance | BindingFlags.NonPublic)
+                    ?? throw new InvalidOperationException("_producer field not found.");
+        field.SetValue(producer, mockInnerProducer.Object);
+
+        // Act
+        var result = await producer.ProduceAsync(_emptyTopic, msg);
+        await Task.Delay(25); // allow metrics to emit
+
+        // Assert
+        Assert.False(result);
+        Assert.Equal(1, failedCounterDelta);
+        Assert.True(latencyMeasurements > 0, "Expected at least one latency measurement to be recorded.");
+
+        loggerMock.Verify(
+            e => e.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((s, _) => s.ToString()!.Contains("Message not persisted")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task ProduceAsync_WithInvalidTopicForSingleMessage_ReturnsFalseAndIncrementsFailed()
     {
         var loggerMock = new Mock<ILogger<KafkaProducer>>();
