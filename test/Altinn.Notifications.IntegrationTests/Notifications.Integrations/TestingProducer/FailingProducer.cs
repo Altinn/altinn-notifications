@@ -47,14 +47,14 @@ internal sealed class FailingProducer : IProducer<Null, string>
     }
 
     /// <summary>
-    /// Initializes transactions. No‑op in stub.
+    /// Initializes transactions.
     /// </summary>
     public void InitTransactions(TimeSpan timeout)
     {
     }
 
     /// <summary>
-    /// Begins a transaction. No‑op in stub.
+    /// Begins a transaction.
     /// </summary>
     public void BeginTransaction()
     {
@@ -69,7 +69,7 @@ internal sealed class FailingProducer : IProducer<Null, string>
     }
 
     /// <summary>
-    /// Commits a transaction with a timeout. No‑op in stub.
+    /// Commits a transaction with a timeout.
     /// </summary>
     public void CommitTransaction(TimeSpan timeout)
     {
@@ -81,12 +81,12 @@ internal sealed class FailingProducer : IProducer<Null, string>
     public void AbortTransaction() => throw new NotSupportedException("AbortTransaction() not used in tests.");
 
     /// <summary>
-    /// Aborts a transaction with a timeout. No‑op in stub.
+    /// Aborts a transaction with a timeout.
     /// </summary>
     public void AbortTransaction(TimeSpan timeout) => throw new NotSupportedException("AbortTransaction() not used in tests.");
 
     /// <summary>
-    /// Sends offsets to the current transaction. No‑op in stub.
+    /// Sends offsets to the current transaction.
     /// </summary>
     public void SendOffsetsToTransaction(IEnumerable<TopicPartitionOffset> offsets, IConsumerGroupMetadata groupMetadata, TimeSpan timeout)
     {
