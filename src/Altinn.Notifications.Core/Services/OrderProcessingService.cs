@@ -58,13 +58,11 @@ public class OrderProcessingService : IOrderProcessingService
     /// <inheritdoc/>
     public async Task StartProcessingPastDueOrders(CancellationToken cancellationToken = default)
     {
-        List<NotificationOrder> pastDueOrders;
+        List<NotificationOrder> pastDueOrders = [];
         Stopwatch stopwatch = Stopwatch.StartNew();
 
         do
         {
-            pastDueOrders = [];
-
             try
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -93,13 +91,9 @@ public class OrderProcessingService : IOrderProcessingService
             }
             catch (OperationCanceledException)
             {
-                // If we have a fetched batch, revert all of them to Registered.
-                if (pastDueOrders.Count > 0)
+                foreach (var order in pastDueOrders)
                 {
-                    foreach (var order in pastDueOrders)
-                    {
-                        await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.Registered);
-                    }
+                    await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.Registered);
                 }
 
                 throw;
