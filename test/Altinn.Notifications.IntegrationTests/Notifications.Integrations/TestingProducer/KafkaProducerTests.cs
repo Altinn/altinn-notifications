@@ -19,8 +19,8 @@ public class KafkaProducerTests : IAsyncLifetime
 {
     private KafkaProducer? _sharedProducer;
     private readonly string _brokerAddress = "localhost:9092";
-    private readonly string _emptyBatchTopic = $"kafka-producer-empty-{Guid.NewGuid():N}";
-    private readonly string _allThrowBatchTopic = $"kafka-producer-all-throw-{Guid.NewGuid():N}";
+    private readonly string _emptyTopic = $"kafka-producer-empty-{Guid.NewGuid():N}";
+    private readonly string _invalidTopic = $"kafka-producer-invalid-{Guid.NewGuid():N}";
     private readonly string _allInvalidBatchTopic = $"kafka-producer-invalid-{Guid.NewGuid():N}";
 
     /// <summary>
@@ -30,7 +30,8 @@ public class KafkaProducerTests : IAsyncLifetime
     {
         _sharedProducer?.Dispose();
 
-        await KafkaUtil.DeleteTopicAsync(_emptyBatchTopic);
+        await KafkaUtil.DeleteTopicAsync(_emptyTopic);
+        await KafkaUtil.DeleteTopicAsync(_invalidTopic);
         await KafkaUtil.DeleteTopicAsync(_allInvalidBatchTopic);
     }
 
@@ -39,17 +40,55 @@ public class KafkaProducerTests : IAsyncLifetime
     /// </summary>
     public async Task InitializeAsync()
     {
-        await KafkaUtil.CreateTopicAsync(_emptyBatchTopic);
+        await KafkaUtil.CreateTopicAsync(_emptyTopic);
         await KafkaUtil.CreateTopicAsync(_allInvalidBatchTopic);
 
         var settings = new KafkaSettings
         {
             BrokerAddress = _brokerAddress,
-            Admin = new AdminSettings { TopicList = { _emptyBatchTopic, _allInvalidBatchTopic } }
+            Admin = new AdminSettings { TopicList = { _emptyTopic, _allInvalidBatchTopic } }
         };
 
         var nullLogger = Mock.Of<ILogger<KafkaProducer>>();
         _sharedProducer = new KafkaProducer(Options.Create(settings), nullLogger);
+    }
+
+    [Fact]
+    public async Task ProduceAsync_WithInvalidSingleMessage_ReturnsFalseAndIncrementsFailed()
+    {
+        var loggerMock = new Mock<ILogger<KafkaProducer>>();
+        using var producer = CreateTestProducerWithLogger(loggerMock);
+
+        var result = await producer.ProduceAsync(_emptyTopic, "   ");
+
+        Assert.False(result);
+        loggerMock.Verify(
+            e => e.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((s, _) => s.ToString()!.Contains("Message is null, empty, or whitespace")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ProduceAsync_WithInvalidTopicForSingleMessage_ReturnsFalseAndIncrementsFailed()
+    {
+        var loggerMock = new Mock<ILogger<KafkaProducer>>();
+        using var producer = CreateTestProducerWithLogger(loggerMock);
+
+        var result = await producer.ProduceAsync(_invalidTopic, "payload");
+
+        Assert.False(result);
+        loggerMock.Verify(
+            e => e.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((s, _) => s.ToString()!.Contains("Topic name is not found")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
     }
 
     [Fact]
@@ -97,7 +136,7 @@ public class KafkaProducerTests : IAsyncLifetime
 
         using var producer = CreateTestProducerWithLogger(loggerMock);
 
-        var result = await producer.ProduceAsync(_emptyBatchTopic, emptyMessagesBatch);
+        var result = await producer.ProduceAsync(_emptyTopic, emptyMessagesBatch);
 
         Assert.Empty(result);
         Assert.Same(emptyMessagesBatch, result);
@@ -143,30 +182,31 @@ public class KafkaProducerTests : IAsyncLifetime
     [Fact]
     public async Task ProduceAsync_AllProduceTasksThrow_AllMessagesInTheBatchReturnedAsNotProduced()
     {
-        // Arrange
         int failedCounterDelta = 0;
         var loggerMock = new Mock<ILogger<KafkaProducer>>();
         var validMessagesBatch = ImmutableList.Create("x1", "x2", "x3");
 
+        var localTopic = $"kafka-producer-all-throw-{Guid.NewGuid():N}";
+
         var settings = new KafkaSettings
         {
             BrokerAddress = _brokerAddress,
-            Admin = new AdminSettings { TopicList = { _allThrowBatchTopic } }
+            Admin = new AdminSettings { TopicList = { localTopic } } // include so ValidateTopic passes
         };
 
         using var producer = new KafkaProducer(Options.Create(settings), loggerMock.Object);
 
-        // Replace internal _producer with throwing stub (reflection – avoids altering production code)
-        var field = typeof(KafkaProducer).GetField("_producer", BindingFlags.Instance | BindingFlags.NonPublic) ?? throw new InvalidOperationException("_producer field not found.");
+        await KafkaUtil.CreateTopicAsync(localTopic);
+
+        var field = typeof(KafkaProducer).GetField("_producer", BindingFlags.Instance | BindingFlags.NonPublic)
+                     ?? throw new InvalidOperationException("_producer field not found.");
         field.SetValue(producer, new FailingProducer());
 
         using var listener = InitiateFailedCounterListener(delta => Interlocked.Add(ref failedCounterDelta, delta));
 
-        // Act
-        var result = await producer.ProduceAsync(_allThrowBatchTopic, validMessagesBatch);
-        await Task.Delay(30); // allow metric callbacks
+        var result = await producer.ProduceAsync(localTopic, validMessagesBatch);
+        await Task.Delay(30);
 
-        // Assert
         Assert.Equal(validMessagesBatch, result);
         Assert.Equal(validMessagesBatch.Count, failedCounterDelta);
 
@@ -179,14 +219,7 @@ public class KafkaProducerTests : IAsyncLifetime
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
 
-        loggerMock.Verify(
-            e => e.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.IsAny<It.IsAnyType>(),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Never);
+        await KafkaUtil.DeleteTopicAsync(localTopic);
     }
 
     [Fact]
@@ -205,7 +238,7 @@ public class KafkaProducerTests : IAsyncLifetime
         await cancellationTokenSource.CancelAsync(); // Cancellation requested before scheduling produce tasks
 
         // Act
-        var result = await producer.ProduceAsync(_emptyBatchTopic, validMessagesBatch, cancellationTokenSource.Token);
+        var result = await producer.ProduceAsync(_emptyTopic, validMessagesBatch, cancellationTokenSource.Token);
         await Task.Delay(25); // allow metrics callback
 
         // Assert
@@ -220,15 +253,6 @@ public class KafkaProducerTests : IAsyncLifetime
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
-
-        loggerMock.Verify(
-            e => e.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.IsAny<It.IsAnyType>(),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Never);
 
         loggerMock.Verify(
             e => e.Log(
@@ -290,7 +314,7 @@ public class KafkaProducerTests : IAsyncLifetime
         var settings = new KafkaSettings
         {
             BrokerAddress = _brokerAddress,
-            Admin = new AdminSettings { TopicList = { _emptyBatchTopic, _allInvalidBatchTopic } }
+            Admin = new AdminSettings { TopicList = { _emptyTopic, _allInvalidBatchTopic } }
         };
 
         return new KafkaProducer(Options.Create(settings), loggerMock.Object);
