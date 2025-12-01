@@ -96,6 +96,43 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
+    public async Task StartProcessingPastDueOrders_CancellationBeforeSecondFetch_DoesNotRevertFirstBatch()
+    {
+        // Arrange
+        var firstBatch = CreateOrderBatch(50, "first-batch");
+
+        var repo = new Mock<IOrderRepository>();
+        repo
+            .SetupSequence(e => e.GetPastDueOrdersAndSetProcessingState(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(firstBatch) // Iteration 1 succeeds
+            .ThrowsAsync(new OperationCanceledException("Canceled before second fetch")); // Iteration 2 throws before assignment
+
+        var producer = new Mock<IKafkaProducer>();
+        producer
+            .Setup(e => e.ProduceAsync(
+                It.IsAny<string>(),
+                It.Is<ImmutableList<string>>(e => e.Count == 50),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]); // All published successfully
+
+        var service = GetTestService(orderRepository: repo.Object, producer: producer.Object);
+
+        using var cancellationTokenSource = new CancellationTokenSource();
+
+        // Act + Assert
+        await Assert.ThrowsAsync<OperationCanceledException>(() => service.StartProcessingPastDueOrders(cancellationTokenSource.Token));
+
+        repo.Verify(e => e.GetPastDueOrdersAndSetProcessingState(It.IsAny<CancellationToken>()), Times.Exactly(2));
+
+        producer.Verify(e => e.ProduceAsync(It.IsAny<string>(), It.IsAny<ImmutableList<string>>(), It.IsAny<CancellationToken>()), Times.Once);
+
+        foreach (var order in firstBatch)
+        {
+            repo.Verify(e => e.SetProcessingStatus(order.Id, OrderProcessingStatus.Registered), Times.Never);
+        }
+    }
+
+    [Fact]
     public async Task StartProcessingPastDueOrders_PartialFailures_MultipleValidFailedOrdersAreRevertedToRegistered()
     {
         // Arrange
