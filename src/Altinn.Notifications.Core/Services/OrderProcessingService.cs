@@ -1,5 +1,4 @@
-﻿using System.Collections.Immutable;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Text.Json;
 
 using Altinn.Notifications.Core.Configuration;
@@ -65,8 +64,6 @@ public class OrderProcessingService : IOrderProcessingService
         {
             try
             {
-                cancellationToken.ThrowIfCancellationRequested();
-
                 pastDueOrders = await _orderRepository.GetPastDueOrdersAndSetProcessingState(cancellationToken);
                 if (pastDueOrders.Count == 0)
                 {
@@ -91,9 +88,9 @@ public class OrderProcessingService : IOrderProcessingService
             }
             catch (OperationCanceledException)
             {
-                foreach (var order in pastDueOrders)
+                foreach (var pastDueOrder in pastDueOrders)
                 {
-                    await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.Registered);
+                    await _orderRepository.SetProcessingStatus(pastDueOrder.Id, OrderProcessingStatus.Registered);
                 }
 
                 throw;

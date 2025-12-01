@@ -86,8 +86,6 @@ public class EmailNotificationService : IEmailNotificationService
         {
             try
             {
-                cancellationToken.ThrowIfCancellationRequested();
-
                 newEmailNotifications = await _repository.GetNewNotificationsAsync(_emailPublishBatchSize, cancellationToken);
                 if (newEmailNotifications.Count == 0)
                 {
@@ -96,23 +94,19 @@ public class EmailNotificationService : IEmailNotificationService
 
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var readyToSendMessages = newEmailNotifications
-                    .Select(readyToSendEmail => readyToSendEmail.Serialize())
-                    .ToImmutableList();
+                var serializedEmailNotifications = newEmailNotifications.Select(readyToSendEmail => readyToSendEmail.Serialize()).ToImmutableList();
 
-                var unpublishedMessages = await _producer.ProduceAsync(_emailQueueTopicName, readyToSendMessages, cancellationToken);
+                var unpublishedEmailNotifications = await _producer.ProduceAsync(_emailQueueTopicName, serializedEmailNotifications, cancellationToken);
 
-                foreach (var unpublishedMessage in unpublishedMessages)
+                foreach (var unpublishedEmailNotification in unpublishedEmailNotifications)
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    var failedToSendEmail = JsonSerializer.Deserialize<Email>(unpublishedMessage, JsonSerializerOptionsProvider.Options);
-                    if (failedToSendEmail == null || failedToSendEmail.NotificationId == Guid.Empty)
+                    var deserializedEmailNotification = JsonSerializer.Deserialize<Email>(unpublishedEmailNotification, JsonSerializerOptionsProvider.Options);
+                    if (deserializedEmailNotification == null || deserializedEmailNotification.NotificationId == Guid.Empty)
                     {
                         continue;
                     }
 
-                    await _repository.UpdateSendStatus(failedToSendEmail.NotificationId, EmailNotificationResultType.New);
+                    await _repository.UpdateSendStatus(deserializedEmailNotification.NotificationId, EmailNotificationResultType.New);
                 }
             }
             catch (OperationCanceledException)
