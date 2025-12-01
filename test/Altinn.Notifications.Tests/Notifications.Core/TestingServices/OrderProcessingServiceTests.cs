@@ -96,22 +96,37 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task StartProcessingPastDueOrders_CancellationRequestedBeforeFirstFetch_Throws_AndDoesNothing()
+    public async Task StartProcessingPastDueOrders_CancellationRequestedAfterFirstFetch_Throws_AndRevertsProcessingStatus()
     {
         // Arrange
         var producerMock = new Mock<IKafkaProducer>();
         var orderRepositoryMock = new Mock<IOrderRepository>();
 
+        var pastDueOrders = new List<NotificationOrder>
+        {
+            new() { Id = Guid.NewGuid() },
+            new() { Id = Guid.NewGuid() }
+        };
+
+        orderRepositoryMock
+            .Setup(e => e.GetPastDueOrdersAndSetProcessingState(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(pastDueOrders);
+
         var service = GetTestService(orderRepository: orderRepositoryMock.Object, producer: producerMock.Object);
 
         using var cancellationTokenSource = new CancellationTokenSource();
-        await cancellationTokenSource.CancelAsync();
+        await cancellationTokenSource.CancelAsync(); // cancellation requested before method call
 
         // Act + Assert
         await Assert.ThrowsAsync<OperationCanceledException>(() => service.StartProcessingPastDueOrders(cancellationTokenSource.Token));
 
-        orderRepositoryMock.Verify(e => e.GetPastDueOrdersAndSetProcessingState(It.IsAny<CancellationToken>()), Times.Never);
-        orderRepositoryMock.Verify(e => e.SetProcessingStatus(It.IsAny<Guid>(), It.IsAny<OrderProcessingStatus>()), Times.Never);
+        orderRepositoryMock.Verify(e => e.GetPastDueOrdersAndSetProcessingState(It.IsAny<CancellationToken>()), Times.Once);
+
+        foreach (var order in pastDueOrders)
+        {
+            orderRepositoryMock.Verify(e => e.SetProcessingStatus(order.Id, OrderProcessingStatus.Registered), Times.Once);
+        }
+
         producerMock.Verify(e => e.ProduceAsync(It.IsAny<string>(), It.IsAny<ImmutableList<string>>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 

@@ -78,7 +78,7 @@ public class SmsNotificationService : ISmsNotificationService
             try
             {
                 newSmsNotifications = await _repository.GetNewNotifications(_publishBatchSize, cancellationToken, sendingTimePolicy);
-                if (newSmsNotifications.Count == 0)
+                if (newSmsNotifications == null || newSmsNotifications.Count == 0)
                 {
                     break;
                 }

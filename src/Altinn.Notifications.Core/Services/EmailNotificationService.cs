@@ -87,7 +87,7 @@ public class EmailNotificationService : IEmailNotificationService
             try
             {
                 newEmailNotifications = await _repository.GetNewNotificationsAsync(_emailPublishBatchSize, cancellationToken);
-                if (newEmailNotifications.Count == 0)
+                if (newEmailNotifications == null || newEmailNotifications.Count == 0)
                 {
                     break;
                 }
