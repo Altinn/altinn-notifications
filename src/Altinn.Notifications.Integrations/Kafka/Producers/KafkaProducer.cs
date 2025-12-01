@@ -194,15 +194,8 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
         {
             batchProcessingStopwatch.Stop();
 
-            _batchLatencyMs.Record(
-                batchProcessingStopwatch.Elapsed.TotalMilliseconds,
-                new KeyValuePair<string, object?>("topic", topicName),
-                new KeyValuePair<string, object?>("batch.status", batchFailed ? "failed" : "succeeded"),
-                new KeyValuePair<string, object?>("batch.valid.count", batchContext.ValidMessages.Count),
-                new KeyValuePair<string, object?>("batch.invalid.count", batchContext.InvalidMessages.Count),
-                new KeyValuePair<string, object?>("batch.produced.count", batchContext.ProducedMessages.Count),
-                new KeyValuePair<string, object?>("batch.notproduced.count", batchContext.NotProducedMessages.Count));
-
+            RecordBatchMetrics(topicName, batchContext, batchFailed, batchProcessingStopwatch);
+            
             LogBatchResults(topicName, batchContext, batchProcessingStopwatch);
         }
 
@@ -519,6 +512,35 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             batchContext.NotProducedMessages.Count,
             successRate,
             batchStopwatch.Elapsed.TotalMilliseconds);
+    }
+
+    /// <summary>
+    /// Records latency and outcome metrics for a completed batch publish operation.
+    /// </summary>
+    /// <param name="topicName">
+    /// The Kafka topic targeted by the batch. Added as a tag to correlate metrics per topic.
+    /// </param>
+    /// <param name="batchContext">
+    /// The final batch context containing counts of valid, invalid, produced, and not produced messages.
+    /// Values are used to emit dimensional tags for observability.
+    /// </param>
+    /// <param name="batchFailed">
+    /// Indicates whether the batch had any unsuccessful message outcomes
+    /// (i.e. one or more messages ended in the not-produced set). Drives the batch.status tag.
+    /// </param>
+    /// <param name="stopwatch">
+    /// A stopped <see cref="Stopwatch"/> measuring total end‑to‑end batch processing duration in milliseconds.
+    /// </param>
+    private static void RecordBatchMetrics(string topicName, BatchProducingContext batchContext, bool batchFailed, Stopwatch stopwatch)
+    {
+        _batchLatencyMs.Record(
+            stopwatch.Elapsed.TotalMilliseconds,
+            new KeyValuePair<string, object?>("topic", topicName),
+            new KeyValuePair<string, object?>("batch.status", batchFailed ? "failed" : "succeeded"),
+            new KeyValuePair<string, object?>("batch.valid.count", batchContext.ValidMessages.Count),
+            new KeyValuePair<string, object?>("batch.invalid.count", batchContext.InvalidMessages.Count),
+            new KeyValuePair<string, object?>("batch.produced.count", batchContext.ProducedMessages.Count),
+            new KeyValuePair<string, object?>("batch.notproduced.count", batchContext.NotProducedMessages.Count));
     }
 
     /// <summary>
