@@ -36,7 +36,7 @@ public abstract class KafkaConsumerBase : BackgroundService
         };
 
         _consumer = new ConsumerBuilder<string, string>(consumerConfig)
-            .SetErrorHandler((_, e) => _logger.LogError("// { Class } // Error: { e.Reason }", GetType().Name, e.Reason))
+            .SetErrorHandler((_, e) => _logger.LogError("// {Class} // Error: {Reason}", GetType().Name, e.Reason))
             .Build();
         _topicName = topicName;
     }

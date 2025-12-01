@@ -15,7 +15,7 @@ namespace Altinn.Notifications.Sms.Telemetry
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestFilterProcessor"/> class.
         /// </summary>
-        public RequestFilterProcessor(IHttpContextAccessor httpContextAccessor = null) : base()
+        public RequestFilterProcessor(IHttpContextAccessor httpContextAccessor) : base()
         {
             _httpContextAccessor = httpContextAccessor;
         }
