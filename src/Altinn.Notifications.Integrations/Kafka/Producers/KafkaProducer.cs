@@ -289,7 +289,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             EnableBackgroundPoll = true,
             SocketKeepaliveEnable = true,
             EnableDeliveryReports = true,
-            StatisticsIntervalMs = 10000,
+            StatisticsIntervalMs = 30000,
             DeliveryReportFields = "status",
             CompressionType = CompressionType.Zstd,
             Partitioner = Partitioner.ConsistentRandom
