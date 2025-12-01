@@ -226,7 +226,7 @@ public class NotificationStatusRetryConsumerBaseTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ConsumeRetryMessage_WhenRetryStatusProducerFails_ThrowsInvalidOperationException()
+    public async Task ConsumeRetryMessage_WhenRetryPublishFails_IncrementsAttemptsAndLogsInvalidOperationException()
     {
         // Arrange
         var logger = new Mock<ILogger<EmailStatusRetryConsumer>>();

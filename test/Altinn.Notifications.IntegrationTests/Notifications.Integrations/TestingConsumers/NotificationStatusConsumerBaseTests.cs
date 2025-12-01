@@ -71,7 +71,7 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ProcessEmailDeliveryReport_WhenRetryStatusProducerFails_ThrowsInvalidOperationException()
+    public async Task ConsumeRetryMessage_WhenRetryStatusProducerFails_LogsInvalidOperationException()
     {
         // Arrange
         var guidService = new Mock<IGuidService>();
@@ -137,6 +137,9 @@ public class NotificationStatusConsumerBaseTests : IAsyncLifetime
                     // Verify UpdateSendStatus was called once
                     emailNotificationRepository.Verify(e => e.UpdateSendStatus(sendOperationResult.NotificationId, sendOperationResult.SendResult.Value, sendOperationResult.OperationId), Times.Once);
 
+                    // Verify no dead delivery report was inserted
+                    deadDeliveryReportService.Verify(e => e.InsertAsync(It.IsAny<DeadDeliveryReport>(), It.IsAny<CancellationToken>()), Times.Never);
+                    
                     return true;
                 }
                 catch
