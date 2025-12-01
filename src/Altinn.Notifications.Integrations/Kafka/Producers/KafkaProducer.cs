@@ -1,6 +1,8 @@
 ﻿using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
+using System.Security.Cryptography;
+using System.Text;
 
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Integrations.Configuration;
@@ -195,7 +197,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             batchProcessingStopwatch.Stop();
 
             RecordBatchMetrics(topicName, batchContext, batchFailed, batchProcessingStopwatch);
-            
+
             LogBatchResults(topicName, batchContext, batchProcessingStopwatch);
         }
 
@@ -504,9 +506,11 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             ? 0
             : (double)batchContext.ProducedMessages.Count / batchContext.ValidMessages.Count;
 
+        var topicHash = ComputeTopicFingerprint(topicName);
+
         _logger.LogInformation(
-            "// KafkaProducer // ProduceAsync // Topic={Topic} TotalValid={TotalValid} Produced={ProducedCount} NotProduced={NotProducedCount} SuccessRate={Rate:P2} DurationMs={Duration:F0}",
-            topicName,
+            "// KafkaProducer // ProduceAsync // TopicHash={TopicHash} TotalValid={TotalValid} Produced={ProducedCount} NotProduced={NotProducedCount} SuccessRate={Rate:P2} DurationMs={Duration:F0}",
+            topicHash,
             batchContext.ValidMessages.Count,
             batchContext.ProducedMessages.Count,
             batchContext.NotProducedMessages.Count,
@@ -668,5 +672,43 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             ProducedMessages = [.. producedMessages],
             NotProducedMessages = [.. notProducedMessages]
         };
+    }
+
+    /// <summary>
+    /// Computes a deterministic truncated SHA-256 hexadecimal fingerprint for a Kafka topic name.
+    /// The fingerprint is intended for log correlation and diagnostics without exposing the raw topic identifier.
+    /// </summary>
+    /// <param name="topicName">
+    /// The original Kafka topic name to fingerprint. If <c>null</c>, empty, or whitespace,
+    /// the literal string <c>"EMPTY"</c> is returned.
+    /// </param>
+    /// <returns>
+    /// A 16 character lowercase hexadecimal string representing the first 8 bytes of the SHA-256 hash
+    /// of <paramref name="topicName"/>, or <c>"EMPTY"</c> if the input is blank.
+    /// </returns>
+    private static string ComputeTopicFingerprint(string topicName)
+    {
+        if (string.IsNullOrWhiteSpace(topicName))
+        {
+            return "EMPTY";
+        }
+
+        ReadOnlySpan<byte> topicNameBytes = Encoding.UTF8.GetBytes(topicName);
+
+        Span<byte> digest = stackalloc byte[32];
+        SHA256.HashData(topicNameBytes, digest);
+
+        // First 8 bytes -> 16 hex chars (truncated fingerprint)
+        Span<char> fingerprintBuffer = stackalloc char[16];
+        const string hexAlphabet = "0123456789abcdef";
+
+        for (int i = 0; i < 8; i++)
+        {
+            byte byteValue = digest[i];
+            fingerprintBuffer[i * 2] = hexAlphabet[byteValue >> 4];
+            fingerprintBuffer[(i * 2) + 1] = hexAlphabet[byteValue & 0x0F];
+        }
+
+        return new string(fingerprintBuffer);
     }
 }
