@@ -572,10 +572,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
                 break;
             }
 
-            // Capture the message in a local variable to avoid closure issues
-            var messagePayload = validMessage;
-
-            produceTaskFactories.Add(ProduceTaskFactory.Create(topicName, messagePayload, _producer, cancellationToken));
+            produceTaskFactories.Add(ProduceTaskFactory.Create(topicName, validMessage, _producer, cancellationToken));
 
             scheduledMessagesCount++;
             unscheduledMessagesCount--;
