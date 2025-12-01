@@ -71,14 +71,16 @@ public class SmsNotificationService : ISmsNotificationService
     /// <inheritdoc/>
     public async Task SendNotifications(CancellationToken cancellationToken, SendingTimePolicy sendingTimePolicy = SendingTimePolicy.Daytime)
     {
-        List<Sms> newSmsNotifications = [];
+        List<Sms> newSmsNotifications;
 
         do
         {
+            newSmsNotifications = [];
+
             try
             {
                 newSmsNotifications = await _repository.GetNewNotifications(_publishBatchSize, cancellationToken, sendingTimePolicy);
-                if (newSmsNotifications == null || newSmsNotifications.Count == 0)
+                if (newSmsNotifications.Count == 0)
                 {
                     break;
                 }

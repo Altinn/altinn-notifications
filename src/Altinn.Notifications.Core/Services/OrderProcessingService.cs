@@ -57,15 +57,17 @@ public class OrderProcessingService : IOrderProcessingService
     /// <inheritdoc/>
     public async Task StartProcessingPastDueOrders(CancellationToken cancellationToken = default)
     {
-        List<NotificationOrder> pastDueOrders = [];
+        List<NotificationOrder> pastDueOrders;
         Stopwatch stopwatch = Stopwatch.StartNew();
 
         do
         {
+            pastDueOrders = [];
+
             try
             {
                 pastDueOrders = await _orderRepository.GetPastDueOrdersAndSetProcessingState(cancellationToken);
-                if (pastDueOrders == null || pastDueOrders.Count == 0)
+                if (pastDueOrders.Count == 0)
                 {
                     break;
                 }

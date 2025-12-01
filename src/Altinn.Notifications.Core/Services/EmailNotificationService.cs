@@ -80,14 +80,16 @@ public class EmailNotificationService : IEmailNotificationService
     /// <inheritdoc/>
     public async Task SendNotifications(CancellationToken cancellationToken)
     {
-        List<Email> newEmailNotifications = [];
+        List<Email> newEmailNotifications;
 
         do
         {
+            newEmailNotifications = [];
+
             try
             {
                 newEmailNotifications = await _repository.GetNewNotificationsAsync(_emailPublishBatchSize, cancellationToken);
-                if (newEmailNotifications == null || newEmailNotifications.Count == 0)
+                if (newEmailNotifications.Count == 0)
                 {
                     break;
                 }
