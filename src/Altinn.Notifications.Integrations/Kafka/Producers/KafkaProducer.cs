@@ -144,62 +144,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             return messages;
         }
 
-        var batchProcessingStopwatch = Stopwatch.StartNew();
-
-        var batchFailed = false;
-        var batchCategorized = false;
-
-        var deliveryTasks = new List<Task<DeliveryResult<Null, string>>>(batchContext.DeferredProduceTasks.Count);
-
-        try
-        {
-            deliveryTasks.AddRange(batchContext.DeferredProduceTasks.Select(e => e.ProduceTask()));
-
-            await Task.WhenAll(deliveryTasks);
-
-            batchContext = CategorizeDeliveryResults(topicName, batchContext, deliveryTasks);
-
-            batchCategorized = true;
-
-            batchFailed = batchContext.NotProducedMessages.Count > 0;
-        }
-        catch (Exception ex)
-        {
-            batchFailed = true;
-
-            LogOnProducingFailures(ex);
-
-            if (deliveryTasks.Count > 0 && !batchCategorized)
-            {
-                deliveryTasks = [.. deliveryTasks.Where(e => e.IsCompleted)];
-
-                if (deliveryTasks.Count > 0)
-                {
-                    batchContext = CategorizeDeliveryResults(topicName, batchContext, deliveryTasks);
-                }
-            }
-
-            // If still no classification, mark all valid as not produced
-            if (batchContext.ValidMessages.Count > 0 &&
-                batchContext.ProducedMessages.Count == 0 &&
-                batchContext.NotProducedMessages.Count == 0)
-            {
-                batchContext = batchContext with
-                {
-                    NotProducedMessages = [.. batchContext.ValidMessages]
-                };
-
-                IncrementFailed(topicName, batchContext.ValidMessages.Count);
-            }
-        }
-        finally
-        {
-            batchProcessingStopwatch.Stop();
-
-            RecordBatchMetrics(topicName, batchContext, batchFailed, batchProcessingStopwatch);
-
-            LogBatchResults(topicName, batchContext, batchProcessingStopwatch);
-        }
+        batchContext = await ExecuteAndFinalizeBatchAsync(topicName, batchContext).ConfigureAwait(false);
 
         return [.. batchContext.InvalidMessages, .. batchContext.NotProducedMessages];
     }
@@ -387,6 +332,44 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     }
 
     /// <summary>
+    /// Computes a deterministic truncated SHA-256 hexadecimal fingerprint for a Kafka topic name.
+    /// The fingerprint is intended for log correlation and diagnostics without exposing the raw topic identifier.
+    /// </summary>
+    /// <param name="topicName">
+    /// The original Kafka topic name to fingerprint. If <c>null</c>, empty, or whitespace,
+    /// the literal string <c>"EMPTY"</c> is returned.
+    /// </param>
+    /// <returns>
+    /// A 16 character lowercase hexadecimal string representing the first 8 bytes of the SHA-256 hash
+    /// of <paramref name="topicName"/>, or <c>"EMPTY"</c> if the input is blank.
+    /// </returns>
+    private static string ComputeTopicFingerprint(string topicName)
+    {
+        if (string.IsNullOrWhiteSpace(topicName))
+        {
+            return "EMPTY";
+        }
+
+        ReadOnlySpan<byte> topicNameBytes = Encoding.UTF8.GetBytes(topicName);
+
+        Span<byte> digest = stackalloc byte[32];
+        SHA256.HashData(topicNameBytes, digest);
+
+        // First 8 bytes -> 16 hex chars (truncated fingerprint)
+        Span<char> fingerprintBuffer = stackalloc char[16];
+        const string hexAlphabet = "0123456789abcdef";
+
+        for (int i = 0; i < 8; i++)
+        {
+            byte byteValue = digest[i];
+            fingerprintBuffer[i * 2] = hexAlphabet[byteValue >> 4];
+            fingerprintBuffer[(i * 2) + 1] = hexAlphabet[byteValue & 0x0F];
+        }
+
+        return new string(fingerprintBuffer);
+    }
+
+    /// <summary>
     /// Creates a Kafka producer instance with error and statistics handlers, plus instrumentation support.
     /// </summary>
     /// <param name="config">The producer configuration to use for creating the Kafka producer.</param>
@@ -516,6 +499,74 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             batchContext.NotProducedMessages.Count,
             successRate,
             batchStopwatch.Elapsed.TotalMilliseconds);
+    }
+
+    /// <summary>
+    /// Executes all deferred produce tasks for the batch, categorizes results, and records metrics/logs.
+    /// </summary>
+    /// <param name="topicName">The Kafka topic name used for tagging and logging.</param>
+    /// <param name="batchContext">The current batch context containing deferred tasks.</param>
+    /// <returns>The updated <see cref="BatchProducingContext"/> after categorization.</returns>
+    private async Task<BatchProducingContext> ExecuteAndFinalizeBatchAsync(string topicName, BatchProducingContext batchContext)
+    {
+        var batchProcessingStopwatch = Stopwatch.StartNew();
+
+        var batchFailed = false;
+        var batchCategorized = false;
+
+        var deliveryTasks = new List<Task<DeliveryResult<Null, string>>>(batchContext.DeferredProduceTasks.Count);
+
+        try
+        {
+            deliveryTasks.AddRange(batchContext.DeferredProduceTasks.Select(e => e.ProduceTask()));
+
+            await Task.WhenAll(deliveryTasks).ConfigureAwait(false);
+
+            batchContext = CategorizeDeliveryResults(topicName, batchContext, deliveryTasks);
+
+            batchCategorized = true;
+
+            batchFailed = batchContext.NotProducedMessages.Count > 0;
+        }
+        catch (Exception ex)
+        {
+            batchFailed = true;
+
+            LogOnProducingFailures(ex);
+
+            if (deliveryTasks.Count > 0 && !batchCategorized)
+            {
+                deliveryTasks = [.. deliveryTasks.Where(e => e.IsCompleted)];
+
+                if (deliveryTasks.Count > 0)
+                {
+                    batchContext = CategorizeDeliveryResults(topicName, batchContext, deliveryTasks);
+                }
+            }
+
+            // If still no classification, mark all valid as not produced
+            if (batchContext.ValidMessages.Count > 0 &&
+                batchContext.ProducedMessages.Count == 0 &&
+                batchContext.NotProducedMessages.Count == 0)
+            {
+                batchContext = batchContext with
+                {
+                    NotProducedMessages = [.. batchContext.ValidMessages]
+                };
+
+                IncrementFailed(topicName, batchContext.ValidMessages.Count);
+            }
+        }
+        finally
+        {
+            batchProcessingStopwatch.Stop();
+
+            RecordBatchMetrics(topicName, batchContext, batchFailed, batchProcessingStopwatch);
+
+            LogBatchResults(topicName, batchContext, batchProcessingStopwatch);
+        }
+
+        return batchContext;
     }
 
     /// <summary>
@@ -672,43 +723,5 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             ProducedMessages = [.. producedMessages],
             NotProducedMessages = [.. notProducedMessages]
         };
-    }
-
-    /// <summary>
-    /// Computes a deterministic truncated SHA-256 hexadecimal fingerprint for a Kafka topic name.
-    /// The fingerprint is intended for log correlation and diagnostics without exposing the raw topic identifier.
-    /// </summary>
-    /// <param name="topicName">
-    /// The original Kafka topic name to fingerprint. If <c>null</c>, empty, or whitespace,
-    /// the literal string <c>"EMPTY"</c> is returned.
-    /// </param>
-    /// <returns>
-    /// A 16 character lowercase hexadecimal string representing the first 8 bytes of the SHA-256 hash
-    /// of <paramref name="topicName"/>, or <c>"EMPTY"</c> if the input is blank.
-    /// </returns>
-    private static string ComputeTopicFingerprint(string topicName)
-    {
-        if (string.IsNullOrWhiteSpace(topicName))
-        {
-            return "EMPTY";
-        }
-
-        ReadOnlySpan<byte> topicNameBytes = Encoding.UTF8.GetBytes(topicName);
-
-        Span<byte> digest = stackalloc byte[32];
-        SHA256.HashData(topicNameBytes, digest);
-
-        // First 8 bytes -> 16 hex chars (truncated fingerprint)
-        Span<char> fingerprintBuffer = stackalloc char[16];
-        const string hexAlphabet = "0123456789abcdef";
-
-        for (int i = 0; i < 8; i++)
-        {
-            byte byteValue = digest[i];
-            fingerprintBuffer[i * 2] = hexAlphabet[byteValue >> 4];
-            fingerprintBuffer[(i * 2) + 1] = hexAlphabet[byteValue & 0x0F];
-        }
-
-        return new string(fingerprintBuffer);
     }
 }
