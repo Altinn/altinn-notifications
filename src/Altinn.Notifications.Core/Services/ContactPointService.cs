@@ -314,9 +314,9 @@ public class ContactPointService(
     /// </returns>
     private async Task<List<UserContactPoints>> LookupPersonContactPoints(List<Recipient> recipients)
     {
-        List<string> nationalIdentityNumbers = [.. recipients
+        List<string> nationalIdentityNumbers = recipients
                 .Where(e => !string.IsNullOrWhiteSpace(e.NationalIdentityNumber))
-                .Select(e => e.NationalIdentityNumber)];
+                .Select(e => e.NationalIdentityNumber!).ToList();
 
         if (nationalIdentityNumbers.Count == 0)
         {
@@ -355,9 +355,9 @@ public class ContactPointService(
     /// </returns>
     private async Task<List<OrganizationContactPoints>> LookupOrganizationContactPoints(List<Recipient> recipients, string? resourceId)
     {
-        List<string> organizationNumbers = [.. recipients
+        List<string> organizationNumbers = recipients
             .Where(e => !string.IsNullOrWhiteSpace(e.OrganizationNumber))
-            .Select(e => e.OrganizationNumber)];
+            .Select(e => e.OrganizationNumber!).ToList();
 
         if (organizationNumbers.Count == 0)
         {

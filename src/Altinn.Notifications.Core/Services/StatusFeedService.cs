@@ -43,11 +43,6 @@ public class StatusFeedService : IStatusFeedService
     /// <inheritdoc />
     public async Task<Result<List<StatusFeed>, ServiceError>> GetStatusFeed(long seq, int? pageSize, string creatorName, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(creatorName))
-        {
-            return new ServiceError(400, "Creator name cannot be null or empty");
-        }
-
         try
         {
             var pageSizeFound = FindPageSize(pageSize);

@@ -74,20 +74,20 @@ export function setup() {
     const idempotencyIdSms = uuidv4();
     const sendersReference = uuidv4();
 
-    if (emailRecipient != null) {
-        emailOrderRequestJson.recipient.recipientEmail.emailAddress = emailRecipient;
-    }
-    else {
+    if (emailRecipient == null) {
         // unset recipientEmail object when no email recipient is provided
         emailOrderRequestJson.recipient["recipientEmail"] = undefined;
     }
-
-    if (ninRecipient != null) {
-        emailOrderRequestJson.recipient.recipientPerson.nationalIdentityNumber = ninRecipient;
-    }
     else {
+        emailOrderRequestJson.recipient.recipientEmail.emailAddress = emailRecipient;
+    }
+
+    if (ninRecipient == null) {
         // unset recipientPerson object when no national identity number is provided
         emailOrderRequestJson.recipient["recipientPerson"] = undefined;
+    }
+    else {
+        emailOrderRequestJson.recipient.recipientPerson.nationalIdentityNumber = ninRecipient;
     }
 
     if (smsRecipient != null) {
@@ -265,7 +265,7 @@ function getStatusFeed(data, label) {
  * The main function to run the test.
  * @param {Object} data - The data object containing test data.
  */
-export default function (data) {
+export default function runTests(data) {
     let response = postEmailNotificationOrderRequest(data);
     let responseObject = JSON.parse(response);
 

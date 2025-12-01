@@ -105,11 +105,11 @@ public class FutureOrdersController : ControllerBase
         {
             var problemDetails = new ProblemDetails
             {
-                Status = 400,
-                Detail = ex.Message,
-                Title = "Invalid notification order request"
+                Status = 500,
+                Title = "Notification order is incomplete or invalid",
+                Detail = ex.Message
             };
-            return StatusCode(400, problemDetails);
+            return StatusCode(500, problemDetails);
         }
         catch (OperationCanceledException)
         {

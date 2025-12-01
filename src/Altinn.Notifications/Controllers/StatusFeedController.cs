@@ -69,7 +69,12 @@ public class StatusFeedController(IStatusFeedService statusFeedService, IValidat
         }
         catch (OperationCanceledException)
         {
-            return StatusCode(499, "Request terminated - The client disconnected or cancelled the request before the server could complete processing");
+            return StatusCode(499, new ProblemDetails
+            {
+                Title = "Request terminated",
+                Detail = "The client disconnected or cancelled the request before the server could complete processing.",
+                Status = 499
+            });
         }
     }
 }
