@@ -8,6 +8,18 @@ namespace Altinn.Notifications.Email.Core
     /// </summary>
     public class SendNotificationOperationIdentifier
     {
+        private static readonly JsonSerializerOptions _serializeOptions = new()
+        {
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            Converters = { new JsonStringEnumConverter() }
+        };
+
+        private static readonly JsonSerializerOptions _deserializeOptions = new()
+        {
+            PropertyNameCaseInsensitive = true
+        };
+
         /// <summary>
         /// The notification id
         /// </summary>
@@ -30,12 +42,7 @@ namespace Altinn.Notifications.Email.Core
         {
             return JsonSerializer.Serialize(
                 this,
-                new JsonSerializerOptions
-                {
-                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    Converters = { new JsonStringEnumConverter() }
-                });
+                _serializeOptions);
         }
 
         /// <summary>
@@ -55,10 +62,7 @@ namespace Altinn.Notifications.Email.Core
             {
                 parsedOutput = JsonSerializer.Deserialize<SendNotificationOperationIdentifier>(
                 input!,
-                new JsonSerializerOptions()
-                {
-                    PropertyNameCaseInsensitive = true
-                });
+                _deserializeOptions);
 
                 value = parsedOutput!;
                 return value.NotificationId != Guid.Empty;

@@ -55,6 +55,12 @@ public class Email
     {
     }
 
+    private static readonly JsonSerializerOptions _jsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        Converters = { new JsonStringEnumConverter() }
+    };
+
     /// <summary>
     /// Try to parse a json string into a<see cref="Email"/>
     /// </summary>
@@ -71,12 +77,8 @@ public class Email
         try
         {
             parsedOutput = JsonSerializer.Deserialize<Email>(
-            input!,
-            new JsonSerializerOptions()
-            {
-                PropertyNameCaseInsensitive = true,
-                Converters = { new JsonStringEnumConverter() }
-            });
+                input!,
+                _jsonOptions);
 
             value = parsedOutput!;
             return value.NotificationId != Guid.Empty;
