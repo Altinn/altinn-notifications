@@ -20,10 +20,12 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Integrations.Testi
 public class KafkaProducerTests : IAsyncLifetime
 {
     private KafkaProducer? _sharedProducer;
-    private readonly string _brokerAddress = "localhost:9092";
-    private readonly string _emptyTopic = $"kafka-producer-empty-{Guid.NewGuid():N}";
+
+    private const int _metricEmissionDelayMs = 25;
+    private const string _brokerAddress = "localhost:9092";
+    private readonly string _batchTopic = $"kafka-producer-batch-{Guid.NewGuid():N}";
+    private readonly string _validTopic = $"kafka-producer-valid-{Guid.NewGuid():N}";
     private readonly string _invalidTopic = $"kafka-producer-invalid-{Guid.NewGuid():N}";
-    private readonly string _allInvalidBatchTopic = $"kafka-producer-invalid-{Guid.NewGuid():N}";
 
     /// <summary>
     /// Disposes the class instance, after all tests have been run.
@@ -32,9 +34,9 @@ public class KafkaProducerTests : IAsyncLifetime
     {
         _sharedProducer?.Dispose();
 
-        await KafkaUtil.DeleteTopicAsync(_emptyTopic);
+        await KafkaUtil.DeleteTopicAsync(_batchTopic);
+        await KafkaUtil.DeleteTopicAsync(_validTopic);
         await KafkaUtil.DeleteTopicAsync(_invalidTopic);
-        await KafkaUtil.DeleteTopicAsync(_allInvalidBatchTopic);
     }
 
     /// <summary>
@@ -42,202 +44,242 @@ public class KafkaProducerTests : IAsyncLifetime
     /// </summary>
     public async Task InitializeAsync()
     {
-        await KafkaUtil.CreateTopicAsync(_emptyTopic);
-        await KafkaUtil.CreateTopicAsync(_allInvalidBatchTopic);
+        await KafkaUtil.CreateTopicAsync(_validTopic);
+        await KafkaUtil.CreateTopicAsync(_batchTopic);
 
-        var settings = new KafkaSettings
-        {
-            BrokerAddress = _brokerAddress,
-            Admin = new AdminSettings { TopicList = { _emptyTopic, _allInvalidBatchTopic } }
-        };
-
+        var settings = CreateKafkaSettings(_validTopic, _batchTopic);
         var nullLogger = Mock.Of<ILogger<KafkaProducer>>();
         _sharedProducer = new KafkaProducer(Options.Create(settings), nullLogger);
     }
-    
+
     [Fact]
-    public async Task ProduceAsync_WithInvalidSingleMessage_ReturnsFalseAndIncrementsFailed()
+    public async Task ProduceAsync_SingleMessage_WithInvalidTopic_ReturnsFalseAndLogsError()
     {
+        // Arrange
         var loggerMock = new Mock<ILogger<KafkaProducer>>();
-        using var producer = CreateTestProducerWithLogger(loggerMock);
+        using var producer = CreateTestProducer(loggerMock.Object);
 
-        var result = await producer.ProduceAsync(_emptyTopic, "   ");
+        // Act
+        var result = await producer.ProduceAsync(_invalidTopic, "valid-payload");
 
+        // Assert
         Assert.False(result);
         loggerMock.Verify(
-            e => e.Log(
+            logger => logger.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((s, _) => s.ToString()!.Contains("Message is null, empty, or whitespace")),
+                It.Is<It.IsAnyType>((state, _) => state.ToString()!.Contains("Topic name is not found")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
     }
-    
+
     [Fact]
-    public async Task ProduceAsync_WithSingleMessagePersisted_ReturnsTrueAndPublishedIncrement()
+    public async Task ProduceAsync_SingleMessage_WithWhitespaceMessage_ReturnsFalseAndLogsError()
     {
         // Arrange
-        int publishedCounterDelta = 0;
-        var messageToPublish = "new-message";
         var loggerMock = new Mock<ILogger<KafkaProducer>>();
-
-        using var producer = CreateTestProducerWithLogger(loggerMock);
-
-        using var listener = new MeterListener
-        {
-            InstrumentPublished = (instrument, e) =>
-            {
-                if (instrument.Meter.Name == "Altinn.Notifications.KafkaProducer" && instrument.Name == "kafka.producer.published")
-                {
-                    e.EnableMeasurementEvents(instrument);
-                }
-            }
-        };
-        listener.SetMeasurementEventCallback<int>((instrument, measurement, tags, state) =>
-        {
-            if (instrument.Meter.Name == "Altinn.Notifications.KafkaProducer" && instrument.Name == "kafka.producer.published")
-            {
-                Interlocked.Add(ref publishedCounterDelta, measurement);
-            }
-        });
-
-        listener.Start();
-
-        var mockInnerProducer = new Mock<IProducer<Null, string>>();
-        mockInnerProducer
-            .Setup(e => e.ProduceAsync(_emptyTopic, It.Is<Message<Null, string>>(m => m.Value == messageToPublish), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new DeliveryResult<Null, string>
-            {
-                Status = PersistenceStatus.Persisted,
-                Message = new Message<Null, string> { Value = messageToPublish }
-            });
-
-        var field = typeof(KafkaProducer).GetField("_producer", BindingFlags.Instance | BindingFlags.NonPublic)
-                    ?? throw new InvalidOperationException("_producer field not found.");
-        field.SetValue(producer, mockInnerProducer.Object);
+        using var producer = CreateTestProducer(loggerMock.Object);
 
         // Act
-        var result = await producer.ProduceAsync(_emptyTopic, messageToPublish);
-        await Task.Delay(25); // allow meter to emit
+        var result = await producer.ProduceAsync(_validTopic, "   ");
 
         // Assert
-        Assert.True(result);
-        loggerMock.VerifyNoOtherCalls();
-        Assert.Equal(1, publishedCounterDelta);
+        Assert.False(result);
+        loggerMock.Verify(
+            logger => logger.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((state, _) => state.ToString()!.Contains("Message is null, empty, or whitespace")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
     }
 
     [Fact]
-    public async Task ProduceAsync_WithSingleMessageNotPersisted_ReturnsFalseAndFailedIncremented()
+    public async Task ProduceAsync_SingleMessage_WhenPersisted_ReturnsTrueAndIncrementsPublishedCounter()
     {
         // Arrange
-        var msg = "new-message";
-        int failedCounterDelta = 0;
-        int latencyMeasurements = 0;
+        var publishedCounterDelta = 0;
+        const string testMessage = "test-message";
         var loggerMock = new Mock<ILogger<KafkaProducer>>();
 
-        using var producer = CreateTestProducerWithLogger(loggerMock);
+        using var producer = CreateTestProducer(loggerMock.Object);
+        using var listener = CreatePublishedCounterListener(delta => Interlocked.Add(ref publishedCounterDelta, delta));
 
-        using var failedListener = InitiateFailedCounterListener(delta => Interlocked.Add(ref failedCounterDelta, delta));
-
-        using var latencyListener = new MeterListener
-        {
-            InstrumentPublished = (instrument, e) =>
+        var mockProducer = new Mock<IProducer<Null, string>>();
+        mockProducer
+            .Setup(e => e.ProduceAsync(_validTopic, It.Is<Message<Null, string>>(m => m.Value == testMessage), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DeliveryResult<Null, string>
             {
-                if (instrument.Meter.Name == "Altinn.Notifications.KafkaProducer" && instrument.Name == "kafka.producer.single.latency.ms")
-                {
-                    e.EnableMeasurementEvents(instrument);
-                }
-            }
-        };
-        latencyListener.SetMeasurementEventCallback<double>((instrument, measurement, tags, state) =>
-        {
-            if (instrument.Meter.Name == "Altinn.Notifications.KafkaProducer" && instrument.Name == "kafka.producer.single.latency.ms")
-            {
-                Interlocked.Increment(ref latencyMeasurements);
-            }
-        });
-        latencyListener.Start();
+                Status = PersistenceStatus.Persisted,
+                Message = new Message<Null, string> { Value = testMessage }
+            });
 
-        var mockInnerProducer = new Mock<IProducer<Null, string>>();
-        mockInnerProducer
-            .Setup(p => p.ProduceAsync(_emptyTopic, It.Is<Message<Null, string>>(m => m.Value == msg), It.IsAny<CancellationToken>()))
+        InjectMockProducer(producer, mockProducer.Object);
+
+        // Act
+        var result = await producer.ProduceAsync(_validTopic, testMessage);
+        await Task.Delay(_metricEmissionDelayMs);
+
+        // Assert
+        Assert.True(result);
+        Assert.Equal(1, publishedCounterDelta);
+        loggerMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task ProduceAsync_SingleMessage_WhenNotPersisted_ReturnsFalseAndIncrementsFailedCounter()
+    {
+        // Arrange
+        var failedCounterDelta = 0;
+        var latencyMeasurements = 0;
+        const string testMessage = "test-message";
+        var loggerMock = new Mock<ILogger<KafkaProducer>>();
+
+        using var producer = CreateTestProducer(loggerMock.Object);
+        using var failedListener = CreateFailedCounterListener(delta => Interlocked.Add(ref failedCounterDelta, delta));
+        using var latencyListener = CreateLatencyListener(_ => Interlocked.Increment(ref latencyMeasurements));
+
+        var mockProducer = new Mock<IProducer<Null, string>>();
+        mockProducer
+            .Setup(e => e.ProduceAsync(_validTopic, It.Is<Message<Null, string>>(m => m.Value == testMessage), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new DeliveryResult<Null, string>
             {
                 Status = PersistenceStatus.NotPersisted,
-                Message = new Message<Null, string> { Value = msg }
+                Message = new Message<Null, string> { Value = testMessage }
             });
 
-        var field = typeof(KafkaProducer).GetField("_producer", BindingFlags.Instance | BindingFlags.NonPublic)
-                    ?? throw new InvalidOperationException("_producer field not found.");
-        field.SetValue(producer, mockInnerProducer.Object);
+        InjectMockProducer(producer, mockProducer.Object);
 
         // Act
-        var result = await producer.ProduceAsync(_emptyTopic, msg);
-        await Task.Delay(25); // allow metrics to emit
+        var result = await producer.ProduceAsync(_validTopic, testMessage);
+        await Task.Delay(_metricEmissionDelayMs);
 
         // Assert
         Assert.False(result);
         Assert.Equal(1, failedCounterDelta);
-        Assert.True(latencyMeasurements > 0, "Expected at least one latency measurement to be recorded.");
+        Assert.True(latencyMeasurements > 0, "Expected at least one latency measurement");
 
         loggerMock.Verify(
-            e => e.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((s, _) => s.ToString()!.Contains("Message not persisted")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task ProduceAsync_WithInvalidTopicForSingleMessage_ReturnsFalseAndIncrementsFailed()
-    {
-        var loggerMock = new Mock<ILogger<KafkaProducer>>();
-        using var producer = CreateTestProducerWithLogger(loggerMock);
-
-        var result = await producer.ProduceAsync(_invalidTopic, "payload");
-
-        Assert.False(result);
-        loggerMock.Verify(
-            e => e.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((s, _) => s.ToString()!.Contains("Topic name is not found")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task ProduceAsync_WithInvalidMessagesBatch_CategorizeEarlyReturn()
-    {
-        int failedCounterDelta = 0;
-        var loggerMock = new Mock<ILogger<KafkaProducer>>();
-        var invalidMessagesBatch = ImmutableList.Create(null!, string.Empty, " ");
-
-        using var producer = CreateTestProducerWithLogger(loggerMock);
-
-        using var listener = InitiateFailedCounterListener(increment => Interlocked.Add(ref failedCounterDelta, increment));
-
-        var result = await producer.ProduceAsync(_allInvalidBatchTopic, invalidMessagesBatch);
-        await Task.Delay(25); // Allow some time for the meter to emit measurements
-
-        Assert.Equal(invalidMessagesBatch, result);
-        Assert.Equal(invalidMessagesBatch.Count, failedCounterDelta);
-
-        loggerMock.Verify(
-            e => e.Log(
+            logger => logger.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
                 It.IsAny<It.IsAnyType>(),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task ProduceAsync_SingleMessage_WhenProduceExceptionThrown_ReturnsFalseAndIncrementsFailedCounter()
+    {
+        // Arrange
+        var failedCounterDelta = 0;
+        var publishedCounterDelta = 0;
+        const string testMessage = "test-message";
+
+        var loggerMock = new Mock<ILogger<KafkaProducer>>();
+        using var producer = CreateTestProducer(loggerMock.Object);
+        using var failedListener = CreateFailedCounterListener(delta => Interlocked.Add(ref failedCounterDelta, delta));
+        using var publishedListener = CreatePublishedCounterListener(delta => Interlocked.Add(ref publishedCounterDelta, delta));
+
+        var produceException = new ProduceException<Null, string>(
+            new Error(ErrorCode.Local_MsgTimedOut, "Simulated timeout"),
+            new DeliveryResult<Null, string> { Status = PersistenceStatus.NotPersisted });
+
+        var mockProducer = new Mock<IProducer<Null, string>>();
+        mockProducer
+            .Setup(e => e.ProduceAsync(_validTopic, It.IsAny<Message<Null, string>>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(produceException);
+        InjectMockProducer(producer, mockProducer.Object);
+
+        // Act
+        var result = await producer.ProduceAsync(_validTopic, testMessage);
+        var success = SpinWait.SpinUntil(() => Volatile.Read(ref failedCounterDelta) == 1, TimeSpan.FromMilliseconds(500));
+
+        // Assert
+        Assert.False(result);
+        Assert.Equal(1, failedCounterDelta);
+        Assert.Equal(0, publishedCounterDelta);
+        Assert.True(success, $"Counter did not reach expected value {1} within timeout");
 
         loggerMock.Verify(
-            e => e.Log(
+            logger => logger.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                produceException,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ProduceAsync_SingleMessage_WhenUnexpectedExceptionThrown_ReturnsFalseAndIncrementsFailedCounter()
+    {
+        // Arrange
+        var failedCounterDelta = 0;
+        const string testMessage = "test-message";
+
+        var loggerMock = new Mock<ILogger<KafkaProducer>>();
+        var unexpectedException = new InvalidOperationException("Unexpected error");
+
+        using var producer = CreateTestProducer(loggerMock.Object);
+        using var failedListener = CreateFailedCounterListener(delta => Interlocked.Add(ref failedCounterDelta, delta));
+
+        var mockProducer = new Mock<IProducer<Null, string>>();
+        mockProducer
+            .Setup(e => e.ProduceAsync(_validTopic, It.IsAny<Message<Null, string>>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(unexpectedException);
+        InjectMockProducer(producer, mockProducer.Object);
+
+        // Act
+        var result = await producer.ProduceAsync(_validTopic, testMessage);
+        await Task.Delay(_metricEmissionDelayMs);
+
+        // Assert
+        Assert.False(result);
+        Assert.Equal(1, failedCounterDelta);
+        loggerMock.Verify(
+            logger => logger.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                unexpectedException,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ProduceAsync_BatchMessages_WithEmptyBatch_ReturnsSameBatchAndLogsError()
+    {
+        // Arrange
+        var failedCounterDelta = 0;
+        var emptyBatch = ImmutableList<string>.Empty;
+        var loggerMock = new Mock<ILogger<KafkaProducer>>();
+
+        using var producer = CreateTestProducer(loggerMock.Object);
+        using var failedListener = CreateFailedCounterListener(delta => Interlocked.Add(ref failedCounterDelta, delta));
+
+        // Act
+        var result = await producer.ProduceAsync(_batchTopic, emptyBatch);
+        await Task.Delay(_metricEmissionDelayMs);
+
+        // Assert
+        Assert.Same(emptyBatch, result);
+        Assert.Equal(0, failedCounterDelta);
+
+        loggerMock.Verify(
+            logger => logger.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((state, _) => state.ToString()!.Contains("No messages to produce")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+
+        loggerMock.Verify(
+            logger => logger.Log(
                 LogLevel.Information,
                 It.IsAny<EventId>(),
                 It.IsAny<It.IsAnyType>(),
@@ -247,197 +289,173 @@ public class KafkaProducerTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ProduceAsync_WithEmptyMessagesBatch_ReturnsEmptyMessagesAndLogsError()
+    public async Task ProduceAsync_BatchMessages_WithInvalidTopic_ReturnsOriginalBatchAndIncrementsFailedCounter()
     {
-        var loggerMock = new Mock<ILogger<KafkaProducer>>();
-
-        var emptyMessagesBatch = ImmutableList<string>.Empty;
-
-        using var producer = CreateTestProducerWithLogger(loggerMock);
-
-        var result = await producer.ProduceAsync(_emptyTopic, emptyMessagesBatch);
-
-        Assert.Empty(result);
-        Assert.Same(emptyMessagesBatch, result);
-
-        loggerMock.Verify(
-            e => e.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.IsAny<It.IsAnyType>(),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task ProduceAsync_WithInvalidTopic_AllMessagesInTheBatchReportedFailedAndReturned()
-    {
-        int failedCounterDelta = 0;
+        // Arrange
+        var failedCounterDelta = 0;
+        var publishedCounterDelta = 0;
         var invalidTopic = $"invalid-{Guid.NewGuid():N}";
         var loggerMock = new Mock<ILogger<KafkaProducer>>();
-        var validMessagesBatch = ImmutableList.Create("a", "b", "c");
+        var validBatch = ImmutableList.Create("message1", "message2", "message3");
 
-        using var producer = CreateTestProducerWithLogger(loggerMock);
-
-        using var listener = InitiateFailedCounterListener(increment => Interlocked.Add(ref failedCounterDelta, increment));
-
-        var result = await producer.ProduceAsync(invalidTopic, validMessagesBatch);
-        await Task.Delay(25); // Allow some time for the meter to emit measurements
-
-        Assert.Equal(validMessagesBatch, result);
-        Assert.Equal(validMessagesBatch.Count, failedCounterDelta);
-
-        loggerMock.Verify(
-            e => e.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.IsAny<It.IsAnyType>(),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task ProduceAsync_AllProduceTasksThrow_AllMessagesInTheBatchReturnedAsNotProduced()
-    {
-        int failedCounterDelta = 0;
-        var loggerMock = new Mock<ILogger<KafkaProducer>>();
-        var validMessagesBatch = ImmutableList.Create("x1", "x2", "x3");
-
-        var localTopic = $"kafka-producer-all-throw-{Guid.NewGuid():N}";
-
-        var settings = new KafkaSettings
-        {
-            BrokerAddress = _brokerAddress,
-            Admin = new AdminSettings { TopicList = { localTopic } } // include so ValidateTopic passes
-        };
-
-        using var producer = new KafkaProducer(Options.Create(settings), loggerMock.Object);
-
-        await KafkaUtil.CreateTopicAsync(localTopic);
-
-        var field = typeof(KafkaProducer).GetField("_producer", BindingFlags.Instance | BindingFlags.NonPublic)
-                     ?? throw new InvalidOperationException("_producer field not found.");
-        field.SetValue(producer, new FailingProducer());
-
-        using var listener = InitiateFailedCounterListener(delta => Interlocked.Add(ref failedCounterDelta, delta));
-
-        var result = await producer.ProduceAsync(localTopic, validMessagesBatch);
-        await Task.Delay(30);
-
-        Assert.Equal(validMessagesBatch, result);
-        Assert.Equal(validMessagesBatch.Count, failedCounterDelta);
-
-        loggerMock.Verify(
-            e => e.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.IsAny<It.IsAnyType>(),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
-
-        await KafkaUtil.DeleteTopicAsync(localTopic);
-    }
-
-    [Fact]
-    public async Task ProduceAsync_WhenProduceTaskThrows_FallbackMarksAllValidAsNotProducedAndIncrementsFailed()
-    {
-        // Arrange
-        int failedCounterDelta = 0;
-        var loggerMock = new Mock<ILogger<KafkaProducer>>();
-        var localTopic = $"kafka-producer-fallback-{Guid.NewGuid():N}";
-        var validMessagesBatch = ImmutableList.Create("p1", "p2", "p3");
-
-        await KafkaUtil.CreateTopicAsync(localTopic);
-
-        var settings = new KafkaSettings
-        {
-            BrokerAddress = _brokerAddress,
-            Admin = new AdminSettings { TopicList = { localTopic } }
-        };
-
-        using var producer = new KafkaProducer(Options.Create(settings), loggerMock.Object);
-
-        var categorizeMethod = typeof(KafkaProducer).GetMethod("CategorizeMessages", BindingFlags.Instance | BindingFlags.NonPublic)
-                               ?? throw new InvalidOperationException("CategorizeMessages not found.");
-
-        var buildTasksMethod = typeof(KafkaProducer).GetMethod("BuildProduceTasks", BindingFlags.Instance | BindingFlags.NonPublic)
-                               ?? throw new InvalidOperationException("BuildProduceTasks not found.");
-
-        var execFinalizeMethod = typeof(KafkaProducer).GetMethod("ExecuteAndFinalizeBatchAsync", BindingFlags.Instance | BindingFlags.NonPublic)
-                               ?? throw new InvalidOperationException("ExecuteAndFinalizeBatchAsync not found.");
-
-        var batchContext = (BatchProducingContext)categorizeMethod.Invoke(producer, [localTopic, validMessagesBatch])!;
-        batchContext = (BatchProducingContext)buildTasksMethod.Invoke(producer, [localTopic, batchContext, CancellationToken.None])!;
-
-        var throwingFactories = validMessagesBatch
-            .Select(msg => new ProduceTaskFactory
-            {
-                Message = msg,
-                ProduceTask = () => throw new InvalidOperationException("Synchronous factory invocation failure")
-            })
-            .ToImmutableList();
-
-        batchContext = batchContext with { DeferredProduceTasks = throwingFactories };
-
-        using var listener = InitiateFailedCounterListener(delta => Interlocked.Add(ref failedCounterDelta, delta));
+        using var producer = CreateTestProducer(loggerMock.Object);
+        using var failedListener = CreateFailedCounterListener(delta => Interlocked.Add(ref failedCounterDelta, delta));
+        using var publishedListener = CreatePublishedCounterListener(delta => Interlocked.Add(ref publishedCounterDelta, delta));
 
         // Act
-        var execTask = (Task<BatchProducingContext>)execFinalizeMethod.Invoke(producer, new object[] { localTopic, batchContext })!;
-        var finalizedContext = await execTask;
+        var result = await producer.ProduceAsync(invalidTopic, validBatch);
+        var success = SpinWait.SpinUntil(() => Volatile.Read(ref failedCounterDelta) == validBatch.Count, TimeSpan.FromMilliseconds(500));
 
         // Assert
-        Assert.Equal(validMessagesBatch.Count, failedCounterDelta);
-        Assert.Equal(validMessagesBatch, finalizedContext.NotProducedMessages);
+        Assert.Same(validBatch, result);
+        Assert.Equal(0, publishedCounterDelta);
+        Assert.Equal(validBatch.Count, failedCounterDelta);
+        Assert.True(success, $"Counter did not reach expected value {validBatch.Count} within timeout");
 
         loggerMock.Verify(
-            e => e.Log(
+            logger => logger.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
-                It.IsAny<It.IsAnyType>(),
+                It.Is<It.IsAnyType>((state, _) => state.ToString()!.Contains("Topic name is not found")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
 
-        await KafkaUtil.DeleteTopicAsync(localTopic);
-    }
-
-    [Fact]
-    public async Task ProduceAsync_WithCancellationRequestedBeforeScheduling_AllMessagesInTheBatchReturnedAndIncrementsFailed()
-    {
-        // Arrange
-        int failedCounterDelta = 0;
-        var loggerMock = new Mock<ILogger<KafkaProducer>>();
-        var validMessagesBatch = ImmutableList.Create("m1", "m2", "m3", "m4", "m5");
-
-        using var producer = CreateTestProducerWithLogger(loggerMock);
-
-        using var listener = InitiateFailedCounterListener(delta => Interlocked.Add(ref failedCounterDelta, delta));
-
-        using var cancellationTokenSource = new CancellationTokenSource();
-        await cancellationTokenSource.CancelAsync(); // Cancellation requested before scheduling produce tasks
-
-        // Act
-        var result = await producer.ProduceAsync(_emptyTopic, validMessagesBatch, cancellationTokenSource.Token);
-        await Task.Delay(25); // allow metrics callback
-
-        // Assert
-        Assert.Same(validMessagesBatch, result);
-        Assert.Equal(validMessagesBatch.Count, failedCounterDelta);
-
         loggerMock.Verify(
-            e => e.Log(
+            logger => logger.Log(
                 LogLevel.Information,
                 It.IsAny<EventId>(),
                 It.IsAny<It.IsAnyType>(),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task ProduceAsync_BatchMessages_WithAllInvalidMessages_ReturnsSameBatchAndIncrementsFailedCounter()
+    {
+        // Arrange
+        var failedCounterDelta = 0;
+        var loggerMock = new Mock<ILogger<KafkaProducer>>();
+        var invalidBatch = ImmutableList.Create(null!, string.Empty, "   ");
+
+        using var producer = CreateTestProducer(loggerMock.Object);
+        using var failedListener = CreateFailedCounterListener(delta => Interlocked.Add(ref failedCounterDelta, delta));
+
+        // Act
+        var result = await producer.ProduceAsync(_batchTopic, invalidBatch);
+        var success = SpinWait.SpinUntil(() => Volatile.Read(ref failedCounterDelta) == invalidBatch.Count, TimeSpan.FromMilliseconds(500));
+
+        // Assert
+        Assert.Same(invalidBatch, result);
+        Assert.Equal(invalidBatch.Count, failedCounterDelta);
+        Assert.True(success, $"Counter did not reach expected value {invalidBatch.Count} within timeout");
+
+        loggerMock.Verify(
+            logger => logger.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
 
         loggerMock.Verify(
-            e => e.Log(
+            logger => logger.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task ProduceAsync_BatchMessages_WhenAllTasksThrowExceptions_ReturnsAllMessagesAndIncrementsFailedCounter()
+    {
+        // Arrange
+        var failedCounterDelta = 0;
+        var publishedCounterDelta = 0;
+        var loggerMock = new Mock<ILogger<KafkaProducer>>();
+        var testTopic = $"kafka-producer-throw-test-{Guid.NewGuid():N}";
+        var validBatch = ImmutableList.Create("message1", "message2", "message3");
+
+        await KafkaUtil.CreateTopicAsync(testTopic);
+
+        try
+        {
+            var settings = CreateKafkaSettings(testTopic);
+            using var producer = new KafkaProducer(Options.Create(settings), loggerMock.Object);
+
+            // Replace with failing producer
+            InjectMockProducer(producer, new FailingProducer());
+
+            using var failedListener = CreateFailedCounterListener(delta => Interlocked.Add(ref failedCounterDelta, delta));
+            using var publishedListener = CreatePublishedCounterListener(delta => Interlocked.Add(ref publishedCounterDelta, delta));
+
+            // Act
+            var result = await producer.ProduceAsync(testTopic, validBatch);
+            var success = SpinWait.SpinUntil(() => Volatile.Read(ref failedCounterDelta) == validBatch.Count, TimeSpan.FromMilliseconds(500));
+
+            // Assert
+            Assert.Equal(0, publishedCounterDelta);
+            Assert.Equal(validBatch.Count, result.Count);
+            Assert.Equal(validBatch.Count, failedCounterDelta);
+            Assert.True(validBatch.SequenceEqual(result), "Returned messages should match input batch");
+            Assert.True(success, $"Counter did not reach expected value {validBatch.Count} within timeout");
+
+            loggerMock.Verify(
+                logger => logger.Log(
+                    LogLevel.Error,
+                    It.IsAny<EventId>(),
+                    It.IsAny<It.IsAnyType>(),
+                    It.IsAny<Exception>(),
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                Times.Once);
+        }
+        finally
+        {
+            await KafkaUtil.DeleteTopicAsync(testTopic);
+        }
+    }
+
+    [Fact]
+    public async Task ProduceAsync_BatchMessages_WithCancellationBeforeScheduling_ReturnsAllMessagesAndIncrementsFailedCounter()
+    {
+        // Arrange
+        var failedCounterDelta = 0;
+        var publishedCounterDelta = 0;
+        var loggerMock = new Mock<ILogger<KafkaProducer>>();
+        var validBatch = ImmutableList.Create("message1", "message2", "message3", "message4", "message5");
+
+        using var producer = CreateTestProducer(loggerMock.Object);
+        using var failedListener = CreateFailedCounterListener(delta => Interlocked.Add(ref failedCounterDelta, delta));
+        using var publishedListener = CreatePublishedCounterListener(delta => Interlocked.Add(ref publishedCounterDelta, delta));
+
+        using var cancellationTokenSource = new CancellationTokenSource();
+        await cancellationTokenSource.CancelAsync();
+
+        // Act
+        var result = await producer.ProduceAsync(_batchTopic, validBatch, cancellationTokenSource.Token);
+        var success = SpinWait.SpinUntil(() => Volatile.Read(ref failedCounterDelta) == validBatch.Count, TimeSpan.FromMilliseconds(500));
+
+        // Assert
+        Assert.Same(validBatch, result);
+        Assert.Equal(0, publishedCounterDelta);
+        Assert.Equal(validBatch.Count, failedCounterDelta);
+        Assert.True(success, $"Counter did not reach expected value {validBatch.Count} within timeout");
+
+        loggerMock.Verify(
+            logger => logger.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((state, _) => state.ToString()!.Contains("Cancellation Requested")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+
+        loggerMock.Verify(
+            logger => logger.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
                 It.IsAny<It.IsAnyType>(),
@@ -447,58 +465,128 @@ public class KafkaProducerTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// Creates and starts a <see cref="MeterListener"/> subscribed to the Kafka producer failed counter
-    /// instrument (<c>"kafka.producer.failed"</c>) emitted by the <c>"Altinn.Notifications.KafkaProducer"</c> meter.
-    /// Invokes the provided <paramref name="onIncrement"/> callback for each positive measurement observed.
+    /// Creates a test Kafka producer instance with default topic configuration.
     /// </summary>
-    /// <param name="onIncrement">
-    /// Callback invoked with the delta value of each failed publish count (always &gt; 0).
-    /// The callback can be invoked from arbitrary threads; it must be thread-safe.
-    /// </param>
-    /// <returns>
-    /// A started <see cref="MeterListener"/> instance. Call <c>Dispose()</c> when you no longer need to observe measurements.
-    /// </returns>
-    private static MeterListener InitiateFailedCounterListener(Action<int> onIncrement)
+    /// <param name="logger">The logger instance to inject into the producer.</param>
+    /// <returns>A configured <see cref="KafkaProducer"/> instance for testing.</returns>
+    private KafkaProducer CreateTestProducer(ILogger<KafkaProducer> logger)
     {
+        var settings = CreateKafkaSettings(_validTopic, _batchTopic);
+        return new KafkaProducer(Options.Create(settings), logger);
+    }
+
+    /// <summary>
+    /// Creates Kafka settings with the specified topics configured for testing.
+    /// </summary>
+    /// <param name="topics">The topic names to include in the admin settings.</param>
+    /// <returns>A configured <see cref="KafkaSettings"/> instance for testing.</returns>
+    private static KafkaSettings CreateKafkaSettings(params string[] topics)
+    {
+        return new KafkaSettings
+        {
+            BrokerAddress = _brokerAddress,
+            Admin = new AdminSettings { TopicList = [.. topics] }
+        };
+    }
+
+    /// <summary>
+    /// Injects a mock producer into the KafkaProducer instance using reflection for testing.
+    /// </summary>
+    /// <param name="producer">The KafkaProducer instance to modify.</param>
+    /// <param name="mockProducer">The mock producer to inject.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the internal producer field cannot be found.</exception>
+    private static void InjectMockProducer(KafkaProducer producer, IProducer<Null, string> mockProducer)
+    {
+        var fieldInfo = typeof(KafkaProducer).GetField("_producer", BindingFlags.Instance | BindingFlags.NonPublic) ?? throw new InvalidOperationException("_producer field not found");
+        fieldInfo.SetValue(producer, mockProducer);
+    }
+
+    /// <summary>
+    /// Creates a meter listener for tracking failed message counter metrics.
+    /// </summary>
+    /// <param name="onIncrement">Callback invoked when the failed counter is incremented.</param>
+    /// <returns>A configured <see cref="MeterListener"/> for the kafka.producer.failed instrument.</returns>
+    private static MeterListener CreateFailedCounterListener(Action<int> onIncrement)
+    {
+        return CreateCounterListener("kafka.producer.failed", onIncrement);
+    }
+
+    /// <summary>
+    /// Creates a meter listener for tracking published message counter metrics.
+    /// </summary>
+    /// <param name="onIncrement">Callback invoked when the published counter is incremented.</param>
+    /// <returns>A configured <see cref="MeterListener"/> for the kafka.producer.published instrument.</returns>
+    private static MeterListener CreatePublishedCounterListener(Action<int> onIncrement)
+    {
+        return CreateCounterListener("kafka.producer.published", onIncrement);
+    }
+
+    /// <summary>
+    /// Creates a meter listener for a specific counter instrument.
+    /// </summary>
+    /// <param name="instrumentName">The name of the counter instrument to listen for.</param>
+    /// <param name="onMeasurement">Callback invoked when measurements are recorded.</param>
+    /// <returns>A started <see cref="MeterListener"/> configured for the specified instrument.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="onMeasurement"/> is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="instrumentName"/> is null or whitespace.</exception>
+    private static MeterListener CreateCounterListener(string instrumentName, Action<int> onMeasurement)
+    {
+        ArgumentNullException.ThrowIfNull(onMeasurement);
+        ArgumentException.ThrowIfNullOrWhiteSpace(instrumentName);
+
         var listener = new MeterListener
         {
-            InstrumentPublished = (instrument, e) =>
+            InstrumentPublished = (instrument, subscription) =>
             {
-                if (instrument.Meter.Name == "Altinn.Notifications.KafkaProducer" && instrument.Name == "kafka.producer.failed")
+                if (instrument.Meter.Name == "Altinn.Notifications.KafkaProducer" && instrument.Name == instrumentName)
                 {
-                    e.EnableMeasurementEvents(instrument);
+                    subscription.EnableMeasurementEvents(instrument);
                 }
             }
         };
 
         listener.SetMeasurementEventCallback<int>((instrument, measurement, tags, state) =>
         {
-            if (instrument.Meter.Name == "Altinn.Notifications.KafkaProducer" && instrument.Name == "kafka.producer.failed")
+            if (instrument.Meter.Name == "Altinn.Notifications.KafkaProducer" && instrument.Name == instrumentName && measurement > 0)
             {
-                onIncrement(measurement);
+                onMeasurement(measurement);
             }
         });
 
         listener.Start();
-
         return listener;
     }
 
     /// <summary>
-    /// Creates a fresh <see cref="KafkaProducer"/> instance configured with the test topics
-    /// and the supplied logger mock, enabling isolated verification of log output per test.
-    /// Topics are assumed to be pre-created during <see cref="InitializeAsync"/>.
+    /// Creates a meter listener for tracking latency measurements.
     /// </summary>
-    /// <param name="loggerMock">Mock logger used to capture and assert log entries.</param>
-    /// <returns>Disposable producer instance dedicated to a single test.</returns>
-    private KafkaProducer CreateTestProducerWithLogger(Mock<ILogger<KafkaProducer>> loggerMock)
+    /// <param name="onMeasurement">Callback invoked when latency measurements are recorded.</param>
+    /// <returns>A started <see cref="MeterListener"/> configured for the kafka.producer.single.latency.ms instrument.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="onMeasurement"/> is null.</exception>
+    private static MeterListener CreateLatencyListener(Action<double> onMeasurement)
     {
-        var settings = new KafkaSettings
+        ArgumentNullException.ThrowIfNull(onMeasurement);
+
+        var listener = new MeterListener
         {
-            BrokerAddress = _brokerAddress,
-            Admin = new AdminSettings { TopicList = { _emptyTopic, _allInvalidBatchTopic } }
+            InstrumentPublished = (instrument, subscription) =>
+            {
+                if (instrument.Meter.Name == "Altinn.Notifications.KafkaProducer" && instrument.Name == "kafka.producer.single.latency.ms")
+                {
+                    subscription.EnableMeasurementEvents(instrument);
+                }
+            }
         };
 
-        return new KafkaProducer(Options.Create(settings), loggerMock.Object);
+        listener.SetMeasurementEventCallback<double>((instrument, value, tags, state) =>
+        {
+            if (instrument.Meter.Name == "Altinn.Notifications.KafkaProducer" && instrument.Name == "kafka.producer.single.latency.ms")
+            {
+                onMeasurement(value);
+            }
+        });
+
+        listener.Start();
+        return listener;
     }
 }
