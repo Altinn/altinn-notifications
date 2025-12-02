@@ -371,6 +371,69 @@ public class KafkaProducerTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ProduceAsync_BatchMessages_WithMixedSuccessAndNotPersisted_ReturnsInvalidAndNotPersistedMessages()
+    {
+        // Arrange
+        var failedCounterDelta = 0;
+        var publishedCounterDelta = 0;
+        var loggerMock = new Mock<ILogger<KafkaProducer>>();
+
+        var invalidMessage = "   ";
+        var firstValidMessage = "valid-message-1";
+        var secondValidMessage = "valid-message-2";
+        var mixedBatch = ImmutableList.Create(firstValidMessage, invalidMessage, secondValidMessage);
+
+        using var producer = CreateTestProducer(loggerMock.Object);
+        using var failedListener = CreateFailedCounterListener(delta => Interlocked.Add(ref failedCounterDelta, delta));
+        using var publishedListener = CreatePublishedCounterListener(delta => Interlocked.Add(ref publishedCounterDelta, delta));
+
+        var mockProducer = new Mock<IProducer<Null, string>>();
+
+        // Setup first message to succeed (Persisted)
+        mockProducer
+            .Setup(e => e.ProduceAsync(_batchTopic, It.Is<Message<Null, string>>(m => m.Value == firstValidMessage), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DeliveryResult<Null, string>
+            {
+                Status = PersistenceStatus.Persisted,
+                Message = new Message<Null, string> { Value = firstValidMessage }
+            });
+
+        // Setup second message to fail (NotPersisted)
+        mockProducer
+            .Setup(e => e.ProduceAsync(_batchTopic, It.Is<Message<Null, string>>(m => m.Value == secondValidMessage), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DeliveryResult<Null, string>
+            {
+                Status = PersistenceStatus.NotPersisted,
+                Message = new Message<Null, string> { Value = secondValidMessage }
+            });
+
+        InjectMockProducer(producer, mockProducer.Object);
+
+        // Act
+        var result = await producer.ProduceAsync(_batchTopic, mixedBatch);
+        var success = SpinWait.SpinUntil(() => Volatile.Read(ref failedCounterDelta) >= 2, TimeSpan.FromMilliseconds(500));
+
+        // Assert
+        Assert.Equal(2, result.Count);
+        Assert.Equal(2, failedCounterDelta);
+        Assert.Equal(1, publishedCounterDelta);
+        Assert.True(success, "Failed counter did not reach expected value within timeout");
+
+        Assert.Contains(invalidMessage, result);
+        Assert.Contains(secondValidMessage, result);
+        Assert.DoesNotContain(firstValidMessage, result);
+
+        loggerMock.Verify(
+            logger => logger.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task ProduceAsync_BatchMessages_WhenAllTasksThrowExceptions_ReturnsAllMessagesAndIncrementsFailedCounter()
     {
         // Arrange
