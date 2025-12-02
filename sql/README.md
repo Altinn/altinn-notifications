@@ -2,6 +2,8 @@
 
 This folder contains SQL scripts for manual database operations that need to be run independently in specific environments (test, staging, production).
 
+**How to use:** Connect to the database using pgAdmin on the VM (image), then copy and execute these scripts in the query tool.
+
 ## Cancel Orders by Sender References
 
 ### Overview
@@ -21,15 +23,13 @@ Follow these steps in order:
 
 Run the analysis script first to see what would be affected:
 
-```bash
-psql -h <host> -U <user> -d <database> -f analyze-orders-for-cancellation.sql
-```
-
-Before running:
-1. Open `analyze-orders-for-cancellation.sql`
-2. Update the configuration variables:
+1. Connect to the database using pgAdmin on the VM (image)
+2. Open `analyze-orders-for-cancellation.sql` in an editor
+3. Update the configuration variables:
    - `v_sendersreferences`: Array of sender reference strings
    - `v_creatorname`: The creator name (service owner)
+4. Copy the entire script content
+5. Paste and execute it in pgAdmin's query tool
 
 The script will show:
 - Total number of orders matched
@@ -60,15 +60,12 @@ Cannot be cancelled:   1
 
 After reviewing the analysis results, run the cancellation script:
 
-```bash
-psql -h <host> -U <user> -d <database> -f cancel-orders-by-sendersreferences.sql
-```
-
-Before running:
-1. Open `cancel-orders-by-sendersreferences.sql`
-2. Update the configuration variables (in multiple places):
+1. Open `cancel-orders-by-sendersreferences.sql` in an editor
+2. Update the configuration variables:
    - `v_sendersreferences`: Same array as in analysis script
    - `v_creatorname`: Same creator name as in analysis script
+3. Copy the entire script content
+4. Paste and execute it in pgAdmin's query tool
 
 The script will:
 1. Start a transaction
@@ -80,12 +77,13 @@ The script will:
 
 #### Step 3: Review and Commit
 
-After running the cancellation script:
-1. Review the results shown in the output
-2. If correct, run: `COMMIT;`
-3. If incorrect, run: `ROLLBACK;`
+After running the cancellation script in pgAdmin:
+1. Review the results shown in the output pane
+2. In the query tool, execute one of the following:
+   - If results look correct: `COMMIT;`
+   - If you want to undo: `ROLLBACK;`
 
-**Important:** The transaction remains open until you explicitly commit or rollback. If you close the connection without committing, all changes will be rolled back automatically.
+**Important:** The transaction remains open until you explicitly commit or rollback. If you close pgAdmin or the connection without committing, all changes will be rolled back automatically.
 
 ### Cancellation Rules
 
@@ -114,29 +112,25 @@ Orders already cancelled will be reported as successfully cancelled (idempotent)
 
 #### Scenario: Cancel test notifications
 
-1. Edit `analyze-orders-for-cancellation.sql`:
+1. Connect to the test database using pgAdmin on the VM
+
+2. Edit `analyze-orders-for-cancellation.sql`:
 ```sql
 v_sendersreferences text[] := ARRAY['test-ref-001', 'test-ref-002', 'test-ref-003'];
 v_creatorname text := 'ttd';
 ```
 
-2. Run analysis:
-```bash
-psql -h testdb.example.com -U notifications_admin -d notificationsdb -f analyze-orders-for-cancellation.sql
-```
+3. Copy the script and run it in pgAdmin's query tool
 
-3. Review output and verify it's correct
+4. Review the output and verify the orders to be cancelled are correct
 
-4. Edit `cancel-orders-by-sendersreferences.sql` with same values
+5. Edit `cancel-orders-by-sendersreferences.sql` with the same values
 
-5. Run cancellation:
-```bash
-psql -h testdb.example.com -U notifications_admin -d notificationsdb -f cancel-orders-by-sendersreferences.sql
-```
+6. Copy and run the cancellation script in pgAdmin
 
-6. Review the results
+7. Review the results in the output pane
 
-7. In the psql session:
+8. Execute in pgAdmin's query tool:
 ```sql
 -- If everything looks good:
 COMMIT;
@@ -144,31 +138,6 @@ COMMIT;
 -- Or if you want to undo:
 ROLLBACK;
 ```
-
-### Function Details
-
-The function `notifications.cancelordersbysendersreferences` is created by the cancellation script. It:
-- Takes an array of sender references and a creator name
-- Finds all matching orders
-- Applies cancellation rules
-- Updates orders that can be cancelled
-- Returns detailed results for each order
-
-**Function signature:**
-```sql
-notifications.cancelordersbysendersreferences(
-    _sendersreferences text[],  -- Array of sender references
-    _creatorname text           -- Creator name for authorization
-)
-```
-
-**Returns:**
-- `sendersreference`: The sender reference
-- `alternateid`: The order UUID
-- `cancelallowed`: TRUE if cancelled/already cancelled, FALSE if cannot cancel
-- `processedstatus`: Current processing status
-- `requestedsendtime`: Scheduled send time
-- `message`: Human-readable result message
 
 ### Troubleshooting
 
@@ -181,35 +150,3 @@ notifications.cancelordersbysendersreferences(
 - Check if send time is within 5 minutes
 - Verify order status is 'Registered'
 - Orders in 'Processing', 'Processed', or 'Completed' status cannot be cancelled
-
-**Permission denied:**
-- Ensure database user has UPDATE permissions on `notifications.orders`
-- Ensure database user can create functions
-
-### Environment-Specific Considerations
-
-#### Test Environment
-- Safe to experiment
-- Can test the full workflow
-
-#### Staging Environment
-- Should mirror production data
-- Use for final validation before production
-
-#### Production Environment
-- Always run analysis first
-- Double-check sender references
-- Have a rollback plan
-- Consider running during maintenance windows
-- Document the cancellation reason and timestamp
-
-### Maintenance
-
-The function is stored in:
-- **Source:** `src/Altinn.Notifications.Persistence/Migration/FunctionsAndProcedures/cancelordersbysendersreferences.sql`
-- **Created by:** The cancellation script (includes the function definition)
-
-If the function needs to be updated:
-1. Update the source file in `FunctionsAndProcedures/`
-2. Update the function definition in `cancel-orders-by-sendersreferences.sql`
-3. Test in a non-production environment first
