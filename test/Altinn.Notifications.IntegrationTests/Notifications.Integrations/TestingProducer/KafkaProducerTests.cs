@@ -21,7 +21,6 @@ public class KafkaProducerTests : IAsyncLifetime
 {
     private KafkaProducer? _sharedProducer;
 
-    private const int _metricEmissionDelayMs = 25;
     private const string _brokerAddress = "localhost:9092";
     private readonly string _batchTopic = $"kafka-producer-batch-{Guid.NewGuid():N}";
     private readonly string _validTopic = $"kafka-producer-valid-{Guid.NewGuid():N}";
@@ -120,12 +119,13 @@ public class KafkaProducerTests : IAsyncLifetime
 
         // Act
         var result = await producer.ProduceAsync(_validTopic, testMessage);
-        await Task.Delay(_metricEmissionDelayMs);
+        var publishedObserved = SpinWait.SpinUntil(() => Volatile.Read(ref publishedCounterDelta) >= 1, TimeSpan.FromMilliseconds(500));
 
         // Assert
         Assert.True(result);
-        Assert.Equal(1, publishedCounterDelta);
         loggerMock.VerifyNoOtherCalls();
+        Assert.Equal(1, publishedCounterDelta);
+        Assert.True(publishedObserved, "Published counter did not reach expected value within timeout");
     }
 
     [Fact]
@@ -154,12 +154,14 @@ public class KafkaProducerTests : IAsyncLifetime
 
         // Act
         var result = await producer.ProduceAsync(_validTopic, testMessage);
-        await Task.Delay(_metricEmissionDelayMs);
+        var failedObserved = SpinWait.SpinUntil(() => Volatile.Read(ref failedCounterDelta) >= 1, TimeSpan.FromMilliseconds(500));
+        var latencyObserved = SpinWait.SpinUntil(() => Volatile.Read(ref latencyMeasurements) >= 1, TimeSpan.FromMilliseconds(500));
 
         // Assert
         Assert.False(result);
         Assert.Equal(1, failedCounterDelta);
-        Assert.True(latencyMeasurements > 0, "Expected at least one latency measurement");
+        Assert.True(latencyObserved, "Expected at least one latency measurement");
+        Assert.True(failedObserved, "Failed counter did not reach expected value within timeout");
 
         loggerMock.Verify(
             logger => logger.Log(
@@ -235,11 +237,13 @@ public class KafkaProducerTests : IAsyncLifetime
 
         // Act
         var result = await producer.ProduceAsync(_validTopic, testMessage);
-        await Task.Delay(_metricEmissionDelayMs);
+        var failedObserved = SpinWait.SpinUntil(() => Volatile.Read(ref failedCounterDelta) >= 1, TimeSpan.FromMilliseconds(500));
 
         // Assert
         Assert.False(result);
         Assert.Equal(1, failedCounterDelta);
+        Assert.True(failedObserved, "Failed counter did not reach expected value within timeout");
+
         loggerMock.Verify(
             logger => logger.Log(
                 LogLevel.Error,
@@ -263,7 +267,6 @@ public class KafkaProducerTests : IAsyncLifetime
 
         // Act
         var result = await producer.ProduceAsync(_batchTopic, emptyBatch);
-        await Task.Delay(_metricEmissionDelayMs);
 
         // Assert
         Assert.Same(emptyBatch, result);
