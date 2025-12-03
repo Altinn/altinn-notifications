@@ -99,7 +99,10 @@ public abstract class KafkaConsumerBase : BackgroundService
         {
             try
             {
-                await Task.WhenAll(processingTasks).WaitAsync(TimeSpan.FromSeconds(15));
+                foreach (var processingTask in processingTasks)
+                {
+                    await processingTask.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+                }
             }
             catch (Exception ex)
             {
