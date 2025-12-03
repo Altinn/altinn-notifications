@@ -124,6 +124,7 @@ public class DeliveryReportControllerTests : IClassFixture<IntegrationTestWebApp
                 services.Configure<EmailDeliveryReportSettings>(opts =>
                 {
                     opts.AccessKey = "accesskey";
+                    opts.LogDeliveryReportsToApplicationInsights = true;
                 });
                 services.AddSingleton(sendingServiceMock.Object);
             });
