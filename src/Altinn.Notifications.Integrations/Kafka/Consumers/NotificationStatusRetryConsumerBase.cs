@@ -33,7 +33,7 @@ public abstract class NotificationStatusRetryConsumerBase : KafkaConsumerBase
         IOptions<KafkaSettings> kafkaSettings,
         IDeadDeliveryReportService deadDeliveryReportService,
         ILogger<NotificationStatusRetryConsumerBase> logger)
-        : base(kafkaSettings, logger, topicName)
+        : base(topicName, kafkaSettings, logger)
     {
         _logger = logger;
         _kafkaProducer = kafkaProducer;
@@ -50,7 +50,7 @@ public abstract class NotificationStatusRetryConsumerBase : KafkaConsumerBase
     /// <inheritdoc/>
     protected override sealed Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        return Task.Run(() => ConsumeMessage(ProcessStatus, RetryStatus, stoppingToken), stoppingToken);
+        return ConsumeMessage(ProcessStatus, RetryStatus, stoppingToken);
     }
 
     /// <summary>

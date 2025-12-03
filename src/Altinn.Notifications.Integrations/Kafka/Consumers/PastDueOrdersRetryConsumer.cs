@@ -25,7 +25,7 @@ public class PastDueOrdersRetryConsumer : KafkaConsumerBase
         IDateTimeService dateTimeService,
         IOptions<KafkaSettings> settings,
         ILogger<PastDueOrdersRetryConsumer> logger)
-        : base(settings, logger, settings.Value.PastDueOrdersRetryTopicName)
+        : base(settings.Value.PastDueOrdersRetryTopicName, settings, logger)
     {
         _orderProcessingService = orderProcessingService;
         _dateTime = dateTimeService;
@@ -34,7 +34,7 @@ public class PastDueOrdersRetryConsumer : KafkaConsumerBase
     /// <inheritdoc/>
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        return Task.Run(() => ConsumeMessage(ProcessOrder, RetryOrder, stoppingToken), stoppingToken);
+        return ConsumeMessage(ProcessOrder, RetryOrder, stoppingToken);
     }
 
     private async Task ProcessOrder(string message)

@@ -160,7 +160,8 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
                 "Microsoft.AspNetCore.Hosting",
                 "Microsoft.AspNetCore.Server.Kestrel",
                 "System.Net.Http",
-                "Altinn.Notifications.KafkaProducer");
+                "Altinn.Notifications.KafkaProducer",
+                "Altinn.Notifications.KafkaConsumer");
         })
         .WithTracing(tracing =>
         {
