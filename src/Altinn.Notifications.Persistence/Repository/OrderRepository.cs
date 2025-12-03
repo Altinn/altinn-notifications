@@ -282,6 +282,7 @@ public class OrderRepository : IOrderRepository
                 await reader.CloseAsync();
 
                 // Build OrderStatus object 
+                // If send condition is not met, the status feed entry will have an empty recipients list
                 var orderStatus = new OrderStatus
                 {
                     ShipmentId = orderId,
