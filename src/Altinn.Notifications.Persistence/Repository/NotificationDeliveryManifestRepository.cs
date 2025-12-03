@@ -1,7 +1,6 @@
 ﻿using System.Collections.Immutable;
 using System.Data;
 
-using Altinn.Notifications.Core.Helpers;
 using Altinn.Notifications.Core.Models.Delivery;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Mappers;
@@ -24,7 +23,7 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
     private const string _lastUpdateColumnName = "last_update";
     private const string _destinationColumnName = "destination";
 
-    private const string _getShipmentTrackingInfoFunction = "SELECT * FROM notifications.get_shipment_tracking_v2($1, $2)"; // (_alternateid, _creatorname)
+    private const string _getShipmentTrackingInfoFunction = "SELECT * FROM notifications.get_shipment_tracking_v3($1, $2)"; // (_alternateid, _creatorname)
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationDeliveryManifestRepository"/> class.
@@ -129,6 +128,7 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
         var statusOrdinal = reader.GetOrdinal(_statusColumnName);
         var lastUpdateOrdinal = reader.GetOrdinal(_lastUpdateColumnName);
         var destinationOrdinal = reader.GetOrdinal(_destinationColumnName);
+        var typeOrdinal = reader.GetOrdinal(_typeColumnName);
 
         var isStatusNull = await reader.IsDBNullAsync(statusOrdinal, cancellationToken);
         var isTimestampNull = await reader.IsDBNullAsync(lastUpdateOrdinal, cancellationToken);
@@ -140,25 +140,28 @@ public partial class NotificationDeliveryManifestRepository : INotificationDeliv
         }
 
         var status = reader.GetString(statusOrdinal);
-
+        var type = reader.GetString(typeOrdinal);
         var lastUpdate = reader.GetDateTime(lastUpdateOrdinal);
         var destination = reader.GetString(destinationOrdinal);
 
-        IDeliveryManifest deliverableEntity = MobileNumberHelper.IsValidMobileNumber(destination)
-            ? new SmsDeliveryManifest
-            {
-                LastUpdate = lastUpdate,
-                Destination = destination,
-                Status = ProcessingLifecycleMapper.GetSmsLifecycleStage(status),
-            }
-            : new EmailDeliveryManifest
+        if (type.Equals("email", StringComparison.OrdinalIgnoreCase))
+        {
+            deliveryManifestEntities.Add(new EmailDeliveryManifest
             {
                 LastUpdate = lastUpdate,
                 Destination = destination,
                 Status = ProcessingLifecycleMapper.GetEmailLifecycleStage(status),
-            };
-
-        deliveryManifestEntities.Add(deliverableEntity);
+            });
+        }
+        else if (type.Equals("sms", StringComparison.OrdinalIgnoreCase))
+        {
+            deliveryManifestEntities.Add(new SmsDeliveryManifest
+            {
+                LastUpdate = lastUpdate,
+                Destination = destination,
+                Status = ProcessingLifecycleMapper.GetSmsLifecycleStage(status),
+            });
+        }
     }
 
     /// <summary>
