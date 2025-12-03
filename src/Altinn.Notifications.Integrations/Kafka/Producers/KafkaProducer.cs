@@ -232,7 +232,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
                     }
                 ]);
 
-                _logger.LogInformation("// KafkaProducer // EnsureTopicsExist // Created topic '{Topic}'", topic);
+                _logger.LogInformation("// KafkaProducer // EnsureTopicsExist // Created topic '{Topic}'", ComputeTopicFingerprint(topic));
             }
             catch (CreateTopicsException ex)
             {
@@ -428,7 +428,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
     /// <param name="topicName">The name of the topic that failed to be created.</param>
     private void LogOnTopicCreationFailed(Exception exception, string topicName)
     {
-        _logger.LogError(exception, "// KafkaProducer // EnsureTopicsExist // Failed to create topic '{Topic}'", topicName);
+        _logger.LogError(exception, "// KafkaProducer // EnsureTopicsExist // Failed to create topic '{Topic}'", ComputeTopicFingerprint(topicName));
     }
 
     /// <summary>
@@ -620,7 +620,7 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
             {
                 _logger.LogInformation(
                     "// KafkaProducer // ProduceAsync // BuildProduceTasks // Cancellation Requested. Topic={Topic} Scheduled={Scheduled} Unscheduled={Unscheduled}",
-                    topicName,
+                    ComputeTopicFingerprint(topicName),
                     scheduledMessagesCount,
                     unscheduledMessagesCount);
 
