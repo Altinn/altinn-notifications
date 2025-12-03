@@ -132,8 +132,7 @@ public interface IOrderRepository
     /// <remarks>
     /// This method retrieves the current shipment tracking information for the order
     /// and inserts it into the status feed. This is typically used for orders that
-    /// reach terminal states without generating notifications, such as orders where
-    /// the send condition was not met.
+    /// reach terminal states such as failed or where send condition is not met.
     /// </remarks>
     public Task InsertStatusFeedForOrder(Guid orderId);
 
