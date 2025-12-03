@@ -1,5 +1,5 @@
-﻿using Altinn.Notifications.Core.Models.Orders;
-using Altinn.Notifications.Core.Shared;
+﻿using Altinn.Authorization.ProblemDetails;
+using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Models;
 
 namespace Altinn.Notifications.Core.Services.Interfaces;
@@ -26,9 +26,9 @@ public interface IOrderRequestService
     /// A token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.
     /// </param>
     /// <returns>
-    /// On success, a <see cref="Task{TResult}"/> containing a <see cref="NotificationOrderChainResponse"/> with 
-    /// the generated order chain identifier and receipt information for both the main notification and any associated reminders.
-    /// On failure, a <see cref="ServiceError"/> indicating the reason for the failure.
+    /// A <see cref="Task{TResult}"/> containing a <see cref="Result{T}"/> with a <see cref="NotificationOrderChainResponse"/>
+    /// containing the generated order chain identifier and receipt information for both the main notification and any associated reminders.
+    /// If validation fails, returns a failed <see cref="Result{T}"/> with a <see cref="ProblemInstance"/> describing the validation error.
     /// </returns>
     /// <remarks>
     /// This method processes a chain of notifications, consisting of an initial notification and
@@ -41,7 +41,7 @@ public interface IOrderRequestService
     /// <exception cref="OperationCanceledException">
     /// Thrown when the operation is canceled through the provided <paramref name="cancellationToken"/>.
     /// </exception>
-    Task<Result<NotificationOrderChainResponse, ServiceError>> RegisterNotificationOrderChain(NotificationOrderChainRequest orderRequest, CancellationToken cancellationToken = default);
+    Task<Result<NotificationOrderChainResponse>> RegisterNotificationOrderChain(NotificationOrderChainRequest orderRequest, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Retrieves tracking information for a notification order chain using the creator's name and idempotency identifier.
