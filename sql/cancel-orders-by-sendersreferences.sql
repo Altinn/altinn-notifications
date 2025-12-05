@@ -31,7 +31,8 @@ BEGIN; -- Start transaction
 -- =====================================================================
 CREATE OR REPLACE FUNCTION notifications.cancelordersbysendersreferences(
     _sendersreferences text[],
-    _creatorname text
+    _creatorname text,
+    _created_after timestamptz
 )
 RETURNS TABLE(
     sendersreference text,
@@ -53,6 +54,10 @@ BEGIN
         RAISE EXCEPTION 'Creator name cannot be null or empty';
     END IF;
 
+    IF _created_after IS NULL THEN
+        RAISE EXCEPTION 'Created after timestamp cannot be null';
+    END IF;
+
     -- Return query that processes all matching orders
     RETURN QUERY
     WITH matching_orders AS (
@@ -67,6 +72,7 @@ BEGIN
         FROM notifications.orders o
         WHERE o.sendersreference = ANY(_sendersreferences)
           AND o.creatorname = _creatorname
+          AND o.created >= _created_after
     ),
     classified_orders AS (
         -- Classify each order based on cancellation rules
@@ -127,12 +133,14 @@ DO $$
 DECLARE
     v_sendersreferences text[] := ARRAY['ref-001', 'ref-002', 'ref-003']; -- UPDATE: Your sender references
     v_creatorname text := 'ttd';  -- UPDATE: Your creator name
+    v_created_after timestamptz := '2025-12-01 00:00:00+00'::timestamptz;  -- UPDATE: Only consider orders created after this date
 BEGIN
     RAISE NOTICE '========================================';
     RAISE NOTICE 'EXECUTING CANCELLATION';
     RAISE NOTICE '========================================';
     RAISE NOTICE 'Creator Name: %', v_creatorname;
     RAISE NOTICE 'Sender References: %', array_to_string(v_sendersreferences, ', ');
+    RAISE NOTICE 'Time Window: Only orders created after %', v_created_after;
     RAISE NOTICE '';
 END $$;
 -- =============================================================
@@ -147,7 +155,8 @@ SELECT
     message
 FROM notifications.cancelordersbysendersreferences(
     ARRAY['ref-001', 'ref-002', 'ref-003'],  -- UPDATE: Your sender references
-    'ttd'  -- UPDATE: Your creator name
+    'ttd',  -- UPDATE: Your creator name
+    '2025-12-01 00:00:00+00'::timestamptz  -- UPDATE: Your time window
 )
 ORDER BY cancelallowed DESC, sendersreference;
 
@@ -159,7 +168,8 @@ SELECT
     COUNT(*) FILTER (WHERE cancelallowed = false) as could_not_cancel
 FROM notifications.cancelordersbysendersreferences(
     ARRAY['ref-001', 'ref-002', 'ref-003'],  -- UPDATE: Your sender references
-    'ttd'  -- UPDATE: Your creator name
+    'ttd',  -- UPDATE: Your creator name
+    '2025-12-01 00:00:00+00'::timestamptz  -- UPDATE: Your time window
 );
 
 \echo '\n========================================\n'

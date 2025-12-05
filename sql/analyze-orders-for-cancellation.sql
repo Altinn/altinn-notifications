@@ -17,6 +17,7 @@ DECLARE
     -- ============ CONFIGURATION - UPDATE THESE VALUES ============
     v_sendersreferences text[] := ARRAY['ref-001', 'ref-002', 'ref-003']; -- Add your sender references here
     v_creatorname text := 'ttd';  -- Update with the creator name
+    v_created_after timestamptz := '2025-12-01 00:00:00+00'::timestamptz;  -- Only consider orders created after this date
     -- =============================================================
 
     v_total_matched int;
@@ -30,13 +31,15 @@ BEGIN
     RAISE NOTICE '========================================';
     RAISE NOTICE 'Creator Name: %', v_creatorname;
     RAISE NOTICE 'Sender References: %', array_to_string(v_sendersreferences, ', ');
+    RAISE NOTICE 'Time Window: Only orders created after %', v_created_after;
     RAISE NOTICE '';
 
     -- Count totals
     SELECT COUNT(*) INTO v_total_matched
     FROM notifications.orders o
     WHERE o.sendersreference = ANY(v_sendersreferences)
-      AND o.creatorname = v_creatorname;
+      AND o.creatorname = v_creatorname
+      AND o.created >= v_created_after;
 
     RAISE NOTICE 'Total orders matched: %', v_total_matched;
     RAISE NOTICE '';
@@ -57,7 +60,8 @@ BEGIN
     INTO v_already_cancelled, v_can_cancel, v_cannot_cancel
     FROM notifications.orders o
     WHERE o.sendersreference = ANY(v_sendersreferences)
-      AND o.creatorname = v_creatorname;
+      AND o.creatorname = v_creatorname
+      AND o.created >= v_created_after;
 
     RAISE NOTICE '----------------------------------------';
     RAISE NOTICE 'SUMMARY';
@@ -99,6 +103,7 @@ SELECT
 FROM notifications.orders o
 WHERE o.sendersreference = ANY(ARRAY['ref-001', 'ref-002', 'ref-003'])  -- UPDATE THIS to match your sender references
   AND o.creatorname = 'ttd'  -- UPDATE THIS to match your creator name
+  AND o.created >= '2025-12-01 00:00:00+00'::timestamptz  -- UPDATE THIS to match your time window
 ORDER BY
     CASE
         WHEN o.processedstatus = 'Cancelled' THEN 1
@@ -120,6 +125,7 @@ FROM notifications.orders o
 JOIN notifications.emailnotifications e ON e._orderid = o._id
 WHERE o.sendersreference = ANY(ARRAY['ref-001', 'ref-002', 'ref-003'])  -- UPDATE THIS to match your sender references
   AND o.creatorname = 'ttd'  -- UPDATE THIS to match your creator name
+  AND o.created >= '2025-12-01 00:00:00+00'::timestamptz  -- UPDATE THIS to match your time window
 ORDER BY o.sendersreference, e._id;
 
 \echo '\n=== SMS Notifications for Matched Orders ===\n'
@@ -133,4 +139,5 @@ FROM notifications.orders o
 JOIN notifications.smsnotifications s ON s._orderid = o._id
 WHERE o.sendersreference = ANY(ARRAY['ref-001', 'ref-002', 'ref-003'])  -- UPDATE THIS to match your sender references
   AND o.creatorname = 'ttd'  -- UPDATE THIS to match your creator name
+  AND o.created >= '2025-12-01 00:00:00+00'::timestamptz  -- UPDATE THIS to match your time window
 ORDER BY o.sendersreference, s._id;
