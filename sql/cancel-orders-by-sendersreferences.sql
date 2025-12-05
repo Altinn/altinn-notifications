@@ -25,7 +25,7 @@
 
 BEGIN; -- Start transaction
 
-\echo '\n=== TRANSACTION STARTED ===\n'
+DO $$ BEGIN RAISE NOTICE ''; RAISE NOTICE '=== TRANSACTION STARTED ==='; RAISE NOTICE ''; END $$;
 
 -- Step 1: Create temporary function (inside transaction)
 -- =====================================================================
@@ -123,7 +123,7 @@ BEGIN
 END;
 $$;
 
-\echo 'Temporary function created (will be dropped before commit/rollback)\n'
+DO $$ BEGIN RAISE NOTICE 'Temporary function created (will be dropped before commit/rollback)'; RAISE NOTICE ''; END $$;
 
 -- Step 2: Execute Cancellation
 -- =====================================================================
@@ -161,7 +161,8 @@ FROM notifications.cancelordersbysendersreferences(
 ORDER BY cancelallowed DESC, sendersreference;
 
 -- Show summary statistics
-\echo '\n=== SUMMARY ===\n'
+DO $$ BEGIN RAISE NOTICE ''; RAISE NOTICE '=== SUMMARY ==='; RAISE NOTICE ''; END $$;
+
 SELECT
     COUNT(*) as total_processed,
     COUNT(*) FILTER (WHERE cancelallowed = true) as successfully_cancelled,
@@ -172,23 +173,30 @@ FROM notifications.cancelordersbysendersreferences(
     '2025-12-01 00:00:00+00'::timestamptz  -- UPDATE: Your time window
 );
 
-\echo '\n========================================\n'
-\echo 'REVIEW THE RESULTS ABOVE\n'
-\echo '========================================\n'
-\echo '\n'
+DO $$
+BEGIN
+    RAISE NOTICE '';
+    RAISE NOTICE '========================================';
+    RAISE NOTICE 'REVIEW THE RESULTS ABOVE';
+    RAISE NOTICE '========================================';
+    RAISE NOTICE '';
+END $$;
 
 -- Step 3: Clean up temporary function
 -- =====================================================================
 DROP FUNCTION IF EXISTS notifications.cancelordersbysendersreferences;
 
-\echo 'Temporary function dropped\n'
-\echo '\n'
-\echo 'If the results look correct, run: COMMIT;\n'
-\echo 'If you want to undo the changes, run: ROLLBACK;\n'
-\echo '\n'
-\echo 'IMPORTANT: The transaction is still open.\n'
-\echo 'No changes have been saved to the database yet.\n'
-\echo '\n'
+DO $$
+BEGIN
+    RAISE NOTICE 'Temporary function dropped';
+    RAISE NOTICE '';
+    RAISE NOTICE 'If the results look correct, run: COMMIT;';
+    RAISE NOTICE 'If you want to undo the changes, run: ROLLBACK;';
+    RAISE NOTICE '';
+    RAISE NOTICE 'IMPORTANT: The transaction is still open.';
+    RAISE NOTICE 'No changes have been saved to the database yet.';
+    RAISE NOTICE '';
+END $$;
 
 -- Step 4: Decision Point
 -- =====================================================================

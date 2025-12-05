@@ -114,7 +114,8 @@ ORDER BY
     o.sendersreference;
 
 -- Show notification details for matched orders
-\echo '\n=== Email Notifications for Matched Orders ===\n'
+DO $$ BEGIN RAISE NOTICE ''; RAISE NOTICE '=== Email Notifications for Matched Orders ==='; END $$;
+
 SELECT
     o.sendersreference,
     e.alternateid as email_id,
@@ -128,7 +129,8 @@ WHERE o.sendersreference = ANY(ARRAY['ref-001', 'ref-002', 'ref-003'])  -- UPDAT
   AND o.created >= '2025-12-01 00:00:00+00'::timestamptz  -- UPDATE THIS to match your time window
 ORDER BY o.sendersreference, e._id;
 
-\echo '\n=== SMS Notifications for Matched Orders ===\n'
+DO $$ BEGIN RAISE NOTICE ''; RAISE NOTICE '=== SMS Notifications for Matched Orders ==='; END $$;
+
 SELECT
     o.sendersreference,
     s.alternateid as sms_id,
