@@ -34,7 +34,7 @@ public class PastDueOrdersRetryConsumer : KafkaConsumerBase
     /// <inheritdoc/>
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        return ConsumeMessage(ProcessOrder, RetryOrder, stoppingToken);
+        return ConsumeMessageAsync(ProcessOrder, RetryOrder, stoppingToken);
     }
 
     private async Task ProcessOrder(string message)

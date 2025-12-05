@@ -32,7 +32,7 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers
         /// <inheritdoc/>
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            return ConsumeMessage(ProcessServiceUpdate, RetryServiceUpdate, stoppingToken);
+            return ConsumeMessageAsync(ProcessServiceUpdate, RetryServiceUpdate, stoppingToken);
         }
 
         private async Task ProcessServiceUpdate(string message)

@@ -52,7 +52,7 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
     /// <inheritdoc/>
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        return ConsumeMessage(ProcessStatus, RetryStatus, stoppingToken);
+        return ConsumeMessageAsync(ProcessStatus, RetryStatus, stoppingToken);
     }
 
     /// <summary>

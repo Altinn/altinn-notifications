@@ -50,7 +50,7 @@ public abstract class NotificationStatusRetryConsumerBase : KafkaConsumerBase
     /// <inheritdoc/>
     protected override sealed Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        return ConsumeMessage(ProcessStatus, RetryStatus, stoppingToken);
+        return ConsumeMessageAsync(ProcessStatus, RetryStatus, stoppingToken);
     }
 
     /// <summary>
