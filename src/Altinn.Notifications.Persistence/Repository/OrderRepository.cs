@@ -1,4 +1,5 @@
-﻿using System.Data;
+﻿using System.Collections.Immutable;
+using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
@@ -12,7 +13,7 @@ using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Persistence.Extensions;
 using Altinn.Notifications.Persistence.Mappers;
-
+using Altinn.Notifications.Persistence.Utils;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -46,7 +47,7 @@ public class OrderRepository : IOrderRepository
     private const string _insertEmailNotificationSql = "call notifications.insertemailnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (_orderid, _alternateid, _recipientorgno, _recipientnin, _toaddress, _customizedbody, _customizedsubject, _result, _resulttime, _expirytime)
     private const string _getInstantOrderTrackingInformationSql = "SELECT * FROM notifications.get_instant_order_tracking(_creatorname := @creatorName, _idempotencyid := @idempotencyId)";
     private const string _getOrderCreatorNameSql = "select creatorname from notifications.orders where alternateid=$1";
-    private const string _getShipmentTrackingSql = "select * from notifications.get_shipment_tracking_v2($1, $2)";
+    private const string _getShipmentTrackingSql = "SELECT * FROM notifications.get_shipment_tracking_v3(@alternateid, @creatorname)"; // (_alternateid, _creatorname)
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderRepository"/> class.
@@ -192,7 +193,7 @@ public class OrderRepository : IOrderRepository
     }
 
     /// <inheritdoc/>
-    public async Task<InstantNotificationOrderTracking?> Create(InstantNotificationOrder instantNotificationOrder, NotificationOrder notificationOrder, SmsNotification smsNotification, DateTime smsExpiryDateTime, int smsMessageCount, CancellationToken cancellationToken = default)
+    public async Task<InstantNotificationOrderTracking> Create(InstantNotificationOrder instantNotificationOrder, NotificationOrder notificationOrder, SmsNotification smsNotification, DateTime smsExpiryDateTime, int smsMessageCount, CancellationToken cancellationToken = default)
     {
         var smsTemplate = notificationOrder.Templates.Find(e => e.Type == NotificationTemplateType.Sms) as SmsTemplate ?? throw new InvalidOperationException("SMS template is missing.");
 
@@ -206,7 +207,7 @@ public class OrderRepository : IOrderRepository
     }
 
     /// <inheritdoc/>
-    public async Task<InstantNotificationOrderTracking?> Create(InstantSmsNotificationOrder instantSmsNotificationOrder, NotificationOrder notificationOrder, SmsNotification smsNotification, DateTime smsExpiryDateTime, int smsMessageCount, CancellationToken cancellationToken = default)
+    public async Task<InstantNotificationOrderTracking> Create(InstantSmsNotificationOrder instantSmsNotificationOrder, NotificationOrder notificationOrder, SmsNotification smsNotification, DateTime smsExpiryDateTime, int smsMessageCount, CancellationToken cancellationToken = default)
     {
         var smsTemplate = notificationOrder.Templates.Find(e => e.Type == NotificationTemplateType.Sms) as SmsTemplate ?? throw new InvalidOperationException("SMS template is missing.");
 
@@ -220,7 +221,7 @@ public class OrderRepository : IOrderRepository
     }
 
     /// <inheritdoc/>
-    public async Task<InstantNotificationOrderTracking?> Create(InstantEmailNotificationOrder instantEmailNotificationOrder, NotificationOrder notificationOrder, EmailNotification emailNotification, DateTime emailExpiryDateTime, CancellationToken cancellationToken = default)
+    public async Task<InstantNotificationOrderTracking> Create(InstantEmailNotificationOrder instantEmailNotificationOrder, NotificationOrder notificationOrder, EmailNotification emailNotification, DateTime emailExpiryDateTime, CancellationToken cancellationToken = default)
     {
         var emailTemplate = notificationOrder.Templates.Find(e => e.Type == NotificationTemplateType.Email) as EmailTemplate ?? throw new InvalidOperationException("Email template is missing.");
 
@@ -247,6 +248,7 @@ public class OrderRepository : IOrderRepository
     {
         await using var connection = await _dataSource.OpenConnectionAsync();
         await using var transaction = await connection.BeginTransactionAsync();
+        List<Core.Models.Status.Recipient> recipients = [];
 
         try
         {
@@ -262,8 +264,8 @@ public class OrderRepository : IOrderRepository
 
             // Get shipment tracking information
             await using var getTrackingCommand = new NpgsqlCommand(_getShipmentTrackingSql, connection, transaction);
-            getTrackingCommand.Parameters.AddWithValue(NpgsqlDbType.Uuid, orderId);
-            getTrackingCommand.Parameters.AddWithValue(NpgsqlDbType.Text, creatorName);
+            getTrackingCommand.Parameters.AddWithValue("alternateid", NpgsqlDbType.Uuid, orderId);
+            getTrackingCommand.Parameters.AddWithValue("creatorname", NpgsqlDbType.Text, creatorName);
 
             await using var reader = await getTrackingCommand.ExecuteReaderAsync();
             if (await reader.ReadAsync())
@@ -273,18 +275,22 @@ public class OrderRepository : IOrderRepository
                 var statusValue = await reader.GetFieldValueAsync<string>("status");
                 var lastUpdate = await reader.GetFieldValueAsync<DateTime>("last_update");
                 var type = await reader.GetFieldValueAsync<string>("type");
+                
+                // Attempt to read recipients
+                await NotificationUtil.ReadRecipientsAsync(recipients, reader, CancellationToken.None);
 
                 await reader.CloseAsync();
 
-                // Build OrderStatus object (no recipients for SendConditionNotMet orders)
-                var orderStatus = new Core.Models.Status.OrderStatus
+                // Build OrderStatus object 
+                // If send condition is not met, the status feed entry will have an empty recipients list
+                var orderStatus = new OrderStatus
                 {
                     ShipmentId = orderId,
                     SendersReference = reference,
                     Status = ProcessingLifecycleMapper.GetOrderLifecycleStage(statusValue),
                     LastUpdated = lastUpdate,
                     ShipmentType = type,
-                    Recipients = []
+                    Recipients = recipients.ToImmutableArray()
                 };
 
                 // Insert status feed entry

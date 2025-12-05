@@ -107,12 +107,13 @@ public class OrderProcessingService : IOrderProcessingService
     public async Task<NotificationOrderProcessingResult> ProcessOrder(NotificationOrder order)
     {
         var sendingConditionEvaluationResult = await EvaluateSendingCondition(order, false);
+        var isOrderCompleted = false;
 
         switch (sendingConditionEvaluationResult)
         {
             case { IsSendConditionMet: false }:
                 await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
-                await TryInsertStatusFeedForUnmetCondition(order.Id);
+                isOrderCompleted = true;
                 break;
 
             case { IsSendConditionMet: true }:
@@ -137,8 +138,13 @@ public class OrderProcessingService : IOrderProcessingService
                         break;
                 }
 
-                await _orderRepository.TryCompleteOrderBasedOnNotificationsState(order.Id, AlternateIdentifierSource.Order);
+                isOrderCompleted = await _orderRepository.TryCompleteOrderBasedOnNotificationsState(order.Id, AlternateIdentifierSource.Order);
                 break;
+        }
+
+        if (isOrderCompleted)
+        {
+            await TryInsertStatusFeedForCompletedOrder(order.Id);
         }
 
         return new NotificationOrderProcessingResult
@@ -150,13 +156,14 @@ public class OrderProcessingService : IOrderProcessingService
     /// <inheritdoc/>
     public async Task ProcessOrderRetry(NotificationOrder order)
     {
+        var isOrderCompleted = false;
         var sendingConditionEvaluationResult = await EvaluateSendingCondition(order, true);
 
         switch (sendingConditionEvaluationResult)
         {
             case { IsSendConditionMet: false }:
                 await _orderRepository.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
-                await TryInsertStatusFeedForUnmetCondition(order.Id);
+                isOrderCompleted = true;
                 break;
 
             case { IsSendConditionMet: true }:
@@ -181,17 +188,22 @@ public class OrderProcessingService : IOrderProcessingService
                         break;
                 }
 
-                await _orderRepository.TryCompleteOrderBasedOnNotificationsState(order.Id, AlternateIdentifierSource.Order);
+                isOrderCompleted = await _orderRepository.TryCompleteOrderBasedOnNotificationsState(order.Id, AlternateIdentifierSource.Order);
                 break;
+        }
+
+        if (isOrderCompleted)
+        {
+            await TryInsertStatusFeedForCompletedOrder(order.Id);
         }
     }
 
     /// <summary>
-    /// Attempts to insert a status feed entry for an order where the send condition was not met.
+    /// Attempts to insert a status feed entry for a completed order.
     /// Logs a warning if the insertion fails but does not throw, allowing order processing to continue.
     /// </summary>
-    /// <param name="orderId">The unique identifier of the order.</param>
-    private async Task TryInsertStatusFeedForUnmetCondition(Guid orderId)
+    /// <param name="orderId">The unique identifier of the completed order.</param>
+    private async Task TryInsertStatusFeedForCompletedOrder(Guid orderId)
     {
         try
         {
@@ -200,7 +212,7 @@ public class OrderProcessingService : IOrderProcessingService
         catch (Exception ex)
         {
             var maskedOrderId = string.Concat(orderId.ToString().AsSpan(0, 8), "****");
-            _logger.LogWarning(ex, "Failed to insert status feed for order {OrderId} after marking SendConditionNotMet.", maskedOrderId);
+            _logger.LogWarning(ex, "Failed to insert status feed for completed order {OrderId}.", maskedOrderId);
         }
     }
 
