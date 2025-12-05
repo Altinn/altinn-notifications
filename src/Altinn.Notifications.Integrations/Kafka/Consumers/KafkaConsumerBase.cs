@@ -28,7 +28,7 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers
 
         private readonly string _topicName;
         private readonly string _topicFingerprint;
-        private readonly ILogger<KafkaConsumerBase> _logger;
+        private readonly ILogger _logger;
         private volatile KafkaBatchState? _lastProcessedBatch;
         private readonly IConsumer<string, string> _kafkaConsumer;
         private CancellationTokenSource? _internalCancellationSource;
@@ -44,7 +44,7 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers
         /// <summary>
         /// Initializes a new instance of the <see cref="KafkaConsumerBase"/> class.
         /// </summary>
-        protected KafkaConsumerBase(string topicName, IOptions<KafkaSettings> settings, ILogger<KafkaConsumerBase> logger)
+        protected KafkaConsumerBase(string topicName, IOptions<KafkaSettings> settings, ILogger logger)
         {
             _logger = logger;
             _topicName = topicName;

@@ -19,8 +19,8 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
     where TResult : class
     where TConsumer : class
 {
-    private readonly IKafkaProducer _producer;
     private readonly ILogger _logger;
+    private readonly IKafkaProducer _producer;
     private readonly string _statusUpdatedTopicName;
     private readonly string _statusUpdatedRetryTopicName;
     private readonly IDeadDeliveryReportService _deadDeliveryReportService;
