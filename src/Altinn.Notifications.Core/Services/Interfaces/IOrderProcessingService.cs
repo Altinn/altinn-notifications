@@ -14,6 +14,7 @@ public interface IOrderProcessingService
     /// <summary>
     /// Processes a batch of notification orders whose requested send times have passed.
     /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
     /// <remarks>
     /// <para>
     /// This method retrieves orders that are due for processing, updates their status to 'Processing',
@@ -25,7 +26,7 @@ public interface IOrderProcessingService
     /// </para>
     /// </remarks>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    public Task StartProcessingPastDueOrders();
+    public Task StartProcessingPastDueOrders(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Processes a notification order through the appropriate channel-specific service.

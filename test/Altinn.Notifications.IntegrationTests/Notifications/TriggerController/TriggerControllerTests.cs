@@ -33,7 +33,7 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
         // Arrange
         Mock<IOrderProcessingService> serviceMock = new();
         serviceMock
-            .Setup(e => e.StartProcessingPastDueOrders())
+            .Setup(e => e.StartProcessingPastDueOrders(It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         var smsPublishTaskQueueMock = CreateIdleSmsQueueMock();
@@ -50,7 +50,7 @@ public class TriggerControllerTests : IClassFixture<IntegrationTestWebApplicatio
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        serviceMock.Verify(e => e.StartProcessingPastDueOrders(), Times.Once);
+        serviceMock.Verify(e => e.StartProcessingPastDueOrders(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -184,7 +185,7 @@ public class SmsNotificationServiceTests
     }
 
     [Fact]
-    public async Task SendNotifications_MultipleBatches_AllProduced()
+    public async Task SendNotifications_MultipleBatches_AllPublishedInBatches()
     {
         // Arrange
         var firstBatch = new List<Sms>
@@ -207,8 +208,6 @@ public class SmsNotificationServiceTests
             new(Guid.NewGuid(), "Altinn", "+4799999999", "SMS notification 8")
         };
 
-        int allBatches = firstBatch.Count + secondBatch.Count + thirdBatch.Count;
-
         var repoMock = new Mock<ISmsNotificationRepository>();
         repoMock.SetupSequence(r => r.GetNewNotifications(It.IsAny<int>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Anytime))
             .ReturnsAsync(firstBatch)
@@ -217,8 +216,12 @@ public class SmsNotificationServiceTests
             .ReturnsAsync([]);
 
         var producerMock = new Mock<IKafkaProducer>();
-        producerMock.Setup(p => p.ProduceAsync(_smsQueueTopicName, It.IsAny<string>()))
-            .ReturnsAsync(true);
+        producerMock
+            .Setup(p => p.ProduceAsync(
+                _smsQueueTopicName,
+                It.IsAny<ImmutableList<string>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
 
         var service = GetTestService(repository: repoMock.Object, producer: producerMock.Object, publishBatchSize: 1);
 
@@ -226,25 +229,54 @@ public class SmsNotificationServiceTests
         await service.SendNotifications(CancellationToken.None, SendingTimePolicy.Anytime);
 
         // Assert
-        producerMock.Verify(p => p.ProduceAsync(_smsQueueTopicName, It.IsAny<string>()), Times.Exactly(allBatches));
+        producerMock.Verify(
+            p => p.ProduceAsync(
+                _smsQueueTopicName,
+                It.Is<ImmutableList<string>>(m => m.Count == firstBatch.Count),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        producerMock.Verify(
+            p => p.ProduceAsync(
+                _smsQueueTopicName,
+                It.Is<ImmutableList<string>>(m => m.Count == secondBatch.Count),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        producerMock.Verify(
+            p => p.ProduceAsync(
+                _smsQueueTopicName,
+                It.Is<ImmutableList<string>>(m => m.Count == thirdBatch.Count),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+
         repoMock.Verify(r => r.GetNewNotifications(It.IsAny<int>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Anytime), Times.Exactly(4));
     }
 
     [Fact]
-    public async Task SendNotifications_ProduceReturnedFalse_StatusResetToNew()
+    public async Task SendNotifications_ProducerReturnsAllUnpublished_AllSmsResetToNew()
     {
         // Arrange
-        var repoMock = new Mock<ISmsNotificationRepository>();
+        var firstSms = new Sms(Guid.NewGuid(), "Altinn", "+4799990000", "first");
+        var secondSms = new Sms(Guid.NewGuid(), "Altinn", "+4799990001", "second");
+        var thirdSms = new Sms(Guid.NewGuid(), "Altinn", "+4799990002", "third");
 
-        repoMock.SetupSequence(r => r.GetNewNotifications(It.IsAny<int>(), It.IsAny<CancellationToken>(), It.IsAny<SendingTimePolicy>()))
-            .ReturnsAsync([_sms])
+        var batch = new List<Sms> { firstSms, secondSms, thirdSms };
+
+        var repoMock = new Mock<ISmsNotificationRepository>();
+        repoMock
+            .SetupSequence(e => e.GetNewNotifications(It.IsAny<int>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime))
+            .ReturnsAsync(batch)
             .ReturnsAsync([]);
 
-        repoMock.Setup(r => r.UpdateSendStatus(It.Is<Guid>(g => g == _sms.NotificationId), SmsNotificationResultType.New, It.IsAny<string?>()));
-
         var producerMock = new Mock<IKafkaProducer>();
-        producerMock.Setup(p => p.ProduceAsync(_smsQueueTopicName, It.IsAny<string>()))
-            .ReturnsAsync(false);
+
+        producerMock
+            .Setup(e => e.ProduceAsync(
+                _smsQueueTopicName,
+                It.Is<ImmutableList<string>>(e => e.Count == batch.Count),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([firstSms.Serialize(), secondSms.Serialize(), thirdSms.Serialize()]);
 
         var service = GetTestService(repository: repoMock.Object, producer: producerMock.Object);
 
@@ -252,13 +284,13 @@ public class SmsNotificationServiceTests
         await service.SendNotifications(CancellationToken.None);
 
         // Assert
-        producerMock.Verify(p => p.ProduceAsync(_smsQueueTopicName, It.IsAny<string>()), Times.Once);
-        repoMock.Verify(r => r.UpdateSendStatus(_sms.NotificationId, SmsNotificationResultType.New, It.IsAny<string?>()), Times.Once);
-        repoMock.Verify(r => r.GetNewNotifications(It.IsAny<int>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime), Times.AtLeastOnce);
+        repoMock.Verify(e => e.UpdateSendStatus(firstSms.NotificationId, SmsNotificationResultType.New, It.IsAny<string?>()), Times.Once);
+        repoMock.Verify(e => e.UpdateSendStatus(secondSms.NotificationId, SmsNotificationResultType.New, It.IsAny<string?>()), Times.Once);
+        repoMock.Verify(e => e.UpdateSendStatus(thirdSms.NotificationId, SmsNotificationResultType.New, It.IsAny<string?>()), Times.Once);
     }
 
     [Fact]
-    public async Task SendNotifications_SingleBatchThenEmpty_ProducesEachAndStops()
+    public async Task SendNotifications_SingleBatchThenEmpty_PublishesOneBatchAndStops()
     {
         // Arrange
         List<Sms> firstBatch = [_sms, _sms, _sms];
@@ -271,7 +303,12 @@ public class SmsNotificationServiceTests
             .ReturnsAsync([]);
 
         var producerMock = new Mock<IKafkaProducer>();
-        producerMock.Setup(e => e.ProduceAsync(_smsQueueTopicName, It.IsAny<string>())).ReturnsAsync(true);
+        producerMock
+            .Setup(p => p.ProduceAsync(
+                _smsQueueTopicName,
+                It.IsAny<ImmutableList<string>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
 
         var service = GetTestService(repository: repositoryMock.Object, producer: producerMock.Object);
 
@@ -279,8 +316,69 @@ public class SmsNotificationServiceTests
         await service.SendNotifications(CancellationToken.None);
 
         // Assert
-        producerMock.Verify(p => p.ProduceAsync(_smsQueueTopicName, It.IsAny<string>()), Times.Exactly(firstBatch.Count));
-        repositoryMock.Verify(r => r.GetNewNotifications(It.IsAny<int>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime), Times.AtLeastOnce);
+        producerMock.Verify(
+            p => p.ProduceAsync(
+            _smsQueueTopicName,
+            It.Is<ImmutableList<string>>(m => m.Count == firstBatch.Count),
+            It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        repositoryMock.Verify(r => r.GetNewNotifications(It.IsAny<int>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime), Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task SendNotifications_BatchProduceReturnedUnpublished_StatusResetToNew()
+    {
+        // Arrange
+        var repoMock = new Mock<ISmsNotificationRepository>();
+
+        repoMock.SetupSequence(r => r.GetNewNotifications(It.IsAny<int>(), It.IsAny<CancellationToken>(), It.IsAny<SendingTimePolicy>()))
+            .ReturnsAsync([_sms])
+            .ReturnsAsync([]);
+
+        repoMock.Setup(r => r.UpdateSendStatus(It.Is<Guid>(g => g == _sms.NotificationId), SmsNotificationResultType.New, It.IsAny<string?>()));
+
+        var producerMock = new Mock<IKafkaProducer>();
+        producerMock
+            .Setup(p => p.ProduceAsync(
+                _smsQueueTopicName,
+                It.IsAny<ImmutableList<string>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([_sms.Serialize()]);
+
+        var service = GetTestService(repository: repoMock.Object, producer: producerMock.Object);
+
+        // Act
+        await service.SendNotifications(CancellationToken.None);
+
+        // Assert
+        producerMock.Verify(
+            p => p.ProduceAsync(
+            _smsQueueTopicName,
+            It.Is<ImmutableList<string>>(m => m.Count == 1),
+            It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        repoMock.Verify(r => r.UpdateSendStatus(_sms.NotificationId, SmsNotificationResultType.New, It.IsAny<string?>()), Times.Once);
+        repoMock.Verify(r => r.GetNewNotifications(It.IsAny<int>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime), Times.AtLeastOnce);
+    }
+
+    [Fact]
+    public async Task SendNotifications_RepositoryThrowsOperationCanceled_NoStatusResets()
+    {
+        // Arrange
+        var repoMock = new Mock<ISmsNotificationRepository>();
+        repoMock
+            .Setup(e => e.GetNewNotifications(It.IsAny<int>(), It.IsAny<CancellationToken>(), It.IsAny<SendingTimePolicy>()))
+            .ThrowsAsync(new OperationCanceledException()); // Simulate cancellation
+
+        var service = GetTestService(repository: repoMock.Object);
+        using var cancellationTokenSource = new CancellationTokenSource();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<OperationCanceledException>(() => service.SendNotifications(cancellationTokenSource.Token));
+
+        repoMock.Verify(e => e.UpdateSendStatus(It.IsAny<Guid?>(), It.IsAny<SmsNotificationResultType>(), It.IsAny<string?>()), Times.Never);
     }
 
     [Fact]
@@ -307,7 +405,121 @@ public class SmsNotificationServiceTests
     }
 
     [Fact]
-    public async Task SendNotifications_DefaultSendingTimePolicy_DaytimeUsed_NoStatusUpdatesOnSuccess()
+    public async Task SendNotifications_CancellationAfterProduceOnNextFetch_NoStatusResets()
+    {
+        // Arrange
+        List<Sms> firstBatch = [_sms, _sms];
+
+        var repoMock = new Mock<ISmsNotificationRepository>();
+        repoMock
+            .SetupSequence(e => e.GetNewNotifications(It.IsAny<int>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Anytime))
+            .ReturnsAsync(firstBatch) // First call returns batch
+            .ThrowsAsync(new OperationCanceledException()); // Second call simulates cancellation
+
+        var producer = new Mock<IKafkaProducer>();
+        producer
+            .Setup(e => e.ProduceAsync(_smsQueueTopicName, It.IsAny<ImmutableList<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        var service = GetTestService(repository: repoMock.Object, producer: producer.Object);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<OperationCanceledException>(() => service.SendNotifications(CancellationToken.None, SendingTimePolicy.Anytime));
+
+        producer.Verify(e => e.ProduceAsync(_smsQueueTopicName, It.Is<ImmutableList<string>>(m => m.Count == firstBatch.Count), It.IsAny<CancellationToken>()), Times.Once);
+
+        repoMock.Verify(e => e.UpdateSendStatus(It.IsAny<Guid?>(), It.IsAny<SmsNotificationResultType>(), It.IsAny<string?>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SendNotifications_ProducerThrowsOperationCanceled_StatusResetForBatch()
+    {
+        // Arrange
+        List<Sms> batch = [_sms, _sms, _sms];
+
+        var repo = new Mock<ISmsNotificationRepository>();
+        repo
+            .Setup(e => e.GetNewNotifications(It.IsAny<int>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime))
+            .ReturnsAsync(batch);
+
+        var producer = new Mock<IKafkaProducer>();
+        producer
+            .Setup(e => e.ProduceAsync(_smsQueueTopicName, It.IsAny<ImmutableList<string>>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationCanceledException());
+
+        var service = GetTestService(repository: repo.Object, producer: producer.Object);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<OperationCanceledException>(() => service.SendNotifications(CancellationToken.None));
+
+        repo.Verify(e => e.UpdateSendStatus(It.Is<Guid>(id => batch.Exists(s => s.NotificationId == id)), SmsNotificationResultType.New, It.IsAny<string?>()), Times.Exactly(batch.Count));
+    }
+
+    [Fact]
+    public async Task SendNotifications_CancellationAfterFetchBeforeProduce_StatusResetForBatch()
+    {
+        // Arrange
+        List<Sms> batch = [_sms, _sms, _sms];
+
+        using var cancellationTokenSource = new CancellationTokenSource();
+
+        var repo = new Mock<ISmsNotificationRepository>();
+        repo
+            .Setup(e => e.GetNewNotifications(It.IsAny<int>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime))
+            .Callback(cancellationTokenSource.Cancel)
+            .ReturnsAsync(batch);
+
+        var producer = new Mock<IKafkaProducer>();
+
+        var service = GetTestService(repository: repo.Object, producer: producer.Object);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<OperationCanceledException>(() => service.SendNotifications(cancellationTokenSource.Token));
+
+        repo.Verify(r => r.UpdateSendStatus(It.Is<Guid>(id => batch.Exists(s => s.NotificationId == id)), SmsNotificationResultType.New, It.IsAny<string?>()), Times.Exactly(batch.Count));
+        producer.Verify(p => p.ProduceAsync(It.IsAny<string>(), It.IsAny<ImmutableList<string>>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SendNotifications_ProducerReturnsSubsetUnpublished_OnlyFailedSmsResetToNew()
+    {
+        // Arrange
+        var firstSms = new Sms(Guid.NewGuid(), "Altinn", "+4799999999", "first");
+        var secondSms = new Sms(Guid.NewGuid(), "Altinn", "+4799999999", "second");
+        var thirdSms = new Sms(Guid.NewGuid(), "Altinn", "+4799999999", "third");
+
+        var batch = new List<Sms> { firstSms, secondSms, thirdSms };
+
+        var repoMock = new Mock<ISmsNotificationRepository>();
+        repoMock
+            .SetupSequence(e => e.GetNewNotifications(It.IsAny<int>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime))
+            .ReturnsAsync(batch)
+            .ReturnsAsync([]);
+
+        var producerMock = new Mock<IKafkaProducer>();
+
+        producerMock
+            .Setup(e => e.ProduceAsync(
+                _smsQueueTopicName,
+                It.Is<ImmutableList<string>>(e => e.Count == batch.Count),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([secondSms.Serialize()]);
+
+        var service = GetTestService(repository: repoMock.Object, producer: producerMock.Object);
+
+        // Act
+        await service.SendNotifications(CancellationToken.None);
+
+        // Assert
+        producerMock.Verify(e => e.ProduceAsync(_smsQueueTopicName, It.IsAny<ImmutableList<string>>(), It.IsAny<CancellationToken>()), Times.Once);
+
+        repoMock.Verify(e => e.UpdateSendStatus(secondSms.NotificationId, SmsNotificationResultType.New, It.IsAny<string?>()), Times.Once);
+        repoMock.Verify(e => e.UpdateSendStatus(firstSms.NotificationId, SmsNotificationResultType.New, It.IsAny<string?>()), Times.Never);
+        repoMock.Verify(e => e.UpdateSendStatus(thirdSms.NotificationId, SmsNotificationResultType.New, It.IsAny<string?>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SendNotifications_DefaultPolicy_Daytime_BatchPublished_NoStatusUpdatesOnSuccess()
     {
         // Arrange
         var repoMock = new Mock<ISmsNotificationRepository>();
@@ -316,18 +528,28 @@ public class SmsNotificationServiceTests
             .ReturnsAsync([]);
 
         var producerMock = new Mock<IKafkaProducer>();
-        producerMock.Setup(p => p.ProduceAsync(_smsQueueTopicName, It.IsAny<string>()))
-            .ReturnsAsync(true);
+        producerMock
+            .Setup(p => p.ProduceAsync(
+                _smsQueueTopicName,
+                It.IsAny<ImmutableList<string>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
 
         var service = GetTestService(repository: repoMock.Object, producer: producerMock.Object);
 
         // Act
-        await service.SendNotifications(CancellationToken.None); // rely on default parameter
+        await service.SendNotifications(CancellationToken.None);
 
         // Assert
-        producerMock.Verify(e => e.ProduceAsync(_smsQueueTopicName, It.IsAny<string>()), Times.Exactly(2));
+        producerMock.Verify(
+            p => p.ProduceAsync(
+            _smsQueueTopicName,
+            It.Is<ImmutableList<string>>(m => m.Count == 2),
+            It.IsAny<CancellationToken>()),
+            Times.Once);
+
         repoMock.Verify(e => e.UpdateSendStatus(It.IsAny<Guid>(), It.IsAny<SmsNotificationResultType>(), It.IsAny<string?>()), Times.Never);
-        repoMock.Verify(e => e.GetNewNotifications(It.Is<int>(e => e == 50), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime), Times.AtLeastOnce);
+        repoMock.Verify(e => e.GetNewNotifications(It.Is<int>(b => b == 50), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime), Times.Exactly(2));
     }
 
     [Fact]
@@ -357,6 +579,43 @@ public class SmsNotificationServiceTests
 
         // Assert
         repoMock.Verify();
+    }
+
+    [Fact]
+    public async Task SendNotifications_ProducerReturnsInvalidAndValidUnpublished_OnlyValidSmsResetToNew()
+    {
+        // Arrange
+        var firstSms = new Sms(Guid.NewGuid(), "Altinn", "+4744444444", "first");
+        var secondSms = new Sms(Guid.NewGuid(), "Altinn", "+4755555555", "second");
+        var thirdSms = new Sms(Guid.NewGuid(), "Altinn", "+4766666666", "third");
+        var batch = new List<Sms> { firstSms, secondSms, thirdSms };
+
+        var repoMock = new Mock<ISmsNotificationRepository>();
+        repoMock
+            .SetupSequence(e => e.GetNewNotifications(It.IsAny<int>(), It.IsAny<CancellationToken>(), SendingTimePolicy.Daytime))
+            .ReturnsAsync(batch)
+            .ReturnsAsync([]);
+
+        var producerMock = new Mock<IKafkaProducer>();
+        var invalidEntries = new[] { "{}" };
+        producerMock
+            .Setup(e => e.ProduceAsync(
+                _smsQueueTopicName,
+                It.Is<ImmutableList<string>>(e => e.Count == batch.Count),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([firstSms.Serialize(), thirdSms.Serialize(), .. invalidEntries]);
+
+        var service = GetTestService(repository: repoMock.Object, producer: producerMock.Object);
+
+        // Act
+        await service.SendNotifications(CancellationToken.None);
+
+        // Assert
+        repoMock.Verify(e => e.UpdateSendStatus(firstSms.NotificationId, SmsNotificationResultType.New, It.IsAny<string?>()), Times.Once);
+        repoMock.Verify(e => e.UpdateSendStatus(thirdSms.NotificationId, SmsNotificationResultType.New, It.IsAny<string?>()), Times.Once);
+        repoMock.Verify(e => e.UpdateSendStatus(secondSms.NotificationId, SmsNotificationResultType.New, It.IsAny<string?>()), Times.Never);
+
+        producerMock.Verify(p => p.ProduceAsync(_smsQueueTopicName, It.IsAny<ImmutableList<string>>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     private static SmsNotificationService GetTestService(

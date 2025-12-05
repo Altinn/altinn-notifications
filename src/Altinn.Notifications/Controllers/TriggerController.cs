@@ -46,12 +46,14 @@ public class TriggerController : ControllerBase
     /// <summary>
     /// Endpoint for starting the processing of past due orders
     /// </summary>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.</param>
+    /// <returns>A <see cref="Task{TResult}"/> representing the asynchronous operation that returns an <see cref="ActionResult"/>.</returns>
     [HttpPost]
     [Route("pastdueorders")]
     [Consumes("application/json")]
-    public async Task<ActionResult> Trigger_PastDueOrders()
+    public async Task<ActionResult> Trigger_PastDueOrders(CancellationToken cancellationToken = default)
     {
-        await _orderProcessingService.StartProcessingPastDueOrders();
+        await _orderProcessingService.StartProcessingPastDueOrders(cancellationToken);
         return Ok();
     }
 

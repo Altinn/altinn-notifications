@@ -1,4 +1,6 @@
-﻿using Altinn.Notifications.Core.Configuration;
+﻿using System.Text.Json;
+
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
@@ -7,7 +9,6 @@ using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.Recipients;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services.Interfaces;
-
 using Microsoft.Extensions.Options;
 
 namespace Altinn.Notifications.Core.Services;
@@ -74,17 +75,41 @@ public class SmsNotificationService : ISmsNotificationService
 
         do
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            newSmsNotifications = [];
 
-            newSmsNotifications = await _repository.GetNewNotifications(_publishBatchSize, cancellationToken, sendingTimePolicy);
-
-            foreach (var newSmsNotification in newSmsNotifications)
+            try
             {
-                var success = await _producer.ProduceAsync(_smsQueueTopicName, newSmsNotification.Serialize());
-                if (!success)
+                newSmsNotifications = await _repository.GetNewNotifications(_publishBatchSize, cancellationToken, sendingTimePolicy);
+                if (newSmsNotifications.Count == 0)
+                {
+                    break;
+                }
+
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var serializedSmsNotifications = newSmsNotifications.Select(readyToSendSms => readyToSendSms.Serialize());
+
+                var unpublishedSmsNotifications = await _producer.ProduceAsync(_smsQueueTopicName, [.. serializedSmsNotifications], cancellationToken);
+
+                foreach (var unpublishedSmsNotification in unpublishedSmsNotifications)
+                {
+                    var deserializedSmsNotification = JsonSerializer.Deserialize<Sms>(unpublishedSmsNotification, JsonSerializerOptionsProvider.Options);
+                    if (deserializedSmsNotification == null || deserializedSmsNotification.NotificationId == Guid.Empty)
+                    {
+                        continue;
+                    }
+
+                    await _repository.UpdateSendStatus(deserializedSmsNotification.NotificationId, SmsNotificationResultType.New);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                foreach (var newSmsNotification in newSmsNotifications)
                 {
                     await _repository.UpdateSendStatus(newSmsNotification.NotificationId, SmsNotificationResultType.New);
                 }
+
+                throw;
             }
         }
         while (newSmsNotifications.Count > 0);
