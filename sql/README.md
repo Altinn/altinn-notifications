@@ -12,24 +12,51 @@ These scripts allow you to cancel multiple notification orders by providing a li
 
 ### Files
 
-1. **`analyze-orders-for-cancellation.sql`** - Preview script (read-only)
-2. **`cancel-orders-by-sendersreferences.sql`** - Cancellation script (writes to database)
+1. **`config.json.example`** - Example configuration file (committed to git)
+2. **`config.json`** - Your actual configuration (gitignored, create from example)
+3. **`update-scripts.sh`** - Helper script to update SQL files from config
+4. **`analyze-orders-for-cancellation.sql`** - Preview script (read-only)
+5. **`cancel-orders-by-sendersreferences.sql`** - Cancellation script (writes to database)
 
 ### Workflow
 
 Follow these steps in order:
+
+#### Step 0: Configure (One Place Only)
+
+First time setup - copy the example config:
+```bash
+cp config.json.example config.json
+```
+
+Then edit `config.json` with your values:
+```json
+{
+  "sendersreferences": ["ref-001", "ref-002", "ref-003"],
+  "creatorname": "ttd",
+  "created_after": "2024-12-01 00:00:00+00"
+}
+```
+
+**Note:** `config.json` is gitignored to prevent committing sensitive data.
+
+Then run the update script to apply the configuration to both SQL files:
+```bash
+./update-scripts.sh
+```
+
+**Note:** This step updates all configuration values in both SQL scripts automatically. No need to manually edit the SQL files.
+
+**Requirements:** The update script requires `jq` for JSON parsing.
 
 #### Step 1: Analysis (Preview)
 
 Run the analysis script first to see what would be affected:
 
 1. Connect to the database using pgAdmin on the VM (image)
-2. Open `analyze-orders-for-cancellation.sql` in an editor
-3. Update the configuration variables:
-   - `v_sendersreferences`: Array of sender reference strings
-   - `v_creatorname`: The creator name (service owner)
-4. Copy the entire script content
-5. Paste and execute it in pgAdmin's query tool
+2. Open `analyze-orders-for-cancellation.sql` (already updated by the script)
+3. Copy the entire script content
+4. Paste and execute it in pgAdmin's query tool
 
 The script will show:
 - Total number of orders matched
@@ -60,12 +87,9 @@ Cannot be cancelled:   1
 
 After reviewing the analysis results, run the cancellation script:
 
-1. Open `cancel-orders-by-sendersreferences.sql` in an editor
-2. Update the configuration variables:
-   - `v_sendersreferences`: Same array as in analysis script
-   - `v_creatorname`: Same creator name as in analysis script
-3. Copy the entire script content
-4. Paste and execute it in pgAdmin's query tool
+1. Open `cancel-orders-by-sendersreferences.sql` (already updated by the script)
+2. Copy the entire script content
+3. Paste and execute it in pgAdmin's query tool
 
 The script will:
 1. Start a transaction
@@ -112,21 +136,27 @@ Orders already cancelled will be reported as successfully cancelled (idempotent)
 
 #### Scenario: Cancel test notifications
 
-1. Connect to the test database using pgAdmin on the VM
-
-2. Edit `analyze-orders-for-cancellation.sql`:
-```sql
-v_sendersreferences text[] := ARRAY['test-ref-001', 'test-ref-002', 'test-ref-003'];
-v_creatorname text := 'ttd';
+1. Edit `config.json`:
+```json
+{
+  "sendersreferences": ["test-ref-001", "test-ref-002", "test-ref-003"],
+  "creatorname": "ttd",
+  "created_after": "2024-12-01 00:00:00+00"
+}
 ```
 
-3. Copy the script and run it in pgAdmin's query tool
+2. Run the update script:
+```bash
+./update-scripts.sh
+```
 
-4. Review the output and verify the orders to be cancelled are correct
+3. Connect to the test database using pgAdmin on the VM
 
-5. Edit `cancel-orders-by-sendersreferences.sql` with the same values
+4. Copy and run `analyze-orders-for-cancellation.sql` in pgAdmin's query tool
 
-6. Copy and run the cancellation script in pgAdmin
+5. Review the output and verify the orders to be cancelled are correct
+
+6. Copy and run `cancel-orders-by-sendersreferences.sql` in pgAdmin
 
 7. Review the results in the output pane
 
