@@ -24,7 +24,7 @@ public class PastDueOrdersConsumer : KafkaConsumerBase
         IKafkaProducer producer,
         IOptions<KafkaSettings> settings,
         ILogger<PastDueOrdersConsumer> logger,
-        IOrderProcessingService orderProcessingService) : base(settings, logger, settings.Value.PastDueOrdersTopicName)
+        IOrderProcessingService orderProcessingService) : base(settings.Value.PastDueOrdersTopicName, settings, logger)
     {
         _producer = producer;
         _orderProcessingService = orderProcessingService;
@@ -34,7 +34,7 @@ public class PastDueOrdersConsumer : KafkaConsumerBase
     /// <inheritdoc/>
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        return Task.Run(() => ConsumeMessage(ProcessOrder, RetryOrder, stoppingToken), stoppingToken);
+        return ConsumeMessageAsync(ProcessOrder, RetryOrder, stoppingToken);
     }
 
     private async Task ProcessOrder(string message)
