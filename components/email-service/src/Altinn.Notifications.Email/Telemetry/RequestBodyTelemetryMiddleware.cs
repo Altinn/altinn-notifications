@@ -44,15 +44,18 @@ public class RequestBodyTelemetryMiddleware(
 
         // Allow the body to be read multiple times (rewindable)
         context.Request.EnableBuffering();
+        string body;
 
         // Leave the body stream open after reading
-        using var reader = new StreamReader(
+        using (var reader = new StreamReader(
             context.Request.Body,
             Encoding.UTF8,
             detectEncodingFromByteOrderMarks: false,
             bufferSize: 1024,
-            leaveOpen: true);
-        var body = await reader.ReadToEndAsync();
+            leaveOpen: true))
+        {
+            body = await reader.ReadToEndAsync();
+        }
 
         // Reset the stream's position to 0 so the next middleware/controller can read it
         context.Request.Body.Position = 0;
