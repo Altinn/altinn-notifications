@@ -14,6 +14,7 @@ public class DeadDeliveryReportRepository(NpgsqlDataSource npgsqlDataSource) : I
     private readonly NpgsqlDataSource _dataSource = npgsqlDataSource;
     private const string _addDeadDeliveryReport = "SELECT notifications.insertdeaddeliveryreport(@channel, @attemptcount, @deliveryreport, @resolved, @firstseen, @lastattempt, @reason, @message)";
     private const string _getDeadDeliveryReport = "SELECT id, channel, attemptcount, deliveryreport, resolved, firstseen, lastattempt, reason, message FROM notifications.deaddeliveryreports WHERE id = @id";
+    private const string _getAllDeadDeliveryReports = "SELECT id, channel, attemptcount, deliveryreport, resolved, firstseen, lastattempt, reason, message FROM notifications.deaddeliveryreports";
 
     /// <inheritdoc/>
     public async Task<long> InsertAsync(DeadDeliveryReport report, CancellationToken cancellationToken = default)
@@ -64,5 +65,35 @@ public class DeadDeliveryReportRepository(NpgsqlDataSource npgsqlDataSource) : I
         {
             throw new KeyNotFoundException($"DeadDeliveryReport with ID {id} not found.");
         }
+    }
+
+    /// <inheritdoc/>
+    public async Task<List<DeadDeliveryReport>> GetAllAsync(CancellationToken cancellationToken = default)
+    {
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getAllDeadDeliveryReports);
+
+        await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken);
+
+        var reports = new List<DeadDeliveryReport>();
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            var reasonOrdinal = reader.GetOrdinal("reason");
+            var messageOrdinal = reader.GetOrdinal("message");
+
+            var report = new DeadDeliveryReport
+            {
+                Channel = (Core.Enums.DeliveryReportChannel)await reader.GetFieldValueAsync<short>("channel", cancellationToken),
+                AttemptCount = await reader.GetFieldValueAsync<int>("attemptcount", cancellationToken),
+                DeliveryReport = await reader.GetFieldValueAsync<string>("deliveryreport", cancellationToken),
+                Resolved = await reader.GetFieldValueAsync<bool>("resolved", cancellationToken),
+                FirstSeen = await reader.GetFieldValueAsync<DateTime>("firstseen", cancellationToken),
+                LastAttempt = await reader.GetFieldValueAsync<DateTime>("lastattempt", cancellationToken),
+                Reason = await reader.IsDBNullAsync(reasonOrdinal, cancellationToken) ? null : await reader.GetFieldValueAsync<string>(reasonOrdinal, cancellationToken),
+                Message = await reader.IsDBNullAsync(messageOrdinal, cancellationToken) ? null : await reader.GetFieldValueAsync<string>(messageOrdinal, cancellationToken)
+            };
+            reports.Add(report);
+        }
+
+        return reports;
     }
 }
