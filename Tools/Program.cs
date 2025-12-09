@@ -2,7 +2,6 @@
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Persistence.Repository;
-using Confluent.Kafka;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -54,6 +53,11 @@ using (var scope = host.Services.CreateScope())
         var reports = await repository.GetAllAsync(fromDate, reason, channel, CancellationToken.None);
         Console.WriteLine($"Found {reports.Count} dead delivery reports");
 
+        reports.Select(report => Util.MapToEmailSendOperationResult(report)).ToList()
+            .ForEach(result => Console.WriteLine($"Report Id: {result?.OperationId}, Status: {result?.SendResult}"));
+
+        // todo: figure out how to keep track of what has been produced.
+        // todo: is the status feed idempotent? It needs to be idempotent if we are to replay messages.
 
         var producer = scope.ServiceProvider.GetRequiredService<ICommonProducer>();
 
@@ -70,9 +74,9 @@ using (var scope = host.Services.CreateScope())
             return;
         }
 
-        var result = await producer.ProduceAsync(topic, sendOperationResult.Serialize());
+        //var result = await producer.ProduceAsync(topic, sendOperationResult.Serialize());
 
-        Console.WriteLine($"Message produced to topic {topic}: {result}");
+        //Console.WriteLine($"Message produced to topic {topic}: {result}");
     }
     catch (Exception ex)
     {
