@@ -1,5 +1,5 @@
 ﻿using System.Data;
-
+using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Persistence;
 
@@ -14,7 +14,7 @@ public class DeadDeliveryReportRepository(NpgsqlDataSource npgsqlDataSource) : I
     private readonly NpgsqlDataSource _dataSource = npgsqlDataSource;
     private const string _addDeadDeliveryReport = "SELECT notifications.insertdeaddeliveryreport(@channel, @attemptcount, @deliveryreport, @resolved, @firstseen, @lastattempt, @reason, @message)";
     private const string _getDeadDeliveryReport = "SELECT id, channel, attemptcount, deliveryreport, resolved, firstseen, lastattempt, reason, message FROM notifications.deaddeliveryreports WHERE id = @id";
-    private const string _getAllDeadDeliveryReports = "SELECT id, channel, attemptcount, deliveryreport, resolved, firstseen, lastattempt, reason, message FROM notifications.deaddeliveryreports";
+    private const string _getAllDeadDeliveryReports = "SELECT id, channel, attemptcount, deliveryreport, resolved, firstseen, lastattempt, reason, message FROM notifications.deaddeliveryreports WHERE firstseen >= @fromDate AND reason = @reason AND channel = @channel";
 
     /// <inheritdoc/>
     public async Task<long> InsertAsync(DeadDeliveryReport report, CancellationToken cancellationToken = default)
@@ -68,9 +68,12 @@ public class DeadDeliveryReportRepository(NpgsqlDataSource npgsqlDataSource) : I
     }
 
     /// <inheritdoc/>
-    public async Task<List<DeadDeliveryReport>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<List<DeadDeliveryReport>> GetAllAsync(DateTime fromDate, string reason, DeliveryReportChannel channel, CancellationToken cancellationToken = default)
     {
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getAllDeadDeliveryReports);
+        pgcom.Parameters.AddWithValue("fromDate", NpgsqlDbType.TimestampTz, fromDate);
+        pgcom.Parameters.AddWithValue("reason", NpgsqlDbType.Text, reason);
+        pgcom.Parameters.AddWithValue("channel", NpgsqlDbType.Smallint, (short)channel);
 
         await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken);
 
@@ -82,7 +85,7 @@ public class DeadDeliveryReportRepository(NpgsqlDataSource npgsqlDataSource) : I
 
             var report = new DeadDeliveryReport
             {
-                Channel = (Core.Enums.DeliveryReportChannel)await reader.GetFieldValueAsync<short>("channel", cancellationToken),
+                Channel = (DeliveryReportChannel)await reader.GetFieldValueAsync<short>("channel", cancellationToken),
                 AttemptCount = await reader.GetFieldValueAsync<int>("attemptcount", cancellationToken),
                 DeliveryReport = await reader.GetFieldValueAsync<string>("deliveryreport", cancellationToken),
                 Resolved = await reader.GetFieldValueAsync<bool>("resolved", cancellationToken),
