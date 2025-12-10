@@ -8,7 +8,7 @@
         -e mpClientId={the id of an integration defined in maskinporten} \
         -e mpKid={the key id of the JSON web key used to sign the maskinporten token request} \
         -e encodedJwk={the encoded JSON web key used to sign the maskinporten token request} \
-        -e env={environment: at22, at23, at24, tt02, prod} \
+        -e altinn_env={environment: at22, at23, at24, tt02, prod} \
         -e orgNoRecipient={an organization number to include as a notification recipient} \
         -e resourceId={the resource ID associated with the notification order} \
 
@@ -57,7 +57,7 @@ setEmptyThresholds(labels, options);
 export function setup() {
     const sendersReference = uuidv4();
     const idempotencyIdEmail = uuidv4();
-    const idempotencyIdSms = uuidv4();  
+    const idempotencyIdSms = uuidv4();
     const token = setupToken.getAltinnTokenForOrg(scopes);
 
     const orgNoRecipient = getOrgNoRecipient();

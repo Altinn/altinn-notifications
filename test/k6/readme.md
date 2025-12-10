@@ -41,7 +41,7 @@ For example:
 $> podman compose run k6 run /src/tests/orders-email.js \
     -e tokenGeneratorUserName=*** \
     -e tokenGeneratorUserPwd=*** \
-    -e env=*** \
+    -e altinn_env=*** \
     -e emailRecipient=*** \
     -e ninRecipient=*** \
     -e runFullTestSet=true
@@ -55,7 +55,7 @@ $> podman compose run k6 run /src/tests/orders-email.js \
    ```bash
    -e tokenGeneratorUserName=***
    -e tokenGeneratorUserPwd=***
-   -e env=***
+   -e altinn_env=***
    -e emailRecipient=***
    -e ninRecipient=***
    -e runFullTestSet=true
@@ -77,7 +77,7 @@ Run a test with 10 virtual users (VUs) for 5 minutes:
 $> k6 run /src/tests/orders-email.js \
     -e tokenGeneratorUserName=*** \
     -e tokenGeneratorUserPwd=*** \
-    -e env=*** \
+    -e altinn_env=*** \
     --vus=10 \
     --duration=5m
 ```

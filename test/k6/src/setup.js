@@ -11,7 +11,7 @@ import { environment } from "./shared/variables.js";
  */
 export function getAltinnTokenForOrg(scopes, org = "ttd", orgNo = "991825827") {
     if (!environment) {
-        stopIterationOnFail("Environment variable 'env' is not set", false);
+        stopIterationOnFail("Environment variable 'altinn_env' is not set", false);
     }
 
     if ((environment === "prod" || environment === "tt02") && org === "ttd") {
@@ -21,7 +21,7 @@ export function getAltinnTokenForOrg(scopes, org = "ttd", orgNo = "991825827") {
     }
 
     const queryParams = {
-        env: environment,
+        altinn_env: environment,
         scopes: scopes.replaceAll(/ /gi, ","),
         org: org,
         orgNo: orgNo,
