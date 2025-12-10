@@ -63,7 +63,7 @@ using (var scope = host.Services.CreateScope())
     try
     {
         var fromId = 43716;
-        var toId = 43716;
+        var toId = 43717;
         
         var operationResults = await Util.GetAndMapDeadDeliveryReports(
             repository,
@@ -71,9 +71,19 @@ using (var scope = host.Services.CreateScope())
             toId,
             Altinn.Notifications.Core.Enums.DeliveryReportChannel.AzureCommunicationServices,
             CancellationToken.None);
+            
+        var dataSource = scope.ServiceProvider.GetRequiredService<NpgsqlDataSource>();
 
         foreach (var result in operationResults)
         {
+
+            var isDelivered = await Util.IsEmailNotificationDelivered(dataSource, result.OperationId);
+            if (isDelivered)
+            {
+                Console.WriteLine($"Notification {result.NotificationId} with OperationId {result.OperationId} is already marked as Delivered. Skipping Event Grid post.");
+                continue;
+            }
+
             var bd = BinaryData.FromObjectAsJson(new
             {
                 messageId = result.OperationId,
@@ -89,7 +99,7 @@ using (var scope = host.Services.CreateScope())
 
             // Post to Event Grid using reusable client
             var (success, responseBody) = await eventGridClient.PostEventsAsync(
-                eventArray, 
+                eventArray,
                 CancellationToken.None);
 
             if (!success)

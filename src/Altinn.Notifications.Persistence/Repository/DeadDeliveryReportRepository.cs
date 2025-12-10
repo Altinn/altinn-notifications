@@ -14,7 +14,7 @@ public class DeadDeliveryReportRepository(NpgsqlDataSource npgsqlDataSource) : I
     private readonly NpgsqlDataSource _dataSource = npgsqlDataSource;
     private const string _addDeadDeliveryReport = "SELECT notifications.insertdeaddeliveryreport(@channel, @attemptcount, @deliveryreport, @resolved, @firstseen, @lastattempt, @reason, @message)";
     private const string _getDeadDeliveryReport = "SELECT id, channel, attemptcount, deliveryreport, resolved, firstseen, lastattempt, reason, message FROM notifications.deaddeliveryreports WHERE id = @id";
-    private const string _getAllDeadDeliveryReports = "SELECT id, channel, attemptcount, deliveryreport, resolved, firstseen, lastattempt, reason, message FROM notifications.deaddeliveryreports WHERE id >= @fromId AND id <= @toId AND reason = @reason AND channel = @channel";
+    private const string _getAllDeadDeliveryReports = "SELECT id, channel, attemptcount, deliveryreport, resolved, firstseen, lastattempt, reason, message FROM notifications.deaddeliveryreports WHERE id >= @fromId AND id < @toId AND reason = @reason AND channel = @channel";
 
     /// <inheritdoc/>
     public async Task<long> InsertAsync(DeadDeliveryReport report, CancellationToken cancellationToken = default)

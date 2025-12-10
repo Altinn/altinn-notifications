@@ -20,8 +20,8 @@ public interface IDeadDeliveryReportRepository
     /// <summary>
     /// Asynchronously retrieves all dead delivery reports from the data source.
     /// </summary>
-    /// <param name="fromId">starting position for the report retrieval</param>
-    /// <param name="toId">ending position for the report retrieval</param>
+    /// <param name="fromId">inclusive starting position for the report retrieval</param>
+    /// <param name="toId">exclusive ending position for the report retrieval</param>
     /// <param name="reason">Filter based on reason code</param>
     /// <param name="channel">Type of delivery report email/sms</param>
     /// <param name="cancellationToken">A token that can be used to cancel the asynchronous operation. The default value is <see

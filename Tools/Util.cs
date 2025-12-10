@@ -1,6 +1,7 @@
 ﻿using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Persistence;
+using Npgsql;
 
 namespace Tools;
 
@@ -39,6 +40,24 @@ internal static class Util
             .ToList();
 
         return operationResults;
+    }
+
+    internal static async Task<bool> IsEmailNotificationDelivered(
+        NpgsqlDataSource dataSource,
+        string operationId)
+    {
+        const string sql = @"
+            SELECT COUNT(1) 
+            FROM notifications.emailnotifications 
+            WHERE operationid = @operationId 
+            AND result = 'Delivered'";
+
+        await using var connection = await dataSource.OpenConnectionAsync();
+        await using var command = new NpgsqlCommand(sql, connection);
+        command.Parameters.AddWithValue("operationId", operationId);
+
+        var count = (long)(await command.ExecuteScalarAsync() ?? 0L);
+        return count > 0;
     }
 
     internal static async Task<int> ProduceMessagesToKafka(
