@@ -42,7 +42,7 @@ internal static class Util
         return operationResults;
     }
 
-    internal static async Task<bool> IsEmailNotificationDelivered(
+    internal static async Task<bool> IsEmailNotificationSucceeded(
         NpgsqlDataSource dataSource,
         string operationId)
     {
@@ -50,7 +50,7 @@ internal static class Util
             SELECT COUNT(1) 
             FROM notifications.emailnotifications 
             WHERE operationid = @operationId 
-            AND result = 'Delivered'";
+            AND result = 'Succeeded'";
 
         await using var connection = await dataSource.OpenConnectionAsync();
         await using var command = new NpgsqlCommand(sql, connection);

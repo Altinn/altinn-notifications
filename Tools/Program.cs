@@ -77,8 +77,8 @@ using (var scope = host.Services.CreateScope())
         foreach (var result in operationResults)
         {
 
-            var isDelivered = await Util.IsEmailNotificationDelivered(dataSource, result.OperationId);
-            if (isDelivered)
+            var isSucceeded = await Util.IsEmailNotificationSucceeded(dataSource, result.OperationId);
+            if (!isSucceeded)
             {
                 Console.WriteLine($"Notification {result.NotificationId} with OperationId {result.OperationId} is already marked as Delivered. Skipping Event Grid post.");
                 continue;
