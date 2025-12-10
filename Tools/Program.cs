@@ -1,6 +1,7 @@
 ﻿using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Integrations.Configuration;
+using Altinn.Notifications.Persistence.Configuration;
 using Altinn.Notifications.Persistence.Repository;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,7 +17,7 @@ builder.Configuration
     .AddUserSecrets<Program>(optional: true); // Add this line
 
 // Configure PostgreSQL settings
-builder.Services.Configure<PostgreSQLSettings>(
+builder.Services.Configure<PostgreSqlSettings>(
     builder.Configuration.GetSection("PostgreSQLSettings"));
 
 // Register NpgsqlDataSource
