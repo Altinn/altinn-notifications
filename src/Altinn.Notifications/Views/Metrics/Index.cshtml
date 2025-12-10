@@ -1,5 +1,35 @@
 ﻿@model Altinn.Notifications.Core.Models.Metrics.MonthlyNotificationMetrics
 
+@functions {
+    public readonly static Dictionary<int, string> MonthDict = new()
+    {
+        { 1, "January" },
+        { 2, "February" },
+        { 3, "March" },
+        { 4, "April" },
+        { 5, "May" },
+        { 6, "June" },
+        { 7, "July" },
+        { 8, "August" },
+        { 9, "September" },
+        { 10, "October" },
+        { 11, "November" },
+        { 12, "December" },
+    };
+
+    public List<SelectListItem> GetYears()
+    {
+        // Generate a list of the current year and the five years before it
+        var currentYear = DateTime.Now.Year;
+        var years = Enumerable.Range(currentYear - 5, 6)
+                             .OrderByDescending(year => year)
+                             .Select(year => new SelectListItem { Value = year.ToString(), Text = year.ToString() })
+                             .ToList();
+
+        return years;
+    }
+}
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -150,33 +180,3 @@
     </script>
 </body>
 </html>
-
-@functions {
-    public readonly static Dictionary<int, string> MonthDict = new()
-    {
-        { 1, "January" },
-        { 2, "February" },
-        { 3, "March" },
-        { 4, "April" },
-        { 5, "May" },
-        { 6, "June" },
-        { 7, "July" },
-        { 8, "August" },
-        { 9, "September" },
-        { 10, "October" },
-        { 11, "November" },
-        { 12, "December" },
-    };
-
-    public List<SelectListItem> GetYears()
-    {
-        // Generate a list of the current year and the five years before it
-        var currentYear = DateTime.Now.Year;
-        var years = Enumerable.Range(currentYear - 5, 6)
-                             .OrderByDescending(year => year)
-                             .Select(year => new SelectListItem { Value = year.ToString(), Text = year.ToString() })
-                             .ToList();
-
-        return years;
-    }
-}

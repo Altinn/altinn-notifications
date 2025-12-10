@@ -60,10 +60,9 @@ public interface IOrderRepository
     /// A <see cref="CancellationToken"/> to monitor for cancellation requests. Defaults to <see cref="CancellationToken.None"/>.
     /// </param>
     /// <returns>
-    /// A <see cref="Task{TResult}"/> containing a <see cref="InstantNotificationOrderTracking"/> with tracking information,
-    /// or <c>null</c> if the operation failed.
+    /// A <see cref="Task{TResult}"/> containing a <see cref="InstantNotificationOrderTracking"/> with tracking information.
     /// </returns>
-    Task<InstantNotificationOrderTracking?> Create(InstantNotificationOrder instantNotificationOrder, NotificationOrder notificationOrder, SmsNotification smsNotification, DateTime smsExpiryDateTime, int smsMessageCount, CancellationToken cancellationToken = default);
+    Task<InstantNotificationOrderTracking> Create(InstantNotificationOrder instantNotificationOrder, NotificationOrder notificationOrder, SmsNotification smsNotification, DateTime smsExpiryDateTime, int smsMessageCount, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Creates a new high-priority instant SMS notification order with flattened structure in the database.
@@ -87,10 +86,9 @@ public interface IOrderRepository
     /// A <see cref="CancellationToken"/> to monitor for cancellation requests. Defaults to <see cref="CancellationToken.None"/>.
     /// </param>
     /// <returns>
-    /// A <see cref="Task{TResult}"/> containing a <see cref="InstantNotificationOrderTracking"/> with tracking information,
-    /// or <c>null</c> if the operation failed.
+    /// A <see cref="Task{TResult}"/> containing a <see cref="InstantNotificationOrderTracking"/> with tracking information.
     /// </returns>
-    Task<InstantNotificationOrderTracking?> Create(InstantSmsNotificationOrder instantSmsNotificationOrder, NotificationOrder notificationOrder, SmsNotification smsNotification, DateTime smsExpiryDateTime, int smsMessageCount, CancellationToken cancellationToken = default);
+    Task<InstantNotificationOrderTracking> Create(InstantSmsNotificationOrder instantSmsNotificationOrder, NotificationOrder notificationOrder, SmsNotification smsNotification, DateTime smsExpiryDateTime, int smsMessageCount, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Creates a new high-priority instant email notification order in the database.
@@ -111,10 +109,9 @@ public interface IOrderRepository
     /// A <see cref="CancellationToken"/> to monitor for cancellation requests. Defaults to <see cref="CancellationToken.None"/>.
     /// </param>
     /// <returns>
-    /// A <see cref="Task{TResult}"/> containing a <see cref="InstantNotificationOrderTracking"/> with tracking information,
-    /// or <c>null</c> if the operation failed.
+    /// A <see cref="Task{TResult}"/> containing a <see cref="InstantNotificationOrderTracking"/> with tracking information.
     /// </returns>
-    Task<InstantNotificationOrderTracking?> Create(InstantEmailNotificationOrder instantEmailNotificationOrder, NotificationOrder notificationOrder, EmailNotification emailNotification, DateTime emailExpiryDateTime, CancellationToken cancellationToken = default);
+    Task<InstantNotificationOrderTracking> Create(InstantEmailNotificationOrder instantEmailNotificationOrder, NotificationOrder notificationOrder, EmailNotification emailNotification, DateTime emailExpiryDateTime, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets a list of notification orders where requestedSendTime has passed
@@ -135,8 +132,7 @@ public interface IOrderRepository
     /// <remarks>
     /// This method retrieves the current shipment tracking information for the order
     /// and inserts it into the status feed. This is typically used for orders that
-    /// reach terminal states without generating notifications, such as orders where
-    /// the send condition was not met.
+    /// reach terminal states such as failed or where send condition is not met.
     /// </remarks>
     public Task InsertStatusFeedForOrder(Guid orderId);
 

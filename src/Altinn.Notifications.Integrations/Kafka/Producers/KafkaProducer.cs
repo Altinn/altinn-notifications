@@ -95,25 +95,17 @@ public class KafkaProducer : SharedClientConfig, IKafkaProducer, IDisposable
         var topicsNotExisting = _settings.Admin.TopicList.Except(existingTopics.Select(t => t.Topic), StringComparer.OrdinalIgnoreCase);
         foreach (string topic in topicsNotExisting)
         {
-            try
-            {
-                adminClient.CreateTopicsAsync(
-                [
-                    new()
-                    {
-                        Name = topic,
-                        NumPartitions = TopicSpecification.NumPartitions,
-                        ReplicationFactor = TopicSpecification.ReplicationFactor,
-                        Configs = TopicSpecification.Configs
-                    }
-                ]).Wait();
-                _logger.LogInformation("// KafkaProducer // EnsureTopicsExists // Topic '{Topic}' created successfully.", topic);
-            }
-            catch (CreateTopicsException ex)
-            {
-                _logger.LogError(ex, "// KafkaProducer // EnsureTopicsExists // Failed to create topic '{Topic}'", topic);
-                throw;
-            }            
+            adminClient.CreateTopicsAsync(
+            [
+                new()
+                {
+                    Name = topic,
+                    NumPartitions = TopicSpecification.NumPartitions,
+                    ReplicationFactor = TopicSpecification.ReplicationFactor,
+                    Configs = TopicSpecification.Configs
+                }
+            ]).Wait();
+            _logger.LogInformation("// KafkaProducer // EnsureTopicsExists // Topic '{Topic}' created successfully.", topic);           
         }
     }
 }

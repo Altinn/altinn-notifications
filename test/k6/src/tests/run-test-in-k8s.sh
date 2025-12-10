@@ -19,7 +19,7 @@ help() {
     echo "  -b, --breakpoint     Flag to set breakpoint test or not"
     echo "  -a, --abort          Flag to specify whether to abort on fail or not, only used in breakpoint tests"
     echo "  -h, --help           Show this help message"
-    exit 0
+    return
 }
 
 print_logs() {
@@ -39,7 +39,7 @@ print_logs() {
             echo $pod
             echo ---------------------------
             kubectl logs --tail=-1 $pod
-            status=`kubectl get $pod -o jsonpath='{.status.phase}'`
+            status=$(kubectl get $pod -o jsonpath='{.status.phase}')
             if [[ "$status" != "Succeeded" ]]; then
                 failed=1
             fi
@@ -55,6 +55,7 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         -h|--help)
             help
+            exit 0
             ;;
         -f|--filename)
             filename="$2"

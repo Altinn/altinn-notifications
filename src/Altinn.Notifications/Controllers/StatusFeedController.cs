@@ -1,4 +1,6 @@
-﻿using Altinn.Notifications.Configuration;
+﻿using Altinn.Authorization.ProblemDetails;
+using Altinn.Notifications.Configuration;
+using Altinn.Notifications.Core.Errors;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Mappers;
@@ -19,7 +21,6 @@ namespace Altinn.Notifications.Controllers;
 [Route("notifications/api/v1/future/shipment")]
 [SwaggerResponse(401, "Caller is unauthorized")]
 [SwaggerResponse(403, "Caller is not authorized to access the requested resource")]
-[SwaggerResponse(499, "The operation was cancelled by the caller")]
 [Authorize(Policy = AuthorizationConstants.POLICY_CREATE_SCOPE_OR_PLATFORM_ACCESS)]
 public class StatusFeedController(IStatusFeedService statusFeedService, IValidator<GetStatusFeedRequestExt> validator) : ControllerBase
 {
@@ -34,6 +35,7 @@ public class StatusFeedController(IStatusFeedService statusFeedService, IValidat
     [Consumes("application/json")]
     [Produces("application/json")]
     [SwaggerResponse(200, "Successfully retrieved status feed entries", typeof(List<StatusFeedExt>))]
+    [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request", typeof(AltinnProblemDetails))]
     public async Task<ActionResult<List<StatusFeedExt>>> GetStatusFeed([FromQuery] GetStatusFeedRequestExt statusFeedRequest)
     {
         try
@@ -51,25 +53,14 @@ public class StatusFeedController(IStatusFeedService statusFeedService, IValidat
                 return Forbid();
             }
 
-            var result = await statusFeedService.GetStatusFeed(statusFeedRequest.Seq, statusFeedRequest.PageSize, creatorName, HttpContext.RequestAborted);
+            var statusFeed = await statusFeedService.GetStatusFeed(statusFeedRequest.Seq, statusFeedRequest.PageSize, creatorName, HttpContext.RequestAborted);
 
-            return result.Match<ActionResult>(
-                statusFeed =>
-                {
-                    return Ok(statusFeed.MapToStatusFeedExtList());
-                },
-                error =>
-                {
-                    return StatusCode(error.ErrorCode, new ProblemDetails
-                    {
-                        Status = error.ErrorCode,
-                        Detail = error.ErrorMessage
-                    });
-                });
+            return Ok(statusFeed.MapToStatusFeedExtList());
         }
         catch (OperationCanceledException)
         {
-            return StatusCode(499, "Request terminated - The client disconnected or cancelled the request before the server could complete processing");
+            var problemDetails = Problems.RequestTerminated.ToProblemDetails();
+            return StatusCode(problemDetails.Status!.Value, problemDetails);
         }
     }
 }

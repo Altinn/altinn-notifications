@@ -1,5 +1,7 @@
-﻿using Altinn.Notifications.Configuration;
+﻿using Altinn.Authorization.ProblemDetails;
+using Altinn.Notifications.Configuration;
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Errors;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Extensions;
@@ -66,8 +68,7 @@ public class InstantOrdersController : ControllerBase
     [SwaggerResponse(201, "The instant notification was created.", typeof(InstantNotificationOrderResponseExt))]
     [SwaggerResponse(200, "The notification order was created previously.", typeof(InstantNotificationOrderResponseExt))]
     [SwaggerResponse(400, "The notification order is invalid", typeof(ValidationProblemDetails))]
-    [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request before the server could complete processing")]
-    [SwaggerResponse(500, "An internal server error occurred while processing the notification order")]
+    [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request before the server could complete processing", typeof(AltinnProblemDetails))]
     public async Task<IActionResult> Post([FromBody] InstantNotificationOrderRequestExt request, CancellationToken cancellationToken = default)
     {
         return await ProcessInstantOrderAsync(
@@ -76,7 +77,6 @@ public class InstantOrdersController : ControllerBase
             validator: _validator,
             mapToOrder: (req, creator, timestamp) => req.MapToInstantNotificationOrder(creator, timestamp),
             persistOrder: _instantOrderRequestService.PersistInstantSmsNotificationAsync,
-            notificationChannel: NotificationChannel.Sms,
             cancellationToken: cancellationToken);
     }
 
@@ -94,8 +94,7 @@ public class InstantOrdersController : ControllerBase
     [SwaggerResponse(201, "The instant SMS notification was created.", typeof(InstantNotificationOrderResponseExt))]
     [SwaggerResponse(200, "The SMS notification order was created previously.", typeof(InstantNotificationOrderResponseExt))]
     [SwaggerResponse(400, "The SMS notification order is invalid", typeof(ValidationProblemDetails))]
-    [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request before the server could complete processing")]
-    [SwaggerResponse(500, "An internal server error occurred while processing the SMS notification order")]
+    [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request before the server could complete processing", typeof(AltinnProblemDetails))]
     public async Task<IActionResult> PostSms([FromBody] InstantSmsNotificationOrderRequestExt request, CancellationToken cancellationToken = default)
     {
         return await ProcessInstantOrderAsync(
@@ -104,7 +103,6 @@ public class InstantOrdersController : ControllerBase
             validator: _smsValidator,
             mapToOrder: (req, creator, timestamp) => req.MapToInstantSmsNotificationOrder(creator, timestamp),
             persistOrder: _instantOrderRequestService.PersistInstantSmsNotificationAsync,
-            notificationChannel: NotificationChannel.Sms,
             cancellationToken: cancellationToken);
     }
 
@@ -122,8 +120,7 @@ public class InstantOrdersController : ControllerBase
     [SwaggerResponse(201, "The instant email notification was created.", typeof(InstantNotificationOrderResponseExt))]
     [SwaggerResponse(200, "The email notification order was created previously.", typeof(InstantNotificationOrderResponseExt))]
     [SwaggerResponse(400, "The email notification order is invalid", typeof(ValidationProblemDetails))]
-    [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request before the server could complete processing")]
-    [SwaggerResponse(500, "An internal server error occurred while processing the email notification order")]
+    [SwaggerResponse(499, "Request terminated - The client disconnected or cancelled the request before the server could complete processing", typeof(AltinnProblemDetails))]
     public async Task<IActionResult> PostEmail([FromBody] InstantEmailNotificationOrderRequestExt request, CancellationToken cancellationToken = default)
     {
         return await ProcessInstantOrderAsync(
@@ -132,7 +129,6 @@ public class InstantOrdersController : ControllerBase
             validator: _emailValidator,
             mapToOrder: (req, creator, timestamp) => req.MapToInstantEmailNotificationOrder(creator, timestamp),
             persistOrder: _instantOrderRequestService.PersistInstantEmailNotificationAsync,
-            notificationChannel: NotificationChannel.Email,
             cancellationToken: cancellationToken);
     }
 
@@ -144,8 +140,7 @@ public class InstantOrdersController : ControllerBase
         string idempotencyId,
         IValidator<TRequest> validator,
         Func<TRequest, string, DateTime, TOrder> mapToOrder,
-        Func<TOrder, CancellationToken, Task<InstantNotificationOrderTracking?>> persistOrder,
-        NotificationChannel notificationChannel,
+        Func<TOrder, CancellationToken, Task<InstantNotificationOrderTracking>> persistOrder,
         CancellationToken cancellationToken)
         where TRequest : class
     {
@@ -176,21 +171,13 @@ public class InstantOrdersController : ControllerBase
             var instantOrder = mapToOrder(request, creator, _dateTimeService.UtcNow());
             trackingInformation = await persistOrder(instantOrder, cancellationToken);
 
-            if (trackingInformation == null)
-            {
-                var channelName = notificationChannel.ToString().ToLowerInvariant();
-                return StatusCode(500, CreateProblemDetails(
-                    500,
-                    $"Instant {channelName} notification order registration failed",
-                    $"An internal server error occurred while processing the {channelName} notification order."));
-            }
-
             // 5. Return tracking information and location header.
             return Created(trackingInformation.OrderChainId.GetSelfLinkFromOrderChainId(), trackingInformation.MapToInstantNotificationOrderResponse());
         }
-        catch (Exception ex)
+        catch (OperationCanceledException)
         {
-            return HandleCommonExceptions(ex);
+            var problemDetails = Problems.RequestTerminated.ToProblemDetails();
+            return StatusCode(problemDetails.Status!.Value, problemDetails);
         }
     }
 
@@ -221,37 +208,5 @@ public class InstantOrdersController : ControllerBase
         }
 
         return null;
-    }
-
-    /// <summary>
-    /// Creates appropriate problem details for different error scenarios.
-    /// </summary>
-    private static ProblemDetails CreateProblemDetails(int statusCode, string title, string detail)
-    {
-        return new ProblemDetails
-        {
-            Status = statusCode,
-            Title = title,
-            Detail = detail
-        };
-    }
-
-    /// <summary>
-    /// Handles common exceptions and returns appropriate error responses.
-    /// </summary>
-    private ObjectResult HandleCommonExceptions(Exception ex)
-    {
-        return ex switch
-        {
-            InvalidOperationException => StatusCode(400, CreateProblemDetails(
-                400,
-                "Invalid notification order request",
-                ex.Message)),
-            OperationCanceledException => StatusCode(499, CreateProblemDetails(
-                499,
-                "Request terminated",
-                "The client disconnected or cancelled the request before the server could complete processing.")),
-            _ => throw ex
-        };
     }
 }
