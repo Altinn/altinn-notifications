@@ -1,5 +1,4 @@
-﻿using Altinn.Notifications.Core.Models.Notification;
-using Altinn.Notifications.Core.Persistence;
+﻿using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Persistence.Configuration;
 using Altinn.Notifications.Persistence.Repository;
@@ -14,7 +13,7 @@ var builder = Host.CreateApplicationBuilder(args);
 // Add configuration with user secrets support
 builder.Configuration
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-    .AddUserSecrets<Program>(optional: true); // Add this line
+    .AddUserSecrets<Program>(optional: true);
 
 // Configure PostgreSQL settings
 builder.Services.Configure<PostgreSqlSettings>(
@@ -48,36 +47,19 @@ using (var scope = host.Services.CreateScope())
     var repository = scope.ServiceProvider.GetRequiredService<IDeadDeliveryReportRepository>();
     try
     {
-        var fromDate = new DateTime(2025, 10, 8, 0, 0, 0, DateTimeKind.Utc);
-        var reason = "test"; // Replace with actual reason
-        var channel = Altinn.Notifications.Core.Enums.DeliveryReportChannel.AzureCommunicationServices; 
-        var reports = await repository.GetAllAsync(fromDate, reason, channel, CancellationToken.None);
-        Console.WriteLine($"Found {reports.Count} dead delivery reports");
-
-        reports.Select(report => Util.MapToEmailSendOperationResult(report)).ToList()
-            .ForEach(result => Console.WriteLine($"Report Id: {result?.OperationId}, Status: {result?.SendResult}"));
-
-        // todo: figure out how to keep track of what has been produced.
-        // todo: is the status feed idempotent? It needs to be idempotent if we are to replay messages.
+        var fromId = 43716;
+        var toId = 43716;
+        
+        var operationResults = await Util.GetAndMapDeadDeliveryReports(
+            repository,
+            fromId,
+            toId,
+            Altinn.Notifications.Core.Enums.DeliveryReportChannel.AzureCommunicationServices,
+            CancellationToken.None);
 
         var producer = scope.ServiceProvider.GetRequiredService<ICommonProducer>();
 
-        var sendOperationResult = new EmailSendOperationResult
-        {
-            OperationId = "abcdefgh1234",
-            SendResult = Altinn.Notifications.Core.Enums.EmailNotificationResultType.Delivered
-        };
-        var topic = builder.Configuration["KafkaSettings:EmailStatusUpdatedTopicName"];
-
-        if (string.IsNullOrEmpty(topic))
-        {
-            Console.WriteLine("EmailStatusUpdatedTopicName is not configured.");
-            return;
-        }
-
-        //var result = await producer.ProduceAsync(topic, sendOperationResult.Serialize());
-
-        //Console.WriteLine($"Message produced to topic {topic}: {result}");
+        await Util.ProduceMessagesToKafka(producer, builder.Configuration["KafkaSettings:EmailStatusUpdatedTopicName"], operationResults);
     }
     catch (Exception ex)
     {
