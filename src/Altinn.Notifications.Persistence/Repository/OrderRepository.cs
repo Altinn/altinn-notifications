@@ -307,14 +307,14 @@ public class OrderRepository : IOrderRepository
     }
 
     /// <inheritdoc/>
-    public async Task<List<NotificationOrder>> GetPastDueOrdersAndSetProcessingState()
+    public async Task<List<NotificationOrder>> GetPastDueOrdersAndSetProcessingState(CancellationToken cancellationToken = default)
     {
-        List<NotificationOrder> searchResult = new();
+        List<NotificationOrder> searchResult = [];
 
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getOrdersPastSendTimeUpdateStatus);
-        await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync())
+        await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken))
         {
-            while (await reader.ReadAsync())
+            while (await reader.ReadAsync(cancellationToken))
             {
                 NotificationOrder notificationOrder = await reader.GetFieldValueAsync<NotificationOrder>(0);
                 searchResult.Add(notificationOrder);

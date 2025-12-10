@@ -1,4 +1,7 @@
-﻿using Altinn.Notifications.Core.Configuration;
+﻿using System.Collections.Immutable;
+using System.Text.Json;
+
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
@@ -78,20 +81,44 @@ public class EmailNotificationService : IEmailNotificationService
     public async Task SendNotifications(CancellationToken cancellationToken)
     {
         List<Email> newEmailNotifications;
-        
+
         do
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            newEmailNotifications = [];
 
-            newEmailNotifications = await _repository.GetNewNotificationsAsync(_emailPublishBatchSize, cancellationToken);
-
-            foreach (var email in newEmailNotifications)
+            try
             {
-                bool success = await _producer.ProduceAsync(_emailQueueTopicName, email.Serialize());
-                if (!success)
+                newEmailNotifications = await _repository.GetNewNotificationsAsync(_emailPublishBatchSize, cancellationToken);
+                if (newEmailNotifications.Count == 0)
+                {
+                    break;
+                }
+
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var serializedEmailNotifications = newEmailNotifications.Select(readyToSendEmail => readyToSendEmail.Serialize()).ToImmutableList();
+
+                var unpublishedEmailNotifications = await _producer.ProduceAsync(_emailQueueTopicName, serializedEmailNotifications, cancellationToken);
+
+                foreach (var unpublishedEmailNotification in unpublishedEmailNotifications)
+                {
+                    var deserializedEmailNotification = JsonSerializer.Deserialize<Email>(unpublishedEmailNotification, JsonSerializerOptionsProvider.Options);
+                    if (deserializedEmailNotification == null || deserializedEmailNotification.NotificationId == Guid.Empty)
+                    {
+                        continue;
+                    }
+
+                    await _repository.UpdateSendStatus(deserializedEmailNotification.NotificationId, EmailNotificationResultType.New);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                foreach (var email in newEmailNotifications)
                 {
                     await _repository.UpdateSendStatus(email.NotificationId, EmailNotificationResultType.New);
                 }
+
+                throw;
             }
         }
         while (newEmailNotifications.Count > 0);
