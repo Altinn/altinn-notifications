@@ -36,7 +36,7 @@ jobs:
         with:
           path: test/k6/src/tests/orders-v2.js
           flags: -e ninRecipient=${{ secrets.AUTOMATEDTEST_NINRECIPIENT}} -e smsRecipient=${{ secrets.AUTOMATEDTEST_SMSRECIPIENT}} -e subscriptionKey=${{ secrets.AUTOMATEDTEST_APIM_SUBSCRIPTION_KEY}}
-          inspect-flags: -e altinn_env=${{ matrix.environment }}
+          #inspect-flags: -e altinn_env=${{ matrix.environment }}
       - name: Run API v2 recipientOrganization tests
         uses: grafana/run-k6-action@a15e2072ede004e8d46141e33d7f7dad8ad08d9d # v1.3.1
         with:
