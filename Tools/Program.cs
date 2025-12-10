@@ -7,6 +7,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Npgsql;
 using Tools;
+using Azure.Messaging.EventGrid;
+
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -35,7 +37,18 @@ builder.Services.AddSingleton(sp =>
     return kafkaSettings;
 });
 
-// Register the repository
+// Register Event Grid Client
+builder.Services.AddSingleton(sp =>
+{
+    var baseUrl = builder.Configuration["EventGrid:BaseUrl"] 
+        ?? throw new InvalidOperationException("EventGrid:BaseUrl is not configured");
+    var accessKey = builder.Configuration["EventGrid:AccessKey"] 
+        ?? throw new InvalidOperationException("EventGrid:AccessKey is not configured");
+    
+    return new EventGridClient(baseUrl, accessKey);
+});
+
+// Register the repositories and services
 builder.Services.AddSingleton<IDeadDeliveryReportRepository, DeadDeliveryReportRepository>();
 builder.Services.AddSingleton<ICommonProducer, CommonProducer>();
 
@@ -45,6 +58,8 @@ var host = builder.Build();
 using (var scope = host.Services.CreateScope())
 {
     var repository = scope.ServiceProvider.GetRequiredService<IDeadDeliveryReportRepository>();
+    var eventGridClient = scope.ServiceProvider.GetRequiredService<EventGridClient>();
+    
     try
     {
         var fromId = 43716;
@@ -57,13 +72,37 @@ using (var scope = host.Services.CreateScope())
             Altinn.Notifications.Core.Enums.DeliveryReportChannel.AzureCommunicationServices,
             CancellationToken.None);
 
-        var producer = scope.ServiceProvider.GetRequiredService<ICommonProducer>();
+        foreach (var result in operationResults)
+        {
+            var bd = BinaryData.FromObjectAsJson(new
+            {
+                messageId = result.OperationId,
+                status = result.SendResult.ToString()
+            });
 
-        await Util.ProduceMessagesToKafka(producer, builder.Configuration["KafkaSettings:EmailStatusUpdatedTopicName"], operationResults);
+            var subject = $"sender/senderid@azure.com/message/{result.OperationId}";
+
+            var eventGridEvent = new EventGridEvent(subject, "Microsoft.Communication.EmailDeliveryReportReceived", "1.0", bd);
+            eventGridEvent.EventTime = DateTime.UtcNow;
+
+            var eventArray = new[] { eventGridEvent };
+
+            // Post to Event Grid using reusable client
+            var (success, responseBody) = await eventGridClient.PostEventsAsync(
+                eventArray, 
+                CancellationToken.None);
+
+            if (!success)
+            {
+                Console.WriteLine($"Failed to post event for notification {result.NotificationId}");
+                Console.WriteLine($"Response: {responseBody}");
+            }
+        }
     }
     catch (Exception ex)
     {
         Console.WriteLine($"An error occurred: {ex.Message}");
+        Console.WriteLine($"Stack trace: {ex.StackTrace}");
         return;
     }
 }
