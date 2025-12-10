@@ -42,21 +42,25 @@ jobs:
         with:
           path: test/k6/src/tests/orders-org-no-v2.js
           flags: -e orgNoRecipient=${{ secrets.AUTOMATEDTEST_ORG_NO_RECIPIENT}} -e resourceId=urn:altinn:resource:${{ secrets.AUTOMATEDTEST_RESOURCE_ID}}
+          inspect-flags: -e altinn_env=${{ matrix.environment }}
       - name: Run email notification order use case tests
         uses: grafana/run-k6-action@a15e2072ede004e8d46141e33d7f7dad8ad08d9d # v1.3.1
         with:
           path: test/k6/src/tests/orders-email.js
           flags: -e emailRecipient=${{ secrets.AUTOMATEDTEST_EMAILRECIPIENT }} -e ninRecipient=${{ secrets.AUTOMATEDTEST_NINRECIPIENT}} -e subscriptionKey=${{ secrets.AUTOMATEDTEST_APIM_SUBSCRIPTION_KEY}}
+          inspect-flags: -e altinn_env=${{ matrix.environment }}
       - name: Run contact(s) lookup by organization number use case tests with generating an email notification
         uses: grafana/run-k6-action@a15e2072ede004e8d46141e33d7f7dad8ad08d9d # v1.3.1
         with:
           path: test/k6/src/tests/orders-org-no.js
           flags: -e orgNoRecipient=${{ secrets.AUTOMATEDTEST_ORG_NO_RECIPIENT}} -e resourceId=${{ secrets.AUTOMATEDTEST_RESOURCE_ID}}
+          inspect-flags: -e altinn_env=${{ matrix.environment }}
       - name: Run sms notification order use case tests
         uses: grafana/run-k6-action@a15e2072ede004e8d46141e33d7f7dad8ad08d9d # v1.3.1
         with:
           path: test/k6/src/tests/orders-sms.js
           flags: -e smsRecipient=${{ secrets.AUTOMATEDTEST_SMSRECIPIENT }}
+          inspect-flags: -e altinn_env=${{ matrix.environment }}
       - name: Set failure output
         id: set-failure
         if: failure()
