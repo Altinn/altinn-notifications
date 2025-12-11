@@ -8,7 +8,7 @@
         -e mpClientId={the id of an integration defined in maskinporten} \
         -e mpKid={the key id of the JSON web key used to sign the maskinporten token request} \
         -e encodedJwk={the encoded JSON web key used to sign the maskinporten token request} \
-        -e env={environment: at22, at23, at24, tt02, prod} \
+        -e altinn_env={environment: at22, at23, at24, tt02, prod} \
         -e smsRecipient={a mobile number to include as a notification recipient} \
         -e runFullTestSet=true
 
