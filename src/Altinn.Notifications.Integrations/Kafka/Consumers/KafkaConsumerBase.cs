@@ -98,13 +98,45 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers
         /// <inheritdoc/>
         public override async Task StopAsync(CancellationToken cancellationToken)
         {
-            if (_internalCancellationSource != null)
-            {
-                await _internalCancellationSource.CancelAsync();
-            }
-
             SignalShutdownStarted();
 
+            await CancelInternalTokenSourceAsync();
+
+            CommitLastBatchOffsets();
+
+            UnsubscribeFromTopic();
+
+            await base.StopAsync(cancellationToken);
+
+            CloseConsumerIfNeeded();
+        }
+
+        /// <inheritdoc/>
+        protected override abstract Task ExecuteAsync(CancellationToken stoppingToken);
+
+        /// <summary>
+        /// Cancels the internal cancellation token source if it exists and hasn't been disposed.
+        /// </summary>
+        private async Task CancelInternalTokenSourceAsync()
+        {
+            if (_internalCancellationSource != null && !_internalCancellationSource.IsCancellationRequested)
+            {
+                try
+                {
+                    await _internalCancellationSource.CancelAsync();
+                }
+                catch (ObjectDisposedException)
+                {
+                    // Source already disposed, continue with shutdown
+                }
+            }
+        }
+
+        /// <summary>
+        /// Commits the last batch of processed offsets during shutdown.
+        /// </summary>
+        private void CommitLastBatchOffsets()
+        {
             var lastBatchNormalizedOffsets = _lastProcessedBatch != null
                 ? CalculateContiguousCommitOffsets(_lastProcessedBatch.CommitReadyOffsets, _lastProcessedBatch.PolledConsumeResults)
                 : [];
@@ -126,23 +158,43 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers
                     _logger.LogError(ex, "// {Class} // Failed to commit last batch safe offsets during shutdown", GetType().Name);
                 }
             }
+        }
 
-            _kafkaConsumer.Unsubscribe();
+        /// <summary>
+        /// Unsubscribes from the Kafka topic if the consumer hasn't been disposed.
+        /// </summary>
+        private void UnsubscribeFromTopic()
+        {
+            try
+            {
+                _kafkaConsumer.Unsubscribe();
+                _logger.LogInformation("// {Class} // Unsubscribed from topic {Topic} because shutdown is initiated ", GetType().Name, _topicFingerprint);
+            }
+            catch (ObjectDisposedException ex)
+            {
+                _logger.LogDebug(ex, "// {Class} // Consumer already disposed during unsubscribe", GetType().Name);
+            }
+        }
 
-            await base.StopAsync(cancellationToken);
-
-            _logger.LogInformation("// {Class} // Unsubscribed from topic {Topic} because shutdown is initiated ", GetType().Name, _topicFingerprint);
-
+        /// <summary>
+        /// Closes the Kafka consumer if it hasn't been closed already.
+        /// </summary>
+        private void CloseConsumerIfNeeded()
+        {
             if (!IsConsumerClosed)
             {
                 SignalConsumerClosure();
 
-                _kafkaConsumer.Close();
+                try
+                {
+                    _kafkaConsumer.Close();
+                }
+                catch (ObjectDisposedException)
+                {
+                    // Consumer already disposed
+                }
             }
         }
-
-        /// <inheritdoc/>
-        protected override abstract Task ExecuteAsync(CancellationToken stoppingToken);
 
         /// <summary>
         /// Consumes messages from the configured Kafka topic using batch polling and bounded parallel processing.
