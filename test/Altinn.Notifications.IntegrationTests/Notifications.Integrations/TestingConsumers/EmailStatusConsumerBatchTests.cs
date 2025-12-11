@@ -8,8 +8,9 @@ using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.IntegrationTests.Utils;
 
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 using Moq;
@@ -46,7 +47,7 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
         var processedSignal = new ManualResetEventSlim(false);
         var emailNotificationServiceMock = CreateEmailNotificationServiceMock(processedSignal);
 
-        var testConsumer = CreateConsumer(emailNotificationServiceMock.Object);
+        await using var testFixture = CreateTestFixture(emailNotificationServiceMock.Object);
 
         var sendersRef = $"ref-{Guid.NewGuid()}";
         (_, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(sendersRef, simulateCronJob: true);
@@ -58,23 +59,17 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
             SendResult = EmailNotificationResultType.Delivered
         };
 
-        try
-        {
-            // Act
-            await testConsumer.StartAsync(CancellationToken.None);
-            await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, deliveryReport.Serialize());
+        // Act
+        await testFixture.Consumer.StartAsync(CancellationToken.None);
+        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, deliveryReport.Serialize());
 
-            bool processed = await WaitForConditionAsync(() => processedSignal.IsSet, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(50));
+        bool processed = await WaitForConditionAsync(() => processedSignal.IsSet, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(50));
+        
+        await testFixture.Consumer.StopAsync(CancellationToken.None);
 
-            // Assert
-            Assert.True(processed, "Email status was not processed within the expected time window.");
-            emailNotificationServiceMock.Verify(s => s.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()), Times.Once);
-        }
-        finally
-        {
-            await testConsumer.StopAsync(CancellationToken.None);
-            testConsumer.Dispose();
-        }
+        // Assert
+        Assert.True(processed, "Email status was not processed within the expected time window.");
+        emailNotificationServiceMock.Verify(s => s.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()), Times.Once);
     }
 
     [Fact]
@@ -84,25 +79,19 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
         var processedSignal = new ManualResetEventSlim(false);
         var emailNotificationServiceMock = CreateEmailNotificationServiceMock(processedSignal);
 
-        var testConsumer = CreateConsumer(emailNotificationServiceMock.Object);
+        await using var testFixture = CreateTestFixture(emailNotificationServiceMock.Object);
 
-        try
-        {
-            // Act
-            await testConsumer.StartAsync(CancellationToken.None);
-            await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, "Not a valid status message");
+        // Act
+        await testFixture.Consumer.StartAsync(CancellationToken.None);
+        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, "Not a valid status message");
 
-            bool processed = await WaitForConditionAsync(() => processedSignal.IsSet, TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(50));
+        bool processed = await WaitForConditionAsync(() => processedSignal.IsSet, TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(50));
+        
+        await testFixture.Consumer.StopAsync(CancellationToken.None);
 
-            // Assert
-            Assert.False(processed, "Service should not be called when deserialization fails.");
-            emailNotificationServiceMock.Verify(s => s.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()), Times.Never);
-        }
-        finally
-        {
-            await testConsumer.StopAsync(CancellationToken.None);
-            testConsumer.Dispose();
-        }
+        // Assert
+        Assert.False(processed, "Service should not be called when deserialization fails.");
+        emailNotificationServiceMock.Verify(s => s.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()), Times.Never);
     }
 
     [Fact]
@@ -144,43 +133,37 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
                 }
             });
 
-        var testConsumer = CreateConsumer(emailNotificationServiceMock.Object);
+        await using var testFixture = CreateTestFixture(emailNotificationServiceMock.Object);
 
         var sendersRef = $"ref-{Guid.NewGuid()}";
         (_, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(sendersRef, simulateCronJob: true);
 
-        try
-        {
-            // Act
-            await testConsumer.StartAsync(CancellationToken.None);
+        // Act
+        await testFixture.Consumer.StartAsync(CancellationToken.None);
 
-            // Publish multiple messages
-            for (int i = 0; i < messageCount; i++)
+        // Publish multiple messages
+        for (int i = 0; i < messageCount; i++)
+        {
+            var deliveryReport = new EmailSendOperationResult
             {
-                var deliveryReport = new EmailSendOperationResult
-                {
-                    NotificationId = emailNotification.Id,
-                    OperationId = Guid.NewGuid().ToString(),
-                    SendResult = EmailNotificationResultType.Delivered
-                };
-                await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, deliveryReport.Serialize());
-            }
-
-            var isProcessed = await WaitForConditionAsync(
-                () => allMessagesProcessedSignal.IsSet,
-                TimeSpan.FromSeconds(20),
-                TimeSpan.FromMilliseconds(50));
-
-            // Assert
-            Assert.True(isProcessed, "All messages were not processed within expected time.");
-            emailNotificationServiceMock.Verify(s => s.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()), Times.Exactly(messageCount));
-            Assert.True(maxConcurrentExecutions > 1, $"Expected concurrent execution, but max concurrent was only {maxConcurrentExecutions}");
+                NotificationId = emailNotification.Id,
+                OperationId = Guid.NewGuid().ToString(),
+                SendResult = EmailNotificationResultType.Delivered
+            };
+            await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, deliveryReport.Serialize());
         }
-        finally
-        {
-            await testConsumer.StopAsync(CancellationToken.None);
-            testConsumer.Dispose();
-        }
+
+        bool allProcessed = await WaitForConditionAsync(
+            () => allMessagesProcessedSignal.IsSet,
+            TimeSpan.FromSeconds(10),
+            TimeSpan.FromMilliseconds(100));
+        
+        await testFixture.Consumer.StopAsync(CancellationToken.None);
+
+        // Assert
+        Assert.True(allProcessed, "All messages were not processed within expected time");
+        emailNotificationServiceMock.Verify(s => s.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()), Times.Exactly(messageCount));
+        Assert.True(maxConcurrentExecutions > 1, $"Expected concurrent execution, but max concurrent was only {maxConcurrentExecutions}");
     }
 
     [Fact]
@@ -196,7 +179,7 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
             .Callback(processedSignal.Set)
             .Returns(Task.CompletedTask);
 
-        var testConsumer = CreateConsumer(emailNotificationServiceMock.Object, loggerMock.Object);
+        await using var testFixture = CreateTestFixture(emailNotificationServiceMock.Object, loggerMock.Object);
 
         var sendersRef = $"ref-{Guid.NewGuid()}";
         (_, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(sendersRef, simulateCronJob: true);
@@ -208,30 +191,23 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
             SendResult = EmailNotificationResultType.Delivered
         };
 
-        // Act & Assert
-        try
-        {
-            await testConsumer.StartAsync(CancellationToken.None);
-            await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, deliveryReport.Serialize());
+        // Act
+        await testFixture.Consumer.StartAsync(CancellationToken.None);
+        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, deliveryReport.Serialize());
 
-            var processed = await WaitForConditionAsync(() => processedSignal.IsSet, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(50));
-            await testConsumer.StopAsync(CancellationToken.None);
+        var processed = await WaitForConditionAsync(() => processedSignal.IsSet, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(50));
+        await testFixture.Consumer.StopAsync(CancellationToken.None);
 
-            // Assert
-            Assert.True(processed, "Message should have been processed");
-            emailNotificationServiceMock.Verify(s => s.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()), Times.Once);
+        // Assert
+        Assert.True(processed, "Message should have been processed");
+        emailNotificationServiceMock.Verify(s => s.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()), Times.Once);
 
-            var loggerInvocations = loggerMock.Invocations
-                .Where(i => i.Arguments.Count >= 3)
-                .Where(i => i.Arguments[2]?.ToString()?.Contains("Commit") == true || i.Arguments[2]?.ToString()?.Contains("last batch safe offsets") == true)
-                .ToList();
+        var loggerInvocations = loggerMock.Invocations
+            .Where(i => i.Arguments.Count >= 3)
+            .Where(i => i.Arguments[2]?.ToString()?.Contains("Commit") == true || i.Arguments[2]?.ToString()?.Contains("last batch safe offsets") == true)
+            .ToList();
 
-            Assert.True(loggerInvocations.Count > 0, "Expected commit-related logging during shutdown");
-        }
-        finally
-        {
-            testConsumer.Dispose();
-        }
+        Assert.True(loggerInvocations.Count > 0, "Expected commit-related logging during shutdown");
     }
 
     [Fact]
@@ -243,27 +219,22 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
             .Setup(s => s.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()))
             .Returns(Task.CompletedTask);
 
-        var testConsumer = CreateConsumer(emailNotificationServiceMock.Object);
+        await using var testFixture = CreateTestFixture(emailNotificationServiceMock.Object);
 
-        // Act & Assert
-        try
-        {
-            await testConsumer.StartAsync(CancellationToken.None);
-            
-            // Kafka messages with null values are typically used as tombstones
-            // The consumer should handle them gracefully without calling the service
-            
-            // Give the consumer a moment to poll
-            await Task.Delay(500);
+        // Act
+        await testFixture.Consumer.StartAsync(CancellationToken.None);
+        
+        // Kafka messages with null values are typically used as tombstones
+        // The consumer should handle them gracefully without calling the service
+        
+        // Give the consumer a moment to poll
+        await Task.Delay(500);
+        
+        await testFixture.Consumer.StopAsync(CancellationToken.None);
+        await Task.Delay(100); // Allow Kafka to release native resources before disposal
 
-            // Assert
-            emailNotificationServiceMock.Verify(s => s.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()), Times.Never);
-        }
-        finally
-        {
-            await testConsumer.StopAsync(CancellationToken.None);
-            testConsumer.Dispose();
-        }
+        // Assert
+        emailNotificationServiceMock.Verify(s => s.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()), Times.Never);
     }
 
     [Fact]
@@ -283,7 +254,7 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
             .Callback(() => processedSignal.Set())
             .ReturnsAsync(true);
 
-        var testConsumer = CreateConsumer(emailNotificationServiceMock.Object, producer: producerMock.Object);
+        await using var testFixture = CreateTestFixture(emailNotificationServiceMock.Object, producer: producerMock.Object);
 
         var sendersRef = $"ref-{Guid.NewGuid()}";
         (_, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(sendersRef, simulateCronJob: true);
@@ -295,28 +266,22 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
             SendResult = EmailNotificationResultType.Delivered
         };
 
-        // Act & Assert
-        try
-        {
-            await testConsumer.StartAsync(CancellationToken.None);
-            await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, deliveryReport.Serialize());
+        // Act
+        await testFixture.Consumer.StartAsync(CancellationToken.None);
+        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, deliveryReport.Serialize());
 
-            bool retried = await WaitForConditionAsync(() => processedSignal.IsSet, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(50));
+        bool retried = await WaitForConditionAsync(() => processedSignal.IsSet, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(50));
+        
+        await testFixture.Consumer.StopAsync(CancellationToken.None);
 
-            // Assert
-            Assert.True(retried, "Message should have been sent to retry topic");
-            
-            // Verify that the primary service was called (and threw exception)
-            emailNotificationServiceMock.Verify(s => s.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()), Times.Once);
-            
-            // Verify that retry logic published message back to status topic
-            producerMock.Verify(p => p.ProduceAsync(_statusUpdatedTopicName, It.IsAny<string>()), Times.Once);
-        }
-        finally
-        {
-            await testConsumer.StopAsync(CancellationToken.None);
-            testConsumer.Dispose();
-        }
+        // Assert
+        Assert.True(retried, "Message should have been sent to retry topic");
+        
+        // Verify that the primary service was called (and threw exception)
+        emailNotificationServiceMock.Verify(s => s.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()), Times.Once);
+        
+        // Verify that retry logic published message back to status topic
+        producerMock.Verify(p => p.ProduceAsync(_statusUpdatedTopicName, It.IsAny<string>()), Times.Once);
     }
 
     [Fact]
@@ -331,49 +296,42 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
             .Callback(() => Interlocked.Increment(ref processedCount))
             .Returns(Task.CompletedTask);
 
-        var testConsumer = CreateConsumer(emailNotificationServiceMock.Object);
+        await using var testFixture = CreateTestFixture(emailNotificationServiceMock.Object);
 
         var sendersRef = $"ref-{Guid.NewGuid()}";
         (_, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(sendersRef, simulateCronJob: true);
 
-        // Act & Assert
-        try
+        // Act
+        await testFixture.Consumer.StartAsync(CancellationToken.None);
+
+        // Publish one message that should be processed
+        var deliveryReport1 = new EmailSendOperationResult
         {
-            await testConsumer.StartAsync(CancellationToken.None);
+            NotificationId = emailNotification.Id,
+            OperationId = Guid.NewGuid().ToString(),
+            SendResult = EmailNotificationResultType.Delivered
+        };
+        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, deliveryReport1.Serialize());
 
-            // Publish one message that should be processed
-            var deliveryReport1 = new EmailSendOperationResult
-            {
-                NotificationId = emailNotification.Id,
-                OperationId = Guid.NewGuid().ToString(),
-                SendResult = EmailNotificationResultType.Delivered
-            };
-            await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, deliveryReport1.Serialize());
+        // Wait for the first message to be processed
+        await WaitForConditionAsync(() => Volatile.Read(ref processedCount) >= 1, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(50));
 
-            // Wait for the first message to be processed
-            await WaitForConditionAsync(() => Volatile.Read(ref processedCount) >= 1, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(50));
+        // Initiate shutdown
+        var stopTask = testFixture.Consumer.StopAsync(CancellationToken.None);
 
-            // Initiate shutdown
-            var stopTask = testConsumer.StopAsync(CancellationToken.None);
-
-            // Publish another message during shutdown - this should NOT be processed
-            var deliveryReport2 = new EmailSendOperationResult
-            {
-                NotificationId = emailNotification.Id,
-                OperationId = Guid.NewGuid().ToString(),
-                SendResult = EmailNotificationResultType.Delivered
-            };
-            await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, deliveryReport2.Serialize());
-
-            await stopTask;
-
-            // Assert
-            Assert.Equal(1, Volatile.Read(ref processedCount));
-        }
-        finally
+        // Publish another message during shutdown - this should NOT be processed
+        var deliveryReport2 = new EmailSendOperationResult
         {
-            testConsumer.Dispose();
-        }
+            NotificationId = emailNotification.Id,
+            OperationId = Guid.NewGuid().ToString(),
+            SendResult = EmailNotificationResultType.Delivered
+        };
+        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, deliveryReport2.Serialize());
+
+        await stopTask;
+
+        // Assert
+        Assert.Equal(1, Volatile.Read(ref processedCount));
     }
 
     [Fact]
@@ -389,45 +347,39 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
             .Callback(() => Interlocked.Increment(ref processedCount))
             .Returns(Task.CompletedTask);
 
-        var testConsumer = CreateConsumer(emailNotificationServiceMock.Object);
+        await using var testFixture = CreateTestFixture(emailNotificationServiceMock.Object);
 
         var sendersRef = $"ref-{Guid.NewGuid()}";
         (_, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(sendersRef, simulateCronJob: true);
 
-        // Act & Assert
-        try
-        {
-            await testConsumer.StartAsync(CancellationToken.None);
+        // Act
+        await testFixture.Consumer.StartAsync(CancellationToken.None);
 
-            // Publish messages
-            var publishTasks = Enumerable.Range(0, messageCount).Select(async i =>
+        // Publish messages
+        var publishTasks = Enumerable.Range(0, messageCount).Select(async i =>
+        {
+            var deliveryReport = new EmailSendOperationResult
             {
-                var deliveryReport = new EmailSendOperationResult
-                {
-                    NotificationId = emailNotification.Id,
-                    OperationId = Guid.NewGuid().ToString(),
-                    SendResult = EmailNotificationResultType.Delivered
-                };
-                await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, deliveryReport.Serialize());
-            });
+                NotificationId = emailNotification.Id,
+                OperationId = Guid.NewGuid().ToString(),
+                SendResult = EmailNotificationResultType.Delivered
+            };
+            await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, deliveryReport.Serialize());
+        });
 
-            await Task.WhenAll(publishTasks);
+        await Task.WhenAll(publishTasks);
 
-            // Wait for all messages to be processed
-            bool allProcessed = await WaitForConditionAsync(
-                () => Volatile.Read(ref processedCount) >= messageCount,
-                TimeSpan.FromSeconds(30),
-                TimeSpan.FromMilliseconds(100));
+        // Wait for all messages to be processed
+        bool allProcessed = await WaitForConditionAsync(
+            () => Volatile.Read(ref processedCount) >= messageCount,
+            TimeSpan.FromSeconds(30),
+            TimeSpan.FromMilliseconds(100));
+        
+        await testFixture.Consumer.StopAsync(CancellationToken.None);
 
-            // Assert
-            Assert.True(allProcessed, $"Expected {messageCount} messages to be processed, but got {processedCount}");
-            Assert.Equal(messageCount, Volatile.Read(ref processedCount));
-        }
-        finally
-        {
-            await testConsumer.StopAsync(CancellationToken.None);
-            testConsumer.Dispose();
-        }
+        // Assert
+        Assert.True(allProcessed, $"Expected {messageCount} messages to be processed, but got {processedCount}");
+        Assert.Equal(messageCount, Volatile.Read(ref processedCount));
     }
 
     [Fact]
@@ -446,7 +398,7 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
                 await semaphoreSlim.WaitAsync(TimeSpan.FromSeconds(10));
             });
 
-        var testConsumer = CreateConsumer(emailNotificationServiceMock.Object);
+        await using var testFixture = CreateTestFixture(emailNotificationServiceMock.Object);
 
         var sendersRef = $"ref-{Guid.NewGuid()}";
         (_, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(sendersRef, simulateCronJob: true);
@@ -458,33 +410,26 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
             SendResult = EmailNotificationResultType.Delivered
         };
 
-        // Act & Assert
-        try
-        {
-            await testConsumer.StartAsync(CancellationToken.None);
-            await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, deliveryReport.Serialize());
+        // Act
+        await testFixture.Consumer.StartAsync(CancellationToken.None);
+        await KafkaUtil.PublishMessageOnTopic(_statusUpdatedTopicName, deliveryReport.Serialize());
 
-            var isProcessed = await WaitForConditionAsync(() => processedSignal.IsSet, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(50));
+        var isProcessed = await WaitForConditionAsync(() => processedSignal.IsSet, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(50));
 
-            var stopwatch = Stopwatch.StartNew();
-            using var stopTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var stopwatch = Stopwatch.StartNew();
+        using var stopTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
-            var stopTask = testConsumer.StopAsync(stopTimeout.Token);
+        var stopTask = testFixture.Consumer.StopAsync(stopTimeout.Token);
 
-            semaphoreSlim.Release();
+        semaphoreSlim.Release();
 
-            await stopTask;
-            stopwatch.Stop();
+        await stopTask;
+        stopwatch.Stop();
 
-            // Assert
-            emailNotificationServiceMock.Verify(s => s.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()), Times.Once);
-            Assert.True(isProcessed, "First message was not processed (entered) within the expected time window");
-            Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(2), "StopAsync took too long, suggesting internal cancellation was not signaled.");
-        }
-        finally
-        {
-            testConsumer.Dispose();
-        }
+        // Assert
+        emailNotificationServiceMock.Verify(s => s.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()), Times.Once);
+        Assert.True(isProcessed, "First message was not processed (entered) within the expected time window");
+        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(2), "StopAsync took too long, suggesting internal cancellation was not signaled.");
     }
 
     [Fact]
@@ -494,29 +439,23 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
         var loggerMock = new Mock<ILogger<EmailStatusConsumer>>();
         var emailNotificationServiceMock = new Mock<IEmailNotificationService>();
         
-        var testConsumer = CreateConsumer(emailNotificationServiceMock.Object, loggerMock.Object);
+        await using var testFixture = CreateTestFixture(emailNotificationServiceMock.Object, loggerMock.Object);
 
-        // Act & Assert
-        try
-        {
-            await testConsumer.StartAsync(CancellationToken.None);
-            
-            // Allow consumer to initialize
-            await Task.Delay(500);
+        // Act
+        await testFixture.Consumer.StartAsync(CancellationToken.None);
+        
+        // Allow consumer to initialize
+        await Task.Delay(500);
+        
+        await testFixture.Consumer.StopAsync(CancellationToken.None);
 
-            // Assert
-            var subscriptionLogs = loggerMock.Invocations
-                .Where(i => i.Arguments.Count >= 3)
-                .Where(i => i.Arguments[2]?.ToString()?.Contains("subscribed to topic") == true)
-                .ToList();
+        // Assert
+        var subscriptionLogs = loggerMock.Invocations
+            .Where(i => i.Arguments.Count >= 3)
+            .Where(i => i.Arguments[2]?.ToString()?.Contains("subscribed to topic") == true)
+            .ToList();
 
-            Assert.True(subscriptionLogs.Count > 0, "Expected subscription logging");
-        }
-        finally
-        {
-            await testConsumer.StopAsync(CancellationToken.None);
-            testConsumer.Dispose();
-        }
+        Assert.True(subscriptionLogs.Count > 0, "Expected subscription logging");
     }
 
     /// <summary>
@@ -552,34 +491,69 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// Creates a configured EmailStatusConsumer for testing.
+    /// Creates a test fixture with a configured EmailStatusConsumer and ServiceProvider for testing.
     /// </summary>
-    private EmailStatusConsumer CreateConsumer(
+    private EmailStatusConsumerTestFixture CreateTestFixture(
         IEmailNotificationService emailNotificationService,
         ILogger<EmailStatusConsumer>? logger = null,
-        IKafkaProducer? producer = null,
-        IDeadDeliveryReportService? deadDeliveryReportService = null)
+        IKafkaProducer? producer = null)
     {
-        var kafkaSettings = new KafkaSettings
-        {
-            BrokerAddress = "localhost:9092",
-            Consumer = new ConsumerSettings
+        var services = new ServiceCollection()
+            .AddLogging()
+            .AddSingleton(emailNotificationService)
+            .AddSingleton(Options.Create(new KafkaSettings
             {
-                GroupId = $"email-status-consumer-test-{Guid.NewGuid()}"
-            },
-            EmailStatusUpdatedTopicName = _statusUpdatedTopicName,
-            EmailStatusUpdatedRetryTopicName = _statusUpdatedRetryTopicName
-        };
+                BrokerAddress = "localhost:9092",
+                Consumer = new ConsumerSettings
+                {
+                    GroupId = $"email-status-consumer-test-{Guid.NewGuid()}"
+                },
+                EmailStatusUpdatedTopicName = _statusUpdatedTopicName,
+                EmailStatusUpdatedRetryTopicName = _statusUpdatedRetryTopicName
+            }));
 
-        producer ??= new Mock<IKafkaProducer>().Object;
-        logger ??= new NullLogger<EmailStatusConsumer>();
-        deadDeliveryReportService ??= new Mock<IDeadDeliveryReportService>().Object;
+        if (producer != null)
+        {
+            services.AddSingleton(producer);
+        }
+        else
+        {
+            services.AddSingleton(new Mock<IKafkaProducer>().Object);
+        }
 
-        return new EmailStatusConsumer(
-            producer,
-            logger,
-            Options.Create(kafkaSettings),
-            emailNotificationService,
-            deadDeliveryReportService);
+        if (logger != null)
+        {
+            services.AddSingleton(logger);
+        }
+
+        services.AddSingleton(new Mock<IDeadDeliveryReportService>().Object);
+        services.AddHostedService<EmailStatusConsumer>();
+
+        var serviceProvider = services.BuildServiceProvider();
+        var consumer = serviceProvider.GetServices<IHostedService>().OfType<EmailStatusConsumer>().Single();
+
+        return new EmailStatusConsumerTestFixture(consumer, serviceProvider);
+    }
+}
+
+/// <summary>
+/// Test fixture that owns the EmailStatusConsumer and ServiceProvider lifecycle.
+/// Ensures proper async disposal of all resources.
+/// </summary>
+internal sealed class EmailStatusConsumerTestFixture : IAsyncDisposable
+{
+    public EmailStatusConsumer Consumer { get; }
+
+    private readonly ServiceProvider _serviceProvider;
+
+    public EmailStatusConsumerTestFixture(EmailStatusConsumer consumer, ServiceProvider serviceProvider)
+    {
+        Consumer = consumer;
+        _serviceProvider = serviceProvider;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _serviceProvider.DisposeAsync();
     }
 }
