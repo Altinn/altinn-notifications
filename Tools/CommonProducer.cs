@@ -40,6 +40,18 @@ public sealed class CommonProducer : ICommonProducer, IDisposable
         EnsureTopicsExist();
     }
 
+    /// <summary>
+    /// Constructor for injecting a mock producer for unit testing
+    /// </summary>s
+    internal CommonProducer(KafkaSettings kafkaSettings, ILogger<CommonProducer> logger, IProducer<Null, string> producer, SharedClientConfig sharedClientConfig)
+    {
+        _kafkaSettings = kafkaSettings;
+        _logger = logger;
+        _producer = producer ?? throw new ArgumentNullException(nameof(producer));
+        _sharedClientConfig = sharedClientConfig ?? new SharedClientConfig(kafkaSettings);
+        // Do NOT call EnsureTopicsExist() in this constructor - keeps unit tests isolated from Kafka
+    }
+
     /// <inheritdoc/>
     public async Task<bool> ProduceAsync(string topic, string message)
     {
@@ -56,9 +68,10 @@ public sealed class CommonProducer : ICommonProducer, IDisposable
                 return false;
             }
         }
-        catch (ProduceException<long, string> ex)
+        catch (ProduceException<Null, string> ex)
         {
-            _logger.LogError(ex, "// KafkaProducer // ProduceAsync // Permanent error: {Message} for message (value: '{DeliveryResult}')", ex.Message, ex.DeliveryResult.Value);
+            var deliveredValue = ex.DeliveryResult?.Value;
+            _logger.LogError(ex, "// KafkaProducer // ProduceAsync // Permanent error: {Message} for message (value: '{DeliveryResult}')", ex.Message, deliveredValue);
             return false;
         }
 

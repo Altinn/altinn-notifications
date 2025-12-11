@@ -1,32 +1,35 @@
-﻿using System.Net.Http.Json;
+﻿using Microsoft.Extensions.Options;
+using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 
 namespace Tools;
 
 /// <summary>
+/// Configuration settings for Event Grid client.
+/// </summary>
+public class EventGridSettings
+{
+    public string BaseUrl { get; set; } = string.Empty;
+    public string AccessKey { get; set; } = string.Empty;
+}
+
+/// <summary>
 /// HTTP client for posting events to Azure Event Grid.
 /// </summary>
-public class EventGridClient : IDisposable
+public class EventGridClient : IEventGridClient, IDisposable
 {
     private readonly HttpClient _httpClient;
     private readonly string _baseUrl;
     private readonly string _accessKey;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EventGridClient"/> class.
-    /// </summary>
-    /// <param name="baseUrl">The base URL for the Event Grid endpoint.</param>
-    /// <param name="accessKey">The access key for authentication.</param>
-    public EventGridClient(string baseUrl, string accessKey)
+    public EventGridClient(HttpClient httpClient, IOptions<EventGridSettings> settings)
     {
-        _baseUrl = baseUrl ?? throw new ArgumentNullException(nameof(baseUrl));
-        _accessKey = accessKey ?? throw new ArgumentNullException(nameof(accessKey));
-        
-        _httpClient = new HttpClient
-        {
-            Timeout = TimeSpan.FromSeconds(30)
-        };
+        _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+        var cfg = settings?.Value ?? throw new ArgumentNullException(nameof(settings));
+        if (string.IsNullOrWhiteSpace(cfg.BaseUrl)) throw new ArgumentException("BaseUrl must be configured", nameof(settings));
+        _baseUrl = cfg.BaseUrl;
+        _accessKey = cfg.AccessKey ?? throw new ArgumentNullException(nameof(settings));
     }
 
     /// <summary>
@@ -71,6 +74,6 @@ public class EventGridClient : IDisposable
 
     public void Dispose()
     {
-        _httpClient?.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

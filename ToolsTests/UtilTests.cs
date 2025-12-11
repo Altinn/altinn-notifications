@@ -1,32 +1,31 @@
-using Altinn.Notifications.Core.Enums;
-using Altinn.Notifications.Core.Models;
-using Altinn.Notifications.Core.Models.Notification;
 using Tools;
-using Xunit;
+using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Models.Notification;
 
 namespace ToolsTests;
 
-    public class UtilTests
+public class UtilTests
+{
+    [Fact]
+    public void MapToEmailSendOperationResult_ReturnsObject_WhenValidJson()
     {
-        [Fact]
-        public void MapToEmailSendOperationResult_ReturnsObject_WhenValidJson()
+        var sendOp = new EmailSendOperationResult
         {
-            var sendOp = new EmailSendOperationResult 
-            { 
-                NotificationId = Guid.NewGuid(),
-                OperationId = "op123",
-                SendResult = EmailNotificationResultType.Delivered
-            }; 
-    
-            var report = new DeadDeliveryReport
-            {
-                FirstSeen = DateTime.UtcNow.AddMinutes(-5),
-                LastAttempt = DateTime.UtcNow,
-                Resolved = false,
-                AttemptCount = 1,
-                Channel = DeliveryReportChannel.AzureCommunicationServices,
-                DeliveryReport = sendOp.Serialize()
-            };
+            NotificationId = Guid.NewGuid(),
+            OperationId = "op123",
+            SendResult = EmailNotificationResultType.Delivered
+        };
+
+        var report = new DeadDeliveryReport
+        {
+            FirstSeen = DateTime.UtcNow.AddMinutes(-5),
+            LastAttempt = DateTime.UtcNow,
+            Resolved = false,
+            AttemptCount = 1,
+            Channel = DeliveryReportChannel.AzureCommunicationServices,
+            DeliveryReport = sendOp.Serialize()
+        };
 
         var result = Util.MapToEmailSendOperationResult(report);
 

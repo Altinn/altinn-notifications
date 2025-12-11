@@ -2,12 +2,13 @@
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Persistence.Configuration;
 using Altinn.Notifications.Persistence.Repository;
+using Azure.Messaging.EventGrid;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Npgsql;
 using Tools;
-using Azure.Messaging.EventGrid;
 
 
 var builder = Host.CreateApplicationBuilder(args);
@@ -38,14 +39,17 @@ builder.Services.AddSingleton(sp =>
 });
 
 // Register Event Grid Client
-builder.Services.AddSingleton(sp =>
+builder.Services.Configure<EventGridSettings>(builder.Configuration.GetSection("EventGrid"));
+builder.Services.AddHttpClient<IEventGridClient, EventGridClient>((sp, client) =>
 {
-    var baseUrl = builder.Configuration["EventGrid:BaseUrl"] 
-        ?? throw new InvalidOperationException("EventGrid:BaseUrl is not configured");
-    var accessKey = builder.Configuration["EventGrid:AccessKey"] 
-        ?? throw new InvalidOperationException("EventGrid:AccessKey is not configured");
-    
-    return new EventGridClient(baseUrl, accessKey);
+    var cfg = sp.GetRequiredService<IOptions<EventGridSettings>>().Value;
+    if (string.IsNullOrWhiteSpace(cfg.BaseUrl))
+    {
+        throw new InvalidOperationException("EventGrid:BaseUrl is not configured");
+    }
+
+    client.BaseAddress = new Uri(cfg.BaseUrl);
+    client.Timeout = TimeSpan.FromSeconds(30);
 });
 
 // Register the repositories and services
