@@ -98,15 +98,12 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers
         /// <inheritdoc/>
         public override async Task StopAsync(CancellationToken cancellationToken)
         {
-            SignalShutdownStarted();
-
-            if (_internalCancellationSource != null && !_internalCancellationSource.IsCancellationRequested)
+            if (_internalCancellationSource != null)
             {
                 await _internalCancellationSource.CancelAsync();
             }
 
-            // Wait for ExecuteAsync to complete before cleanup
-            await base.StopAsync(cancellationToken);
+            SignalShutdownStarted();
 
             var lastBatchNormalizedOffsets = _lastProcessedBatch != null
                 ? CalculateContiguousCommitOffsets(_lastProcessedBatch.CommitReadyOffsets, _lastProcessedBatch.PolledConsumeResults)
@@ -130,18 +127,14 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers
                 }
             }
 
+            _kafkaConsumer.Unsubscribe();
+
+            await base.StopAsync(cancellationToken);
+
+            _logger.LogInformation("// {Class} // Unsubscribed from topic {Topic} because shutdown is initiated ", GetType().Name, _topicFingerprint);
+
             if (!IsConsumerClosed)
             {
-                try
-                {
-                    _kafkaConsumer.Unsubscribe();
-                    _logger.LogInformation("// {Class} // Unsubscribed from topic {Topic} because shutdown is initiated ", GetType().Name, _topicFingerprint);
-                }
-                catch (ObjectDisposedException ex)
-                {
-                    _logger.LogWarning(ex, "// {Class} // Unsubscribe skipped - consumer already disposed", GetType().Name);
-                }
-
                 SignalConsumerClosure();
 
                 _kafkaConsumer.Close();
