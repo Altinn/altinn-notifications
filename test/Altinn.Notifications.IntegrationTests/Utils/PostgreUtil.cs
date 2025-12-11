@@ -249,7 +249,7 @@ public static class PostgreUtil
 
     public static async Task DeleteOrderFromDb(string sendersRef)
     {
-        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
+        NpgsqlDataSource dataSource = ServiceUtil.GetSharedDataSource();
         string sql = "DELETE FROM notifications.orders WHERE sendersreference = @sendersRef";
 
         await using NpgsqlCommand pgcom = dataSource.CreateCommand(sql);
@@ -260,7 +260,7 @@ public static class PostgreUtil
 
     public static async Task DeleteOrderFromDb(Guid id)
     {
-        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
+        NpgsqlDataSource dataSource = ServiceUtil.GetSharedDataSource();
         string sql = "DELETE FROM notifications.orders WHERE alternateid = @id";
 
         await using NpgsqlCommand pgcom = dataSource.CreateCommand(sql);
@@ -281,7 +281,7 @@ public static class PostgreUtil
 
     public static async Task DeleteStatusFeedFromDb(string sendersRef)
     {
-        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
+        NpgsqlDataSource dataSource = ServiceUtil.GetSharedDataSource();
         string sql = @"DELETE FROM notifications.statusfeed s
                        USING notifications.orders o
                        WHERE s.orderid = o._id AND o.sendersreference = @sendersRef;";
@@ -328,7 +328,7 @@ public static class PostgreUtil
 
     public static async Task<T> RunSqlReturnOutput<T>(string query)
     {
-        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
+        NpgsqlDataSource dataSource = ServiceUtil.GetSharedDataSource();
 
         await using NpgsqlCommand pgcom = dataSource.CreateCommand(query);
 
@@ -347,7 +347,7 @@ public static class PostgreUtil
                     WHERE o.alternateid = @orderId
                     LIMIT 1";
 
-        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
+        NpgsqlDataSource dataSource = ServiceUtil.GetSharedDataSource();
         await using NpgsqlCommand pgcom = dataSource.CreateCommand(sql);
         pgcom.Parameters.AddWithValue("orderId", orderId);
 
@@ -357,7 +357,7 @@ public static class PostgreUtil
 
     public static async Task RunSql(string query)
     {
-        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices([typeof(NpgsqlDataSource)])[0]!;
+        NpgsqlDataSource dataSource = ServiceUtil.GetSharedDataSource();
 
         await using NpgsqlCommand pgcom = dataSource.CreateCommand(query);
         await pgcom.ExecuteNonQueryAsync();
@@ -365,7 +365,7 @@ public static class PostgreUtil
 
     public static async Task RunSql(string query, params NpgsqlParameter[] parameters)
     {
-        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices([typeof(NpgsqlDataSource)])[0]!;
+        NpgsqlDataSource dataSource = ServiceUtil.GetSharedDataSource();
 
         await using NpgsqlCommand pgcom = dataSource.CreateCommand(query);
         
@@ -462,7 +462,7 @@ public static class PostgreUtil
 
         var query = $@"SELECT id FROM notifications.deaddeliveryreports WHERE deliveryreport ->> '{fieldName}' = @fieldValue";
 
-        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
+        NpgsqlDataSource dataSource = ServiceUtil.GetSharedDataSource();
 
         await using NpgsqlCommand pgcom = dataSource.CreateCommand(query);
         pgcom.Parameters.AddWithValue("@fieldValue", fieldValue);
