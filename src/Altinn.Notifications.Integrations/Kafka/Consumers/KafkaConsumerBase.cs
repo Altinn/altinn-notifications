@@ -23,7 +23,7 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers
         private int _consumerClosedFlag;
         private int _shutdownStartedFlag;
 
-        private readonly int _maxBatchSize = 100;
+        private readonly int _maxBatchSize = 50;
         private readonly int _batchPollTimeoutMs = 100;
 
         private readonly string _topicName;
@@ -307,46 +307,48 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers
                 {
                     _logger.LogDebug("// KafkaConsumerBase // Stats: {StatsJson}", json);
                 })
-                .SetPartitionsRevokedHandler((_, partitions) =>
-                {
-                    if (IsShutdownStarted || IsConsumerClosed)
-                    {
-                        return;
-                    }
-
-                    var lastBatchSafeOffsets = _lastProcessedBatch != null
-                        ? CalculateContiguousCommitOffsets(_lastProcessedBatch.CommitReadyOffsets, _lastProcessedBatch.PolledConsumeResults)
-                        : [];
-
-                    var revokedPartitionOffsets = lastBatchSafeOffsets
-                        .Where(offsetEntry => partitions.Any(revokedPartition => revokedPartition.TopicPartition.Equals(offsetEntry.TopicPartition)))
-                        .ToList();
-
-                    if (revokedPartitionOffsets.Count == 0)
-                    {
-                        return;
-                    }
-
-                    try
-                    {
-                        _kafkaConsumer.Commit(revokedPartitionOffsets);
-                    }
-                    catch (KafkaException ex) when (ex.Error.Code is ErrorCode.RebalanceInProgress or ErrorCode.IllegalGeneration)
-                    {
-                        _logger.LogWarning(ex, "// {Class} // Commit on revocation skipped due to transient state: {Reason}", GetType().Name, ex.Error.Reason);
-                    }
-                    catch (KafkaException ex)
-                    {
-                        _logger.LogError(ex, "// {Class} // Commit on revocation failed unexpectedly", GetType().Name);
-                    }
-
-                    _logger.LogInformation("// {Class} // Partitions revoked: {Partitions}", GetType().Name, string.Join(',', partitions.Select(e => e.Partition.Value)));
-                })
+                .SetPartitionsRevokedHandler(PartitionsRevokedHandler)
                 .SetPartitionsAssignedHandler((_, partitions) =>
                 {
                     _logger.LogInformation("// {Class} // Partitions assigned: {Partitions}", GetType().Name, string.Join(',', partitions.Select(e => e.Partition.Value)));
                 })
                 .Build();
+        }
+
+        private void PartitionsRevokedHandler(IConsumer<string, string> consumer, List<TopicPartitionOffset> partitions)
+        {
+            if (IsShutdownStarted || IsConsumerClosed)
+            {
+                return;
+            }
+
+            var lastBatchSafeOffsets = _lastProcessedBatch != null
+                ? CalculateContiguousCommitOffsets(_lastProcessedBatch.CommitReadyOffsets, _lastProcessedBatch.PolledConsumeResults)
+                : [];
+
+            var revokedPartitionOffsets = lastBatchSafeOffsets
+                .Where(offsetEntry => partitions.Any(revokedPartition => revokedPartition.TopicPartition.Equals(offsetEntry.TopicPartition)))
+                .ToList();
+
+            if (revokedPartitionOffsets.Count == 0)
+            {
+                return;
+            }
+
+            try
+            {
+                _kafkaConsumer.Commit(revokedPartitionOffsets);
+            }
+            catch (KafkaException ex) when (ex.Error.Code is ErrorCode.RebalanceInProgress or ErrorCode.IllegalGeneration)
+            {
+                _logger.LogWarning(ex, "// {Class} // Commit on revocation skipped due to transient state: {Reason}", GetType().Name, ex.Error.Reason);
+            }
+            catch (KafkaException ex)
+            {
+                _logger.LogError(ex, "// {Class} // Commit on revocation failed unexpectedly", GetType().Name);
+            }
+
+            _logger.LogInformation("// {Class} // Partitions revoked: {Partitions}", GetType().Name, string.Join(',', partitions.Select(e => e.Partition.Value)));
         }
 
         /// <summary>
@@ -640,7 +642,7 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers
                     concurrencyConfiguration,
                     async (consumeResult, stoppingToken) =>
                     {
-                        if (cancellationToken.IsCancellationRequested || IsShutdownStarted || IsConsumerClosed || IsMessageProcessingFailureSignaled)
+                        if (stoppingToken.IsCancellationRequested || IsShutdownStarted || IsConsumerClosed || IsMessageProcessingFailureSignaled)
                         {
                             return;
                         }
