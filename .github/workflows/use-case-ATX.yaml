@@ -61,7 +61,7 @@ jobs:
         id: set-failure
         if: failure()
         run: |
-          echo "${{ matrix.environment }}=true" >> $GITHUB_OUTPUT
+          echo "${{ matrix.environment }}=true" >> "$GITHUB_OUTPUT"
   slack-notify:
     if: failure()
     needs: test
