@@ -62,8 +62,8 @@ using (var scope = host.Services.CreateScope())
     
     try
     {
-        var fromId = 43716;
-        var toId = 43717;
+        var fromId = 20000;
+        var toId = 50000;
         
         var operationResults = await Util.GetAndMapDeadDeliveryReports(
             repository,
@@ -80,14 +80,14 @@ using (var scope = host.Services.CreateScope())
             var isSucceeded = await Util.IsEmailNotificationSucceeded(dataSource, result.OperationId);
             if (!isSucceeded)
             {
-                Console.WriteLine($"Notification {result.NotificationId} with OperationId {result.OperationId} is already marked as Delivered. Skipping Event Grid post.");
+                Console.WriteLine($"Notification {result.NotificationId} with OperationId {result.OperationId} is already marked as Delivered or final. Skipping Event Grid post.");
                 continue;
             }
 
             var bd = BinaryData.FromObjectAsJson(new
             {
                 messageId = result.OperationId,
-                status = result.SendResult.ToString()
+                status = MapStatus(result)
             });
 
             var subject = $"sender/senderid@azure.com/message/{result.OperationId}";
@@ -97,16 +97,15 @@ using (var scope = host.Services.CreateScope())
 
             var eventArray = new[] { eventGridEvent };
 
+            Task.Delay(100).Wait();
+
             // Post to Event Grid using reusable client
-            var (success, responseBody) = await eventGridClient.PostEventsAsync(
+            var (_, _) = await eventGridClient.PostEventsAsync(
                 eventArray,
                 CancellationToken.None);
 
-            if (!success)
-            {
-                Console.WriteLine($"Failed to post event for notification {result.NotificationId}");
-                Console.WriteLine($"Response: {responseBody}");
-            }
+            Console.WriteLine("✓ Event Grid event posted for notification " +
+                              $"{result.NotificationId} with OperationId {result.OperationId}");
         }
     }
     catch (Exception ex)
@@ -115,4 +114,18 @@ using (var scope = host.Services.CreateScope())
         Console.WriteLine($"Stack trace: {ex.StackTrace}");
         return;
     }
+}
+
+static string? MapStatus(Altinn.Notifications.Core.Models.Notification.EmailSendOperationResult result)
+{
+    if (string.Equals(result.SendResult.ToString(), "Failed_Bounced", StringComparison.OrdinalIgnoreCase))
+    {
+        return "Bounced";
+    }
+    if (string.Equals(result.SendResult.ToString(), "Failed_SupressedRecipient", StringComparison.OrdinalIgnoreCase))
+    {
+        return "Suppressed";
+    }
+
+    return result.SendResult.ToString();
 }
