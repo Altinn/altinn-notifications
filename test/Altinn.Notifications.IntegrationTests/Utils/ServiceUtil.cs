@@ -55,23 +55,6 @@ public static class ServiceUtil
         }
     }
 
-    public static NpgsqlDataSource GetSharedDataSource()
-    {
-        if (_sharedDataSource != null)
-        {
-            return _sharedDataSource;
-        }
-
-        // If shared datasource doesn't exist yet, create it
-        var builder = new ConfigurationBuilder()
-            .AddJsonFile($"appsettings.json")
-            .AddJsonFile("appsettings.IntegrationTest.json")
-            .AddEnvironmentVariables();
-
-        var config = builder.Build();
-        return GetOrCreateDataSource(config);
-    }
-
     public static List<object> GetServices(List<Type> interfaceTypes, Dictionary<string, string>? envVariables = null)
     {
         if (envVariables != null)
