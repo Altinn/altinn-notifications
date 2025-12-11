@@ -184,27 +184,11 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers
         /// </returns>
         protected async Task ConsumeMessageAsync(Func<string, Task> processMessageFunc, Func<string, Task> retryMessageFunc, CancellationToken cancellationToken)
         {
-            if (IsShutdownStarted || IsConsumerClosed)
-            {
-                return;
-            }
+            using var linkedCancellationTokenSource = _internalCancellationSource is null
+                ? CancellationTokenSource.CreateLinkedTokenSource(cancellationToken)
+                : CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _internalCancellationSource.Token);
 
-            CancellationTokenSource? linkedCancellationTokenSource = null;
-            CancellationToken linkedCancellationToken;
-
-            try
-            {
-                linkedCancellationTokenSource = _internalCancellationSource is null
-                    ? CancellationTokenSource.CreateLinkedTokenSource(cancellationToken)
-                    : CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _internalCancellationSource.Token);
-
-                linkedCancellationToken = linkedCancellationTokenSource.Token;
-            }
-            catch (ObjectDisposedException)
-            {
-                // Internal cancellation source was disposed during shutdown
-                return;
-            }
+            var linkedCancellationToken = linkedCancellationTokenSource.Token;
 
             while (!linkedCancellationToken.IsCancellationRequested && !IsShutdownStarted && !IsConsumerClosed)
             {
@@ -249,8 +233,6 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers
 
                 _batchProcessingLatency.Record(batchProcessingTimer.Elapsed.TotalMilliseconds, KeyValuePair.Create<string, object?>(_metricsTopicTag, _topicFingerprint));
             }
-
-            linkedCancellationTokenSource?.Dispose();
         }
 
         /// <summary>
