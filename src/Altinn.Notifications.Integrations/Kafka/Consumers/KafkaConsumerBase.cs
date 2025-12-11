@@ -136,7 +136,14 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers
                 }
             }
 
-            _kafkaConsumer.Unsubscribe();
+            try
+            {
+                _kafkaConsumer.Unsubscribe();
+            }
+            catch (ObjectDisposedException)
+            {
+                // Consumer already disposed
+            }
 
             await base.StopAsync(cancellationToken);
 
@@ -146,7 +153,14 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers
             {
                 SignalConsumerClosure();
 
-                _kafkaConsumer.Close();
+                try
+                {
+                    _kafkaConsumer.Close();
+                }
+                catch (ObjectDisposedException)
+                {
+                    // Consumer already disposed
+                }
             }
         }
 
