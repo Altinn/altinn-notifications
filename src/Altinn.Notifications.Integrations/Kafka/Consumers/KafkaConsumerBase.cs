@@ -105,6 +105,9 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers
                 await _internalCancellationSource.CancelAsync();
             }
 
+            // Wait for ExecuteAsync to complete before cleanup
+            await base.StopAsync(cancellationToken);
+
             var lastBatchNormalizedOffsets = _lastProcessedBatch != null
                 ? CalculateContiguousCommitOffsets(_lastProcessedBatch.CommitReadyOffsets, _lastProcessedBatch.PolledConsumeResults)
                 : [];
@@ -143,8 +146,6 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers
 
                 _kafkaConsumer.Close();
             }
-
-            await base.StopAsync(cancellationToken);
         }
 
         /// <inheritdoc/>
