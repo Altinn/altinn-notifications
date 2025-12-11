@@ -47,7 +47,7 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
         var processedSignal = new ManualResetEventSlim(false);
         var emailNotificationServiceMock = CreateEmailNotificationServiceMock(processedSignal);
 
-        await using var testFixture = CreateTestFixture(emailNotificationServiceMock.Object);
+        using var testFixture = CreateTestFixture(emailNotificationServiceMock.Object);
 
         var sendersRef = $"ref-{Guid.NewGuid()}";
         (_, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(sendersRef, simulateCronJob: true);
@@ -79,7 +79,7 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
         var processedSignal = new ManualResetEventSlim(false);
         var emailNotificationServiceMock = CreateEmailNotificationServiceMock(processedSignal);
 
-        await using var testFixture = CreateTestFixture(emailNotificationServiceMock.Object);
+        using var testFixture = CreateTestFixture(emailNotificationServiceMock.Object);
 
         // Act
         await testFixture.Consumer.StartAsync(CancellationToken.None);
@@ -133,7 +133,7 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
                 }
             });
 
-        await using var testFixture = CreateTestFixture(emailNotificationServiceMock.Object);
+        using var testFixture = CreateTestFixture(emailNotificationServiceMock.Object);
 
         var sendersRef = $"ref-{Guid.NewGuid()}";
         (_, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(sendersRef, simulateCronJob: true);
@@ -179,7 +179,7 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
             .Callback(processedSignal.Set)
             .Returns(Task.CompletedTask);
 
-        await using var testFixture = CreateTestFixture(emailNotificationServiceMock.Object, loggerMock.Object);
+        using var testFixture = CreateTestFixture(emailNotificationServiceMock.Object, loggerMock.Object);
 
         var sendersRef = $"ref-{Guid.NewGuid()}";
         (_, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(sendersRef, simulateCronJob: true);
@@ -219,7 +219,7 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
             .Setup(s => s.UpdateSendStatus(It.IsAny<EmailSendOperationResult>()))
             .Returns(Task.CompletedTask);
 
-        await using var testFixture = CreateTestFixture(emailNotificationServiceMock.Object);
+        using var testFixture = CreateTestFixture(emailNotificationServiceMock.Object);
 
         // Act
         await testFixture.Consumer.StartAsync(CancellationToken.None);
@@ -254,7 +254,7 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
             .Callback(() => processedSignal.Set())
             .ReturnsAsync(true);
 
-        await using var testFixture = CreateTestFixture(emailNotificationServiceMock.Object, producer: producerMock.Object);
+        using var testFixture = CreateTestFixture(emailNotificationServiceMock.Object, producer: producerMock.Object);
 
         var sendersRef = $"ref-{Guid.NewGuid()}";
         (_, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(sendersRef, simulateCronJob: true);
@@ -296,7 +296,7 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
             .Callback(() => Interlocked.Increment(ref processedCount))
             .Returns(Task.CompletedTask);
 
-        await using var testFixture = CreateTestFixture(emailNotificationServiceMock.Object);
+        using var testFixture = CreateTestFixture(emailNotificationServiceMock.Object);
 
         var sendersRef = $"ref-{Guid.NewGuid()}";
         (_, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(sendersRef, simulateCronJob: true);
@@ -347,7 +347,7 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
             .Callback(() => Interlocked.Increment(ref processedCount))
             .Returns(Task.CompletedTask);
 
-        await using var testFixture = CreateTestFixture(emailNotificationServiceMock.Object);
+        using var testFixture = CreateTestFixture(emailNotificationServiceMock.Object);
 
         var sendersRef = $"ref-{Guid.NewGuid()}";
         (_, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(sendersRef, simulateCronJob: true);
@@ -398,7 +398,7 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
                 await semaphoreSlim.WaitAsync(TimeSpan.FromSeconds(10));
             });
 
-        await using var testFixture = CreateTestFixture(emailNotificationServiceMock.Object);
+        using var testFixture = CreateTestFixture(emailNotificationServiceMock.Object);
 
         var sendersRef = $"ref-{Guid.NewGuid()}";
         (_, EmailNotification emailNotification) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification(sendersRef, simulateCronJob: true);
@@ -439,7 +439,7 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
         var loggerMock = new Mock<ILogger<EmailStatusConsumer>>();
         var emailNotificationServiceMock = new Mock<IEmailNotificationService>();
         
-        await using var testFixture = CreateTestFixture(emailNotificationServiceMock.Object, loggerMock.Object);
+        using var testFixture = CreateTestFixture(emailNotificationServiceMock.Object, loggerMock.Object);
 
         // Act
         await testFixture.Consumer.StartAsync(CancellationToken.None);
@@ -538,9 +538,9 @@ public class EmailStatusConsumerBatchTests : IAsyncLifetime
 
 /// <summary>
 /// Test fixture that owns the EmailStatusConsumer and ServiceProvider lifecycle.
-/// Ensures proper async disposal of all resources.
+/// Uses synchronous disposal to match the disposal pattern of shared test utilities.
 /// </summary>
-internal sealed class EmailStatusConsumerTestFixture : IAsyncDisposable
+internal sealed class EmailStatusConsumerTestFixture : IDisposable
 {
     public EmailStatusConsumer Consumer { get; }
 
@@ -552,8 +552,8 @@ internal sealed class EmailStatusConsumerTestFixture : IAsyncDisposable
         _serviceProvider = serviceProvider;
     }
 
-    public async ValueTask DisposeAsync()
+    public void Dispose()
     {
-        await _serviceProvider.DisposeAsync();
+        _serviceProvider.Dispose();
     }
 }
