@@ -58,8 +58,6 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers
         /// <inheritdoc/>
         public override void Dispose()
         {
-            SignalShutdownStarted();
-
             try
             {
                 if (!IsConsumerClosed)
@@ -102,16 +100,9 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers
         {
             SignalShutdownStarted();
 
-            if (_internalCancellationSource != null)
+            if (_internalCancellationSource != null && !_internalCancellationSource.IsCancellationRequested)
             {
-                try
-                {
-                    await _internalCancellationSource.CancelAsync();
-                }
-                catch (ObjectDisposedException)
-                {
-                    // Already disposed, continue shutdown
-                }
+                await _internalCancellationSource.CancelAsync();
             }
 
             var lastBatchNormalizedOffsets = _lastProcessedBatch != null
@@ -136,32 +127,24 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers
                 }
             }
 
-            try
+            if (!IsConsumerClosed)
             {
-                _kafkaConsumer.Unsubscribe();
-            }
-            catch (ObjectDisposedException)
-            {
-                // Consumer already disposed
+                try
+                {
+                    _kafkaConsumer.Unsubscribe();
+                    _logger.LogInformation("// {Class} // Unsubscribed from topic {Topic} because shutdown is initiated ", GetType().Name, _topicFingerprint);
+                }
+                catch (ObjectDisposedException ex)
+                {
+                    _logger.LogWarning(ex, "// {Class} // Unsubscribe skipped - consumer already disposed", GetType().Name);
+                }
+
+                SignalConsumerClosure();
+
+                _kafkaConsumer.Close();
             }
 
             await base.StopAsync(cancellationToken);
-
-            _logger.LogInformation("// {Class} // Unsubscribed from topic {Topic} because shutdown is initiated ", GetType().Name, _topicFingerprint);
-
-            if (!IsConsumerClosed)
-            {
-                SignalConsumerClosure();
-
-                try
-                {
-                    _kafkaConsumer.Close();
-                }
-                catch (ObjectDisposedException)
-                {
-                    // Consumer already disposed
-                }
-            }
         }
 
         /// <inheritdoc/>
