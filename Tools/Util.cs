@@ -5,7 +5,7 @@ using Npgsql;
 
 namespace Tools;
 
-internal static class Util
+public static class Util
 {
     public static string RetryExceededReason => "RETRY_THRESHOLD_EXCEEDED";
 
