@@ -66,15 +66,21 @@ public static class ServiceUtil
         }
 
         var builder = new ConfigurationBuilder()
-            .AddJsonFile($"appsettings.json")
-            .AddJsonFile("appsettings.IntegrationTest.json")
+            .AddJsonFile($"appsettings.json", optional: false, reloadOnChange: false)
+            .AddJsonFile("appsettings.IntegrationTest.json", optional: false, reloadOnChange: false)
             .AddEnvironmentVariables();
 
         var config = builder.Build();
 
-        WebApplication.CreateBuilder()
-                       .Build()
-                       .SetUpPostgreSql(true, config);
+        // Create a minimal WebApplication for PostgreSQL setup without file watching
+        var webAppBuilder = WebApplication.CreateBuilder(new WebApplicationOptions
+        {
+            EnvironmentName = "Test",
+            Args = []
+        });
+        webAppBuilder.Configuration.AddConfiguration(config);
+        
+        webAppBuilder.Build().SetUpPostgreSql(true, config);
 
         IServiceCollection services = new ServiceCollection();
 

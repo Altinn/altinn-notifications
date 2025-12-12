@@ -22,6 +22,9 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
                 .AddJsonFile(path: "appsettings.IntegrationTest.json", optional: false, reloadOnChange: false)
         .Build();
 
+        // Disable file watching to prevent inotify limit issues in tests
+        builder.UseSetting("hostBuilder:reloadConfigOnChange", "false");
+
         builder.ConfigureAppConfiguration((hostingContext, config) =>
         {
             config.AddConfiguration(configuration);
