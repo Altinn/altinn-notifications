@@ -642,7 +642,7 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers
                     concurrencyConfiguration,
                     async (consumeResult, stoppingToken) =>
                     {
-                        if (cancellationToken.IsCancellationRequested || IsShutdownStarted || IsConsumerClosed || IsMessageProcessingFailureSignaled)
+                        if (stoppingToken.IsCancellationRequested || IsShutdownStarted || IsConsumerClosed || IsMessageProcessingFailureSignaled)
                         {
                             return;
                         }
