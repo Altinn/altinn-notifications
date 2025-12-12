@@ -19,8 +19,8 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
     where TResult : class
     where TConsumer : class
 {
-    private readonly IKafkaProducer _producer;
     private readonly ILogger _logger;
+    private readonly IKafkaProducer _producer;
     private readonly string _statusUpdatedTopicName;
     private readonly string _statusUpdatedRetryTopicName;
     private readonly IDeadDeliveryReportService _deadDeliveryReportService;
@@ -40,19 +40,19 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
         string statusUpdatedRetryTopicName,
         IOptions<KafkaSettings> kafkaSettings,
         IDeadDeliveryReportService deadDeliveryReportService)
-        : base(kafkaSettings, logger, statusUpdatedTopicName)
+        : base(statusUpdatedTopicName, kafkaSettings, logger)
     {
         _logger = logger;
         _producer = producer;
         _statusUpdatedTopicName = statusUpdatedTopicName;
-        _statusUpdatedRetryTopicName = statusUpdatedRetryTopicName;
         _deadDeliveryReportService = deadDeliveryReportService;
+        _statusUpdatedRetryTopicName = statusUpdatedRetryTopicName;
     }
 
     /// <inheritdoc/>
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        return Task.Run(() => ConsumeMessage(ProcessStatus, RetryStatus, stoppingToken), stoppingToken);
+        return ConsumeMessageAsync(ProcessStatus, RetryStatus, stoppingToken);
     }
 
     /// <summary>
