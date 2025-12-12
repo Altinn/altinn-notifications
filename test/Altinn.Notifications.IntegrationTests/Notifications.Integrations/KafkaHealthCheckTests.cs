@@ -23,7 +23,7 @@ public class KafkaHealthCheckTests : IAsyncLifetime
     public KafkaHealthCheckTests()
     {
         IConfiguration configuration = new ConfigurationBuilder()
-                       .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
+                       .AddJsonFile("appsettings.json")
                        .Build();
 
         KafkaSettings? settings = configuration.GetSection("KafkaSettings").Get<KafkaSettings>();

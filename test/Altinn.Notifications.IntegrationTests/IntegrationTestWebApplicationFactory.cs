@@ -18,12 +18,9 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         IConfiguration configuration = new ConfigurationBuilder()
-                .AddJsonFile(path: "appsettings.json", optional: false, reloadOnChange: false)
-                .AddJsonFile(path: "appsettings.IntegrationTest.json", optional: false, reloadOnChange: false)
+                .AddJsonFile("appsettings.json")
+                .AddJsonFile("appsettings.IntegrationTest.json")
         .Build();
-
-        // Disable file watching to prevent inotify limit issues in tests
-        builder.UseSetting("hostBuilder:reloadConfigOnChange", "false");
 
         builder.ConfigureAppConfiguration((hostingContext, config) =>
         {

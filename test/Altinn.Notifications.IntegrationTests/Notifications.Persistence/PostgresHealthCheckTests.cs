@@ -17,7 +17,7 @@ public sealed class PostgresHealthCheckTests : IAsyncDisposable
     public PostgresHealthCheckTests()
     {
         IConfiguration configuration = new ConfigurationBuilder()
-                       .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
+                       .AddJsonFile("appsettings.json")
                        .Build();
 
         PostgreSqlSettings? settings = configuration.GetSection("PostgreSqlSettings").Get<PostgreSqlSettings>();

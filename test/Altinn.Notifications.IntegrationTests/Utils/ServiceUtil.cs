@@ -66,27 +66,15 @@ public static class ServiceUtil
         }
 
         var builder = new ConfigurationBuilder()
-            .AddJsonFile($"appsettings.json", optional: false, reloadOnChange: false)
-            .AddJsonFile("appsettings.IntegrationTest.json", optional: false, reloadOnChange: false)
+            .AddJsonFile($"appsettings.json")
+            .AddJsonFile("appsettings.IntegrationTest.json")
             .AddEnvironmentVariables();
 
         var config = builder.Build();
 
-        // Create a minimal WebApplication for PostgreSQL setup without file watching
-        var webAppBuilder = WebApplication.CreateBuilder(new WebApplicationOptions
-        {
-            EnvironmentName = "Test",
-            Args = [],
-            ApplicationName = typeof(ServiceUtil).Assembly.FullName
-        });
-
-        // Clear default configuration sources that include file watchers
-        webAppBuilder.Configuration.Sources.Clear();
-
-        // Add our configuration without file watching
-        webAppBuilder.Configuration.AddConfiguration(config);
-
-        webAppBuilder.Build().SetUpPostgreSql(true, config);
+        WebApplication.CreateBuilder()
+                       .Build()
+                       .SetUpPostgreSql(true, config);
 
         IServiceCollection services = new ServiceCollection();
 
