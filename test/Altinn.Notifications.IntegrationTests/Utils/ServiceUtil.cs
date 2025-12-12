@@ -76,10 +76,16 @@ public static class ServiceUtil
         var webAppBuilder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
             EnvironmentName = "Test",
-            Args = []
+            Args = [],
+            ApplicationName = typeof(ServiceUtil).Assembly.FullName
         });
+
+        // Clear default configuration sources that include file watchers
+        webAppBuilder.Configuration.Sources.Clear();
+
+        // Add our configuration without file watching
         webAppBuilder.Configuration.AddConfiguration(config);
-        
+
         webAppBuilder.Build().SetUpPostgreSql(true, config);
 
         IServiceCollection services = new ServiceCollection();
