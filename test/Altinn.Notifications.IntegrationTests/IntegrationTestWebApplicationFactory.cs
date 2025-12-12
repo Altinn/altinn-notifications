@@ -18,8 +18,8 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         IConfiguration configuration = new ConfigurationBuilder()
-                .AddJsonFile("appsettings.json")
-                .AddJsonFile("appsettings.IntegrationTest.json")
+                .AddJsonFile(path: "appsettings.json", optional: false, reloadOnChange: false)
+                .AddJsonFile(path: "appsettings.IntegrationTest.json", optional: false, reloadOnChange: false)
         .Build();
 
         builder.ConfigureAppConfiguration((hostingContext, config) =>
