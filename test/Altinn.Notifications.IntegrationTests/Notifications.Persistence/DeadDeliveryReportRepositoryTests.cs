@@ -543,6 +543,7 @@ public class DeadDeliveryReportRepositoryTests : IAsyncLifetime
             var id = await sut.InsertAsync(report, CancellationToken.None);
             ids.Add(id);
         }
+
         _createdIds.AddRange(ids);
 
         // Act
