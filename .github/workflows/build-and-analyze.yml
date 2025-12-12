@@ -69,12 +69,12 @@ jobs:
         uses: GuillaumeFalourd/wait-sleep-action@175a644657d8de245e4c6059d014941646186a84 # v1
         with:
           time: '30s'
-
       - name: Build & Test
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
+          echo "Current limit: $(cat /proc/sys/fs/inotify/max_user_instances)"
           dotnet-sonarscanner begin /k:"Altinn_altinn-notifications" /o:"altinn" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" /d:sonar.exclusions="src/Altinn.Notifications.Persistence/Migration/**/*"
 
           dotnet build Altinn.Notifications.sln -v q
