@@ -89,21 +89,34 @@ public sealed class CommonProducer : ICommonProducer, IDisposable
     private void EnsureTopicsExist()
     {
         using var adminClient = new AdminClientBuilder(_sharedClientConfig.AdminClientConfig).Build();
-        var existingTopics = adminClient.GetMetadata(TimeSpan.FromSeconds(10)).Topics;
-        var topicsNotExisting = _kafkaSettings.Admin.TopicList.Except(existingTopics.Select(t => t.Topic), StringComparer.OrdinalIgnoreCase);
+
+        // Delegate the core logic to the test-friendly overload that accepts delegates.
+        EnsureTopicsExist(
+            () => adminClient.GetMetadata(TimeSpan.FromSeconds(10)).Topics.Select(t => t.Topic),
+            spec => adminClient.CreateTopicsAsync(new TopicSpecification[] { spec }).Wait());
+    }
+
+    /// <summary>
+    /// Internal overload used to make EnsureTopicsExist testable.
+    /// </summary>
+    /// <param name="getExistingTopics">Function that returns the existing topic names.</param>
+    /// <param name="createTopicAction">Action that will create a given TopicSpecification.</param>
+    internal void EnsureTopicsExist(Func<IEnumerable<string>> getExistingTopics, Action<TopicSpecification> createTopicAction)
+    {
+        var existingTopics = getExistingTopics() ?? Enumerable.Empty<string>();
+        var topicsNotExisting = _kafkaSettings.Admin.TopicList.Except(existingTopics, StringComparer.OrdinalIgnoreCase);
 
         foreach (string topic in topicsNotExisting)
         {
-            adminClient.CreateTopicsAsync(new TopicSpecification[]
+            var spec = new TopicSpecification()
             {
-                new TopicSpecification()
-                {
-                    Name = topic,
-                    NumPartitions = _sharedClientConfig.TopicSpecification.NumPartitions,
-                    ReplicationFactor = _sharedClientConfig.TopicSpecification.ReplicationFactor,
-                    Configs = _sharedClientConfig.TopicSpecification.Configs
-                }
-            }).Wait();
+                Name = topic,
+                NumPartitions = _sharedClientConfig.TopicSpecification.NumPartitions,
+                ReplicationFactor = _sharedClientConfig.TopicSpecification.ReplicationFactor,
+                Configs = _sharedClientConfig.TopicSpecification.Configs
+            };
+
+            createTopicAction(spec);
             _logger.LogInformation("// KafkaProducer // EnsureTopicsExists // Topic '{Topic}' created successfully.", topic);
         }
     }
