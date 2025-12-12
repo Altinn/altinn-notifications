@@ -519,6 +519,6 @@ public class UtilTests
         var status = Util.MapStatus(result);
 
         // Assert
-        Assert.Null(status);
+        Assert.Empty(status);
     }
 }
