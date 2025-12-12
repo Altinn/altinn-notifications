@@ -271,7 +271,10 @@ public class OrderRepository : IOrderRepository
             if (await reader.ReadAsync())
             {
                 // Read order tracking (first row is always the order-level tracking)
-                var reference = await reader.GetFieldValueAsync<string>("reference");
+                string? reference = await reader.IsDBNullAsync(reader.GetOrdinal("reference"))
+                    ? null
+                    : await reader.GetFieldValueAsync<string>("reference");
+
                 var statusValue = await reader.GetFieldValueAsync<string>("status");
                 var lastUpdate = await reader.GetFieldValueAsync<DateTime>("last_update");
                 var type = await reader.GetFieldValueAsync<string>("type");
