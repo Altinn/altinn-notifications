@@ -1,4 +1,5 @@
-﻿using Altinn.Notifications.Core.Persistence;
+﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Integrations.Configuration;
 using Altinn.Notifications.Persistence.Configuration;
 using Altinn.Notifications.Persistence.Repository;
@@ -62,25 +63,24 @@ var host = builder.Build();
 using (var scope = host.Services.CreateScope())
 {
     var repository = scope.ServiceProvider.GetRequiredService<IDeadDeliveryReportRepository>();
-    var eventGridClient = scope.ServiceProvider.GetRequiredService<EventGridClient>();
-    
+    var eventGridClient = scope.ServiceProvider.GetRequiredService<IEventGridClient>();
+
     try
     {
         var fromId = 20000;
         var toId = 50000;
-        
+
         var operationResults = await Util.GetAndMapDeadDeliveryReports(
             repository,
             fromId,
             toId,
-            Altinn.Notifications.Core.Enums.DeliveryReportChannel.AzureCommunicationServices,
+            DeliveryReportChannel.AzureCommunicationServices,
             CancellationToken.None);
-            
+
         var dataSource = scope.ServiceProvider.GetRequiredService<NpgsqlDataSource>();
 
         foreach (var result in operationResults)
         {
-
             var isSucceeded = await Util.IsEmailNotificationSucceeded(dataSource, result.OperationId);
             if (!isSucceeded)
             {
@@ -91,7 +91,7 @@ using (var scope = host.Services.CreateScope())
             var bd = BinaryData.FromObjectAsJson(new
             {
                 messageId = result.OperationId,
-                status = MapStatus(result)
+                status = Util.MapStatus(result)
             });
 
             var subject = $"sender/senderid@azure.com/message/{result.OperationId}";
@@ -118,18 +118,4 @@ using (var scope = host.Services.CreateScope())
         Console.WriteLine($"Stack trace: {ex.StackTrace}");
         return;
     }
-}
-
-static string? MapStatus(Altinn.Notifications.Core.Models.Notification.EmailSendOperationResult result)
-{
-    if (string.Equals(result.SendResult.ToString(), "Failed_Bounced", StringComparison.OrdinalIgnoreCase))
-    {
-        return "Bounced";
-    }
-    if (string.Equals(result.SendResult.ToString(), "Failed_SupressedRecipient", StringComparison.OrdinalIgnoreCase))
-    {
-        return "Suppressed";
-    }
-
-    return result.SendResult.ToString();
 }

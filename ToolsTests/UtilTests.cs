@@ -1,16 +1,9 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Persistence;
 using Moq;
-using Npgsql;
 using Tools;
-using Xunit;
 
 namespace ToolsTests;
 
@@ -419,5 +412,113 @@ public class UtilTests
 
         // Assert
         Assert.Equal("RETRY_THRESHOLD_EXCEEDED", reason);
-    }    
+    }
+
+    [Fact]
+    public void MapStatus_ReturnsBounced_WhenResultIsFailed_Bounced()
+    {
+        // Arrange
+        var result = new EmailSendOperationResult
+        {
+            NotificationId = Guid.NewGuid(),
+            OperationId = "op-123",
+            SendResult = EmailNotificationResultType.Failed_Bounced
+        };
+
+        // Act
+        var status = Util.MapStatus(result);
+
+        // Assert
+        Assert.Equal("Bounced", status);
+    }
+
+    [Fact]
+    public void MapStatus_ReturnsSuppressed_WhenResultIsFailed_SupressedRecipient()
+    {
+        // Arrange
+        var result = new EmailSendOperationResult
+        {
+            NotificationId = Guid.NewGuid(),
+            OperationId = "op-123",
+            SendResult = EmailNotificationResultType.Failed_SupressedRecipient
+        };
+
+        // Act
+        var status = Util.MapStatus(result);
+
+        // Assert
+        Assert.Equal("Suppressed", status);
+    }
+
+    [Fact]
+    public void MapStatus_ReturnsOriginalStatus_WhenResultIsSucceeded()
+    {
+        // Arrange
+        var result = new EmailSendOperationResult
+        {
+            NotificationId = Guid.NewGuid(),
+            OperationId = "op-123",
+            SendResult = EmailNotificationResultType.Succeeded
+        };
+
+        // Act
+        var status = Util.MapStatus(result);
+
+        // Assert
+        Assert.Equal("Succeeded", status);
+    }
+
+    [Fact]
+    public void MapStatus_ReturnsOriginalStatus_WhenResultIsFailed_RecipientNotIdentified()
+    {
+        // Arrange
+        var result = new EmailSendOperationResult
+        {
+            NotificationId = Guid.NewGuid(),
+            OperationId = "op-123",
+            SendResult = EmailNotificationResultType.Failed_RecipientNotIdentified
+        };
+
+        // Act
+        var status = Util.MapStatus(result);
+
+        // Assert
+        Assert.Equal("Failed_RecipientNotIdentified", status);
+    }
+
+    [Fact]
+    public void MapStatus_IsCaseInsensitive_ForBouncedStatus()
+    {
+        // Arrange - Test that the comparison is case-insensitive
+        var result = new EmailSendOperationResult
+        {
+            NotificationId = Guid.NewGuid(),
+            OperationId = "op-123",
+            SendResult = EmailNotificationResultType.Failed_Bounced
+        };
+
+        // Act
+        var status = Util.MapStatus(result);
+
+        // Assert - Should still map to "Bounced" regardless of enum ToString() casing
+        Assert.Equal("Bounced", status);
+    }
+
+    [Fact]
+    public void MapStatus_ReturnsNull_WhenSendResultIsNull()
+    {
+        // Arrange
+        var result = new EmailSendOperationResult
+        {
+            NotificationId = Guid.NewGuid(),
+            OperationId = "op-123",
+            SendResult = null
+        };
+
+        // Act
+        var status = Util.MapStatus(result);
+
+        // Assert
+        Assert.Null(status);
+    }
 }

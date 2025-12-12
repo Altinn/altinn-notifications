@@ -93,4 +93,21 @@ public static class Util
         Console.WriteLine($"\nSummary: {successCount} succeeded, {failureCount} failed out of {operationResults.Count} total");
         return successCount;
     }
+
+    /// <summary>
+    /// Maps email send operation result to Event Grid status string
+    /// </summary>
+    public static string? MapStatus(EmailSendOperationResult result)
+    {
+        if (string.Equals(result.SendResult.ToString(), "Failed_Bounced", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Bounced";
+        }
+        if (string.Equals(result.SendResult.ToString(), "Failed_SupressedRecipient", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Suppressed";
+        }
+
+        return result.SendResult.ToString();
+    }
 }
