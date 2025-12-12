@@ -32,7 +32,8 @@ namespace Altinn.Notifications.Core.Services
 
         private readonly static List<SmsNotificationResultType> _successResults = new()
         {
-            SmsNotificationResultType.Accepted
+            SmsNotificationResultType.Accepted,
+            SmsNotificationResultType.Delivered
         };
 
         /// <summary>
