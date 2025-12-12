@@ -66,6 +66,10 @@ jobs:
         uses: GuillaumeFalourd/wait-sleep-action@175a644657d8de245e4c6059d014941646186a84 # v1
         with:
           time: '30s'
+      - name: Increase inotify watchers for test execution
+        run: |
+          sudo sysctl fs.inotify.max_user_instances=524288
+          sudo sysctl -p
       - name: Build & Test
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed to get PR information, if any
