@@ -3,8 +3,6 @@ using Altinn.Notifications.Email.Core.Dependencies;
 using Altinn.Notifications.Email.Integrations.Configuration;
 using Altinn.Notifications.Integrations.Kafka.Consumers;
 
-using Confluent.Kafka;
-
 using Microsoft.Extensions.Logging;
 
 namespace Altinn.Notifications.Email.Integrations.Consumers;
@@ -30,7 +28,7 @@ public sealed class EmailSendingAcceptedConsumer : KafkaConsumerBase
         KafkaSettings kafkaSettings,
         IDateTimeService dateTime,
         ILogger<EmailSendingAcceptedConsumer> logger)
-        : base(kafkaSettings, logger, kafkaSettings.EmailSendingAcceptedTopicName)
+        : base(kafkaSettings.EmailSendingAcceptedTopicName, kafkaSettings, logger)
     {
         _statusService = statusService;
         _producer = producer;
@@ -42,7 +40,7 @@ public sealed class EmailSendingAcceptedConsumer : KafkaConsumerBase
     /// <inheritdoc/>
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        return Task.Run(() => ConsumeMessage(ConsumeOperation, RetryOperation, stoppingToken), stoppingToken);
+        return ConsumeMessageAsync(ConsumeOperation, RetryOperation, stoppingToken);
     }
 
     private async Task ConsumeOperation(string message)

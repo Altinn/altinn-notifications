@@ -12,10 +12,10 @@ namespace Altinn.Notifications.Email.Integrations.Consumers;
 /// </summary>
 public sealed class SendEmailQueueConsumer : KafkaConsumerBase
 {
-    private readonly ISendingService _emailService;
-    private readonly ICommonProducer _producer;
-    private readonly ILogger<SendEmailQueueConsumer> _logger;
     private readonly string _retryTopicName;
+    private readonly ICommonProducer _producer;
+    private readonly ISendingService _emailService;
+    private readonly ILogger<SendEmailQueueConsumer> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SendEmailQueueConsumer"/> class.
@@ -25,18 +25,18 @@ public sealed class SendEmailQueueConsumer : KafkaConsumerBase
         ISendingService emailService,
         ICommonProducer producer,
         ILogger<SendEmailQueueConsumer> logger)
-        : base(kafkaSettings, logger, kafkaSettings.SendEmailQueueTopicName)
+        : base(kafkaSettings.SendEmailQueueTopicName, kafkaSettings, logger)
     {
-        _emailService = emailService;
-        _producer = producer;
-        _retryTopicName = kafkaSettings.SendEmailQueueRetryTopicName;
         _logger = logger;
+        _producer = producer;
+        _emailService = emailService;
+        _retryTopicName = kafkaSettings.SendEmailQueueRetryTopicName;
     }
 
     /// <inheritdoc/>
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        return Task.Run(() => ConsumeMessage(ConsumeEmail, RetryEmail, stoppingToken), stoppingToken);
+        return ConsumeMessageAsync(ConsumeEmail, RetryEmail, stoppingToken);
     }
 
     private async Task ConsumeEmail(string message)

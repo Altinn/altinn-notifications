@@ -138,7 +138,8 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
             metrics.AddMeter(
                 "Microsoft.AspNetCore.Hosting",
                 "Microsoft.AspNetCore.Server.Kestrel",
-                "System.Net.Http");
+                "System.Net.Http",
+                "Altinn.Notifications.KafkaConsumer");
         })
         .WithTracing(tracing => 
         {
