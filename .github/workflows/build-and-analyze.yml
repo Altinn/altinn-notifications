@@ -66,6 +66,9 @@ jobs:
         uses: GuillaumeFalourd/wait-sleep-action@175a644657d8de245e4c6059d014941646186a84 # v1
         with:
           time: '30s'
+      - name: Increase inotify watchers for test execution # Necessary due to a temporary problem with too many file watchers (e.g. https://github.com/Altinn/altinn-notifications/actions/runs/20168791056)
+        run: |
+          sudo sysctl -w fs.inotify.max_user_instances=524288
       - name: Build & Test
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed to get PR information, if any
