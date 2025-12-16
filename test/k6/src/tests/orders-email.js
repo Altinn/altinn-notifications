@@ -8,7 +8,7 @@
     -e mpClientId={the id of an integration defined in maskinporten} \
     -e mpKid={the key id of the JSON web key used to sign the maskinporten token request} \
     -e encodedJwk={the encoded JSON web key used to sign the maskinporten token request} \
-    -e env={environment: at22, at23, at24, tt02, prod} \
+    -e altinn_env={environment: at22, at23, at24, tt02, prod} \
     -e emailRecipient={an email address to add as a notification recipient} \
     -e ninRecipient={a national identity number of a person to include as a notification recipient} \
     -e subscriptionKey={the subscription key with access to the automated tests product} \
@@ -143,7 +143,7 @@ function postEmailNotificationOrderWithNegativeConditionCheck(data) {
 
     let response = ordersApi.postEmailNotificationOrder(
         JSON.stringify(emailOrderRequest),
-        data.token, 
+        data.token,
         post_mail_order
     );
 
