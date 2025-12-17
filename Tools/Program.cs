@@ -10,6 +10,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Npgsql;
 using Tools;
+using Tools.EventGrid;
+using Tools.Kafka;
 
 
 var builder = Host.CreateApplicationBuilder(args);

@@ -1,4 +1,4 @@
-﻿namespace Tools;
+﻿namespace Tools.Kafka;
 
 /// <summary>
 /// This interface describes the minimum requirements for a Kafka producer 

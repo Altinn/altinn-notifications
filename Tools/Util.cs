@@ -2,6 +2,7 @@
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Persistence;
 using Npgsql;
+using Tools.Kafka;
 
 namespace Tools;
 

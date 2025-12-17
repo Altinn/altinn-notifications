@@ -1,9 +1,9 @@
-namespace Tools;
+namespace Tools.EventGrid;
 
 /// <summary>
 /// Interface for Event Grid client operations.
 /// </summary>
-public interface IEventGridClient : IDisposable
+public interface IEventGridClient
 {
     /// <summary>
     /// Posts an event to Event Grid.

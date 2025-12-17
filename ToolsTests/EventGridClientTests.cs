@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Options;
 using System.Net;
 using Tools;
+using Tools.EventGrid;
 
 namespace ToolsTests;
 

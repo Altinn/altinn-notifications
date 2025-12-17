@@ -1,10 +1,11 @@
 ﻿using Altinn.Notifications.Integrations.Configuration;
+using Altinn.Notifications.Integrations.Kafka;
 using Confluent.Kafka;
 using Confluent.Kafka.Admin;
 
 using Microsoft.Extensions.Logging;
 
-namespace Tools;
+namespace Tools.Kafka;
 
 /// <summary>
 /// Implementation of a generic Kafka producer.
@@ -26,7 +27,7 @@ public sealed class CommonProducer : ICommonProducer, IDisposable
 
         _sharedClientConfig = new SharedClientConfig(kafkaSettings);
 
-        var config = new ProducerConfig(_sharedClientConfig.ProducerConfig)
+        var config = new ProducerConfig()
         {
             Acks = Acks.All,
             EnableDeliveryReports = true,
@@ -88,7 +89,8 @@ public sealed class CommonProducer : ICommonProducer, IDisposable
 
     private void EnsureTopicsExist()
     {
-        using var adminClient = new AdminClientBuilder(_sharedClientConfig.AdminClientConfig).Build();
+        var adminClientConfig = new AdminClientConfig();
+        using var adminClient = new AdminClientBuilder(adminClientConfig).Build();
 
         // Delegate the core logic to the test-friendly overload that accepts delegates.
         EnsureTopicsExist(

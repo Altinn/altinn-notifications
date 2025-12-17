@@ -3,7 +3,7 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 
-namespace Tools;
+namespace Tools.EventGrid;
 
 /// <summary>
 /// Configuration settings for Event Grid client.
@@ -17,7 +17,7 @@ public class EventGridSettings
 /// <summary>
 /// HTTP client for posting events to Azure Event Grid.
 /// </summary>
-public class EventGridClient : IEventGridClient, IDisposable
+public class EventGridClient : IEventGridClient
 {
     private readonly HttpClient _httpClient;
     private readonly string _baseUrl;
@@ -72,8 +72,4 @@ public class EventGridClient : IEventGridClient, IDisposable
         }
     }
 
-    public void Dispose()
-    {
-        GC.SuppressFinalize(this);
-    }
 }

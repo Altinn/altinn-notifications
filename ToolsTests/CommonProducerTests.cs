@@ -1,10 +1,12 @@
 using Altinn.Notifications.Integrations.Configuration;
+using Altinn.Notifications.Integrations.Kafka;
 using Confluent.Kafka;
 using Confluent.Kafka.Admin;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Tools;
+using Tools.Kafka;
 
 namespace ToolsTests;
 
@@ -314,8 +316,9 @@ public class CommonProducerTests
         // Arrange
         var kafkaSettings = new KafkaSettings();
         var mockProducer = new Mock<IProducer<Null, string>>();
+        var sharedClientConfig = new SharedClientConfig(kafkaSettings);
         var logger = new NullLogger<CommonProducer>();
-        var cp = new CommonProducer(kafkaSettings, logger, mockProducer.Object, null);
+        var cp = new CommonProducer(kafkaSettings, logger, mockProducer.Object, sharedClientConfig);
 
         // Act & Assert - Should not throw
         var exception = Record.Exception(() => cp.Dispose());

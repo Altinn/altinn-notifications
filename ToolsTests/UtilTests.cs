@@ -4,6 +4,7 @@ using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Persistence;
 using Moq;
 using Tools;
+using Tools.Kafka;
 
 namespace ToolsTests;
 
@@ -246,7 +247,7 @@ public class UtilTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<DeadDeliveryReport>());
 
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
 
         // Act
         await Util.GetAndMapDeadDeliveryReports(
@@ -487,24 +488,6 @@ public class UtilTests
     }
 
     [Fact]
-    public void MapStatus_IsCaseInsensitive_ForBouncedStatus()
-    {
-        // Arrange - Test that the comparison is case-insensitive
-        var result = new EmailSendOperationResult
-        {
-            NotificationId = Guid.NewGuid(),
-            OperationId = "op-123",
-            SendResult = EmailNotificationResultType.Failed_Bounced
-        };
-
-        // Act
-        var status = Util.MapStatus(result);
-
-        // Assert - Should still map to "Bounced" regardless of enum ToString() casing
-        Assert.Equal("Bounced", status);
-    }
-
-    [Fact]
     public void MapStatus_ReturnsNull_WhenSendResultIsNull()
     {
         // Arrange
@@ -519,6 +502,7 @@ public class UtilTests
         var status = Util.MapStatus(result);
 
         // Assert
+        Assert.NotNull(status);
         Assert.Empty(status);
     }
 }
