@@ -12,6 +12,13 @@ namespace ToolsTests;
 
 public class CommonProducerTests
 {
+    private static readonly string[] _topicNames_t1_t2 = new[] { "t1", "t2" };
+    private static readonly string[] _topicNames_t1 = new[] { "t1" };
+    private static readonly string[] _topicNames_topic1_TOPC2 = new[] { "topic1", "TOPIC2" };
+    private static readonly string[] _topicNames_empty = Array.Empty<string>();
+    private static readonly string[] _topicNames_existing_topic = new[] { "existing-topic" };
+    private static readonly string[] _expected = ["t2", "t3"];
+
     [Fact]
     public async Task ProduceAsync_ReturnsTrue_WhenProducerPersists()
     {
@@ -123,7 +130,7 @@ public class CommonProducerTests
         var logger = new NullLogger<CommonProducer>();
         var cp = new CommonProducer(kafkaSettings, logger, mockProducer.Object, shared);
 
-        var existing = new[] { "t1", "t2" };
+        var existing = _topicNames_t1_t2;
         var created = new List<TopicSpecification>();
 
         // Act
@@ -145,7 +152,7 @@ public class CommonProducerTests
         var logger = new NullLogger<CommonProducer>();
         var cp = new CommonProducer(kafkaSettings, logger, mockProducer.Object, shared);
 
-        var existing = new[] { "t1" };
+        var existing = _topicNames_t1;
         var created = new List<TopicSpecification>();
 
         // Act
@@ -154,7 +161,7 @@ public class CommonProducerTests
         // Assert
         Assert.Equal(2, created.Count);
         var names = created.Select(c => c.Name).OrderBy(n => n).ToArray();
-        Assert.Equal(new[] { "t2", "t3" }, names);
+        Assert.Equal(_expected, names);
 
         // verify that created topic specs use values from SharedClientConfig.TopicSpecification
         foreach (var spec in created)
@@ -177,7 +184,7 @@ public class CommonProducerTests
         var logger = new NullLogger<CommonProducer>();
         var cp = new CommonProducer(kafkaSettings, logger, mockProducer.Object, shared);
 
-        var existing = new[] { "topic1", "TOPIC2" }; // Different casing
+        var existing = _topicNames_topic1_TOPC2; // Different casing
         var created = new List<TopicSpecification>();
 
         // Act
@@ -221,7 +228,7 @@ public class CommonProducerTests
         var mockLogger = new Mock<ILogger<CommonProducer>>();
         var cp = new CommonProducer(kafkaSettings, mockLogger.Object, mockProducer.Object, shared);
 
-        var existing = Array.Empty<string>();
+        var existing = _topicNames_empty;
         var created = new List<TopicSpecification>();
 
         // Act
@@ -250,7 +257,7 @@ public class CommonProducerTests
         var logger = new NullLogger<CommonProducer>();
         var cp = new CommonProducer(kafkaSettings, logger, mockProducer.Object, shared);
 
-        var existing = new[] { "existing-topic" };
+        var existing = _topicNames_existing_topic;
         var created = new List<TopicSpecification>();
 
         // Act
