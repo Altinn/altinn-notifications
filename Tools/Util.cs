@@ -26,8 +26,8 @@ public static class Util
 
     internal static async Task<List<EmailSendOperationResult>> GetAndMapDeadDeliveryReports(
         IDeadDeliveryReportRepository repository,
-        int fromId,
-        int toId,
+        long fromId,
+        long toId,
         Altinn.Notifications.Core.Enums.DeliveryReportChannel channel,
         CancellationToken cancellationToken)
     {
@@ -43,7 +43,7 @@ public static class Util
         return operationResults;
     }
 
-    internal static async Task<bool> IsEmailNotificationSucceeded(
+    internal static async Task<bool> IsEmailNotificationInSucceededState(
         NpgsqlDataSource dataSource,
         string operationId)
     {
