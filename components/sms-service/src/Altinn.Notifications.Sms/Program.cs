@@ -42,6 +42,12 @@ appBuilder.Services.AddSwaggerGen(c =>
 
 var app = appBuilder.Build();
 
+var smsDeliveryReportSettings = app.Services.GetRequiredService<SmsDeliveryReportSettings>();
+if (smsDeliveryReportSettings.LogDeliveryReportsToApplicationInsights)
+{
+    app.UseMiddleware<RequestBodyTelemetryMiddleware>();
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {

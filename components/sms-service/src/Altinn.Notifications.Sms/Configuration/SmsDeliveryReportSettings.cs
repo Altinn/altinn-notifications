@@ -9,6 +9,12 @@ public class SmsDeliveryReportSettings
     /// The user settings
     /// </summary> 
     public UserSettings UserSettings { get; set; } = new();
+
+    /// <summary>
+    /// Toggles whether delivery reports should be logged to Application Insights
+    /// using a custom middleware that intercepts the incoming HTTP requests.
+    /// </summary>
+    public bool LogDeliveryReportsToApplicationInsights { get; set; } = false;
 }
 
 /// <summary>

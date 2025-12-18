@@ -32,7 +32,7 @@ public class SmsClient : ISmsClient
     {
         var linkMobilitySms = CreateLinkMobilitySms(sms, TimeSpan.FromHours(DefaultTimeToLiveInHours));
 
-        return await SendToLinkMobilityAsync(linkMobilitySms);
+        return await SendToLinkMobilityAsync(sms, linkMobilitySms);
     }
 
     /// <inheritdoc />
@@ -40,7 +40,7 @@ public class SmsClient : ISmsClient
     {
         var linkMobilitySms = CreateLinkMobilitySms(sms, TimeSpan.FromSeconds(timeToLiveInSeconds));
 
-        return await SendToLinkMobilityAsync(linkMobilitySms);
+        return await SendToLinkMobilityAsync(sms, linkMobilitySms);
     }
 
     /// <summary>
@@ -60,6 +60,7 @@ public class SmsClient : ISmsClient
     /// <summary>
     /// Sends the SMS message using the LinkMobility gateway and handles the result.
     /// </summary>
+    /// <param name="sms">The core SMS message.</param>
     /// <param name="linkMobilitySms">The LinkMobility SMS message to send.</param>
     /// <returns>
     /// A <see cref="Result{T, TError}"/> that represents the outcome of the send operation:
@@ -68,7 +69,7 @@ public class SmsClient : ISmsClient
     ///   <item>On failure: a <see cref="SmsClientErrorResponse"/> providing details about the error.</item>
     /// </list>
     /// </returns>
-    private async Task<Result<string, SmsClientErrorResponse>> SendToLinkMobilityAsync(LinkMobilityModel.Sms linkMobilitySms)
+    private async Task<Result<string, SmsClientErrorResponse>> SendToLinkMobilityAsync(Core.Sending.Sms sms, LinkMobilityModel.Sms linkMobilitySms)
     {
         var result = await _client.SendAsync(linkMobilitySms);
 
@@ -86,7 +87,7 @@ public class SmsClient : ISmsClient
             };
         }
 
-        _logger.LogWarning("// SmsClient // SendAsync // Failed to send SMS. Status: {StatusText}", result.StatusText);
+        _logger.LogWarning("// SmsClient // SendAsync // Failed to send SMS. NotificationId: {NotificationId}. Status: {StatusText}", sms.NotificationId, result.StatusText);
 
         return new SmsClientErrorResponse
         {
