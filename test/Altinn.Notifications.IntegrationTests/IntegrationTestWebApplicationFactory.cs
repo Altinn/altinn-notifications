@@ -33,12 +33,15 @@ public class IntegrationTestWebApplicationFactory<TStartup> : WebApplicationFact
 
         builder.ConfigureTestServices(services =>
         {
-            var descriptor = services.Single(s => s.ImplementationType == typeof(PastDueOrdersConsumer));
-            services.Remove(descriptor);
-            descriptor = services.Single(s => s.ImplementationType == typeof(PastDueOrdersRetryConsumer));
-            services.Remove(descriptor);
-            descriptor = services.Single(s => s.ImplementationType == typeof(EmailStatusConsumer));
-            services.Remove(descriptor);
+            // Remove all Kafka consumers - controller tests don't need them
+            var consumersToRemove = services
+                .Where(s => s.ImplementationType?.IsAssignableTo(typeof(KafkaConsumerBase)) == true)
+                .ToList();
+
+            foreach (var descriptor in consumersToRemove)
+            {
+                services.Remove(descriptor);
+            }
         });
     }
 }

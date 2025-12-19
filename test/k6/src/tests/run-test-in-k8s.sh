@@ -124,7 +124,7 @@ fi
 
 if ! k6 archive $filename \
      -e API_VERSION="$API_VERSION" \
-     -e env="$API_ENVIRONMENT" \
+     -e altinn_env="$API_ENVIRONMENT" \
      -e NUMBER_OF_ENDUSERS="$NUMBER_OF_ENDUSERS" \
      -e TESTID=$testid $archive_args; then
     echo "Error: Failed to create k6 archive" >&2

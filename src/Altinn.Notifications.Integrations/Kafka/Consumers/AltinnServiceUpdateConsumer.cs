@@ -23,7 +23,7 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers
             IAltinnServiceUpdateService serviceUpdate,
             IOptions<KafkaSettings> settings,
             ILogger<AltinnServiceUpdateConsumer> logger)
-            : base(settings, logger, settings.Value.AltinnServiceUpdateTopicName)
+            : base(settings.Value.AltinnServiceUpdateTopicName, settings, logger)
         {
             _serviceUpdate = serviceUpdate;
             _logger = logger;
@@ -32,7 +32,7 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers
         /// <inheritdoc/>
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            return Task.Run(() => ConsumeMessage(ProcessServiceUpdate, RetryServiceUpdate, stoppingToken), stoppingToken);
+            return ConsumeMessageAsync(ProcessServiceUpdate, RetryServiceUpdate, stoppingToken);
         }
 
         private async Task ProcessServiceUpdate(string message)

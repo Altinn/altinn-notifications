@@ -18,7 +18,7 @@ jobs:
       checks: write
     services:
       postgres: # note that updating this image might break the pipeline if the agent doesn't support the new version
-        image: postgres:16@sha256:cf2a05fe40887b721e4b3dbac8fd32673c08292dcc8ba6b62b52b7f640433bd0
+        image: postgres:16@sha256:d4c3314b2dd74ff23cd6cd07e4d7e737cb6ef791c22a7cbd744cfbfb4815df72
         env:
           POSTGRES_USER: platform_notifications_admin
           POSTGRES_PASSWORD: Password
@@ -37,7 +37,7 @@ jobs:
           dotnet-version: |
             9.0.x
       - name: Set up Java
-        uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165 # v5.0.0
+        uses: actions/setup-java@f2beeb24e141e01a676f977032f5a29d81c9e27e # v5.1.0
         with:
           distribution: 'temurin'
           java-version: 17
@@ -66,6 +66,9 @@ jobs:
         uses: GuillaumeFalourd/wait-sleep-action@175a644657d8de245e4c6059d014941646186a84 # v1
         with:
           time: '30s'
+      - name: Increase inotify watchers for test execution # Necessary due to a temporary problem with too many file watchers (e.g. https://github.com/Altinn/altinn-notifications/actions/runs/20168791056)
+        run: |
+          sudo sysctl -w fs.inotify.max_user_instances=524288
       - name: Build & Test
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed to get PR information, if any

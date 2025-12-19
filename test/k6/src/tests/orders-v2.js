@@ -8,7 +8,7 @@
     -e mpClientId={the id of an integration defined in maskinporten} \
     -e mpKid={the key id of the JSON web key used to sign the maskinporten token request} \
     -e encodedJwk={the encoded JSON web key used to sign the maskinporten token request} \
-    -e env={environment: at22, at23, at24, tt02, prod} \
+    -e altinn_env={environment: at22, at23, at24, tt02, prod} \
     -e emailRecipient={an email address to add as a notification recipient} \
     -e ninRecipient={a national identity number of a person to include as a notification recipient} \
     -e smsRecipient={a mobile number to include as a notification recipient} \
@@ -186,7 +186,7 @@ function postSmsInstantNotificationOrderRequest(data) {
         JSON.stringify(data.smsOrderInstantRequest),
         data.token,
         post_sms_instant_order_v2
-    );  
+    );
 
     const success = check(response, {
         "POST SMS instant notification order request. Status is 201 Created": (r) => r.status === 201,
@@ -210,7 +210,7 @@ export function getShipmentStatus(data, shipmentId, label, type) {
     const response = futureOrdersApi.getShipment(shipmentId, data.token, label);
 
     switch (type) {
-        case "Email": 
+        case "Email":
             check(response, {
                 "GET shipment details for Email. Status is 200 OK": (r) => r.status === 200
             });
@@ -277,7 +277,7 @@ export default function runTests(data) {
 
     // checking shipment details for the SMS order
     getShipmentStatus(data, responseObject.notification.shipmentId, get_sms_shipment, "SMS");
-    
+
     // testing instant SMS notification order request
     response = postSmsInstantNotificationOrderRequest(data);
     getShipmentStatus(data, JSON.parse(response).notification.shipmentId, get_sms_instant_shipment, "SMSInstant");

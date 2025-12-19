@@ -271,7 +271,10 @@ public class OrderRepository : IOrderRepository
             if (await reader.ReadAsync())
             {
                 // Read order tracking (first row is always the order-level tracking)
-                var reference = await reader.GetFieldValueAsync<string>("reference");
+                string? reference = await reader.IsDBNullAsync(reader.GetOrdinal("reference"))
+                    ? null
+                    : await reader.GetFieldValueAsync<string>("reference");
+
                 var statusValue = await reader.GetFieldValueAsync<string>("status");
                 var lastUpdate = await reader.GetFieldValueAsync<DateTime>("last_update");
                 var type = await reader.GetFieldValueAsync<string>("type");
@@ -307,14 +310,14 @@ public class OrderRepository : IOrderRepository
     }
 
     /// <inheritdoc/>
-    public async Task<List<NotificationOrder>> GetPastDueOrdersAndSetProcessingState()
+    public async Task<List<NotificationOrder>> GetPastDueOrdersAndSetProcessingState(CancellationToken cancellationToken = default)
     {
-        List<NotificationOrder> searchResult = new();
+        List<NotificationOrder> searchResult = [];
 
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getOrdersPastSendTimeUpdateStatus);
-        await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync())
+        await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken))
         {
-            while (await reader.ReadAsync())
+            while (await reader.ReadAsync(cancellationToken))
             {
                 NotificationOrder notificationOrder = await reader.GetFieldValueAsync<NotificationOrder>(0);
                 searchResult.Add(notificationOrder);
