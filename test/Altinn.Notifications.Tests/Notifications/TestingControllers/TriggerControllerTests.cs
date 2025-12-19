@@ -38,7 +38,8 @@ public class TriggerControllerTests
             _emailPublishTaskQueueMock.Object,
             _notificationScheduleMock.Object,
             _orderProcessingServiceMock.Object,
-            [_emailNotificationServiceMock.Object, _smsNotificationServiceMock.Object]);
+            _smsNotificationServiceMock.Object,
+            _emailNotificationServiceMock.Object);
     }
 
     [Fact]
