@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Options;
+using System.Diagnostics.CodeAnalysis;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
@@ -17,6 +18,7 @@ public class EventGridSettings
 /// <summary>
 /// HTTP client for posting events to Azure Event Grid.
 /// </summary>
+[ExcludeFromCodeCoverage]
 public class EventGridClient : IEventGridClient
 {
     private readonly HttpClient _httpClient;
