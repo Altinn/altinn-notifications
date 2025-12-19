@@ -20,7 +20,8 @@ public class TriggerController : ControllerBase
     private readonly IEmailPublishTaskQueue _emailPublishTaskQueue;
     private readonly INotificationScheduleService _scheduleService;
     private readonly IOrderProcessingService _orderProcessingService;
-    private readonly IEnumerable<INotificationService> _notificationServices;
+    private readonly ISmsNotificationService _smsNotificationService;
+    private readonly IEmailNotificationService _emailNotificationService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TriggerController"/> class.
@@ -32,7 +33,8 @@ public class TriggerController : ControllerBase
         IEmailPublishTaskQueue emailPublishingTaskQueue,
         INotificationScheduleService scheduleService,
         IOrderProcessingService orderProcessingService,
-        IEnumerable<INotificationService> notificationServices)
+        ISmsNotificationService smsNotificationService,
+        IEmailNotificationService emailNotificationService)
     {
         _logger = logger;
         _scheduleService = scheduleService;
@@ -40,7 +42,8 @@ public class TriggerController : ControllerBase
         _smsPublishTaskQueue = smsPublishTaskQueue;
         _emailPublishTaskQueue = emailPublishingTaskQueue;
         _orderProcessingService = orderProcessingService;
-        _notificationServices = notificationServices;
+        _smsNotificationService = smsNotificationService;
+        _emailNotificationService = emailNotificationService;
     }
 
     /// <summary>
@@ -83,11 +86,8 @@ public class TriggerController : ControllerBase
     {
         try
         {
-            // This will call TerminateExpiredNotifications on all registered notification services, currently sms and email
-            foreach (var service in _notificationServices)
-            {
-                await service.TerminateExpiredNotifications();
-            }
+            await _emailNotificationService.TerminateExpiredNotifications();
+            await _smsNotificationService.TerminateExpiredNotifications();
 
             return Ok();
         }
