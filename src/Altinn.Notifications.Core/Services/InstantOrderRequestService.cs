@@ -59,7 +59,7 @@ public class InstantOrderRequestService : IInstantOrderRequestService
     }
 
     /// <inheritdoc/>
-    public async Task<InstantNotificationOrderTracking?> PersistInstantSmsNotificationAsync(InstantNotificationOrder instantNotificationOrder, CancellationToken cancellationToken = default)
+    public async Task<InstantNotificationOrderTracking> PersistInstantSmsNotificationAsync(InstantNotificationOrder instantNotificationOrder, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -79,30 +79,28 @@ public class InstantOrderRequestService : IInstantOrderRequestService
 
         // Create the tracking information for the order.
         var trackingInformation = await _orderRepository.Create(instantNotificationOrder, notificationOrder, smsNotification, expirationDateTime, messagesCount, cancellationToken);
-        if (trackingInformation != null)
-        {
-            _ = Task.Run(
-                async () =>
+        
+        _ = Task.Run(
+            async () =>
+            {
+                var shortMessage = new ShortMessage
                 {
-                    var shortMessage = new ShortMessage
-                    {
-                        Message = messageContent.Message,
-                        NotificationId = smsNotification.Id,
-                        TimeToLive = deliveryDetails.TimeToLiveInSeconds,
-                        Recipient = smsNotification.Recipient.MobileNumber,
-                        Sender = senderIdentifier
-                    };
+                    Message = messageContent.Message,
+                    NotificationId = smsNotification.Id,
+                    TimeToLive = deliveryDetails.TimeToLiveInSeconds,
+                    Recipient = smsNotification.Recipient.MobileNumber,
+                    Sender = senderIdentifier
+                };
 
-                    await _shortMessageServiceClient.SendAsync(shortMessage);
-                },
-                CancellationToken.None);
-        }
+                await _shortMessageServiceClient.SendAsync(shortMessage);
+            },
+            CancellationToken.None);
 
         return trackingInformation;
     }
 
     /// <inheritdoc/>
-    public async Task<InstantNotificationOrderTracking?> PersistInstantSmsNotificationAsync(InstantSmsNotificationOrder instantSmsNotificationOrder, CancellationToken cancellationToken = default)
+    public async Task<InstantNotificationOrderTracking> PersistInstantSmsNotificationAsync(InstantSmsNotificationOrder instantSmsNotificationOrder, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -122,24 +120,22 @@ public class InstantOrderRequestService : IInstantOrderRequestService
 
         // Create the tracking information for the order.
         var trackingInformation = await _orderRepository.Create(instantSmsNotificationOrder, notificationOrder, smsNotification, expirationDateTime, messagesCount, cancellationToken);
-        if (trackingInformation != null)
-        {
-            _ = Task.Run(
-                async () =>
+        
+        _ = Task.Run(
+            async () =>
+            {
+                var shortMessage = new ShortMessage
                 {
-                    var shortMessage = new ShortMessage
-                    {
-                        Message = messageContent.Message,
-                        NotificationId = smsNotification.Id,
-                        TimeToLive = deliveryDetails.TimeToLiveInSeconds,
-                        Recipient = smsNotification.Recipient.MobileNumber,
-                        Sender = senderIdentifier
-                    };
+                    Message = messageContent.Message,
+                    NotificationId = smsNotification.Id,
+                    TimeToLive = deliveryDetails.TimeToLiveInSeconds,
+                    Recipient = smsNotification.Recipient.MobileNumber,
+                    Sender = senderIdentifier
+                };
 
-                    await _shortMessageServiceClient.SendAsync(shortMessage);
-                },
-                CancellationToken.None);
-        }
+                await _shortMessageServiceClient.SendAsync(shortMessage);
+            },
+            CancellationToken.None);
 
         return trackingInformation;
     }
@@ -243,7 +239,7 @@ public class InstantOrderRequestService : IInstantOrderRequestService
     }
 
     /// <inheritdoc/>
-    public async Task<InstantNotificationOrderTracking?> PersistInstantEmailNotificationAsync(InstantEmailNotificationOrder instantEmailNotificationOrder, CancellationToken cancellationToken = default)
+    public async Task<InstantNotificationOrderTracking> PersistInstantEmailNotificationAsync(InstantEmailNotificationOrder instantEmailNotificationOrder, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -261,25 +257,23 @@ public class InstantOrderRequestService : IInstantOrderRequestService
 
         // Create the tracking information for the order.
         var trackingInformation = await _orderRepository.Create(instantEmailNotificationOrder, notificationOrder, emailNotification, emailExpiryDateTime, cancellationToken);
-        if (trackingInformation != null)
-        {
-            _ = Task.Run(
-                async () =>
+        
+        _ = Task.Run(
+            async () =>
+            {
+                var instantEmail = new InstantEmail
                 {
-                    var instantEmail = new InstantEmail
-                    {
-                        Subject = emailContent.Subject,
-                        Body = emailContent.Body,
-                        ContentType = emailContent.ContentType,
-                        Sender = senderEmailAddress,
-                        Recipient = emailNotification.Recipient.ToAddress,
-                        NotificationId = emailNotification.Id
-                    };
+                    Subject = emailContent.Subject,
+                    Body = emailContent.Body,
+                    ContentType = emailContent.ContentType,
+                    Sender = senderEmailAddress,
+                    Recipient = emailNotification.Recipient.ToAddress,
+                    NotificationId = emailNotification.Id
+                };
 
-                    await _instantEmailServiceClient.SendAsync(instantEmail);
-                },
-                CancellationToken.None);
-        }
+                await _instantEmailServiceClient.SendAsync(instantEmail);
+            },
+            CancellationToken.None);
 
         return trackingInformation;
     }

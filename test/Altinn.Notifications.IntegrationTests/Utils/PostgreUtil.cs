@@ -129,7 +129,7 @@ public static class PostgreUtil
         return o;
     }
 
-    public static async Task<(NotificationOrder Order, SmsNotification SmsNotification)> PopulateDBWithOrderAndSmsNotification(string? sendersReference = null, SendingTimePolicy? sendingTimePolicy = null, bool simulateCronJob = false, bool simulateConsumers = false, bool forceSendersReferenceToBeNull = false)
+    public static async Task<(NotificationOrder Order, SmsNotification SmsNotification)> PopulateDBWithOrderAndSmsNotification(string? sendersReference = null, SendingTimePolicy? sendingTimePolicy = null, bool simulateCronJob = false, bool simulateConsumers = false, bool forceSendersReferenceToBeNull = false, SmsNotificationResultType? resultType = null)
     {
         (NotificationOrder order, SmsNotification smsNotification) = TestdataUtil.GetOrderAndSmsNotification(sendingTimePolicy);
         var serviceList = ServiceUtil.GetServices(new List<Type>() { typeof(IOrderRepository), typeof(ISmsNotificationRepository) });
@@ -146,6 +146,11 @@ public static class PostgreUtil
         {
             // Force the senders reference to be null, even if a value is provided
             order.SendersReference = null;
+        }
+
+        if (resultType.HasValue)
+        {
+            smsNotification.SendResult = new NotificationResult<SmsNotificationResultType>(resultType.Value, DateTime.UtcNow);
         }
 
         /*
@@ -339,6 +344,22 @@ public static class PostgreUtil
         return result;
     }
 
+    public static async Task<string?> GetStatusFeedOrderStatusJson(Guid orderId)
+    {
+        var sql = @"SELECT s.orderstatus::text 
+                    FROM notifications.statusfeed s
+                    INNER JOIN notifications.orders o ON o._id = s.orderid
+                    WHERE o.alternateid = @orderId
+                    LIMIT 1";
+
+        NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices(new List<Type>() { typeof(NpgsqlDataSource) })[0]!;
+        await using NpgsqlCommand pgcom = dataSource.CreateCommand(sql);
+        pgcom.Parameters.AddWithValue("orderId", orderId);
+
+        var result = await pgcom.ExecuteScalarAsync();
+        return result?.ToString();
+    }
+
     public static async Task RunSql(string query)
     {
         NpgsqlDataSource dataSource = (NpgsqlDataSource)ServiceUtil.GetServices([typeof(NpgsqlDataSource)])[0]!;
@@ -403,7 +424,38 @@ public static class PostgreUtil
             throw new ArgumentException("Type T must be either EmailNotification or SmsNotification");
         }
     }
-    
+
+    public static async Task UpdateNotificationResult<T>(Guid orderId, string result)
+        where T : class
+    {
+        if (typeof(T) == typeof(SmsNotification))
+        {
+            string sql = @"
+                UPDATE notifications.smsnotifications 
+                SET result = @result::smsnotificationresulttype 
+                WHERE _orderid = (SELECT _id FROM notifications.orders WHERE alternateid = @orderId)";
+            await RunSql(
+                sql,
+                new NpgsqlParameter("@result", result),
+                new NpgsqlParameter("@orderId", orderId));
+        }
+        else if (typeof(T) == typeof(EmailNotification))
+        {
+            string sql = @"
+                UPDATE notifications.emailnotifications 
+                SET result = @result::emailnotificationresulttype 
+                WHERE _orderid = (SELECT _id FROM notifications.orders WHERE alternateid = @orderId)";
+            await RunSql(
+                sql,
+                new NpgsqlParameter("@result", result),
+                new NpgsqlParameter("@orderId", orderId));
+        }
+        else
+        {
+            throw new ArgumentException("Type T must be either EmailNotification or SmsNotification");
+        }
+    }
+
     private static async Task<long?> GetDeadDeliveryReportIdByJsonField(string fieldName, string fieldValue)
     {
         // Validate fieldName to prevent SQL injection

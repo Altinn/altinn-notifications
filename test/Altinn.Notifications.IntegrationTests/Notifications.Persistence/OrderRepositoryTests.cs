@@ -195,6 +195,46 @@ public class OrderRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task SetProcessingStatus_SetsProcessedTimestamp()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil
+            .GetServices(new List<Type>() { typeof(IOrderRepository) })
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        NotificationOrder order = new()
+        {
+            Id = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Creator = new("test"),
+            Templates = new List<INotificationTemplate>()
+            {
+                new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)
+            }
+        };
+
+        _orderIdsToDelete.Add(order.Id);
+        await repo.Create(order);
+
+        // Record time before setting status
+        DateTime beforeStatusUpdate = DateTime.UtcNow;
+
+        // Act
+        await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
+
+        // Assert - verify processed timestamp was set
+        string sql = $@"SELECT processed
+                            FROM notifications.orders
+                            WHERE alternateid = '{order.Id}'";
+
+        DateTime? processedTimestamp = await PostgreUtil.RunSqlReturnOutput<DateTime?>(sql);
+
+        Assert.NotNull(processedTimestamp);
+        Assert.True(processedTimestamp.Value >= beforeStatusUpdate, "Processed timestamp should be set to current time or later");
+        Assert.True(processedTimestamp.Value <= DateTime.UtcNow.AddSeconds(5), "Processed timestamp should be close to current time");
+    }
+
+    [Fact]
     public async Task InsertStatusFeedForOrder_WithSendConditionNotMetOrder_InsertsStatusFeedCorrectly()
     {
         // Arrange
@@ -208,6 +248,50 @@ public class OrderRepositoryTests : IAsyncLifetime
             Created = DateTime.UtcNow,
             Creator = new("test"),
             SendersReference = Guid.NewGuid().ToString(),
+            Templates = new List<INotificationTemplate>()
+            {
+                new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)
+            },
+            ConditionEndpoint = new Uri("https://vg.no/condition")
+        };
+
+        _orderIdsToDelete.Add(order.Id);
+        await repo.Create(order);
+        await repo.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
+
+        // Act
+        await repo.InsertStatusFeedForOrder(order.Id);
+
+        // Assert
+        int statusFeedCount = await PostgreUtil.SelectStatusFeedEntryCount(order.Id);
+        Assert.Equal(1, statusFeedCount);
+
+        // Additional verification: check that status feed contains SendConditionNotMet status and empty recipients
+        string jsonSql = $@"select sf.orderstatus
+                                from notifications.statusfeed sf
+                                join notifications.orders o on sf.orderid = o._id
+                                where o.alternateid = '{order.Id}'";
+
+        string orderStatusJson = await PostgreUtil.RunSqlReturnOutput<string>(jsonSql);
+        Assert.NotNull(orderStatusJson);
+        Assert.Contains("\"Recipients\": []", orderStatusJson);
+        Assert.Contains("\"Status\": \"Order_SendConditionNotMet\"", orderStatusJson);
+    }
+
+    [Fact]
+    public async Task InsertStatusFeedForOrder_WithSendConditionNotMetOrderAndSendersRefNull_InsertsStatusFeedCorrectly()
+    {
+        // Arrange
+        OrderRepository repo = (OrderRepository)ServiceUtil
+            .GetServices(new List<Type>() { typeof(IOrderRepository) })
+            .First(i => i.GetType() == typeof(OrderRepository));
+
+        NotificationOrder order = new()
+        {
+            Id = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Creator = new("test"),
+            SendersReference = null,
             Templates = new List<INotificationTemplate>()
             {
                 new EmailTemplate("noreply@altinn.no", "Subject", "Body", EmailContentType.Plain)

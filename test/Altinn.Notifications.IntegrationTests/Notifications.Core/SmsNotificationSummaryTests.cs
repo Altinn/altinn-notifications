@@ -34,7 +34,7 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Core
         }
 
         [Fact]
-        public async Task GetSmsSummary_SingleNeweNotification_ReturnsSummary()
+        public async Task GetSmsSummary_SingleNewNotification_ReturnsSummary()
         {
             // Arrange
             (NotificationOrder order, SmsNotification notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification();
@@ -57,6 +57,106 @@ namespace Altinn.Notifications.IntegrationTests.Notifications.Core
                    Assert.NotEmpty(actualNotification.Recipient.MobileNumber);
                    Assert.Equal(notification.Id, actualNotification.Id);
                    Assert.Equivalent(notification.Recipient, actualNotification.Recipient);
+                   Assert.False(actualNotification.Succeeded);
+                   return true;
+               },
+               error =>
+               {
+                   throw new Exception("Expected a summary, but got an error");
+               });
+        }
+
+        [Fact]
+        public async Task GetSmsSummary_SingleAcceptedNotification_ReturnsSummary()
+        {
+            // Arrange
+            (NotificationOrder order, SmsNotification notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(resultType: SmsNotificationResultType.Accepted);
+            _orderIdsToDelete.Add(order.Id);
+
+            SmsNotificationSummaryService service = (SmsNotificationSummaryService)ServiceUtil
+             .GetServices(new List<Type>() { typeof(ISmsNotificationSummaryService) })
+             .First(i => i.GetType() == typeof(SmsNotificationSummaryService));
+
+            // Act
+            Result<SmsNotificationSummary, ServiceError> result = await service.GetSummary(order.Id, "ttd");
+
+            // Assert
+            result.Match(
+               actualSummary =>
+               {
+                   Assert.Single(actualSummary.Notifications);
+                   var actualNotification = actualSummary.Notifications[0];
+                   Assert.Equal(SmsNotificationResultType.Accepted, actualNotification.ResultStatus.Result);
+                   Assert.NotEmpty(actualNotification.Recipient.MobileNumber);
+                   Assert.Equal(notification.Id, actualNotification.Id);
+                   Assert.Equivalent(notification.Recipient, actualNotification.Recipient);
+                   Assert.True(actualNotification.Succeeded);
+                   return true;
+               },
+               error =>
+               {
+                   throw new Exception("Expected a summary, but got an error");
+               });
+        }
+
+        [Fact]
+        public async Task GetSmsSummary_SingleDeliveredNotification_ReturnsSummary()
+        {
+            // Arrange
+            (NotificationOrder order, SmsNotification notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(resultType: SmsNotificationResultType.Delivered);
+            _orderIdsToDelete.Add(order.Id);
+
+            SmsNotificationSummaryService service = (SmsNotificationSummaryService)ServiceUtil
+             .GetServices(new List<Type>() { typeof(ISmsNotificationSummaryService) })
+             .First(i => i.GetType() == typeof(SmsNotificationSummaryService));
+
+            // Act
+            Result<SmsNotificationSummary, ServiceError> result = await service.GetSummary(order.Id, "ttd");
+
+            // Assert
+            result.Match(
+               actualSummary =>
+               {
+                   Assert.Single(actualSummary.Notifications);
+                   var actualNotification = actualSummary.Notifications[0];
+                   Assert.Equal(SmsNotificationResultType.Delivered, actualNotification.ResultStatus.Result);
+                   Assert.NotEmpty(actualNotification.Recipient.MobileNumber);
+                   Assert.Equal(notification.Id, actualNotification.Id);
+                   Assert.Equivalent(notification.Recipient, actualNotification.Recipient);
+                   Assert.True(actualNotification.Succeeded);
+                   return true;
+               },
+               error =>
+               {
+                   throw new Exception("Expected a summary, but got an error");
+               });
+        }
+
+        [Fact]
+        public async Task GetSmsSummary_SingleFailedNotification_ReturnsSummary()
+        {
+            // Arrange
+            (NotificationOrder order, SmsNotification notification) = await PostgreUtil.PopulateDBWithOrderAndSmsNotification(resultType: SmsNotificationResultType.Failed);
+            _orderIdsToDelete.Add(order.Id);
+
+            SmsNotificationSummaryService service = (SmsNotificationSummaryService)ServiceUtil
+             .GetServices(new List<Type>() { typeof(ISmsNotificationSummaryService) })
+             .First(i => i.GetType() == typeof(SmsNotificationSummaryService));
+
+            // Act
+            Result<SmsNotificationSummary, ServiceError> result = await service.GetSummary(order.Id, "ttd");
+
+            // Assert
+            result.Match(
+               actualSummary =>
+               {
+                   Assert.Single(actualSummary.Notifications);
+                   var actualNotification = actualSummary.Notifications[0];
+                   Assert.Equal(SmsNotificationResultType.Failed, actualNotification.ResultStatus.Result);
+                   Assert.NotEmpty(actualNotification.Recipient.MobileNumber);
+                   Assert.Equal(notification.Id, actualNotification.Id);
+                   Assert.Equivalent(notification.Recipient, actualNotification.Recipient);
+                   Assert.False(actualNotification.Succeeded);
                    return true;
                },
                error =>
