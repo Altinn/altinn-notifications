@@ -662,15 +662,4 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers
             return [.. processedMessageOffsets];
         }
     }
-
-    /// <summary>
-    /// Commits the Kafka offset for a successfully processed message.
-    /// This tells Kafka the message has been handled and won't be reprocessed.
-    /// </summary>
-    /// <param name="consumeResult">The consume result containing the offset to commit.</param>
-    private void CommitOffset(ConsumeResult<string, string> consumeResult)
-    {
-        _consumer.Commit(consumeResult);
-        _consumer.StoreOffset(consumeResult);
-    }
 }
