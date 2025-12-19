@@ -14,7 +14,9 @@ using Altinn.Notifications.Integrations.Kafka.Consumers;
 using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Mappers;
 using Altinn.Notifications.Persistence.Repository;
+
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -108,6 +110,98 @@ public class PastDueOrdersConsumerTests : IDisposable
         var lifecycleStatus = ProcessingLifecycleMapper.GetSmsLifecycleStage(status.ToString());
         await AssertStatusFeedEntryCreated(order.Id, lifecycleStatus);
         await consumerService.StopAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task RetryOrder_WhenProducerReturnsfalse_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var logger = new Mock<ILogger<PastDueOrdersConsumer>>();
+        var kafkaProducer = new Mock<IKafkaProducer>(MockBehavior.Strict);
+        var orderProcessingService = new Mock<IOrderProcessingService>();
+        
+        var pastDueOrdersRetryTopicName = Guid.NewGuid().ToString();
+        await KafkaUtil.CreateTopicAsync(_pastDueOrdersTopicName);
+        await KafkaUtil.CreateTopicAsync(pastDueOrdersRetryTopicName);
+
+        try
+        {
+            var kafkaSettings = Options.Create(new Altinn.Notifications.Integrations.Configuration.KafkaSettings
+            {
+                PastDueOrdersTopicName = _pastDueOrdersTopicName,
+                PastDueOrdersRetryTopicName = pastDueOrdersRetryTopicName,
+                BrokerAddress = "localhost:9092",
+                Consumer = new Altinn.Notifications.Integrations.Configuration.ConsumerSettings 
+                { 
+                    GroupId = $"altinn-notifications-{Guid.NewGuid():N}" 
+                },
+                Admin = new Altinn.Notifications.Integrations.Configuration.AdminSettings
+                {
+                    TopicList = [_pastDueOrdersTopicName, pastDueOrdersRetryTopicName]
+                }
+            });
+
+            // Setup order processing to throw an exception, which will trigger the retry mechanism
+            orderProcessingService
+                .Setup(s => s.ProcessOrder(It.IsAny<NotificationOrder>()))
+                .ThrowsAsync(new Exception("Simulated processing failure"));
+
+            // Setup producer to return false on retry (this simulates the retry publish failure)
+            kafkaProducer
+                .Setup(p => p.ProduceAsync(pastDueOrdersRetryTopicName, It.IsAny<string>()))
+                .ReturnsAsync(false);
+
+            using var pastDueOrdersConsumer = new PastDueOrdersConsumer(
+                kafkaProducer.Object,
+                kafkaSettings,
+                logger.Object,
+                orderProcessingService.Object);
+
+            var order = await PostgreUtil.PopulateDBWithEmailOrder(sendersReference: _sendersRef);
+            var orderMessage = order.Serialize();
+
+            // Act
+            await pastDueOrdersConsumer.StartAsync(CancellationToken.None);
+            await KafkaUtil.PublishMessageOnTopic(_pastDueOrdersTopicName, orderMessage);
+
+            // Assert
+            await IntegrationTestUtil.EventuallyAsync(
+                () =>
+                {
+                    try
+                    {
+                        // Verify ProcessOrder was called once (and threw exception)
+                        orderProcessingService.Verify(s => s.ProcessOrder(It.IsAny<NotificationOrder>()), Times.Once);
+
+                        // Verify producer was called once with the retry message and returned false
+                        kafkaProducer.Verify(p => p.ProduceAsync(pastDueOrdersRetryTopicName, orderMessage), Times.Once);
+
+                        // Verify InvalidOperationException was logged
+                        logger.Verify(
+                            l => l.Log(
+                                LogLevel.Error,
+                                It.IsAny<EventId>(),
+                                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Failed to republish message to topic") && 
+                                                               v.ToString()!.Contains(pastDueOrdersRetryTopicName)),
+                                It.IsAny<InvalidOperationException>(),
+                                It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+                            Times.Once);
+
+                        return true;
+                    }
+                    catch
+                    {
+                        return false;
+                    }
+                },
+                TimeSpan.FromSeconds(15));
+
+            await pastDueOrdersConsumer.StopAsync(CancellationToken.None);
+        }
+        finally
+        {
+            await KafkaUtil.DeleteTopicAsync(pastDueOrdersRetryTopicName);
+        }
     }
 
     private async Task<(NotificationOrder Order, SmsNotification Notification)> SetupOrderWithFailedSmsRecipient(SmsNotificationResultType status)
