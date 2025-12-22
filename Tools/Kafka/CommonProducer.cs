@@ -43,7 +43,7 @@ public sealed class CommonProducer : ICommonProducer, IDisposable
 
     /// <summary>
     /// Constructor for injecting a mock producer for unit testing
-    /// </summary>s
+    /// </summary>
     internal CommonProducer(KafkaSettings kafkaSettings, ILogger<CommonProducer> logger, IProducer<Null, string> producer, SharedClientConfig sharedClientConfig)
     {
         _kafkaSettings = kafkaSettings;
