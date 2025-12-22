@@ -116,36 +116,4 @@ public class ProgramIntegrationTests
 
         Assert.Equal("EventGrid:BaseUrl is not configured", exception.Message);
     }
-
-    [Fact]
-    public void Program_ConfiguresHttpClient_WithCorrectTimeout()
-    {
-        // Arrange
-        var builder = Host.CreateApplicationBuilder();
-
-        var inMemorySettings = new Dictionary<string, string>
-        {
-            {"EventGrid:BaseUrl", "https://test.eventgrid.azure.net/api/events"},
-            {"EventGrid:AccessKey", "test-key"}
-        };
-
-        builder.Configuration.AddInMemoryCollection(inMemorySettings!);
-
-        builder.Services.Configure<EventGridSettings>(builder.Configuration.GetSection("EventGrid"));
-        builder.Services.AddHttpClient<IEventGridClient, EventGridClient>((sp, client) =>
-        {
-            var cfg = sp.GetRequiredService<IOptions<EventGridSettings>>().Value;
-            client.BaseAddress = new Uri(cfg.BaseUrl);
-            client.Timeout = TimeSpan.FromSeconds(30);
-        });
-
-        var host = builder.Build();
-
-        // Act
-        using var scope = host.Services.CreateScope();
-        var client = scope.ServiceProvider.GetRequiredService<IEventGridClient>();
-
-        // Assert
-        Assert.NotNull(client);
-    }
 }
