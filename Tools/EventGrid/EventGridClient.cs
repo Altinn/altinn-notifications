@@ -31,7 +31,8 @@ public class EventGridClient : IEventGridClient
         var cfg = settings?.Value ?? throw new ArgumentNullException(nameof(settings));
         if (string.IsNullOrWhiteSpace(cfg.BaseUrl)) throw new ArgumentException("BaseUrl must be configured", nameof(settings));
         _baseUrl = cfg.BaseUrl;
-        _accessKey = cfg.AccessKey ?? throw new ArgumentNullException(nameof(settings));
+        if (string.IsNullOrWhiteSpace(cfg.AccessKey)) throw new ArgumentException("AccessKey must be configured", nameof(settings));
+        _accessKey = cfg.AccessKey;
     }
 
     /// <summary>
