@@ -56,10 +56,23 @@ internal static class EventGridUtil
 
     internal static async Task PostEventToGridAsync(IEventGridClient eventGridClient, EventGridEvent eventGridEvent, dynamic result)
     {
-        var eventArray = new[] { eventGridEvent };
-
-        await eventGridClient.PostEventsAsync(eventArray, CancellationToken.None);
-
-        Console.WriteLine($"✓ Event Grid event posted for notification {result.NotificationId} with OperationId {result.OperationId}");
+        try
+        {
+            var eventArray = new[] { eventGridEvent };
+            var (success, responseBody) = await eventGridClient.PostEventsAsync(eventArray, CancellationToken.None);
+            
+            if (success)
+            {
+                Console.WriteLine($"✓ Event Grid event posted for notification {result.NotificationId} with OperationId {result.OperationId}");
+            }
+            else
+            {
+                Console.WriteLine($"✗ Failed to post Event Grid event for notification {result.NotificationId} with OperationId {result.OperationId}: {responseBody}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"✗ Error posting Event Grid event for notification {result.NotificationId} with OperationId {result.OperationId}: {ex.Message}");
+        }
     }
 }
