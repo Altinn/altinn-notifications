@@ -10,9 +10,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Npgsql;
+using System.Diagnostics.CodeAnalysis;
 using Tools;
 using Tools.EventGrid;
 using Tools.Kafka;
+
+[assembly: ExcludeFromCodeCoverage]
 
 var builder = Host.CreateApplicationBuilder(args);
 
