@@ -27,7 +27,7 @@ public sealed class CommonProducer : ICommonProducer, IDisposable
 
         _sharedClientConfig = new SharedClientConfig(kafkaSettings);
 
-        var config = new ProducerConfig()
+        var config = new ProducerConfig(_sharedClientConfig.ProducerSettings)
         {
             Acks = Acks.All,
             EnableDeliveryReports = true,
@@ -89,7 +89,7 @@ public sealed class CommonProducer : ICommonProducer, IDisposable
 
     private void EnsureTopicsExist()
     {
-        var adminClientConfig = new AdminClientConfig();
+        var adminClientConfig = new AdminClientConfig(_sharedClientConfig.AdminClientSettings);
         using var adminClient = new AdminClientBuilder(adminClientConfig).Build();
 
         // Delegate the core logic to the test-friendly overload that accepts delegates.
