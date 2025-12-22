@@ -113,7 +113,7 @@ public class PastDueOrdersConsumerTests : IDisposable
     }
 
     [Fact]
-    public async Task RetryOrder_WhenProducerReturnsfalse_ThrowsInvalidOperationException()
+    public async Task RetryOrder_WhenProducerReturnsFalse_ThrowsInvalidOperationException()
     {
         // Arrange
         var logger = new Mock<ILogger<PastDueOrdersConsumer>>();
