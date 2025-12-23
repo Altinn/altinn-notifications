@@ -2,6 +2,7 @@
 
 using Altinn.Notifications.Core;
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Services.Interfaces;
@@ -15,7 +16,7 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers;
 /// <summary>
 /// Serves as a base class for implementing consumers that handle status updates with retry logic.
 /// </summary>
-public abstract class NotificationStatusRetryConsumerBase : KafkaConsumerBase<NotificationStatusRetryConsumerBase>
+public abstract class NotificationStatusRetryConsumerBase : KafkaConsumerBase
 {
     private readonly ILogger _logger;
     private readonly IKafkaProducer _kafkaProducer;
@@ -32,7 +33,7 @@ public abstract class NotificationStatusRetryConsumerBase : KafkaConsumerBase<No
         IOptions<KafkaSettings> kafkaSettings,
         IDeadDeliveryReportService deadDeliveryReportService,
         ILogger<NotificationStatusRetryConsumerBase> logger)
-        : base(kafkaSettings, logger, topicName)
+        : base(topicName, kafkaSettings, logger)
     {
         _logger = logger;
         _kafkaProducer = kafkaProducer;
@@ -49,7 +50,7 @@ public abstract class NotificationStatusRetryConsumerBase : KafkaConsumerBase<No
     /// <inheritdoc/>
     protected override sealed Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        return Task.Run(() => ConsumeMessage(ProcessStatus, RetryStatus, stoppingToken), stoppingToken);
+        return ConsumeMessageAsync(ProcessStatus, RetryStatus, stoppingToken);
     }
 
     /// <summary>
@@ -131,12 +132,14 @@ public abstract class NotificationStatusRetryConsumerBase : KafkaConsumerBase<No
     {
         var deadDeliveryReport = new DeadDeliveryReport
         {
-            Resolved = false,
             Channel = Channel,
             FirstSeen = updateStatusRetryMessage.FirstSeen,
-            AttemptCount = updateStatusRetryMessage.Attempts,
             LastAttempt = updateStatusRetryMessage.LastAttempt,
-            DeliveryReport = updateStatusRetryMessage.SendOperationResult ?? string.Empty
+            AttemptCount = updateStatusRetryMessage.Attempts,
+            Resolved = false,
+            DeliveryReport = updateStatusRetryMessage.SendOperationResult ?? string.Empty,
+            Reason = "RETRY_THRESHOLD_EXCEEDED",
+            Message = "Retry timeout exceeded"
         };
 
         await _deadDeliveryReportService.InsertAsync(deadDeliveryReport);
@@ -153,12 +156,46 @@ public abstract class NotificationStatusRetryConsumerBase : KafkaConsumerBase<No
         {
             await UpdateStatusAsync(updateStatusRetryMessage);
         }
+        catch (NotificationExpiredException ex)
+        {
+            // Notification has expired - save to dead delivery reports immediately, don't retry
+            _logger.LogInformation(
+                ex,
+                "// {Class} // ProcessStatusUpdateWithRetry // {Message}",
+                GetType().Name,
+                ex.Message);
+
+            await SaveDeadDeliveryReportForExpired(updateStatusRetryMessage);
+        }
         catch (Exception ex)
         {
+            // Other exceptions - continue retrying
             _logger.LogWarning(ex, "// {Class} // ProcessStatusUpdateWithRetry // Update failed. Attempts={Attempts}", GetType().Name, updateStatusRetryMessage.Attempts);
 
             var incrementedRetryMessage = updateStatusRetryMessage with { Attempts = updateStatusRetryMessage.Attempts + 1, LastAttempt = DateTime.UtcNow };
             await RetryStatus(incrementedRetryMessage.Serialize());
         }
+    }
+
+    /// <summary>
+    /// Saves a dead delivery report for a notification that has expired.
+    /// </summary>
+    /// <param name="retryMessage">The retry message containing delivery report information.</param>
+    /// <returns>A task representing the asynchronous operation of storing the dead delivery report.</returns>
+    private async Task SaveDeadDeliveryReportForExpired(UpdateStatusRetryMessage retryMessage)
+    {
+        var deadDeliveryReport = new DeadDeliveryReport
+        {
+            Channel = Channel,
+            FirstSeen = retryMessage.FirstSeen,
+            LastAttempt = DateTime.UtcNow,
+            AttemptCount = retryMessage.Attempts,
+            Resolved = false,
+            DeliveryReport = retryMessage.SendOperationResult ?? string.Empty,
+            Reason = "NOTIFICATION_EXPIRED",
+            Message = "Notification expiry time has passed"
+        };
+
+        await _deadDeliveryReportService.InsertAsync(deadDeliveryReport);
     }
 }

@@ -4,11 +4,12 @@ using System.Collections.Immutable;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Altinn.Authorization.ProblemDetails;
 using Altinn.Notifications.Controllers;
 using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Errors;
 using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Core.Services.Interfaces;
-using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Models.Status;
 using Altinn.Notifications.Validators;
 
@@ -120,26 +121,9 @@ namespace Altinn.Notifications.Tests.Notifications.TestingControllers
             Assert.NotNull(result);
             var statusCodeResult = Assert.IsType<ObjectResult>(result.Result);
             Assert.Equal(499, statusCodeResult.StatusCode);
-            Assert.Equal("Request terminated - The client disconnected or cancelled the request before the server could complete processing", statusCodeResult.Value);
-        }
-
-        [Fact]
-        public async Task Get_WhenServiceReturnsError_CorrectStatusCodeIsReturned()
-        {
-            // Arrange
-            var error = new ServiceError(400, "Bad request");
-            _statusFeedService.Setup(x => x.GetStatusFeed(It.IsAny<long>(), It.IsAny<int?>(), It.IsAny<string>(), CancellationToken.None))
-                .ReturnsAsync(error);
-
-            // Act
-            var result = await _sut.GetStatusFeed(new GetStatusFeedRequestExt { Seq = 1 });
-
-            // Assert
-            Assert.NotNull(result);
-            var statusCodeResult = Assert.IsType<ObjectResult>(result.Result);
-            Assert.Equal(400, statusCodeResult.StatusCode);
-            var problemDetails = Assert.IsType<ProblemDetails>(statusCodeResult.Value);
-            Assert.Equal("Bad request", problemDetails.Detail);
+            var problemDetails = Assert.IsType<AltinnProblemDetails>(statusCodeResult.Value);
+            Assert.Equal("NOT-00002", problemDetails.ErrorCode.ToString()); // Problems.RequestTerminated
+            Assert.Equal(statusCodeResult.StatusCode, problemDetails.Status);
         }
     }
 }

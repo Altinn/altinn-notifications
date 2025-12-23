@@ -38,4 +38,14 @@ public record DeadDeliveryReport
     /// Should be in the format of a JSON string.
     /// </summary>
     public required string DeliveryReport { get; init; }
+
+    /// <summary>
+    /// Gets or sets the reason code for why the delivery failed (e.g., "RETRY_THRESHOLD_EXCEEDED", "NOTIFICATION_EXPIRED").
+    /// </summary>
+    public string? Reason { get; init; }
+
+    /// <summary>
+    /// Gets or sets a human-readable message describing why the delivery failed.
+    /// </summary>
+    public string? Message { get; init; }
 }

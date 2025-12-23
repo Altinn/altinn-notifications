@@ -1,6 +1,8 @@
-﻿using Altinn.Notifications.Core.Exceptions;
+﻿using Altinn.Notifications.Core.Enums;
+using Altinn.Notifications.Core.Exceptions;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
+using Altinn.Notifications.Core.Services.Interfaces;
 using Altinn.Notifications.Integrations.Configuration;
 
 using Microsoft.Extensions.Logging;
@@ -13,36 +15,44 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers;
 /// </summary>
 /// <typeparam name="TConsumer">The type of the consumer.</typeparam>
 /// <typeparam name="TResult">The type of the result after deserializing the message.</typeparam>
-public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : KafkaConsumerBase<TConsumer>
+public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : KafkaConsumerBase
     where TResult : class
     where TConsumer : class
 {
+    private readonly ILogger _logger;
     private readonly IKafkaProducer _producer;
-    private readonly ILogger<TConsumer> _logger;
     private readonly string _statusUpdatedTopicName;
     private readonly string _statusUpdatedRetryTopicName;
+    private readonly IDeadDeliveryReportService _deadDeliveryReportService;
+
+    /// <summary>
+    /// Gets the delivery report channel for this consumer (e.g., Email = AzureCommunicationServices, SMS = LinkMobility).
+    /// </summary>
+    protected abstract DeliveryReportChannel Channel { get; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationStatusConsumerBase{TConsumer, TResult}"/> class.
     /// </summary>
     protected NotificationStatusConsumerBase(
         IKafkaProducer producer,
-        ILogger<TConsumer> logger,
+        ILogger logger,
         string statusUpdatedTopicName,
         string statusUpdatedRetryTopicName,
-        IOptions<KafkaSettings> kafkaSettings)
-        : base(kafkaSettings, logger, statusUpdatedTopicName)
+        IOptions<KafkaSettings> kafkaSettings,
+        IDeadDeliveryReportService deadDeliveryReportService)
+        : base(statusUpdatedTopicName, kafkaSettings, logger)
     {
         _logger = logger;
         _producer = producer;
         _statusUpdatedTopicName = statusUpdatedTopicName;
+        _deadDeliveryReportService = deadDeliveryReportService;
         _statusUpdatedRetryTopicName = statusUpdatedRetryTopicName;
     }
 
     /// <inheritdoc/>
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        return Task.Run(() => ConsumeMessage(ProcessStatus, RetryStatus, stoppingToken), stoppingToken);
+        return ConsumeMessageAsync(ProcessStatus, RetryStatus, stoppingToken);
     }
 
     /// <summary>
@@ -72,8 +82,20 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
         {
             await UpdateStatusAsync(result);
         }
-        catch (SendStatusUpdateException)
+        catch (NotificationExpiredException ex)
         {
+            // Notification has expired - save to dead delivery reports immediately, don't retry
+            _logger.LogInformation(
+                ex,
+                "// {Consumer} // ProcessStatus // {Message}",
+                typeof(TConsumer).Name,
+                ex.Message);
+
+            await SaveDeadDeliveryReport(message);
+        }
+        catch (NotificationNotFoundException)
+        {
+            // Notification not found - send to retry topic (might arrive later)
             var updateStatusRetryMessage = new UpdateStatusRetryMessage
             {
                 Attempts = 1,
@@ -104,5 +126,25 @@ public abstract class NotificationStatusConsumerBase<TConsumer, TResult> : Kafka
     private void LogProcessingError(string message)
     {
         _logger.LogError("// {Consumer} // ProcessStatus // Failed while applying status update. Not retrying. {Message}", typeof(TConsumer).Name, message);
+    }
+
+    /// <summary>
+    /// Saves a dead delivery report for a notification that has expired.
+    /// </summary>
+    private async Task SaveDeadDeliveryReport(string originalMessage)
+    {
+        var deadDeliveryReport = new DeadDeliveryReport
+        {
+            Channel = Channel,
+            FirstSeen = DateTime.UtcNow,
+            LastAttempt = DateTime.UtcNow,
+            AttemptCount = 1,
+            Resolved = false,
+            DeliveryReport = originalMessage,
+            Reason = "NOTIFICATION_EXPIRED",
+            Message = "Notification expiry time has passed"
+        };
+
+        await _deadDeliveryReportService.InsertAsync(deadDeliveryReport);
     }
 }

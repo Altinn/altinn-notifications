@@ -1,4 +1,5 @@
-﻿using System.Data;
+﻿using System.Collections.Immutable;
+using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
@@ -7,10 +8,12 @@ using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Models.Notification;
 using Altinn.Notifications.Core.Models.NotificationTemplate;
 using Altinn.Notifications.Core.Models.Orders;
+using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Persistence.Extensions;
-
+using Altinn.Notifications.Persistence.Mappers;
+using Altinn.Notifications.Persistence.Utils;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -33,7 +36,7 @@ public class OrderRepository : IOrderRepository
     private const string _insertOrderSql = "select notifications.insertorder($1, $2, $3, $4, $5, $6, $7, $8, $9)"; // (_alternateid, _creatorname, _sendersreference, _created, _requestedsendtime, _notificationorder, _sendingtimepolicy, _type, _processingstatus)
     private const string _insertEmailTextSql = "call notifications.insertemailtext($1, $2, $3, $4, $5)"; // (__orderid, _fromaddress, _subject, _body, _contenttype)
     private const string _insertSmsTextSql = "insert into notifications.smstexts(_orderid, sendernumber, body) VALUES ($1, $2, $3)"; // __orderid, _sendernumber, _body
-    private const string _setProcessCompleted = "update notifications.orders set processedstatus =$1::orderprocessingstate where alternateid=$2";
+    private const string _setProcessCompleted = "update notifications.orders set processedstatus =$1::orderprocessingstate, processed = CURRENT_TIMESTAMP where alternateid=$2";
     private const string _getOrdersPastSendTimeUpdateStatus = "select notifications.getorders_pastsendtime_updatestatus()";
     private const string _getOrderIncludeStatus = "select * from notifications.getorder_includestatus_v4($1, $2)"; // _alternateid,  creator
     private const string _cancelAndReturnOrder = "select * from notifications.cancelorder($1, $2)"; // _alternateid,  creator
@@ -43,6 +46,8 @@ public class OrderRepository : IOrderRepository
     private const string _insertSmsNotificationSql = "call notifications.insertsmsnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (_orderid, _alternateid, _recipientorgno, _recipientnin, _mobilenumber, _customizedbody, _result, _smscount, _resulttime, _expirytime)
     private const string _insertEmailNotificationSql = "call notifications.insertemailnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (_orderid, _alternateid, _recipientorgno, _recipientnin, _toaddress, _customizedbody, _customizedsubject, _result, _resulttime, _expirytime)
     private const string _getInstantOrderTrackingInformationSql = "SELECT * FROM notifications.get_instant_order_tracking(_creatorname := @creatorName, _idempotencyid := @idempotencyId)";
+    private const string _getOrderCreatorNameSql = "select creatorname from notifications.orders where alternateid=$1";
+    private const string _getShipmentTrackingSql = "SELECT * FROM notifications.get_shipment_tracking_v3(@alternateid, @creatorname)"; // (_alternateid, _creatorname)
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderRepository"/> class.
@@ -188,7 +193,7 @@ public class OrderRepository : IOrderRepository
     }
 
     /// <inheritdoc/>
-    public async Task<InstantNotificationOrderTracking?> Create(InstantNotificationOrder instantNotificationOrder, NotificationOrder notificationOrder, SmsNotification smsNotification, DateTime smsExpiryDateTime, int smsMessageCount, CancellationToken cancellationToken = default)
+    public async Task<InstantNotificationOrderTracking> Create(InstantNotificationOrder instantNotificationOrder, NotificationOrder notificationOrder, SmsNotification smsNotification, DateTime smsExpiryDateTime, int smsMessageCount, CancellationToken cancellationToken = default)
     {
         var smsTemplate = notificationOrder.Templates.Find(e => e.Type == NotificationTemplateType.Sms) as SmsTemplate ?? throw new InvalidOperationException("SMS template is missing.");
 
@@ -202,7 +207,7 @@ public class OrderRepository : IOrderRepository
     }
 
     /// <inheritdoc/>
-    public async Task<InstantNotificationOrderTracking?> Create(InstantSmsNotificationOrder instantSmsNotificationOrder, NotificationOrder notificationOrder, SmsNotification smsNotification, DateTime smsExpiryDateTime, int smsMessageCount, CancellationToken cancellationToken = default)
+    public async Task<InstantNotificationOrderTracking> Create(InstantSmsNotificationOrder instantSmsNotificationOrder, NotificationOrder notificationOrder, SmsNotification smsNotification, DateTime smsExpiryDateTime, int smsMessageCount, CancellationToken cancellationToken = default)
     {
         var smsTemplate = notificationOrder.Templates.Find(e => e.Type == NotificationTemplateType.Sms) as SmsTemplate ?? throw new InvalidOperationException("SMS template is missing.");
 
@@ -216,7 +221,7 @@ public class OrderRepository : IOrderRepository
     }
 
     /// <inheritdoc/>
-    public async Task<InstantNotificationOrderTracking?> Create(InstantEmailNotificationOrder instantEmailNotificationOrder, NotificationOrder notificationOrder, EmailNotification emailNotification, DateTime emailExpiryDateTime, CancellationToken cancellationToken = default)
+    public async Task<InstantNotificationOrderTracking> Create(InstantEmailNotificationOrder instantEmailNotificationOrder, NotificationOrder notificationOrder, EmailNotification emailNotification, DateTime emailExpiryDateTime, CancellationToken cancellationToken = default)
     {
         var emailTemplate = notificationOrder.Templates.Find(e => e.Type == NotificationTemplateType.Email) as EmailTemplate ?? throw new InvalidOperationException("Email template is missing.");
 
@@ -239,14 +244,80 @@ public class OrderRepository : IOrderRepository
     }
 
     /// <inheritdoc/>
-    public async Task<List<NotificationOrder>> GetPastDueOrdersAndSetProcessingState()
+    public async Task InsertStatusFeedForOrder(Guid orderId)
     {
-        List<NotificationOrder> searchResult = new();
+        await using var connection = await _dataSource.OpenConnectionAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+        List<Core.Models.Status.Recipient> recipients = [];
+
+        try
+        {
+            // Get order details to retrieve creator name
+            await using var getOrderCommand = new NpgsqlCommand(_getOrderCreatorNameSql, connection, transaction);
+            getOrderCommand.Parameters.AddWithValue(NpgsqlDbType.Uuid, orderId);
+
+            var creatorName = await getOrderCommand.ExecuteScalarAsync() as string;
+            if (string.IsNullOrEmpty(creatorName))
+            {
+                throw new InvalidOperationException($"Order with ID {orderId} not found.");
+            }
+
+            // Get shipment tracking information
+            await using var getTrackingCommand = new NpgsqlCommand(_getShipmentTrackingSql, connection, transaction);
+            getTrackingCommand.Parameters.AddWithValue("alternateid", NpgsqlDbType.Uuid, orderId);
+            getTrackingCommand.Parameters.AddWithValue("creatorname", NpgsqlDbType.Text, creatorName);
+
+            await using var reader = await getTrackingCommand.ExecuteReaderAsync();
+            if (await reader.ReadAsync())
+            {
+                // Read order tracking (first row is always the order-level tracking)
+                string? reference = await reader.IsDBNullAsync(reader.GetOrdinal("reference"))
+                    ? null
+                    : await reader.GetFieldValueAsync<string>("reference");
+
+                var statusValue = await reader.GetFieldValueAsync<string>("status");
+                var lastUpdate = await reader.GetFieldValueAsync<DateTime>("last_update");
+                var type = await reader.GetFieldValueAsync<string>("type");
+                
+                // Attempt to read recipients
+                await NotificationUtil.ReadRecipientsAsync(recipients, reader, CancellationToken.None);
+
+                await reader.CloseAsync();
+
+                // Build OrderStatus object 
+                // If send condition is not met, the status feed entry will have an empty recipients list
+                var orderStatus = new OrderStatus
+                {
+                    ShipmentId = orderId,
+                    SendersReference = reference,
+                    Status = ProcessingLifecycleMapper.GetOrderLifecycleStage(statusValue),
+                    LastUpdated = lastUpdate,
+                    ShipmentType = type,
+                    Recipients = recipients.ToImmutableArray()
+                };
+
+                // Insert status feed entry
+                await StatusFeedRepository.InsertStatusFeedEntry(orderStatus, connection, transaction);
+            }
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<List<NotificationOrder>> GetPastDueOrdersAndSetProcessingState(CancellationToken cancellationToken = default)
+    {
+        List<NotificationOrder> searchResult = [];
 
         await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getOrdersPastSendTimeUpdateStatus);
-        await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync())
+        await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken))
         {
-            while (await reader.ReadAsync())
+            while (await reader.ReadAsync(cancellationToken))
             {
                 NotificationOrder notificationOrder = await reader.GetFieldValueAsync<NotificationOrder>(0);
                 searchResult.Add(notificationOrder);

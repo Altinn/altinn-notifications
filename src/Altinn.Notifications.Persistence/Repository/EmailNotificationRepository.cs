@@ -1,3 +1,5 @@
+using System.Data;
+
 using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Exceptions;
@@ -9,9 +11,7 @@ using Altinn.Notifications.Persistence.Extensions;
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-
 using Npgsql;
-
 using NpgsqlTypes;
 
 namespace Altinn.Notifications.Persistence.Repository;
@@ -25,9 +25,9 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
     private readonly NpgsqlDataSource _dataSource;
 
     private const string _insertEmailNotificationSql = "call notifications.insertemailnotification($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"; // (__orderid, _alternateid, _recipientorgno, _recipientnin, _toaddress, _customizedbody, _customizedsubject, _result, _resulttime, _expirytime)
-    private const string _getEmailNotificationsSql = "select * from notifications.getemails_statusnew_updatestatus()";
+    private const string _getEmailNotificationsBatchSql = "SELECT * FROM notifications.claim_email_batch(@batchsize)";
     private const string _getEmailRecipients = "select * from notifications.getemailrecipients_v2($1)"; // (_orderid)
-    private const string _updateEmailNotificationSql = "SELECT notifications.updateemailnotification($1, $2, $3)"; // (_result, _operationid, _alternateid)
+    private const string _updateEmailNotificationSql = "select * from notifications.updateemailnotification_v2($1, $2, $3)"; // (_result, _operationid, _alternateid)
 
     /// <inheritdoc/>
     protected override string SourceIdentifier => _emailSourceIdentifier;
@@ -63,87 +63,7 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
         await pgcom.ExecuteNonQueryAsync();
     }
 
-    /// <inheritdoc/>
-    public async Task<List<Email>> GetNewNotifications()
-    {
-        List<Email> searchResult = new();
-        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getEmailNotificationsSql);
-
-        await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync())
-        {
-            while (await reader.ReadAsync())
-            {
-                EmailContentType emailContentType = Enum.Parse<EmailContentType>(reader.GetValue<string>("contenttype"));
-
-                var email = new Email(
-                    reader.GetValue<Guid>("alternateid"),
-                    reader.GetValue<string>("subject"),
-                    reader.GetValue<string>("body"),
-                    reader.GetValue<string>("fromaddress"),
-                    reader.GetValue<string>("toaddress"),
-                    emailContentType);
-
-                searchResult.Add(email);
-            }
-        }
-
-        return searchResult;
-    }
-
-    /// <inheritdoc/>
-    public async Task UpdateSendStatus(Guid? notificationId, EmailNotificationResultType status, string? operationId = null)
-    {
-        var hasOperationId = !string.IsNullOrWhiteSpace(operationId);
-        var hasNotificationId = notificationId is Guid id && id != Guid.Empty;
-        if (!hasOperationId && !hasNotificationId)
-        {
-            throw new ArgumentException("The provided Email identifier is invalid.");
-        }
-
-        await using var connection = await _dataSource.OpenConnectionAsync();
-        await using var transaction = await connection.BeginTransactionAsync();
-
-        try
-        {
-            await using NpgsqlCommand pgcom = new(_updateEmailNotificationSql, connection, transaction);
-            pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
-            pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(operationId) ? DBNull.Value : operationId);
-            pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, (notificationId == null || notificationId == Guid.Empty) ? DBNull.Value : notificationId);
-
-            var alternateId = await pgcom.ExecuteScalarAsync();
-
-            if (alternateId is null or DBNull)
-            {
-                if (hasOperationId)
-                {
-                    throw new SendStatusUpdateException(NotificationChannel.Email, operationId!, SendStatusIdentifierType.OperationId);
-                }
-
-                throw new SendStatusUpdateException(NotificationChannel.Email, notificationId!.Value.ToString(), SendStatusIdentifierType.NotificationId);
-            }
-
-            if (alternateId is not Guid emailNotificationAlternateId)
-            {
-                throw new InvalidOperationException("Guid could not be parsed");
-            }
-
-            var orderIsSetAsCompleted = await TryCompleteOrderBasedOnNotificationsState(emailNotificationAlternateId, connection, transaction);
-
-            if (orderIsSetAsCompleted)
-            {
-                await InsertOrderStatusCompletedOrder(connection, transaction, emailNotificationAlternateId);
-            }
-
-            await transaction.CommitAsync();
-        }
-        catch (Exception)
-        {
-            await transaction.RollbackAsync();
-            throw;
-        }
-    }
-
-    /// <inheritdoc/>
+     /// <inheritdoc/>
     public async Task<List<EmailRecipient>> GetRecipients(Guid orderId)
     {
         List<EmailRecipient> searchResult = [];
@@ -160,6 +80,58 @@ public class EmailNotificationRepository : NotificationRepositoryBase, IEmailNot
                     OrganizationNumber = reader.GetValue<string?>("recipientorgno"),
                     NationalIdentityNumber = reader.GetValue<string?>("recipientnin"),
                 });
+            }
+        }
+
+        return searchResult;
+    }
+
+    /// <inheritdoc/>
+    public async Task UpdateSendStatus(Guid? notificationId, EmailNotificationResultType status, string? operationId = null)
+    {
+        var hasNotificationId = notificationId is Guid id && id != Guid.Empty;
+        var hasOperationId = !string.IsNullOrWhiteSpace(operationId);
+        if (!hasOperationId && !hasNotificationId)
+        {
+            throw new ArgumentException("The provided Email identifier is invalid.");
+        }
+
+        await ExecuteUpdateWithTransactionAsync(
+            _updateEmailNotificationSql,
+            pgcom =>
+            {
+                pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, status.ToString());
+                pgcom.Parameters.AddWithValue(NpgsqlDbType.Text, string.IsNullOrWhiteSpace(operationId) ? DBNull.Value : operationId);
+                pgcom.Parameters.AddWithValue(NpgsqlDbType.Uuid, (notificationId == null || notificationId == Guid.Empty) ? DBNull.Value : notificationId);
+            },
+            NotificationChannel.Email,
+            notificationId,
+            operationId,
+            SendStatusIdentifierType.OperationId);
+    }
+
+    /// <inheritdoc/>
+    public async Task<List<Email>> GetNewNotificationsAsync(int publishBatchSize, CancellationToken cancellationToken)
+    {
+        List<Email> searchResult = [];
+        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getEmailNotificationsBatchSql);
+        pgcom.Parameters.AddWithValue("batchsize", NpgsqlDbType.Integer, publishBatchSize);
+
+        await using (NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken))
+        {
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                EmailContentType emailContentType = Enum.Parse<EmailContentType>(reader.GetValue<string>("contenttype"));
+
+                var email = new Email(
+                    await reader.GetFieldValueAsync<Guid>("alternateid", cancellationToken),
+                    await reader.GetFieldValueAsync<string>("subject", cancellationToken),
+                    await reader.GetFieldValueAsync<string>("body", cancellationToken),
+                    await reader.GetFieldValueAsync<string>("fromaddress", cancellationToken),
+                    await reader.GetFieldValueAsync<string>("toaddress", cancellationToken),
+                    emailContentType);
+
+                searchResult.Add(email);
             }
         }
 

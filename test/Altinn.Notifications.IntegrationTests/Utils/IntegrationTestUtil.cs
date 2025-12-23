@@ -1,5 +1,7 @@
 ﻿using System.Diagnostics;
 
+using Altinn.Notifications.Core.Models.Notification;
+
 namespace Altinn.Notifications.IntegrationTests.Utils;
 
 public static class IntegrationTestUtil
@@ -72,5 +74,50 @@ public static class IntegrationTestUtil
     public static Task EventuallyAsync(Func<bool> predicate, TimeSpan maximumWaitTime, TimeSpan? checkInterval = null, CancellationToken cancellationToken = default)
     {
         return EventuallyAsync(() => Task.FromResult(predicate()), maximumWaitTime, checkInterval, cancellationToken);
+    }
+
+    /// <summary>
+    /// Polls the database to check if a notification has reached the expected result status.
+    /// </summary>
+    /// <param name="notification">The notification to check.</param>
+    /// <param name="timeout">The maximum time to wait for the expected result. Defaults to 5 seconds.</param>
+    /// <returns>Returns 1 if the notification reached 'Sending' status within the timeout period; otherwise, returns 0.</returns>
+    public static async Task<int> PollSendingNotificationStatus<T>(T notification, TimeSpan? timeout = null)
+        where T : class
+    {
+        var actualTimeout = timeout ?? TimeSpan.FromSeconds(5);
+        var stopwatch = Stopwatch.StartNew();
+
+        string tableName;
+        Guid notificationId;
+
+        if (notification is EmailNotification emailNotification)
+        {
+            tableName = "emailnotifications";
+            notificationId = emailNotification.Id;
+        }
+        else if (notification is SmsNotification smsNotification)
+        {
+            tableName = "smsnotifications";
+            notificationId = smsNotification.Id;
+        }
+        else
+        {
+            return 0;
+        }
+
+        while (stopwatch.Elapsed < actualTimeout)
+        {
+            string sqlCheck = $"select count(1) from notifications.{tableName} where result = 'Sending' and alternateid='{notificationId}'";
+            long count = await PostgreUtil.RunSqlReturnOutput<long>(sqlCheck);
+            if (count == 1)
+            {
+                return 1;
+            }
+
+            await Task.Delay(20); // wait a bit before checking again
+        }
+
+        return 0;
     }
 }

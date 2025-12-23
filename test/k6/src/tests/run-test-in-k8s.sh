@@ -19,7 +19,7 @@ help() {
     echo "  -b, --breakpoint     Flag to set breakpoint test or not"
     echo "  -a, --abort          Flag to specify whether to abort on fail or not, only used in breakpoint tests"
     echo "  -h, --help           Show this help message"
-    exit 0
+    return
 }
 
 print_logs() {
@@ -30,7 +30,7 @@ print_logs() {
     
     # Verify kubectl access
     if ! kubectl get pods &>/dev/null; then
-        echo "Error: Failed to access Kubernetes cluster"
+        echo "Error: Failed to access Kubernetes cluster" >&2
         return 1
     fi
     for pod in $(kubectl get pods -l "$POD_LABEL" -o name); do 
@@ -39,8 +39,8 @@ print_logs() {
             echo $pod
             echo ---------------------------
             kubectl logs --tail=-1 $pod
-            status=`kubectl get $pod -o jsonpath='{.status.phase}'`
-            if [ "$status" != "Succeeded" ]; then
+            status=$(kubectl get $pod -o jsonpath='{.status.phase}')
+            if [[ "$status" != "Succeeded" ]]; then
                 failed=1
             fi
             echo
@@ -55,6 +55,7 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         -h|--help)
             help
+            exit 0
             ;;
         -f|--filename)
             filename="$2"
@@ -98,15 +99,15 @@ done
 
 # Validate required arguments
 missing_args=()
-[ -z "$filename" ] && missing_args+=("filename (-f)")
-[ -z "$configmapname" ] && missing_args+=("configmapname (-c)")
-[ -z "$name" ] && missing_args+=("name (-n)")
-[ -z "$vus" ] && missing_args+=("vus (-v)")
-[ -z "$duration" ] && missing_args+=("duration (-d)")
-[ -z "$parallelism" ] && missing_args+=("parallelism (-p)")
+[[ -z "$filename" ]] && missing_args+=("filename (-f)")
+[[ -z "$configmapname" ]] && missing_args+=("configmapname (-c)")
+[[ -z "$name" ]] && missing_args+=("name (-n)")
+[[ -z "$vus" ]] && missing_args+=("vus (-v)")
+[[ -z "$duration" ]] && missing_args+=("duration (-d)")
+[[ -z "$parallelism" ]] && missing_args+=("parallelism (-p)")
 
-if [ ${#missing_args[@]} -ne 0 ]; then
-    echo "Error: Missing required arguments: ${missing_args[*]}"
+if [[ ${#missing_args[@]} -ne 0 ]]; then
+    echo "Error: Missing required arguments: ${missing_args[*]}" >&2
     help
     exit 1
 fi
@@ -123,16 +124,16 @@ fi
 
 if ! k6 archive $filename \
      -e API_VERSION="$API_VERSION" \
-     -e env="$API_ENVIRONMENT" \
+     -e altinn_env="$API_ENVIRONMENT" \
      -e NUMBER_OF_ENDUSERS="$NUMBER_OF_ENDUSERS" \
      -e TESTID=$testid $archive_args; then
-    echo "Error: Failed to create k6 archive"
+    echo "Error: Failed to create k6 archive" >&2
     exit 1
 fi
    
 # Create the configmap from the archive
 if ! kubectl create configmap $configmapname --from-file=archive.tar; then
-    echo "Error: Failed to create configmap"
+    echo "Error: Failed to create configmap" >&2
     rm archive.tar
     exit 1
 fi

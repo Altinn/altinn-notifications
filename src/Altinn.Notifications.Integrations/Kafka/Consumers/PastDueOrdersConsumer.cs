@@ -11,7 +11,7 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers;
 /// <summary>
 /// Kafka consumer class for past due orders
 /// </summary>
-public class PastDueOrdersConsumer : KafkaConsumerBase<PastDueOrdersConsumer>
+public class PastDueOrdersConsumer : KafkaConsumerBase
 {
     private readonly IOrderProcessingService _orderProcessingService;
     private readonly IKafkaProducer _producer;
@@ -24,7 +24,7 @@ public class PastDueOrdersConsumer : KafkaConsumerBase<PastDueOrdersConsumer>
         IKafkaProducer producer,
         IOptions<KafkaSettings> settings,
         ILogger<PastDueOrdersConsumer> logger,
-        IOrderProcessingService orderProcessingService) : base(settings, logger, settings.Value.PastDueOrdersTopicName)
+        IOrderProcessingService orderProcessingService) : base(settings.Value.PastDueOrdersTopicName, settings, logger)
     {
         _producer = producer;
         _orderProcessingService = orderProcessingService;
@@ -34,7 +34,7 @@ public class PastDueOrdersConsumer : KafkaConsumerBase<PastDueOrdersConsumer>
     /// <inheritdoc/>
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        return Task.Run(() => ConsumeMessage(ProcessOrder, RetryOrder, stoppingToken), stoppingToken);
+        return ConsumeMessageAsync(ProcessOrder, RetryOrder, stoppingToken);
     }
 
     private async Task ProcessOrder(string message)

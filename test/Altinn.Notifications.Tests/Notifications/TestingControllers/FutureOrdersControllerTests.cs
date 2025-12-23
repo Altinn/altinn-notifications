@@ -2,10 +2,11 @@
 using System.Threading;
 using System.Threading.Tasks;
 
+using Altinn.Authorization.ProblemDetails;
 using Altinn.Notifications.Controllers;
+using Altinn.Notifications.Core.Errors;
 using Altinn.Notifications.Core.Models.Orders;
 using Altinn.Notifications.Core.Services.Interfaces;
-using Altinn.Notifications.Core.Shared;
 using Altinn.Notifications.Extensions;
 using Altinn.Notifications.Models;
 using Altinn.Notifications.Models.Email;
@@ -108,7 +109,7 @@ public class FutureOrdersControllerTests
     }
 
     [Fact]
-    public async Task ServiceError_ShouldReturn_ProblemDetails()
+    public async Task ServiceProblem_ShouldReturn_ProblemDetails()
     {
         // Arrange
         var request = new NotificationOrderChainRequestExt
@@ -128,12 +129,8 @@ public class FutureOrdersControllerTests
             IdempotencyId = "test-idempotency-id",
         };
 
-        var serviceError = new ServiceError(
-            422,
-            "No recipients found");
-
         _orderRequestService.Setup(x => x.RegisterNotificationOrderChain(It.IsAny<NotificationOrderChainRequest>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(serviceError);
+            .ReturnsAsync(Problems.MissingContactInformation);
 
         // Act
         var result = await _controller.Post(request, CancellationToken.None);
@@ -142,7 +139,8 @@ public class FutureOrdersControllerTests
         Assert.NotNull(result);
         var objectResult = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(422, objectResult.StatusCode);
-        var problemDetails = Assert.IsType<ProblemDetails>(objectResult.Value);
-        Assert.Contains(serviceError.ErrorMessage!, problemDetails.Detail);
+        var problemDetails = Assert.IsType<AltinnProblemDetails>(objectResult.Value);
+        Assert.Equal("NOT-00001", problemDetails.ErrorCode.ToString()); // Problems.MissingContactInformation
+        Assert.Equal(objectResult.StatusCode, problemDetails.Status);
     }
 }

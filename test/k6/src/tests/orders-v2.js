@@ -8,7 +8,7 @@
     -e mpClientId={the id of an integration defined in maskinporten} \
     -e mpKid={the key id of the JSON web key used to sign the maskinporten token request} \
     -e encodedJwk={the encoded JSON web key used to sign the maskinporten token request} \
-    -e env={environment: at22, at23, at24, tt02, prod} \
+    -e altinn_env={environment: at22, at23, at24, tt02, prod} \
     -e emailRecipient={an email address to add as a notification recipient} \
     -e ninRecipient={a national identity number of a person to include as a notification recipient} \
     -e smsRecipient={a mobile number to include as a notification recipient} \
@@ -74,20 +74,20 @@ export function setup() {
     const idempotencyIdSms = uuidv4();
     const sendersReference = uuidv4();
 
-    if (emailRecipient != null) {
-        emailOrderRequestJson.recipient.recipientEmail.emailAddress = emailRecipient;
-    }
-    else {
+    if (emailRecipient == null) {
         // unset recipientEmail object when no email recipient is provided
         emailOrderRequestJson.recipient["recipientEmail"] = undefined;
     }
-
-    if (ninRecipient != null) {
-        emailOrderRequestJson.recipient.recipientPerson.nationalIdentityNumber = ninRecipient;
-    }
     else {
+        emailOrderRequestJson.recipient.recipientEmail.emailAddress = emailRecipient;
+    }
+
+    if (ninRecipient == null) {
         // unset recipientPerson object when no national identity number is provided
         emailOrderRequestJson.recipient["recipientPerson"] = undefined;
+    }
+    else {
+        emailOrderRequestJson.recipient.recipientPerson.nationalIdentityNumber = ninRecipient;
     }
 
     if (smsRecipient != null) {
@@ -186,7 +186,7 @@ function postSmsInstantNotificationOrderRequest(data) {
         JSON.stringify(data.smsOrderInstantRequest),
         data.token,
         post_sms_instant_order_v2
-    );  
+    );
 
     const success = check(response, {
         "POST SMS instant notification order request. Status is 201 Created": (r) => r.status === 201,
@@ -210,7 +210,7 @@ export function getShipmentStatus(data, shipmentId, label, type) {
     const response = futureOrdersApi.getShipment(shipmentId, data.token, label);
 
     switch (type) {
-        case "Email": 
+        case "Email":
             check(response, {
                 "GET shipment details for Email. Status is 200 OK": (r) => r.status === 200
             });
@@ -265,7 +265,7 @@ function getStatusFeed(data, label) {
  * The main function to run the test.
  * @param {Object} data - The data object containing test data.
  */
-export default function (data) {
+export default function runTests(data) {
     let response = postEmailNotificationOrderRequest(data);
     let responseObject = JSON.parse(response);
 
@@ -277,7 +277,7 @@ export default function (data) {
 
     // checking shipment details for the SMS order
     getShipmentStatus(data, responseObject.notification.shipmentId, get_sms_shipment, "SMS");
-    
+
     // testing instant SMS notification order request
     response = postSmsInstantNotificationOrderRequest(data);
     getShipmentStatus(data, JSON.parse(response).notification.shipmentId, get_sms_instant_shipment, "SMSInstant");

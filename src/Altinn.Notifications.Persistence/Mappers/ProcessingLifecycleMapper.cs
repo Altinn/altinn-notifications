@@ -5,7 +5,7 @@ namespace Altinn.Notifications.Persistence.Mappers;
 /// <summary>
 /// Helper class for mapping processing life cycle related data to and from the database.
 /// </summary>
-internal static class ProcessingLifecycleMapper
+public static class ProcessingLifecycleMapper
 {
     /// <summary>
     /// Maps database SMS notification result types to ProcessingLifecycle values.
@@ -74,7 +74,7 @@ internal static class ProcessingLifecycleMapper
     /// ProcessingLifecycle enum. It's used when processing delivery information from the database
     /// to ensure consistent status representation throughout the notification system.
     /// </remarks>
-    internal static ProcessingLifecycle GetSmsLifecycleStage(string status)
+    public static ProcessingLifecycle GetSmsLifecycleStage(string status)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(status);
 
@@ -97,7 +97,7 @@ internal static class ProcessingLifecycleMapper
     /// ProcessingLifecycle enum. It's used when processing delivery information from the database
     /// to ensure consistent status representation throughout the notification system.
     /// </remarks>
-    internal static ProcessingLifecycle GetEmailLifecycleStage(string status)
+    public static ProcessingLifecycle GetEmailLifecycleStage(string status)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(status);
 
@@ -120,7 +120,7 @@ internal static class ProcessingLifecycleMapper
     /// ProcessingLifecycle enum. It's used when processing delivery information from the database
     /// to ensure consistent status representation throughout the notification system.
     /// </remarks>
-    internal static ProcessingLifecycle GetOrderLifecycleStage(string status)
+    public static ProcessingLifecycle GetOrderLifecycleStage(string status)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(status);
 

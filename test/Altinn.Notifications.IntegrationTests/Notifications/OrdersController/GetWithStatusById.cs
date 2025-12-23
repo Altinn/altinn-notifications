@@ -60,34 +60,6 @@ public class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFact
 
         string refLinkBase = "http://localhost:5090/notifications/api/v1/orders";
 
-        NotificationOrderWithStatusExt expected = new()
-        {
-            Id = persistedOrder.Id.ToString(),
-            SendersReference = persistedOrder.SendersReference,
-            Creator = "ttd",
-            Created = persistedOrder.Created,
-            NotificationChannel = (NotificationChannelExt)persistedOrder.NotificationChannel,
-            RequestedSendTime = persistedOrder.RequestedSendTime,
-            ProcessingStatus = new()
-            {
-                LastUpdate = persistedOrder.Created,
-                Status = "Completed",
-                StatusDescription = "Order processing is done. Notifications have been successfully generated."
-            },
-            NotificationsStatusSummary = new NotificationsStatusSummaryExt()
-            {
-                Email = new()
-                {
-                    Generated = 1,
-                    Succeeded = 0,
-                    Links = new()
-                    {
-                        Self = $"{refLinkBase}/{persistedOrder.Id}/notifications/email"
-                    }
-                }
-            }
-        };
-
         string uri = $"{_basePath}/{persistedOrder.Id}/status";
 
         HttpClient client = GetTestClient();
@@ -102,7 +74,19 @@ public class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFact
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equivalent(expected, actual);
+        Assert.NotNull(actual);
+        Assert.Equal(persistedOrder.Id.ToString(), actual.Id);
+        Assert.Equal(persistedOrder.SendersReference, actual.SendersReference);
+        Assert.Equal("ttd", actual.Creator);
+        Assert.Equal(persistedOrder.Created, actual.Created);
+        Assert.Equal((NotificationChannelExt)persistedOrder.NotificationChannel, actual.NotificationChannel);
+        Assert.Equal(persistedOrder.RequestedSendTime, actual.RequestedSendTime);
+        Assert.Equal("Completed", actual.ProcessingStatus?.Status);
+        Assert.Equal("Order processing is done. Notifications have been successfully generated.", actual.ProcessingStatus?.StatusDescription);
+        Assert.True(actual.ProcessingStatus?.LastUpdate >= persistedOrder.Created, "LastUpdate should be >= Created");
+        Assert.Equal(1, actual.NotificationsStatusSummary?.Email?.Generated);
+        Assert.Equal(0, actual.NotificationsStatusSummary?.Email?.Succeeded);
+        Assert.Equal($"{refLinkBase}/{persistedOrder.Id}/notifications/email", actual.NotificationsStatusSummary?.Email?.Links?.Self);
     }
 
     [Fact]
@@ -113,35 +97,6 @@ public class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFact
 
         string refLinkBase = "http://localhost:5090/notifications/api/v1/orders";
 
-        NotificationOrderWithStatusExt expected = new()
-        {
-            Id = persistedOrder.Id.ToString(),
-            SendersReference = persistedOrder.SendersReference,
-            Creator = "ttd",
-            Created = persistedOrder.Created,
-            NotificationChannel = (NotificationChannelExt)persistedOrder.NotificationChannel,
-            RequestedSendTime = persistedOrder.RequestedSendTime,
-            ProcessingStatus = new()
-            {
-                Status = "Completed",
-                LastUpdate = persistedOrder.Created,
-                StatusDescription = "Order processing is done. Notifications have been successfully generated."
-            },
-            NotificationsStatusSummary = new NotificationsStatusSummaryExt()
-            {
-                Sms = new()
-                {
-                    Generated = 1,
-                    Succeeded = 0,
-                    Links = new()
-                    {
-                        Self = $"{refLinkBase}/{persistedOrder.Id}/notifications/sms"
-                    }
-                },
-                Email = null
-            }
-        };
-
         string uri = $"{_basePath}/{persistedOrder.Id}/status";
 
         HttpClient client = GetTestClient();
@@ -156,7 +111,20 @@ public class GetWithStatusById : IClassFixture<IntegrationTestWebApplicationFact
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equivalent(expected, actual);
+        Assert.NotNull(actual);
+        Assert.Equal(persistedOrder.Id.ToString(), actual.Id);
+        Assert.Equal(persistedOrder.SendersReference, actual.SendersReference);
+        Assert.Equal("ttd", actual.Creator);
+        Assert.Equal(persistedOrder.Created, actual.Created);
+        Assert.Equal((NotificationChannelExt)persistedOrder.NotificationChannel, actual.NotificationChannel);
+        Assert.Equal(persistedOrder.RequestedSendTime, actual.RequestedSendTime);
+        Assert.Equal("Completed", actual.ProcessingStatus?.Status);
+        Assert.Equal("Order processing is done. Notifications have been successfully generated.", actual.ProcessingStatus?.StatusDescription);
+        Assert.True(actual.ProcessingStatus?.LastUpdate >= persistedOrder.Created, "LastUpdate should be >= Created");
+        Assert.Equal(1, actual.NotificationsStatusSummary?.Sms?.Generated);
+        Assert.Equal(0, actual.NotificationsStatusSummary?.Sms?.Succeeded);
+        Assert.Equal($"{refLinkBase}/{persistedOrder.Id}/notifications/sms", actual.NotificationsStatusSummary?.Sms?.Links?.Self);
+        Assert.Null(actual.NotificationsStatusSummary?.Email);
     }
 
     [Fact]

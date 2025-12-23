@@ -89,7 +89,7 @@ function getTokenExpiration(token) {
     const payload = JSON.parse(payloadJson);
     const exp = Number(payload.exp);
     if (!Number.isFinite(exp)) {
-        throw new Error("Token does not contain numeric expiration (exp) claim");
+        throw new TypeError("Token does not contain numeric expiration (exp) claim");
     }
 
     return exp;

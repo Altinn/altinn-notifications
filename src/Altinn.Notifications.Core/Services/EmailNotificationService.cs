@@ -1,4 +1,7 @@
-﻿using Altinn.Notifications.Core.Configuration;
+﻿using System.Collections.Immutable;
+using System.Text.Json;
+
+using Altinn.Notifications.Core.Configuration;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Integrations;
 using Altinn.Notifications.Core.Models;
@@ -22,6 +25,7 @@ public class EmailNotificationService : IEmailNotificationService
     private readonly string _emailQueueTopicName;
     private readonly IEmailNotificationRepository _repository;
     private readonly IKafkaProducer _producer;
+    private readonly int _emailPublishBatchSize;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailNotificationService"/> class.
@@ -31,12 +35,14 @@ public class EmailNotificationService : IEmailNotificationService
         IKafkaProducer producer,
         IDateTimeService dateTime,
         IOptions<KafkaSettings> kafkaSettings,
+        IOptions<NotificationConfig> notificationConfig,
         IEmailNotificationRepository repository)
     {
         _guid = guid;
         _dateTime = dateTime;
         _producer = producer;
         _repository = repository;
+        _emailPublishBatchSize = notificationConfig.Value.EmailPublishBatchSize;
         _emailQueueTopicName = kafkaSettings.Value.EmailQueueTopicName;
     }
 
@@ -72,18 +78,50 @@ public class EmailNotificationService : IEmailNotificationService
     }
 
     /// <inheritdoc/>
-    public async Task SendNotifications()
+    public async Task SendNotifications(CancellationToken cancellationToken)
     {
-        List<Email> emails = await _repository.GetNewNotifications();
+        List<Email> newEmailNotifications;
 
-        foreach (Email email in emails)
+        do
         {
-            bool success = await _producer.ProduceAsync(_emailQueueTopicName, email.Serialize());
-            if (!success)
+            newEmailNotifications = [];
+
+            try
             {
-                await _repository.UpdateSendStatus(email.NotificationId, EmailNotificationResultType.New);
+                newEmailNotifications = await _repository.GetNewNotificationsAsync(_emailPublishBatchSize, cancellationToken);
+                if (newEmailNotifications.Count == 0)
+                {
+                    break;
+                }
+
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var serializedEmailNotifications = newEmailNotifications.Select(readyToSendEmail => readyToSendEmail.Serialize()).ToImmutableList();
+
+                var unpublishedEmailNotifications = await _producer.ProduceAsync(_emailQueueTopicName, serializedEmailNotifications, cancellationToken);
+
+                foreach (var unpublishedEmailNotification in unpublishedEmailNotifications)
+                {
+                    var deserializedEmailNotification = JsonSerializer.Deserialize<Email>(unpublishedEmailNotification, JsonSerializerOptionsProvider.Options);
+                    if (deserializedEmailNotification == null || deserializedEmailNotification.NotificationId == Guid.Empty)
+                    {
+                        continue;
+                    }
+
+                    await _repository.UpdateSendStatus(deserializedEmailNotification.NotificationId, EmailNotificationResultType.New);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                foreach (var email in newEmailNotifications)
+                {
+                    await _repository.UpdateSendStatus(email.NotificationId, EmailNotificationResultType.New);
+                }
+
+                throw;
             }
         }
+        while (newEmailNotifications.Count > 0);
     }
 
     /// <inheritdoc/>

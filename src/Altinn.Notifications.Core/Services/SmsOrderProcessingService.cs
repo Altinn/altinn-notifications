@@ -88,12 +88,13 @@ public class SmsOrderProcessingService : ISmsOrderProcessingService
 
             var matchedSmsRecipient = FindSmsRecipient(allSmsRecipients, recipient);
             var smsRecipient = matchedSmsRecipient ?? new SmsRecipient { IsReserved = recipient.IsReserved };
+            var smsAddresses = smsAddress != null ? [smsAddress] : new List<SmsAddressPoint>();
 
             await _smsService.CreateNotification(
                 order.Id,
                 order.RequestedSendTime,
                 expirationDateTime,
-                [smsAddress],
+                smsAddresses,
                 smsRecipient,
                 segmentsCount);
         }

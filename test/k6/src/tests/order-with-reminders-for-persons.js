@@ -19,7 +19,7 @@
     -e mpClientId={the identifier of an integration defined in maskinporten} \
     -e mpKid={the key identifier of the JSON web key used to sign the maskinporten token request} \
     -e encodedJwk={the encoded JSON web key used to sign the maskinporten token request} \
-    -e env={the environment to run this script within: at22, at23, at24, yt01, tt02, prod} \
+    -e altinn_env={the environment to run this script within: at22, at23, at24, yt01, tt02, prod} \
     -e ninRecipient={a Norwegian birth number to include as a notification recipient} \
     -e orderTypes={types of orders to test, e.g., valid, invalid or duplicate} \
 */
@@ -31,7 +31,6 @@ import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 import {
     buildOptions,
     runValidators,
-    handleSummary,
     processVariants,
     validOrderDuration,
     invalidOrderDuration,
@@ -147,7 +146,7 @@ function stripRecipientPersonFromOrderChainPayload(orderChainPayload) {
  *
  * @param {Object} data - Setup context
  */
-export default function (data) {
+export default function runTests(data) {
     const variants = generateOrderChainPayloads(orderTypes, data.orderChainPayload, {
         uniqueFactory: createUniqueOrderChainPayload,
         invalidTransform: stripRecipientPersonFromOrderChainPayload
@@ -170,4 +169,4 @@ export default function (data) {
     runValidators(processingResults, validators);
 }
 
-export { handleSummary };
+export { handleSummary } from "./order-with-reminders-functions.js";

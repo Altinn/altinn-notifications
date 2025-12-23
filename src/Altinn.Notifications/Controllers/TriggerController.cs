@@ -17,10 +17,10 @@ public class TriggerController : ControllerBase
     private readonly ILogger<TriggerController> _logger;
     private readonly IStatusFeedService _statusFeedService;
     private readonly ISmsPublishTaskQueue _smsPublishTaskQueue;
+    private readonly IEmailPublishTaskQueue _emailPublishTaskQueue;
     private readonly INotificationScheduleService _scheduleService;
-    private readonly ISmsNotificationService _smsNotificationService;
     private readonly IOrderProcessingService _orderProcessingService;
-    private readonly IEmailNotificationService _emailNotificationService;
+    private readonly IEnumerable<INotificationService> _notificationServices;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TriggerController"/> class.
@@ -29,41 +29,46 @@ public class TriggerController : ControllerBase
         ILogger<TriggerController> logger,
         IStatusFeedService statusFeedService,
         ISmsPublishTaskQueue smsPublishTaskQueue,
+        IEmailPublishTaskQueue emailPublishingTaskQueue,
         INotificationScheduleService scheduleService,
         IOrderProcessingService orderProcessingService,
-        ISmsNotificationService smsNotificationService,
-        IEmailNotificationService emailNotificationService)
+        IEnumerable<INotificationService> notificationServices)
     {
         _logger = logger;
         _scheduleService = scheduleService;
         _statusFeedService = statusFeedService;
         _smsPublishTaskQueue = smsPublishTaskQueue;
-        _smsNotificationService = smsNotificationService;
+        _emailPublishTaskQueue = emailPublishingTaskQueue;
         _orderProcessingService = orderProcessingService;
-        _emailNotificationService = emailNotificationService;
+        _notificationServices = notificationServices;
     }
 
     /// <summary>
     /// Endpoint for starting the processing of past due orders
     /// </summary>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.</param>
+    /// <returns>A <see cref="Task{TResult}"/> representing the asynchronous operation that returns an <see cref="ActionResult"/>.</returns>
     [HttpPost]
     [Route("pastdueorders")]
     [Consumes("application/json")]
-    public async Task<ActionResult> Trigger_PastDueOrders()
+    public async Task<ActionResult> Trigger_PastDueOrders(CancellationToken cancellationToken = default)
     {
-        await _orderProcessingService.StartProcessingPastDueOrders();
+        await _orderProcessingService.StartProcessingPastDueOrders(cancellationToken);
         return Ok();
     }
 
     /// <summary>
-    /// Endpoint for starting the processing of emails that are ready to be sent
+    /// Signals background processing of email notifications.
     /// </summary>
+    /// <returns>
+    /// Always returns 200 OK, regardless of whether a new task was enqueued.
+    /// </returns>
     [HttpPost]
     [Route("sendemail")]
     [Consumes("application/json")]
-    public async Task<ActionResult> Trigger_SendEmailNotifications()
+    public ActionResult Trigger_SendEmailNotifications()
     {
-        await _emailNotificationService.SendNotifications();
+        _emailPublishTaskQueue.TryEnqueue();
         return Ok();
     }
 
@@ -78,8 +83,12 @@ public class TriggerController : ControllerBase
     {
         try
         {
-            await _emailNotificationService.TerminateExpiredNotifications();
-            await _smsNotificationService.TerminateExpiredNotifications();
+            // This will call TerminateExpiredNotifications on all registered notification services, currently sms and email
+            foreach (var service in _notificationServices)
+            {
+                await service.TerminateExpiredNotifications();
+            }
+
             return Ok();
         }
         catch (Exception ex)

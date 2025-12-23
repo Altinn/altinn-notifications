@@ -23,6 +23,8 @@ using AltinnCore.Authentication.JwtCookie;
 using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.Exporter;
 
+using Confluent.Kafka.Extensions.OpenTelemetry;
+
 using FluentValidation;
 
 using Microsoft.AspNetCore.Authorization;
@@ -157,7 +159,9 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
             metrics.AddMeter(
                 "Microsoft.AspNetCore.Hosting",
                 "Microsoft.AspNetCore.Server.Kestrel",
-                "System.Net.Http");
+                "System.Net.Http",
+                "Altinn.Notifications.KafkaProducer",
+                "Altinn.Notifications.KafkaConsumer");
         })
         .WithTracing(tracing =>
         {
@@ -173,6 +177,8 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
             tracing.AddProcessor<RequestFilterProcessor>();
 
             tracing.AddNpgsql();
+
+            tracing.AddConfluentKafkaInstrumentation();
         });
 
     AddAzureMonitorTelemetryExporters(services, config);

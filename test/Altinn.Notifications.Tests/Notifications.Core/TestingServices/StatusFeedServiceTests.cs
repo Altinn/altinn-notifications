@@ -9,7 +9,6 @@ using Altinn.Notifications.Core.Models.Status;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Core.Services;
 
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 using Moq;
@@ -54,7 +53,7 @@ public class StatusFeedServiceTests
             }
                 ]);
 
-        var sut = new StatusFeedService(statusFeedRepository.Object, _options, NullLogger<StatusFeedService>.Instance);
+        var sut = new StatusFeedService(statusFeedRepository.Object, _options);
         long seq = 1;
 
         // Act
@@ -65,79 +64,10 @@ public class StatusFeedServiceTests
         x => x.GetStatusFeed(seq, _creatorName, _maxPageSize, It.IsAny<CancellationToken>()),
         Times.Once);
 
-        result.Match(
-            success =>
-            {
-                Assert.NotNull(success);
-                var entry = Assert.Single(success);
-                Assert.Equal(1, entry.SequenceNumber);
-                return true;
-            },
-            error =>
-            {
-                Assert.Fail("Expected success but got error: " + error.ErrorMessage);
-                return false;
-            });
-    }
+        Assert.NotNull(result);
 
-    [Fact]
-    public async Task GetStatusFeed_MissingCreatorName_ReturnsError()
-    {
-        // Arrange
-        Mock<IStatusFeedRepository> statusFeedRepository = new();
-        var sut = new StatusFeedService(statusFeedRepository.Object, _options, NullLogger<StatusFeedService>.Instance);
-        long seq = 1;
-        string creatorName = string.Empty;
-
-        // Act
-        var result = await sut.GetStatusFeed(seq, null, creatorName, CancellationToken.None);
-
-        // Assert
-        result.Match(
-            success =>
-            {
-                Assert.Fail("Expected error but got success");
-                return false;
-            },
-            error =>
-            {
-                Assert.Equal(400, error.ErrorCode);
-                Assert.Equal("Creator name cannot be null or empty", error.ErrorMessage);
-                return true;
-            });
-    }
-
-    [Fact]
-    public async Task GetStatusFeed_RepositoryThrowsException_ReturnsServiceError()
-    {
-        // Arrange
-        Mock<IStatusFeedRepository> statusFeedRepository = new();
-        statusFeedRepository.Setup(x => x.GetStatusFeed(It.IsAny<long>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new Exception("Database error"));
-        var sut = new StatusFeedService(statusFeedRepository.Object, _options, NullLogger<StatusFeedService>.Instance);
-        long seq = 1;
-        string creatorName = "ttd";
-        
-        // Act
-        var result = await sut.GetStatusFeed(seq, null, creatorName, CancellationToken.None);
-        
-        // Assert
-        statusFeedRepository.Verify(
-            x => x.GetStatusFeed(seq, creatorName, _maxPageSize, It.IsAny<CancellationToken>()),
-            Times.Once);
-
-        result.Match(
-            success =>
-            {
-                Assert.Fail("Expected error but got success");
-                return false;
-            },
-            error =>
-            {
-                Assert.Equal(500, error.ErrorCode);
-                Assert.StartsWith("Failed to retrieve status feed", error.ErrorMessage);
-                return true;
-            });
+        var entry = Assert.Single(result);
+        Assert.Equal(1, entry.SequenceNumber);
     }
 
     [Theory]
@@ -160,7 +90,7 @@ public class StatusFeedServiceTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedStatusFeedEntries);
 
-        var sut = new StatusFeedService(mockRepository.Object, _options, NullLogger<StatusFeedService>.Instance);
+        var sut = new StatusFeedService(mockRepository.Object, _options);
 
         int expected = CalculateExpectedPageSize(pageSize);
 
@@ -168,7 +98,7 @@ public class StatusFeedServiceTests
         var result = await sut.GetStatusFeed(seq, pageSize, _creatorName, CancellationToken.None);
 
         // Assert
-        Assert.True(result.IsSuccess);
+        Assert.NotNull(result);
 
         // Verify that the repository was called with the clipped page size (maxPageSize)
         mockRepository.Verify(
@@ -216,13 +146,13 @@ public class StatusFeedServiceTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedStatusFeedEntries);
         
-        var sut = new StatusFeedService(mockRepository.Object, _options, NullLogger<StatusFeedService>.Instance);
+        var sut = new StatusFeedService(mockRepository.Object, _options);
         
         // Act
         var result = await sut.GetStatusFeed(seq, requestedPageSize, _creatorName, CancellationToken.None);
         
         // Assert
-        Assert.True(result.IsSuccess);
+        Assert.NotNull(result);
         
         // Verify that the repository was called with the requested page size (not the max)
         mockRepository.Verify(

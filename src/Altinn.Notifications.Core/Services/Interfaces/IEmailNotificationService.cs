@@ -21,10 +21,12 @@ public interface IEmailNotificationService : INotificationService
     Task CreateNotification(Guid orderId, DateTime requestedSendTime, List<EmailAddressPoint> emailAddresses, EmailRecipient emailRecipient, bool ignoreReservation = false);
 
     /// <summary>
-    /// Initiates the process of sending all ready email notifications.
+    /// Sends pending email notifications.
     /// </summary>
+    /// <param name="cancellationToken">A token to observe for cancellation.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    Task SendNotifications();
+    /// <exception cref="OperationCanceledException">Thrown if the operation is canceled.</exception>
+    Task SendNotifications(CancellationToken cancellationToken);
 
     /// <summary>
     /// Updates the send status of a notification.

@@ -10,10 +10,10 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers;
 /// <summary>
 /// Kafka consumer class for past due orders, first retry
 /// </summary>
-public class PastDueOrdersRetryConsumer : KafkaConsumerBase<PastDueOrdersRetryConsumer>
+public class PastDueOrdersRetryConsumer : KafkaConsumerBase
 {
-    private readonly IOrderProcessingService _orderProcessingService;
     private readonly IDateTimeService _dateTime;
+    private readonly IOrderProcessingService _orderProcessingService;
 
     private readonly int _processingDelayMins = 1;
 
@@ -25,7 +25,7 @@ public class PastDueOrdersRetryConsumer : KafkaConsumerBase<PastDueOrdersRetryCo
         IDateTimeService dateTimeService,
         IOptions<KafkaSettings> settings,
         ILogger<PastDueOrdersRetryConsumer> logger)
-        : base(settings, logger, settings.Value.PastDueOrdersRetryTopicName)
+        : base(settings.Value.PastDueOrdersRetryTopicName, settings, logger)
     {
         _orderProcessingService = orderProcessingService;
         _dateTime = dateTimeService;
@@ -34,7 +34,7 @@ public class PastDueOrdersRetryConsumer : KafkaConsumerBase<PastDueOrdersRetryCo
     /// <inheritdoc/>
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        return Task.Run(() => ConsumeMessage(ProcessOrder, RetryOrder, stoppingToken), stoppingToken);
+        return ConsumeMessageAsync(ProcessOrder, RetryOrder, stoppingToken);
     }
 
     private async Task ProcessOrder(string message)

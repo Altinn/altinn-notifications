@@ -314,9 +314,9 @@ public class ContactPointService(
     /// </returns>
     private async Task<List<UserContactPoints>> LookupPersonContactPoints(List<Recipient> recipients)
     {
-        List<string> nationalIdentityNumbers = [.. recipients
+        List<string> nationalIdentityNumbers = recipients
                 .Where(e => !string.IsNullOrWhiteSpace(e.NationalIdentityNumber))
-                .Select(e => e.NationalIdentityNumber)];
+                .Select(e => e.NationalIdentityNumber!).ToList();
 
         if (nationalIdentityNumbers.Count == 0)
         {
@@ -355,9 +355,9 @@ public class ContactPointService(
     /// </returns>
     private async Task<List<OrganizationContactPoints>> LookupOrganizationContactPoints(List<Recipient> recipients, string? resourceId)
     {
-        List<string> organizationNumbers = [.. recipients
+        List<string> organizationNumbers = recipients
             .Where(e => !string.IsNullOrWhiteSpace(e.OrganizationNumber))
-            .Select(e => e.OrganizationNumber)];
+            .Select(e => e.OrganizationNumber!).ToList();
 
         if (organizationNumbers.Count == 0)
         {
@@ -375,18 +375,21 @@ public class ContactPointService(
         {
             var allUserContactPoints = await _profileClient.GetUserRegisteredContactPoints(organizationNumbers, sanitizedResourceId);
 
-            var authorizedUserContactPoints = await _authorizationService.AuthorizeUserContactPointsForResource(allUserContactPoints, sanitizedResourceId);
-
-            foreach (var authorizedUserContactPoint in authorizedUserContactPoints)
+            if (allUserContactPoints.Count > 0)
             {
-                var existingContactPoint = contactPoints.Find(e => e.OrganizationNumber == authorizedUserContactPoint.OrganizationNumber);
-                if (existingContactPoint == null)
+                var authorizedUserContactPoints = await _authorizationService.AuthorizeUserContactPointsForResource(allUserContactPoints, sanitizedResourceId);
+
+                foreach (var authorizedUserContactPoint in authorizedUserContactPoints)
                 {
-                    contactPoints.Add(authorizedUserContactPoint);
-                }
-                else
-                {
-                    existingContactPoint.UserContactPoints.AddRange(authorizedUserContactPoint.UserContactPoints);
+                    var existingContactPoint = contactPoints.Find(e => e.OrganizationNumber == authorizedUserContactPoint.OrganizationNumber);
+                    if (existingContactPoint == null)
+                    {
+                        contactPoints.Add(authorizedUserContactPoint);
+                    }
+                    else
+                    {
+                        existingContactPoint.UserContactPoints.AddRange(authorizedUserContactPoint.UserContactPoints);
+                    }
                 }
             }
         }

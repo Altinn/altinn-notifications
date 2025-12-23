@@ -8,7 +8,7 @@
         -e mpClientId={the id of an integration defined in maskinporten} \
         -e mpKid={the key id of the JSON web key used to sign the maskinporten token request} \
         -e encodedJwk={the encoded JSON web key used to sign the maskinporten token request} \
-        -e env={environment: at22, at23, at24, tt02, prod} \
+        -e altinn_env={environment: at22, at23, at24, tt02, prod} \
         -e orgNoRecipient={an organization number to include as a notification recipient} \
         -e resourceId={the resource ID associated with the notification order} \
         -e runFullTestSet=true
@@ -119,19 +119,19 @@ function postEmailNotificationOrderRequest(data) {
     stopIterationOnFail("POST email notification order request failed", success);
 
     const selfLink = response.headers["Location"];
-    if (environment !== yt01Environment) {
+    if (environment === yt01Environment) {
         check(response, {
             "POST email notification order request. Location header provided": (r) => selfLink,
-            "POST email notification order request. Recipient lookup was successful": (r) => JSON.parse(r.body).recipientLookup.status == 'Success' 
+            "POST email notification order request. Recipient lookup was successful or no recipients found": (r) => JSON.parse(r.body).recipientLookup.status == 'Success'
+                || (JSON.parse(r.body).recipientLookup.status == 'Failed' && JSON.parse(r.body).recipientLookup.missingContact.length > 0)
         });
     }
     else {
         check(response, {
             "POST email notification order request. Location header provided": (r) => selfLink,
-            "POST email notification order request. Recipient lookup was successful or no recipients found": (r) => JSON.parse(r.body).recipientLookup.status == 'Success' 
-            || (JSON.parse(r.body).recipientLookup.status == 'Failed' && JSON.parse(r.body).recipientLookup.missingContact.length > 0)
+            "POST email notification order request. Recipient lookup was successful": (r) => JSON.parse(r.body).recipientLookup.status == 'Success'
         });
-    }   
+    }
 
     return selfLink;
 }
@@ -225,7 +225,7 @@ function getSmsNotificationSummary(data, orderId) {
  * The main function to run the test.
  * @param {Object} data - The data object containing runFullTestSet and other test data.
  */
-export default function (data) {
+export default function runTests(data) {
     // Get a random organization number from the list.
     // For all other envs than yt01, the list only contains one number
     const orgNoRecipient = getOrgNoRecipient();
@@ -233,7 +233,7 @@ export default function (data) {
     const selfLink = postEmailNotificationOrderRequest(data);
     const id = selfLink.split("/").pop();
 
-    data.smsOrderRequest.recipients[0].organizationNumber = orgNoRecipient; 
+    data.smsOrderRequest.recipients[0].organizationNumber = orgNoRecipient;
     const smsSelfLink = postSmsNotificationOrderRequest(data);
     const smsId = smsSelfLink.split("/").pop();
 
