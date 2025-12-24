@@ -1,8 +1,13 @@
+using System;
+using System.Collections.Generic;
+
 using Altinn.Notifications.Core.Enums;
+
 using StatusFeedBackfillTool;
+
 using Xunit;
 
-namespace StatusFeedBackfillTool.Tests;
+namespace Altinn.Notifications.Tools.Tests.StatusFeedBackfillTool;
 
 public class BackfillSettingsTests
 {
