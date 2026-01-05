@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 
 using Microsoft.OpenApi;
 
@@ -9,6 +10,7 @@ namespace Altinn.Notifications.Swagger;
 /// <summary>
 /// Schema filter to properly handle default values in Swagger.
 /// </summary>
+[ExcludeFromCodeCoverage]
 public class SwaggerDefaultValues : ISchemaFilter
 {
     /// <summary>
