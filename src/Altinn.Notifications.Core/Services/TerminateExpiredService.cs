@@ -3,7 +3,7 @@ using Altinn.Notifications.Core.Services.Interfaces;
 namespace Altinn.Notifications.Core.Services;
 
 /// <summary>
-/// Service that coordinates trigger operations for notifications.
+/// Service that terminates expired notifications for both email and SMS channels.
 /// </summary>
 public class TerminateExpiredService : ITerminateExpiredNotificationsService
 {

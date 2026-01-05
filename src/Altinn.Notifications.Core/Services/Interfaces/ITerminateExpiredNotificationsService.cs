@@ -1,7 +1,7 @@
 namespace Altinn.Notifications.Core.Services.Interfaces;
 
 /// <summary>
-/// Service that coordinates trigger operations for notifications.
+/// Service that coordinates terminate operations for notifications.
 /// Groups related operations to reduce constructor parameter count.
 /// </summary>
 public interface ITerminateExpiredNotificationsService

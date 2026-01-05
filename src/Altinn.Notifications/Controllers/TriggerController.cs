@@ -21,7 +21,7 @@ public class TriggerController : ControllerBase
     private readonly IEmailPublishTaskQueue _emailPublishTaskQueue;
     private readonly INotificationScheduleService _scheduleService;
     private readonly IOrderProcessingService _orderProcessingService;
-    private readonly ITerminateExpiredNotificationsService _triggerOperationsService;
+    private readonly ITerminateExpiredNotificationsService _terminateExpiredService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TriggerController"/> class.
@@ -33,7 +33,7 @@ public class TriggerController : ControllerBase
         IEmailPublishTaskQueue emailPublishingTaskQueue,
         INotificationScheduleService scheduleService,
         IOrderProcessingService orderProcessingService,
-        ITerminateExpiredNotificationsService triggerOperationsService)
+        ITerminateExpiredNotificationsService terminateExpiredService)
     {
         _logger = logger;
         _scheduleService = scheduleService;
@@ -41,7 +41,7 @@ public class TriggerController : ControllerBase
         _smsPublishTaskQueue = smsPublishTaskQueue;
         _emailPublishTaskQueue = emailPublishingTaskQueue;
         _orderProcessingService = orderProcessingService;
-        _triggerOperationsService = triggerOperationsService;
+        _terminateExpiredService = terminateExpiredService;
     }
 
     /// <summary>
@@ -84,7 +84,7 @@ public class TriggerController : ControllerBase
     {
         try
         {
-            await _triggerOperationsService.TerminateExpiredNotifications();
+            await _terminateExpiredService.TerminateExpiredNotifications();
 
             return Ok();
         }
