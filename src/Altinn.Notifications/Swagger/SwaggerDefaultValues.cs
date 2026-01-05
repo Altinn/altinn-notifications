@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel;
 
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 
 using Swashbuckle.AspNetCore.SwaggerGen;
 
@@ -14,7 +14,7 @@ public class SwaggerDefaultValues : ISchemaFilter
     /// <summary>
     /// Applies default value handling to the schema
     /// </summary>
-    public void Apply(OpenApiSchema schema, SchemaFilterContext context)
+    public void Apply(IOpenApiSchema schema, SchemaFilterContext context)
     {
         if (context.MemberInfo == null)
         {
@@ -31,21 +31,27 @@ public class SwaggerDefaultValues : ISchemaFilter
             return;
         }
 
+        // Cast to concrete OpenApiSchema to access the settable Default property
+        if (schema is not OpenApiSchema openApiSchema)
+        {
+            return;
+        }
+
         if (defaultValue.Value is Enum)
         {
-            schema.Default = new Microsoft.OpenApi.Any.OpenApiString(Convert.ToString(defaultValue.Value));
+            openApiSchema.Default = Convert.ToString(defaultValue.Value);
         }
         else if (defaultValue.Value is int intValue)
         {
-            schema.Default = new Microsoft.OpenApi.Any.OpenApiInteger(intValue);
+            openApiSchema.Default = intValue;
         }
         else if (defaultValue.Value is bool boolValue)
         {
-            schema.Default = new Microsoft.OpenApi.Any.OpenApiBoolean(boolValue);
+            openApiSchema.Default = boolValue;
         }
         else if (defaultValue.Value is string stringValue)
         {
-            schema.Default = new Microsoft.OpenApi.Any.OpenApiString(stringValue);
+            openApiSchema.Default = stringValue;
         }
     }
 }
