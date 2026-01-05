@@ -3,6 +3,7 @@ using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Services.Interfaces;
 
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace Altinn.Notifications.Controllers;
 
@@ -20,8 +21,7 @@ public class TriggerController : ControllerBase
     private readonly IEmailPublishTaskQueue _emailPublishTaskQueue;
     private readonly INotificationScheduleService _scheduleService;
     private readonly IOrderProcessingService _orderProcessingService;
-    private readonly ISmsNotificationService _smsNotificationService;
-    private readonly IEmailNotificationService _emailNotificationService;
+    private readonly ITerminateExpiredNotificationsService _triggerOperationsService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TriggerController"/> class.
@@ -33,8 +33,7 @@ public class TriggerController : ControllerBase
         IEmailPublishTaskQueue emailPublishingTaskQueue,
         INotificationScheduleService scheduleService,
         IOrderProcessingService orderProcessingService,
-        ISmsNotificationService smsNotificationService,
-        IEmailNotificationService emailNotificationService)
+        ITerminateExpiredNotificationsService triggerOperationsService)
     {
         _logger = logger;
         _scheduleService = scheduleService;
@@ -42,8 +41,7 @@ public class TriggerController : ControllerBase
         _smsPublishTaskQueue = smsPublishTaskQueue;
         _emailPublishTaskQueue = emailPublishingTaskQueue;
         _orderProcessingService = orderProcessingService;
-        _smsNotificationService = smsNotificationService;
-        _emailNotificationService = emailNotificationService;
+        _triggerOperationsService = triggerOperationsService;
     }
 
     /// <summary>
@@ -86,8 +84,7 @@ public class TriggerController : ControllerBase
     {
         try
         {
-            await _emailNotificationService.TerminateExpiredNotifications();
-            await _smsNotificationService.TerminateExpiredNotifications();
+            await _triggerOperationsService.TerminateExpiredNotifications();
 
             return Ok();
         }
