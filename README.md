@@ -56,7 +56,6 @@ In pgAdmin
 - Create the following users with password: _Password_ (see privileges in parentheses)
   - platform_notifications_admin (superuser, canlogin)
   - platform_notifications (canlogin)
-- Create schema _notifications_ in notificationsdb with owner _platform_notifications_admin_
 
 A more detailed description of the database setup is available in [our developer handbook](https://docs.altinn.studio/community/contributing/handbook/postgres/)
 
