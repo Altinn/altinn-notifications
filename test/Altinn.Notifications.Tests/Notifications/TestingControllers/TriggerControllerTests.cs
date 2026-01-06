@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 
 using Altinn.Notifications.Controllers;
 using Altinn.Notifications.Core.BackgroundQueue;
+using Altinn.Notifications.Core.Services;
 using Altinn.Notifications.Core.Services.Interfaces;
 
 using Microsoft.AspNetCore.Http;
@@ -31,14 +32,16 @@ public class TriggerControllerTests
 
     public TriggerControllerTests()
     {
+        ITerminateExpiredNotificationsService terminateExpiredNotificationsService = new TerminateExpiredService(_emailNotificationServiceMock.Object, _smsNotificationServiceMock.Object);
+
         _controller = new TriggerController(
-            NullLogger<TriggerController>.Instance,
-            _statusFeedServiceMock.Object,
-            _smsPublishTaskQueueMock.Object,
-            _emailPublishTaskQueueMock.Object,
-            _notificationScheduleMock.Object,
-            _orderProcessingServiceMock.Object,
-            [_emailNotificationServiceMock.Object, _smsNotificationServiceMock.Object]);
+        NullLogger<TriggerController>.Instance,
+        _statusFeedServiceMock.Object,
+        _smsPublishTaskQueueMock.Object,
+        _emailPublishTaskQueueMock.Object,
+        _notificationScheduleMock.Object,
+        _orderProcessingServiceMock.Object,
+        terminateExpiredNotificationsService);
     }
 
     [Fact]
