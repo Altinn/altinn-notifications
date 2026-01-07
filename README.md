@@ -39,7 +39,7 @@ The persistance layer that implements repository logic.
 
 ## Getting started
 
-1. [.NET 9.0 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
+1. [.NET 10.0 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/10.0)
 2. Newest [Git](https://git-scm.com/downloads)
 3. A code editor - we like [Visual Studio Code](https://code.visualstudio.com/download)
    - Also install [recommended extensions](https://code.visualstudio.com/docs/editor/extension-marketplace#_workspace-recommended-extensions) (e.g. [C#](https://marketplace.visualstudio.com/items?itemName=ms-dotnettools.csharp))

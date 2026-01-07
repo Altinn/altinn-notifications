@@ -34,12 +34,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
-      - name: Setup .NET 9.0.* SDK
+      - name: Setup .NET 10.0.* SDK
         if: matrix.language == 'csharp'
         uses: actions/setup-dotnet@2016bd2012dba4e32de620c46fe006a3ac9f0602 # v5.0.1
         with:
           dotnet-version: |
-            9.0.x
+            10.0.x
       - name: Initialize CodeQL
         uses: github/codeql-action/init@1b168cd39490f61582a9beae412bb7057a6b2c4e # v4.31.8
         with:
