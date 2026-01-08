@@ -305,7 +305,7 @@ namespace Altinn.Notifications.Integrations.Kafka.Consumers
                 })
                 .SetStatisticsHandler((_, json) =>
                 {
-                    _logger.LogDebug("// KafkaConsumerBase // Stats: {StatsJson}", json);
+                    _logger.LogTrace("// KafkaConsumerBase // Stats: {StatsJson}", json);
                 })
                 .SetPartitionsRevokedHandler(PartitionsRevokedHandler)
                 .SetPartitionsAssignedHandler((_, partitions) =>
