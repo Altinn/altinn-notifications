@@ -3,6 +3,7 @@ using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Services.Interfaces;
 
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace Altinn.Notifications.Controllers;
 
@@ -20,7 +21,7 @@ public class TriggerController : ControllerBase
     private readonly IEmailPublishTaskQueue _emailPublishTaskQueue;
     private readonly INotificationScheduleService _scheduleService;
     private readonly IOrderProcessingService _orderProcessingService;
-    private readonly IEnumerable<INotificationService> _notificationServices;
+    private readonly ITerminateExpiredNotificationsService _terminateExpiredService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TriggerController"/> class.
@@ -32,7 +33,7 @@ public class TriggerController : ControllerBase
         IEmailPublishTaskQueue emailPublishingTaskQueue,
         INotificationScheduleService scheduleService,
         IOrderProcessingService orderProcessingService,
-        IEnumerable<INotificationService> notificationServices)
+        ITerminateExpiredNotificationsService terminateExpiredService)
     {
         _logger = logger;
         _scheduleService = scheduleService;
@@ -40,7 +41,7 @@ public class TriggerController : ControllerBase
         _smsPublishTaskQueue = smsPublishTaskQueue;
         _emailPublishTaskQueue = emailPublishingTaskQueue;
         _orderProcessingService = orderProcessingService;
-        _notificationServices = notificationServices;
+        _terminateExpiredService = terminateExpiredService;
     }
 
     /// <summary>
@@ -83,11 +84,7 @@ public class TriggerController : ControllerBase
     {
         try
         {
-            // This will call TerminateExpiredNotifications on all registered notification services, currently sms and email
-            foreach (var service in _notificationServices)
-            {
-                await service.TerminateExpiredNotifications();
-            }
+            await _terminateExpiredService.TerminateExpiredNotifications();
 
             return Ok();
         }
