@@ -4,7 +4,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Npgsql;
-using StatusFeedBackfillTool;
+using StatusFeedBackfillTool.Configuration;
+using StatusFeedBackfillTool.Services;
 using System.Diagnostics.CodeAnalysis;
 
 [assembly: ExcludeFromCodeCoverage]
@@ -19,6 +20,10 @@ builder.Configuration
 // Configure PostgreSQL settings
 builder.Services.Configure<PostgreSqlSettings>(
     builder.Configuration.GetSection("PostgreSQLSettings"));
+
+// Configure discovery settings
+builder.Services.Configure<DiscoverySettings>(
+    builder.Configuration.GetSection("DiscoverySettings"));
 
 // Configure backfill settings
 builder.Services.Configure<BackfillSettings>(
@@ -40,22 +45,47 @@ builder.Services.AddSingleton(sp =>
 // Register repositories
 builder.Services.AddSingleton<Altinn.Notifications.Persistence.Repository.OrderRepository>();
 
-// Register the backfill service
+// Register services
+builder.Services.AddSingleton<OrderDiscoveryService>();
 builder.Services.AddSingleton<StatusFeedBackfillService>();
 
 var host = builder.Build();
 
-// Run the backfill
+// Run the tool
 using (var scope = host.Services.CreateScope())
 {
-    var backfillService = scope.ServiceProvider.GetRequiredService<StatusFeedBackfillService>();
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
     try
     {
-        logger.LogInformation("Starting Status Feed Backfill Tool");
-        await backfillService.RunBackfill(CancellationToken.None);
-        logger.LogInformation("Status Feed Backfill completed successfully");
+        logger.LogInformation("Starting Status Feed Backfill Tool\n");
+        
+        // Interactive mode selection
+        Console.WriteLine("Select operation mode:");
+        Console.WriteLine("  1. Discover - Find affected orders and save to file");
+        Console.WriteLine("  2. Backfill - Process orders from file and insert status feed entries");
+        Console.WriteLine("  3. Exit");
+        Console.Write("\nEnter choice (1-3): ");
+        
+        var choice = Console.ReadLine()?.Trim();
+        
+        if (choice == "1")
+        {
+            var discoveryService = scope.ServiceProvider.GetRequiredService<OrderDiscoveryService>();
+            await discoveryService.Run(CancellationToken.None);
+        }
+        else if (choice == "2")
+        {
+            var backfillService = scope.ServiceProvider.GetRequiredService<StatusFeedBackfillService>();
+            await backfillService.Run(CancellationToken.None);
+        }
+        else
+        {
+            logger.LogInformation("Exiting...");
+            return 0;
+        }
+        
+        logger.LogInformation("\nStatus Feed Backfill Tool completed successfully");
     }
     catch (Exception ex)
     {
