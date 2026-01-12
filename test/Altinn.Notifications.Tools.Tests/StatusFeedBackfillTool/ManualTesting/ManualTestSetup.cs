@@ -16,7 +16,7 @@ namespace Altinn.Notifications.Tools.Tests.StatusFeedBackfillTool.ManualTesting;
 public class ManualTestSetup
 {
     // Set to true to enable these tests for manual execution
-    private const bool _enableManualTests = true;
+    private const bool _enableManualTests = false;
     
     /// <summary>
     /// Creates diverse test orders to verify discovery logic:
