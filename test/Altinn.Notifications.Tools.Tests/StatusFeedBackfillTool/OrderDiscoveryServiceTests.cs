@@ -7,9 +7,7 @@ using System.Threading.Tasks;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Tools.Tests.Utils;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Moq;
 using Npgsql;
 using StatusFeedBackfillTool.Configuration;
 using StatusFeedBackfillTool.Services;
@@ -54,7 +52,6 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
             Guid.Parse("6ba7b810-9dad-11d1-80b4-00c04fd430c8")
         };
 
-        var mockLogger = new Mock<ILogger<OrderDiscoveryService>>();
         var settings = Options.Create(new DiscoverySettings
         {
             OrderIdsFilePath = _testFilePath,
@@ -62,10 +59,7 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
         });
 
         // Create service using reflection to access private SaveOrdersToFile method
-        var service = new OrderDiscoveryService(
-            null!,
-            settings,
-            mockLogger.Object);
+        var service = new OrderDiscoveryService(null!, settings);
 
         // Use reflection to call private method
         var method = typeof(OrderDiscoveryService).GetMethod(
@@ -108,8 +102,7 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
             MaxOrders = 100
         });
 
-        var logger = new Mock<ILogger<OrderDiscoveryService>>();
-        var service = new OrderDiscoveryService(dataSource, settings, logger.Object);
+        var service = new OrderDiscoveryService(dataSource, settings);
 
         // Act
         await service.Run(CancellationToken.None);
@@ -142,8 +135,7 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
             MaxOrders = 100
         });
 
-        var logger = new Mock<ILogger<OrderDiscoveryService>>();
-        var service = new OrderDiscoveryService(dataSource, settings, logger.Object);
+        var service = new OrderDiscoveryService(dataSource, settings);
 
         // Act
         await service.Run(CancellationToken.None);
@@ -176,8 +168,7 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
             MaxOrders = 100
         });
 
-        var logger = new Mock<ILogger<OrderDiscoveryService>>();
-        var service = new OrderDiscoveryService(dataSource, settings, logger.Object);
+        var service = new OrderDiscoveryService(dataSource, settings);
 
         // Act
         await service.Run(CancellationToken.None);
@@ -210,8 +201,7 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
             MaxOrders = 100
         });
 
-        var logger = new Mock<ILogger<OrderDiscoveryService>>();
-        var service = new OrderDiscoveryService(dataSource, settings, logger.Object);
+        var service = new OrderDiscoveryService(dataSource, settings);
 
         // Act
         await service.Run(CancellationToken.None);
@@ -241,8 +231,7 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
             MaxOrders = 100
         });
 
-        var logger = new Mock<ILogger<OrderDiscoveryService>>();
-        var service = new OrderDiscoveryService(dataSource, settings, logger.Object);
+        var service = new OrderDiscoveryService(dataSource, settings);
 
         // Act
         await service.Run(CancellationToken.None);
@@ -273,8 +262,7 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
             MaxOrders = 100
         });
 
-        var logger = new Mock<ILogger<OrderDiscoveryService>>();
-        var service = new OrderDiscoveryService(dataSource, settings, logger.Object);
+        var service = new OrderDiscoveryService(dataSource, settings);
 
         // Act
         await service.Run(CancellationToken.None);
@@ -320,8 +308,7 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
             MaxOrders = 100
         });
 
-        var logger = new Mock<ILogger<OrderDiscoveryService>>();
-        var service = new OrderDiscoveryService(dataSource, settings, logger.Object);
+        var service = new OrderDiscoveryService(dataSource, settings);
 
         // Act
         await service.Run(CancellationToken.None);
@@ -354,8 +341,7 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
             MaxOrders = 100
         });
 
-        var logger = new Mock<ILogger<OrderDiscoveryService>>();
-        var service = new OrderDiscoveryService(dataSource, settings, logger.Object);
+        var service = new OrderDiscoveryService(dataSource, settings);
 
         // Act
         await service.Run(CancellationToken.None);
@@ -389,8 +375,7 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
             MaxOrders = 100
         });
 
-        var logger = new Mock<ILogger<OrderDiscoveryService>>();
-        var service = new OrderDiscoveryService(dataSource, settings, logger.Object);
+        var service = new OrderDiscoveryService(dataSource, settings);
 
         // Act
         await service.Run(CancellationToken.None);

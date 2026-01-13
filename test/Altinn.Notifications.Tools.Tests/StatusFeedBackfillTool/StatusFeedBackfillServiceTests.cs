@@ -8,9 +8,7 @@ using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Persistence;
 using Altinn.Notifications.Persistence.Repository;
 using Altinn.Notifications.Tools.Tests.Utils;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Moq;
 using StatusFeedBackfillTool.Configuration;
 using StatusFeedBackfillTool.Services;
 using Xunit;
@@ -45,37 +43,30 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Run_WithEmptyFile_LogsNoOrdersFound()
+    public async Task Run_WithEmptyFile_CompletesSuccessfullyWithoutProcessing()
     {
         // Arrange
         var orderIds = new List<Guid>();
         await File.WriteAllTextAsync(_testFilePath, JsonSerializer.Serialize(orderIds));
 
         var orderRepo = TestServiceUtil.GetService<OrderRepository>();
-        var mockLogger = new Mock<ILogger<StatusFeedBackfillService>>();
         var settings = Options.Create(new BackfillSettings
         {
             OrderIdsFilePath = _testFilePath,
             DryRun = true
         });
 
-        var service = new StatusFeedBackfillService(
-            orderRepo,
-            settings,
-            mockLogger.Object);
+        var service = new StatusFeedBackfillService(orderRepo, settings);
 
-        // Act
+        // Act & Assert - Should complete without throwing exception
+        // Service writes "No orders found in file" to console and returns gracefully
         await service.Run(CancellationToken.None);
 
-        // Assert
-        mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("No orders found in file")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        // Verify file still exists and is still empty (no modifications)
+        Assert.True(File.Exists(_testFilePath));
+        var fileContent = await File.ReadAllTextAsync(_testFilePath);
+        var deserializedOrders = JsonSerializer.Deserialize<List<Guid>>(fileContent);
+        Assert.Empty(deserializedOrders!);
     }
 
     [Fact]
@@ -94,17 +85,13 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
         await File.WriteAllTextAsync(_testFilePath, JsonSerializer.Serialize(orderIds));
 
         var backfillOrderRepo = TestServiceUtil.GetService<OrderRepository>();
-        var mockLogger = new Mock<ILogger<StatusFeedBackfillService>>();
         var settings = Options.Create(new BackfillSettings
         {
             OrderIdsFilePath = _testFilePath,
             DryRun = true
         });
 
-        var service = new StatusFeedBackfillService(
-            backfillOrderRepo,
-            settings,
-            mockLogger.Object);
+        var service = new StatusFeedBackfillService(backfillOrderRepo, settings);
 
         // Act
         await service.Run(CancellationToken.None);
@@ -114,16 +101,6 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
         int count2 = await TestDataUtil.GetStatusFeedEntryCount(order2Id);
         Assert.Equal(0, count1);
         Assert.Equal(0, count2);
-
-        // Verify summary was logged
-        mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Backfill Summary")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
     }
 
     [Fact]
@@ -145,17 +122,13 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
         await File.WriteAllTextAsync(_testFilePath, JsonSerializer.Serialize(orderIds));
 
         var backfillOrderRepo = TestServiceUtil.GetService<OrderRepository>();
-        var mockLogger = new Mock<ILogger<StatusFeedBackfillService>>();
         var settings = Options.Create(new BackfillSettings
         {
             OrderIdsFilePath = _testFilePath,
             DryRun = false
         });
 
-        var service = new StatusFeedBackfillService(
-            backfillOrderRepo,
-            settings,
-            mockLogger.Object);
+        var service = new StatusFeedBackfillService(backfillOrderRepo, settings);
 
         // Act
         await service.Run(CancellationToken.None);
@@ -173,40 +146,30 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Run_WithNonExistentFile_LogsError()
+    public async Task Run_WithNonExistentFile_HandlesErrorGracefully()
     {
         // Arrange
         var nonExistentPath = Path.Combine(Path.GetTempPath(), $"non-existent-{Guid.NewGuid()}.json");
 
         var orderRepo = TestServiceUtil.GetService<OrderRepository>();
-        var mockLogger = new Mock<ILogger<StatusFeedBackfillService>>();
         var settings = Options.Create(new BackfillSettings
         {
             OrderIdsFilePath = nonExistentPath,
             DryRun = true
         });
 
-        var service = new StatusFeedBackfillService(
-            orderRepo,
-            settings,
-            mockLogger.Object);
+        var service = new StatusFeedBackfillService(orderRepo, settings);
 
-        // Act
+        // Act & Assert - Should complete without throwing exception
+        // Service writes "ERROR: File not found" to console and returns gracefully without crashing
         await service.Run(CancellationToken.None);
 
-        // Assert
-        mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("File not found")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        // Verify file was never created (service doesn't attempt to create missing files)
+        Assert.False(File.Exists(nonExistentPath));
     }
 
     [Fact]
-    public async Task Run_WithNonExistentOrder_LogsErrorAndContinues()
+    public async Task Run_WithInvalidOrder_ContinuesProcessingRemainingOrders()
     {
         // Arrange
         var nonExistentOrderId = Guid.NewGuid();
@@ -219,32 +182,19 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
         await File.WriteAllTextAsync(_testFilePath, JsonSerializer.Serialize(orderIds));
 
         var backfillOrderRepo = TestServiceUtil.GetService<OrderRepository>();
-        var mockLogger = new Mock<ILogger<StatusFeedBackfillService>>();
         var settings = Options.Create(new BackfillSettings
         {
             OrderIdsFilePath = _testFilePath,
             DryRun = false
         });
 
-        var service = new StatusFeedBackfillService(
-            backfillOrderRepo,
-            settings,
-            mockLogger.Object);
+        var service = new StatusFeedBackfillService(backfillOrderRepo, settings);
 
         // Act
         await service.Run(CancellationToken.None);
 
-        // Assert - error should be logged for non-existent order
-        mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Error processing order")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.AtLeastOnce);
-
-        // But the existing order should still be processed successfully
+        // Assert - Service logs error for invalid order but continues processing valid orders
+        // Verify that the valid order was still processed successfully
         await Task.Delay(2100);
         int count = await TestDataUtil.GetStatusFeedEntryCount(existingOrderId);
         Assert.Equal(1, count);

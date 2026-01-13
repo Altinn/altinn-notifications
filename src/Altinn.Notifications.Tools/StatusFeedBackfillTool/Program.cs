@@ -2,7 +2,6 @@ using Altinn.Notifications.Persistence.Configuration;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Npgsql;
 using StatusFeedBackfillTool.Configuration;
 using StatusFeedBackfillTool.Services;
@@ -54,21 +53,19 @@ var host = builder.Build();
 // Run the tool
 using (var scope = host.Services.CreateScope())
 {
-    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-
     try
     {
-        logger.LogInformation("Starting Status Feed Backfill Tool\n");
-        
+        Console.WriteLine("Starting Status Feed Backfill Tool\n");
+
         // Interactive mode selection
         Console.WriteLine("Select operation mode:");
         Console.WriteLine("  1. Discover - Find affected orders and save to file");
         Console.WriteLine("  2. Backfill - Process orders from file and insert status feed entries");
         Console.WriteLine("  3. Exit");
         Console.Write("\nEnter choice (1-3): ");
-        
+
         var choice = Console.ReadLine()?.Trim();
-        
+
         if (choice == "1")
         {
             var discoveryService = scope.ServiceProvider.GetRequiredService<OrderDiscoveryService>();
@@ -81,15 +78,16 @@ using (var scope = host.Services.CreateScope())
         }
         else
         {
-            logger.LogInformation("Exiting...");
+            Console.WriteLine("Exiting...");
             return 0;
         }
-        
-        logger.LogInformation("\nStatus Feed Backfill Tool completed successfully");
+
+        Console.WriteLine("\nStatus Feed Backfill Tool completed successfully");
     }
     catch (Exception ex)
     {
-        logger.LogError(ex, "An error occurred during backfill: {Message}", ex.Message);
+        Console.WriteLine($"ERROR: An error occurred during backfill: {ex.Message}");
+        Console.WriteLine($"Stack trace: {ex.StackTrace}");
         return 1;
     }
 }

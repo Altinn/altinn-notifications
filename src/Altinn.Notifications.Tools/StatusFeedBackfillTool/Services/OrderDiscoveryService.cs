@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Text.Json;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Npgsql;
 using NpgsqlTypes;
@@ -16,7 +15,8 @@ public class OrderDiscoveryService
 {
     private readonly NpgsqlDataSource _dataSource;
     private readonly DiscoverySettings _settings;
-    private readonly ILogger<OrderDiscoveryService> _logger;
+
+    private static readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
     private const string _getOldestStatusFeedDateSql = "SELECT COALESCE(MIN(created), '1900-01-01'::TIMESTAMPTZ) FROM notifications.statusfeed";
 
@@ -36,26 +36,23 @@ public class OrderDiscoveryService
 
     public OrderDiscoveryService(
         NpgsqlDataSource dataSource,
-        IOptions<DiscoverySettings> settings,
-        ILogger<OrderDiscoveryService> logger)
+        IOptions<DiscoverySettings> settings)
     {
         _dataSource = dataSource;
         _settings = settings.Value;
-        _logger = logger;
     }
 
     public async Task Run(CancellationToken cancellationToken)
     {
         var stopwatch = Stopwatch.StartNew();
 
-        var settings = $"=== DISCOVER MODE ===\n\n" +
-            $"Tool Settings:\n" +
-            $"  Mode: Discover\n" +
-            $"  Order IDs File: {_settings.OrderIdsFilePath}\n" +
-            $"  Creator Filter: {_settings.CreatorNameFilter ?? "None (all creators)"}\n" +
-            $"  Order Status Filter: {_settings.OrderProcessingStatusFilter?.ToString() ?? "None (all statuses)"}\n";
-        
-        _logger.LogInformation("{Settings}", settings);
+        Console.WriteLine("=== DISCOVER MODE ===\n");
+        Console.WriteLine("Tool Settings:");
+        Console.WriteLine($"  Mode: Discover");
+        Console.WriteLine($"  Order IDs File: {_settings.OrderIdsFilePath}");
+        Console.WriteLine($"  Creator Filter: {_settings.CreatorNameFilter ?? "None (all creators)"}");
+        Console.WriteLine($"  Order Status Filter: {_settings.OrderProcessingStatusFilter?.ToString() ?? "None (all statuses)"}");
+        Console.WriteLine();
 
         var affectedOrders = await DiscoverAffectedOrders(cancellationToken);
 
@@ -63,28 +60,31 @@ public class OrderDiscoveryService
 
         if (affectedOrders.Count == 0)
         {
-            _logger.LogInformation("No affected orders found.\nTotal elapsed time: {Elapsed:hh\\:mm\\:ss}", stopwatch.Elapsed);
+            Console.WriteLine("No affected orders found.");
+            Console.WriteLine($"Total elapsed time: {stopwatch.Elapsed:hh\\:mm\\:ss}");
             return;
         }
-        
+
         await SaveOrdersToFile(affectedOrders, cancellationToken);
-        
-        _logger.LogInformation("Found {Count} affected orders\nAffected orders saved to: {FilePath}\nTo process these orders, run again in Backfill mode\nTotal elapsed time: {Elapsed:hh\\:mm\\:ss}", 
-            affectedOrders.Count, _settings.OrderIdsFilePath, stopwatch.Elapsed);
+
+        Console.WriteLine($"Found {affectedOrders.Count} affected orders");
+        Console.WriteLine($"Affected orders saved to: {_settings.OrderIdsFilePath}");
+        Console.WriteLine("To process these orders, run again in Backfill mode");
+        Console.WriteLine($"Total elapsed time: {stopwatch.Elapsed:hh\\:mm\\:ss}");
     }
 
     private async Task<List<Guid>> DiscoverAffectedOrders(CancellationToken cancellationToken)
     {
         DateTime minProcessedDate = await GetMinProcessedDate(cancellationToken);
-        _logger.LogInformation("  Min Processed Date: {MinProcessedDate:yyyy-MM-dd HH:mm:ss}\nDiscovering affected orders...", 
-            minProcessedDate);
+        Console.WriteLine($"  Min Processed Date: {minProcessedDate:yyyy-MM-dd HH:mm:ss}");
+        Console.WriteLine("Discovering affected orders...");
 
         return await GetAllAffectedOrders(minProcessedDate, cancellationToken);
     }
 
     private async Task SaveOrdersToFile(List<Guid> orders, CancellationToken cancellationToken)
     {
-        var json = JsonSerializer.Serialize(orders, new JsonSerializerOptions { WriteIndented = true });
+        var json = JsonSerializer.Serialize(orders, _jsonOptions);
         await File.WriteAllTextAsync(_settings.OrderIdsFilePath, json, cancellationToken);
     }
 

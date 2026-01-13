@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
 using Altinn.Notifications.Persistence.Repository;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using StatusFeedBackfillTool.Configuration;
 
@@ -15,41 +14,37 @@ public class StatusFeedBackfillService
 {
     private readonly OrderRepository _orderRepository;
     private readonly BackfillSettings _settings;
-    private readonly ILogger<StatusFeedBackfillService> _logger;
 
     public StatusFeedBackfillService(
         OrderRepository orderRepository,
-        IOptions<BackfillSettings> settings,
-        ILogger<StatusFeedBackfillService> logger)
+        IOptions<BackfillSettings> settings)
     {
         _orderRepository = orderRepository;
         _settings = settings.Value;
-        _logger = logger;
     }
 
     public async Task Run(CancellationToken cancellationToken)
     {
         var stopwatch = Stopwatch.StartNew();
 
-        var settings = $"=== BACKFILL MODE ===\n\n" +
-            $"Tool Settings:\n" +
-            $"  Mode: Backfill\n" +
-            $"  Order IDs File: {_settings.OrderIdsFilePath}\n" +
-            $"  Dry Run: {_settings.DryRun}\n";
-        
-        _logger.LogInformation("{Settings}", settings);
+        Console.WriteLine("=== BACKFILL MODE ===\n");
+        Console.WriteLine("Tool Settings:");
+        Console.WriteLine($"  Mode: Backfill");
+        Console.WriteLine($"  Order IDs File: {_settings.OrderIdsFilePath}");
+        Console.WriteLine($"  Dry Run: {_settings.DryRun}");
+        Console.WriteLine();
 
         var ordersToProcess = await LoadOrdersFromFile(cancellationToken);
 
         if (ordersToProcess.Count == 0)
         {
             stopwatch.Stop();
-            _logger.LogInformation("No orders found in file: {FilePath}\nTotal elapsed time: {Elapsed:hh\\:mm\\:ss}", 
-                _settings.OrderIdsFilePath, stopwatch.Elapsed);
+            Console.WriteLine($"No orders found in file: {_settings.OrderIdsFilePath}");
+            Console.WriteLine($"Total elapsed time: {stopwatch.Elapsed:hh\\:mm\\:ss}");
             return;
         }
 
-        _logger.LogInformation("Loaded {Count} orders from file\n", ordersToProcess.Count);
+        Console.WriteLine($"Loaded {ordersToProcess.Count} orders from file\n");
 
         var (totalProcessed, totalInserted, totalErrors) = await ProcessOrders(ordersToProcess, cancellationToken);
 
@@ -61,7 +56,7 @@ public class StatusFeedBackfillService
     {
         if (!File.Exists(_settings.OrderIdsFilePath))
         {
-            _logger.LogError("File not found: {FilePath}", _settings.OrderIdsFilePath);
+            Console.WriteLine($"ERROR: File not found: {_settings.OrderIdsFilePath}");
             return [];
         }
 
@@ -82,7 +77,7 @@ public class StatusFeedBackfillService
         {
             if (cancellationToken.IsCancellationRequested)
             {
-                _logger.LogWarning("Cancellation requested. Stopping processing.");
+                Console.WriteLine("WARNING: Cancellation requested. Stopping processing.");
                 break;
             }
 
@@ -90,7 +85,7 @@ public class StatusFeedBackfillService
 
             if (currentOrder % 10 == 0 || currentOrder == 1)
             {
-                _logger.LogInformation("Processing order {Current}/{Total}...", currentOrder, totalOrderCount);
+                Console.WriteLine($"Processing order {currentOrder}/{totalOrderCount}...");
             }
 
             try
@@ -111,7 +106,7 @@ public class StatusFeedBackfillService
             catch (Exception ex)
             {
                 totalErrors++;
-                _logger.LogError(ex, "Error processing order {OrderId}: {Message}", orderId, ex.Message);
+                Console.WriteLine($"ERROR processing order {orderId}: {ex.Message}");
             }
         }
 
@@ -121,19 +116,18 @@ public class StatusFeedBackfillService
     private void LogBackfillSummary(int totalProcessed, int totalInserted, int totalErrors, TimeSpan elapsed)
     {
         var action = _settings.DryRun ? "Would Be Inserted" : "Inserted";
-        var summary = $"\n========================================\n" +
-            $"Backfill Summary\n" +
-            $"========================================\n" +
-            $"Total Orders Processed: {totalProcessed}\n" +
-            $"Total Status Feed Entries {action}: {totalInserted}\n" +
-            $"Total Errors: {totalErrors}\n" +
-            $"Total elapsed time: {elapsed:hh\\:mm\\:ss}";
-        
-        _logger.LogInformation("{Summary}", summary);
-        
+
+        Console.WriteLine("\n========================================");
+        Console.WriteLine("Backfill Summary");
+        Console.WriteLine("========================================");
+        Console.WriteLine($"Total Orders Processed: {totalProcessed}");
+        Console.WriteLine($"Total Status Feed Entries {action}: {totalInserted}");
+        Console.WriteLine($"Total Errors: {totalErrors}");
+        Console.WriteLine($"Total elapsed time: {elapsed:hh\\:mm\\:ss}");
+
         if (_settings.DryRun)
         {
-            _logger.LogWarning("DRY RUN MODE - No changes were committed to the database");
+            Console.WriteLine("\nWARNING: DRY RUN MODE - No changes were committed to the database");
         }
     }
 }
