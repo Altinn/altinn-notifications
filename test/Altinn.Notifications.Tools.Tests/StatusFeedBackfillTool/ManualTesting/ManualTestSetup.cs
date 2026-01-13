@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Persistence;
-using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Tools.Tests.Utils;
 using Xunit;
 
@@ -56,11 +55,7 @@ public class ManualTestSetup
     [Fact(Skip = _enableManualTests ? null : "Manual test - set _enableManualTests = true to run")]
     public async Task Cleanup_ManualTestData()
     {
-        string deleteStatusFeedSql = @"DELETE FROM notifications.statusfeed WHERE creatorname = 'ttd'";
-        await PostgreUtil.RunSql(deleteStatusFeedSql);
-
-        string deleteOrdersSql = @"DELETE FROM notifications.orders WHERE creatorname = 'ttd'";
-        await PostgreUtil.RunSql(deleteOrdersSql);
+        await TestDataUtil.CleanupTestData();
 
         Console.WriteLine("\n========================================");
         Console.WriteLine("Manual test data cleaned up successfully!");
@@ -75,12 +70,11 @@ public class ManualTestSetup
         // SendConditionNotMet happens BEFORE notifications are created, so no email/SMS records
         for (int i = 0; i < count; i++)
         {
-            var order = await PostgreUtil.PopulateDBWithEmailOrder($"scnm-without-sf-{i}");
-            ordersToFind.Add(order.Id);
-            
-            // Update order to SendConditionNotMet via SQL to avoid automatic status feed creation
-            string updateOrderSql = $@"UPDATE notifications.orders SET processedstatus = 'SendConditionNotMet', processed = now() WHERE alternateid = '{order.Id}'";
-            await PostgreUtil.RunSql(updateOrderSql);
+            var orderId = await TestDataUtil.CreateSmsOrder($"scnm-without-sf-{i}");
+            ordersToFind.Add(orderId);
+
+            // Use legacy update to avoid automatic status feed creation
+            await TestDataUtil.UpdateOrderStatusLegacy(orderId, OrderProcessingStatus.SendConditionNotMet);
         }
     }
 
@@ -92,14 +86,14 @@ public class ManualTestSetup
         // SendConditionNotMet happens BEFORE notifications are created, so no email/SMS records
         for (int i = 0; i < count; i++)
         {
-            var order = await PostgreUtil.PopulateDBWithEmailOrder($"scnm-with-sf-{i}");
-            ordersNotToFind.Add(order.Id);
+            var orderId = await TestDataUtil.CreateSmsOrder($"scnm-with-sf-{i}");
+            ordersNotToFind.Add(orderId);
             
             // Update order status to SendConditionNotMet
-            await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
+            await orderRepo.SetProcessingStatus(orderId, OrderProcessingStatus.SendConditionNotMet);
             
             // Manually create status feed entry using the order repository method
-            await orderRepo.InsertStatusFeedForOrder(order.Id);
+            await orderRepo.InsertStatusFeedForOrder(orderId);
         }
     }
 
@@ -108,17 +102,17 @@ public class ManualTestSetup
         // === Processing orders WITHOUT status feed (should NOT be found - not final) ===
         for (int i = 0; i < count; i++)
         {
-            (var order, var email) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification($"processing-{i}");
-            ordersNotToFind.Add(order.Id);
+            var (orderId, emailId) = await TestDataUtil.CreateEmailOrder($"processing-{i}");
+            ordersNotToFind.Add(orderId);
             
-            // Keep order in Processing state with different intermediate email statuses
-            string updateOrderSql = $@"UPDATE notifications.orders SET processedstatus = 'Processing' WHERE alternateid = '{order.Id}'";
-            await PostgreUtil.RunSql(updateOrderSql);
+            // Keep order in Processing state
+            await TestDataUtil.UpdateOrderStatus(orderId, OrderProcessingStatus.Processing);
             
             // Vary email results to show different processing states
-            string emailResult = i % 2 == 0 ? "Sending" : "New";
-            string updateEmailSql = $@"UPDATE notifications.emailnotifications SET result = '{emailResult}' WHERE alternateid = '{email.Id}'";
-            await PostgreUtil.RunSql(updateEmailSql);
+            EmailNotificationResultType emailResult = i % 2 == 0 
+                ? EmailNotificationResultType.Sending 
+                : EmailNotificationResultType.New;
+            await TestDataUtil.UpdateEmailNotificationResult(emailId, emailResult);
         }
     }
 
@@ -130,11 +124,11 @@ public class ManualTestSetup
         // === Completed orders WITH status feed entries (should NOT be found) ===
         for (int i = 0; i < count; i++)
         {
-            (var order, var email) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification($"completed-with-sf-{i}");
-            ordersNotToFind.Add(order.Id);
+            var (orderId, emailId) = await TestDataUtil.CreateEmailOrder($"completed-with-sf-{i}");
+            ordersNotToFind.Add(orderId);
             
             // Update order and email statuses
-            await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Completed);
+            await orderRepo.SetProcessingStatus(orderId, OrderProcessingStatus.Completed);
             
             // Set different email results to test variety
             EmailNotificationResultType emailStatus = i switch
@@ -143,27 +137,24 @@ public class ManualTestSetup
                 1 => EmailNotificationResultType.Failed,
                 _ => EmailNotificationResultType.Failed_Bounced
             };
-            await emailRepo.UpdateSendStatus(email.Id, emailStatus);
+            await emailRepo.UpdateSendStatus(emailId, emailStatus);
             
             // Manually create status feed entry using the order repository method
-            await orderRepo.InsertStatusFeedForOrder(order.Id);
+            await orderRepo.InsertStatusFeedForOrder(orderId);
         }
     }
 
     private static async Task CreateCompletedWithoutStatusFeed(List<Guid> ordersToFind, int count)
     {
         // === Completed orders WITHOUT status feed (SHOULD BE FOUND) ===
+        // This simulates legacy orders that were completed before automatic status feed creation
         for (int i = 0; i < count; i++)
         {
-            (var order, var email) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification($"completed-without-sf-{i}");
-            ordersToFind.Add(order.Id);
-            
-            // Update via SQL to avoid automatic status feed creation
-            string updateEmailSql = $@"UPDATE notifications.emailnotifications SET result = 'Delivered', resulttime = now() WHERE alternateid = '{email.Id}'";
-            await PostgreUtil.RunSql(updateEmailSql);
-            
-            string updateOrderSql = $@"UPDATE notifications.orders SET processedstatus = 'Completed', processed = now() WHERE alternateid = '{order.Id}'";
-            await PostgreUtil.RunSql(updateOrderSql);
+            var (orderId, _) = await TestDataUtil.CreateEmailOrder($"completed-without-sf-{i}");
+            ordersToFind.Add(orderId);
+
+            // Use legacy update to simulate old orders completed without automatic statusfeed creation
+            await TestDataUtil.UpdateOrderStatusLegacy(orderId, OrderProcessingStatus.Completed);
         }
     }
 

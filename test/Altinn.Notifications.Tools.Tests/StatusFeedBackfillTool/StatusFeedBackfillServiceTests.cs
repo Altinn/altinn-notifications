@@ -6,7 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Persistence;
-using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Persistence.Repository;
 using Altinn.Notifications.Tools.Tests.Utils;
 using Microsoft.Extensions.Logging;
@@ -21,7 +20,6 @@ namespace Altinn.Notifications.Tools.Tests.StatusFeedBackfillTool;
 public class StatusFeedBackfillServiceTests : IAsyncLifetime
 {
     private readonly string _testFilePath;
-    private readonly List<Guid> _orderIdsToCleanup = [];
 
     public StatusFeedBackfillServiceTests()
     {
@@ -39,15 +37,11 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
             File.Delete(_testFilePath);
         }
 
-        // Clean up test orders and status feed entries from database
-        if (_orderIdsToCleanup.Count > 0)
-        {
-            string deleteStatusFeedSql = $@"DELETE FROM notifications.statusfeed WHERE orderid IN (SELECT _id FROM notifications.orders WHERE alternateid IN ('{string.Join("','", _orderIdsToCleanup)}'))";
-            await PostgreUtil.RunSql(deleteStatusFeedSql);
+        // Clean up all test data (created with "ttd" creator)
+        await TestDataUtil.CleanupTestData();
 
-            string deleteOrdersSql = $@"DELETE FROM notifications.orders WHERE alternateid IN ('{string.Join("','", _orderIdsToCleanup)}')";
-            await PostgreUtil.RunSql(deleteOrdersSql);
-        }
+        // Note: Don't dispose TestServiceUtil here - xUnit runs tests in parallel
+        // and they share the same data source
     }
 
     [Fact]
@@ -88,20 +82,18 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
     public async Task Run_WithOrdersInDryRunMode_DoesNotInsertData()
     {
         // Arrange - Create test orders
-        var order1 = await PostgreUtil.PopulateDBWithEmailOrder();
-        var order2 = await PostgreUtil.PopulateDBWithSmsOrder();
-        _orderIdsToCleanup.Add(order1.Id);
-        _orderIdsToCleanup.Add(order2.Id);
+        var order1Id = await TestDataUtil.CreateSmsOrder("dryrun-test-1");
+        var order2Id = await TestDataUtil.CreateSmsOrder("dryrun-test-2");
 
-        // Mark orders as Processed
-        var orderRepo = (IOrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)])[0];
-        await orderRepo.SetProcessingStatus(order1.Id, OrderProcessingStatus.Processed);
-        await orderRepo.SetProcessingStatus(order2.Id, OrderProcessingStatus.Processed);
+        // Mark orders as Completed
+        var orderRepo = TestServiceUtil.GetService<IOrderRepository>();
+        await orderRepo.SetProcessingStatus(order1Id, OrderProcessingStatus.Completed);
+        await orderRepo.SetProcessingStatus(order2Id, OrderProcessingStatus.Completed);
 
-        var orderIds = new List<Guid> { order1.Id, order2.Id };
+        var orderIds = new List<Guid> { order1Id, order2Id };
         await File.WriteAllTextAsync(_testFilePath, JsonSerializer.Serialize(orderIds));
 
-        var backfillOrderRepo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)])[0];
+        var backfillOrderRepo = TestServiceUtil.GetService<OrderRepository>();
         var mockLogger = new Mock<ILogger<StatusFeedBackfillService>>();
         var settings = Options.Create(new BackfillSettings
         {
@@ -118,8 +110,8 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
         await service.Run(CancellationToken.None);
 
         // Assert - should not have created status feed entries
-        int count1 = await PostgreUtil.SelectStatusFeedEntryCount(order1.Id);
-        int count2 = await PostgreUtil.SelectStatusFeedEntryCount(order2.Id);
+        int count1 = await TestDataUtil.GetStatusFeedEntryCount(order1Id);
+        int count2 = await TestDataUtil.GetStatusFeedEntryCount(order2Id);
         Assert.Equal(0, count1);
         Assert.Equal(0, count2);
 
@@ -137,21 +129,22 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
     [Fact]
     public async Task Run_WithOrdersNotInDryRunMode_InsertsData()
     {
-        // Arrange - Create test orders
-        var order1 = await PostgreUtil.PopulateDBWithEmailOrder();
-        var order2 = await PostgreUtil.PopulateDBWithSmsOrder();
-        _orderIdsToCleanup.Add(order1.Id);
-        _orderIdsToCleanup.Add(order2.Id);
+        // Arrange - Create test orders (legacy scenario without statusfeed)
+        var order1Id = await TestDataUtil.CreateSmsOrder("insert-test-1");
+        var order2Id = await TestDataUtil.CreateSmsOrder("insert-test-2");
 
-        // Mark orders as Processed
-        var orderRepo = (IOrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)])[0];
-        await orderRepo.SetProcessingStatus(order1.Id, OrderProcessingStatus.Processed);
-        await orderRepo.SetProcessingStatus(order2.Id, OrderProcessingStatus.Processed);
+        // Use legacy update to mark orders as Completed without automatic statusfeed creation
+        await TestDataUtil.UpdateOrderStatusLegacy(order1Id, OrderProcessingStatus.Completed);
+        await TestDataUtil.UpdateOrderStatusLegacy(order2Id, OrderProcessingStatus.Completed);
 
-        var orderIds = new List<Guid> { order1.Id, order2.Id };
+        // When tests run in sequence, give the database extra time to ensure consistency
+        // This is necessary because we're using direct SQL updates that bypass the normal repository
+        await Task.Delay(500);
+
+        var orderIds = new List<Guid> { order1Id, order2Id };
         await File.WriteAllTextAsync(_testFilePath, JsonSerializer.Serialize(orderIds));
 
-        var backfillOrderRepo = (OrderRepository)ServiceUtil.GetServices([typeof(IOrderRepository)])[0];
+        var backfillOrderRepo = TestServiceUtil.GetService<OrderRepository>();
         var mockLogger = new Mock<ILogger<StatusFeedBackfillService>>();
         var settings = Options.Create(new BackfillSettings
         {
@@ -169,11 +162,11 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
 
         // Assert - should have created status feed entries
         // Note: SelectStatusFeedEntryCount may return 0 for entries created within the last 2 seconds
-        // due to filtering in GetStatusFeed, so we use a direct SQL query instead
+        // due to filtering in GetStatusFeed, so we wait a bit
         await Task.Delay(2100); // Wait for status feed entries to be selectable
         
-        int count1 = await PostgreUtil.SelectStatusFeedEntryCount(order1.Id);
-        int count2 = await PostgreUtil.SelectStatusFeedEntryCount(order2.Id);
+        int count1 = await TestDataUtil.GetStatusFeedEntryCount(order1Id);
+        int count2 = await TestDataUtil.GetStatusFeedEntryCount(order2Id);
         
         Assert.Equal(1, count1);
         Assert.Equal(1, count2);
@@ -217,13 +210,12 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
     {
         // Arrange
         var nonExistentOrderId = Guid.NewGuid();
-        var existingOrder = await PostgreUtil.PopulateDBWithEmailOrder();
-        _orderIdsToCleanup.Add(existingOrder.Id);
+        var existingOrderId = await TestDataUtil.CreateSmsOrder("error-test");
 
         var orderRepo = TestServiceUtil.GetService<IOrderRepository>();
-        await orderRepo.SetProcessingStatus(existingOrder.Id, OrderProcessingStatus.Processed);
+        await orderRepo.SetProcessingStatus(existingOrderId, OrderProcessingStatus.Completed);
 
-        var orderIds = new List<Guid> { nonExistentOrderId, existingOrder.Id };
+        var orderIds = new List<Guid> { nonExistentOrderId, existingOrderId };
         await File.WriteAllTextAsync(_testFilePath, JsonSerializer.Serialize(orderIds));
 
         var backfillOrderRepo = TestServiceUtil.GetService<OrderRepository>();
@@ -254,7 +246,7 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
 
         // But the existing order should still be processed successfully
         await Task.Delay(2100);
-        int count = await PostgreUtil.SelectStatusFeedEntryCount(existingOrder.Id);
+        int count = await TestDataUtil.GetStatusFeedEntryCount(existingOrderId);
         Assert.Equal(1, count);
     }
 }

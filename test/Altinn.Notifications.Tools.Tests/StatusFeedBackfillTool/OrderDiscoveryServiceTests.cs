@@ -6,7 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Altinn.Notifications.Core.Enums;
 using Altinn.Notifications.Core.Persistence;
-using Altinn.Notifications.IntegrationTests.Utils;
 using Altinn.Notifications.Tools.Tests.Utils;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -21,7 +20,6 @@ namespace Altinn.Notifications.Tools.Tests.StatusFeedBackfillTool;
 public class OrderDiscoveryServiceTests : IAsyncLifetime
 {
     private readonly string _testFilePath;
-    private readonly List<Guid> _orderIdsToCleanup = [];
 
     public OrderDiscoveryServiceTests()
     {
@@ -39,12 +37,11 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
             File.Delete(_testFilePath);
         }
 
-        // Clean up test orders from database
-        if (_orderIdsToCleanup.Count > 0)
-        {
-            string deleteSql = $@"DELETE FROM notifications.orders WHERE alternateid IN ('{string.Join("','", _orderIdsToCleanup)}')";
-            await PostgreUtil.RunSql(deleteSql);
-        }
+        // Clean up all test data (created with "ttd" creator)
+        await TestDataUtil.CleanupTestData();
+        
+        // Note: Don't dispose TestServiceUtil here - xUnit runs tests in parallel
+        // and they share the same data source
     }
 
     [Fact]
@@ -93,22 +90,21 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
     [Fact]
     public async Task DiscoverOrders_CompletedWithStatusFeed_NotFound()
     {
-        // Arrange - Create Completed order WITH status feed entry
-        (var order, var email) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification("completed-with-sf");
-        _orderIdsToCleanup.Add(order.Id);
+        // Arrange - Create Completed order WITH status feed entry (automatic via UpdateSendStatus)
+        var (orderId, emailId) = await TestDataUtil.CreateEmailOrder("completed-with-sf");
         
         var orderRepo = TestServiceUtil.GetService<IOrderRepository>();
         var emailRepo = TestServiceUtil.GetService<IEmailNotificationRepository>();
         
-        await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.Completed);
-        await emailRepo.UpdateSendStatus(email.Id, EmailNotificationResultType.Delivered);
-        await orderRepo.InsertStatusFeedForOrder(order.Id); // Create status feed entry
+        // Keep order in Processing state so UpdateSendStatus can complete it and create statusfeed
+        await orderRepo.SetProcessingStatus(orderId, OrderProcessingStatus.Processing);
+        await emailRepo.UpdateSendStatus(emailId, EmailNotificationResultType.Delivered);
 
         var dataSource = TestServiceUtil.GetService<NpgsqlDataSource>();
         var settings = Options.Create(new DiscoverySettings
         {
             OrderIdsFilePath = _testFilePath,
-            CreatorNameFilter = order.Creator.ShortName,
+            CreatorNameFilter = "ttd",
             MaxOrders = 100
         });
 
@@ -126,28 +122,23 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
             discoveredOrders = JsonSerializer.Deserialize<List<Guid>>(json) ?? [];
         }
         
-        Assert.DoesNotContain(order.Id, discoveredOrders);
+        Assert.DoesNotContain(orderId, discoveredOrders);
     }
 
     [Fact]
     public async Task DiscoverOrders_CompletedWithoutStatusFeed_Found()
     {
-        // Arrange - Create Completed order WITHOUT status feed entry
-        (var order, var email) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification("completed-without-sf");
-        _orderIdsToCleanup.Add(order.Id);
+        // Arrange - Create Completed order WITHOUT status feed entry (legacy scenario)
+        var (orderId, _) = await TestDataUtil.CreateEmailOrder("completed-without-sf");
         
-        // Update order to Completed via SQL to avoid automatic status feed creation
-        string updateEmailSql = $@"UPDATE notifications.emailnotifications SET result = 'Delivered', resulttime = now() WHERE alternateid = '{email.Id}'";
-        await PostgreUtil.RunSql(updateEmailSql);
-        
-        string updateOrderSql = $@"UPDATE notifications.orders SET processedstatus = 'Completed', processed = now() WHERE alternateid = '{order.Id}'";
-        await PostgreUtil.RunSql(updateOrderSql);
+        // Use legacy update to avoid automatic statusfeed creation
+        await TestDataUtil.UpdateOrderStatusLegacy(orderId, OrderProcessingStatus.Completed);
 
         var dataSource = TestServiceUtil.GetService<NpgsqlDataSource>();
         var settings = Options.Create(new DiscoverySettings
         {
             OrderIdsFilePath = _testFilePath,
-            CreatorNameFilter = order.Creator.ShortName,
+            CreatorNameFilter = "ttd",
             MaxOrders = 100
         });
 
@@ -162,25 +153,26 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
         var discoveredOrders = JsonSerializer.Deserialize<List<Guid>>(json);
         
         Assert.NotNull(discoveredOrders);
-        Assert.Contains(order.Id, discoveredOrders);
+        Assert.Contains(orderId, discoveredOrders);
     }
 
     [Fact]
     public async Task DiscoverOrders_SendConditionNotMetWithStatusFeed_NotFound()
     {
-        // Arrange - Create SendConditionNotMet order WITH status feed entry (no notifications)
-        var order = await PostgreUtil.PopulateDBWithEmailOrder("scnm-with-sf");
-        _orderIdsToCleanup.Add(order.Id);
+        // Arrange - Create SendConditionNotMet order WITH status feed entry
+        var orderId = await TestDataUtil.CreateSmsOrder("scnm-with-sf");
         
         var orderRepo = TestServiceUtil.GetService<IOrderRepository>();
-        await orderRepo.SetProcessingStatus(order.Id, OrderProcessingStatus.SendConditionNotMet);
-        await orderRepo.InsertStatusFeedForOrder(order.Id); // Create status feed entry
+        await orderRepo.SetProcessingStatus(orderId, OrderProcessingStatus.SendConditionNotMet);
+        
+        // Repository method automatically creates statusfeed for final states
+        await orderRepo.InsertStatusFeedForOrder(orderId);
 
         var dataSource = TestServiceUtil.GetService<NpgsqlDataSource>();
         var settings = Options.Create(new DiscoverySettings
         {
             OrderIdsFilePath = _testFilePath,
-            CreatorNameFilter = order.Creator.ShortName,
+            CreatorNameFilter = "ttd",
             MaxOrders = 100
         });
 
@@ -198,25 +190,23 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
             discoveredOrders = JsonSerializer.Deserialize<List<Guid>>(json) ?? [];
         }
         
-        Assert.DoesNotContain(order.Id, discoveredOrders);
+        Assert.DoesNotContain(orderId, discoveredOrders);
     }
 
     [Fact]
     public async Task DiscoverOrders_SendConditionNotMetWithoutStatusFeed_Found()
     {
-        // Arrange - Create SendConditionNotMet order WITHOUT status feed entry (no notifications)
-        var order = await PostgreUtil.PopulateDBWithEmailOrder("scnm-without-sf");
-        _orderIdsToCleanup.Add(order.Id);
+        // Arrange - Create SendConditionNotMet order WITHOUT status feed entry (legacy scenario)
+        var orderId = await TestDataUtil.CreateSmsOrder("scnm-without-sf");
         
-        // Update order to SendConditionNotMet via SQL to avoid automatic status feed creation
-        string updateOrderSql = $@"UPDATE notifications.orders SET processedstatus = 'SendConditionNotMet', processed = now() WHERE alternateid = '{order.Id}'";
-        await PostgreUtil.RunSql(updateOrderSql);
+        // Use legacy update to avoid automatic statusfeed creation
+        await TestDataUtil.UpdateOrderStatusLegacy(orderId, OrderProcessingStatus.SendConditionNotMet);
 
         var dataSource = TestServiceUtil.GetService<NpgsqlDataSource>();
         var settings = Options.Create(new DiscoverySettings
         {
             OrderIdsFilePath = _testFilePath,
-            CreatorNameFilter = order.Creator.ShortName,
+            CreatorNameFilter = "ttd",
             MaxOrders = 100
         });
 
@@ -231,25 +221,23 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
         var discoveredOrders = JsonSerializer.Deserialize<List<Guid>>(json);
         
         Assert.NotNull(discoveredOrders);
-        Assert.Contains(order.Id, discoveredOrders);
+        Assert.Contains(orderId, discoveredOrders);
     }
 
     [Fact]
     public async Task DiscoverOrders_ProcessingStatus_NotFound()
     {
         // Arrange - Create Processing order WITHOUT status feed entry
-        (var order, _) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification("processing");
-        _orderIdsToCleanup.Add(order.Id);
+        var (orderId, _) = await TestDataUtil.CreateEmailOrder("processing");
         
-        // Keep order in Processing state (default from PopulateDBWithOrderAndEmailNotification)
-        string updateOrderSql = $@"UPDATE notifications.orders SET processedstatus = 'Processing' WHERE alternateid = '{order.Id}'";
-        await PostgreUtil.RunSql(updateOrderSql);
+        // Keep order in Processing state
+        await TestDataUtil.UpdateOrderStatus(orderId, OrderProcessingStatus.Processing);
 
         var dataSource = TestServiceUtil.GetService<NpgsqlDataSource>();
         var settings = Options.Create(new DiscoverySettings
         {
             OrderIdsFilePath = _testFilePath,
-            CreatorNameFilter = order.Creator.ShortName,
+            CreatorNameFilter = "ttd",
             MaxOrders = 100
         });
 
@@ -267,22 +255,21 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
             discoveredOrders = JsonSerializer.Deserialize<List<Guid>>(json) ?? [];
         }
         
-        Assert.DoesNotContain(order.Id, discoveredOrders);
+        Assert.DoesNotContain(orderId, discoveredOrders);
     }
 
     [Fact]
     public async Task DiscoverOrders_RegisteredStatus_NotFound()
     {
         // Arrange - Create Registered order WITHOUT status feed entry
-        var order = await PostgreUtil.PopulateDBWithEmailOrder("registered");
-        _orderIdsToCleanup.Add(order.Id);
+        var orderId = await TestDataUtil.CreateSmsOrder("registered");
         
         // Order defaults to Registered status
         var dataSource = TestServiceUtil.GetService<NpgsqlDataSource>();
         var settings = Options.Create(new DiscoverySettings
         {
             OrderIdsFilePath = _testFilePath,
-            CreatorNameFilter = order.Creator.ShortName,
+            CreatorNameFilter = "ttd",
             MaxOrders = 100
         });
 
@@ -300,41 +287,36 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
             discoveredOrders = JsonSerializer.Deserialize<List<Guid>>(json) ?? [];
         }
         
-        Assert.DoesNotContain(order.Id, discoveredOrders);
+        Assert.DoesNotContain(orderId, discoveredOrders);
     }
 
     [Fact]
     public async Task DiscoverOrders_WithDateFilter_OnlyFindsOrdersAfterDate()
     {
         // Arrange - Create orders with different processed dates
-        // Order 1: Completed WITH status feed (should establish min date baseline)
-        (var order1, var email1) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification("date-filter-1");
-        _orderIdsToCleanup.Add(order1.Id);
+        // Order 1: Completed WITH status feed (establishes min date baseline)
+        var (order1Id, email1Id) = await TestDataUtil.CreateEmailOrder("date-filter-1");
         
         var orderRepo = TestServiceUtil.GetService<IOrderRepository>();
         var emailRepo = TestServiceUtil.GetService<IEmailNotificationRepository>();
         
-        await orderRepo.SetProcessingStatus(order1.Id, OrderProcessingStatus.Completed);
-        await emailRepo.UpdateSendStatus(email1.Id, EmailNotificationResultType.Delivered);
-        await orderRepo.InsertStatusFeedForOrder(order1.Id); // This creates the min date
+        // Keep in Processing so UpdateSendStatus can complete it and create statusfeed
+        await orderRepo.SetProcessingStatus(order1Id, OrderProcessingStatus.Processing);
+        await emailRepo.UpdateSendStatus(email1Id, EmailNotificationResultType.Delivered);
         
         await Task.Delay(100); // Ensure time difference
         
-        // Order 2: Completed WITHOUT status feed, processed AFTER min date (should be found)
-        (var order2, var email2) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification("date-filter-2");
-        _orderIdsToCleanup.Add(order2.Id);
+        // Order 2: Completed WITHOUT status feed, processed AFTER min date (should be found) - legacy scenario
+        var (order2Id, _) = await TestDataUtil.CreateEmailOrder("date-filter-2");
         
-        string updateEmail2Sql = $@"UPDATE notifications.emailnotifications SET result = 'Delivered', resulttime = now() WHERE alternateid = '{email2.Id}'";
-        await PostgreUtil.RunSql(updateEmail2Sql);
-        
-        string updateOrder2Sql = $@"UPDATE notifications.orders SET processedstatus = 'Completed', processed = now() WHERE alternateid = '{order2.Id}'";
-        await PostgreUtil.RunSql(updateOrder2Sql);
+        // Use legacy update to avoid automatic statusfeed creation
+        await TestDataUtil.UpdateOrderStatusLegacy(order2Id, OrderProcessingStatus.Completed);
 
         var dataSource = TestServiceUtil.GetService<NpgsqlDataSource>();
         var settings = Options.Create(new DiscoverySettings
         {
             OrderIdsFilePath = _testFilePath,
-            CreatorNameFilter = order1.Creator.ShortName,
+            CreatorNameFilter = "ttd",
             MaxOrders = 100
         });
 
@@ -349,34 +331,25 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
         var discoveredOrders = JsonSerializer.Deserialize<List<Guid>>(json);
         
         Assert.NotNull(discoveredOrders);
-        Assert.DoesNotContain(order1.Id, discoveredOrders); // Has status feed
-        Assert.Contains(order2.Id, discoveredOrders); // Missing status feed, processed after min date
+        Assert.DoesNotContain(order1Id, discoveredOrders); // Has status feed
+        Assert.Contains(order2Id, discoveredOrders); // Missing status feed, processed after min date
     }
 
     [Fact]
     public async Task DiscoverOrders_WithStatusFilter_OnlyFindsMatchingStatus()
     {
-        // Arrange - Create both SendConditionNotMet and Completed orders
-        var scnmOrder = await PostgreUtil.PopulateDBWithEmailOrder("status-filter-scnm");
-        _orderIdsToCleanup.Add(scnmOrder.Id);
+        // Arrange - Create both SendConditionNotMet and Completed orders (legacy scenarios without statusfeed)
+        var scnmOrderId = await TestDataUtil.CreateSmsOrder("status-filter-scnm");
+        await TestDataUtil.UpdateOrderStatusLegacy(scnmOrderId, OrderProcessingStatus.SendConditionNotMet);
         
-        string updateScnmSql = $@"UPDATE notifications.orders SET processedstatus = 'SendConditionNotMet', processed = now() WHERE alternateid = '{scnmOrder.Id}'";
-        await PostgreUtil.RunSql(updateScnmSql);
-        
-        (var completedOrder, var email) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification("status-filter-completed");
-        _orderIdsToCleanup.Add(completedOrder.Id);
-        
-        string updateEmailSql = $@"UPDATE notifications.emailnotifications SET result = 'Delivered', resulttime = now() WHERE alternateid = '{email.Id}'";
-        await PostgreUtil.RunSql(updateEmailSql);
-        
-        string updateCompletedSql = $@"UPDATE notifications.orders SET processedstatus = 'Completed', processed = now() WHERE alternateid = '{completedOrder.Id}'";
-        await PostgreUtil.RunSql(updateCompletedSql);
+        var (completedOrderId, _) = await TestDataUtil.CreateEmailOrder("status-filter-completed");
+        await TestDataUtil.UpdateOrderStatusLegacy(completedOrderId, OrderProcessingStatus.Completed);
 
         var dataSource = TestServiceUtil.GetService<NpgsqlDataSource>();
         var settings = Options.Create(new DiscoverySettings
         {
             OrderIdsFilePath = _testFilePath,
-            CreatorNameFilter = scnmOrder.Creator.ShortName,
+            CreatorNameFilter = "ttd",
             OrderProcessingStatusFilter = OrderProcessingStatus.SendConditionNotMet,
             MaxOrders = 100
         });
@@ -392,8 +365,8 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
         var discoveredOrders = JsonSerializer.Deserialize<List<Guid>>(json);
         
         Assert.NotNull(discoveredOrders);
-        Assert.Contains(scnmOrder.Id, discoveredOrders);
-        Assert.DoesNotContain(completedOrder.Id, discoveredOrders);
+        Assert.Contains(scnmOrderId, discoveredOrders);
+        Assert.DoesNotContain(completedOrderId, discoveredOrders);
     }
 
     [Fact]
@@ -402,21 +375,17 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
         // This test ensures we still find Completed orders even if they previously used the old "Processed" terminology
         // (testing backward compatibility / legacy data handling)
         
-        // Arrange
-        (var order, var email) = await PostgreUtil.PopulateDBWithOrderAndEmailNotification("legacy-completed");
-        _orderIdsToCleanup.Add(order.Id);
+        // Arrange - Create legacy Completed order without statusfeed
+        var (orderId, _) = await TestDataUtil.CreateEmailOrder("legacy-completed");
 
-        string updateEmailSql = $@"UPDATE notifications.emailnotifications SET result = 'Delivered', resulttime = now() WHERE alternateid = '{email.Id}'";
-        await PostgreUtil.RunSql(updateEmailSql);
-        
-        string updateOrderSql = $@"UPDATE notifications.orders SET processedstatus = 'Completed', processed = now() WHERE alternateid = '{order.Id}'";
-        await PostgreUtil.RunSql(updateOrderSql);
+        // Use legacy update to avoid automatic statusfeed creation
+        await TestDataUtil.UpdateOrderStatusLegacy(orderId, OrderProcessingStatus.Completed);
 
         var dataSource = TestServiceUtil.GetService<NpgsqlDataSource>();
         var settings = Options.Create(new DiscoverySettings
         {
             OrderIdsFilePath = _testFilePath,
-            CreatorNameFilter = order.Creator.ShortName,
+            CreatorNameFilter = "ttd",
             MaxOrders = 100
         });
 
@@ -431,7 +400,7 @@ public class OrderDiscoveryServiceTests : IAsyncLifetime
         var discoveredOrders = JsonSerializer.Deserialize<List<Guid>>(json);
         
         Assert.NotNull(discoveredOrders);
-        Assert.Contains(order.Id, discoveredOrders);
+        Assert.Contains(orderId, discoveredOrders);
     }
 
     [Fact]
