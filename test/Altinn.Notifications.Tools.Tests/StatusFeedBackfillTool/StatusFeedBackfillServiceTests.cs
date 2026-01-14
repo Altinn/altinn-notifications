@@ -166,7 +166,7 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
             // Assert - should have created status feed entries
             // Note: SelectStatusFeedEntryCount may return 0 for entries created within the last 2 seconds
             // due to filtering in GetStatusFeed, so we wait a bit
-            await Task.Delay(2100); // Wait for status feed entries to be selectable
+            await Task.Delay(50); // Wait for status feed entries to be selectable
 
             int count1 = await TestDataUtil.GetStatusFeedEntryCount(order1Id);
             int count2 = await TestDataUtil.GetStatusFeedEntryCount(order2Id);
@@ -249,7 +249,7 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
 
             // Assert - Service logs error for invalid order but continues processing valid orders
             // Verify that the valid order was still processed successfully
-            await Task.Delay(2100);
+            await Task.Delay(50);
             int count = await TestDataUtil.GetStatusFeedEntryCount(existingOrderId);
             Assert.Equal(1, count);
         }
@@ -289,7 +289,7 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
             await service.Run();
 
             // Assert - User typed "n", so DryRun should be false (insertion happens)
-            await Task.Delay(2100);
+            await Task.Delay(50);
             int count = await TestDataUtil.GetStatusFeedEntryCount(orderId);
             Assert.Equal(1, count); // Not dry run = insertion happened
         }
@@ -329,7 +329,7 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
             await service.Run();
 
             // Assert - User typed "y", so DryRun should be true (no insertion)
-            await Task.Delay(100);
+            await Task.Delay(50);
             int count = await TestDataUtil.GetStatusFeedEntryCount(orderId);
             Assert.Equal(0, count); // Dry run = no insertion
         }
@@ -369,7 +369,7 @@ public class StatusFeedBackfillServiceTests : IAsyncLifetime
             await service.Run();
 
             // Assert - User typed "yes", so DryRun should be true (no insertion)
-            await Task.Delay(100);
+            await Task.Delay(50);
             int count = await TestDataUtil.GetStatusFeedEntryCount(orderId);
             Assert.Equal(0, count); // Dry run = no insertion
         }
