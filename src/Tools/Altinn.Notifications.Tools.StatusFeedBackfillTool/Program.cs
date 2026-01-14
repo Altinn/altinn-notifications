@@ -74,4 +74,3 @@ using (var scope = host.Services.CreateScope())
         return 1;
     }
 }
-
