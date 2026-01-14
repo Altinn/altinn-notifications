@@ -1,5 +1,5 @@
 ﻿using System.Data;
-using Altinn.Notifications.Core.Enums;
+
 using Altinn.Notifications.Core.Models;
 using Altinn.Notifications.Core.Persistence;
 
@@ -14,7 +14,6 @@ public class DeadDeliveryReportRepository(NpgsqlDataSource npgsqlDataSource) : I
     private readonly NpgsqlDataSource _dataSource = npgsqlDataSource;
     private const string _addDeadDeliveryReport = "SELECT notifications.insertdeaddeliveryreport(@channel, @attemptcount, @deliveryreport, @resolved, @firstseen, @lastattempt, @reason, @message)";
     private const string _getDeadDeliveryReport = "SELECT id, channel, attemptcount, deliveryreport, resolved, firstseen, lastattempt, reason, message FROM notifications.deaddeliveryreports WHERE id = @id";
-    private const string _getAllDeadDeliveryReports = "SELECT id, channel, attemptcount, deliveryreport, resolved, firstseen, lastattempt, reason, message FROM notifications.deaddeliveryreports WHERE id >= @fromId AND id < @toId AND reason = @reason AND channel = @channel";
 
     /// <inheritdoc/>
     public async Task<long> InsertAsync(DeadDeliveryReport report, CancellationToken cancellationToken = default)
@@ -65,39 +64,5 @@ public class DeadDeliveryReportRepository(NpgsqlDataSource npgsqlDataSource) : I
         {
             throw new KeyNotFoundException($"DeadDeliveryReport with ID {id} not found.");
         }
-    }
-
-    /// <inheritdoc/>
-    public async Task<List<DeadDeliveryReport>> GetAllAsync(long fromId, long toId, string reason, DeliveryReportChannel channel, CancellationToken cancellationToken = default)
-    {
-        await using NpgsqlCommand pgcom = _dataSource.CreateCommand(_getAllDeadDeliveryReports);
-        pgcom.Parameters.AddWithValue("fromId", NpgsqlDbType.Bigint, fromId);
-        pgcom.Parameters.AddWithValue("toId", NpgsqlDbType.Bigint, toId);
-        pgcom.Parameters.AddWithValue("reason", NpgsqlDbType.Text, reason);
-        pgcom.Parameters.AddWithValue("channel", NpgsqlDbType.Smallint, (short)channel);
-
-        await using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync(cancellationToken);
-
-        var reports = new List<DeadDeliveryReport>();
-        while (await reader.ReadAsync(cancellationToken))
-        {
-            var reasonOrdinal = reader.GetOrdinal("reason");
-            var messageOrdinal = reader.GetOrdinal("message");
-
-            var report = new DeadDeliveryReport
-            {
-                Channel = (DeliveryReportChannel)await reader.GetFieldValueAsync<short>("channel", cancellationToken),
-                AttemptCount = await reader.GetFieldValueAsync<int>("attemptcount", cancellationToken),
-                DeliveryReport = await reader.GetFieldValueAsync<string>("deliveryreport", cancellationToken),
-                Resolved = await reader.GetFieldValueAsync<bool>("resolved", cancellationToken),
-                FirstSeen = await reader.GetFieldValueAsync<DateTime>("firstseen", cancellationToken),
-                LastAttempt = await reader.GetFieldValueAsync<DateTime>("lastattempt", cancellationToken),
-                Reason = await reader.IsDBNullAsync(reasonOrdinal, cancellationToken) ? null : await reader.GetFieldValueAsync<string>(reasonOrdinal, cancellationToken),
-                Message = await reader.IsDBNullAsync(messageOrdinal, cancellationToken) ? null : await reader.GetFieldValueAsync<string>(messageOrdinal, cancellationToken)
-            };
-            reports.Add(report);
-        }
-
-        return reports;
     }
 }
